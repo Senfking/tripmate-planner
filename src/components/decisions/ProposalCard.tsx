@@ -82,6 +82,7 @@ export function ProposalCard({
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
   const isGreyedOut = hasConfirmed && !proposal.adopted;
   const isFrozen = hasConfirmed;
+  const isMobile = useIsMobile();
 
   const [datesExpanded, setDatesExpanded] = useState(false);
   const [showDateForm, setShowDateForm] = useState(false);
