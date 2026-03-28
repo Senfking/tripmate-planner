@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getShareableAppOrigin } from "@/lib/appUrl";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Loader2, Link } from "lucide-react";
+import { Copy, Check, Loader2, Link, AlertTriangle } from "lucide-react";
 
 interface InviteModalProps {
   tripId: string;
