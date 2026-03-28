@@ -7,7 +7,6 @@ import {
   Trash2,
   Plus,
   Lock,
-  MapPin,
   CalendarDays,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
