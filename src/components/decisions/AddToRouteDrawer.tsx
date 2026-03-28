@@ -60,7 +60,7 @@ export function AddToRouteDrawer({
       // Pre-fill start date from last stop
       if (existingStops.length > 0) {
         const lastStop = [...existingStops].sort(
-          (a, b) => b.position - a.position
+          (a, b) => b.end_date.localeCompare(a.end_date)
         )[0];
         setDateRange({ from: parseISO(lastStop.end_date), to: undefined });
       } else {
