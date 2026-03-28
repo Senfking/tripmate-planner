@@ -174,7 +174,7 @@ export function VibeBoard({
     <div className="space-y-4">
       {/* Lock action for managers */}
       {!isLocked && canManage && (
-        <div className="flex justify-end">
+        <div className="flex justify-end md:justify-start">
           <Button
             variant="ghost"
             size="sm"

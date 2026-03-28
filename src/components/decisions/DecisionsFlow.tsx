@@ -334,10 +334,12 @@ function PreferencesContent({ tripId, myRole }: { tripId: string; myRole: string
 
       {(() => {
         const trigger = (
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-            <Plus className="h-4 w-4" />
-            Ask the group something
-          </Button>
+          <div className="flex justify-end md:justify-start">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+              <Plus className="h-4 w-4" />
+              Ask the group something
+            </Button>
+          </div>
         );
         if (isMobile) {
           return (

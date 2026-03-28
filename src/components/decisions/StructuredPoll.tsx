@@ -175,7 +175,7 @@ export function StructuredPoll({
                   onChange={(e) => setNewLabel(e.target.value)}
                 />
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-end md:justify-start">
                 <Button size="sm" onClick={handleAdd} disabled={isAddingOption || (isDate ? !newStart || !newEnd : !newLabel.trim())}>
                   Add
                 </Button>
@@ -185,20 +185,24 @@ export function StructuredPoll({
               </div>
             </div>
           ) : (
-            <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setShowAddForm(true)}>
-              <Plus className="h-3.5 w-3.5" />
-              Add option
-            </Button>
+            <div className="flex justify-end md:justify-start">
+              <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setShowAddForm(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                Add option
+              </Button>
+            </div>
           )}
         </>
       )}
 
       {/* Lock button */}
       {canManage && !isLocked && !disabled && poll.options.length > 0 && (
-        <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={onLock} disabled={isLocking}>
-          <Lock className="h-3.5 w-3.5" />
-          {isLocking ? "Locking…" : "Lock poll"}
-        </Button>
+        <div className="flex justify-end md:justify-start">
+          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={onLock} disabled={isLocking}>
+            <Lock className="h-3.5 w-3.5" />
+            {isLocking ? "Locking…" : "Lock poll"}
+          </Button>
+        </div>
       )}
     </div>
   );

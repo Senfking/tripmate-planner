@@ -282,7 +282,7 @@ export function ProposalCard({
                       className="w-full"
                       placeholder="Select date range"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-end md:justify-start">
                       <Button
                         size="sm"
                         onClick={handleAddDate}
@@ -305,15 +305,17 @@ export function ProposalCard({
                     </div>
                   </div>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => setShowDateForm(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Suggest dates
-                  </Button>
+                  <div className="flex justify-end md:justify-start">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => setShowDateForm(true)}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Suggest dates
+                    </Button>
+                  </div>
                 )}
               </>
             )}
@@ -323,15 +325,17 @@ export function ProposalCard({
 
       {/* Add to route button — owner/admin only */}
       {canManage && !isRouteLocked && !isInRoute && !confirmOpen && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-          onClick={handleOpenConfirm}
-        >
-          <Route className="h-3.5 w-3.5" />
-          Add to route 🗺️
-        </Button>
+        <div className="flex justify-end md:justify-start">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+            onClick={handleOpenConfirm}
+          >
+            <Route className="h-3.5 w-3.5" />
+            Add to route 🗺️
+          </Button>
+        </div>
       )}
 
       {/* Inline confirm panel */}
@@ -409,7 +413,13 @@ export function ProposalCard({
             <p className="text-sm text-amber-600">{validation.softWarning}</p>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-end md:justify-start">
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Cancel
+            </button>
             <Button
               size="sm"
               onClick={handleConfirmRoute}
@@ -421,12 +431,6 @@ export function ProposalCard({
                 ? "Confirm anyway"
                 : "Confirm and add to route"}
             </Button>
-            <button
-              onClick={() => setConfirmOpen(false)}
-              className="text-sm text-muted-foreground hover:text-foreground underline"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
