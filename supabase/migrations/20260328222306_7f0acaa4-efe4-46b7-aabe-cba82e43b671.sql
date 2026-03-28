@@ -1,0 +1,2 @@
+ALTER TABLE public.proposal_reactions DROP CONSTRAINT proposal_reactions_value_check;
+ALTER TABLE public.proposal_reactions ADD CONSTRAINT proposal_reactions_value_check CHECK (value IN ('up', 'down'));
