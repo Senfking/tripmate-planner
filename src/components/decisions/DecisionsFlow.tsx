@@ -184,7 +184,7 @@ import { StructuredPoll } from "./StructuredPoll";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -198,25 +198,119 @@ function PreferencesContent({ tripId, myRole }: { tripId: string; myRole: string
 
   const [prefOpen, setPrefOpen] = useState(false);
   const [prefTitle, setPrefTitle] = useState("");
+  const [prefOptions, setPrefOptions] = useState<string[]>(["", ""]);
+  const [newOptionText, setNewOptionText] = useState("");
+
+  const resetForm = () => {
+    setPrefTitle("");
+    setPrefOptions(["", ""]);
+    setNewOptionText("");
+  };
 
   const handleCreatePref = () => {
     if (!prefTitle.trim()) return;
+    const validOptions = prefOptions.filter((o) => o.trim());
     createPoll.mutate(
-      { type: "preference", title: prefTitle.trim() },
+      { type: "preference", title: prefTitle.trim(), options: validOptions },
       {
         onSuccess: () => {
-          setPrefTitle("");
+          resetForm();
           setPrefOpen(false);
         },
       }
     );
   };
 
+  const updateOption = (index: number, value: string) => {
+    setPrefOptions((prev) => prev.map((o, i) => (i === index ? value : o)));
+  };
+
+  const removeOption = (index: number) => {
+    setPrefOptions((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addNewOption = () => {
+    if (newOptionText.trim()) {
+      setPrefOptions((prev) => [...prev, newOptionText.trim()]);
+      setNewOptionText("");
+    }
+  };
+
+  const content = (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label>Question</Label>
+        <Input
+          placeholder="e.g. Airbnb or hotel?"
+          value={prefTitle}
+          onChange={(e) => setPrefTitle(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Answer options</Label>
+        {prefOptions.map((opt, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input
+              placeholder={`Option ${i + 1}`}
+              value={opt}
+              onChange={(e) => updateOption(i, e.target.value)}
+            />
+            {prefOptions.length > 2 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive"
+                onClick={() => removeOption(i)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Add another option…"
+            value={newOptionText}
+            onChange={(e) => setNewOptionText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addNewOption();
+              }
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 h-9 w-9"
+            onClick={addNewOption}
+            disabled={!newOptionText.trim()}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <Button
+        className="w-full"
+        onClick={handleCreatePref}
+        disabled={
+          !prefTitle.trim() ||
+          prefOptions.filter((o) => o.trim()).length < 2 ||
+          createPoll.isPending
+        }
+      >
+        {createPoll.isPending ? "Creating…" : "Create poll"}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {prefPolls.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
-          No preference polls yet. Ask the group something!
+          No polls yet. Ask the group anything!
         </p>
       )}
 
@@ -224,7 +318,7 @@ function PreferencesContent({ tripId, myRole }: { tripId: string; myRole: string
         <StructuredPoll
           key={poll.id}
           poll={poll}
-          stepLabel="Preferences"
+          stepLabel="Poll"
           voteTally={voteCounts[poll.id] || {}}
           myVotes={myVotes}
           canManage={canManage}
@@ -238,58 +332,38 @@ function PreferencesContent({ tripId, myRole }: { tripId: string; myRole: string
         />
       ))}
 
-      {
-        (() => {
-          const trigger = (
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-              <Plus className="h-4 w-4" />
-              Ask the group something
-            </Button>
-          );
-          const content = (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Question</Label>
-                <Input
-                  placeholder="e.g. Airbnb or hotel?"
-                  value={prefTitle}
-                  onChange={(e) => setPrefTitle(e.target.value)}
-                />
-              </div>
-              <Button
-                className="w-full"
-                onClick={handleCreatePref}
-                disabled={!prefTitle.trim() || createPoll.isPending}
-              >
-                Create poll
-              </Button>
-            </div>
-          );
-          if (isMobile) {
-            return (
-              <Drawer open={prefOpen} onOpenChange={setPrefOpen}>
-                <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-                <DrawerContent className="px-4 pb-6">
-                  <DrawerHeader className="text-left px-0">
-                    <DrawerTitle>New preference poll</DrawerTitle>
-                  </DrawerHeader>
-                  {content}
-                </DrawerContent>
-              </Drawer>
-            );
-          }
+      {(() => {
+        const trigger = (
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+            <Plus className="h-4 w-4" />
+            Ask the group something
+          </Button>
+        );
+        if (isMobile) {
           return (
-            <Dialog open={prefOpen} onOpenChange={setPrefOpen}>
-              <DialogTrigger asChild>{trigger}</DialogTrigger>
-              <DialogContent className="max-w-sm">
-                <DialogHeader>
-                  <DialogTitle>New preference poll</DialogTitle>
-                </DialogHeader>
+            <Drawer open={prefOpen} onOpenChange={setPrefOpen}>
+              <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+              <DrawerContent className="px-4 pb-6">
+                <DrawerHeader className="text-left px-0">
+                  <DrawerTitle>New poll</DrawerTitle>
+                </DrawerHeader>
                 {content}
-              </DialogContent>
-            </Dialog>
+              </DrawerContent>
+            </Drawer>
           );
-        })()}
+        }
+        return (
+          <Dialog open={prefOpen} onOpenChange={setPrefOpen}>
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>New poll</DialogTitle>
+              </DialogHeader>
+              {content}
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }

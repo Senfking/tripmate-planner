@@ -91,13 +91,30 @@ export function useDecisionPolls(tripId: string | undefined) {
   });
 
   const createPoll = useMutation({
-    mutationFn: async (input: { type: string; title: string }) => {
-      const { error } = await supabase.from("polls").insert({
-        trip_id: tripId!,
-        type: input.type,
-        title: input.title,
-      });
+    mutationFn: async (input: { type: string; title: string; options?: string[] }) => {
+      const { data, error } = await supabase
+        .from("polls")
+        .insert({
+          trip_id: tripId!,
+          type: input.type,
+          title: input.title,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+
+      // Insert initial options if provided
+      if (input.options && input.options.length > 0) {
+        const optionRows = input.options.map((label, i) => ({
+          poll_id: data.id,
+          label,
+          sort_order: i,
+        }));
+        const { error: optErr } = await supabase
+          .from("poll_options")
+          .insert(optionRows);
+        if (optErr) throw optErr;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
