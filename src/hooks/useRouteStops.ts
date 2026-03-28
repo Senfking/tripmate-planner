@@ -34,7 +34,7 @@ export function useRouteStops(tripId: string | undefined) {
         .eq("trip_id", tripId!)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data || []) as RouteStop[];
+      return (data || []) as unknown as RouteStop[];
     },
     enabled: !!tripId && !!user,
   });
