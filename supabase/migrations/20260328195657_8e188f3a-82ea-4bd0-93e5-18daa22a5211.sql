@@ -1,0 +1,2 @@
+ALTER TABLE public.trip_members
+ALTER CONSTRAINT trip_members_trip_id_fkey DEFERRABLE INITIALLY DEFERRED;
