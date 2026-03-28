@@ -9,6 +9,7 @@ type Props = {
   reactions: { in: number; maybe: number; no: number };
   myReaction: string | undefined;
   canAdopt: boolean;
+  hasAdopted: boolean;
   onReact: (value: string) => void;
   onAdopt: () => void;
   isAdopting: boolean;
