@@ -13,7 +13,7 @@ export function useVibeBoard(tripId: string | undefined) {
   const qc = useQueryClient();
 
   const myResponses = useQuery({
-    queryKey: ["vibe-my-responses", tripId],
+    queryKey: ["vibe-my-responses", tripId, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vibe_responses")
