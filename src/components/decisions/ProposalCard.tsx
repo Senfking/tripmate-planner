@@ -114,7 +114,7 @@ export function ProposalCard({
       setSelectedDateOptionId(null);
       // Pre-fill start date from last route stop
       if (existingStops.length > 0) {
-        const sorted = [...existingStops].sort((a, b) => b.position - a.position);
+        const sorted = [...existingStops].sort((a, b) => b.end_date.localeCompare(a.end_date));
         const lastEnd = sorted[0]?.end_date;
         if (lastEnd) {
           setManualDateRange({ from: parseISO(lastEnd), to: undefined });
