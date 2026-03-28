@@ -16,7 +16,7 @@ export function AppLayout() {
             <SidebarTrigger className="hidden md:inline-flex" />
             <div className="flex items-center gap-2 md:hidden">
               <Map className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold text-primary">TripCrew</span>
+              <span className="text-lg font-bold text-primary">Junto</span>
             </div>
           </header>
 

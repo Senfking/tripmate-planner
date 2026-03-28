@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'tripcrew-v1';
+const CACHE_NAME = 'junto-v1';
 const SHELL_URLS = [
   '/',
   '/index.html',
