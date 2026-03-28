@@ -116,8 +116,10 @@ export function VibeBoard({
     []
   );
 
-  const allAnswered =
-    QUESTIONS.every((q) => (draft[q.key]?.length || 0) >= 1);
+  const unansweredKeys = QUESTIONS.filter(
+    (q) => (draft[q.key]?.length || 0) < 1
+  ).map((q) => q.key);
+  const allAnswered = unansweredKeys.length === 0;
 
   const handleSubmit = () => {
     const answers: { questionKey: string; answerValue: string }[] = [];
@@ -222,6 +224,7 @@ export function VibeBoard({
               multiSelect={q.multiSelect}
               disabled={isLocked}
               onSelect={(val) => handleSelect(q.key, val, q.multiSelect)}
+              missing={!isLocked && unansweredKeys.includes(q.key) && unansweredKeys.length < 5}
             />
           ))}
         </div>
