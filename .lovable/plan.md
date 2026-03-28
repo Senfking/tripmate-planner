@@ -1,56 +1,55 @@
 
 
-## Database Schema & RLS for Junto
+## Authentication for Junto
 
-### Overview
-Create 12 tables with indexes, a security-definer helper function, and RLS policies — all via migration tool calls.
+### Database migration
 
-### Migration 1: Helper function + Tables
+1. **Create `profiles` table** with `id` (UUID, FK to auth.users ON DELETE CASCADE), `display_name` (text), `created_at`, `updated_at`
+2. **RLS**: authenticated users can SELECT all profiles, UPDATE own profile only
+3. **Trigger**: auto-create profile row on signup (display_name from `raw_user_meta_data->>'display_name'`)
 
-**Security-definer function** `is_trip_member(uuid, uuid)` — checks if a user belongs to a trip. Used in all RLS policies to avoid repetition.
+### New files
 
-**Security-definer function** `is_trip_admin_or_owner(uuid, uuid)` — checks if a user has `owner` or `admin` role on a trip.
+| File | Purpose |
+|------|---------|
+| `src/contexts/AuthContext.tsx` | Auth provider wrapping the app — exposes `user`, `profile`, `loading`, `signIn`, `signUp`, `signOut` via context. Uses `onAuthStateChange` + `getSession`. Fetches profile from `profiles` table. |
+| `src/components/ProtectedRoute.tsx` | Wrapper that redirects to `/login` if not authenticated (checks context, not localStorage). |
+| `src/pages/Login.tsx` | Email + password form, link to `/signup`, error messages, loading spinner. |
+| `src/pages/Signup.tsx` | Email + password + display name form, link to `/login`. Passes `display_name` in `options.data` on `signUp`. |
 
-**12 tables** (exact columns as specified):
-1. `trips` — core trip record
-2. `trip_members` — user ↔ trip membership with role (owner/admin/member)
-3. `invites` — invite tokens for joining trips
-4. `polls` — date/destination polls per trip
-5. `poll_options` — options within a poll
-6. `votes` — user votes on poll options
-7. `itinerary_items` — day-by-day itinerary entries
-8. `attachments` — files/links attached to trips or itinerary items
-9. `comments` — threaded comments on items/attachments
-10. `expenses` — trip expenses with payer
-11. `expense_splits` — per-user share of each expense
-12. `trip_share_tokens` — shareable trip links
+### Modified files
 
-**Indexes**: On `trip_members(trip_id)`, `trip_members(user_id)`, `itinerary_items(trip_id, day_date)`, `expenses(trip_id)`, `comments(trip_id)`, `comments(itinerary_item_id)`, `votes(poll_option_id, user_id)`.
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Wrap with `AuthProvider`. Move app pages under `/app/*` with `ProtectedRoute`. Add public routes `/login`, `/signup`. Redirect `/` to `/app/trips`. |
+| `src/components/AppLayout.tsx` | Show user display name in header. |
+| `src/components/AppSidebar.tsx` | Update nav links to `/app/*` paths. |
+| `src/components/BottomNav.tsx` | Update nav links to `/app/*` paths. |
+| `src/pages/More.tsx` | Show display name + logout button (calls `signOut`, navigates to `/login`). |
 
-### Migration 2: RLS Policies
+### Auth configuration
 
-Enable RLS on all 12 tables. Policies:
+- Call `cloud--configure_auth` to **enable auto-confirm** so users can sign in immediately after signup (no email verification friction during development). *(User can turn this off later for production.)*
 
-| Table | SELECT | INSERT | UPDATE | DELETE |
-|-------|--------|--------|--------|--------|
-| trips | member | authenticated (auto-add as owner via trigger) | member | owner/admin |
-| trip_members | member | member OR valid invite token | member (own row) | owner/admin |
-| invites | member | owner/admin | owner/admin | owner/admin |
-| polls | member | member | owner/admin | owner/admin |
-| poll_options | member | member | member | member |
-| votes | member | member (own) | member (own) | member (own) |
-| itinerary_items | member | member | member | member |
-| attachments | member | member | member | member |
-| comments | member | member (own) | member (own) | member (own) |
-| expenses | member | member | member | member |
-| expense_splits | member | member | member | member |
-| trip_share_tokens | member | owner/admin | owner/admin | owner/admin |
+### Route structure
 
-**Trigger**: After INSERT on `trips`, auto-insert the creator into `trip_members` with role `owner`.
+```text
+/login          — public
+/signup         — public
+/share/:token   — public (placeholder)
+/app/trips      — protected (via ProtectedRoute)
+/app/decisions  — protected
+/app/itinerary  — protected
+/app/expenses   — protected
+/app/more       — protected
+/               — redirect to /app/trips
+```
 
-### Files changed (code)
-None — this is purely database migrations. The `types.ts` file will auto-regenerate after migration.
+### Key details
 
-### Execution
-Two migration tool calls (split for size). After confirming creation, I'll list all tables, RLS status, and policies.
+- `signUp` passes `{ data: { display_name } }` so the trigger can read it from `raw_user_meta_data`
+- No localStorage for auth gating — purely `supabase.auth.onAuthStateChange` + session
+- Navigation after login/signup uses `react-router-dom` `useNavigate` (no full reload)
+- Forms use the existing teal gradient button styling
+- 10 files total changed/created
 
