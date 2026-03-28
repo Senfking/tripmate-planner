@@ -120,7 +120,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
       if (!activeInvite) return;
       const { error } = await supabase
         .from("invites")
-        .update({ revoked_at: new Date().toISOString() })
+        .update({ revoked_at: new Date().toISOString() } as any)
         .eq("id", activeInvite.id);
       if (error) throw error;
     },
