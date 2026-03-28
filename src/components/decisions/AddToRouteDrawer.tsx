@@ -164,7 +164,7 @@ export function AddToRouteDrawer({
         </p>
       )}
       {gapWarning && !gapDismissed && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="flex items-start gap-2 rounded-lg bg-accent p-3 text-sm text-accent-foreground">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <div className="flex-1">
             <p>⚠️ {gapWarning}</p>
