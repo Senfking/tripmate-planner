@@ -193,11 +193,41 @@ export type Database = {
           },
         ]
       }
+      invite_redemptions: {
+        Row: {
+          id: string
+          invite_id: string
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          invite_id: string
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          invite_id?: string
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invite_redemptions_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "invites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invites: {
         Row: {
           created_by: string
           expires_at: string
           id: string
+          revoked_at: string | null
           role: string
           token: string
           trip_id: string
@@ -206,6 +236,7 @@ export type Database = {
           created_by: string
           expires_at: string
           id?: string
+          revoked_at?: string | null
           role?: string
           token: string
           trip_id: string
@@ -214,6 +245,7 @@ export type Database = {
           created_by?: string
           expires_at?: string
           id?: string
+          revoked_at?: string | null
           role?: string
           token?: string
           trip_id?: string
@@ -447,6 +479,7 @@ export type Database = {
           name: string
           tentative_end_date: string | null
           tentative_start_date: string | null
+          trip_code: string
           updated_at: string
         }
         Insert: {
@@ -456,6 +489,7 @@ export type Database = {
           name: string
           tentative_end_date?: string | null
           tentative_start_date?: string | null
+          trip_code: string
           updated_at?: string
         }
         Update: {
@@ -465,6 +499,7 @@ export type Database = {
           name?: string
           tentative_end_date?: string | null
           tentative_start_date?: string | null
+          trip_code?: string
           updated_at?: string
         }
         Relationships: []
@@ -503,6 +538,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_trip_code: { Args: never; Returns: string }
       is_trip_admin_or_owner: {
         Args: { _trip_id: string; _user_id: string }
         Returns: boolean
@@ -511,7 +547,9 @@ export type Database = {
         Args: { _trip_id: string; _user_id: string }
         Returns: boolean
       }
+      join_by_code: { Args: { _code: string }; Returns: Json }
       redeem_invite: { Args: { _token: string }; Returns: Json }
+      regenerate_trip_code: { Args: { _trip_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
