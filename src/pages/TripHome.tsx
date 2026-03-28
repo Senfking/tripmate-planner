@@ -6,8 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { InviteModal } from "@/components/InviteModal";
-import { VibeBoard } from "@/components/vibe/VibeBoard";
-import { WhereWhenSection } from "@/components/decisions/WhereWhenSection";
+import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { format } from "date-fns";
 
 export default function TripHome() {
@@ -151,14 +150,13 @@ export default function TripHome() {
           <TabsTrigger value="admin">Admin</TabsTrigger>
         </TabsList>
         <TabsContent value="decisions" className="px-4 py-4">
-          <VibeBoard
+          <DecisionsFlow
             tripId={trip.id}
             myRole={myRole}
             isActive={(trip as any).vibe_board_active ?? false}
             isLocked={(trip as any).vibe_board_locked ?? false}
             memberCount={memberCount ?? 0}
           />
-          <WhereWhenSection tripId={trip.id} myRole={myRole} />
         </TabsContent>
         <TabsContent value="itinerary">{tabPlaceholder("Itinerary")}</TabsContent>
         <TabsContent value="bookings">{tabPlaceholder("Bookings & Docs")}</TabsContent>
