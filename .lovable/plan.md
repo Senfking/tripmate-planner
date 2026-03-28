@@ -1,22 +1,21 @@
 
 
-## Fix: Blank Screen from React Duplicate Instance
+## Rename TripCrew → Junto
 
-### Problem
-`@tanstack/react-query` calls `useEffect` on a `null` React instance, meaning Vite is bundling two separate copies of React. The `resolve.dedupe` config in `vite.config.ts` already lists React entries, but the Vite dep cache (`node_modules/.vite`) may be stale.
+### Files to change (7 files)
 
-### Solution
-1. **Force a full dep re-optimization** by adding a cache-busting comment or timestamp to `vite.config.ts` (forces Vite to re-hash and rebuild the dep cache).
-2. **Ensure `optimizeDeps.include`** explicitly lists `react`, `react-dom`, and `@tanstack/react-query` so Vite pre-bundles them together in one pass, preventing duplicate React instances.
+1. **`index.html`** — Title, meta description, author, apple-mobile-web-app-title, og:title, og:description
+2. **`public/manifest.json`** — `name`, `short_name`, `description`
+3. **`src/service-worker.ts`** — Cache name `tripcrew-v1` → `junto-v1`
+4. **`src/components/AppLayout.tsx`** — Header logo text
+5. **`src/components/AppSidebar.tsx`** — Sidebar logo text
+6. **`src/components/InstallPrompt.tsx`** — "Install TripCrew" → "Install Junto"
+7. **`public/icon-512.svg`** — SVG text element
 
 ### Changes
+Pure string replacements only. No layout, logic, or styling changes.
 
-**`vite.config.ts`** — Add `optimizeDeps.include` to force co-bundling:
-```ts
-optimizeDeps: {
-  include: ['react', 'react-dom', 'react/jsx-runtime', '@tanstack/react-query'],
-},
-```
-
-This tells Vite to pre-bundle these together, guaranteeing a single React instance. The existing `resolve.dedupe` stays as a secondary safeguard.
+- All instances of `TripCrew` → `Junto`
+- `tripcrew` (lowercase in cache name) → `junto`
+- Descriptions updated to remove "crew" references (e.g. "Plan trips together with your crew" → "Plan trips together")
 
