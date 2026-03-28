@@ -1,47 +1,22 @@
 
 
-## TripCrew PWA — Implementation Plan
+## Fix: Blank Screen from React Duplicate Instance
 
-### Overview
-A mobile-first Progressive Web App for group trip planning with bottom tab navigation (mobile) and sidebar navigation (desktop). Clean, travel-inspired design with warm colors.
+### Problem
+`@tanstack/react-query` calls `useEffect` on a `null` React instance, meaning Vite is bundling two separate copies of React. The `resolve.dedupe` config in `vite.config.ts` already lists React entries, but the Vite dep cache (`node_modules/.vite`) may be stale.
 
-### Design System
-- **Theme color**: `#E07A5F` (warm terracotta/coral — travel-inspired)
-- **Background**: white
-- **Accent colors**: Terracotta primary, sandy neutrals, ocean blue secondary
-- **Typography**: Clean, friendly — using the existing sans-serif stack
-- **Border radius**: Rounded, soft feel
+### Solution
+1. **Force a full dep re-optimization** by adding a cache-busting comment or timestamp to `vite.config.ts` (forces Vite to re-hash and rebuild the dep cache).
+2. **Ensure `optimizeDeps.include`** explicitly lists `react`, `react-dom`, and `@tanstack/react-query` so Vite pre-bundles them together in one pass, preventing duplicate React instances.
 
-### ⚠️ PWA Note
-PWA features (offline support, install prompt) will **only work in the published/deployed version**, not in the Lovable editor preview. Service worker registration will be guarded against iframe/preview contexts to avoid caching issues during development.
+### Changes
 
-### Files to Create
-1. **`public/manifest.json`** — Web app manifest with name, colors, icons
-2. **`public/icon-192.svg`** — Placeholder SVG icon (192x192)
-3. **`public/icon-512.svg`** — Placeholder SVG icon (512x512)
-4. **`src/service-worker.ts`** — Service worker for app shell caching
-5. **`src/components/BottomNav.tsx`** — Mobile bottom navigation (5 tabs)
-6. **`src/components/AppSidebar.tsx`** — Desktop sidebar navigation
-7. **`src/components/AppLayout.tsx`** — Responsive layout shell (header + nav)
-8. **`src/components/InstallPrompt.tsx`** — "Add to Home Screen" banner
-9. **`src/pages/Trips.tsx`** — Placeholder tab screen
-10. **`src/pages/Decisions.tsx`** — Placeholder tab screen
-11. **`src/pages/Itinerary.tsx`** — Placeholder tab screen
-12. **`src/pages/Expenses.tsx`** — Placeholder tab screen
-13. **`src/pages/More.tsx`** — Placeholder tab screen
+**`vite.config.ts`** — Add `optimizeDeps.include` to force co-bundling:
+```ts
+optimizeDeps: {
+  include: ['react', 'react-dom', 'react/jsx-runtime', '@tanstack/react-query'],
+},
+```
 
-### Files to Modify
-1. **`index.html`** — Add manifest link, theme-color meta, viewport meta, SW registration script
-2. **`src/App.tsx`** — Add routes for all 5 tabs, wrap in layout
-3. **`src/index.css`** — Update design tokens to warm travel palette
-4. **`src/main.tsx`** — Add SW registration guard for preview/iframe
-5. **`src/pages/Index.tsx`** — Redirect to /trips
-
-### Navigation & Layout
-- **Mobile**: Fixed bottom nav bar with 5 icon+label tabs (Trips, Decisions, Itinerary, Expenses, More). Top header with "TripCrew" branding.
-- **Desktop (≥768px)**: Side navigation replaces bottom bar. Same 5 items with icons and labels.
-- **Page transitions**: CSS animations for smooth tab switching (fade/slide)
-
-### Screens
-Each tab shows a centered placeholder with an icon and the tab name — styled consistently with the travel theme. No real content yet.
+This tells Vite to pre-bundle these together, guaranteeing a single React instance. The existing `resolve.dedupe` stays as a secondary safeguard.
 
