@@ -135,7 +135,7 @@ export function useRouteStops(tripId: string | undefined) {
         .eq("trip_id", tripId!)
         .order("position");
 
-      await updateTripDates((allStops || []) as RouteStop[]);
+      await updateTripDates((allStops || []) as unknown as RouteStop[]);
       await createItineraryDays(input);
       return data;
     },
