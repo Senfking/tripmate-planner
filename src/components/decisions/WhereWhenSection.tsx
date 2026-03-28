@@ -29,26 +29,6 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
     confirmProposal,
   } = useProposals(tripId);
 
-  const { prefPolls, voteCounts, myVotes, createPoll, addOption, vote, lockPoll } =
-    useDecisionPolls(tripId);
-
-  // Preference poll creation
-  const [prefOpen, setPrefOpen] = useState(false);
-  const [prefTitle, setPrefTitle] = useState("");
-
-  const handleCreatePref = () => {
-    if (!prefTitle.trim()) return;
-    createPoll.mutate(
-      { type: "preference", title: prefTitle.trim() },
-      {
-        onSuccess: () => {
-          setPrefTitle("");
-          setPrefOpen(false);
-        },
-      }
-    );
-  };
-
   return (
     <div className="space-y-6 mt-6">
       {/* Section header */}
