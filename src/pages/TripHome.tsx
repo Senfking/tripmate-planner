@@ -40,6 +40,24 @@ export default function TripHome() {
     enabled: !!tripId && !!user,
   });
 
+  const { data: myRole } = useQuery({
+    queryKey: ["my-trip-role", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_members")
+        .select("role")
+        .eq("trip_id", tripId!)
+        .eq("user_id", user!.id)
+        .single();
+      if (error) throw error;
+      return data.role;
+    },
+    enabled: !!tripId && !!user,
+  });
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const canInvite = myRole === "owner" || myRole === "admin";
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
