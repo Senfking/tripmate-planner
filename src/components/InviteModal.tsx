@@ -50,7 +50,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
 
   const shareableOrigin = getShareableAppOrigin();
 
-  const { data: activeInvite, isLoading: inviteLoading } = useQuery({
+  const { data: activeInvite, isLoading: inviteLoading, isError: inviteError } = useQuery({
     queryKey: ["active-invite", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -66,6 +66,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
       return data;
     },
     enabled: open && !!user,
+    retry: 1,
   });
 
   const { data: redemptionCount } = useQuery({
@@ -159,10 +160,10 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
   });
 
   useEffect(() => {
-    if (open && !inviteLoading && !activeInvite && user && shareableOrigin) {
+    if (open && !inviteLoading && !inviteError && !activeInvite && user && shareableOrigin) {
       createInvite.mutate();
     }
-  }, [open, inviteLoading, activeInvite, user, shareableOrigin]);
+  }, [open, inviteLoading, inviteError, activeInvite, user, shareableOrigin]);
 
   const inviteLink = activeInvite && shareableOrigin
     ? `${shareableOrigin}/app/invite/${activeInvite.token}`
@@ -215,7 +216,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
             Share link
           </div>
 
-          {inviteLoading || createInvite.isPending ? (
+          {inviteLoading && !inviteError ? (
             <div className="flex items-center justify-center py-3">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
@@ -299,9 +300,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
             </button>
             <p className="text-xs text-muted-foreground text-center">
               People can enter this at{" "}
-              <span className="font-medium">
-                {shareableOrigin ? `${new URL(shareableOrigin).hostname}/join` : "your-app/join"}
-              </span>
+              <span className="font-medium">juntotravel.lovable.app/join</span>
             </p>
             {isAdmin && (
               <Button
