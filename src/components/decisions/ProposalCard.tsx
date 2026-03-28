@@ -21,11 +21,12 @@ const REACTION_BUTTONS = [
   { value: "no", icon: X, label: "Not for me", color: "text-destructive" },
 ] as const;
 
-export function ProposalCard({ proposal, reactions, myReaction, canAdopt, onReact, onAdopt, isAdopting }: Props) {
+export function ProposalCard({ proposal, reactions, myReaction, canAdopt, hasAdopted, onReact, onAdopt, isAdopting }: Props) {
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
+  const isGreyedOut = hasAdopted && !proposal.adopted;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3 relative">
+    <div className={`rounded-xl border border-border bg-card p-4 space-y-3 relative ${isGreyedOut ? "opacity-50" : ""}`}>
       {proposal.adopted && (
         <Badge className="absolute top-3 right-3 bg-green-600 text-white">
           <Check className="h-3 w-3 mr-1" /> Adopted
