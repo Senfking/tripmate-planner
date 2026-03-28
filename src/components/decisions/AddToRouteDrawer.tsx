@@ -138,7 +138,7 @@ export function AddToRouteDrawer({
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Adding as Stop {nextPosition}
+        Adding as Stop {stopCount}
       </p>
 
       <Button

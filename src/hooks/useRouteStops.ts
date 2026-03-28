@@ -151,24 +151,13 @@ export function useRouteStops(tripId: string | undefined) {
         .eq("id", input.id);
       if (error) throw error;
 
-      // Re-fetch all stops sorted by start_date and re-number positions
       const { data: allStops } = await supabase
         .from("trip_route_stops" as any)
         .select("*")
         .eq("trip_id", tripId!)
         .order("start_date", { ascending: true });
 
-      const sorted = (allStops || []) as unknown as RouteStop[];
-      for (let i = 0; i < sorted.length; i++) {
-        if (sorted[i].position !== i + 1) {
-          await supabase
-            .from("trip_route_stops" as any)
-            .update({ position: i + 1 } as any)
-            .eq("id", sorted[i].id);
-        }
-      }
-
-      await updateTripDates(sorted);
+      await updateTripDates((allStops || []) as unknown as RouteStop[]);
     },
     onSuccess: invalidate,
   });
