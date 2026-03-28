@@ -149,7 +149,15 @@ export default function TripHome() {
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           <TabsTrigger value="admin">Admin</TabsTrigger>
         </TabsList>
-        <TabsContent value="decisions">{tabPlaceholder("Decisions")}</TabsContent>
+        <TabsContent value="decisions" className="px-4 py-4">
+          <VibeBoard
+            tripId={trip.id}
+            myRole={myRole}
+            isActive={(trip as any).vibe_board_active ?? false}
+            isLocked={(trip as any).vibe_board_locked ?? false}
+            memberCount={memberCount ?? 0}
+          />
+        </TabsContent>
         <TabsContent value="itinerary">{tabPlaceholder("Itinerary")}</TabsContent>
         <TabsContent value="bookings">{tabPlaceholder("Bookings & Docs")}</TabsContent>
         <TabsContent value="expenses">{tabPlaceholder("Expenses")}</TabsContent>
