@@ -50,7 +50,7 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
         <Label htmlFor="dest">Destination</Label>
         <Input id="dest" placeholder="e.g. Barcelona" value={destination} onChange={(e) => setDestination(e.target.value)} required />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="sd">Start date</Label>
           <Input id="sd" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="text-base min-h-[44px] appearance-none" />
