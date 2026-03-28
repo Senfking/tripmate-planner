@@ -121,9 +121,20 @@ export default function TripHome() {
               {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
             </p>
           </div>
-          <div className="flex items-center gap-1 text-white/80 text-sm shrink-0">
-            <Users className="h-4 w-4" />
-            <span>{memberCount ?? "…"}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {canInvite && (
+              <button
+                onClick={() => setInviteOpen(true)}
+                className="flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm text-white hover:bg-white/30 transition-colors"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Invite
+              </button>
+            )}
+            <div className="flex items-center gap-1 text-white/80 text-sm">
+              <Users className="h-4 w-4" />
+              <span>{memberCount ?? "…"}</span>
+            </div>
           </div>
         </div>
       </header>
