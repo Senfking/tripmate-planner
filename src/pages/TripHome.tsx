@@ -150,14 +150,13 @@ export default function TripHome() {
           <TabsTrigger value="admin">Admin</TabsTrigger>
         </TabsList>
         <TabsContent value="decisions" className="px-4 py-4">
-          <VibeBoard
+          <DecisionsFlow
             tripId={trip.id}
             myRole={myRole}
             isActive={(trip as any).vibe_board_active ?? false}
             isLocked={(trip as any).vibe_board_locked ?? false}
             memberCount={memberCount ?? 0}
           />
-          <WhereWhenSection tripId={trip.id} myRole={myRole} />
         </TabsContent>
         <TabsContent value="itinerary">{tabPlaceholder("Itinerary")}</TabsContent>
         <TabsContent value="bookings">{tabPlaceholder("Bookings & Docs")}</TabsContent>
