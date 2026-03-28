@@ -35,7 +35,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     stops,
     addStop,
     removeStop,
-    reorderStop,
+    updateStopDates,
     lockRoute,
     unlockRoute,
     isProposalInRoute,
@@ -60,7 +60,12 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
             onSuccess: () => toast({ title: "Stop removed from route" }),
           });
         }}
-        onReorderStop={(input) => reorderStop.mutate(input)}
+        onUpdateStopDates={(input) => {
+          updateStopDates.mutate(input, {
+            onSuccess: () => toast({ title: "Dates updated! 📅" }),
+          });
+        }}
+        isUpdatingDates={updateStopDates.isPending}
         onLockRoute={() => lockRoute.mutate()}
         onUnlockRoute={() => unlockRoute.mutate()}
         isLocking={lockRoute.isPending || unlockRoute.isPending}
