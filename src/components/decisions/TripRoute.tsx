@@ -300,7 +300,7 @@ export function TripRoute({
       })}
 
       {/* Actions */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
         {canManage && !isRouteLocked && (
           <Button
             variant="outline"

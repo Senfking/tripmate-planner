@@ -197,10 +197,12 @@ export function StructuredPoll({
 
       {/* Lock button */}
       {canManage && !isLocked && !disabled && poll.options.length > 0 && (
-        <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={onLock} disabled={isLocking}>
-          <Lock className="h-3.5 w-3.5" />
-          {isLocking ? "Locking…" : "Lock poll"}
-        </Button>
+        <div className="flex justify-end md:justify-start">
+          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={onLock} disabled={isLocking}>
+            <Lock className="h-3.5 w-3.5" />
+            {isLocking ? "Locking…" : "Lock poll"}
+          </Button>
+        </div>
       )}
     </div>
   );
