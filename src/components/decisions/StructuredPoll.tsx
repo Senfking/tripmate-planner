@@ -175,7 +175,7 @@ export function StructuredPoll({
                   onChange={(e) => setNewLabel(e.target.value)}
                 />
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-end md:justify-start">
                 <Button size="sm" onClick={handleAdd} disabled={isAddingOption || (isDate ? !newStart || !newEnd : !newLabel.trim())}>
                   Add
                 </Button>
