@@ -170,7 +170,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
   }, [open, inviteLoading, activeInvite, user, shareableOrigin]);
 
   const inviteLink = activeInvite && shareableOrigin
-    ? `${shareableOrigin}/app/invite/${activeInvite.token}`
+    ? `${shareableOrigin}/i/${activeInvite.token}`
     : null;
 
   const daysLeft = activeInvite
