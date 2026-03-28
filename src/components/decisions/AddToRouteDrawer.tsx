@@ -51,7 +51,7 @@ export function AddToRouteDrawer({
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [notes, setNotes] = useState("");
 
-  const nextPosition = existingStops.length + 1;
+  const stopCount = existingStops.length + 1;
 
   useEffect(() => {
     if (open) {
