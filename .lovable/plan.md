@@ -1,55 +1,52 @@
 
 
-## Authentication for Junto
+## Trip List, Create Trip, and Trip Home
+
+### Overview
+Build three new screens: trip list, create trip form, and trip home scaffold. The trips table already exists with RLS and the `auto_add_trip_owner` trigger handles auto-inserting the creator as owner — so no manual `trip_members` insert is needed on create.
+
+Note: The DB schema doesn't have an `emoji` column on `trips`. We'll need a migration to add it.
 
 ### Database migration
 
-1. **Create `profiles` table** with `id` (UUID, FK to auth.users ON DELETE CASCADE), `display_name` (text), `created_at`, `updated_at`
-2. **RLS**: authenticated users can SELECT all profiles, UPDATE own profile only
-3. **Trigger**: auto-create profile row on signup (display_name from `raw_user_meta_data->>'display_name'`)
+Add `emoji` column to `trips` table:
+```sql
+ALTER TABLE public.trips ADD COLUMN emoji text DEFAULT '✈️';
+```
 
 ### New files
 
 | File | Purpose |
 |------|---------|
-| `src/contexts/AuthContext.tsx` | Auth provider wrapping the app — exposes `user`, `profile`, `loading`, `signIn`, `signUp`, `signOut` via context. Uses `onAuthStateChange` + `getSession`. Fetches profile from `profiles` table. |
-| `src/components/ProtectedRoute.tsx` | Wrapper that redirects to `/login` if not authenticated (checks context, not localStorage). |
-| `src/pages/Login.tsx` | Email + password form, link to `/signup`, error messages, loading spinner. |
-| `src/pages/Signup.tsx` | Email + password + display name form, link to `/login`. Passes `display_name` in `options.data` on `signUp`. |
+| `src/pages/TripList.tsx` | `/app/trips` — fetches trips via `trip_members` join, shows cards or empty state, FAB button |
+| `src/pages/TripNew.tsx` | `/app/trips/new` — form with name, dates, emoji picker. Inserts into `trips`, redirects to new trip |
+| `src/pages/TripHome.tsx` | `/app/trips/:tripId` — header with emoji/name/dates/member count, 5 tabs with "Coming soon" placeholders, back button |
 
 ### Modified files
 
 | File | Change |
 |------|--------|
-| `src/App.tsx` | Wrap with `AuthProvider`. Move app pages under `/app/*` with `ProtectedRoute`. Add public routes `/login`, `/signup`. Redirect `/` to `/app/trips`. |
-| `src/components/AppLayout.tsx` | Show user display name in header. |
-| `src/components/AppSidebar.tsx` | Update nav links to `/app/*` paths. |
-| `src/components/BottomNav.tsx` | Update nav links to `/app/*` paths. |
-| `src/pages/More.tsx` | Show display name + logout button (calls `signOut`, navigates to `/login`). |
+| `src/App.tsx` | Add routes: `/app/trips` (TripList), `/app/trips/new` (TripNew), `/app/trips/:tripId` (TripHome). TripNew and TripHome are protected but rendered **without** AppLayout (no bottom nav). |
+| `src/integrations/supabase/types.ts` | Auto-regenerated after migration |
 
-### Auth configuration
+### Key implementation details
 
-- Call `cloud--configure_auth` to **enable auto-confirm** so users can sign in immediately after signup (no email verification friction during development). *(User can turn this off later for production.)*
+- **Trip list query**: `supabase.from('trip_members').select('trip_id, trips(*)').eq('user_id', user.id)` — only returns trips the user belongs to
+- **Member count**: Separate query or count via `trip_members` for each trip
+- **Create trip**: Insert into `trips` only — the `auto_add_trip_owner` trigger handles the `trip_members` row automatically
+- **Emoji picker**: Simple grid of ~20 travel emojis (no external library needed)
+- **Pull-to-refresh**: Use `react-query`'s `refetch` with a pull-down gesture handler
+- **Trip not found**: If the trip query returns no rows (RLS filters it), show a friendly "Trip not found" message
+- **TripHome tabs**: Use shadcn `Tabs` component with 5 tabs, each showing a placeholder
+- **Date formatting**: Use `date-fns` `format` for display
+- **FAB**: Fixed-position circular gradient button at bottom-right
 
-### Route structure
-
-```text
-/login          — public
-/signup         — public
-/share/:token   — public (placeholder)
-/app/trips      — protected (via ProtectedRoute)
-/app/decisions  — protected
-/app/itinerary  — protected
-/app/expenses   — protected
-/app/more       — protected
-/               — redirect to /app/trips
+### Route structure (updated)
+```
+/app/trips          → TripList (inside AppLayout)
+/app/trips/new      → TripNew (inside AppLayout)
+/app/trips/:tripId  → TripHome (standalone, no bottom nav)
 ```
 
-### Key details
-
-- `signUp` passes `{ data: { display_name } }` so the trigger can read it from `raw_user_meta_data`
-- No localStorage for auth gating — purely `supabase.auth.onAuthStateChange` + session
-- Navigation after login/signup uses `react-router-dom` `useNavigate` (no full reload)
-- Forms use the existing teal gradient button styling
-- 10 files total changed/created
+### Files changed: 4 total (3 new, 1 modified) + 1 migration
 
