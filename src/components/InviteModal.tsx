@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getShareableAppOrigin } from "@/lib/appUrl";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Loader2, Link } from "lucide-react";
+import { Copy, Check, Loader2, Link, AlertTriangle } from "lucide-react";
 
 interface InviteModalProps {
   tripId: string;
@@ -24,6 +25,8 @@ export function InviteModal({ tripId, tripName, open, onOpenChange }: InviteModa
   const { user } = useAuth();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const shareableOrigin = getShareableAppOrigin();
 
   const createInvite = useMutation({
     mutationFn: async () => {
@@ -39,8 +42,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange }: InviteModa
       });
       if (error) throw error;
 
-      const baseUrl = window.location.origin;
-      return `${baseUrl}/app/invite/${token}`;
+      return `${shareableOrigin}/app/invite/${token}`;
     },
     onSuccess: (link) => {
       setInviteLink(link);
@@ -76,7 +78,14 @@ export function InviteModal({ tripId, tripName, open, onOpenChange }: InviteModa
           </DialogDescription>
         </DialogHeader>
 
-        {!inviteLink ? (
+        {!shareableOrigin ? (
+          <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-4">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground">
+              Invite links won't work until the app is published to a public URL. Please publish your app first.
+            </p>
+          </div>
+        ) : !inviteLink ? (
           <Button
             onClick={() => createInvite.mutate()}
             disabled={createInvite.isPending}
