@@ -72,7 +72,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
           <MapPin className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-foreground">Destinations</h2>
         </div>
-        {proposals.length > 0 && !isRouteLocked && !isInRoute && (
+        {proposals.length > 0 && !isRouteLocked && (
           <ProposalForm
             onSubmit={(data) => {
               createProposal.mutate(data, {
