@@ -210,30 +210,7 @@ export function useRouteStops(tripId: string | undefined) {
     onSuccess: invalidate,
   });
 
-  const reorderStop = useMutation({
-    mutationFn: async ({
-      id,
-      newPosition,
-    }: {
-      id: string;
-      newPosition: number;
-    }) => {
-      const current = stops.find((s) => s.id === id);
-      if (!current) return;
-      const target = stops.find((s) => s.position === newPosition);
-      if (target) {
-        await supabase
-          .from("trip_route_stops" as any)
-          .update({ position: current.position } as any)
-          .eq("id", target.id);
-      }
-      await supabase
-        .from("trip_route_stops" as any)
-        .update({ position: newPosition } as any)
-        .eq("id", id);
-    },
-    onSuccess: invalidate,
-  });
+
 
   const lockRoute = useMutation({
     mutationFn: async () => {
