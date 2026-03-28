@@ -1,4 +1,10 @@
 @tailwind base;
+
+/* Ensure date input calendar icon isn't clipped on mobile */
+input[type="date"] {
+  min-width: 0;
+  padding-right: 0.25rem;
+}
 @tailwind components;
 @tailwind utilities;
 
