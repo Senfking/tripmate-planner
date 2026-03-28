@@ -1,8 +1,10 @@
+import { useState, useEffect, useCallback } from "react";
 import { useVibeBoard } from "@/hooks/useVibeBoard";
 import { VibeQuestion } from "./VibeQuestion";
 import { VibeSummary } from "./VibeSummary";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Lock } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 const QUESTIONS = [
   {
@@ -44,6 +46,8 @@ const QUESTIONS = [
   },
 ];
 
+type LocalAnswers = Record<string, string[]>;
+
 type Props = {
   tripId: string;
   myRole: string | undefined;
@@ -64,13 +68,70 @@ export function VibeBoard({
     aggregates,
     respondentCount,
     isLoading,
-    upsertAnswer,
+    submitAnswers,
     activateBoard,
     lockBoard,
   } = useVibeBoard(tripId);
 
   const canManage = myRole === "owner" || myRole === "admin";
-  const hasAnswered = myResponses.length > 0;
+  const hasSubmitted = myResponses.length > 0;
+
+  // Local draft state
+  const [draft, setDraft] = useState<LocalAnswers>({});
+  const [initialized, setInitialized] = useState(false);
+
+  // Seed draft from saved responses once loaded
+  useEffect(() => {
+    if (isLoading || initialized) return;
+    if (myResponses.length > 0) {
+      const seeded: LocalAnswers = {};
+      for (const r of myResponses) {
+        if (!seeded[r.question_key]) seeded[r.question_key] = [];
+        seeded[r.question_key].push(r.answer_value);
+      }
+      setDraft(seeded);
+    }
+    setInitialized(true);
+  }, [isLoading, myResponses, initialized]);
+
+  const handleSelect = useCallback(
+    (questionKey: string, value: string, multiSelect?: boolean) => {
+      setDraft((prev) => {
+        const current = prev[questionKey] || [];
+        if (multiSelect) {
+          if (current.includes(value)) {
+            return {
+              ...prev,
+              [questionKey]: current.filter((v) => v !== value),
+            };
+          }
+          if (current.length >= 2) {
+            return { ...prev, [questionKey]: [current[1], value] };
+          }
+          return { ...prev, [questionKey]: [...current, value] };
+        }
+        return { ...prev, [questionKey]: [value] };
+      });
+    },
+    []
+  );
+
+  const allAnswered =
+    QUESTIONS.every((q) => (draft[q.key]?.length || 0) >= 1);
+
+  const handleSubmit = () => {
+    const answers: { questionKey: string; answerValue: string }[] = [];
+    for (const q of QUESTIONS) {
+      for (const val of draft[q.key] || []) {
+        answers.push({ questionKey: q.key, answerValue: val });
+      }
+    }
+    submitAnswers.mutate(answers, {
+      onSuccess: () => {
+        toast({ title: "Your vibe is in! 🎉" });
+      },
+    });
+  };
 
   // Inactive state
   if (!isActive) {
@@ -95,7 +156,7 @@ export function VibeBoard({
   }
 
   // Locked + never answered
-  if (isLocked && !hasAnswered) {
+  if (isLocked && !hasSubmitted) {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2">
@@ -115,11 +176,6 @@ export function VibeBoard({
       </div>
     );
   }
-
-  const selectedFor = (key: string) =>
-    myResponses
-      .filter((r) => r.question_key === key)
-      .map((r) => r.answer_value);
 
   return (
     <div className="space-y-4">
@@ -162,18 +218,28 @@ export function VibeBoard({
               key={q.key}
               label={q.label}
               options={q.options}
-              selected={selectedFor(q.key)}
+              selected={draft[q.key] || []}
               multiSelect={q.multiSelect}
-              disabled={isLocked || upsertAnswer.isPending}
-              onSelect={(val) =>
-                upsertAnswer.mutate({
-                  questionKey: q.key,
-                  answerValue: val,
-                })
-              }
+              disabled={isLocked}
+              onSelect={(val) => handleSelect(q.key, val, q.multiSelect)}
             />
           ))}
         </div>
+      )}
+
+      {/* Submit button */}
+      {!isLocked && (
+        <Button
+          className="w-full"
+          onClick={handleSubmit}
+          disabled={!allAnswered || submitAnswers.isPending}
+        >
+          {submitAnswers.isPending
+            ? "Submitting…"
+            : hasSubmitted
+            ? "Update my vibe"
+            : "Submit my vibe"}
+        </Button>
       )}
 
       {/* Summary */}
