@@ -7,6 +7,7 @@ import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { InviteModal } from "@/components/InviteModal";
 import { VibeBoard } from "@/components/vibe/VibeBoard";
+import { WhereWhenSection } from "@/components/decisions/WhereWhenSection";
 import { format } from "date-fns";
 
 export default function TripHome() {
@@ -157,6 +158,7 @@ export default function TripHome() {
             isLocked={(trip as any).vibe_board_locked ?? false}
             memberCount={memberCount ?? 0}
           />
+          <WhereWhenSection tripId={trip.id} myRole={myRole} />
         </TabsContent>
         <TabsContent value="itinerary">{tabPlaceholder("Itinerary")}</TabsContent>
         <TabsContent value="bookings">{tabPlaceholder("Bookings & Docs")}</TabsContent>

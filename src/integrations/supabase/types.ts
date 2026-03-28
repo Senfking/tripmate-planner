@@ -404,6 +404,35 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_reactions: {
+        Row: {
+          id: string
+          proposal_id: string
+          user_id: string
+          value: string
+        }
+        Insert: {
+          id?: string
+          proposal_id: string
+          user_id: string
+          value: string
+        }
+        Update: {
+          id?: string
+          proposal_id?: string
+          user_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_reactions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "trip_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_members: {
         Row: {
           id: string
@@ -429,6 +458,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "trip_members_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_proposals: {
+        Row: {
+          adopted: boolean
+          created_at: string
+          created_by: string
+          destination: string
+          end_date: string
+          id: string
+          note: string | null
+          start_date: string
+          trip_id: string
+        }
+        Insert: {
+          adopted?: boolean
+          created_at?: string
+          created_by: string
+          destination: string
+          end_date: string
+          id?: string
+          note?: string | null
+          start_date: string
+          trip_id: string
+        }
+        Update: {
+          adopted?: boolean
+          created_at?: string
+          created_by?: string
+          destination?: string
+          end_date?: string
+          id?: string
+          note?: string | null
+          start_date?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_proposals_trip_id_fkey"
             columns: ["trip_id"]
             isOneToOne: false
             referencedRelation: "trips"
@@ -580,6 +653,22 @@ export type Database = {
     }
     Functions: {
       generate_trip_code: { Args: never; Returns: string }
+      get_poll_vote_counts: {
+        Args: { _poll_id: string }
+        Returns: {
+          count: number
+          poll_option_id: string
+          value: string
+        }[]
+      }
+      get_trip_proposal_reaction_counts: {
+        Args: { _trip_id: string }
+        Returns: {
+          count: number
+          proposal_id: string
+          value: string
+        }[]
+      }
       get_vibe_aggregates: {
         Args: { _trip_id: string }
         Returns: {
