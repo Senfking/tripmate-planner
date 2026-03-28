@@ -413,7 +413,13 @@ export function ProposalCard({
             <p className="text-sm text-amber-600">{validation.softWarning}</p>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-end md:justify-start">
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Cancel
+            </button>
             <Button
               size="sm"
               onClick={handleConfirmRoute}
@@ -425,12 +431,6 @@ export function ProposalCard({
                 ? "Confirm anyway"
                 : "Confirm and add to route"}
             </Button>
-            <button
-              onClick={() => setConfirmOpen(false)}
-              className="text-sm text-muted-foreground hover:text-foreground underline"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
