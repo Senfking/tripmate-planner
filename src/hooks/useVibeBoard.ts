@@ -50,63 +50,29 @@ export function useVibeBoard(tripId: string | undefined) {
     enabled: !!tripId && !!user,
   });
 
-  const upsertAnswer = useMutation({
-    mutationFn: async ({
-      questionKey,
-      answerValue,
-    }: {
-      questionKey: string;
-      answerValue: string;
-    }) => {
-      if (questionKey !== "musthave") {
-        // For non-musthave: delete existing then insert (upsert via partial unique index)
-        const existing = myResponses.data?.find(
-          (r) => r.question_key === questionKey
-        );
-        if (existing) {
-          await supabase
-            .from("vibe_responses")
-            .delete()
-            .eq("id", existing.id);
-        }
-        const { error } = await supabase.from("vibe_responses").insert({
-          trip_id: tripId!,
-          user_id: user!.id,
-          question_key: questionKey,
-          answer_value: answerValue,
-        });
-        if (error) throw error;
-      } else {
-        // musthave: toggle — if already selected remove it, otherwise add (max 2)
-        const existing = myResponses.data?.find(
-          (r) => r.question_key === "musthave" && r.answer_value === answerValue
-        );
-        if (existing) {
-          const { error } = await supabase
-            .from("vibe_responses")
-            .delete()
-            .eq("id", existing.id);
-          if (error) throw error;
-        } else {
-          const currentMusthaves =
-            myResponses.data?.filter((r) => r.question_key === "musthave") ||
-            [];
-          if (currentMusthaves.length >= 2) {
-            // Remove oldest, add new
-            await supabase
-              .from("vibe_responses")
-              .delete()
-              .eq("id", currentMusthaves[0].id);
-          }
-          const { error } = await supabase.from("vibe_responses").insert({
-            trip_id: tripId!,
-            user_id: user!.id,
-            question_key: "musthave",
-            answer_value: answerValue,
-          });
-          if (error) throw error;
-        }
-      }
+  const submitAnswers = useMutation({
+    mutationFn: async (
+      answers: { questionKey: string; answerValue: string }[]
+    ) => {
+      // Delete all existing responses for this user+trip
+      const { error: delError } = await supabase
+        .from("vibe_responses")
+        .delete()
+        .eq("trip_id", tripId!)
+        .eq("user_id", user!.id);
+      if (delError) throw delError;
+
+      // Insert all answers in one batch
+      const rows = answers.map((a) => ({
+        trip_id: tripId!,
+        user_id: user!.id,
+        question_key: a.questionKey,
+        answer_value: a.answerValue,
+      }));
+      const { error: insError } = await supabase
+        .from("vibe_responses")
+        .insert(rows);
+      if (insError) throw insError;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vibe-my-responses", tripId] });
@@ -149,7 +115,7 @@ export function useVibeBoard(tripId: string | undefined) {
       myResponses.isLoading ||
       aggregates.isLoading ||
       respondentCount.isLoading,
-    upsertAnswer,
+    submitAnswers,
     activateBoard,
     lockBoard,
   };
