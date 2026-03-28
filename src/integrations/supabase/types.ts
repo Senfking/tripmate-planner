@@ -117,6 +117,35 @@ export type Database = {
           },
         ]
       }
+      date_option_votes: {
+        Row: {
+          date_option_id: string
+          id: string
+          user_id: string
+          value: string
+        }
+        Insert: {
+          date_option_id: string
+          id?: string
+          user_id: string
+          value: string
+        }
+        Update: {
+          date_option_id?: string
+          id?: string
+          user_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "date_option_votes_date_option_id_fkey"
+            columns: ["date_option_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_date_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_splits: {
         Row: {
           expense_id: string
@@ -404,6 +433,41 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_date_options: {
+        Row: {
+          created_at: string
+          created_by: string
+          end_date: string
+          id: string
+          proposal_id: string
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          end_date: string
+          id?: string
+          proposal_id: string
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          end_date?: string
+          id?: string
+          proposal_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_date_options_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "trip_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_reactions: {
         Row: {
           id: string
@@ -468,38 +532,48 @@ export type Database = {
       trip_proposals: {
         Row: {
           adopted: boolean
+          confirmed_date_option_id: string | null
           created_at: string
           created_by: string
           destination: string
-          end_date: string
+          end_date: string | null
           id: string
           note: string | null
-          start_date: string
+          start_date: string | null
           trip_id: string
         }
         Insert: {
           adopted?: boolean
+          confirmed_date_option_id?: string | null
           created_at?: string
           created_by: string
           destination: string
-          end_date: string
+          end_date?: string | null
           id?: string
           note?: string | null
-          start_date: string
+          start_date?: string | null
           trip_id: string
         }
         Update: {
           adopted?: boolean
+          confirmed_date_option_id?: string | null
           created_at?: string
           created_by?: string
           destination?: string
-          end_date?: string
+          end_date?: string | null
           id?: string
           note?: string | null
-          start_date?: string
+          start_date?: string | null
           trip_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "trip_proposals_confirmed_date_option_fkey"
+            columns: ["confirmed_date_option_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_date_options"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "trip_proposals_trip_id_fkey"
             columns: ["trip_id"]
@@ -653,6 +727,14 @@ export type Database = {
     }
     Functions: {
       generate_trip_code: { Args: never; Returns: string }
+      get_date_option_vote_counts: {
+        Args: { _trip_id: string }
+        Returns: {
+          count: number
+          date_option_id: string
+          value: string
+        }[]
+      }
       get_poll_vote_counts: {
         Args: { _poll_id: string }
         Returns: {
