@@ -129,7 +129,7 @@ export function StructuredPoll({
       })}
 
       {/* Add option form */}
-      {canManage && !isLocked && !disabled && (
+      {!isLocked && !disabled && (
         <>
           {showAddForm ? (
             <div className="space-y-2 pt-1">

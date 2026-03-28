@@ -1,9 +1,8 @@
-import { useState } from "react";
-import { format } from "date-fns";
+import { useState, useMemo } from "react";
+import { format, parseISO } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -15,8 +14,10 @@ import {
   ChevronUp,
   Plus,
   CalendarDays,
+  Trophy,
 } from "lucide-react";
-import { AddToRouteDrawer } from "./AddToRouteDrawer";
+import { DateRangePicker } from "./DateRangePicker";
+import { validateRouteDate } from "./routeValidation";
 import type { Proposal, DateOption, DateVotes } from "@/hooks/useProposals";
 import type { RouteStop } from "@/hooks/useRouteStops";
 
@@ -52,6 +53,27 @@ const DATE_VOTE_BUTTONS = [
   { value: "no", icon: X, label: "No", activeClass: "bg-destructive/10 border-destructive text-destructive" },
 ] as const;
 
+function getTopPickIndex(dateOptions: DateOption[], dateVotes: DateVotes): number {
+  if (dateOptions.length === 0) return -1;
+
+  let bestIdx = 0;
+  let bestYes = -1;
+  let bestNo = Infinity;
+
+  dateOptions.forEach((d, i) => {
+    const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
+    const yes = votes.yes;
+    const no = votes.no;
+    if (yes > bestYes || (yes === bestYes && no < bestNo)) {
+      bestYes = yes;
+      bestNo = no;
+      bestIdx = i;
+    }
+  });
+
+  return bestIdx;
+}
+
 export function ProposalCard({
   proposal,
   destVotes,
@@ -75,15 +97,76 @@ export function ProposalCard({
 
   const [datesExpanded, setDatesExpanded] = useState(false);
   const [showDateForm, setShowDateForm] = useState(false);
-  const [newStartDate, setNewStartDate] = useState("");
-  const [newEndDate, setNewEndDate] = useState("");
-  const [addToRouteOpen, setAddToRouteOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  // Inline confirm panel state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedDateOptionId, setSelectedDateOptionId] = useState<string | null>(null);
+  const [manualDateRange, setManualDateRange] = useState<DateRange | undefined>();
+
+  // Pre-populate top pick when confirm panel opens
+  const topPickIdx = useMemo(() => getTopPickIndex(dateOptions, dateVotes), [dateOptions, dateVotes]);
+
+  const handleOpenConfirm = () => {
+    if (dateOptions.length > 0) {
+      setSelectedDateOptionId(dateOptions[topPickIdx]?.id || null);
+      setManualDateRange(undefined);
+    } else {
+      setSelectedDateOptionId(null);
+      // Pre-fill start date from last route stop
+      if (existingStops.length > 0) {
+        const sorted = [...existingStops].sort((a, b) => b.position - a.position);
+        const lastEnd = sorted[0]?.end_date;
+        if (lastEnd) {
+          setManualDateRange({ from: parseISO(lastEnd), to: undefined });
+        } else {
+          setManualDateRange(undefined);
+        }
+      } else {
+        setManualDateRange(undefined);
+      }
+    }
+    setConfirmOpen(true);
+  };
+
+  // Determine dates for validation
+  const confirmStartDate = selectedDateOptionId
+    ? dateOptions.find((d) => d.id === selectedDateOptionId)?.start_date
+    : manualDateRange?.from
+    ? format(manualDateRange.from, "yyyy-MM-dd")
+    : undefined;
+  const confirmEndDate = selectedDateOptionId
+    ? dateOptions.find((d) => d.id === selectedDateOptionId)?.end_date
+    : manualDateRange?.to
+    ? format(manualDateRange.to, "yyyy-MM-dd")
+    : undefined;
+
+  const validation =
+    confirmStartDate && confirmEndDate
+      ? validateRouteDate(confirmStartDate, confirmEndDate, existingStops)
+      : { hardError: null, softWarning: null };
+
+  const canConfirm = !!(confirmStartDate && confirmEndDate && !validation.hardError);
+
+  const handleConfirmRoute = () => {
+    if (!canConfirm || !confirmStartDate || !confirmEndDate) return;
+    onAddToRoute({
+      destination: proposal.destination,
+      start_date: confirmStartDate,
+      end_date: confirmEndDate,
+      position: existingStops.length + 1,
+      proposal_id: proposal.id,
+    });
+    setConfirmOpen(false);
+  };
 
   const handleAddDate = () => {
-    if (!newStartDate || !newEndDate) return;
-    onAddDateOption({ startDate: newStartDate, endDate: newEndDate });
-    setNewStartDate("");
-    setNewEndDate("");
+    if (!dateRange?.from || !dateRange?.to) return;
+    onAddDateOption({
+      startDate: format(dateRange.from, "yyyy-MM-dd"),
+      endDate: format(dateRange.to, "yyyy-MM-dd"),
+    });
+    setDateRange(undefined);
     setShowDateForm(false);
   };
 
@@ -158,6 +241,7 @@ export function ProposalCard({
             {dateOptions.map((d) => {
               const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
               const myVote = myDateVotes[d.id];
+              const votingDisabled = isFrozen || isInRoute;
               return (
                 <div key={d.id} className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3">
                   <p className="text-sm font-medium text-foreground">
@@ -171,12 +255,12 @@ export function ProposalCard({
                         <button
                           key={value}
                           onClick={() => onVoteDateOption(d.id, value)}
-                          disabled={isFrozen}
+                          disabled={votingDisabled}
                           className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs border transition-colors ${
                             isSelected
                               ? activeClass
                               : "bg-background border-border text-muted-foreground hover:bg-muted"
-                          } ${isFrozen ? "opacity-60 cursor-not-allowed" : ""}`}
+                          } ${votingDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
                         >
                           <Icon className="h-3 w-3" />
                           <span>{label}</span>
@@ -189,36 +273,22 @@ export function ProposalCard({
               );
             })}
 
-            {/* Add date option inline form */}
-            {!isFrozen && (
+            {/* Add date option inline form — any member can add */}
+            {!isFrozen && !isInRoute && (
               <>
                 {showDateForm ? (
                   <div className="space-y-2 rounded-lg bg-muted/20 p-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Start</Label>
-                        <Input
-                          type="date"
-                          value={newStartDate}
-                          onChange={(e) => setNewStartDate(e.target.value)}
-                          className="text-base min-h-[44px]"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">End</Label>
-                        <Input
-                          type="date"
-                          value={newEndDate}
-                          onChange={(e) => setNewEndDate(e.target.value)}
-                          className="text-base min-h-[44px]"
-                        />
-                      </div>
-                    </div>
+                    <DateRangePicker
+                      value={dateRange}
+                      onChange={setDateRange}
+                      className="w-full"
+                      placeholder="Select date range"
+                    />
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         onClick={handleAddDate}
-                        disabled={!newStartDate || !newEndDate || isAddingDate}
+                        disabled={!dateRange?.from || !dateRange?.to || isAddingDate}
                         className="text-xs"
                       >
                         {isAddingDate ? "Adding…" : "Add dates"}
@@ -226,7 +296,10 @@ export function ProposalCard({
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => setShowDateForm(false)}
+                        onClick={() => {
+                          setShowDateForm(false);
+                          setDateRange(undefined);
+                        }}
                         className="text-xs"
                       >
                         Cancel
@@ -251,31 +324,111 @@ export function ProposalCard({
       </div>
 
       {/* Add to route button — owner/admin only */}
-      {canManage && !isRouteLocked && !isInRoute && (
+      {canManage && !isRouteLocked && !isInRoute && !confirmOpen && (
         <Button
           variant="outline"
           size="sm"
           className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-          onClick={() => setAddToRouteOpen(true)}
+          onClick={handleOpenConfirm}
         >
           <Route className="h-3.5 w-3.5" />
-          Add to route
+          Add to route 🗺️
         </Button>
       )}
 
-      {/* Add to route drawer */}
-      <AddToRouteDrawer
-        open={addToRouteOpen}
-        onOpenChange={setAddToRouteOpen}
-        existingStops={existingStops}
-        defaultDestination={proposal.destination}
-        proposalId={proposal.id}
-        onSubmit={(input) => {
-          onAddToRoute(input);
-          setAddToRouteOpen(false);
-        }}
-        isPending={isAddingToRoute}
-      />
+      {/* Inline confirm panel */}
+      {confirmOpen && canManage && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+          <h5 className="font-semibold text-sm text-foreground">
+            Add "{proposal.destination}" to route
+          </h5>
+
+          {dateOptions.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">
+                Select the dates for this stop:
+              </p>
+              {dateOptions.map((d, i) => {
+                const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
+                const isTopPick = i === topPickIdx;
+                const isSelected = selectedDateOptionId === d.id;
+                return (
+                  <label
+                    key={d.id}
+                    className={`flex items-center gap-3 rounded-lg p-3 cursor-pointer border transition-colors ${
+                      isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-muted/20 hover:bg-muted/40"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`route-date-${proposal.id}`}
+                      checked={isSelected}
+                      onChange={() => setSelectedDateOptionId(d.id)}
+                      className="accent-[hsl(var(--primary))]"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-foreground">
+                        {fmt(d.start_date)} – {fmt(d.end_date)}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (✅ Yes {votes.yes} · 🤔 Maybe {votes.maybe})
+                      </span>
+                    </div>
+                    {isTopPick && (
+                      <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                        <Trophy className="h-3 w-3" />
+                        Top pick
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">
+                No date options yet — pick dates manually:
+              </p>
+              <DateRangePicker
+                value={manualDateRange}
+                onChange={setManualDateRange}
+                className="w-full"
+                placeholder="Select date range"
+              />
+            </div>
+          )}
+
+          {/* Validation messages */}
+          {validation.hardError && (
+            <p className="text-sm text-destructive">{validation.hardError}</p>
+          )}
+          {validation.softWarning && !validation.hardError && (
+            <p className="text-sm text-amber-600">{validation.softWarning}</p>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              onClick={handleConfirmRoute}
+              disabled={!canConfirm || isAddingToRoute}
+            >
+              {isAddingToRoute
+                ? "Adding…"
+                : validation.softWarning
+                ? "Confirm anyway"
+                : "Confirm and add to route"}
+            </Button>
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
