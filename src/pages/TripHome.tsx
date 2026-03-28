@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { InviteModal } from "@/components/InviteModal";
+import { VibeBoard } from "@/components/vibe/VibeBoard";
 import { format } from "date-fns";
 
 export default function TripHome() {
