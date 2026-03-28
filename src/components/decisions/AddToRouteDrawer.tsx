@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { differenceInDays, parseISO } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { format, parseISO } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -17,7 +17,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { AlertTriangle } from "lucide-react";
+import { DateRangePicker } from "./DateRangePicker";
+import { validateRouteDate } from "./routeValidation";
 import type { RouteStop } from "@/hooks/useRouteStops";
 
 type Props = {
@@ -48,11 +49,8 @@ export function AddToRouteDrawer({
 }: Props) {
   const isMobile = useIsMobile();
   const [destination, setDestination] = useState(defaultDestination || "");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [notes, setNotes] = useState("");
-  const [gapWarning, setGapWarning] = useState<string | null>(null);
-  const [gapDismissed, setGapDismissed] = useState(false);
 
   const nextPosition = existingStops.length + 1;
 
@@ -60,54 +58,31 @@ export function AddToRouteDrawer({
     if (open) {
       setDestination(defaultDestination || "");
       setNotes("");
-      setGapDismissed(false);
+      // Pre-fill start date from last stop
       if (existingStops.length > 0) {
         const lastStop = [...existingStops].sort(
           (a, b) => b.position - a.position
         )[0];
-        setStartDate(lastStop.end_date);
-        setEndDate("");
+        setDateRange({ from: parseISO(lastStop.end_date), to: undefined });
       } else {
-        setStartDate("");
-        setEndDate("");
+        setDateRange(undefined);
       }
     }
   }, [open, defaultDestination, existingStops]);
 
-  const endBeforeStart = !!(startDate && endDate && endDate <= startDate);
-  const overlap = existingStops.find(
-    (s) =>
-      startDate && endDate && startDate < s.end_date && endDate > s.start_date
+  const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
+  const endDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
+
+  const validation = useMemo(
+    () =>
+      startDate && endDate
+        ? validateRouteDate(startDate, endDate, existingStops)
+        : { hardError: null, softWarning: null },
+    [startDate, endDate, existingStops]
   );
 
-  useEffect(() => {
-    if (!startDate || existingStops.length === 0) {
-      setGapWarning(null);
-      return;
-    }
-    const sorted = [...existingStops].sort((a, b) =>
-      b.end_date.localeCompare(a.end_date)
-    );
-    const lastEnd = sorted[0]?.end_date;
-    if (lastEnd && startDate > lastEnd) {
-      const gapDays = differenceInDays(
-        parseISO(startDate),
-        parseISO(lastEnd)
-      );
-      if (gapDays > 0) {
-        setGapWarning(
-          `${gapDays}-day gap between previous stop and this one. Intentional? (e.g. travel day)`
-        );
-      } else {
-        setGapWarning(null);
-      }
-    } else {
-      setGapWarning(null);
-    }
-  }, [startDate, existingStops]);
-
   const canSubmit =
-    destination.trim() && startDate && endDate && !endBeforeStart && !overlap;
+    destination.trim() && startDate && endDate && !validation.hardError;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -125,57 +100,30 @@ export function AddToRouteDrawer({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label>Destination</Label>
-        <Input
+        <input
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
           placeholder="e.g. Barcelona"
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label>Start date</Label>
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="text-base min-h-[44px]"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>End date</Label>
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="text-base min-h-[44px]"
-          />
-        </div>
+
+      <div className="space-y-1.5">
+        <Label>Dates</Label>
+        <DateRangePicker
+          value={dateRange}
+          onChange={setDateRange}
+          className="w-full"
+          placeholder="Select date range"
+        />
       </div>
 
-      {endBeforeStart && (
-        <p className="text-sm text-destructive">
-          End date must be after start date
-        </p>
+      {/* Validation messages */}
+      {validation.hardError && (
+        <p className="text-sm text-destructive">{validation.hardError}</p>
       )}
-      {overlap && (
-        <p className="text-sm text-destructive">
-          These dates overlap with Stop {overlap.position} (
-          {overlap.destination}). Please choose different dates.
-        </p>
-      )}
-      {gapWarning && !gapDismissed && (
-        <div className="flex items-start gap-2 rounded-lg bg-accent p-3 text-sm text-accent-foreground">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-          <div className="flex-1">
-            <p>⚠️ {gapWarning}</p>
-            <button
-              onClick={() => setGapDismissed(true)}
-              className="text-xs underline mt-1"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
+      {validation.softWarning && !validation.hardError && (
+        <p className="text-sm text-amber-600">{validation.softWarning}</p>
       )}
 
       <div className="space-y-1.5">
@@ -197,7 +145,11 @@ export function AddToRouteDrawer({
         onClick={handleSubmit}
         disabled={!canSubmit || isPending}
       >
-        {isPending ? "Adding…" : "Add to route"}
+        {isPending
+          ? "Adding…"
+          : validation.softWarning
+          ? "Confirm anyway"
+          : "Add to route"}
       </Button>
     </div>
   );
