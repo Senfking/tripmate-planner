@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
+import { useInviteInfo } from "@/hooks/useInviteInfo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
-  const inviteToken = sessionStorage.getItem("invite_token");
+  const { isInviteFlow, info } = useInviteInfo();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -32,20 +33,36 @@ export default function Login() {
     }
   };
 
-  const isInviteFlow = !!inviteToken;
   const signupLink = redirectTo ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : "/signup";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary text-white">
-            <Map className="h-6 w-6" />
-          </div>
+          {isInviteFlow ? (
+            <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-primary text-2xl">
+              {info?.trip_emoji ?? "✈️"}
+            </div>
+          ) : (
+            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary text-white">
+              <Map className="h-6 w-6" />
+            </div>
+          )}
           {isInviteFlow ? (
             <>
               <CardTitle className="text-2xl">You're invited!</CardTitle>
-              <CardDescription>You've been invited to a trip on Junto. Sign in to join.</CardDescription>
+              <CardDescription className="space-y-1">
+                {info ? (
+                  <>
+                    <span className="block font-medium text-foreground">
+                      {info.inviter_name} invited you to {info.trip_name}
+                    </span>
+                    <span className="block">Sign in to join the trip.</span>
+                  </>
+                ) : (
+                  <span>You've been invited to a trip on Junto. Sign in to join.</span>
+                )}
+              </CardDescription>
             </>
           ) : (
             <>
@@ -71,7 +88,7 @@ export default function Login() {
           <CardFooter className="flex-col gap-3">
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Sign in
+              {isInviteFlow ? "Sign in & join" : "Sign in"}
             </Button>
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
