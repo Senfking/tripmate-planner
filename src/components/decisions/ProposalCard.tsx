@@ -153,7 +153,6 @@ export function ProposalCard({
       destination: proposal.destination,
       start_date: confirmStartDate,
       end_date: confirmEndDate,
-      position: existingStops.length + 1,
       proposal_id: proposal.id,
     });
     setConfirmOpen(false);
