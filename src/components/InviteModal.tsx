@@ -78,7 +78,14 @@ export function InviteModal({ tripId, tripName, open, onOpenChange }: InviteModa
           </DialogDescription>
         </DialogHeader>
 
-        {!inviteLink ? (
+        {!shareableOrigin ? (
+          <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-4">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground">
+              Invite links won't work until the app is published to a public URL. Please publish your app first.
+            </p>
+          </div>
+        ) : !inviteLink ? (
           <Button
             onClick={() => createInvite.mutate()}
             disabled={createInvite.isPending}
