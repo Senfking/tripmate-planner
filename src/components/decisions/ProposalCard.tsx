@@ -305,15 +305,17 @@ export function ProposalCard({
                     </div>
                   </div>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => setShowDateForm(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Suggest dates
-                  </Button>
+                  <div className="flex justify-end md:justify-start">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => setShowDateForm(true)}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Suggest dates
+                    </Button>
+                  </div>
                 )}
               </>
             )}
