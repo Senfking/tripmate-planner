@@ -31,7 +31,6 @@ type Props = {
     destination: string;
     start_date: string;
     end_date: string;
-    position: number;
     notes?: string;
     proposal_id?: string;
   }) => void;
