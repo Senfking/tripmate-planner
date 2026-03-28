@@ -517,6 +517,7 @@ export type Database = {
         Args: { _trip_id: string; _user_id: string }
         Returns: boolean
       }
+      redeem_invite: { Args: { _token: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

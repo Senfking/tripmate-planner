@@ -15,6 +15,7 @@ import Decisions from "./pages/Decisions";
 import Itinerary from "./pages/Itinerary";
 import Expenses from "./pages/Expenses";
 import More from "./pages/More";
+import InviteRedeem from "./pages/InviteRedeem";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/share/:token" element={<div>Share placeholder</div>} />
+            <Route path="/app/invite/:token" element={<InviteRedeem />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>

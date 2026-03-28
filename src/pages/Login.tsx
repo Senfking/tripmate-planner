@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Map, Loader2 } from "lucide-react";
 export default function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function Login() {
     if (err) {
       setError(friendlyError(err.message));
     } else {
-      navigate("/app/trips", { replace: true });
+      navigate(redirectTo || "/app/trips", { replace: true });
     }
   };
 
