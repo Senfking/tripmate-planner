@@ -106,7 +106,7 @@ export default function TripNew() {
             </div>
 
             {/* Dates */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&_input[type=date]]:px-2">
               <div className="space-y-2">
                 <Label htmlFor="startDate">Start Date</Label>
                 <Input
