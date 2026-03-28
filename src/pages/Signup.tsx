@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ import { Map, Loader2 } from "lucide-react";
 export default function Signup() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
+  const inviteToken = sessionStorage.getItem("invite_token");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,9 +29,12 @@ export default function Signup() {
     if (err) {
       setError(friendlyError(err.message));
     } else {
-      navigate("/app/trips", { replace: true });
+      navigate(redirectTo || "/app/trips", { replace: true });
     }
   };
+
+  const isInviteFlow = !!inviteToken;
+  const loginLink = redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
@@ -37,8 +43,17 @@ export default function Signup() {
           <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary text-white">
             <Map className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl">Create your account</CardTitle>
-          <CardDescription>Join Junto and start planning trips</CardDescription>
+          {isInviteFlow ? (
+            <>
+              <CardTitle className="text-2xl">You're invited!</CardTitle>
+              <CardDescription>You've been invited to a trip on Junto. Create an account to join.</CardDescription>
+            </>
+          ) : (
+            <>
+              <CardTitle className="text-2xl">Create your account</CardTitle>
+              <CardDescription>Join Junto and start planning trips</CardDescription>
+            </>
+          )}
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -65,7 +80,7 @@ export default function Signup() {
             </Button>
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="text-primary underline-offset-4 hover:underline">Sign in</Link>
+              <Link to={loginLink} className="text-primary underline-offset-4 hover:underline">Sign in</Link>
             </p>
           </CardFooter>
         </form>

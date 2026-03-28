@@ -13,6 +13,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
+  const inviteToken = sessionStorage.getItem("invite_token");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,9 @@ export default function Login() {
     }
   };
 
+  const isInviteFlow = !!inviteToken;
+  const signupLink = redirectTo ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : "/signup";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-sm">
@@ -38,8 +42,17 @@ export default function Login() {
           <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary text-white">
             <Map className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>Sign in to Junto</CardDescription>
+          {isInviteFlow ? (
+            <>
+              <CardTitle className="text-2xl">You're invited!</CardTitle>
+              <CardDescription>You've been invited to a trip on Junto. Sign in to join.</CardDescription>
+            </>
+          ) : (
+            <>
+              <CardTitle className="text-2xl">Welcome back</CardTitle>
+              <CardDescription>Sign in to Junto</CardDescription>
+            </>
+          )}
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -62,7 +75,7 @@ export default function Login() {
             </Button>
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-primary underline-offset-4 hover:underline">Sign up</Link>
+              <Link to={signupLink} className="text-primary underline-offset-4 hover:underline">Sign up</Link>
             </p>
           </CardFooter>
         </form>
