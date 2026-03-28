@@ -13,7 +13,7 @@ export function useVibeBoard(tripId: string | undefined) {
   const qc = useQueryClient();
 
   const myResponses = useQuery({
-    queryKey: ["vibe-my-responses", tripId],
+    queryKey: ["vibe-my-responses", tripId, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vibe_responses")
@@ -75,7 +75,7 @@ export function useVibeBoard(tripId: string | undefined) {
       if (insError) throw insError;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["vibe-my-responses", tripId] });
+      qc.invalidateQueries({ queryKey: ["vibe-my-responses", tripId, user?.id] });
       qc.invalidateQueries({ queryKey: ["vibe-aggregates", tripId] });
       qc.invalidateQueries({ queryKey: ["vibe-respondent-count", tripId] });
     },
