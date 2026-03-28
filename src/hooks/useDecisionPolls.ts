@@ -182,8 +182,6 @@ export function useDecisionPolls(tripId: string | undefined) {
 
   return {
     polls: polls.data || [],
-    destPoll,
-    datePoll,
     prefPolls,
     voteCounts: voteCounts.data || {},
     myVotes: myVotes.data || ({} as Record<string, string>),
