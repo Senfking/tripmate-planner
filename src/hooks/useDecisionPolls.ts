@@ -30,7 +30,7 @@ export function useDecisionPolls(tripId: string | undefined) {
         .from("polls")
         .select("*, poll_options(*)")
         .eq("trip_id", tripId!)
-        .in("type", ["destination", "date", "preference"])
+        .eq("type", "preference")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data || []).map((p: any) => ({
