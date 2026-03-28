@@ -156,17 +156,26 @@ export function useDecisionPolls(tripId: string | undefined) {
       // Check if vote exists
       const { data: existing } = await supabase
         .from("votes")
-        .select("id")
+        .select("id, value")
         .eq("poll_option_id", optionId)
         .eq("user_id", user!.id)
         .maybeSingle();
 
       if (existing) {
-        const { error } = await supabase
-          .from("votes")
-          .update({ value })
-          .eq("id", existing.id);
-        if (error) throw error;
+        if (existing.value === value) {
+          // Same value → unselect (delete)
+          const { error } = await supabase
+            .from("votes")
+            .delete()
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("votes")
+            .update({ value })
+            .eq("id", existing.id);
+          if (error) throw error;
+        }
       } else {
         const { error } = await supabase.from("votes").insert({
           poll_option_id: optionId,
