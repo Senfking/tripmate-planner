@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 const ERROR_MESSAGES: Record<string, string> = {
   not_found: "This invite link is invalid or doesn't exist.",
   already_redeemed: "This invite has already been used.",
-  expired: "This invite link has expired. Ask the trip organiser for a new one.",
+  expired: "This invite link has expired. Ask the organiser for a new one or request the trip code.",
   already_member: "You're already a member of this trip!",
   not_authenticated: "Please sign in to join this trip.",
+  revoked: "This invite link has been disabled. Ask the organiser for the trip code instead.",
 };
 
 export default function InviteRedeem() {

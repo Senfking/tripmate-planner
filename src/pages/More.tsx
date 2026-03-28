@@ -1,7 +1,7 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, LogOut, User } from "lucide-react";
+import { MoreHorizontal, LogOut, User, Hash } from "lucide-react";
 
 const More = () => {
   const { profile, signOut } = useAuth();
@@ -22,10 +22,19 @@ const More = () => {
       )}
       <p className="max-w-sm text-muted-foreground">Settings, profile, and additional options.</p>
 
-      <Button variant="outline" className="gap-2" onClick={handleLogout}>
-        <LogOut className="h-4 w-4" />
-        Sign out
-      </Button>
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <Button variant="outline" className="gap-2" asChild>
+          <Link to="/join">
+            <Hash className="h-4 w-4" />
+            Join a trip
+          </Link>
+        </Button>
+
+        <Button variant="outline" className="gap-2" onClick={handleLogout}>
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </Button>
+      </div>
     </div>
   );
 };

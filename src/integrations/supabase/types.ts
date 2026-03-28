@@ -198,8 +198,6 @@ export type Database = {
           created_by: string
           expires_at: string
           id: string
-          redeemed_at: string | null
-          redeemed_by: string | null
           role: string
           token: string
           trip_id: string
@@ -208,8 +206,6 @@ export type Database = {
           created_by: string
           expires_at: string
           id?: string
-          redeemed_at?: string | null
-          redeemed_by?: string | null
           role?: string
           token: string
           trip_id: string
@@ -218,8 +214,6 @@ export type Database = {
           created_by?: string
           expires_at?: string
           id?: string
-          redeemed_at?: string | null
-          redeemed_by?: string | null
           role?: string
           token?: string
           trip_id?: string
