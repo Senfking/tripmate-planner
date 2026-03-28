@@ -9,6 +9,7 @@ type Props = {
   reactions: { in: number; maybe: number; no: number };
   myReaction: string | undefined;
   canAdopt: boolean;
+  hasAdopted: boolean;
   onReact: (value: string) => void;
   onAdopt: () => void;
   isAdopting: boolean;
@@ -20,11 +21,12 @@ const REACTION_BUTTONS = [
   { value: "no", icon: X, label: "Not for me", color: "text-destructive" },
 ] as const;
 
-export function ProposalCard({ proposal, reactions, myReaction, canAdopt, onReact, onAdopt, isAdopting }: Props) {
+export function ProposalCard({ proposal, reactions, myReaction, canAdopt, hasAdopted, onReact, onAdopt, isAdopting }: Props) {
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
+  const isGreyedOut = hasAdopted && !proposal.adopted;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3 relative">
+    <div className={`rounded-xl border border-border bg-card p-4 space-y-3 relative ${isGreyedOut ? "opacity-50" : ""}`}>
       {proposal.adopted && (
         <Badge className="absolute top-3 right-3 bg-green-600 text-white">
           <Check className="h-3 w-3 mr-1" /> Adopted
@@ -44,6 +46,10 @@ export function ProposalCard({ proposal, reactions, myReaction, canAdopt, onReac
 
       <p className="text-xs text-muted-foreground">Suggested by {proposal.creator_name}</p>
 
+      {isGreyedOut && (
+        <p className="text-xs text-muted-foreground font-medium">Another plan was adopted</p>
+      )}
+
       {/* Reactions */}
       <div className="flex items-center gap-2 flex-wrap">
         {REACTION_BUTTONS.map(({ value, icon: Icon, label, color }) => {
@@ -53,7 +59,7 @@ export function ProposalCard({ proposal, reactions, myReaction, canAdopt, onReac
             <button
               key={value}
               onClick={() => onReact(value)}
-              disabled={proposal.adopted}
+              disabled={proposal.adopted || isGreyedOut}
               className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border transition-colors ${
                 isSelected
                   ? "bg-primary/10 border-primary text-primary font-medium"

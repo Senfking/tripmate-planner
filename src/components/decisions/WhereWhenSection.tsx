@@ -92,6 +92,7 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
             proposal={p}
             reactions={reactionCounts[p.id] || { in: 0, maybe: 0, no: 0 }}
             myReaction={myReactions[p.id]}
+            hasAdopted={hasAdopted}
             canAdopt={canManage && !hasAdopted}
             onReact={(value) => react.mutate({ proposalId: p.id, value })}
             onAdopt={() => {
