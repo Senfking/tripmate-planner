@@ -531,8 +531,6 @@ export type Database = {
       }
       trip_proposals: {
         Row: {
-          adopted: boolean
-          confirmed_date_option_id: string | null
           created_at: string
           created_by: string
           destination: string
@@ -543,8 +541,6 @@ export type Database = {
           trip_id: string
         }
         Insert: {
-          adopted?: boolean
-          confirmed_date_option_id?: string | null
           created_at?: string
           created_by: string
           destination: string
@@ -555,8 +551,6 @@ export type Database = {
           trip_id: string
         }
         Update: {
-          adopted?: boolean
-          confirmed_date_option_id?: string | null
           created_at?: string
           created_by?: string
           destination?: string
@@ -568,14 +562,61 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "trip_proposals_confirmed_date_option_fkey"
-            columns: ["confirmed_date_option_id"]
+            foreignKeyName: "trip_proposals_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: "proposal_date_options"
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_route_stops: {
+        Row: {
+          confirmed_at: string
+          confirmed_by: string
+          destination: string
+          end_date: string
+          id: string
+          notes: string | null
+          position: number
+          proposal_id: string | null
+          start_date: string
+          trip_id: string
+        }
+        Insert: {
+          confirmed_at?: string
+          confirmed_by: string
+          destination: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          position?: number
+          proposal_id?: string | null
+          start_date: string
+          trip_id: string
+        }
+        Update: {
+          confirmed_at?: string
+          confirmed_by?: string
+          destination?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          position?: number
+          proposal_id?: string | null
+          start_date?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_route_stops_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "trip_proposals"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "trip_proposals_trip_id_fkey"
+            foreignKeyName: "trip_route_stops_trip_id_fkey"
             columns: ["trip_id"]
             isOneToOne: false
             referencedRelation: "trips"
@@ -624,6 +665,7 @@ export type Database = {
           emoji: string | null
           id: string
           name: string
+          route_locked: boolean
           tentative_end_date: string | null
           tentative_start_date: string | null
           trip_code: string
@@ -636,6 +678,7 @@ export type Database = {
           emoji?: string | null
           id?: string
           name: string
+          route_locked?: boolean
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code: string
@@ -648,6 +691,7 @@ export type Database = {
           emoji?: string | null
           id?: string
           name?: string
+          route_locked?: boolean
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code?: string
