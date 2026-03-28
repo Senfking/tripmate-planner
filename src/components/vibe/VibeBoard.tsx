@@ -158,12 +158,6 @@ export function VibeBoard({
   if (isLocked && !hasSubmitted) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-foreground">Vibe Board</h2>
-          <Lock className="h-4 w-4 text-muted-foreground ml-auto" />
-          <span className="text-xs text-muted-foreground">Locked</span>
-        </div>
         <p className="text-sm text-muted-foreground italic">
           You didn't submit answers before the board was locked.
         </p>
