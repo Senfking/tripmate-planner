@@ -6,6 +6,7 @@ type Props = {
   selected: string[];
   multiSelect?: boolean;
   disabled?: boolean;
+  missing?: boolean;
   onSelect: (value: string) => void;
 };
 
@@ -15,15 +16,21 @@ export function VibeQuestion({
   selected,
   multiSelect,
   disabled,
+  missing,
   onSelect,
 }: Props) {
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2 rounded-lg p-2 -mx-2 transition-colors", missing && "bg-destructive/5 ring-1 ring-destructive/20")}>
       <p className="text-sm font-medium text-foreground">
         {label}
         {multiSelect && (
           <span className="text-muted-foreground font-normal ml-1">
             (pick up to 2)
+          </span>
+        )}
+        {missing && (
+          <span className="text-destructive font-normal ml-1 text-xs">
+            — please select
           </span>
         )}
       </p>

@@ -224,6 +224,7 @@ export function VibeBoard({
               multiSelect={q.multiSelect}
               disabled={isLocked}
               onSelect={(val) => handleSelect(q.key, val, q.multiSelect)}
+              missing={!isLocked && unansweredKeys.includes(q.key) && unansweredKeys.length < 5}
             />
           ))}
         </div>
