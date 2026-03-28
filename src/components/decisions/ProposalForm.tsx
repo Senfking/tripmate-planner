@@ -53,11 +53,11 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="sd">Start date</Label>
-          <Input id="sd" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+          <Input id="sd" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="text-base min-h-[44px] appearance-none" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="ed">End date</Label>
-          <Input id="ed" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+          <Input id="ed" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required className="text-base min-h-[44px] appearance-none" />
         </div>
       </div>
       <div className="space-y-1.5">
