@@ -1,67 +1,29 @@
 
 
-# Collapsible Step-by-Step Decisions Tab
+# Fix: Ensure All Modals Use Bottom Drawer on Mobile
 
-## Overview
+## Analysis
 
-Wrap the three existing sections (Vibe Board, Where & When, Preferences) in collapsible accordion-style cards with step numbers, status badges, and unlock gating logic. Content inside each section stays unchanged.
+After auditing every component in the codebase, all current modal-like components already use the `useIsMobile()` + Drawer/Dialog pattern correctly:
 
-## Files to Change
+- **ProposalForm.tsx** — Drawer on mobile, Dialog on desktop
+- **AddToRouteDrawer.tsx** — Drawer on mobile, Dialog on desktop
+- **TripRoute.tsx** (ConfirmWrapper for lock/unlock/remove) — Drawer on mobile, Dialog on desktop
+- **DecisionsFlow.tsx** (PreferencesContent) — Drawer on mobile, Dialog on desktop
+- **InviteModal.tsx** — Drawer on mobile, Dialog on desktop
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/pages/TripHome.tsx` | Edit | Replace flat rendering of VibeBoard + WhereWhenSection with new `DecisionsFlow` component |
-| `src/components/decisions/DecisionsFlow.tsx` | Create | Orchestrator: three collapsible step sections with expand/collapse state, unlock logic, status computation |
-| `src/components/decisions/StepSection.tsx` | Create | Reusable collapsible card: step number circle, title, status badge, chevron, smooth animation |
-| `src/hooks/useVibeBoard.ts` | No change | Already exposes `myResponses`, `respondentCount` needed for gating |
+The screenshot shows the **old "Confirm plan" dialog** which was removed in the multi-stop route migration. The current code no longer has that component. The preview may be showing a cached version.
 
-## How It Works
+## What Needs to Change
 
-### StepSection Component
-- Props: `stepNumber`, `title`, `subtitle?`, `status` (badge text + variant), `isExpanded`, `onToggle`, `isLocked?`, `lockMessage?`, `activeBorder?`, `children`
-- Renders a white card with subtle border; teal circle with step number on the left
-- Right side: status badge + animated chevron (▼/▶)
-- Collapsible body uses CSS `grid-template-rows: 0fr → 1fr` transition for smooth animation
-- When `isLocked`, header shows lock icon + lockMessage instead of status badge, and children are not rendered
-- When `activeBorder` is true, border becomes teal 1.5px
+**No code changes required** — the current codebase is already correct. The old "Confirm this plan" centered dialog no longer exists.
 
-### DecisionsFlow Component
-- Receives `tripId`, `myRole`, `memberCount`, and relevant vibe data from TripHome
-- Manages `expandedSections` state (Set of step keys)
-- Computes section states:
+## Memory Update
 
-**Step 1 — Vibe Board:**
-- `hasSubmitted` = myResponses.length > 0
-- Default expanded if not submitted; auto-collapse when submitted
-- Status: "✅ Done" if submitted, "In progress" if not
-- Collapsed summary: user's top answers from myResponses (e.g. "Full send 🔥 · Fair split ⚖️")
+I will update the project memory to strengthen the mobile-drawer rule so this pattern is never broken in future changes:
 
-**Step 2 — Where & When:**
-- `vibeRatio` = respondentCount / memberCount
-- `isUnlocked` = vibeRatio >= 0.5 OR manually skipped by admin
-- `manuallySkipped` local state toggled by "Skip" link (owner/admin only)
-- When locked: show lock icon + "Waiting for X more members to share their vibe" + Skip link for admin
-- When unlocked + no confirmed plan: auto-expand, status "In progress", active teal border
-- When confirmed: auto-collapse, status "✅ Confirmed", summary "Barcelona · Jun 5–8"
-
-**Step 3 — Preferences:**
-- Always available, default collapsed
-- Title: "③ Preferences · Optional"
-- Status: "X questions" if polls exist, "Add one" if empty
-
-### TripHome Changes
-- In the `decisions` TabsContent, replace the direct `<VibeBoard>` + `<WhereWhenSection>` with `<DecisionsFlow>` passing through all needed props
-- The VibeBoard and WhereWhenSection components render as children inside their respective StepSection — no internal changes
-
-## Visual Design
-- Step number: 28px teal circle with white number, left-aligned
-- Status badges: small rounded pill — green for done/confirmed, muted for in-progress
-- Chevron: `ChevronDown` with `rotate-0` → `rotate-[-90deg]` transition when collapsed
-- Card: `bg-white rounded-xl border shadow-sm p-4`
-- Active section: `border-primary border-[1.5px]`
-- Locked section: slightly `opacity-70`
-- Animation: `transition-all duration-300 ease-in-out` on the grid-rows wrapper
-
-## No Database Changes Required
-All data (myResponses, respondentCount, memberCount, hasConfirmed, leadingCombo) is already available from existing hooks.
+| File | Change |
+|------|--------|
+| `mem://index.md` | Strengthen the core rule about mobile drawers |
+| `mem://preferences/mobile-drawer.md` | Update with explicit "never use Dialog on mobile" rule |
 
