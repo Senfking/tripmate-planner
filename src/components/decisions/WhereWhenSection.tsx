@@ -113,6 +113,7 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
             );
           })}
         </div>
+      )}
     </div>
   );
 }
