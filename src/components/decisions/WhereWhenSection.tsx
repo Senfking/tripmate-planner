@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useProposals } from "@/hooks/useProposals";
 import { ProposalCard } from "./ProposalCard";
 import { ProposalForm } from "./ProposalForm";
