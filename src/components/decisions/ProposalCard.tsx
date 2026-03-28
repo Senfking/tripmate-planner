@@ -59,7 +59,7 @@ export function ProposalCard({ proposal, reactions, myReaction, canAdopt, hasAdo
             <button
               key={value}
               onClick={() => onReact(value)}
-              disabled={proposal.adopted}
+              disabled={proposal.adopted || isGreyedOut}
               className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border transition-colors ${
                 isSelected
                   ? "bg-primary/10 border-primary text-primary font-medium"
