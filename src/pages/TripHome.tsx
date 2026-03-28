@@ -154,6 +154,15 @@ export default function TripHome() {
         <TabsContent value="expenses">{tabPlaceholder("Expenses")}</TabsContent>
         <TabsContent value="admin">{tabPlaceholder("Admin")}</TabsContent>
       </Tabs>
+
+      {trip && (
+        <InviteModal
+          tripId={trip.id}
+          tripName={trip.name}
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+        />
+      )}
     </div>
   );
 }

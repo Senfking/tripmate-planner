@@ -27,7 +27,7 @@ export default function Login() {
     if (err) {
       setError(friendlyError(err.message));
     } else {
-      navigate("/app/trips", { replace: true });
+      navigate(redirectTo || "/app/trips", { replace: true });
     }
   };
 
