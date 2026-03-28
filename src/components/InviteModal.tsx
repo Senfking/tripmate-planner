@@ -160,10 +160,10 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
   });
 
   useEffect(() => {
-    if (open && !inviteLoading && !inviteError && !activeInvite && user && shareableOrigin) {
+    if (open && !inviteLoading && !activeInvite && !createInvite.isPending && !createInvite.isSuccess && user && shareableOrigin) {
       createInvite.mutate();
     }
-  }, [open, inviteLoading, inviteError, activeInvite, user, shareableOrigin]);
+  }, [open, inviteLoading, activeInvite, user, shareableOrigin]);
 
   const inviteLink = activeInvite && shareableOrigin
     ? `${shareableOrigin}/app/invite/${activeInvite.token}`
@@ -216,7 +216,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
             Share link
           </div>
 
-          {inviteLoading && !inviteError ? (
+          {(inviteLoading || createInvite.isPending) ? (
             <div className="flex items-center justify-center py-3">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
