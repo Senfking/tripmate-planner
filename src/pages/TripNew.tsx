@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +50,7 @@ export default function TripNew() {
       toast.success("Trip created!");
       navigate(`/app/trips/${data.id}`);
     } catch (err: any) {
-      setError(err.message || "Failed to create trip");
+      setError(friendlyError(err.message));
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +24,7 @@ export default function Signup() {
     const { error: err } = await signUp(email, password, displayName);
     setLoading(false);
     if (err) {
-      setError(err.message);
+      setError(friendlyError(err.message));
     } else {
       navigate("/app/trips", { replace: true });
     }
