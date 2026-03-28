@@ -481,6 +481,8 @@ export type Database = {
           tentative_start_date: string | null
           trip_code: string
           updated_at: string
+          vibe_board_active: boolean
+          vibe_board_locked: boolean
         }
         Insert: {
           created_at?: string
@@ -491,6 +493,8 @@ export type Database = {
           tentative_start_date?: string | null
           trip_code: string
           updated_at?: string
+          vibe_board_active?: boolean
+          vibe_board_locked?: boolean
         }
         Update: {
           created_at?: string
@@ -501,8 +505,45 @@ export type Database = {
           tentative_start_date?: string | null
           trip_code?: string
           updated_at?: string
+          vibe_board_active?: boolean
+          vibe_board_locked?: boolean
         }
         Relationships: []
+      }
+      vibe_responses: {
+        Row: {
+          answer_value: string
+          created_at: string
+          id: string
+          question_key: string
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          answer_value: string
+          created_at?: string
+          id?: string
+          question_key: string
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          answer_value?: string
+          created_at?: string
+          id?: string
+          question_key?: string
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vibe_responses_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       votes: {
         Row: {
@@ -539,6 +580,15 @@ export type Database = {
     }
     Functions: {
       generate_trip_code: { Args: never; Returns: string }
+      get_vibe_aggregates: {
+        Args: { _trip_id: string }
+        Returns: {
+          answer_value: string
+          question_key: string
+          response_count: number
+        }[]
+      }
+      get_vibe_respondent_count: { Args: { _trip_id: string }; Returns: number }
       is_trip_admin_or_owner: {
         Args: { _trip_id: string; _user_id: string }
         Returns: boolean
