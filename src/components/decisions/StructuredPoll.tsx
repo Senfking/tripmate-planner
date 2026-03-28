@@ -95,8 +95,32 @@ export function StructuredPoll({
           ? `${format(new Date(opt.start_date + "T00:00:00"), "MMM d")} – ${format(new Date(opt.end_date + "T00:00:00"), "MMM d")}`
           : opt.label;
 
-        // Find leading value for highlighting
         const totalVotes = Object.values(tally).reduce((a, b) => a + b, 0);
+
+        if (isPref) {
+          // Simple pick voting for preference polls
+          const pickCount = tally["yes"] || 0;
+          const isPicked = myVote === "yes";
+          return (
+            <button
+              key={opt.id}
+              onClick={() => onVote(opt.id, "yes")}
+              disabled={isLocked}
+              className={`flex items-center justify-between w-full rounded-lg px-3 py-2.5 text-sm border transition-colors ${
+                isPicked
+                  ? "bg-primary/10 border-primary text-primary font-medium"
+                  : "bg-muted/30 border-border text-foreground hover:bg-muted/50"
+              } ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
+            >
+              <span>{displayLabel}</span>
+              {pickCount > 0 && (
+                <span className="text-xs text-muted-foreground font-medium">
+                  {pickCount} vote{pickCount !== 1 ? "s" : ""}
+                </span>
+              )}
+            </button>
+          );
+        }
 
         return (
           <div key={opt.id} className="flex items-center gap-2 flex-wrap">
