@@ -216,7 +216,7 @@ function PreferencesContent({ tripId, myRole }: { tripId: string; myRole: string
     <div className="space-y-4">
       {prefPolls.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
-          No preference polls yet. {canManage ? "Ask the group something!" : "The organizer can add polls here."}
+          No preference polls yet. Ask the group something!
         </p>
       )}
 
