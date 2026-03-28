@@ -20,6 +20,7 @@ type Props = {
 
 export function WhereWhenSection({ tripId, myRole }: Props) {
   const canManage = myRole === "owner" || myRole === "admin";
+  const isMobile = useIsMobile();
 
   const {
     proposals,
