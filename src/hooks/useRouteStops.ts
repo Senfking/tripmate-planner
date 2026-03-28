@@ -201,7 +201,7 @@ export function useRouteStops(tripId: string | undefined) {
         .select("*")
         .eq("trip_id", tripId!);
 
-      await updateTripDates((allStops || []) as RouteStop[]);
+      await updateTripDates((allStops || []) as unknown as RouteStop[]);
     },
     onSuccess: invalidate,
   });
