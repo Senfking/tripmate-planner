@@ -108,7 +108,6 @@ export function useRouteStops(tripId: string | undefined) {
       destination: string;
       start_date: string;
       end_date: string;
-      position: number;
       notes?: string;
       proposal_id?: string;
     }) => {
@@ -119,7 +118,6 @@ export function useRouteStops(tripId: string | undefined) {
           destination: input.destination,
           start_date: input.start_date,
           end_date: input.end_date,
-          position: input.position,
           notes: input.notes || null,
           proposal_id: input.proposal_id || null,
           confirmed_by: user!.id,
@@ -128,24 +126,13 @@ export function useRouteStops(tripId: string | undefined) {
         .single();
       if (error) throw error;
 
-      // Re-sort all stops by start_date and re-number positions
       const { data: allStops } = await supabase
         .from("trip_route_stops" as any)
         .select("*")
         .eq("trip_id", tripId!)
         .order("start_date", { ascending: true });
 
-      const sorted = (allStops || []) as unknown as RouteStop[];
-      for (let i = 0; i < sorted.length; i++) {
-        if (sorted[i].position !== i + 1) {
-          await supabase
-            .from("trip_route_stops" as any)
-            .update({ position: i + 1 } as any)
-            .eq("id", sorted[i].id);
-        }
-      }
-
-      await updateTripDates(sorted);
+      await updateTripDates((allStops || []) as unknown as RouteStop[]);
       await createItineraryDays(input);
       return data;
     },
