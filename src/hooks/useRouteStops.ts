@@ -10,7 +10,6 @@ export type RouteStop = {
   destination: string;
   start_date: string;
   end_date: string;
-  position: number;
   notes: string | null;
   confirmed_by: string;
   confirmed_at: string;
