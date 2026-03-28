@@ -404,6 +404,9 @@ export function ProposalCard({
           {validation.hardError && (
             <p className="text-sm text-destructive">{validation.hardError}</p>
           )}
+          {validation.info && !validation.hardError && (
+            <p className="text-sm text-muted-foreground">{validation.info}</p>
+          )}
           {validation.softWarning && !validation.hardError && (
             <p className="text-sm text-amber-600">{validation.softWarning}</p>
           )}
