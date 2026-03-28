@@ -26,6 +26,8 @@ export function InviteModal({ tripId, tripName, open, onOpenChange }: InviteModa
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const shareableOrigin = getShareableAppOrigin();
+
   const createInvite = useMutation({
     mutationFn: async () => {
       const token = crypto.randomUUID();
@@ -40,8 +42,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange }: InviteModa
       });
       if (error) throw error;
 
-      const baseUrl = window.location.origin;
-      return `${baseUrl}/app/invite/${token}`;
+      return `${shareableOrigin}/app/invite/${token}`;
     },
     onSuccess: (link) => {
       setInviteLink(link);
