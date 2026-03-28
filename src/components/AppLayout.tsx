@@ -12,11 +12,11 @@ export function AppLayout() {
         <AppSidebar />
         <div className="flex flex-1 flex-col">
           {/* Header */}
-          <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background px-4">
-            <SidebarTrigger className="hidden md:inline-flex" />
+          <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-gradient-primary px-4 text-white">
+            <SidebarTrigger className="hidden md:inline-flex text-white" />
             <div className="flex items-center gap-2 md:hidden">
-              <Map className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold text-primary">Junto</span>
+              <Map className="h-6 w-6" />
+              <span className="text-lg font-bold">Junto</span>
             </div>
           </header>
 

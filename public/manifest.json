@@ -4,8 +4,8 @@
   "description": "Plan trips together",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#E07A5F",
-  "background_color": "#ffffff",
+  "theme_color": "#0D9488",
+  "background_color": "#F0FDFA",
   "icons": [
     {
       "src": "/icon-192.svg",

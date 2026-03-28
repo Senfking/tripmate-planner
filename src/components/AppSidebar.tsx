@@ -27,9 +27,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="hidden md:flex">
-      <div className="flex h-14 items-center gap-2 border-b px-4">
-        <Map className="h-6 w-6 text-primary" />
-        {!collapsed && <span className="text-lg font-bold text-primary">Junto</span>}
+      <div className="flex h-14 items-center gap-2 border-b bg-gradient-primary px-4 text-white">
+        <Map className="h-6 w-6" />
+        {!collapsed && <span className="text-lg font-bold">Junto</span>}
       </div>
       <SidebarContent>
         <SidebarGroup>
