@@ -15,6 +15,7 @@ import Decisions from "./pages/Decisions";
 import Itinerary from "./pages/Itinerary";
 import Expenses from "./pages/Expenses";
 import More from "./pages/More";
+import InviteRedeem from "./pages/InviteRedeem";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
