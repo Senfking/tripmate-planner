@@ -34,6 +34,7 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/share/:token" element={<div>Share placeholder</div>} />
             <Route path="/app/invite/:token" element={<InviteRedeem />} />
+            <Route path="/i/:token" element={<InviteRedeem />} />
             <Route path="/join" element={<JoinByCode />} />
 
             {/* Protected routes */}
