@@ -142,32 +142,36 @@ export function useRouteStops(tripId: string | undefined) {
     onSuccess: invalidate,
   });
 
-  const updateStop = useMutation({
+  const updateStopDates = useMutation({
     mutationFn: async (input: {
       id: string;
-      destination?: string;
-      start_date?: string;
-      end_date?: string;
-      notes?: string;
+      start_date: string;
+      end_date: string;
     }) => {
-      const updates: any = {};
-      if (input.destination !== undefined) updates.destination = input.destination;
-      if (input.start_date !== undefined) updates.start_date = input.start_date;
-      if (input.end_date !== undefined) updates.end_date = input.end_date;
-      if (input.notes !== undefined) updates.notes = input.notes;
-
       const { error } = await supabase
         .from("trip_route_stops" as any)
-        .update(updates)
+        .update({ start_date: input.start_date, end_date: input.end_date } as any)
         .eq("id", input.id);
       if (error) throw error;
 
+      // Re-fetch all stops sorted by start_date and re-number positions
       const { data: allStops } = await supabase
         .from("trip_route_stops" as any)
         .select("*")
-        .eq("trip_id", tripId!);
+        .eq("trip_id", tripId!)
+        .order("start_date", { ascending: true });
 
-      await updateTripDates((allStops || []) as unknown as RouteStop[]);
+      const sorted = (allStops || []) as unknown as RouteStop[];
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i].position !== i + 1) {
+          await supabase
+            .from("trip_route_stops" as any)
+            .update({ position: i + 1 } as any)
+            .eq("id", sorted[i].id);
+        }
+      }
+
+      await updateTripDates(sorted);
     },
     onSuccess: invalidate,
   });
