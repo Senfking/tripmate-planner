@@ -4,6 +4,7 @@ import type { RouteStop } from "@/hooks/useRouteStops";
 export type ValidationResult = {
   hardError: string | null;
   softWarning: string | null;
+  info: string | null;
 };
 
 export function validateRouteDate(
@@ -12,14 +13,19 @@ export function validateRouteDate(
   existingStops: RouteStop[],
   excludeStopId?: string
 ): ValidationResult {
-  const result: ValidationResult = { hardError: null, softWarning: null };
+  const result: ValidationResult = { hardError: null, softWarning: null, info: null };
 
   if (!startDate || !endDate) return result;
 
-  // End before start
-  if (endDate <= startDate) {
+  // End strictly before start is a hard error
+  if (endDate < startDate) {
     result.hardError = "End date must be after start date";
     return result;
+  }
+
+  // Same day = single-day stop, show info
+  if (endDate === startDate) {
+    result.info = "This is a single-day stop — no overnight stay";
   }
 
   // Filter out self when editing
