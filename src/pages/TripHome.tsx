@@ -161,6 +161,7 @@ export default function TripHome() {
           tripName={trip.name}
           open={inviteOpen}
           onOpenChange={setInviteOpen}
+          isAdmin={canInvite}
         />
       )}
     </div>

@@ -71,6 +71,9 @@ export default function TripList() {
           <Button asChild>
             <Link to="/app/trips/new">Create your first trip</Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link to="/join">Join with code</Link>
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
