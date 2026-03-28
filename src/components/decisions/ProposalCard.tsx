@@ -144,7 +144,7 @@ export function ProposalCard({
   const validation =
     confirmStartDate && confirmEndDate
       ? validateRouteDate(confirmStartDate, confirmEndDate, existingStops)
-      : { hardError: null, softWarning: null };
+      : { hardError: null, softWarning: null, info: null };
 
   const canConfirm = !!(confirmStartDate && confirmEndDate && !validation.hardError);
 
