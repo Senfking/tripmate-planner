@@ -2,11 +2,11 @@ import { Map, Vote, CalendarDays, DollarSign, MoreHorizontal } from "lucide-reac
 import { NavLink } from "@/components/NavLink";
 
 const tabs = [
-  { to: "/trips", label: "Trips", icon: Map },
-  { to: "/decisions", label: "Decisions", icon: Vote },
-  { to: "/itinerary", label: "Itinerary", icon: CalendarDays },
-  { to: "/expenses", label: "Expenses", icon: DollarSign },
-  { to: "/more", label: "More", icon: MoreHorizontal },
+  { to: "/app/trips", label: "Trips", icon: Map },
+  { to: "/app/decisions", label: "Decisions", icon: Vote },
+  { to: "/app/itinerary", label: "Itinerary", icon: CalendarDays },
+  { to: "/app/expenses", label: "Expenses", icon: DollarSign },
+  { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];
 
 export function BottomNav() {

@@ -13,11 +13,11 @@ import {
 } from "@/components/ui/sidebar";
 
 const items = [
-  { title: "Trips", url: "/trips", icon: Map },
-  { title: "Decisions", url: "/decisions", icon: Vote },
-  { title: "Itinerary", url: "/itinerary", icon: CalendarDays },
-  { title: "Expenses", url: "/expenses", icon: DollarSign },
-  { title: "More", url: "/more", icon: MoreHorizontal },
+  { title: "Trips", url: "/app/trips", icon: Map },
+  { title: "Decisions", url: "/app/decisions", icon: Vote },
+  { title: "Itinerary", url: "/app/itinerary", icon: CalendarDays },
+  { title: "Expenses", url: "/app/expenses", icon: DollarSign },
+  { title: "More", url: "/app/more", icon: MoreHorizontal },
 ];
 
 export function AppSidebar() {

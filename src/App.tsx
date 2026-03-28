@@ -1,9 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Index from "./pages/Index";
 import Trips from "./pages/Trips";
 import Decisions from "./pages/Decisions";
@@ -20,17 +24,30 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/trips" element={<Trips />} />
-            <Route path="/decisions" element={<Decisions />} />
-            <Route path="/itinerary" element={<Itinerary />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/more" element={<More />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/share/:token" element={<div>Share placeholder</div>} />
+
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppLayout />}>
+                <Route path="/app/trips" element={<Trips />} />
+                <Route path="/app/decisions" element={<Decisions />} />
+                <Route path="/app/itinerary" element={<Itinerary />} />
+                <Route path="/app/expenses" element={<Expenses />} />
+                <Route path="/app/more" element={<More />} />
+              </Route>
+            </Route>
+
+            {/* Redirects */}
+            <Route path="/" element={<Navigate to="/app/trips" replace />} />
+            <Route path="/trips" element={<Navigate to="/app/trips" replace />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

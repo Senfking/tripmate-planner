@@ -3,9 +3,12 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { useAuth } from "@/contexts/AuthContext";
 import { Map } from "lucide-react";
 
 export function AppLayout() {
+  const { profile } = useAuth();
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -18,6 +21,11 @@ export function AppLayout() {
               <Map className="h-6 w-6" />
               <span className="text-lg font-bold">Junto</span>
             </div>
+            {profile?.display_name && (
+              <span className="ml-auto text-sm font-medium opacity-90">
+                {profile.display_name}
+              </span>
+            )}
           </header>
 
           {/* Page content */}
