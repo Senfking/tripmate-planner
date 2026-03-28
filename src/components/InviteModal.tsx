@@ -59,7 +59,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
         .eq("trip_id", tripId)
         .is("revoked_at" as any, null)
         .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false })
+        .order("expires_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
