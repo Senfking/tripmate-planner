@@ -1,21 +1,22 @@
 
 
-# Grey out non-adopted proposals
+# Updated Plan: Add Empty State to Where & When Section
 
-## Change: `ProposalCard.tsx` only
+## Addition to existing plan
 
-Add a `hasAdopted` prop. When `hasAdopted` is true and `proposal.adopted` is false, the card gets:
-- `opacity-50` wrapper styling
-- A small muted label: "Another plan was adopted" (below the creator line)
-- Reaction buttons disabled
-- Adopt button already hidden (existing logic handles this)
+In `WhereWhenSection.tsx`, when the sorted proposals list is empty, render a centered empty state instead of the destination cards:
 
-Pass `hasAdopted` from `WhereWhenSection.tsx` — already computed there as `const hasAdopted = proposals.some(p => p.adopted)`.
+- Muted text: "No plans suggested yet. Be the first to suggest a destination! 🌍"
+- The "+ Suggest a destination" button centered below it
+- Wrapped in a `text-center py-8` container for spacing
 
-## Files changed
+This replaces the current "No suggestions yet — be the first!" text with a more prominent, centered layout that includes the action button inline.
+
+No other changes to the approved plan — everything else (database, cards, banner, confirm flow, permissions, preferences) remains as specified.
+
+## File impact
 
 | File | Change |
 |------|--------|
-| `src/components/decisions/ProposalCard.tsx` | Add `hasAdopted` prop; apply greyed-out styling + label for non-adopted cards when another is adopted |
-| `src/components/decisions/WhereWhenSection.tsx` | Pass `hasAdopted` prop to each `ProposalCard` |
+| `src/components/decisions/WhereWhenSection.tsx` | Add empty state block when `proposals.length === 0` with centered text + suggest button |
 
