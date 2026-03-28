@@ -50,7 +50,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
 
   const shareableOrigin = getShareableAppOrigin();
 
-  const { data: activeInvite, isLoading: inviteLoading } = useQuery({
+  const { data: activeInvite, isLoading: inviteLoading, isError: inviteError } = useQuery({
     queryKey: ["active-invite", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -66,6 +66,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
       return data;
     },
     enabled: open && !!user,
+    retry: 1,
   });
 
   const { data: redemptionCount } = useQuery({
