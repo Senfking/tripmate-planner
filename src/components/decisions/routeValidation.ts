@@ -4,6 +4,7 @@ import type { RouteStop } from "@/hooks/useRouteStops";
 export type ValidationResult = {
   hardError: string | null;
   softWarning: string | null;
+  info: string | null;
 };
 
 export function validateRouteDate(
