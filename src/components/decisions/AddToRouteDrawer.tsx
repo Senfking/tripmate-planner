@@ -31,7 +31,6 @@ type Props = {
     destination: string;
     start_date: string;
     end_date: string;
-    position: number;
     notes?: string;
     proposal_id?: string;
   }) => void;
@@ -52,7 +51,7 @@ export function AddToRouteDrawer({
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [notes, setNotes] = useState("");
 
-  const nextPosition = existingStops.length + 1;
+  const stopCount = existingStops.length + 1;
 
   useEffect(() => {
     if (open) {
@@ -61,7 +60,7 @@ export function AddToRouteDrawer({
       // Pre-fill start date from last stop
       if (existingStops.length > 0) {
         const lastStop = [...existingStops].sort(
-          (a, b) => b.position - a.position
+          (a, b) => b.end_date.localeCompare(a.end_date)
         )[0];
         setDateRange({ from: parseISO(lastStop.end_date), to: undefined });
       } else {
@@ -90,7 +89,6 @@ export function AddToRouteDrawer({
       destination: destination.trim(),
       start_date: startDate,
       end_date: endDate,
-      position: nextPosition,
       notes: notes.trim() || undefined,
       proposal_id: proposalId,
     });
@@ -140,7 +138,7 @@ export function AddToRouteDrawer({
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Adding as Stop {nextPosition}
+        Adding as Stop {stopCount}
       </p>
 
       <Button

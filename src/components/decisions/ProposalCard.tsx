@@ -39,7 +39,6 @@ type Props = {
     destination: string;
     start_date: string;
     end_date: string;
-    position: number;
     notes?: string;
     proposal_id?: string;
   }) => void;
@@ -115,7 +114,7 @@ export function ProposalCard({
       setSelectedDateOptionId(null);
       // Pre-fill start date from last route stop
       if (existingStops.length > 0) {
-        const sorted = [...existingStops].sort((a, b) => b.position - a.position);
+        const sorted = [...existingStops].sort((a, b) => b.end_date.localeCompare(a.end_date));
         const lastEnd = sorted[0]?.end_date;
         if (lastEnd) {
           setManualDateRange({ from: parseISO(lastEnd), to: undefined });
@@ -154,7 +153,6 @@ export function ProposalCard({
       destination: proposal.destination,
       start_date: confirmStartDate,
       end_date: confirmEndDate,
-      position: existingStops.length + 1,
       proposal_id: proposal.id,
     });
     setConfirmOpen(false);
