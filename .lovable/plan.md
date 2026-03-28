@@ -1,52 +1,23 @@
 
+Goal: fix invite links so they stop resolving to the editor/private preview and only generate a truly shareable app URL.
 
-## Trip List, Create Trip, and Trip Home
+What I found
+- `src/components/InviteModal.tsx` already uses `window.location.origin`.
+- In the editor/preview environment, that is not a reliable public app URL.
+- This project is currently not published (`published_url: null`), so incognito users are being sent through Lovable login for the private preview. That means the current problem is not the token logic — it is the base URL/deployment context.
 
-### Overview
-Build three new screens: trip list, create trip form, and trip home scaffold. The trips table already exists with RLS and the `auto_add_trip_owner` trigger handles auto-inserting the creator as owner — so no manual `trip_members` insert is needed on create.
+Files I will change
+- `src/components/InviteModal.tsx`
+- `src/lib/appUrl.ts` (new)
 
-Note: The DB schema doesn't have an `emoji` column on `trips`. We'll need a migration to add it.
+Plan
+1. Add a small `getShareableAppOrigin()` helper to centralize invite-link base URL logic.
+2. In that helper, detect when the app is running inside the editor/private preview and avoid using that origin as a share link.
+3. Update `InviteModal.tsx` to build invite links via the helper instead of raw `window.location.origin`.
+4. If there is no real public app URL available, prevent generating a misleading link and show a friendly message that invite links require a published/public app URL to work in incognito.
+5. Keep all existing invite behavior unchanged otherwise: same modal, same token generation, same DB insert, same redemption flow, same styling.
 
-### Database migration
-
-Add `emoji` column to `trips` table:
-```sql
-ALTER TABLE public.trips ADD COLUMN emoji text DEFAULT '✈️';
-```
-
-### New files
-
-| File | Purpose |
-|------|---------|
-| `src/pages/TripList.tsx` | `/app/trips` — fetches trips via `trip_members` join, shows cards or empty state, FAB button |
-| `src/pages/TripNew.tsx` | `/app/trips/new` — form with name, dates, emoji picker. Inserts into `trips`, redirects to new trip |
-| `src/pages/TripHome.tsx` | `/app/trips/:tripId` — header with emoji/name/dates/member count, 5 tabs with "Coming soon" placeholders, back button |
-
-### Modified files
-
-| File | Change |
-|------|--------|
-| `src/App.tsx` | Add routes: `/app/trips` (TripList), `/app/trips/new` (TripNew), `/app/trips/:tripId` (TripHome). TripNew and TripHome are protected but rendered **without** AppLayout (no bottom nav). |
-| `src/integrations/supabase/types.ts` | Auto-regenerated after migration |
-
-### Key implementation details
-
-- **Trip list query**: `supabase.from('trip_members').select('trip_id, trips(*)').eq('user_id', user.id)` — only returns trips the user belongs to
-- **Member count**: Separate query or count via `trip_members` for each trip
-- **Create trip**: Insert into `trips` only — the `auto_add_trip_owner` trigger handles the `trip_members` row automatically
-- **Emoji picker**: Simple grid of ~20 travel emojis (no external library needed)
-- **Pull-to-refresh**: Use `react-query`'s `refetch` with a pull-down gesture handler
-- **Trip not found**: If the trip query returns no rows (RLS filters it), show a friendly "Trip not found" message
-- **TripHome tabs**: Use shadcn `Tabs` component with 5 tabs, each showing a placeholder
-- **Date formatting**: Use `date-fns` `format` for display
-- **FAB**: Fixed-position circular gradient button at bottom-right
-
-### Route structure (updated)
-```
-/app/trips          → TripList (inside AppLayout)
-/app/trips/new      → TripNew (inside AppLayout)
-/app/trips/:tripId  → TripHome (standalone, no bottom nav)
-```
-
-### Files changed: 4 total (3 new, 1 modified) + 1 migration
-
+Technical notes
+- No database or auth-flow changes are needed.
+- The real issue is that private preview links are not publicly accessible, so even a “correct” preview URL will still send incognito users to a login gate.
+- This fix will stop the app from producing broken share links and make the behavior match the actual deployment state.
