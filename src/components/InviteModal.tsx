@@ -160,10 +160,10 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
   });
 
   useEffect(() => {
-    if (open && !inviteLoading && !inviteError && !activeInvite && user && shareableOrigin) {
+    if (open && !inviteLoading && !activeInvite && !createInvite.isPending && !createInvite.isSuccess && user && shareableOrigin) {
       createInvite.mutate();
     }
-  }, [open, inviteLoading, inviteError, activeInvite, user, shareableOrigin]);
+  }, [open, inviteLoading, activeInvite, user, shareableOrigin]);
 
   const inviteLink = activeInvite && shareableOrigin
     ? `${shareableOrigin}/app/invite/${activeInvite.token}`
