@@ -77,7 +77,7 @@ export function AddToRouteDrawer({
     () =>
       startDate && endDate
         ? validateRouteDate(startDate, endDate, existingStops)
-        : { hardError: null, softWarning: null },
+        : { hardError: null, softWarning: null, info: null },
     [startDate, endDate, existingStops]
   );
 
