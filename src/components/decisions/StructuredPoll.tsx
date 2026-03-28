@@ -185,10 +185,12 @@ export function StructuredPoll({
               </div>
             </div>
           ) : (
-            <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setShowAddForm(true)}>
-              <Plus className="h-3.5 w-3.5" />
-              Add option
-            </Button>
+            <div className="flex justify-end md:justify-start">
+              <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setShowAddForm(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                Add option
+              </Button>
+            </div>
           )}
         </>
       )}
