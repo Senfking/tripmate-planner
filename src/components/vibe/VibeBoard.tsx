@@ -172,29 +172,21 @@ export function VibeBoard({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-primary" />
-        <h2 className="font-semibold text-foreground">Vibe Board</h2>
-        {isLocked && (
-          <>
-            <Lock className="h-4 w-4 text-muted-foreground ml-auto" />
-            <span className="text-xs text-muted-foreground">Locked</span>
-          </>
-        )}
-        {!isLocked && canManage && (
+      {/* Lock action for managers */}
+      {!isLocked && canManage && (
+        <div className="flex justify-end">
           <Button
             variant="ghost"
             size="sm"
-            className="ml-auto text-xs"
+            className="text-xs"
             onClick={() => lockBoard.mutate()}
             disabled={lockBoard.isPending}
           >
             <Lock className="h-3.5 w-3.5 mr-1" />
             Lock
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Response counter */}
       {!isLocked && (
