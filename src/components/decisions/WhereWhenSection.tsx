@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { MapPin, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Props = {
   tripId: string;
@@ -18,6 +20,7 @@ type Props = {
 
 export function WhereWhenSection({ tripId, myRole }: Props) {
   const canManage = myRole === "owner" || myRole === "admin";
+  const isMobile = useIsMobile();
 
   const {
     proposals,
@@ -205,38 +208,57 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
           />
         ))}
 
-        {canManage && (
-          <Dialog open={prefOpen} onOpenChange={setPrefOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-                <Plus className="h-4 w-4" />
-                Ask the group something
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>New preference poll</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Question</Label>
-                  <Input
-                    placeholder="e.g. Airbnb or hotel?"
-                    value={prefTitle}
-                    onChange={(e) => setPrefTitle(e.target.value)}
-                  />
-                </div>
-                <Button
-                  className="w-full"
-                  onClick={handleCreatePref}
-                  disabled={!prefTitle.trim() || createPoll.isPending}
-                >
-                  Create poll
-                </Button>
+        {canManage && (() => {
+          const trigger = (
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+              <Plus className="h-4 w-4" />
+              Ask the group something
+            </Button>
+          );
+          const content = (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Question</Label>
+                <Input
+                  placeholder="e.g. Airbnb or hotel?"
+                  value={prefTitle}
+                  onChange={(e) => setPrefTitle(e.target.value)}
+                />
               </div>
-            </DialogContent>
-          </Dialog>
-        )}
+              <Button
+                className="w-full"
+                onClick={handleCreatePref}
+                disabled={!prefTitle.trim() || createPoll.isPending}
+              >
+                Create poll
+              </Button>
+            </div>
+          );
+          if (isMobile) {
+            return (
+              <Drawer open={prefOpen} onOpenChange={setPrefOpen}>
+                <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+                <DrawerContent className="px-4 pb-6">
+                  <DrawerHeader className="text-left px-0">
+                    <DrawerTitle>New preference poll</DrawerTitle>
+                  </DrawerHeader>
+                  {content}
+                </DrawerContent>
+              </Drawer>
+            );
+          }
+          return (
+            <Dialog open={prefOpen} onOpenChange={setPrefOpen}>
+              <DialogTrigger asChild>{trigger}</DialogTrigger>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>New preference poll</DialogTitle>
+                </DialogHeader>
+                {content}
+              </DialogContent>
+            </Dialog>
+          );
+        })()}
       </div>
     </div>
   );
