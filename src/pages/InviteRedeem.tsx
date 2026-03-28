@@ -47,8 +47,9 @@ export default function InviteRedeem() {
     if (authLoading) return;
 
     if (!user) {
-      // Redirect to login with return path
-      navigate(`/login?redirect=/app/invite/${token}`, { replace: true });
+      // Store token so signup/login pages can show contextual message
+      sessionStorage.setItem("invite_token", token!);
+      navigate(`/signup?redirect=/app/invite/${token}`, { replace: true });
       return;
     }
 
