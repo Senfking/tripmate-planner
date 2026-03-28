@@ -292,40 +292,42 @@ export function ProposalCard({
         </Button>
       )}
 
-      {/* Confirm dialog */}
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Confirm plan</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Confirm <span className="font-semibold text-foreground">{proposal.destination}</span>?
-            This will lock the destination and dates for everyone.
-          </p>
-          {dateOptions.length > 1 ? (
-            <div className="space-y-1.5">
-              <Label>Select dates</Label>
-              <Select value={selectedDateId} onValueChange={setSelectedDateId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose date range" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dateOptions.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {fmt(d.start_date)} – {fmt(d.end_date)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            dateOptions.length === 1 && (
-              <p className="text-sm font-medium">
-                {fmt(dateOptions[0].start_date)} – {fmt(dateOptions[0].end_date)}
-              </p>
-            )
-          )}
-          <DialogFooter>
+      {/* Confirm modal — Drawer on mobile, Dialog on desktop */}
+      {(() => {
+        const confirmBody = (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Confirm <span className="font-semibold text-foreground">{proposal.destination}</span>?
+              This will lock the destination and dates for everyone.
+            </p>
+            {dateOptions.length > 1 ? (
+              <div className="space-y-1.5">
+                <Label>Select dates</Label>
+                <Select value={selectedDateId} onValueChange={setSelectedDateId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose date range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dateOptions.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {fmt(d.start_date)} – {fmt(d.end_date)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              dateOptions.length === 1 && (
+                <p className="text-sm font-medium">
+                  {fmt(dateOptions[0].start_date)} – {fmt(dateOptions[0].end_date)}
+                </p>
+              )
+            )}
+          </>
+        );
+
+        const confirmActions = (
+          <>
             <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
               Cancel
             </Button>
@@ -341,9 +343,37 @@ export function ProposalCard({
             >
               {isConfirming ? "Confirming…" : "Confirm"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        );
+
+        if (isMobile) {
+          return (
+            <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <DrawerContent className="px-4 pb-6">
+                <DrawerHeader className="text-left px-0">
+                  <DrawerTitle>Confirm plan</DrawerTitle>
+                </DrawerHeader>
+                <div className="space-y-4">{confirmBody}</div>
+                <DrawerFooter className="flex-row justify-end px-0">
+                  {confirmActions}
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
+          );
+        }
+
+        return (
+          <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Confirm plan</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">{confirmBody}</div>
+              <DialogFooter>{confirmActions}</DialogFooter>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }
