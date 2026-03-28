@@ -300,9 +300,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
             </button>
             <p className="text-xs text-muted-foreground text-center">
               People can enter this at{" "}
-              <span className="font-medium">
-                {shareableOrigin ? `${new URL(shareableOrigin).hostname}/join` : "your-app/join"}
-              </span>
+              <span className="font-medium">juntotravel.lovable.app/join</span>
             </p>
             {isAdmin && (
               <Button
