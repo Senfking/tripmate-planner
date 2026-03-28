@@ -282,7 +282,7 @@ export function ProposalCard({
                       className="w-full"
                       placeholder="Select date range"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-end md:justify-start">
                       <Button
                         size="sm"
                         onClick={handleAddDate}
