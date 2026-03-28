@@ -7,7 +7,6 @@ import {
   Trash2,
   Plus,
   Lock,
-  MapPin,
   CalendarDays,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -184,23 +183,19 @@ export function TripRoute({
 
   return (
     <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold text-foreground text-sm">Trip Route</h3>
+      {/* Route summary */}
+      {sortedStops.length > 0 && tripStart && tripEnd && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            {totalDays} days · {fmt(tripStart)} – {fmt(tripEnd)}
+          </span>
           {isRouteLocked && (
             <Badge className="bg-muted text-muted-foreground text-[10px]">
               <Lock className="h-3 w-3 mr-1" /> Locked
             </Badge>
           )}
         </div>
-        {sortedStops.length > 0 && tripStart && tripEnd && (
-          <span className="text-xs text-muted-foreground">
-            {totalDays} days · {fmt(tripStart)} – {fmt(tripEnd)}
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Unlock link for owner */}
       {isRouteLocked && isOwner && (
