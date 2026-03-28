@@ -3,18 +3,9 @@ import { StepSection } from "./StepSection";
 import { VibeBoard } from "@/components/vibe/VibeBoard";
 import { WhereWhenSection } from "./WhereWhenSection";
 import { useVibeBoard } from "@/hooks/useVibeBoard";
-import { useProposals } from "@/hooks/useProposals";
+import { useRouteStops } from "@/hooks/useRouteStops";
 import { useDecisionPolls } from "@/hooks/useDecisionPolls";
-import { format } from "date-fns";
-
-// Map question keys to friendly emoji labels for collapsed summary
-const VIBE_LABELS: Record<string, string> = {
-  energy: "",
-  budget: "",
-  accommodation: "",
-  length: "",
-  musthave: "",
-};
+import { format, parseISO } from "date-fns";
 
 type Props = {
   tripId: string;
@@ -22,6 +13,7 @@ type Props = {
   isActive: boolean;
   isLocked: boolean;
   memberCount: number;
+  routeLocked: boolean;
 };
 
 export function DecisionsFlow({
@@ -30,6 +22,7 @@ export function DecisionsFlow({
   isActive,
   isLocked: vibeLocked,
   memberCount,
+  routeLocked,
 }: Props) {
   const canManage = myRole === "owner" || myRole === "admin";
 
@@ -37,8 +30,9 @@ export function DecisionsFlow({
   const { myResponses, respondentCount } = useVibeBoard(tripId);
   const hasSubmittedVibe = myResponses.length > 0;
 
-  // Proposal data (for confirmed status)
-  const { hasConfirmed, leadingCombo } = useProposals(tripId);
+  // Route stops data
+  const { stops, tripStart, tripEnd, totalDays } = useRouteStops(tripId);
+  const hasRouteStops = stops.length > 0;
 
   // Preference polls
   const { prefPolls } = useDecisionPolls(tripId);
@@ -76,14 +70,18 @@ export function DecisionsFlow({
     prevUnlocked.current = whereUnlocked;
   }, [whereUnlocked]);
 
-  // Auto-collapse Where & When when confirmed
-  const prevConfirmed = useRef(hasConfirmed);
+  // Auto-collapse Where & When when route is locked
+  const prevRouteLocked = useRef(routeLocked);
   useEffect(() => {
-    if (!prevConfirmed.current && hasConfirmed) {
+    if (!prevRouteLocked.current && routeLocked) {
       setExpanded((prev) => ({ ...prev, where: false }));
     }
-    prevConfirmed.current = hasConfirmed;
-  }, [hasConfirmed]);
+    // Auto-expand when route is unlocked
+    if (prevRouteLocked.current && !routeLocked) {
+      setExpanded((prev) => ({ ...prev, where: true }));
+    }
+    prevRouteLocked.current = routeLocked;
+  }, [routeLocked]);
 
   const toggle = (key: string) =>
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -97,15 +95,13 @@ export function DecisionsFlow({
         .join(" · ")
     : undefined;
 
-  // Build where confirmed summary
-  const whereSummary =
-    hasConfirmed && leadingCombo
-      ? `${leadingCombo.destination}${
-          leadingCombo.dateOption
-            ? ` · ${format(new Date(leadingCombo.dateOption.start_date), "MMM d")}–${format(new Date(leadingCombo.dateOption.end_date), "MMM d")}`
-            : ""
-        }`
-      : undefined;
+  // Build where collapsed summary
+  const fmt = (d: string) => format(parseISO(d), "MMM d");
+  const whereSummary = routeLocked && hasRouteStops && tripStart && tripEnd
+    ? `${stops.length}-stop route · ${fmt(tripStart)} – ${fmt(tripEnd)}`
+    : hasRouteStops
+    ? `${stops.length} stop${stops.length > 1 ? "s" : ""} added`
+    : undefined;
 
   // Vibe status
   const vibeStatus = !isActive
@@ -117,7 +113,7 @@ export function DecisionsFlow({
   // Where status
   const whereStatus = !whereUnlocked
     ? { text: "Locked", variant: "waiting" as const }
-    : hasConfirmed
+    : routeLocked
     ? { text: "✅ Confirmed", variant: "done" as const }
     : { text: "In progress", variant: "active" as const };
 
@@ -160,10 +156,10 @@ export function DecisionsFlow({
         isLocked={!whereUnlocked}
         lockMessage={`Waiting for ${membersNeeded} more member${membersNeeded !== 1 ? "s" : ""} to share their vibe`}
         onSkip={canManage ? () => setManuallySkipped(true) : undefined}
-        activeBorder={whereUnlocked && !hasConfirmed}
+        activeBorder={whereUnlocked && !routeLocked}
         collapsedSummary={whereSummary}
       >
-        <WhereWhenSection tripId={tripId} myRole={myRole} />
+        <WhereWhenSection tripId={tripId} myRole={myRole} isRouteLocked={routeLocked} />
       </StepSection>
 
       {/* Step 3: Preferences */}
@@ -177,7 +173,6 @@ export function DecisionsFlow({
         onToggle={() => toggle("prefs")}
         collapsedSummary={undefined}
       >
-        {/* Preferences content is inside WhereWhenSection already — extract just the polls portion */}
         <PreferencesContent tripId={tripId} myRole={myRole} />
       </StepSection>
     </div>

@@ -10,35 +10,15 @@ import {
   Check,
   HelpCircle,
   X,
-  Crown,
+  Route,
   ChevronDown,
   ChevronUp,
   Plus,
   CalendarDays,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerFooter,
-} from "@/components/ui/drawer";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { AddToRouteDrawer } from "./AddToRouteDrawer";
 import type { Proposal, DateOption, DateVotes } from "@/hooks/useProposals";
+import type { RouteStop } from "@/hooks/useRouteStops";
 
 type Props = {
   proposal: Proposal;
@@ -47,13 +27,22 @@ type Props = {
   dateOptions: DateOption[];
   dateVotes: DateVotes;
   myDateVotes: Record<string, string>;
-  hasConfirmed: boolean;
   canManage: boolean;
+  isRouteLocked: boolean;
+  isInRoute: boolean;
+  existingStops: RouteStop[];
   onReactDest: (value: string) => void;
   onAddDateOption: (input: { startDate: string; endDate: string }) => void;
   onVoteDateOption: (dateOptionId: string, value: string) => void;
-  onConfirm: (dateOptionId: string) => void;
-  isConfirming: boolean;
+  onAddToRoute: (input: {
+    destination: string;
+    start_date: string;
+    end_date: string;
+    position: number;
+    notes?: string;
+    proposal_id?: string;
+  }) => void;
+  isAddingToRoute: boolean;
   isAddingDate: boolean;
 };
 
@@ -70,28 +59,25 @@ export function ProposalCard({
   dateOptions,
   dateVotes,
   myDateVotes,
-  hasConfirmed,
   canManage,
+  isRouteLocked,
+  isInRoute,
+  existingStops,
   onReactDest,
   onAddDateOption,
   onVoteDateOption,
-  onConfirm,
-  isConfirming,
+  onAddToRoute,
+  isAddingToRoute,
   isAddingDate,
 }: Props) {
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
-  const isGreyedOut = hasConfirmed && !proposal.adopted;
-  const isFrozen = hasConfirmed;
-  const isMobile = useIsMobile();
+  const isFrozen = isRouteLocked;
 
   const [datesExpanded, setDatesExpanded] = useState(false);
   const [showDateForm, setShowDateForm] = useState(false);
   const [newStartDate, setNewStartDate] = useState("");
   const [newEndDate, setNewEndDate] = useState("");
-
-  // Confirm dialog
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [selectedDateId, setSelectedDateId] = useState<string>("");
+  const [addToRouteOpen, setAddToRouteOpen] = useState(false);
 
   const handleAddDate = () => {
     if (!newStartDate || !newEndDate) return;
@@ -101,23 +87,12 @@ export function ProposalCard({
     setShowDateForm(false);
   };
 
-  const handleOpenConfirm = () => {
-    // Pre-select top-voted date
-    const topDate = dateOptions[0]; // already sorted by yes count
-    setSelectedDateId(topDate?.id || "");
-    setConfirmOpen(true);
-  };
-
   return (
-    <div
-      className={`rounded-xl border border-border bg-card p-4 space-y-3 relative transition-opacity ${
-        isGreyedOut ? "opacity-50" : ""
-      }`}
-    >
-      {/* Confirmed badge */}
-      {proposal.adopted && (
-        <Badge className="absolute top-3 right-3 bg-green-600 text-white">
-          <Check className="h-3 w-3 mr-1" /> Confirmed
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3 relative transition-opacity">
+      {/* In route badge */}
+      {isInRoute && (
+        <Badge className="absolute top-3 right-3 bg-emerald-100 text-emerald-700 border-emerald-200">
+          <Check className="h-3 w-3 mr-1" /> In route
         </Badge>
       )}
 
@@ -129,10 +104,6 @@ export function ProposalCard({
 
       {proposal.note && (
         <p className="text-sm text-foreground/80 italic">"{proposal.note}"</p>
-      )}
-
-      {isGreyedOut && (
-        <p className="text-xs text-muted-foreground font-medium">Another plan was confirmed</p>
       )}
 
       {/* Destination voting */}
@@ -279,101 +250,32 @@ export function ProposalCard({
         )}
       </div>
 
-      {/* Confirm button — owner/admin only, needs at least one date option */}
-      {canManage && !hasConfirmed && dateOptions.length > 0 && (
+      {/* Add to route button — owner/admin only */}
+      {canManage && !isRouteLocked && !isInRoute && (
         <Button
           variant="outline"
           size="sm"
           className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-          onClick={handleOpenConfirm}
+          onClick={() => setAddToRouteOpen(true)}
         >
-          <Crown className="h-3.5 w-3.5" />
-          Confirm this plan
+          <Route className="h-3.5 w-3.5" />
+          Add to route
         </Button>
       )}
 
-      {/* Confirm modal — Drawer on mobile, Dialog on desktop */}
-      {(() => {
-        const confirmBody = (
-          <>
-            <p className="text-sm text-muted-foreground">
-              Confirm <span className="font-semibold text-foreground">{proposal.destination}</span>?
-              This will lock the destination and dates for everyone.
-            </p>
-            {dateOptions.length > 1 ? (
-              <div className="space-y-1.5">
-                <Label>Select dates</Label>
-                <Select value={selectedDateId} onValueChange={setSelectedDateId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose date range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dateOptions.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {fmt(d.start_date)} – {fmt(d.end_date)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              dateOptions.length === 1 && (
-                <p className="text-sm font-medium">
-                  {fmt(dateOptions[0].start_date)} – {fmt(dateOptions[0].end_date)}
-                </p>
-              )
-            )}
-          </>
-        );
-
-        const confirmActions = (
-          <>
-            <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                const dateId = selectedDateId || dateOptions[0]?.id;
-                if (dateId) {
-                  onConfirm(dateId);
-                  setConfirmOpen(false);
-                }
-              }}
-              disabled={isConfirming || (!selectedDateId && dateOptions.length > 1)}
-            >
-              {isConfirming ? "Confirming…" : "Confirm"}
-            </Button>
-          </>
-        );
-
-        if (isMobile) {
-          return (
-            <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
-              <DrawerContent className="px-4 pb-6">
-                <DrawerHeader className="text-left px-0">
-                  <DrawerTitle>Confirm plan</DrawerTitle>
-                </DrawerHeader>
-                <div className="space-y-4">{confirmBody}</div>
-                <DrawerFooter className="flex-row justify-end px-0">
-                  {confirmActions}
-                </DrawerFooter>
-              </DrawerContent>
-            </Drawer>
-          );
-        }
-
-        return (
-          <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>Confirm plan</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">{confirmBody}</div>
-              <DialogFooter>{confirmActions}</DialogFooter>
-            </DialogContent>
-          </Dialog>
-        );
-      })()}
+      {/* Add to route drawer */}
+      <AddToRouteDrawer
+        open={addToRouteOpen}
+        onOpenChange={setAddToRouteOpen}
+        existingStops={existingStops}
+        defaultDestination={proposal.destination}
+        proposalId={proposal.id}
+        onSubmit={(input) => {
+          onAddToRoute(input);
+          setAddToRouteOpen(false);
+        }}
+        isPending={isAddingToRoute}
+      />
     </div>
   );
 }

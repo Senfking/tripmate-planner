@@ -8,8 +8,8 @@ export type Proposal = {
   created_by: string;
   destination: string;
   note: string | null;
-  adopted: boolean;
-  confirmed_date_option_id: string | null;
+  start_date: string | null;
+  end_date: string | null;
   created_at: string;
   creator_name?: string;
 };
@@ -202,14 +202,12 @@ export function useProposals(tripId: string | undefined) {
 
       if (existing) {
         if (existing.value === value) {
-          // Toggle off
           const { error } = await supabase
             .from("proposal_reactions")
             .delete()
             .eq("id", existing.id);
           if (error) throw error;
         } else {
-          // Change vote
           const { error } = await supabase
             .from("proposal_reactions")
             .update({ value } as any)
@@ -276,17 +274,6 @@ export function useProposals(tripId: string | undefined) {
     onSuccess: invalidateAll,
   });
 
-  const confirmProposal = useMutation({
-    mutationFn: async ({ proposalId, dateOptionId }: { proposalId: string; dateOptionId: string }) => {
-      const { error } = await supabase
-        .from("trip_proposals")
-        .update({ adopted: true, confirmed_date_option_id: dateOptionId } as any)
-        .eq("id", proposalId);
-      if (error) throw error;
-    },
-    onSuccess: invalidateAll,
-  });
-
   // ─── Derived data ───
   const proposalList = proposals.data || [];
   const destVotes = destVoteCounts.data || ({} as DestVotes);
@@ -294,13 +281,8 @@ export function useProposals(tripId: string | undefined) {
 
   // Sort proposals by thumbs up descending
   const sortedProposals = [...proposalList].sort((a, b) => {
-    // Adopted always first
-    if (a.adopted && !b.adopted) return -1;
-    if (!a.adopted && b.adopted) return 1;
     return (destVotes[b.id]?.up || 0) - (destVotes[a.id]?.up || 0);
   });
-
-  const hasConfirmed = proposalList.some((p) => p.adopted);
 
   // Get date options grouped by proposal
   const dateOptionsByProposal = (proposalId: string) =>
@@ -312,23 +294,10 @@ export function useProposals(tripId: string | undefined) {
         return bYes - aYes;
       });
 
-  // Leading combo
+  // Leading combo (frontrunner only — no confirmed state)
   const getLeadingCombo = () => {
     if (proposalList.length === 0) return null;
 
-    const confirmed = proposalList.find((p) => p.adopted);
-    if (confirmed) {
-      const confirmedDate = allDateOptions.find(
-        (d) => d.id === confirmed.confirmed_date_option_id
-      );
-      return {
-        confirmed: true,
-        destination: confirmed.destination,
-        dateOption: confirmedDate || null,
-      };
-    }
-
-    // Find leading destination (most thumbs up)
     let bestProp: Proposal | null = null;
     let bestUp = 0;
     for (const p of proposalList) {
@@ -340,7 +309,6 @@ export function useProposals(tripId: string | undefined) {
     }
     if (!bestProp || bestUp === 0) return null;
 
-    // Find leading date for that proposal
     const dates = allDateOptions.filter((d) => d.proposal_id === bestProp!.id);
     let bestDate: DateOption | null = null;
     let bestYes = 0;
@@ -353,7 +321,6 @@ export function useProposals(tripId: string | undefined) {
     }
 
     return {
-      confirmed: false,
       destination: bestProp.destination,
       dateOption: bestDate,
     };
@@ -361,7 +328,6 @@ export function useProposals(tripId: string | undefined) {
 
   return {
     proposals: sortedProposals,
-    hasConfirmed,
     destVotes,
     myDestVotes: myDestVotes.data || ({} as Record<string, string>),
     dateOptionsByProposal,
@@ -374,6 +340,5 @@ export function useProposals(tripId: string | undefined) {
     reactDest,
     addDateOption,
     voteDateOption,
-    confirmProposal,
   };
 }

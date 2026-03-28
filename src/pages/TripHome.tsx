@@ -156,6 +156,7 @@ export default function TripHome() {
             isActive={(trip as any).vibe_board_active ?? false}
             isLocked={(trip as any).vibe_board_locked ?? false}
             memberCount={memberCount ?? 0}
+            routeLocked={(trip as any).route_locked ?? false}
           />
         </TabsContent>
         <TabsContent value="itinerary">{tabPlaceholder("Itinerary")}</TabsContent>
