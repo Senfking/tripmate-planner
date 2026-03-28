@@ -30,7 +30,7 @@ export function useDecisionPolls(tripId: string | undefined) {
         .from("polls")
         .select("*, poll_options(*)")
         .eq("trip_id", tripId!)
-        .in("type", ["destination", "date", "preference"])
+        .eq("type", "preference")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data || []).map((p: any) => ({
@@ -178,14 +178,10 @@ export function useDecisionPolls(tripId: string | undefined) {
     },
   });
 
-  const destPoll = (polls.data || []).find((p) => p.type === "destination");
-  const datePoll = (polls.data || []).find((p) => p.type === "date");
   const prefPolls = (polls.data || []).filter((p) => p.type === "preference");
 
   return {
     polls: polls.data || [],
-    destPoll,
-    datePoll,
     prefPolls,
     voteCounts: voteCounts.data || {},
     myVotes: myVotes.data || ({} as Record<string, string>),

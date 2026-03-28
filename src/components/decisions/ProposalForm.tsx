@@ -9,30 +9,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 
 type Props = {
-  onSubmit: (data: { destination: string; start_date: string; end_date: string; note?: string }) => void;
+  onSubmit: (data: { destination: string; note?: string }) => void;
   isPending: boolean;
 };
 
 export function ProposalForm({ onSubmit, isPending }: Props) {
   const [open, setOpen] = useState(false);
   const [destination, setDestination] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [note, setNote] = useState("");
   const isMobile = useIsMobile();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!destination.trim() || !startDate || !endDate) return;
+    if (!destination.trim()) return;
     onSubmit({
       destination: destination.trim(),
-      start_date: startDate,
-      end_date: endDate,
       note: note.trim() || undefined,
     });
     setDestination("");
-    setStartDate("");
-    setEndDate("");
     setNote("");
     setOpen(false);
   };
@@ -40,7 +34,7 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   const trigger = (
     <Button variant="outline" size="sm" className="gap-1.5">
       <Plus className="h-4 w-4" />
-      Suggest a trip
+      Suggest a destination
     </Button>
   );
 
@@ -50,21 +44,11 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
         <Label htmlFor="dest">Destination</Label>
         <Input id="dest" placeholder="e.g. Barcelona" value={destination} onChange={(e) => setDestination(e.target.value)} required />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="sd">Start date</Label>
-          <Input id="sd" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="text-base min-h-[44px] appearance-none" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="ed">End date</Label>
-          <Input id="ed" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required className="text-base min-h-[44px] appearance-none" />
-        </div>
-      </div>
       <div className="space-y-1.5">
         <Label htmlFor="note">Note (optional)</Label>
         <Textarea id="note" placeholder="e.g. Found flights for €180 from Zurich" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
       </div>
-      <Button type="submit" className="w-full" disabled={isPending || !destination.trim() || !startDate || !endDate}>
+      <Button type="submit" className="w-full" disabled={isPending || !destination.trim()}>
         {isPending ? "Submitting…" : "Submit suggestion"}
       </Button>
     </form>
@@ -76,7 +60,7 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
         <DrawerTrigger asChild>{trigger}</DrawerTrigger>
         <DrawerContent className="px-4 pb-6">
           <DrawerHeader className="text-left px-0">
-            <DrawerTitle>Suggest a plan</DrawerTitle>
+            <DrawerTitle>Suggest a destination</DrawerTitle>
           </DrawerHeader>
           {formContent}
         </DrawerContent>
@@ -89,7 +73,7 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Suggest a plan</DialogTitle>
+          <DialogTitle>Suggest a destination</DialogTitle>
         </DialogHeader>
         {formContent}
       </DialogContent>

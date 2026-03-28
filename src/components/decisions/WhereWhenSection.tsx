@@ -3,6 +3,7 @@ import { useProposals } from "@/hooks/useProposals";
 import { useDecisionPolls } from "@/hooks/useDecisionPolls";
 import { ProposalCard } from "./ProposalCard";
 import { ProposalForm } from "./ProposalForm";
+import { LeadingComboBanner } from "./LeadingComboBanner";
 import { StructuredPoll } from "./StructuredPoll";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,27 +25,22 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
 
   const {
     proposals,
-    reactionCounts,
-    myReactions,
+    hasConfirmed,
+    destVotes,
+    myDestVotes,
+    dateOptionsByProposal,
+    dateVotes,
+    myDateVotes,
+    leadingCombo,
     createProposal,
-    react,
-    adoptProposal,
+    reactDest,
+    addDateOption,
+    voteDateOption,
+    confirmProposal,
   } = useProposals(tripId);
 
-  const {
-    destPoll,
-    datePoll,
-    prefPolls,
-    voteCounts,
-    myVotes,
-    createPoll,
-    addOption,
-    vote,
-    lockPoll,
-  } = useDecisionPolls(tripId);
-
-  const hasAdopted = proposals.some((p) => p.adopted);
-  const destIsLocked = destPoll?.status === "locked";
+  const { prefPolls, voteCounts, myVotes, createPoll, addOption, vote, lockPoll } =
+    useDecisionPolls(tripId);
 
   // Preference poll creation
   const [prefOpen, setPrefOpen] = useState(false);
@@ -66,129 +62,90 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
   return (
     <div className="space-y-6 mt-6">
       {/* Section header */}
-      <div className="flex items-center gap-2">
-        <MapPin className="h-5 w-5 text-primary" />
-        <h2 className="font-semibold text-foreground">Where & When</h2>
-      </div>
-
-      {/* Proposals */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground font-medium">Suggestions</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-primary" />
+          <h2 className="font-semibold text-foreground">Where & When</h2>
+        </div>
+        {proposals.length > 0 && !hasConfirmed && (
           <ProposalForm
             onSubmit={(data) => {
               createProposal.mutate(data, {
-                onSuccess: () => toast({ title: "Suggestion posted! 🎉" }),
+                onSuccess: () => toast({ title: "Destination suggested! 🎉" }),
               });
             }}
             isPending={createProposal.isPending}
           />
-        </div>
-
-        {proposals.length === 0 && (
-          <p className="text-sm text-muted-foreground italic">No suggestions yet — be the first!</p>
         )}
-
-        {proposals.map((p) => (
-          <ProposalCard
-            key={p.id}
-            proposal={p}
-            reactions={reactionCounts[p.id] || { in: 0, maybe: 0, no: 0 }}
-            myReaction={myReactions[p.id]}
-            hasAdopted={hasAdopted}
-            canAdopt={canManage && !hasAdopted}
-            onReact={(value) => react.mutate({ proposalId: p.id, value })}
-            onAdopt={() => {
-              adoptProposal.mutate(p, {
-                onSuccess: () =>
-                  toast({ title: "Plan adopted — destination and dates are locked ✅" }),
-              });
-            }}
-            isAdopting={adoptProposal.isPending}
-          />
-        ))}
       </div>
 
-      {/* Structured Polls — hidden when a proposal is adopted */}
-      {!hasAdopted && (
-        <div className="space-y-4">
-          {/* Step 1: Destination */}
-          {destPoll ? (
-            <StructuredPoll
-              poll={destPoll}
-              stepLabel="Step 1"
-              voteTally={voteCounts[destPoll.id] || {}}
-              myVotes={myVotes}
-              canManage={canManage}
-              onAddOption={(input) =>
-                addOption.mutate({ pollId: destPoll.id, label: input.label })
-              }
-              onVote={(optionId, value) => vote.mutate({ optionId, value })}
-              onLock={() => lockPoll.mutate(destPoll.id)}
-              isAddingOption={addOption.isPending}
-              isLocking={lockPoll.isPending}
-            />
-          ) : (
-            canManage && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() =>
-                  createPoll.mutate({ type: "destination", title: "Where are we going?" })
-                }
-                disabled={createPoll.isPending}
-              >
-                <Plus className="h-4 w-4" />
-                Create destination poll
-              </Button>
-            )
-          )}
+      {/* Leading combo banner */}
+      <LeadingComboBanner leadingCombo={leadingCombo} />
 
-          {/* Step 2: Date */}
-          {datePoll ? (
-            <StructuredPoll
-              poll={datePoll}
-              stepLabel="Step 2"
-              disabled={!destIsLocked}
-              disabledMessage="Decide where you're going first, then align on dates"
-              voteTally={voteCounts[datePoll.id] || {}}
-              myVotes={myVotes}
-              canManage={canManage}
-              onAddOption={(input) =>
-                addOption.mutate({
-                  pollId: datePoll.id,
-                  label: input.label,
-                  startDate: input.startDate,
-                  endDate: input.endDate,
-                })
-              }
-              onVote={(optionId, value) => vote.mutate({ optionId, value })}
-              onLock={() => lockPoll.mutate(datePoll.id)}
-              isAddingOption={addOption.isPending}
-              isLocking={lockPoll.isPending}
+      {/* Destination cards */}
+      {proposals.length === 0 ? (
+        <div className="text-center py-8 space-y-4">
+          <p className="text-muted-foreground">
+            No plans suggested yet. Be the first to suggest a destination! 🌍
+          </p>
+          <div className="flex justify-center">
+            <ProposalForm
+              onSubmit={(data) => {
+                createProposal.mutate(data, {
+                  onSuccess: () => toast({ title: "Destination suggested! 🎉" }),
+                });
+              }}
+              isPending={createProposal.isPending}
             />
-          ) : (
-            canManage &&
-            destPoll && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                disabled={!destIsLocked || createPoll.isPending}
-                onClick={() =>
-                  createPoll.mutate({ type: "date", title: "When are we going?" })
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {proposals.map((p) => {
+            const pDateOptions = dateOptionsByProposal(p.id);
+            return (
+              <ProposalCard
+                key={p.id}
+                proposal={p}
+                destVotes={destVotes[p.id] || { up: 0, down: 0 }}
+                myDestVote={myDestVotes[p.id]}
+                dateOptions={pDateOptions}
+                dateVotes={dateVotes}
+                myDateVotes={myDateVotes}
+                hasConfirmed={hasConfirmed}
+                canManage={canManage}
+                onReactDest={(value) => reactDest.mutate({ proposalId: p.id, value })}
+                onAddDateOption={(input) =>
+                  addDateOption.mutate({ proposalId: p.id, ...input })
                 }
-              >
-                <Plus className="h-4 w-4" />
-                Create date poll
-              </Button>
-            )
-          )}
+                onVoteDateOption={(dateOptionId, value) =>
+                  voteDateOption.mutate({ dateOptionId, value })
+                }
+                onConfirm={(dateOptionId) => {
+                  const dateOpt = pDateOptions.find((d) => d.id === dateOptionId);
+                  confirmProposal.mutate(
+                    { proposalId: p.id, dateOptionId },
+                    {
+                      onSuccess: () => {
+                        const dateStr = dateOpt
+                          ? `${dateOpt.start_date} → ${dateOpt.end_date}`
+                          : "";
+                        toast({
+                          title: `Plan confirmed! ✅ ${p.destination}${dateStr ? ` · ${dateStr}` : ""}`,
+                        });
+                      },
+                    }
+                  );
+                }}
+                isConfirming={confirmProposal.isPending}
+                isAddingDate={addDateOption.isPending}
+              />
+            );
+          })}
         </div>
       )}
 
-      {/* Step 3: Preference polls */}
+      {/* Preference polls */}
       <div className="space-y-4">
         {prefPolls.map((poll) => (
           <StructuredPoll
@@ -208,57 +165,58 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
           />
         ))}
 
-        {canManage && (() => {
-          const trigger = (
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-              <Plus className="h-4 w-4" />
-              Ask the group something
-            </Button>
-          );
-          const content = (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Question</Label>
-                <Input
-                  placeholder="e.g. Airbnb or hotel?"
-                  value={prefTitle}
-                  onChange={(e) => setPrefTitle(e.target.value)}
-                />
-              </div>
-              <Button
-                className="w-full"
-                onClick={handleCreatePref}
-                disabled={!prefTitle.trim() || createPoll.isPending}
-              >
-                Create poll
+        {canManage &&
+          (() => {
+            const trigger = (
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+                <Plus className="h-4 w-4" />
+                Ask the group something
               </Button>
-            </div>
-          );
-          if (isMobile) {
-            return (
-              <Drawer open={prefOpen} onOpenChange={setPrefOpen}>
-                <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-                <DrawerContent className="px-4 pb-6">
-                  <DrawerHeader className="text-left px-0">
-                    <DrawerTitle>New preference poll</DrawerTitle>
-                  </DrawerHeader>
-                  {content}
-                </DrawerContent>
-              </Drawer>
             );
-          }
-          return (
-            <Dialog open={prefOpen} onOpenChange={setPrefOpen}>
-              <DialogTrigger asChild>{trigger}</DialogTrigger>
-              <DialogContent className="max-w-sm">
-                <DialogHeader>
-                  <DialogTitle>New preference poll</DialogTitle>
-                </DialogHeader>
-                {content}
-              </DialogContent>
-            </Dialog>
-          );
-        })()}
+            const content = (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Question</Label>
+                  <Input
+                    placeholder="e.g. Airbnb or hotel?"
+                    value={prefTitle}
+                    onChange={(e) => setPrefTitle(e.target.value)}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleCreatePref}
+                  disabled={!prefTitle.trim() || createPoll.isPending}
+                >
+                  Create poll
+                </Button>
+              </div>
+            );
+            if (isMobile) {
+              return (
+                <Drawer open={prefOpen} onOpenChange={setPrefOpen}>
+                  <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+                  <DrawerContent className="px-4 pb-6">
+                    <DrawerHeader className="text-left px-0">
+                      <DrawerTitle>New preference poll</DrawerTitle>
+                    </DrawerHeader>
+                    {content}
+                  </DrawerContent>
+                </Drawer>
+              );
+            }
+            return (
+              <Dialog open={prefOpen} onOpenChange={setPrefOpen}>
+                <DialogTrigger asChild>{trigger}</DialogTrigger>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>New preference poll</DialogTitle>
+                  </DialogHeader>
+                  {content}
+                </DialogContent>
+              </Dialog>
+            );
+          })()}
       </div>
     </div>
   );
