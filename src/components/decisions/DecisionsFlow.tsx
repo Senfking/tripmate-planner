@@ -238,7 +238,7 @@ function PreferencesContent({ tripId, myRole }: { tripId: string; myRole: string
         />
       ))}
 
-      {canManage &&
+      {
         (() => {
           const trigger = (
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
