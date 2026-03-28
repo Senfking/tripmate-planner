@@ -1,0 +1,1 @@
+ALTER TABLE public.trip_route_stops DROP COLUMN position;

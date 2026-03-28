@@ -578,7 +578,6 @@ export type Database = {
           end_date: string
           id: string
           notes: string | null
-          position: number
           proposal_id: string | null
           start_date: string
           trip_id: string
@@ -590,7 +589,6 @@ export type Database = {
           end_date: string
           id?: string
           notes?: string | null
-          position?: number
           proposal_id?: string | null
           start_date: string
           trip_id: string
@@ -602,7 +600,6 @@ export type Database = {
           end_date?: string
           id?: string
           notes?: string | null
-          position?: number
           proposal_id?: string | null
           start_date?: string
           trip_id?: string

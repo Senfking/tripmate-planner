@@ -38,7 +38,7 @@ export function validateRouteDate(
     (s) => startDate < s.end_date && endDate > s.start_date
   );
   if (overlap) {
-    result.hardError = `⚠️ These dates overlap with Stop ${overlap.position}: ${overlap.destination}. Please select different dates.`;
+    result.hardError = `⚠️ These dates overlap with ${overlap.destination}. Please select different dates.`;
     return result;
   }
 
