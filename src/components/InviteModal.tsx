@@ -136,7 +136,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
   // Regenerate trip code
   const regenerateCode = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.rpc("regenerate_trip_code", {
+      const { data, error } = await (supabase as any).rpc("regenerate_trip_code", {
         _trip_id: tripId,
       });
       if (error) throw error;

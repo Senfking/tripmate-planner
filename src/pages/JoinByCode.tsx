@@ -23,7 +23,7 @@ export default function JoinByCode() {
 
   const join = useMutation({
     mutationFn: async (joinCode: string) => {
-      const { data, error } = await supabase.rpc("join_by_code", {
+      const { data, error } = await (supabase as any).rpc("join_by_code", {
         _code: joinCode,
       });
       if (error) throw error;
