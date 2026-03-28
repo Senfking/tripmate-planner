@@ -325,15 +325,17 @@ export function ProposalCard({
 
       {/* Add to route button — owner/admin only */}
       {canManage && !isRouteLocked && !isInRoute && !confirmOpen && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-          onClick={handleOpenConfirm}
-        >
-          <Route className="h-3.5 w-3.5" />
-          Add to route 🗺️
-        </Button>
+        <div className="flex justify-end md:justify-start">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+            onClick={handleOpenConfirm}
+          >
+            <Route className="h-3.5 w-3.5" />
+            Add to route 🗺️
+          </Button>
+        </div>
       )}
 
       {/* Inline confirm panel */}
