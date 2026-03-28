@@ -23,7 +23,7 @@ export default function Login() {
     const { error: err } = await signIn(email, password);
     setLoading(false);
     if (err) {
-      setError(err.message);
+      setError(friendlyError(err.message));
     } else {
       navigate("/app/trips", { replace: true });
     }

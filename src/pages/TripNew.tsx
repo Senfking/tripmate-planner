@@ -50,7 +50,7 @@ export default function TripNew() {
       toast.success("Trip created!");
       navigate(`/app/trips/${data.id}`);
     } catch (err: any) {
-      setError(err.message || "Failed to create trip");
+      setError(friendlyError(err.message));
     } finally {
       setLoading(false);
     }

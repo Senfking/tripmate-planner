@@ -24,7 +24,7 @@ export default function Signup() {
     const { error: err } = await signUp(email, password, displayName);
     setLoading(false);
     if (err) {
-      setError(err.message);
+      setError(friendlyError(err.message));
     } else {
       navigate("/app/trips", { replace: true });
     }
