@@ -178,8 +178,6 @@ export function useDecisionPolls(tripId: string | undefined) {
     },
   });
 
-  const destPoll = (polls.data || []).find((p) => p.type === "destination");
-  const datePoll = (polls.data || []).find((p) => p.type === "date");
   const prefPolls = (polls.data || []).filter((p) => p.type === "preference");
 
   return {
