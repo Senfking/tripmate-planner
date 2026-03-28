@@ -32,7 +32,7 @@ export function useRouteStops(tripId: string | undefined) {
         .from("trip_route_stops" as any)
         .select("*")
         .eq("trip_id", tripId!)
-        .order("position", { ascending: true });
+        .order("start_date", { ascending: true });
       if (error) throw error;
       return (data || []) as unknown as RouteStop[];
     },
