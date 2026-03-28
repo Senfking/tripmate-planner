@@ -141,12 +141,9 @@ export function VibeBoard({
     return (
       <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center space-y-3">
         <Sparkles className="h-8 w-8 mx-auto text-primary" />
-        <div>
-          <p className="font-semibold text-foreground">Vibe Board</p>
-          <p className="text-sm text-muted-foreground">
-            Get everyone aligned on trip vibes before planning
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Get everyone aligned on trip vibes before planning
+        </p>
         <Button
           onClick={() => activateBoard.mutate()}
           disabled={activateBoard.isPending}
