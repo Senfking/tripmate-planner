@@ -50,7 +50,7 @@ export default function InviteRedeem() {
     if (!user) {
       // Store token so signup/login pages can show contextual message
       sessionStorage.setItem("invite_token", token!);
-      navigate(`/signup?redirect=/app/invite/${token}`, { replace: true });
+      navigate(`/signup?redirect=/i/${token}`, { replace: true });
       return;
     }
 
