@@ -1,7 +1,7 @@
 {
-  "name": "TripCrew",
-  "short_name": "TripCrew",
-  "description": "Plan trips together with your crew",
+  "name": "Junto",
+  "short_name": "Junto",
+  "description": "Plan trips together",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#E07A5F",

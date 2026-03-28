@@ -5,5 +5,5 @@
     <path d="M-80 65 Q0 -30 80 65" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
     <path d="M0 -98 L10 -125 L0 -115 L-10 -125 Z" fill="#fff"/>
   </g>
-  <text x="256" y="400" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="72" fill="#fff">TripCrew</text>
+  <text x="256" y="400" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="72" fill="#fff">Junto</text>
 </svg>
