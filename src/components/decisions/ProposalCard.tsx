@@ -46,6 +46,10 @@ export function ProposalCard({ proposal, reactions, myReaction, canAdopt, hasAdo
 
       <p className="text-xs text-muted-foreground">Suggested by {proposal.creator_name}</p>
 
+      {isGreyedOut && (
+        <p className="text-xs text-muted-foreground font-medium">Another plan was adopted</p>
+      )}
+
       {/* Reactions */}
       <div className="flex items-center gap-2 flex-wrap">
         {REACTION_BUTTONS.map(({ value, icon: Icon, label, color }) => {
