@@ -1,20 +1,24 @@
 import { useProposals } from "@/hooks/useProposals";
+import { useRouteStops } from "@/hooks/useRouteStops";
 import { ProposalCard } from "./ProposalCard";
 import { ProposalForm } from "./ProposalForm";
 import { LeadingComboBanner } from "./LeadingComboBanner";
+import { TripRoute } from "./TripRoute";
 import { MapPin } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Props = {
   tripId: string;
   myRole: string | undefined;
+  isRouteLocked: boolean;
 };
 
-export function WhereWhenSection({ tripId, myRole }: Props) {
+export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
   const canManage = myRole === "owner" || myRole === "admin";
+  const isOwner = myRole === "owner";
+
   const {
     proposals,
-    hasConfirmed,
     destVotes,
     myDestVotes,
     dateOptionsByProposal,
@@ -25,18 +29,50 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
     reactDest,
     addDateOption,
     voteDateOption,
-    confirmProposal,
   } = useProposals(tripId);
+
+  const {
+    stops,
+    addStop,
+    removeStop,
+    reorderStop,
+    lockRoute,
+    unlockRoute,
+    isProposalInRoute,
+  } = useRouteStops(tripId);
 
   return (
     <div className="space-y-6 mt-6">
+      {/* Trip Route section */}
+      <TripRoute
+        stops={stops}
+        canManage={canManage}
+        isOwner={isOwner}
+        isRouteLocked={isRouteLocked}
+        onAddStop={(input) => {
+          addStop.mutate(input, {
+            onSuccess: () => toast({ title: "Stop added to route! 📍" }),
+          });
+        }}
+        isAddingStop={addStop.isPending}
+        onRemoveStop={(input) => {
+          removeStop.mutate(input, {
+            onSuccess: () => toast({ title: "Stop removed from route" }),
+          });
+        }}
+        onReorderStop={(input) => reorderStop.mutate(input)}
+        onLockRoute={() => lockRoute.mutate()}
+        onUnlockRoute={() => unlockRoute.mutate()}
+        isLocking={lockRoute.isPending || unlockRoute.isPending}
+      />
+
       {/* Section header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MapPin className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-foreground">Where & When</h2>
+          <h2 className="font-semibold text-foreground">Destinations</h2>
         </div>
-        {proposals.length > 0 && !hasConfirmed && (
+        {proposals.length > 0 && !isRouteLocked && (
           <ProposalForm
             onSubmit={(data) => {
               createProposal.mutate(data, {
@@ -49,7 +85,11 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
       </div>
 
       {/* Leading combo banner */}
-      <LeadingComboBanner leadingCombo={leadingCombo} />
+      <LeadingComboBanner
+        leadingCombo={leadingCombo}
+        routeStops={stops}
+        isRouteLocked={isRouteLocked}
+      />
 
       {/* Destination cards */}
       {proposals.length === 0 ? (
@@ -81,8 +121,10 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
                 dateOptions={pDateOptions}
                 dateVotes={dateVotes}
                 myDateVotes={myDateVotes}
-                hasConfirmed={hasConfirmed}
                 canManage={canManage}
+                isRouteLocked={isRouteLocked}
+                isInRoute={isProposalInRoute(p.id)}
+                existingStops={stops}
                 onReactDest={(value) => reactDest.mutate({ proposalId: p.id, value })}
                 onAddDateOption={(input) =>
                   addDateOption.mutate({ proposalId: p.id, ...input })
@@ -90,23 +132,12 @@ export function WhereWhenSection({ tripId, myRole }: Props) {
                 onVoteDateOption={(dateOptionId, value) =>
                   voteDateOption.mutate({ dateOptionId, value })
                 }
-                onConfirm={(dateOptionId) => {
-                  const dateOpt = pDateOptions.find((d) => d.id === dateOptionId);
-                  confirmProposal.mutate(
-                    { proposalId: p.id, dateOptionId },
-                    {
-                      onSuccess: () => {
-                        const dateStr = dateOpt
-                          ? `${dateOpt.start_date} → ${dateOpt.end_date}`
-                          : "";
-                        toast({
-                          title: `Plan confirmed! ✅ ${p.destination}${dateStr ? ` · ${dateStr}` : ""}`,
-                        });
-                      },
-                    }
-                  );
+                onAddToRoute={(input) => {
+                  addStop.mutate(input, {
+                    onSuccess: () => toast({ title: `${p.destination} added to route! 📍` }),
+                  });
                 }}
-                isConfirming={confirmProposal.isPending}
+                isAddingToRoute={addStop.isPending}
                 isAddingDate={addDateOption.isPending}
               />
             );
