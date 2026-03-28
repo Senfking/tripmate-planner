@@ -49,7 +49,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
         .from("invites")
         .select("*")
         .eq("trip_id", tripId)
-        .is("revoked_at", null)
+        .is("revoked_at" as any, null)
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
         .limit(1)
@@ -64,7 +64,7 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
   const { data: redemptionCount } = useQuery({
     queryKey: ["invite-redemptions-count", activeInvite?.id],
     queryFn: async () => {
-      const { count, error } = await supabase
+      const { count, error } = await (supabase as any)
         .from("invite_redemptions")
         .select("id", { count: "exact", head: true })
         .eq("invite_id", activeInvite!.id);
@@ -80,11 +80,11 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trips")
-        .select("trip_code")
+        .select("trip_code" as any)
         .eq("id", tripId)
         .single();
       if (error) throw error;
-      return data;
+      return data as any;
     },
     enabled: open && !!user,
   });
