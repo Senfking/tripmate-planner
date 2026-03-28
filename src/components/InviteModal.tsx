@@ -100,7 +100,11 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
 
   const createInvite = useMutation({
     mutationFn: async () => {
-      const token = crypto.randomUUID();
+      // Short 10-char alphanumeric token for cleaner URLs
+      const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz';
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(10)))
+        .map(b => chars[b % chars.length])
+        .join('');
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       const { error } = await supabase.from("invites").insert({
         trip_id: tripId,
