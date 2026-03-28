@@ -89,7 +89,6 @@ export function AddToRouteDrawer({
       destination: destination.trim(),
       start_date: startDate,
       end_date: endDate,
-      position: nextPosition,
       notes: notes.trim() || undefined,
       proposal_id: proposalId,
     });
