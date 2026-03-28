@@ -1,18 +1,10 @@
 import { useState } from "react";
 import { useProposals } from "@/hooks/useProposals";
-import { useDecisionPolls } from "@/hooks/useDecisionPolls";
 import { ProposalCard } from "./ProposalCard";
 import { ProposalForm } from "./ProposalForm";
 import { LeadingComboBanner } from "./LeadingComboBanner";
-import { StructuredPoll } from "./StructuredPoll";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { MapPin, Plus } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 type Props = {
   tripId: string;
