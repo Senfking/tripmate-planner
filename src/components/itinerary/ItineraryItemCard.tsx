@@ -29,7 +29,7 @@ interface Props {
   onDrop: (e: React.DragEvent) => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
   const { user } = useAuth();
   const status = statusConfig[item.status] || statusConfig.idea;
   const canDelete = item.created_by === user?.id || myRole === "owner" || myRole === "admin";
