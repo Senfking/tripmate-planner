@@ -8,6 +8,7 @@ import { useState } from "react";
 import { InviteModal } from "@/components/InviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
+import { BookingsTab } from "@/components/bookings/BookingsTab";
 import { format } from "date-fns";
 
 export default function TripHome() {
@@ -163,7 +164,9 @@ export default function TripHome() {
         <TabsContent value="itinerary" className="px-4 py-4">
           <ItineraryTab tripId={trip.id} myRole={myRole} />
         </TabsContent>
-        <TabsContent value="bookings">{tabPlaceholder("Bookings & Docs")}</TabsContent>
+        <TabsContent value="bookings" className="px-4 py-4">
+          <BookingsTab tripId={trip.id} myRole={myRole} />
+        </TabsContent>
         <TabsContent value="expenses">{tabPlaceholder("Expenses")}</TabsContent>
         <TabsContent value="admin">{tabPlaceholder("Admin")}</TabsContent>
       </Tabs>

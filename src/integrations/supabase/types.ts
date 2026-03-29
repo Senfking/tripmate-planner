@@ -17,6 +17,7 @@ export type Database = {
       attachments: {
         Row: {
           created_at: string
+          created_by: string | null
           file_path: string | null
           id: string
           itinerary_item_id: string | null
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           file_path?: string | null
           id?: string
           itinerary_item_id?: string | null
@@ -39,6 +41,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           file_path?: string | null
           id?: string
           itinerary_item_id?: string | null

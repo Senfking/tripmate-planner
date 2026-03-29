@@ -1,0 +1,1 @@
+ALTER TABLE public.attachments ADD COLUMN created_by uuid DEFAULT auth.uid();
