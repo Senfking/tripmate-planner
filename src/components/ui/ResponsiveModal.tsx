@@ -48,7 +48,7 @@ export function ResponsiveModal({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        {children}
+        <div className="overflow-y-auto max-h-[70vh]">{children}</div>
       </DialogContent>
     </Dialog>
   );
