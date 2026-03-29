@@ -212,7 +212,7 @@ export function ExpenseFormModal({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Currency</Label>
-          <CurrencyPicker value={currency} onChange={setCurrency} />
+          <CurrencyPicker value={currency} onChange={setCurrency} suggestedCodes={[settlementCurrency, ...usedCurrencies.filter(c => c !== settlementCurrency)]} />
         </div>
       </div>
 
