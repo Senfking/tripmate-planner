@@ -232,7 +232,8 @@ function buildCompactSummary(type: string, data: Record<string, unknown> | null)
     if (data.departure_time) parts.push(String(data.departure_time));
     if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
   } else if (type === "hotel") {
-    if (data.provider) parts.push(String(data.provider));
+    if (data.destination) parts.push(String(data.destination));
+    else if (data.provider && !isPlatformName(String(data.provider))) parts.push(String(data.provider));
     if (data.check_in) parts.push(`In: ${fmtDate(data.check_in)}`);
     if (data.check_out) parts.push(`Out: ${fmtDate(data.check_out)}`);
   } else if (type === "activity") {
