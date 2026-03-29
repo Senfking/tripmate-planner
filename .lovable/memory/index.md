@@ -2,10 +2,11 @@
 
 ## Core
 TripCrew PWA. Warm terracotta primary (#E07A5F / HSL 11 65% 62%). Mobile-first with bottom nav, desktop sidebar.
-On mobile, ALWAYS use Drawer (bottom sheet) not Dialog/AlertDialog for ALL modals, confirmations, and popups — no exceptions.
+All modals → bottom sheet Drawer on mobile (<768px), centered Dialog on desktop.
 
 ## Memories
 - [Design tokens](mem://design/tokens) — Travel-inspired warm palette, terracotta/coral/sand/ocean
-- [Mobile drawer preference](mem://preferences/mobile-drawer) — Use Drawer on mobile for ALL modals/confirmations/alerts, Dialog on desktop only
-- [Mobile-first layout](mem://preferences/mobile-first) — Mobile-first approach, 16px horizontal padding
-- [Mobile padding](mem://preferences/mobile-padding) — Consistent padding rules for mobile layouts
+- [Responsive modals](mem://preferences/responsive-modals) — Use ResponsiveModal or Drawer/Dialog pattern everywhere
+- [Mobile drawer](mem://preferences/mobile-drawer) — Drawer preference for mobile
+- [Mobile first](mem://preferences/mobile-first) — Mobile-first design approach
+- [Mobile padding](mem://preferences/mobile-padding) — Padding/spacing rules for mobile
