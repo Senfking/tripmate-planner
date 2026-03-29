@@ -52,7 +52,7 @@ interface Props {
   onDrop: (e: React.DragEvent) => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, onCycleAttendance, onEdit, onDelete, onDragStart, onDragEnd, onDragOver, onDrop }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
