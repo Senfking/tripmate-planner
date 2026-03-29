@@ -22,6 +22,17 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setGoogleLoading(true);
+    const { error: err } = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    setGoogleLoading(false);
+    if (err) setError(friendlyError(String(err)));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
