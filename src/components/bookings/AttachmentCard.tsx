@@ -181,7 +181,10 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
         {expanded && (
           <div className="border-t px-3 pb-3 pt-2 space-y-2 animate-fade-in">
             {bannerSrc && (
-              <div className="relative h-[100px] overflow-hidden rounded-lg">
+              <div
+                className="relative h-[100px] overflow-hidden rounded-lg cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); onOpen(); }}
+              >
                 <img src={bannerSrc} alt="" className="h-full w-full object-cover" />
               </div>
             )}
