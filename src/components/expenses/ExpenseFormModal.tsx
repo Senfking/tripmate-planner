@@ -198,7 +198,26 @@ export function ExpenseFormModal({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Date</Label>
-          <Input type="date" value={incurredOn} onChange={(e) => setIncurredOn(e.target.value)} />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn("h-10 w-full justify-start text-left font-normal", !incurredOn && "text-muted-foreground")}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {incurredOn ? format(parse(incurredOn, "yyyy-MM-dd", new Date()), "PPP") : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={incurredOn ? parse(incurredOn, "yyyy-MM-dd", new Date()) : undefined}
+                onSelect={(date) => date && setIncurredOn(format(date, "yyyy-MM-dd"))}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
