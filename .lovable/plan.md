@@ -1,26 +1,24 @@
 
 
-## Revised: Bookings & Docs tab
+## Fix: Attachments query failing due to missing FK
 
-Same plan as previously approved, with one addition:
+### Root cause
 
-### Empty state (in `BookingsTab.tsx`)
+The query `.select("*, profiles(display_name)")` returns HTTP 400 because there is no foreign key from `attachments.created_by` to `profiles.id`. PostgREST cannot resolve the join. This means the attachments query **always fails** — it's not just a cache invalidation issue.
 
-When `attachments.length === 0`, render centered empty state instead of filter/search/list:
+### Fix (2 changes)
 
-- 📄 icon or emoji
-- **"No docs saved yet 📄"** heading
-- "Upload a file or save a link to get started" subtext
-- Two buttons side by side: **"Upload file"** and **"Save a link"**
-- Each button switches to the corresponding add mode (same as the toggle buttons in the non-empty view)
+**1. Database migration** — Add a foreign key from `attachments.created_by` to `profiles.id`:
 
-### Full file list (unchanged from approved plan)
+```sql
+ALTER TABLE public.attachments
+ADD CONSTRAINT attachments_created_by_fkey
+FOREIGN KEY (created_by) REFERENCES public.profiles(id);
+```
 
-1. **Migration** — `ALTER TABLE attachments ADD COLUMN created_by uuid DEFAULT auth.uid()`
-2. **`src/hooks/useAttachments.ts`** — CRUD + file upload + signed URL downloads
-3. **`src/components/bookings/BookingsTab.tsx`** — Main tab with empty state, filters, search, add modes
-4. **`src/components/bookings/AttachmentCard.tsx`** — Card with type icon, title, notes, added-by, Open/Delete
-5. **`src/components/bookings/FileUploadZone.tsx`** — Drag-and-drop, PDF/JPG/PNG, progress bar
-6. **`src/components/bookings/LinkForm.tsx`** — URL + title + type + notes form
-7. **`src/pages/TripHome.tsx`** — Replace bookings placeholder with `<BookingsTab>`
+**2. `src/hooks/useAttachments.ts`** — No code changes needed. Once the FK exists, the existing `select("*, profiles(display_name)")` query and `invalidateQueries({ queryKey: key })` will work correctly. The query key and invalidation are already consistent.
+
+### Files changed
+- 1 new migration file (FK addition)
+- No application code changes
 
