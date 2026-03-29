@@ -2,6 +2,7 @@ import { useState, useRef, Fragment } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ItineraryItemCard } from "./ItineraryItemCard";
 import { ItemFormModal } from "./ItemFormModal";
 import type { ItineraryItem } from "@/hooks/useItinerary";
@@ -72,9 +73,18 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
   const handleDragOver = (targetId: string) => (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    if (dragItemRef.current && dragItemRef.current !== targetId) {
-      setDragOverTargetId(targetId);
+    const draggedId = dragItemRef.current;
+    if (!draggedId || draggedId === targetId) return;
+
+    // Suppress placeholder if target is the immediate next sibling (same position)
+    const draggedIndex = items.findIndex(i => i.id === draggedId);
+    const targetIndex = items.findIndex(i => i.id === targetId);
+    if (targetIndex === draggedIndex + 1) {
+      setDragOverTargetId(null);
+      return;
     }
+
+    setDragOverTargetId(targetId);
   };
 
   const getSortValue = (item: ItineraryItem) =>
@@ -90,15 +100,34 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
     const draggedItem = items.find((i) => i.id === draggedId);
     if (!draggedItem || draggedItem.start_time) return;
 
-    const targetIdx = items.findIndex((i) => i.id === targetId);
+    // Exclude dragged item to get correct neighbor indices
+    const filtered = items.filter(i => i.id !== draggedId);
+    const targetIdx = filtered.findIndex((i) => i.id === targetId);
     if (targetIdx === -1) return;
 
-    const targetVal = getSortValue(items[targetIdx]);
+    const targetVal = getSortValue(filtered[targetIdx]);
     const prevIdx = targetIdx - 1;
-    const prevVal = prevIdx >= 0 ? getSortValue(items[prevIdx]) : targetVal - 100;
+    const prevVal = prevIdx >= 0 ? getSortValue(filtered[prevIdx]) : targetVal - 100;
 
     const newSortOrder = Math.round((prevVal + targetVal) / 2);
     onReorder([{ id: draggedItem.id, sort_order: newSortOrder }]);
+  };
+
+  const handleDropEnd = (e: React.DragEvent) => {
+    e.preventDefault();
+    const draggedId = dragItemRef.current;
+    dragItemRef.current = null;
+    setDragOverTargetId(null);
+    if (!draggedId) return;
+
+    const draggedItem = items.find((i) => i.id === draggedId);
+    if (!draggedItem || draggedItem.start_time) return;
+
+    const filtered = items.filter(i => i.id !== draggedId);
+    const lastItem = filtered[filtered.length - 1];
+    const lastVal = lastItem ? getSortValue(lastItem) : 0;
+
+    onReorder([{ id: draggedItem.id, sort_order: lastVal + 1000 }]);
   };
 
   return (
@@ -129,10 +158,18 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
           {items.map((item) => {
             const isDraggable = !item.start_time;
             const isDragging = dragItemRef.current === item.id;
-            const isDropTarget = dragOverTargetId === item.id && dragItemRef.current !== null && dragItemRef.current !== item.id;
+            const draggedId = dragItemRef.current;
+            const isDropTarget = dragOverTargetId === item.id && draggedId !== null && draggedId !== item.id;
+
+            // Suppress placeholder if it's effectively the same position
+            const draggedIndex = draggedId ? items.findIndex(i => i.id === draggedId) : -1;
+            const targetIndex = items.findIndex(i => i.id === item.id);
+            const isSamePosition = draggedIndex !== -1 && targetIndex === draggedIndex + 1;
+            const showPlaceholder = isDropTarget && !isSamePosition;
+
             return (
               <Fragment key={item.id}>
-                {isDropTarget && (
+                {showPlaceholder && (
                   <div className="h-12 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 transition-all duration-150" />
                 )}
                 <ItineraryItemCard
@@ -154,6 +191,20 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
               </Fragment>
             );
           })}
+
+          {/* Trailing drop zone for "move to end" */}
+          {dragItemRef.current && (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOverTargetId("__end__"); }}
+              onDrop={handleDropEnd}
+              className={cn(
+                "min-h-[48px] rounded-lg border-2 border-dashed transition-all duration-150",
+                dragOverTargetId === "__end__"
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-transparent"
+              )}
+            />
+          )}
         </div>
       )}
 
