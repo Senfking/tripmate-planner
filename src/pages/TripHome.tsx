@@ -62,10 +62,30 @@ export default function TripHome() {
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "decisions";
+  const tabStorageKey = tripId ? `trip-home-tab:${tripId}` : null;
+  const tabFromUrl = searchParams.get("tab");
+  const tabFromStorage = tabStorageKey ? sessionStorage.getItem(tabStorageKey) : null;
+  const activeTab = (TRIP_TABS.includes((tabFromUrl || tabFromStorage || "decisions") as TripTab)
+    ? (tabFromUrl || tabFromStorage || "decisions")
+    : "decisions") as TripTab;
+
   const setActiveTab = useCallback((tab: string) => {
-    setSearchParams({ tab }, { replace: true });
-  }, [setSearchParams]);
+    if (!TRIP_TABS.includes(tab as TripTab)) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", tab);
+      return next;
+    }, { replace: true });
+
+    if (tabStorageKey) {
+      sessionStorage.setItem(tabStorageKey, tab);
+    }
+  }, [setSearchParams, tabStorageKey]);
+
+  useEffect(() => {
+    if (!tabStorageKey) return;
+    sessionStorage.setItem(tabStorageKey, activeTab);
+  }, [activeTab, tabStorageKey]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const canInvite = myRole === "owner" || myRole === "admin";
