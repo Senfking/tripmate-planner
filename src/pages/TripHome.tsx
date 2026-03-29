@@ -3,10 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, Loader2, MapPin, UserPlus, Share2 } from "lucide-react";
+import { ArrowLeft, Users, Loader2, MapPin, Share2 } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
-import { InviteModal } from "@/components/InviteModal";
-import { ShareModal } from "@/components/ShareModal";
+import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
@@ -89,9 +88,8 @@ export default function TripHome() {
     sessionStorage.setItem(tabStorageKey, activeTab);
   }, [activeTab, tabStorageKey]);
 
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const canInvite = myRole === "owner" || myRole === "admin";
+  const [shareInviteOpen, setShareInviteOpen] = useState(false);
+  const isAdmin = myRole === "owner" || myRole === "admin";
 
   if (isLoading) {
     return (
@@ -158,21 +156,12 @@ export default function TripHome() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => setShareOpen(true)}
+              onClick={() => setShareInviteOpen(true)}
               className="flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm text-white hover:bg-white/30 transition-colors"
             >
               <Share2 className="h-3.5 w-3.5" />
               Share
             </button>
-            {canInvite && (
-              <button
-                onClick={() => setInviteOpen(true)}
-                className="flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm text-white hover:bg-white/30 transition-colors"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                Invite
-              </button>
-            )}
             <div className="flex items-center gap-1 text-white/80 text-sm">
               <Users className="h-4 w-4" />
               <span>{memberCount ?? "…"}</span>
@@ -213,22 +202,14 @@ export default function TripHome() {
       </Tabs>
 
       {trip && (
-        <>
-          <InviteModal
-            tripId={trip.id}
-            tripName={trip.name}
-            open={inviteOpen}
-            onOpenChange={setInviteOpen}
-            isAdmin={canInvite}
-          />
-          <ShareModal
-            tripId={trip.id}
-            tripName={trip.name}
-            open={shareOpen}
-            onOpenChange={setShareOpen}
-            isAdmin={canInvite}
-          />
-        </>
+        <ShareInviteModal
+          tripId={trip.id}
+          tripName={trip.name}
+          open={shareInviteOpen}
+          onOpenChange={setShareInviteOpen}
+          isAdmin={isAdmin}
+          trip={trip}
+        />
       )}
     </div>
   );
