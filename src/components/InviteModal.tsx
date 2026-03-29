@@ -32,6 +32,7 @@ import {
   Hash,
   Users,
 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 
 interface InviteModalProps {
   tripId: string;
