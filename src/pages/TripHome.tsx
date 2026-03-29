@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, Loader2, MapPin, UserPlus, Share2 } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { InviteModal } from "@/components/InviteModal";
+import { ShareModal } from "@/components/ShareModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
