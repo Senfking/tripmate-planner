@@ -119,7 +119,6 @@ export function useItinerary(tripId: string) {
 
   const reorderItems = useMutation({
     mutationFn: async (reordered: { id: string; sort_order: number }[]) => {
-      // Batch update sort orders
       const promises = reordered.map((r) =>
         supabase.from("itinerary_items").update({ sort_order: r.sort_order }).eq("id", r.id)
       );
@@ -127,8 +126,24 @@ export function useItinerary(tripId: string) {
       const err = results.find((r) => r.error);
       if (err?.error) throw err.error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
-    onError: (e: any) => toast.error(e.message),
+    onMutate: async (reordered) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<ItineraryItem[]>(key);
+      qc.setQueryData<ItineraryItem[]>(key, (old) => {
+        if (!old) return old;
+        const updated = old.map((item) => {
+          const match = reordered.find((r) => r.id === item.id);
+          return match ? { ...item, sort_order: match.sort_order } : item;
+        });
+        return updated;
+      });
+      return { previous };
+    },
+    onError: (e: any, _vars, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+      toast.error(e.message);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
 
   return { items, isLoading, addItem, updateItem, deleteItem, reorderItems };

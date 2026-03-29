@@ -70,7 +70,11 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, d
       onDragEnd={draggable ? onDragEnd : undefined}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      className={cn("rounded-lg border bg-card p-3 space-y-2", draggable ? "cursor-grab active:cursor-grabbing" : "")}
+      className={cn(
+        "rounded-lg border bg-card p-3 space-y-2 transition-all duration-150",
+        draggable ? "cursor-grab active:cursor-grabbing" : "",
+        isDragging && "opacity-50 ring-2 ring-primary/30"
+      )}
     >
       <div className="flex items-start gap-2">
         {draggable ? (

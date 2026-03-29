@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, Fragment } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -34,6 +34,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
   const dragItemRef = useRef<string | null>(null);
+  const [dragOverTargetId, setDragOverTargetId] = useState<string | null>(null);
 
   const dateObj = new Date(dayDate + "T00:00:00");
   const dateLabel = format(dateObj, "EEE d MMM yyyy");
@@ -65,17 +66,25 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
 
   const handleDragEnd = () => {
     dragItemRef.current = null;
+    setDragOverTargetId(null);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (targetId: string) => (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+    if (dragItemRef.current && dragItemRef.current !== targetId) {
+      setDragOverTargetId(targetId);
+    }
   };
+
+  const getSortValue = (item: ItineraryItem) =>
+    item.start_time ? timeToMinutes(item.start_time) : (item.sort_order ?? 0);
 
   const handleDrop = (targetId: string) => (e: React.DragEvent) => {
     e.preventDefault();
     const draggedId = dragItemRef.current;
     dragItemRef.current = null;
+    setDragOverTargetId(null);
     if (!draggedId || draggedId === targetId) return;
 
     const draggedItem = items.find((i) => i.id === draggedId);
@@ -83,9 +92,6 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
 
     const targetIdx = items.findIndex((i) => i.id === targetId);
     if (targetIdx === -1) return;
-
-    const getSortValue = (item: ItineraryItem) =>
-      item.start_time ? timeToMinutes(item.start_time) : (item.sort_order ?? 0);
 
     const targetVal = getSortValue(items[targetIdx]);
     const prevIdx = targetIdx - 1;
@@ -122,23 +128,30 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
         <div className="space-y-2">
           {items.map((item) => {
             const isDraggable = !item.start_time;
+            const isDragging = dragItemRef.current === item.id;
+            const isDropTarget = dragOverTargetId === item.id && dragItemRef.current !== null && dragItemRef.current !== item.id;
             return (
-              <ItineraryItemCard
-                key={item.id}
-                item={item}
-                tripId={tripId}
-                myRole={myRole}
-                members={members}
-                attendance={attendance}
-                draggable={isDraggable}
-                onCycleAttendance={() => onCycleAttendance(item.id)}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop(item.id)}
-                onEdit={() => handleEdit(item)}
-                onDelete={() => onDeleteItem(item.id)}
-                onDragStart={handleDragStart(item.id)}
-                onDragEnd={handleDragEnd}
-              />
+              <Fragment key={item.id}>
+                {isDropTarget && (
+                  <div className="h-12 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 transition-all duration-150" />
+                )}
+                <ItineraryItemCard
+                  item={item}
+                  tripId={tripId}
+                  myRole={myRole}
+                  members={members}
+                  attendance={attendance}
+                  draggable={isDraggable}
+                  isDragging={isDragging}
+                  onCycleAttendance={() => onCycleAttendance(item.id)}
+                  onDragOver={handleDragOver(item.id)}
+                  onDrop={handleDrop(item.id)}
+                  onEdit={() => handleEdit(item)}
+                  onDelete={() => onDeleteItem(item.id)}
+                  onDragStart={handleDragStart(item.id)}
+                  onDragEnd={handleDragEnd}
+                />
+              </Fragment>
             );
           })}
         </div>
