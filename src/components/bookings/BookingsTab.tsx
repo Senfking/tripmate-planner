@@ -47,7 +47,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds } = useAttachments(tripId);
+  const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
   const [mode, setMode] = useState<"none" | "upload" | "link">("none");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
