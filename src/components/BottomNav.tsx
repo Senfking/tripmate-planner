@@ -1,61 +1,43 @@
-import { Map, Vote, CalendarDays, DollarSign, MoreHorizontal, type LucideIcon } from "lucide-react";
-import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { Map, Vote, CalendarDays, DollarSign, MoreHorizontal, Plus, type LucideIcon } from "lucide-react";
+import { NavLink as RouterNavLink, useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-const tabs: { to: string; label: string; icon: LucideIcon; featured?: boolean }[] = [
+const leftTabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/app/trips", label: "Trips", icon: Map },
   { to: "/app/decisions", label: "Decisions", icon: Vote },
-  { to: "/app/itinerary", label: "Itinerary", icon: CalendarDays, featured: true },
+];
+
+const rightTabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/app/expenses", label: "Expenses", icon: DollarSign },
   { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];
 
-function NavTab({ to, label, icon: Icon, featured = false }: { to: string; label: string; icon: LucideIcon; featured?: boolean }) {
+function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: LucideIcon }) {
   const { pathname } = useLocation();
   const isActive = pathname.startsWith(to);
 
   return (
     <RouterNavLink
       to={to}
-      className={cn(
-        "relative flex min-w-0 flex-1 flex-col items-center justify-end pb-1 pt-2 transition-all duration-300",
-        featured && "-mt-5"
-      )}
+      className="relative flex min-w-0 flex-1 flex-col items-center justify-end pb-1 pt-2 transition-all duration-300"
     >
-      {!featured && (
-        <div
-          className={cn(
-            "absolute inset-x-1 top-2 h-11 rounded-[20px] bg-primary/10 opacity-0 transition-opacity duration-300",
-            isActive && "opacity-100"
-          )}
-        />
-      )}
-
       <div
         className={cn(
-          "relative flex items-center justify-center transition-all duration-300",
-          featured
-            ? "h-14 w-14 rounded-full border-4 border-background bg-gradient-primary shadow-xl"
-            : isActive
-              ? "h-11 w-14 rounded-[18px]"
-              : "h-11 w-11 rounded-full"
+          "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300",
+          isActive && "bg-primary/10"
         )}
       >
         <Icon
           className={cn(
             "transition-all duration-300",
-            featured
-              ? "h-6 w-6 text-primary-foreground"
-              : isActive
-                ? "h-[22px] w-[22px] text-primary"
-                : "h-5 w-5 text-muted-foreground/75"
+            isActive ? "h-[22px] w-[22px] text-primary" : "h-5 w-5 text-muted-foreground/60"
           )}
         />
       </div>
       <span
         className={cn(
-          "mt-1.5 text-[10px] font-semibold transition-colors duration-300",
-          featured ? "text-foreground" : isActive ? "text-primary" : "text-muted-foreground/80"
+          "mt-0.5 text-[10px] font-semibold transition-colors duration-300",
+          isActive ? "text-primary" : "text-muted-foreground/70"
         )}
       >
         {label}
@@ -66,12 +48,29 @@ function NavTab({ to, label, icon: Icon, featured = false }: { to: string; label
 
 export function BottomNav() { 
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-50 md:hidden">
-      <div className="relative overflow-visible rounded-[30px] border border-border/70 bg-background/95 px-2 pt-2 shadow-xl backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-primary opacity-60" />
+    <nav className="fixed inset-x-4 bottom-4 z-50 md:hidden">
+      <div className="relative rounded-[28px] border border-border/60 bg-background/95 shadow-[0_8px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+        {/* Subtle top accent */}
+        <div className="pointer-events-none absolute inset-x-16 top-0 h-[1.5px] rounded-full bg-gradient-primary opacity-50" />
 
-        <div className="flex items-end justify-between gap-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)]">
-          {tabs.map((tab) => (
+        <div className="flex items-end justify-between px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-1">
+          {/* Left tabs */}
+          {leftTabs.map((tab) => (
+            <NavTab key={tab.to} {...tab} />
+          ))}
+
+          {/* Center FAB */}
+          <div className="flex flex-col items-center -mt-6 px-2">
+            <Link
+              to="/app/trips/new"
+              className="flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-background bg-gradient-primary text-primary-foreground shadow-lg transition-transform duration-300 active:scale-95"
+            >
+              <Plus className="h-7 w-7" strokeWidth={2.5} />
+            </Link>
+          </div>
+
+          {/* Right tabs */}
+          {rightTabs.map((tab) => (
             <NavTab key={tab.to} {...tab} />
           ))}
         </div>

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Loader2, Plane } from "lucide-react";
+import { Users, Loader2, Plane } from "lucide-react";
 import { format } from "date-fns";
 
 export default function TripList() { 
@@ -112,12 +112,6 @@ export default function TripList() {
         </button>
       </div>
 
-      <Link
-        to="/app/trips/new"
-        className="fixed bottom-28 right-5 z-50 flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-gradient-primary text-primary-foreground shadow-xl transition-transform duration-300 hover:scale-105 md:bottom-6 md:right-6"
-      >
-        <Plus className="h-6 w-6" />
-      </Link>
     </div>
   );
 }
