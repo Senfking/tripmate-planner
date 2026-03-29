@@ -89,7 +89,7 @@ export function useRouteStops(tripId: string | undefined) {
         .order("start_date", { ascending: true });
 
       await updateTripDates((allStops || []) as unknown as RouteStop[]);
-      await createItineraryDays(input);
+      
       return data;
     },
     onSuccess: invalidate,
