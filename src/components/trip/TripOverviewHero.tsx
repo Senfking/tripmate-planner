@@ -89,7 +89,16 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
 
   return (
     <>
-      <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3">
+      <div
+        className="rounded-xl p-4 flex items-center gap-3"
+        style={{
+          background: "rgba(255, 255, 255, 0.7)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.5)",
+          boxShadow: "0 4px 24px rgba(13, 148, 136, 0.08)",
+        }}
+      >
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{statusLine}</p>
           {statusSub && <p className="text-xs text-muted-foreground mt-0.5">{statusSub}</p>}
@@ -101,7 +110,7 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
           className="flex items-center shrink-0 -space-x-2"
         >
           {visibleMembers.map((m) => (
-            <Avatar key={m.user_id} className="h-8 w-8 border-2 border-card">
+            <Avatar key={m.user_id} className="h-8 w-8" style={{ border: "2px solid rgba(255,255,255,0.9)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", borderRadius: "9999px" }}>
               {m.profile?.avatar_url && (
                 <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
               )}
