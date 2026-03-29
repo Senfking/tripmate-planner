@@ -34,7 +34,6 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
     });
     setDestination("");
     setNote("");
-    setShowDates(false);
     setDateRange(undefined);
     setOpen(false);
   };
