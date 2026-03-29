@@ -227,6 +227,8 @@ export function ExpensesTab({ tripId, myRole }: Props) {
               <SettleUpSection
                 settlements={settlements}
                 currency={settlementCurrency}
+                settlementProgress={settlementProgress}
+                totalSettledOverall={totalSettledOverall}
                 onSettle={(data) => addExpense.mutate(data as any)}
               />
             </CollapsibleContent>
