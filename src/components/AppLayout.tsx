@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, Link } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
@@ -22,9 +22,9 @@ export function AppLayout() {
               </div>
             </div>
 
-            <button className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30">
+            <Link to="/app/more" className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30">
               <UserCircle className="h-5 w-5" />
-            </button>
+            </Link>
           </header>
 
           {/* Page content */}
