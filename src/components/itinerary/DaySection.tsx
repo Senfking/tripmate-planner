@@ -2,6 +2,7 @@ import { useState, useRef, Fragment } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ItineraryItemCard } from "./ItineraryItemCard";
 import { ItemFormModal } from "./ItemFormModal";
 import type { ItineraryItem } from "@/hooks/useItinerary";
