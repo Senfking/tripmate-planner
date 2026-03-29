@@ -84,7 +84,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, o
           <Pencil className="h-3.5 w-3.5" />
         </Button>
         {canDelete && (
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setConfirmOpen(true)}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         )}
