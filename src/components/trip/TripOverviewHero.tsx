@@ -92,17 +92,16 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
       <div
         className="rounded-2xl p-4 flex items-center gap-3"
         style={{
-          background: "rgba(255, 255, 255, 0.8)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          border: "1px solid rgba(255, 255, 255, 0.7)",
-          borderTop: "1px solid rgba(255, 255, 255, 0.9)",
-          boxShadow: "0 8px 32px rgba(13, 148, 136, 0.1), 0 1px 0 rgba(255,255,255,0.8)",
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.8)",
+          boxShadow: "0 2px 12px rgba(13, 148, 136, 0.08)",
         }}
       >
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] font-medium text-foreground">{statusLine}</p>
-          {statusSub && <p className="text-xs text-muted-foreground mt-1">{statusSub}</p>}
+          <p className="text-[14px] font-medium" style={{ color: "#0F172A" }}>{statusLine}</p>
+          {statusSub && <p className="text-[13px] mt-1" style={{ color: "#64748B" }}>{statusSub}</p>}
         </div>
 
         {/* Avatar group */}
@@ -111,7 +110,7 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
           className="flex items-center shrink-0 -space-x-2"
         >
           {visibleMembers.map((m) => (
-            <Avatar key={m.user_id} className="h-8 w-8" style={{ border: "2px solid rgba(255,255,255,0.9)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", borderRadius: "9999px" }}>
+            <Avatar key={m.user_id} className="h-9 w-9" style={{ border: "2px solid rgba(255,255,255,0.9)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", borderRadius: "9999px" }}>
               {m.profile?.avatar_url && (
                 <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
               )}

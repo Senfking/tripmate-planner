@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { Compass, CalendarDays, Plane, Wallet, Users } from "lucide-react";
 import { SectionCard } from "./SectionCard";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
 
@@ -314,42 +315,42 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
   return (
     <div className="flex flex-col gap-2.5 px-4 pb-8">
       <SectionCard
-        icon="🗳️"
+        icon={Compass}
         title="Decisions"
         summary={decisionsSummary}
         to={`/app/trips/${tripId}/decisions`}
         badgeCount={pendingVoteCount}
-        variant="decisions"
+        imageUrl="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80"
       />
       <SectionCard
-        icon="🗓️"
+        icon={CalendarDays}
         title="Itinerary"
         summary={itinerarySummary}
         subline={itinerarySubline}
         to={`/app/trips/${tripId}/itinerary`}
-        variant="itinerary"
+        imageUrl="https://images.unsplash.com/photo-1530521954074-e64f6810b32d?w=800&q=80"
       />
       <SectionCard
-        icon="📄"
+        icon={Plane}
         title="Bookings & Docs"
         summary={bookingsSummary}
         subline={bookingsSubline}
         to={`/app/trips/${tripId}/bookings`}
-        variant="bookings"
+        imageUrl="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80"
       />
       <SectionCard
-        icon="💰"
+        icon={Wallet}
         title="Expenses"
         summary={expensesSummary}
         to={`/app/trips/${tripId}/expenses`}
-        variant="expenses"
+        imageUrl="https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?w=800&q=80"
       />
       <SectionCard
-        icon="⚙️"
+        icon={Users}
         title="Admin"
         summary={adminSummary}
         to={`/app/trips/${tripId}/admin`}
-        variant="admin"
+        imageUrl="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
       />
     </div>
   );
