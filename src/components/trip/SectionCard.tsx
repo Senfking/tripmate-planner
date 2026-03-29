@@ -16,7 +16,30 @@ export function SectionCard({ icon, title, summary, subline, to, badgeCount }: S
   return (
     <button
       onClick={() => navigate(to)}
-      className="w-full text-left bg-card rounded-[14px] border border-[hsl(var(--accent))] border-l-[3px] border-l-[hsl(var(--primary))] p-4 active:bg-muted/50 transition-colors"
+      className="w-full text-left rounded-[14px] p-4 transition-all duration-200 active:scale-[0.98]"
+      style={{
+        background: "rgba(255, 255, 255, 0.85)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        border: "1px solid rgba(204, 251, 241, 0.8)",
+        borderLeft: "3px solid #0D9488",
+        boxShadow: "0 2px 12px rgba(13, 148, 136, 0.06)",
+      }}
+      onPointerDown={(e) => {
+        const el = e.currentTarget;
+        el.style.background = "rgba(255, 255, 255, 0.95)";
+        el.style.boxShadow = "0 4px 20px rgba(13, 148, 136, 0.12)";
+      }}
+      onPointerUp={(e) => {
+        const el = e.currentTarget;
+        el.style.background = "rgba(255, 255, 255, 0.85)";
+        el.style.boxShadow = "0 2px 12px rgba(13, 148, 136, 0.06)";
+      }}
+      onPointerLeave={(e) => {
+        const el = e.currentTarget;
+        el.style.background = "rgba(255, 255, 255, 0.85)";
+        el.style.boxShadow = "0 2px 12px rgba(13, 148, 136, 0.06)";
+      }}
     >
       <div className="flex items-start gap-3">
         <div className="relative shrink-0">
