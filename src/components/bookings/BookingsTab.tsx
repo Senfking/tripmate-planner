@@ -66,7 +66,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
   }, [attachments, peopleFilter, user?.id]);
 
   const filtered = useMemo(() => {
-    let list = attachments;
+    let list = peopleFiltered;
     if (filter !== "all") list = list.filter((a) => a.type === filter);
     if (isSearching) {
       const q = search.toLowerCase();
@@ -77,7 +77,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
       );
     }
     return sortByOwnership(list, user?.id);
-  }, [attachments, filter, search, isSearching, user?.id]);
+  }, [peopleFiltered, filter, search, isSearching, user?.id]);
 
   const groupedSections = useMemo(() => {
     if (!isGroupedView) return [];
