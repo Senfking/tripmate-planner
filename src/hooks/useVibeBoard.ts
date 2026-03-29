@@ -107,6 +107,19 @@ export function useVibeBoard(tripId: string | undefined) {
     },
   });
 
+  const unlockBoard = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("trips")
+        .update({ vibe_board_locked: false } as any)
+        .eq("id", tripId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+    },
+  });
+
   return {
     myResponses: myResponses.data || [],
     aggregates: aggregates.data || [],
