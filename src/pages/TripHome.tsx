@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { InviteModal } from "@/components/InviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
@@ -57,6 +58,12 @@ export default function TripHome() {
     },
     enabled: !!tripId && !!user,
   });
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "decisions";
+  const setActiveTab = useCallback((tab: string) => {
+    setSearchParams({ tab }, { replace: true });
+  }, [setSearchParams]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const canInvite = myRole === "owner" || myRole === "admin";
@@ -143,7 +150,7 @@ export default function TripHome() {
       </header>
 
       {/* Tabs */}
-      <Tabs defaultValue="decisions" className="flex-1">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
         <TabsList className="w-full justify-start overflow-x-auto rounded-none border-b bg-background px-2">
           <TabsTrigger value="decisions">Decisions</TabsTrigger>
           <TabsTrigger value="itinerary">Itinerary</TabsTrigger>
