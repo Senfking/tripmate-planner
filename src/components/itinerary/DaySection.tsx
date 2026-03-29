@@ -137,6 +137,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
                 onEdit={() => handleEdit(item)}
                 onDelete={() => onDeleteItem(item.id)}
                 onDragStart={handleDragStart(item.id)}
+                onDragEnd={handleDragEnd}
               />
             );
           })}
