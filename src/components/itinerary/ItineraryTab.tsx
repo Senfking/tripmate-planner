@@ -16,7 +16,7 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-
+interface Props {
   tripId: string;
   myRole?: string;
 }
