@@ -189,6 +189,21 @@ export function VibeBoard({
         </div>
       )}
 
+      {isLocked && canManage && (
+        <div className="flex justify-end md:justify-start">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs"
+            onClick={() => unlockBoard.mutate()}
+            disabled={unlockBoard.isPending}
+          >
+            <Unlock className="h-3.5 w-3.5 mr-1" />
+            Unlock
+          </Button>
+        </div>
+      )}
+
       {/* Response counter */}
       {!isLocked && (
         <p className="text-xs text-muted-foreground">
