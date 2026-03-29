@@ -43,6 +43,7 @@ interface Props {
   members: TripMember[];
   attendance: AttendanceRecord[];
   draggable?: boolean;
+  isDragging?: boolean;
   onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -52,7 +53,7 @@ interface Props {
   onDrop: (e: React.DragEvent) => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, onCycleAttendance, onEdit, onDelete, onDragStart, onDragEnd, onDragOver, onDrop }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, isDragging = false, onCycleAttendance, onEdit, onDelete, onDragStart, onDragEnd, onDragOver, onDrop }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -69,7 +70,11 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, d
       onDragEnd={draggable ? onDragEnd : undefined}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      className={cn("rounded-lg border bg-card p-3 space-y-2", draggable ? "cursor-grab active:cursor-grabbing" : "")}
+      className={cn(
+        "rounded-lg border bg-card p-3 space-y-2 transition-all duration-150",
+        draggable ? "cursor-grab active:cursor-grabbing" : "",
+        isDragging && "opacity-50 ring-2 ring-primary/30"
+      )}
     >
       <div className="flex items-start gap-2">
         {draggable ? (
