@@ -21,17 +21,29 @@ export function useItemComments(tripId: string, itemId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("comments")
-        .select("id, body, user_id, created_at, profiles:user_id(display_name)")
+        .select("id, body, user_id, created_at")
         .eq("itinerary_item_id", itemId)
         .eq("trip_id", tripId)
         .order("created_at");
       if (error) throw error;
-      return (data || []).map((c: any) => ({
+      if (!data || data.length === 0) return [] as ItemComment[];
+
+      // Fetch display names for unique user ids
+      const userIds = [...new Set(data.map((c) => c.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", userIds);
+      const nameMap = new Map(
+        (profiles || []).map((p) => [p.id, p.display_name])
+      );
+
+      return data.map((c) => ({
         id: c.id,
         body: c.body,
         user_id: c.user_id,
         created_at: c.created_at,
-        display_name: c.profiles?.display_name || null,
+        display_name: nameMap.get(c.user_id) || null,
       })) as ItemComment[];
     },
     enabled: !!itemId && !!tripId && !!user,
