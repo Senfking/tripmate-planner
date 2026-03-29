@@ -39,12 +39,13 @@ interface Props {
   attachment: AttachmentRow;
   canDelete: boolean;
   isMine?: boolean;
+  isExtracting?: boolean;
   onOpen: () => void;
   onDelete: () => void;
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
-export function AttachmentCard({ attachment, canDelete, isMine, onOpen, onDelete, getSignedUrl }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, onOpen, onDelete, getSignedUrl }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -59,6 +60,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, onOpen, onDelete
   // Resolve banner image
   const isImageFile = attachment.file_path && IMAGE_EXTENSIONS.test(attachment.file_path);
   const bannerSrc = attachment.og_image_url || imageUrl;
+  const hasBanner = !!bannerSrc;
 
   useEffect(() => {
     if (!attachment.og_image_url && isImageFile && attachment.file_path && getSignedUrl) {
@@ -102,20 +104,24 @@ export function AttachmentCard({ attachment, canDelete, isMine, onOpen, onDelete
   return (
     <>
       <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
-        {/* Banner */}
-        <div className="relative h-[120px] sm:h-[160px] overflow-hidden">
-          {bannerSrc ? (
+        {/* Banner — only when there's a real image */}
+        {hasBanner && (
+          <div className="relative h-[100px] overflow-hidden">
             <img src={bannerSrc} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${gradient}`}>
-              <Icon className="h-8 w-8 text-white/90" />
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Body */}
         <div className="p-3 space-y-1.5">
-          <p className="font-medium text-[15px] leading-snug truncate">{displayTitle}</p>
+          {/* Title row — with inline icon when no banner */}
+          <div className="flex items-center gap-2">
+            {!hasBanner && (
+              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br ${gradient}`}>
+                <Icon className="h-4 w-4 text-white/90" />
+              </div>
+            )}
+            <p className="font-medium text-[15px] leading-snug truncate flex-1">{displayTitle}</p>
+          </div>
 
           {attachment.og_description && (
             <p className="text-[13px] text-muted-foreground line-clamp-2">{attachment.og_description}</p>
@@ -123,6 +129,13 @@ export function AttachmentCard({ attachment, canDelete, isMine, onOpen, onDelete
 
           {/* Structured booking data */}
           {booking && <BookingDetails type={attachment.type} data={booking} />}
+
+          {/* AI extraction loading state */}
+          {isExtracting && (
+            <p className="text-xs font-medium animate-pulse" style={{ color: "#0D9488" }}>
+              ✦ Reading document...
+            </p>
+          )}
 
           {/* Meta */}
           <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">

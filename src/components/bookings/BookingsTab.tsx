@@ -99,6 +99,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
       attachment={a}
       canDelete={isAdmin || a.created_by === user?.id}
       isMine={a.created_by === user?.id}
+      isExtracting={extractingIds.has(a.id)}
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
       getSignedUrl={getSignedUrl}
