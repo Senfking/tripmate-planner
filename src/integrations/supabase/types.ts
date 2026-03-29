@@ -22,6 +22,9 @@ export type Database = {
           id: string
           itinerary_item_id: string | null
           notes: string | null
+          og_description: string | null
+          og_image_url: string | null
+          og_title: string | null
           title: string
           trip_id: string
           type: string
@@ -34,6 +37,9 @@ export type Database = {
           id?: string
           itinerary_item_id?: string | null
           notes?: string | null
+          og_description?: string | null
+          og_image_url?: string | null
+          og_title?: string | null
           title: string
           trip_id: string
           type: string
@@ -46,6 +52,9 @@ export type Database = {
           id?: string
           itinerary_item_id?: string | null
           notes?: string | null
+          og_description?: string | null
+          og_image_url?: string | null
+          og_title?: string | null
           title?: string
           trip_id?: string
           type?: string
