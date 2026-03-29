@@ -1,55 +1,50 @@
 
 
-## Replace drag-and-drop with @dnd-kit
+## Add overlap detection to itinerary item cards
+
+### No migration needed
+The `end_time` column (time, nullable) already exists on `itinerary_items` and is already in the form modal with start/end time selects.
 
 ### Files to change
-1. **`package.json`** — add `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
-2. **`src/components/itinerary/DaySection.tsx`** — full rewrite of drag logic using dnd-kit's `DndContext`, `SortableContext`, sensors
-3. **`src/components/itinerary/ItineraryItemCard.tsx`** — remove all native drag props, add dnd-kit `useSortable` hook integration
-4. **`src/hooks/useItinerary.ts`** — no changes needed (optimistic update already works)
+1. **`src/components/itinerary/DaySection.tsx`** — compute overlaps per day, pass overlap info to each card
+2. **`src/components/itinerary/ItineraryItemCard.tsx`** — render amber left border + warning icon with tooltip when overlapping
 
-### Approach
+### Overlap detection logic (DaySection.tsx)
 
-**DaySection.tsx** becomes the drag orchestrator:
-- Wrap items list in `<DndContext>` with `<SortableContext>` using `verticalListSortingStrategy`
-- Configure sensors: `PointerSensor` (with 8px activation distance to avoid interfering with buttons) + `TouchSensor` (with 250ms delay so scrolling still works on mobile)
-- `onDragStart`: store active item id in state (for opacity styling)
-- `onDragEnd`: compute new `sort_order` from neighbors, call `onReorder`
-- Timed items get `disabled: true` in their `useSortable` config — they cannot be picked up but remain valid drop targets
-- dnd-kit handles placeholder gaps, drop-at-end, and self-drop no-ops natively
+Compute a `Map<string, string[]>` mapping each item ID to the titles of items it overlaps with:
 
-**ItineraryItemCard.tsx** changes:
-- Remove all native drag event props (`onDragStart`, `onDragEnd`, `onDragOver`, `onDrop`, `draggable`)
-- Add `useSortable` hook with the item's id
-- Apply `transform` and `transition` styles from `useSortable` to the card div
-- Show `GripVertical` handle only when `!item.start_time` — bind it as the drag handle via `listeners` and `attributes` from the hook
-- When `isDragging` (from `useSortable`), apply `opacity-50`
-- Pass `disabled: true` to `useSortable` for timed items
-
-**Sort order calculation on drop** (in DaySection):
-```text
-onDragEnd({ active, over }):
-  if no over or active === over → return
-  if active item has start_time → return (safety check)
-  
-  oldIndex = items.findIndex(id === active.id)
-  newIndex = items.findIndex(id === over.id)
-  
-  reordered = arrayMove(items, oldIndex, newIndex)  // from @dnd-kit/sortable
-  
-  // Compute sort_order for the moved item based on neighbors
-  prev = reordered[newIndex - 1]
-  next = reordered[newIndex + 1]
-  prevVal = prev ? getSortValue(prev) : 0
-  nextVal = next ? getSortValue(next) : (prevVal + 2000)
-  newSortOrder = Math.round((prevVal + nextVal) / 2)
-  
-  onReorder([{ id: active.id, sort_order: newSortOrder }])
+```typescript
+function computeOverlaps(items: ItineraryItem[]): Map<string, string[]> {
+  const timed = items.filter(i => i.start_time && i.end_time);
+  const map = new Map<string, string[]>();
+  for (let i = 0; i < timed.length; i++) {
+    for (let j = i + 1; j < timed.length; j++) {
+      const a = timed[i], b = timed[j];
+      const aStart = timeToMinutes(a.start_time!);
+      const aEnd = timeToMinutes(a.end_time!);
+      const bStart = timeToMinutes(b.start_time!);
+      const bEnd = timeToMinutes(b.end_time!);
+      if (aStart < bEnd && bStart < aEnd) {
+        map.set(a.id, [...(map.get(a.id) || []), b.title]);
+        map.set(b.id, [...(map.get(b.id) || []), a.title]);
+      }
+    }
+  }
+  return map;
+}
 ```
 
-**What stays the same:**
-- All attendance, comments, edit/delete, form modal logic untouched
-- `useItinerary.ts` optimistic update and rollback unchanged
-- `ItineraryTab.tsx` hybrid sort logic unchanged
-- Card visual layout (badge, location, time display) unchanged
+Pass `overlapTitles?: string[]` prop to each `ItineraryItemCard`.
+
+### Visual treatment (ItineraryItemCard.tsx)
+
+- Accept `overlapTitles?: string[]` prop
+- When non-empty: add `border-l-[3px] border-l-amber-400` to the card
+- Show a small `AlertTriangle` icon (amber) next to the status badge
+- Wrap the icon in a `Tooltip` (from existing `@/components/ui/tooltip`): "Overlaps with [title1], [title2] — different people can join different activities"
+- On mobile (touch): tooltip triggers on tap via Radix's built-in touch handling
+
+### What stays the same
+- Drag logic, attendance, comments, edit/delete — untouched
+- Overlaps are purely informational — no blocking
 
