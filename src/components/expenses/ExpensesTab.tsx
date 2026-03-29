@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { calcNetBalances, calcSettlements, formatCurrency } from "@/lib/settlementCalc";
 import { SettlementCurrencyPicker } from "./SettlementCurrencyPicker";
 import { BalancesSummary } from "./BalancesSummary";
@@ -10,8 +11,9 @@ import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Plus, AlertTriangle, Download, Loader2, ChevronRight, CheckCircle2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 
 interface Props {
   tripId: string;
