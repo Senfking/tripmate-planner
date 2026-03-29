@@ -7,15 +7,26 @@ const corsHeaders = {
 };
 
 function extractMeta(html: string, property: string): string | null {
-  // Try og: and twitter: variants
-  for (const attr of [`property="${property}"`, `name="${property}"`, `property="twitter:${property.replace("og:", "")}"`, `name="twitter:${property.replace("og:", "")}"`]) {
-    const re = new RegExp(`<meta[^>]+${attr.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^>]+content="([^"]*)"`, "i");
-    const m = html.match(re);
-    if (m) return m[1];
-    // also try content before property
-    const re2 = new RegExp(`<meta[^>]+content="([^"]*)"[^>]+${attr.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
+  const q = `["']`; // match single or double quotes
+  const props = [property];
+  if (property.startsWith("og:")) {
+    props.push(`twitter:${property.slice(3)}`);
+  }
+  for (const prop of props) {
+    const esc = prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // property/name before content
+    const re1 = new RegExp(`<meta[^>]+(?:property|name)=${q}${esc}${q}[^>]+content=${q}([^"']*?)${q}`, "i");
+    const m1 = html.match(re1);
+    if (m1) return m1[1];
+    // content before property/name
+    const re2 = new RegExp(`<meta[^>]+content=${q}([^"']*?)${q}[^>]+(?:property|name)=${q}${esc}${q}`, "i");
     const m2 = html.match(re2);
     if (m2) return m2[1];
+  }
+  // Fallback: try <title> tag for og:title
+  if (property === "og:title") {
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleMatch) return titleMatch[1].trim();
   }
   return null;
 }
@@ -37,12 +48,13 @@ Deno.serve(async (req) => {
     // Fetch the page with browser-like headers
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)",
-        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "identity",
       },
       redirect: "follow",
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(8000),
     });
 
     const html = await res.text();
