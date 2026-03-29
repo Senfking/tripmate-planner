@@ -8,8 +8,8 @@ const leftTabs: { to: string; label: string; icon: LucideIcon }[] = [
 ];
 
 const rightTabs: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: "/app/itinerary", label: "Itinerary", icon: CalendarDays },
   { to: "/app/expenses", label: "Expenses", icon: DollarSign },
-  { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];
 
 function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: LucideIcon }) {
