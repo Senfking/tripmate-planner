@@ -16,6 +16,7 @@ interface ItemFormModalProps {
     id?: string;
     title: string;
     start_time?: string | null;
+    end_time?: string | null;
     location_text?: string | null;
     notes?: string | null;
     status?: string;
@@ -30,6 +31,7 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
   const isMobile = useIsMobile();
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("idea");
@@ -38,6 +40,7 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
     if (open) {
       setTitle(item?.title || "");
       setStartTime(item?.start_time?.slice(0, 5) || "");
+      setEndTime((item as any)?.end_time?.slice(0, 5) || "");
       setLocation(item?.location_text || "");
       setNotes(item?.notes || "");
       setStatus(item?.status || "idea");
@@ -51,6 +54,7 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
       id: item?.id,
       title: title.trim(),
       start_time: startTime || null,
+      end_time: endTime || null,
       location_text: location || null,
       notes: notes || null,
       status,
@@ -72,16 +76,23 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
         <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Visit Colosseum" required />
       </div>
       <div className="space-y-2">
-        <Label>Start time</Label>
-        <div className="flex items-center gap-2">
+        <Label>Time</Label>
+        <div className="flex items-center gap-2 flex-wrap">
           <Select value={startTime} onValueChange={setStartTime}>
-            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Pick time" /></SelectTrigger>
+            <SelectTrigger className="w-[110px]"><SelectValue placeholder="Start" /></SelectTrigger>
             <SelectContent className="max-h-[240px]">
               {timeSlots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
-          {startTime && (
-            <button type="button" onClick={() => setStartTime("")} className="text-xs text-muted-foreground hover:text-foreground">
+          <span className="text-muted-foreground text-sm">→</span>
+          <Select value={endTime} onValueChange={setEndTime}>
+            <SelectTrigger className="w-[110px]"><SelectValue placeholder="End" /></SelectTrigger>
+            <SelectContent className="max-h-[240px]">
+              {timeSlots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {(startTime || endTime) && (
+            <button type="button" onClick={() => { setStartTime(""); setEndTime(""); }} className="text-xs text-muted-foreground hover:text-foreground">
               Clear
             </button>
           )}

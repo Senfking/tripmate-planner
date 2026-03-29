@@ -294,6 +294,7 @@ export type Database = {
           created_at: string
           created_by: string
           day_date: string
+          end_time: string | null
           id: string
           location_text: string | null
           notes: string | null
@@ -308,6 +309,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           day_date: string
+          end_time?: string | null
           id?: string
           location_text?: string | null
           notes?: string | null
@@ -322,6 +324,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           day_date?: string
+          end_time?: string | null
           id?: string
           location_text?: string | null
           notes?: string | null
