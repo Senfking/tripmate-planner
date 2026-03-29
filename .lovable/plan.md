@@ -1,70 +1,72 @@
 
 
-## Drag UX improvements: live preview, optimistic updates, smooth transitions
+## Fix three drag-and-drop issues
 
 ### Files to change
-1. **`src/components/itinerary/DaySection.tsx`** — major rewrite of drag logic: track hover target for live placeholder, compute optimistic reorder on drop, add placeholder rendering
-2. **`src/components/itinerary/ItineraryItemCard.tsx`** — add opacity styling when dragged, accept `isDragging` and `isDropTarget` props
-3. **`src/hooks/useItinerary.ts`** — add optimistic update to `reorderItems` mutation with rollback on error
+1. **`src/components/itinerary/DaySection.tsx`** — all three fixes live here
 
-### What changes
+`useItinerary.ts` does NOT need changes — the optimistic update and DB persistence logic is already correct. The issues are in the drop handler and rendering logic in DaySection.
 
-**1. Live drop preview while dragging (DaySection + ItineraryItemCard)**
-- Add `dragOverTargetId` state in `DaySection` — updated on every `onDragOver` to the id of the card being hovered
-- Render a dashed placeholder element (subtle border, ~48px height) just above the hovered card to show where the item will land
-- Pass `isDragging` prop to the card being dragged — it renders with `opacity-50` and a ring/outline
-- Pass `isDropTarget` prop to the hovered card — used to conditionally render the placeholder gap above it
-- Clear `dragOverTargetId` on `onDragEnd` and `onDrop`
+---
 
-**2. Optimistic update on drop (DaySection + useItinerary)**
-- On drop, immediately compute the new sort order and reorder the local items array via `queryClient.setQueryData` before the mutation fires
-- `reorderItems` mutation gets an `onMutate` that snapshots current data, writes the optimistic update, and returns the snapshot
-- `onError` reverts to the snapshot and shows an error toast
-- `onSettled` invalidates the query to sync with the DB
+### Issue 1: Drop doesn't save the new position
 
-**3. Smooth CSS transition (ItineraryItemCard)**
-- Add `transition-all duration-150` to the card's outer div so position/opacity changes animate smoothly
+**Root cause**: The `handleDrop` computes `newSortOrder` as the midpoint between `prevVal` and `targetVal`. But when the dragged item is already in the list, its old position affects the index lookup. After the item is conceptually "removed" from its old spot, the target index shifts — but the code doesn't account for this.
 
-### Technical detail
+**Fix**: When computing the midpoint, skip the dragged item from the neighbor calculation. Find the target index in the list excluding the dragged item, then compute the midpoint from the correct neighbors:
 
-Optimistic update in `useItinerary.ts`:
+```text
+filtered = items.filter(i => i.id !== draggedId)
+targetIdx in filtered = index of targetId
+prevItem = filtered[targetIdx - 1]
+targetItem = filtered[targetIdx]
+newSortOrder = midpoint(prevItem value, targetItem value)
+```
+
+This ensures the sort_order value actually places the item in the intended gap.
+
+### Issue 2: Self-drop placeholder bug
+
+**Fix**: In the render loop, suppress the placeholder when the drop target is the item immediately after the dragged item in the current list. Add this check:
+
 ```typescript
-reorderItems = useMutation({
-  mutationFn: async (reordered) => { /* existing DB writes */ },
-  onMutate: async (reordered) => {
-    await qc.cancelQueries({ queryKey: key });
-    const previous = qc.getQueryData(key);
-    qc.setQueryData(key, (old) => {
-      const updated = [...old];
-      for (const r of reordered) {
-        const item = updated.find(i => i.id === r.id);
-        if (item) item.sort_order = r.sort_order;
-      }
-      return updated;
-    });
-    return { previous };
-  },
-  onError: (err, _, context) => {
-    qc.setQueryData(key, context.previous);
-    toast.error(err.message);
-  },
-  onSettled: () => qc.invalidateQueries({ queryKey: key }),
-});
+const draggedIndex = items.findIndex(i => i.id === dragItemRef.current);
+const targetIndex = items.findIndex(i => i.id === dragOverTargetId);
+const isSamePosition = targetIndex === draggedIndex + 1;
+// Only show placeholder if !isSamePosition
 ```
 
-Placeholder in DaySection — rendered conditionally before the hovered card:
+Also suppress the placeholder via `handleDragOver` — don't set `dragOverTargetId` if the target is the immediate next sibling.
+
+### Issue 3: Cannot drop after last card
+
+**Fix**: Add a trailing drop zone `div` after the last card:
+
 ```tsx
-{items.map(item => (
-  <Fragment key={item.id}>
-    {dragOverTargetId === item.id && dragItemRef.current && dragItemRef.current !== item.id && (
-      <div className="h-12 rounded-lg border-2 border-dashed border-primary/40 transition-all duration-150" />
+{/* Trailing drop zone for "move to end" */}
+{dragItemRef.current && (
+  <div
+    onDragOver={(e) => { e.preventDefault(); setDragOverTargetId("__end__"); }}
+    onDrop={handleDropEnd}
+    className={cn(
+      "min-h-[48px] rounded-lg border-2 border-dashed transition-all duration-150",
+      dragOverTargetId === "__end__" 
+        ? "border-primary/40 bg-primary/5" 
+        : "border-transparent"
     )}
-    <ItineraryItemCard
-      isDragging={dragItemRef.current === item.id}
-      isDropTarget={dragOverTargetId === item.id}
-      ...
-    />
-  </Fragment>
-))}
+  />
+)}
 ```
+
+`handleDropEnd` sets `sort_order` to the last item's sort value + 100.
+
+---
+
+### Summary of changes in DaySection.tsx
+
+- Rewrite `handleDrop` to exclude the dragged item from neighbor computation
+- Add `handleDropEnd` for trailing drop zone
+- Add self-drop suppression in `handleDragOver` and placeholder rendering
+- Add trailing drop zone div after the items list
+- Use `useState` for tracking drag item ID (instead of ref) so placeholder renders reactively — or keep ref but force re-render via `dragOverTargetId` state updates (current approach works since `dragOverTargetId` already triggers re-render)
 
