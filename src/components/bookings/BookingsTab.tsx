@@ -106,6 +106,25 @@ export function BookingsTab({ tripId, myRole }: Props) {
     />
   );
 
+  const renderOwnedSection = (items: AttachmentRow[]) => {
+    const mine = items.filter((a) => a.created_by === user?.id);
+    const others = items.filter((a) => a.created_by !== user?.id);
+    const showLabels = mine.length > 0 && others.length > 0;
+
+    return (
+      <>
+        {showLabels && mine.length > 0 && (
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider pt-1 pb-0.5 px-1">Yours</p>
+        )}
+        {mine.map(renderCard)}
+        {showLabels && others.length > 0 && (
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider pt-2 pb-0.5 px-1">From others</p>
+        )}
+        {others.map(renderCard)}
+      </>
+    );
+  };
+
   if (query.isLoading) {
     return (
       <div className="flex justify-center py-16">
