@@ -90,6 +90,22 @@ export function ExpensesTab({ tripId, myRole }: Props) {
       }));
   }, [expenses]);
 
+  const totalExpenses = useMemo(() => {
+    if (expenses.length === 0) return null;
+    // Sum expenses converted to settlement currency where possible
+    let total = 0;
+    for (const exp of expenses) {
+      if (exp.currency === settlementCurrency) {
+        total += exp.amount;
+      } else if (rates && rates[exp.currency]) {
+        total += exp.amount / rates[exp.currency];
+      } else {
+        total += exp.amount; // fallback
+      }
+    }
+    return total;
+  }, [expenses, settlementCurrency, rates]);
+
   const editingSplits = editingExpense
     ? splits.filter((s) => s.expense_id === editingExpense.id).map((s) => ({
         user_id: s.user_id,
