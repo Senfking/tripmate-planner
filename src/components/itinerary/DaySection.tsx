@@ -158,10 +158,18 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
           {items.map((item) => {
             const isDraggable = !item.start_time;
             const isDragging = dragItemRef.current === item.id;
-            const isDropTarget = dragOverTargetId === item.id && dragItemRef.current !== null && dragItemRef.current !== item.id;
+            const draggedId = dragItemRef.current;
+            const isDropTarget = dragOverTargetId === item.id && draggedId !== null && draggedId !== item.id;
+
+            // Suppress placeholder if it's effectively the same position
+            const draggedIndex = draggedId ? items.findIndex(i => i.id === draggedId) : -1;
+            const targetIndex = items.findIndex(i => i.id === item.id);
+            const isSamePosition = draggedIndex !== -1 && targetIndex === draggedIndex + 1;
+            const showPlaceholder = isDropTarget && !isSamePosition;
+
             return (
               <Fragment key={item.id}>
-                {isDropTarget && (
+                {showPlaceholder && (
                   <div className="h-12 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 transition-all duration-150" />
                 )}
                 <ItineraryItemCard
@@ -183,6 +191,20 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
               </Fragment>
             );
           })}
+
+          {/* Trailing drop zone for "move to end" */}
+          {dragItemRef.current && (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOverTargetId("__end__"); }}
+              onDrop={handleDropEnd}
+              className={cn(
+                "min-h-[48px] rounded-lg border-2 border-dashed transition-all duration-150",
+                dragOverTargetId === "__end__"
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-transparent"
+              )}
+            />
+          )}
         </div>
       )}
 
