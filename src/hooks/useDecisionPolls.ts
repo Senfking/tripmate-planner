@@ -206,16 +206,17 @@ export function useDecisionPolls(tripId: string | undefined) {
 
   const deletePoll = useMutation({
     mutationFn: async (pollId: string) => {
-      // Delete options first (cascade not guaranteed via RLS)
-      const { error: optErr } = await supabase
+      // Get option IDs to delete votes
+      const { data: opts } = await supabase
         .from("poll_options")
-        .delete()
+        .select("id")
         .eq("poll_id", pollId);
-      if (optErr) throw optErr;
-      const { error } = await supabase
-        .from("polls")
-        .delete()
-        .eq("id", pollId);
+      const optIds = (opts || []).map((o) => o.id);
+      if (optIds.length > 0) {
+        await supabase.from("votes").delete().in("poll_option_id", optIds);
+      }
+      await supabase.from("poll_options").delete().eq("poll_id", pollId);
+      const { error } = await supabase.from("polls").delete().eq("id", pollId);
       if (error) throw error;
     },
     onSuccess: () => {
