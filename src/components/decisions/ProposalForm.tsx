@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, CalendarDays } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
@@ -20,7 +20,6 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   const [open, setOpen] = useState(false);
   const [destination, setDestination] = useState("");
   const [note, setNote] = useState("");
-  const [showDates, setShowDates] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const isMobile = useIsMobile();
 
@@ -35,7 +34,6 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
     });
     setDestination("");
     setNote("");
-    setShowDates(false);
     setDateRange(undefined);
     setOpen(false);
   };
@@ -43,7 +41,6 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
     if (!isOpen) {
-      setShowDates(false);
       setDateRange(undefined);
     }
   };
@@ -66,26 +63,15 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
         <Textarea id="note" placeholder="e.g. Found flights for €180 from Zurich" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
       </div>
 
-      {!showDates ? (
-        <button
-          type="button"
-          onClick={() => setShowDates(true)}
-          className="flex items-center gap-1.5 text-sm text-primary hover:underline"
-        >
-          <CalendarDays className="h-3.5 w-3.5" />
-          Add dates (optional)
-        </button>
-      ) : (
-        <div className="space-y-1.5">
-          <Label>Dates (optional)</Label>
-          <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            placeholder="Pick travel dates"
-            className="w-full"
-          />
-        </div>
-      )}
+      <div className="space-y-1.5">
+        <Label>Dates (optional)</Label>
+        <DateRangePicker
+          value={dateRange}
+          onChange={setDateRange}
+          placeholder="Pick travel dates"
+          className="w-full"
+        />
+      </div>
 
       <Button type="submit" className="w-full" disabled={isPending || !destination.trim()}>
         {isPending ? "Submitting…" : "Submit suggestion"}
