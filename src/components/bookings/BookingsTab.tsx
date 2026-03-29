@@ -101,6 +101,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
       isMine={a.created_by === user?.id}
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
+      getSignedUrl={getSignedUrl}
     />
   );
 
