@@ -95,12 +95,13 @@ export function ExpensesTab({ tripId, myRole }: Props) {
     // Sum expenses converted to settlement currency where possible
     let total = 0;
     for (const exp of expenses) {
+      if (exp.category === "settlement") continue;
       if (exp.currency === settlementCurrency) {
         total += exp.amount;
       } else if (rates && rates[exp.currency]) {
         total += exp.amount / rates[exp.currency];
       } else {
-        total += exp.amount; // fallback
+        total += exp.amount;
       }
     }
     return total;
