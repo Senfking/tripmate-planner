@@ -1,16 +1,18 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
-import { useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
 import { InviteModal } from "@/components/InviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
 import { format } from "date-fns";
+
+const TRIP_TABS = ["decisions", "itinerary", "bookings", "expenses", "admin"] as const;
+type TripTab = (typeof TRIP_TABS)[number];
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -60,10 +62,30 @@ export default function TripHome() {
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "decisions";
+  const tabStorageKey = tripId ? `trip-home-tab:${tripId}` : null;
+  const tabFromUrl = searchParams.get("tab");
+  const tabFromStorage = tabStorageKey ? sessionStorage.getItem(tabStorageKey) : null;
+  const activeTab = (TRIP_TABS.includes((tabFromUrl || tabFromStorage || "decisions") as TripTab)
+    ? (tabFromUrl || tabFromStorage || "decisions")
+    : "decisions") as TripTab;
+
   const setActiveTab = useCallback((tab: string) => {
-    setSearchParams({ tab }, { replace: true });
-  }, [setSearchParams]);
+    if (!TRIP_TABS.includes(tab as TripTab)) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", tab);
+      return next;
+    }, { replace: true });
+
+    if (tabStorageKey) {
+      sessionStorage.setItem(tabStorageKey, tab);
+    }
+  }, [setSearchParams, tabStorageKey]);
+
+  useEffect(() => {
+    if (!tabStorageKey) return;
+    sessionStorage.setItem(tabStorageKey, activeTab);
+  }, [activeTab, tabStorageKey]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const canInvite = myRole === "owner" || myRole === "admin";
