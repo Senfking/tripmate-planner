@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CurrencyPicker } from "./CurrencyPicker";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,12 +27,6 @@ const CATEGORIES = [
   { value: "other", label: "Other" },
 ];
 
-const CURRENCY_GROUPS = [
-  { label: "Europe", codes: ["EUR", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON"] },
-  { label: "Americas", codes: ["USD", "CAD", "MXN", "BRL", "ARS", "CLP", "COP"] },
-  { label: "Asia Pacific", codes: ["THB", "JPY", "CNY", "HKD", "SGD", "MYR", "IDR", "VND", "PHP", "KRW", "AUD", "NZD", "INR", "PKR", "BDT", "LKR"] },
-  { label: "Middle East & Africa", codes: ["AED", "SAR", "QAR", "KWD", "ZAR", "EGP", "MAD", "NGN", "KES"] },
-];
 
 interface Props {
   open: boolean;
@@ -216,19 +211,7 @@ export function ExpenseFormModal({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Currency</Label>
-          <Select value={currency} onValueChange={setCurrency}>
-            <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {CURRENCY_GROUPS.map((group) => (
-                <div key={group.label}>
-                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</div>
-                  {group.codes.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </div>
-              ))}
-            </SelectContent>
-          </Select>
+          <CurrencyPicker value={currency} onChange={setCurrency} />
         </div>
       </div>
 
