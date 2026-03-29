@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, Loader2, MapPin, UserPlus, Share2 } from "lucide-react";
+import { ArrowLeft, Users, Loader2, MapPin, Share2 } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
