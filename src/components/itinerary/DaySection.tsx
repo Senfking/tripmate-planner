@@ -34,6 +34,7 @@ function getSortValue(item: ItineraryItem): number {
 
 function computeOverlaps(items: ItineraryItem[]): Map<string, string[]> {
   const timed = items.filter(i => i.start_time && i.end_time);
+  console.log("[overlap] timed items:", timed.map(i => ({ id: i.id, title: i.title, start: i.start_time, end: i.end_time })));
   const map = new Map<string, string[]>();
   for (let i = 0; i < timed.length; i++) {
     for (let j = i + 1; j < timed.length; j++) {
@@ -42,12 +43,14 @@ function computeOverlaps(items: ItineraryItem[]): Map<string, string[]> {
       const aEnd = timeToMinutes(a.end_time!);
       const bStart = timeToMinutes(b.start_time!);
       const bEnd = timeToMinutes(b.end_time!);
+      console.log("[overlap] comparing", a.title, `${aStart}-${aEnd}`, "vs", b.title, `${bStart}-${bEnd}`, "overlaps:", aStart < bEnd && bStart < aEnd);
       if (aStart < bEnd && bStart < aEnd) {
         map.set(a.id, [...(map.get(a.id) || []), b.title]);
         map.set(b.id, [...(map.get(b.id) || []), a.title]);
       }
     }
   }
+  console.log("[overlap] result map size:", map.size);
   return map;
 }
 
