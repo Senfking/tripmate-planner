@@ -32,6 +32,25 @@ function getSortValue(item: ItineraryItem): number {
   return item.start_time ? timeToMinutes(item.start_time) : (item.sort_order ?? 0);
 }
 
+function computeOverlaps(items: ItineraryItem[]): Map<string, string[]> {
+  const timed = items.filter(i => i.start_time && i.end_time);
+  const map = new Map<string, string[]>();
+  for (let i = 0; i < timed.length; i++) {
+    for (let j = i + 1; j < timed.length; j++) {
+      const a = timed[i], b = timed[j];
+      const aStart = timeToMinutes(a.start_time!);
+      const aEnd = timeToMinutes(a.end_time!);
+      const bStart = timeToMinutes(b.start_time!);
+      const bEnd = timeToMinutes(b.end_time!);
+      if (aStart < bEnd && bStart < aEnd) {
+        map.set(a.id, [...(map.get(a.id) || []), b.title]);
+        map.set(b.id, [...(map.get(b.id) || []), a.title]);
+      }
+    }
+  }
+  return map;
+}
+
 interface Props {
   dayDate: string;
   dayNumber: number;
