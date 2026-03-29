@@ -322,7 +322,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
           ) : shareUrl && activeShare ? (
             <div className="space-y-2.5">
               <div className="flex items-center gap-1.5">
-                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground truncate font-mono">
+                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground font-mono">
                   {shareUrl}
                 </div>
                 <Button
