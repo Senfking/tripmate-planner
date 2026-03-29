@@ -135,7 +135,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
               <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
             </div>
 
-            {!expanded && displayDesc && (
+            {!expanded && !booking && displayDesc && (
               <p className="text-xs text-muted-foreground truncate">{displayDesc}</p>
             )}
 
@@ -210,6 +210,13 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   );
 }
 
+/* ---------- Platform name check ---------- */
+
+const PLATFORM_NAMES = ["booking.com", "agoda", "expedia", "hotels.com", "airbnb", "trip.com", "hostelworld"];
+function isPlatformName(name: string): boolean {
+  return PLATFORM_NAMES.some((p) => name.toLowerCase().includes(p));
+}
+
 /* ---------- Date formatting helper ---------- */
 
 function fmtDate(val: unknown): string | null {
@@ -232,7 +239,8 @@ function buildCompactSummary(type: string, data: Record<string, unknown> | null)
     if (data.departure_time) parts.push(String(data.departure_time));
     if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
   } else if (type === "hotel") {
-    if (data.provider) parts.push(String(data.provider));
+    if (data.destination) parts.push(String(data.destination));
+    else if (data.provider && !isPlatformName(String(data.provider))) parts.push(String(data.provider));
     if (data.check_in) parts.push(`In: ${fmtDate(data.check_in)}`);
     if (data.check_out) parts.push(`Out: ${fmtDate(data.check_out)}`);
   } else if (type === "activity") {
@@ -258,10 +266,14 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
       items.push({ icon: Users, text: data.passenger_names.join(", ") });
     }
   } else if (type === "hotel") {
-    const PLATFORM_NAMES = ["booking.com", "agoda", "expedia", "hotels.com", "airbnb", "trip.com", "hostelworld"];
-    const provider = data.provider ? String(data.provider) : null;
-    if (provider && !PLATFORM_NAMES.some((p) => provider.toLowerCase().includes(p))) {
-      items.push({ icon: MapPin, text: provider });
+    // Show destination/city, or non-platform provider name
+    if (data.destination) {
+      items.push({ icon: MapPin, text: String(data.destination) });
+    } else {
+      const provider = data.provider ? String(data.provider) : null;
+      if (provider && !isPlatformName(provider)) {
+        items.push({ icon: MapPin, text: provider });
+      }
     }
     if (data.check_in || data.check_out) {
       const parts = [data.check_in && `In: ${fmtDate(data.check_in)}`, data.check_out && `Out: ${fmtDate(data.check_out)}`].filter(Boolean).join(" · ");

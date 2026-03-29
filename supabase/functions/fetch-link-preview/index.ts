@@ -120,19 +120,20 @@ ${htmlContent?.slice(0, 3000) || "none"}
 Return ONLY a JSON object (null for missing):
 {
   "booking_type": "flight|hotel|activity|other",
-  "title": "short descriptive title",
-  "provider": "company name",
+  "title": "short descriptive title (property/venue name, not the platform)",
+  "provider": "platform/company name (e.g. Booking.com, Agoda)",
+  "destination": "city and/or country where the property is located",
   "booking_reference": "ref code or null",
   "check_in": "date string or null",
   "check_out": "date string or null",
   "departure": "origin city/airport or null",
-  "destination": "destination city/airport or null",
-  "departure_time": "time or null",
   "arrival_time": "time or null",
+  "departure_time": "time or null",
   "total_price": "price with currency or null",
   "notes": "any other useful info or null"
 }
 
+For hotels: "title" = hotel/property name, "provider" = booking platform, "destination" = city/country.
 For booking.com URLs, the URL params often contain checkin/checkout dates, city names, and hotel names — extract these even if the page content was blocked.
 
 Return only valid JSON, no other text.`;
