@@ -1,50 +1,83 @@
 
 
-## Add overlap detection to itinerary item cards
+## Set up private storage bucket with RLS policies
 
-### No migration needed
-The `end_time` column (time, nullable) already exists on `itinerary_items` and is already in the form modal with start/end time selects.
+### What will be created
 
-### Files to change
-1. **`src/components/itinerary/DaySection.tsx`** — compute overlaps per day, pass overlap info to each card
-2. **`src/components/itinerary/ItineraryItemCard.tsx`** — render amber left border + warning icon with tooltip when overlapping
+**1. Database migration** with the following SQL:
 
-### Overlap detection logic (DaySection.tsx)
+- **Create bucket**: `trip-attachments` (private, no public access)
+- **4 RLS policies on `storage.objects`** using the existing `is_trip_member` and `is_trip_admin_or_owner` helper functions, extracting `trip_id` from the file path (`storage.foldername(name)`)
 
-Compute a `Map<string, string[]>` mapping each item ID to the titles of items it overlaps with:
+### Migration SQL
 
-```typescript
-function computeOverlaps(items: ItineraryItem[]): Map<string, string[]> {
-  const timed = items.filter(i => i.start_time && i.end_time);
-  const map = new Map<string, string[]>();
-  for (let i = 0; i < timed.length; i++) {
-    for (let j = i + 1; j < timed.length; j++) {
-      const a = timed[i], b = timed[j];
-      const aStart = timeToMinutes(a.start_time!);
-      const aEnd = timeToMinutes(a.end_time!);
-      const bStart = timeToMinutes(b.start_time!);
-      const bEnd = timeToMinutes(b.end_time!);
-      if (aStart < bEnd && bStart < aEnd) {
-        map.set(a.id, [...(map.get(a.id) || []), b.title]);
-        map.set(b.id, [...(map.get(b.id) || []), a.title]);
-      }
-    }
-  }
-  return map;
-}
+```sql
+-- Create private bucket
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('trip-attachments', 'trip-attachments', false);
+
+-- SELECT: trip members can download
+CREATE POLICY "trip_attachments_select"
+ON storage.objects FOR SELECT TO authenticated
+USING (
+  bucket_id = 'trip-attachments'
+  AND public.is_trip_member(
+    (storage.foldername(name))[2]::uuid,
+    auth.uid()
+  )
+);
+
+-- INSERT: trip members can upload
+CREATE POLICY "trip_attachments_insert"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'trip-attachments'
+  AND public.is_trip_member(
+    (storage.foldername(name))[2]::uuid,
+    auth.uid()
+  )
+);
+
+-- UPDATE: trip members can update their own files
+CREATE POLICY "trip_attachments_update"
+ON storage.objects FOR UPDATE TO authenticated
+USING (
+  bucket_id = 'trip-attachments'
+  AND owner = auth.uid()
+  AND public.is_trip_member(
+    (storage.foldername(name))[2]::uuid,
+    auth.uid()
+  )
+);
+
+-- DELETE: owners/admins can delete any file; members only their own
+CREATE POLICY "trip_attachments_delete"
+ON storage.objects FOR DELETE TO authenticated
+USING (
+  bucket_id = 'trip-attachments'
+  AND (
+    public.is_trip_admin_or_owner(
+      (storage.foldername(name))[2]::uuid,
+      auth.uid()
+    )
+    OR (
+      owner = auth.uid()
+      AND public.is_trip_member(
+        (storage.foldername(name))[2]::uuid,
+        auth.uid()
+      )
+    )
+  )
+);
 ```
 
-Pass `overlapTitles?: string[]` prop to each `ItineraryItemCard`.
+**Path convention**: `trips/{trip_id}/{attachment_id}/{filename}` — `storage.foldername(name)[2]` extracts the `trip_id` segment.
 
-### Visual treatment (ItineraryItemCard.tsx)
-
-- Accept `overlapTitles?: string[]` prop
-- When non-empty: add `border-l-[3px] border-l-amber-400` to the card
-- Show a small `AlertTriangle` icon (amber) next to the status badge
-- Wrap the icon in a `Tooltip` (from existing `@/components/ui/tooltip`): "Overlaps with [title1], [title2] — different people can join different activities"
-- On mobile (touch): tooltip triggers on tap via Radix's built-in touch handling
+### Files changed
+- **1 new migration file** (SQL above)
+- No application code changes — this is infrastructure only
 
 ### What stays the same
-- Drag logic, attendance, comments, edit/delete — untouched
-- Overlaps are purely informational — no blocking
+- All existing tables, RLS policies, and functions untouched
+- No public access, no anonymous access
 
