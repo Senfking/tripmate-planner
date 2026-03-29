@@ -219,6 +219,11 @@ export function ExpensesTab({ tripId, myRole }: Props) {
               )}
             </div>
           </CollapsibleTrigger>
+          {!expensesOpen && totalExpenses !== null && (
+            <p className="text-xs text-muted-foreground pl-6">
+              Total: {formatCurrency(totalExpenses, settlementCurrency)}
+            </p>
+          )}
           <CollapsibleContent>
             {expenses.length === 0 ? (
               <div className="text-center py-8 space-y-1">
