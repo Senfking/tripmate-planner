@@ -32,6 +32,7 @@ import {
   Hash,
   Users,
 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 
 interface InviteModalProps {
   tripId: string;
@@ -254,6 +255,20 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
                   </Button>
                 )}
               </div>
+              {/* WhatsApp */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 text-[#25D366] border-[#25D366]/30 hover:bg-[#25D366]/10"
+                onClick={() => {
+                  if (!inviteLink) return;
+                  const msg = `Hey! Join our trip ${tripName} on Junto 🗺️\n\nUse this link to join: ${inviteLink}${tripCode ? `\nOr enter code: ${tripCode}` : ""}`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+                }}
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                Share via WhatsApp
+              </Button>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span>Expires in {daysLeft} day{daysLeft !== 1 ? "s" : ""}</span>
                 {typeof redemptionCount === "number" && (
