@@ -138,11 +138,11 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
                 attendance={attendance}
                 draggable={isDraggable}
                 onCycleAttendance={() => onCycleAttendance(item.id)}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop(item.id)}
                 onEdit={() => handleEdit(item)}
                 onDelete={() => onDeleteItem(item.id)}
                 onDragStart={handleDragStart(item.id)}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop(item.id)}
               />
             );
           })}
