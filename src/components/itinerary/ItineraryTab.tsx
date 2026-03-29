@@ -57,21 +57,15 @@ export function ItineraryTab({ tripId, myRole }: Props) {
     return map;
   }, [stops]);
 
-  // Group items by day, sorted: start_time ASC, nulls last by sort_order
+  // Group items by day, ordered by sort_order only
   const itemsByDay = useMemo(() => {
     const map: Record<string, typeof items> = {};
     items.forEach((i) => {
       if (!map[i.day_date]) map[i.day_date] = [];
       map[i.day_date].push(i);
     });
-    // Sort each day's items
     for (const day in map) {
-      map[day].sort((a, b) => {
-        if (a.start_time && b.start_time) return a.start_time.localeCompare(b.start_time);
-        if (a.start_time) return -1;
-        if (b.start_time) return 1;
-        return (a.sort_order || 0) - (b.sort_order || 0);
-      });
+      map[day].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
     }
     return map;
   }, [items]);

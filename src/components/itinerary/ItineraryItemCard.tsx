@@ -21,7 +21,6 @@ interface Props {
   myRole?: string;
   members: TripMember[];
   attendance: AttendanceRecord[];
-  draggable?: boolean;
   onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -30,7 +29,7 @@ interface Props {
   onDrop: (e: React.DragEvent) => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
   const { user } = useAuth();
   const status = statusConfig[item.status] || statusConfig.idea;
   const canDelete = item.created_by === user?.id || myRole === "owner" || myRole === "admin";
@@ -40,14 +39,14 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, d
 
   return (
     <div
-      draggable={draggable}
-      onDragStart={draggable ? onDragStart : undefined}
-      onDragOver={draggable ? onDragOver : undefined}
-      onDrop={draggable ? onDrop : undefined}
-      className={cn("rounded-lg border bg-card p-3 space-y-2", draggable && "cursor-grab active:cursor-grabbing")}
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      className={cn("rounded-lg border bg-card p-3 space-y-2 cursor-grab active:cursor-grabbing")}
     >
       <div className="flex items-start gap-2">
-        <GripVertical className={cn("h-4 w-4 mt-0.5 shrink-0", draggable ? "text-muted-foreground/50" : "text-transparent")} />
+        <GripVertical className="h-4 w-4 text-muted-foreground/50 mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {timeDisplay && (
