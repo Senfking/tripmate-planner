@@ -100,6 +100,11 @@ export function ExpensesTab({ tripId, myRole }: Props) {
     return { text: "All settled ✓", color: "text-emerald-600" };
   }, [settlements, user?.id, settlementCurrency]);
 
+  // Unique currencies used in existing expenses (for suggested list)
+  const usedCurrencies = useMemo(() => {
+    return [...new Set(expenses.map((e) => e.currency))];
+  }, [expenses]);
+
   // Group expenses by date
   const groupedExpenses = useMemo(() => {
     const groups = new Map<string, ExpenseRow[]>();
