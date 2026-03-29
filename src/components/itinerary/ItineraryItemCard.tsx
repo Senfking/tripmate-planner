@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortable } from "@dnd-kit/sortable";
@@ -104,17 +104,16 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            {timeDisplay && (
-              <span className="text-xs font-mono text-muted-foreground">{timeDisplay}</span>
-            )}
+            <span className="flex items-center gap-1 text-xs font-mono text-muted-foreground">
+              <Clock className="h-3 w-3 shrink-0" />
+              {timeDisplay || "tbc"}
+            </span>
             <span className="font-medium text-sm truncate">{item.title}</span>
           </div>
-          {item.location_text && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">{item.location_text}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{item.location_text || "tbc"}</span>
+          </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {overlapTitles?.length ? (
