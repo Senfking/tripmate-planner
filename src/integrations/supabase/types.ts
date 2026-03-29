@@ -762,6 +762,7 @@ export type Database = {
           name: string
           route_locked: boolean
           settlement_currency: string
+          share_permission: string
           tentative_end_date: string | null
           tentative_start_date: string | null
           trip_code: string
@@ -776,6 +777,7 @@ export type Database = {
           name: string
           route_locked?: boolean
           settlement_currency?: string
+          share_permission?: string
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code: string
@@ -790,6 +792,7 @@ export type Database = {
           name?: string
           route_locked?: boolean
           settlement_currency?: string
+          share_permission?: string
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code?: string
@@ -913,6 +916,14 @@ export type Database = {
       join_by_code: { Args: { _code: string }; Returns: Json }
       redeem_invite: { Args: { _token: string }; Returns: Json }
       regenerate_trip_code: { Args: { _trip_id: string }; Returns: Json }
+      remove_trip_member: {
+        Args: { _target_user_id: string; _trip_id: string }
+        Returns: Json
+      }
+      update_member_role: {
+        Args: { _new_role: string; _target_user_id: string; _trip_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
