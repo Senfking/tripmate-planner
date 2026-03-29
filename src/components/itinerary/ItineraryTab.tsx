@@ -40,6 +40,21 @@ export function ItineraryTab({ tripId, myRole }: Props) {
     return Array.from(dateSet).sort();
   }, [stops, items]);
 
+  // Map day -> destination from route stops
+  const destinationByDay = useMemo(() => {
+    const map: Record<string, string> = {};
+    (stops || []).forEach((stop) => {
+      try {
+        const start = parseISO(stop.start_date);
+        const end = parseISO(stop.end_date);
+        eachDayOfInterval({ start, end }).forEach((d) => {
+          map[format(d, "yyyy-MM-dd")] = stop.destination;
+        });
+      } catch {}
+    });
+    return map;
+  }, [stops]);
+
   // Group items by day
   const itemsByDay = useMemo(() => {
     const map: Record<string, typeof items> = {};

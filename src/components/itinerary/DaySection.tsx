@@ -71,7 +71,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
-          Day {dayNumber} — {dateLabel}
+          Day {dayNumber} — {dateLabel}{destination ? ` · ${destination}` : ""}
         </h3>
         <Button
           variant="ghost"
