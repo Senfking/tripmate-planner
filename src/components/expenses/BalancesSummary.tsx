@@ -1,15 +1,14 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { BalanceEntry, Settlement, formatCurrency } from "@/lib/settlementCalc";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { BalanceEntry, formatCurrency } from "@/lib/settlementCalc";
+import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Props {
   balances: BalanceEntry[];
-  settlements: Settlement[];
   currency: string;
 }
 
-export function BalancesSummary({ balances, settlements, currency }: Props) {
+export function BalancesSummary({ balances, currency }: Props) {
   const { user } = useAuth();
 
   if (balances.length === 0) {
@@ -56,25 +55,6 @@ export function BalancesSummary({ balances, settlements, currency }: Props) {
           })}
         </div>
       </div>
-
-      {/* Settle up */}
-      {settlements.length > 0 && (
-        <div className="rounded-xl border bg-card p-3 space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Settle Up</h3>
-          <div className="space-y-1.5">
-            {settlements.map((s, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="truncate max-w-[100px]">{s.fromName}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="truncate max-w-[100px]">{s.toName}</span>
-                <span className="ml-auto font-medium text-foreground">
-                  {formatCurrency(s.amount, currency)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
