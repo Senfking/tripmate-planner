@@ -54,6 +54,7 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
       id: item?.id,
       title: title.trim(),
       start_time: startTime || null,
+      end_time: endTime || null,
       location_text: location || null,
       notes: notes || null,
       status,
