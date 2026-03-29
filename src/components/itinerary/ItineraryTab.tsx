@@ -10,7 +10,13 @@ import { CalendarPlus, Loader2 } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
 
-interface Props {
+/** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+
   tripId: string;
   myRole?: string;
 }
