@@ -147,7 +147,7 @@ export function SettlementCurrencyPicker({ value, onChange, disabled, cachedCurr
           </div>
         </div>
 
-        <ScrollArea className="max-h-[300px]">
+        <div className="max-h-[300px] overflow-y-auto overscroll-contain">
           <div className="p-1.5 space-y-1">
             {filteredGroups.map((group) => (
               <div key={group.label}>
@@ -196,7 +196,7 @@ export function SettlementCurrencyPicker({ value, onChange, disabled, cachedCurr
               </p>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );
