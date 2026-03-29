@@ -3,12 +3,9 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { useAuth } from "@/contexts/AuthContext";
-import { Map } from "lucide-react";
+import { Map, UserCircle } from "lucide-react";
 
 export function AppLayout() {
-  const { profile } = useAuth();
-
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -25,11 +22,9 @@ export function AppLayout() {
               </div>
             </div>
 
-            {profile?.display_name && (
-              <span className="ml-auto max-w-[132px] truncate text-sm font-semibold opacity-95 sm:max-w-[160px]">
-                {profile.display_name}
-              </span>
-            )}
+            <button className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30">
+              <UserCircle className="h-5 w-5" />
+            </button>
           </header>
 
           {/* Page content */}
