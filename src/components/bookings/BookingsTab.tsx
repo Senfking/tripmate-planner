@@ -233,7 +233,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
               icon={section.icon}
               count={section.items.length}
             >
-              {section.items.map(renderCard)}
+              {renderOwnedSection(section.items)}
             </SectionGroup>
           ))}
         </div>
