@@ -57,7 +57,13 @@ export function BookingsTab({ tripId, myRole }: Props) {
   const attachments = query.data ?? [];
 
   const isSearching = search.trim().length > 0;
-  const isGroupedView = filter === "all" && !isSearching;
+  const isGroupedView = filter === "all" && peopleFilter === "all" && !isSearching;
+
+  const peopleFiltered = useMemo(() => {
+    if (peopleFilter === "mine") return attachments.filter((a) => a.created_by === user?.id);
+    if (peopleFilter === "others") return attachments.filter((a) => a.created_by !== user?.id);
+    return attachments;
+  }, [attachments, peopleFilter, user?.id]);
 
   const filtered = useMemo(() => {
     let list = attachments;
