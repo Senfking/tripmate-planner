@@ -61,8 +61,8 @@ export default function JoinByCode() {
 
     if (!user) {
       sessionStorage.setItem("join_code", trimmed);
-      sessionStorage.setItem("invite_token", "__code__"); // signal invite flow for contextual UI
-      navigate(`/signup?redirect=/join`, { replace: true });
+      sessionStorage.setItem("invite_token", "__code__");
+      navigate(`/signup?redirect=/join/${trimmed}`, { replace: true });
       return;
     }
 

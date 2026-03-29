@@ -90,7 +90,10 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
 
   const createShare = useMutation({
     mutationFn: async () => {
-      const token = crypto.randomUUID();
+      const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+        .map((b) => chars[b % chars.length])
+        .join("");
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       const { error } = await supabase.from("trip_share_tokens").insert({
         trip_id: tripId,
