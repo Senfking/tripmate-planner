@@ -84,11 +84,13 @@ interface Props {
   disabled?: boolean;
   /** Extra currency codes from cache to show under "Other" when searched */
   cachedCurrencyCodes?: string[];
+  /** Codes to show in a "Suggested" section at the top (settlement + recently used) */
+  suggestedCodes?: string[];
   /** Visual variant */
   variant?: "settlement" | "form";
 }
 
-export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes = [], variant = "form" }: Props) {
+export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes = [], suggestedCodes = [], variant = "form" }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
