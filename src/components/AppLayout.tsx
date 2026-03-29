@@ -15,19 +15,18 @@ export function AppLayout() {
         <AppSidebar />
         <div className="flex flex-1 flex-col">
           {/* Header */}
-          <header className="sticky top-0 z-40 flex h-14 items-center border-b bg-gradient-primary px-4 text-white">
+          <header className="sticky top-0 z-40 flex h-16 items-center border-b bg-gradient-primary px-4 text-white">
             <SidebarTrigger className="hidden md:inline-flex text-white" />
 
-            {/* Centered logo — absolute so it stays centered regardless of left/right content */}
-            <div className="absolute inset-x-0 flex items-center justify-center pointer-events-none md:hidden">
-              <div className="flex items-center gap-2">
+            <div className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center pointer-events-none md:hidden">
+              <div className="flex items-center gap-2.5">
                 <Map className="h-6 w-6" />
-                <span className="text-lg font-bold tracking-tight">Junto</span>
+                <span className="text-xl font-bold tracking-tight">Junto</span>
               </div>
             </div>
 
             {profile?.display_name && (
-              <span className="ml-auto text-sm font-medium opacity-90 truncate max-w-[140px]">
+              <span className="ml-auto max-w-[132px] truncate text-sm font-semibold opacity-95 sm:max-w-[160px]">
                 {profile.display_name}
               </span>
             )}

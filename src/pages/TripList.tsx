@@ -55,62 +55,66 @@ export default function TripList() {
   }
 
   return (
-    <div className="px-5 py-5 space-y-4 relative min-h-[calc(100vh-8rem)]">
-      <div className="flex items-center justify-between">
+    <div className="relative min-h-[calc(100vh-8rem)] px-4 pb-36 pt-6 sm:px-5">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5">
+        <div className="flex items-center justify-between px-1">
         <h1 className="text-2xl font-bold text-foreground">My Trips</h1>
         {isRefetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+
+        {!trips || trips.length === 0 ? (
+          <div className="flex flex-col items-center justify-center space-y-4 py-20 text-center">
+            <Plane className="h-16 w-16 text-muted-foreground/50" />
+            <div>
+              <p className="text-xl font-semibold text-foreground">No trips yet</p>
+              <p className="mt-1 text-muted-foreground">Start planning! ✈️</p>
+            </div>
+            <Button asChild>
+              <Link to="/app/trips/new">Create your first trip</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/join">Join with code</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3.5">
+            {trips.map((trip) => (
+              <Link key={trip.id} to={`/app/trips/${trip.id}`}>
+                <Card className="cursor-pointer overflow-hidden rounded-[26px] border-card-border shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                  <CardContent className="flex items-center gap-3 px-4 py-5">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-muted/60 text-4xl">
+                      <span>{(trip as any).emoji || "✈️"}</span>
+                    </div>
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="text-[1.95rem] font-semibold leading-tight text-foreground line-clamp-2 sm:text-xl">
+                        {trip.name}
+                      </p>
+                      <p className="mt-1 text-base text-muted-foreground">
+                        {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5 text-base text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{trip.memberCount}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={() => refetch()}
+          className="w-full py-3 text-center text-sm text-muted-foreground"
+        >
+          Tap to refresh
+        </button>
       </div>
 
-      {!trips || trips.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-          <Plane className="h-16 w-16 text-muted-foreground/50" />
-          <div>
-            <p className="text-xl font-semibold text-foreground">No trips yet</p>
-            <p className="text-muted-foreground mt-1">Start planning! ✈️</p>
-          </div>
-          <Button asChild>
-            <Link to="/app/trips/new">Create your first trip</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/join">Join with code</Link>
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {trips.map((trip) => (
-            <Link key={trip.id} to={`/app/trips/${trip.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <span className="text-3xl shrink-0">{(trip as any).emoji || "✈️"}</span>
-                  <div className="flex-1 min-w-0 pr-1">
-                    <p className="font-semibold text-foreground leading-snug line-clamp-2">{trip.name}</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 text-muted-foreground text-sm shrink-0">
-                    <Users className="h-4 w-4" />
-                    <span>{trip.memberCount}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {/* Pull to refresh hint */}
-      <button
-        onClick={() => refetch()}
-        className="w-full text-center text-xs text-muted-foreground py-2"
-      >
-        Tap to refresh
-      </button>
-
-      {/* FAB */}
       <Link
         to="/app/trips/new"
-        className="fixed bottom-28 right-5 md:bottom-6 md:right-6 z-50 h-14 w-14 rounded-full bg-gradient-primary text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
+        className="fixed bottom-28 right-5 z-50 flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-gradient-primary text-primary-foreground shadow-xl transition-transform duration-300 hover:scale-105 md:bottom-6 md:right-6"
       >
         <Plus className="h-6 w-6" />
       </Link>
