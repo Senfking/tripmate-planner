@@ -74,7 +74,8 @@ export function ItineraryTab({ tripId, myRole }: Props) {
       map[day].sort((a, b) => {
         const av = a.start_time ? timeToMinutes(a.start_time) : (a.sort_order ?? 0);
         const bv = b.start_time ? timeToMinutes(b.start_time) : (b.sort_order ?? 0);
-        return av - bv;
+        if (av !== bv) return av - bv;
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
       });
     }
     return map;

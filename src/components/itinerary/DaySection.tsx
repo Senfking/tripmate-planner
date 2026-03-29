@@ -33,7 +33,7 @@ interface Props {
 export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
-  const dragItem = useRef<string | null>(null);
+  const dragItemRef = useRef<string | null>(null);
 
   const dateObj = new Date(dayDate + "T00:00:00");
   const dateLabel = format(dateObj, "EEE d MMM yyyy");
