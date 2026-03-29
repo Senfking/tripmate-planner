@@ -27,6 +27,7 @@ export function useAttachments(tripId: string) {
   const qc = useQueryClient();
   const key = ["attachments", tripId];
   const [extractingIds, setExtractingIds] = useState<Set<string>>(new Set());
+  const [fetchingIds, setFetchingIds] = useState<Set<string>>(new Set());
 
   const query = useQuery({
     queryKey: key,
