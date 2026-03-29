@@ -118,11 +118,18 @@ export function useAttachments(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Link saved");
       if (data?.id && data?.url) {
+        setFetchingIds((prev) => new Set(prev).add(data.id));
         supabase.functions.invoke("fetch-link-preview", {
           body: { attachment_id: data.id, url: data.url },
         }).then(() => {
           qc.invalidateQueries({ queryKey: key });
-        }).catch(() => {});
+        }).catch(() => {}).finally(() => {
+          setFetchingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(data.id);
+            return next;
+          });
+        });
       }
     },
     onError: (e: Error) => toast.error(e.message),
