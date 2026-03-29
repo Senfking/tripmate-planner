@@ -53,6 +53,7 @@ interface Props {
 export function ItineraryItemCard({ item, tripId, myRole, members, attendance, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const isMobile = useIsMobile();
   const status = statusConfig[item.status] || statusConfig.idea;
   const canDelete = item.created_by === user?.id || myRole === "owner" || myRole === "admin";
   const timeStr = item.start_time ? item.start_time.slice(0, 5) : null;
