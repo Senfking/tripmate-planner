@@ -66,7 +66,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, d
     <div
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
-      onDragOver={onDragOver}
+      onDragEnd={draggable ? onDragEnd : undefined}
       onDrop={onDrop}
       className={cn("rounded-lg border bg-card p-3 space-y-2", draggable ? "cursor-grab active:cursor-grabbing" : "")}
     >
