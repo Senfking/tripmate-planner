@@ -29,8 +29,7 @@ interface ItemFormModalProps {
 export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, item }: ItemFormModalProps) {
   const isMobile = useIsMobile();
   const [title, setTitle] = useState("");
-  const [hour, setHour] = useState("");
-  const [minute, setMinute] = useState("");
+  const [startTime, setStartTime] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("idea");
@@ -38,15 +37,7 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
   useEffect(() => {
     if (open) {
       setTitle(item?.title || "");
-      const t = item?.start_time?.slice(0, 5) || "";
-      if (t) {
-        const [h, m] = t.split(":");
-        setHour(h);
-        setMinute(m);
-      } else {
-        setHour("");
-        setMinute("");
-      }
+      setStartTime(item?.start_time?.slice(0, 5) || "");
       setLocation(item?.location_text || "");
       setNotes(item?.notes || "");
       setStatus(item?.status || "idea");
@@ -56,11 +47,10 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    const startTime = hour && minute ? `${hour}:${minute}` : null;
     onSave({
       id: item?.id,
       title: title.trim(),
-      start_time: startTime,
+      start_time: startTime || null,
       location_text: location || null,
       notes: notes || null,
       status,
@@ -68,8 +58,12 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
     });
   };
 
-  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-  const minutes = ["00", "15", "30", "45"];
+  // Generate time slots every 15 minutes
+  const timeSlots = Array.from({ length: 96 }, (_, i) => {
+    const h = String(Math.floor(i / 4)).padStart(2, "0");
+    const m = String((i % 4) * 15).padStart(2, "0");
+    return `${h}:${m}`;
+  });
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -80,17 +74,14 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
       <div className="space-y-2">
         <Label>Start time</Label>
         <div className="flex items-center gap-2">
-          <Select value={hour} onValueChange={setHour}>
-            <SelectTrigger className="w-[80px]"><SelectValue placeholder="HH" /></SelectTrigger>
-            <SelectContent>{hours.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
+          <Select value={startTime} onValueChange={setStartTime}>
+            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Pick time" /></SelectTrigger>
+            <SelectContent className="max-h-[240px]">
+              {timeSlots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
           </Select>
-          <span className="text-muted-foreground font-medium">:</span>
-          <Select value={minute} onValueChange={setMinute}>
-            <SelectTrigger className="w-[80px]"><SelectValue placeholder="MM" /></SelectTrigger>
-            <SelectContent>{minutes.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-          </Select>
-          {(hour || minute) && (
-            <button type="button" onClick={() => { setHour(""); setMinute(""); }} className="text-xs text-muted-foreground hover:text-foreground">
+          {startTime && (
+            <button type="button" onClick={() => setStartTime("")} className="text-xs text-muted-foreground hover:text-foreground">
               Clear
             </button>
           )}
