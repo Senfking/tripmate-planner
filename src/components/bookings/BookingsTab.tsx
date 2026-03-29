@@ -232,9 +232,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
                 variant={peopleFilter === f.value ? "default" : "outline"}
                 onClick={() => setPeopleFilter(f.value)}
                 className={`shrink-0 text-xs h-7 px-2.5 ${
-                  peopleFilter === f.value && f.value === "mine"
-                    ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white border-transparent hover:from-teal-700 hover:to-teal-600"
-                    : peopleFilter === f.value && f.value === "others"
+                  peopleFilter === f.value && f.value === "others"
                     ? "border-teal-500 text-teal-600 bg-teal-50 hover:bg-teal-100"
                     : ""
                 }`}
