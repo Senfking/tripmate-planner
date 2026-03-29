@@ -53,7 +53,7 @@ interface Props {
 
 export function ExpenseFormModal({
   open, onOpenChange, members, settlementCurrency,
-  itineraryItems, editingExpense, editingSplits, onSave,
+  itineraryItems, usedCurrencies = [], editingExpense, editingSplits, onSave,
 }: Props) {
   const isMobile = useIsMobile();
   const { user } = useAuth();
