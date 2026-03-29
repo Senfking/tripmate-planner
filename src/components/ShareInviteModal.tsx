@@ -408,6 +408,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
           </div>
         </section>
       </div>
+      )}
     </ResponsiveModal>
   );
 }
