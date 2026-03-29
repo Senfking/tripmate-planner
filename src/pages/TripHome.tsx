@@ -1,20 +1,13 @@
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, Loader2, MapPin, Share2 } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
-import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
-import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
-import { BookingsTab } from "@/components/bookings/BookingsTab";
-import { ExpensesTab } from "@/components/expenses/ExpensesTab";
-import { AdminTab } from "@/components/admin/AdminTab";
+import { TripOverviewHero } from "@/components/trip/TripOverviewHero";
+import { TripDashboard } from "@/components/trip/TripDashboard";
 import { format } from "date-fns";
-
-const TRIP_TABS = ["decisions", "itinerary", "bookings", "expenses", "admin"] as const;
-type TripTab = (typeof TRIP_TABS)[number];
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -63,32 +56,6 @@ export default function TripHome() {
     enabled: !!tripId && !!user,
   });
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tabStorageKey = tripId ? `trip-home-tab:${tripId}` : null;
-  const tabFromUrl = searchParams.get("tab");
-  const tabFromStorage = tabStorageKey ? sessionStorage.getItem(tabStorageKey) : null;
-  const activeTab = (TRIP_TABS.includes((tabFromUrl || tabFromStorage || "decisions") as TripTab)
-    ? (tabFromUrl || tabFromStorage || "decisions")
-    : "decisions") as TripTab;
-
-  const setActiveTab = useCallback((tab: string) => {
-    if (!TRIP_TABS.includes(tab as TripTab)) return;
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set("tab", tab);
-      return next;
-    }, { replace: true });
-
-    if (tabStorageKey) {
-      sessionStorage.setItem(tabStorageKey, tab);
-    }
-  }, [setSearchParams, tabStorageKey]);
-
-  useEffect(() => {
-    if (!tabStorageKey) return;
-    sessionStorage.setItem(tabStorageKey, activeTab);
-  }, [activeTab, tabStorageKey]);
-
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
   const isAdmin = myRole === "owner" || myRole === "admin";
 
@@ -128,14 +95,6 @@ export default function TripHome() {
     return `Until ${format(new Date(end!), "MMM d, yyyy")}`;
   };
 
-  const tabPlaceholder = (label: string) => (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <p className="text-muted-foreground">
-        {label} — <span className="font-medium">Coming soon</span>
-      </p>
-    </div>
-  );
-
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
@@ -148,7 +107,7 @@ export default function TripHome() {
           <span className="text-sm">My Trips</span>
         </button>
         <div className="flex items-center gap-3">
-          <span className="text-3xl">{(trip as any).emoji || "✈️"}</span>
+          <span className="text-3xl">{trip.emoji || "✈️"}</span>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold truncate">{trip.name}</h1>
             <p className="text-sm text-white/80">
@@ -171,38 +130,23 @@ export default function TripHome() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-        <TabsList className="w-full justify-start overflow-x-auto rounded-none border-b bg-background px-2">
-          <TabsTrigger value="decisions">Decisions</TabsTrigger>
-          <TabsTrigger value="itinerary">Itinerary</TabsTrigger>
-          <TabsTrigger value="bookings">Bookings</TabsTrigger>
-          <TabsTrigger value="expenses">Expenses</TabsTrigger>
-          <TabsTrigger value="admin">Admin</TabsTrigger>
-        </TabsList>
-        <TabsContent value="decisions" className="px-4 py-4">
-          <DecisionsFlow
+      {/* Overview hero + dashboard cards */}
+      <div className="flex-1 space-y-4 pt-4">
+        <div className="px-4">
+          <TripOverviewHero
             tripId={trip.id}
-            myRole={myRole}
-            isActive={(trip as any).vibe_board_active ?? false}
-            isLocked={(trip as any).vibe_board_locked ?? false}
-            memberCount={memberCount ?? 0}
-            routeLocked={(trip as any).route_locked ?? false}
+            routeLocked={trip.route_locked ?? false}
+            startDate={trip.tentative_start_date}
+            endDate={trip.tentative_end_date}
           />
-        </TabsContent>
-        <TabsContent value="itinerary" className="px-4 py-4">
-          <ItineraryTab tripId={trip.id} myRole={myRole} />
-        </TabsContent>
-        <TabsContent value="bookings" className="px-4 py-4">
-          <BookingsTab tripId={trip.id} myRole={myRole} />
-        </TabsContent>
-        <TabsContent value="expenses" className="px-4 py-4">
-          <ExpensesTab tripId={trip.id} myRole={myRole} />
-        </TabsContent>
-        <TabsContent value="admin" className="px-4 py-4">
-          <AdminTab tripId={trip.id} myRole={myRole} tripName={trip.name} />
-        </TabsContent>
-      </Tabs>
+        </div>
+        <TripDashboard
+          tripId={trip.id}
+          routeLocked={trip.route_locked ?? false}
+          settlementCurrency={trip.settlement_currency}
+          myRole={myRole}
+        />
+      </div>
 
       {trip && (
         <ShareInviteModal

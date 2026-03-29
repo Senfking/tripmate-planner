@@ -52,6 +52,7 @@ const App = () => (
               </Route>
               {/* TripHome without AppLayout bottom nav */}
               <Route path="/app/trips/:tripId" element={<TripHome />} />
+              <Route path="/app/trips/:tripId/:section" element={<TripSection />} />
             </Route>
 
             {/* Redirects */}
