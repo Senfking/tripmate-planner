@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { calcNetBalances, calcSettlements, formatCurrency } from "@/lib/settlementCalc";
 import { SettlementCurrencyPicker } from "./SettlementCurrencyPicker";
 import { BalancesSummary } from "./BalancesSummary";
-import { SettleUpSection } from "./SettleUpSection";
+import { SettleUpSection, SettlementProgress } from "./SettleUpSection";
 import { ExpenseCard } from "./ExpenseCard";
 import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
