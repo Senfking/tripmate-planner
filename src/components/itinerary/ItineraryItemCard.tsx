@@ -47,11 +47,12 @@ interface Props {
   onEdit: () => void;
   onDelete: () => void;
   onDragStart: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, onCycleAttendance, onEdit, onDelete, onDragStart, onDragEnd, onDragOver, onDrop }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -65,6 +66,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, d
     <div
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
+      onDragEnd={draggable ? onDragEnd : undefined}
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={cn("rounded-lg border bg-card p-3 space-y-2", draggable ? "cursor-grab active:cursor-grabbing" : "")}
