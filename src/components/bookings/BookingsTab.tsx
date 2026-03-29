@@ -50,6 +50,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
   const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
   const [mode, setMode] = useState<"none" | "upload" | "link">("none");
   const [filter, setFilter] = useState("all");
+  const [peopleFilter, setPeopleFilter] = useState<"all" | "mine" | "others">("all");
   const [search, setSearch] = useState("");
 
   const isAdmin = myRole === "owner" || myRole === "admin";
