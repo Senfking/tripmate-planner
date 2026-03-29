@@ -20,7 +20,6 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   const [open, setOpen] = useState(false);
   const [destination, setDestination] = useState("");
   const [note, setNote] = useState("");
-  const [showDates, setShowDates] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const isMobile = useIsMobile();
 
