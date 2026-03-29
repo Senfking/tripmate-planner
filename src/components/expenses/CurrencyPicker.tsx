@@ -170,6 +170,27 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
 
         <div className="max-h-[300px] overflow-y-auto overscroll-contain">
           <div className="p-1.5 space-y-1">
+            {filteredSuggested.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
+                  Suggested
+                </p>
+                {filteredSuggested.map((c) => (
+                  <button
+                    key={`suggested-${c.code}`}
+                    onClick={() => handleSelect(c.code)}
+                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors ${
+                      value === c.code ? "bg-accent font-medium" : ""
+                    }`}
+                  >
+                    <span>{c.flag}</span>
+                    <span>{c.code}</span>
+                    <span className="text-muted-foreground text-xs ml-auto truncate max-w-[100px]">{c.name}</span>
+                  </button>
+                ))}
+                <div className="border-b my-1" />
+              </div>
+            )}
             {filteredGroups.map((group) => (
               <div key={group.label}>
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
