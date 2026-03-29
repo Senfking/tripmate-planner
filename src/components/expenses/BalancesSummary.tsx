@@ -8,7 +8,7 @@ interface Props {
   currency: string;
 }
 
-export function BalancesSummary({ balances, settlements, currency }: Props) {
+export function BalancesSummary({ balances, currency }: Props) {
   const { user } = useAuth();
 
   if (balances.length === 0) {
