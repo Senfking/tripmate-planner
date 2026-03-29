@@ -48,10 +48,11 @@ interface Props {
   isExtracting?: boolean;
   onOpen: () => void;
   onDelete: () => void;
+  onUploadPrompt?: () => void;
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
-export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, onOpen, onDelete, getSignedUrl }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, onOpen, onDelete, onUploadPrompt, getSignedUrl }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -66,6 +67,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
   const rawDesc = attachment.og_description;
   const displayDesc = rawDesc ? decodeHtml(rawDesc) : null;
   const booking = attachment.booking_data as Record<string, unknown> | null;
+  const isLinkWithNoData = attachment.type === "link" && !booking && !attachment.og_image_url && !isExtracting;
 
   const isImageFile = attachment.file_path && IMAGE_EXTENSIONS.test(attachment.file_path);
   const bannerSrc = attachment.og_image_url || imageUrl;
@@ -145,6 +147,15 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
               </p>
             )}
 
+            {!isExtracting && isLinkWithNoData && onUploadPrompt && (
+              <button
+                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors text-left"
+                onClick={(e) => { e.stopPropagation(); onUploadPrompt(); }}
+              >
+                Upload a screenshot to extract more details
+              </button>
+            )}
+
             <div className="flex items-center gap-1.5 pt-0.5">
               {isMine && (
                 <span className="inline-flex items-center rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium leading-none">You</span>
@@ -170,7 +181,10 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
         {expanded && (
           <div className="border-t px-3 pb-3 pt-2 space-y-2 animate-fade-in">
             {bannerSrc && (
-              <div className="relative h-[100px] overflow-hidden rounded-lg">
+              <div
+                className="relative h-[100px] overflow-hidden rounded-lg cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); onOpen(); }}
+              >
                 <img src={bannerSrc} alt="" className="h-full w-full object-cover" />
               </div>
             )}
