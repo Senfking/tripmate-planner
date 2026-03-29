@@ -14,6 +14,10 @@ export type AttachmentRow = {
   file_path: string | null;
   url: string | null;
   created_by: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image_url: string | null;
+  booking_data: Record<string, unknown> | null;
   profiles: { display_name: string | null } | null;
 };
 
@@ -55,10 +59,28 @@ export function useAttachments(tripId: string) {
         created_by: user!.id,
       });
       if (insertError) throw insertError;
+
+      return { id: attachmentId, filePath: storagePath, fileType: file.type };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: key });
       toast.success("File uploaded");
+
+      // Fire-and-forget AI extraction
+      if (data?.id && data?.filePath && data?.fileType) {
+        supabase.functions
+          .invoke("extract-booking-info", {
+            body: {
+              attachment_id: data.id,
+              file_path: data.filePath,
+              file_type: data.fileType,
+            },
+          })
+          .then(() => {
+            qc.invalidateQueries({ queryKey: key });
+          })
+          .catch(() => {});
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -84,16 +106,12 @@ export function useAttachments(tripId: string) {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Link saved");
-    // Fire-and-forget link preview fetch
       if (data?.id && data?.url) {
-        console.log("Invoking fetch-link-preview for:", data.id, data.url);
         supabase.functions.invoke("fetch-link-preview", {
           body: { attachment_id: data.id, url: data.url },
         }).then(() => {
           qc.invalidateQueries({ queryKey: key });
-        }).catch((err) => {
-          console.error("fetch-link-preview error:", err);
-        });
+        }).catch(() => {});
       }
     },
     onError: (e: Error) => toast.error(e.message),

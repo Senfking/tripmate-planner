@@ -1,0 +1,1 @@
+ALTER TABLE public.attachments ADD COLUMN booking_data jsonb DEFAULT NULL;

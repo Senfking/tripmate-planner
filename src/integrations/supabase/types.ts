@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       attachments: {
         Row: {
+          booking_data: Json | null
           created_at: string
           created_by: string | null
           file_path: string | null
@@ -31,6 +32,7 @@ export type Database = {
           url: string | null
         }
         Insert: {
+          booking_data?: Json | null
           created_at?: string
           created_by?: string | null
           file_path?: string | null
@@ -46,6 +48,7 @@ export type Database = {
           url?: string | null
         }
         Update: {
+          booking_data?: Json | null
           created_at?: string
           created_by?: string | null
           file_path?: string | null
