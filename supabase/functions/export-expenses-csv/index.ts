@@ -66,23 +66,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch expenses, splits, profiles in parallel
-    const [expRes, splitsRes, profilesRes] = await Promise.all([
-      supabase
-        .from("expenses")
-        .select("id, title, amount, currency, incurred_on, payer_id, notes, category")
-        .eq("trip_id", tripId)
-        .order("incurred_on", { ascending: false }),
-      supabase
-        .from("expense_splits")
-        .select("expense_id, user_id, share_amount")
-        .in(
-          "expense_id",
-          // We'll filter after; fetch all splits for trip expenses
-          []
-        ),
-      supabase.from("profiles").select("id, display_name"),
-    ]);
+    // Fetch expenses
+    const expRes = await supabase
+      .from("expenses")
+      .select("id, title, amount, currency, incurred_on, payer_id, notes, category")
+      .eq("trip_id", tripId)
+      .order("incurred_on", { ascending: false });
+
+    // Fetch profiles
+    const profilesRes = await supabase.from("profiles").select("id, display_name");
 
     if (expRes.error) {
       console.error("Expenses fetch error:", expRes.error.message);
