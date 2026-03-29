@@ -96,22 +96,26 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
         </button>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => (
-            <ItineraryItemCard
-              key={item.id}
-              item={item}
-              tripId={tripId}
-              myRole={myRole}
-              members={members}
-              attendance={attendance}
-              onCycleAttendance={() => onCycleAttendance(item.id)}
-              onEdit={() => handleEdit(item)}
-              onDelete={() => onDeleteItem(item.id)}
-              onDragStart={handleDragStart(item.id)}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop(item.id)}
-            />
-          ))}
+          {items.map((item) => {
+            const isDraggable = !item.start_time;
+            return (
+              <ItineraryItemCard
+                key={item.id}
+                item={item}
+                tripId={tripId}
+                myRole={myRole}
+                members={members}
+                attendance={attendance}
+                draggable={isDraggable}
+                onCycleAttendance={() => onCycleAttendance(item.id)}
+                onEdit={() => handleEdit(item)}
+                onDelete={() => onDeleteItem(item.id)}
+                onDragStart={handleDragStart(item.id)}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop(item.id)}
+              />
+            );
+          })}
         </div>
       )}
 
