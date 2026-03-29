@@ -81,11 +81,15 @@ Deno.serve(async (req) => {
         og_title = og_title || microlinkData.data.title || null;
         og_description = og_description || microlinkData.data.description || null;
         if (!og_image_url) {
+          // Prefer real image over screenshot — screenshot is low quality
           og_image_url =
             microlinkData.data.image?.url ||
-            microlinkData.data.screenshot?.url ||
             microlinkData.data.logo?.url ||
             null;
+          // Only fall back to screenshot if absolutely nothing else
+          if (!og_image_url && microlinkData.data.screenshot?.url) {
+            og_image_url = microlinkData.data.screenshot.url;
+          }
         }
       }
     } catch {
