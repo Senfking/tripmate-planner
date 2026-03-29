@@ -96,7 +96,7 @@ export default function TripHome() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(13,148,136,0.15) 0%, transparent 70%), linear-gradient(180deg, #E8FAF8 0%, #F0FDFA 100%)" }}>
+    <div className="flex flex-col min-h-screen" style={{ background: "#F1F5F9" }}>
       {/* Header with shine overlay */}
       <header className="sticky top-0 z-40 text-white p-4 pb-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0D9488, #0EA5E9)" }}>
         {/* Diagonal shine */}
