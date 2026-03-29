@@ -170,7 +170,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
           onClick={() => setMode(mode === "upload" ? "none" : "upload")}
         >
           <Upload className="h-4 w-4 mr-1" />
-          Upload file
+           Upload confirmation
         </Button>
         <Button
           size="sm"
@@ -178,7 +178,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
           onClick={() => setMode(mode === "link" ? "none" : "link")}
         >
           <Link2 className="h-4 w-4 mr-1" />
-          Save a link
+          Share a link
         </Button>
       </div>
 

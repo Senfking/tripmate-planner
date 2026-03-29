@@ -143,13 +143,19 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
               <p className="text-xs text-muted-foreground truncate">{compactBookingSummary}</p>
             )}
 
-            {isExtracting && (
-              <p className="text-[11px] font-medium animate-pulse" style={{ color: "#0D9488" }}>
-                ✦ Reading document...
+            {isFetching && (
+              <p className="text-[11px] font-medium animate-pulse flex items-center gap-1" style={{ color: "#0D9488" }}>
+                ✦ Fetching details…
               </p>
             )}
 
-            {!isExtracting && isLinkWithNoData && onUploadPrompt && (
+            {isExtracting && (
+              <p className="text-[11px] font-medium animate-pulse flex items-center gap-1" style={{ color: "#0D9488" }}>
+                <Sparkles className="h-3 w-3" /> AI is reading this document…
+              </p>
+            )}
+
+            {!isExtracting && !isFetching && isLinkWithNoData && onUploadPrompt && (
               <button
                 className="text-[11px] text-muted-foreground hover:text-foreground transition-colors text-left"
                 onClick={(e) => { e.stopPropagation(); onUploadPrompt(); }}

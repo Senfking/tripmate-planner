@@ -163,5 +163,5 @@ export function useAttachments(tripId: string) {
     return data.signedUrl;
   };
 
-  return { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds };
+  return { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds, fetchingIds };
 }

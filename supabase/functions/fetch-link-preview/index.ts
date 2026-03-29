@@ -69,26 +69,27 @@ Deno.serve(async (req) => {
       // Direct fetch failed
     }
 
-    // 2. Microlink fallback if no title found
-    if (!og_title) {
-      try {
-        const microlinkRes = await fetch(
-          `https://api.microlink.io/?url=${encodeURIComponent(url)}`,
-          { signal: AbortSignal.timeout(8000) },
-        );
-        const microlinkData = await microlinkRes.json();
-        if (microlinkData.status === "success") {
-          microlinkPayload = microlinkData.data;
-          og_title = microlinkData.data.title || og_title;
-          og_description = microlinkData.data.description || og_description;
-          og_image_url = microlinkData.data.image?.url || og_image_url;
-          if (!og_image_url) {
-            og_image_url = microlinkData.data.screenshot?.url || null;
-          }
+    // 2. Microlink fallback — always try for richer data & images
+    try {
+      const microlinkRes = await fetch(
+        `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true`,
+        { signal: AbortSignal.timeout(8000) },
+      );
+      const microlinkData = await microlinkRes.json();
+      if (microlinkData.status === "success") {
+        microlinkPayload = microlinkData.data;
+        og_title = og_title || microlinkData.data.title || null;
+        og_description = og_description || microlinkData.data.description || null;
+        if (!og_image_url) {
+          og_image_url =
+            microlinkData.data.image?.url ||
+            microlinkData.data.screenshot?.url ||
+            microlinkData.data.logo?.url ||
+            null;
         }
-      } catch {
-        // Microlink also failed
       }
+    } catch {
+      // Microlink also failed
     }
 
     // 3. Claude AI extraction for structured booking data
