@@ -868,6 +868,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _seed_brazil_trip: { Args: never; Returns: Json }
       generate_trip_code: { Args: never; Returns: string }
       get_date_option_vote_counts: {
         Args: { _trip_id: string }
