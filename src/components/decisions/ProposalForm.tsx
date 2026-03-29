@@ -1,15 +1,18 @@
 import { useState } from "react";
+import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, CalendarDays } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { DateRangePicker } from "./DateRangePicker";
 
 type Props = {
-  onSubmit: (data: { destination: string; note?: string }) => void;
+  onSubmit: (data: { destination: string; note?: string; startDate?: string; endDate?: string }) => void;
   isPending: boolean;
 };
 
@@ -17,6 +20,8 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   const [open, setOpen] = useState(false);
   const [destination, setDestination] = useState("");
   const [note, setNote] = useState("");
+  const [showDates, setShowDates] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const isMobile = useIsMobile();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -25,10 +30,22 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
     onSubmit({
       destination: destination.trim(),
       note: note.trim() || undefined,
+      startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+      endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
     setDestination("");
     setNote("");
+    setShowDates(false);
+    setDateRange(undefined);
     setOpen(false);
+  };
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setShowDates(false);
+      setDateRange(undefined);
+    }
   };
 
   const trigger = (
@@ -48,6 +65,28 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
         <Label htmlFor="note">Note (optional)</Label>
         <Textarea id="note" placeholder="e.g. Found flights for €180 from Zurich" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
       </div>
+
+      {!showDates ? (
+        <button
+          type="button"
+          onClick={() => setShowDates(true)}
+          className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+        >
+          <CalendarDays className="h-3.5 w-3.5" />
+          Add dates (optional)
+        </button>
+      ) : (
+        <div className="space-y-1.5">
+          <Label>Dates (optional)</Label>
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            placeholder="Pick travel dates"
+            className="w-full"
+          />
+        </div>
+      )}
+
       <Button type="submit" className="w-full" disabled={isPending || !destination.trim()}>
         {isPending ? "Submitting…" : "Submit suggestion"}
       </Button>
@@ -56,7 +95,7 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={setOpen}>
+      <Drawer open={open} onOpenChange={handleOpenChange}>
         <DrawerTrigger asChild>{trigger}</DrawerTrigger>
         <DrawerContent className="px-4 pb-6">
           <DrawerHeader className="text-left px-0">
@@ -69,7 +108,7 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>

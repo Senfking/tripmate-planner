@@ -179,14 +179,24 @@ export function useProposals(tripId: string | undefined) {
 
   // ─── Mutations ───
   const createProposal = useMutation({
-    mutationFn: async (input: { destination: string; note?: string }) => {
-      const { error } = await supabase.from("trip_proposals").insert({
+    mutationFn: async (input: { destination: string; note?: string; startDate?: string; endDate?: string }) => {
+      const { data, error } = await supabase.from("trip_proposals").insert({
         trip_id: tripId!,
         created_by: user!.id,
         destination: input.destination,
         note: input.note || null,
-      } as any);
+      } as any).select("id").single();
       if (error) throw error;
+
+      if (input.startDate && input.endDate && data) {
+        const { error: dateErr } = await supabase.from("proposal_date_options").insert({
+          proposal_id: data.id,
+          start_date: input.startDate,
+          end_date: input.endDate,
+          created_by: user!.id,
+        } as any);
+        if (dateErr) throw dateErr;
+      }
     },
     onSuccess: invalidateAll,
   });

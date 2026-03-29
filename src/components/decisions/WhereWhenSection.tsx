@@ -106,7 +106,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
             <ProposalForm
               onSubmit={(data) => {
                 createProposal.mutate(data, {
-                  onSuccess: () => toast({ title: "Destination suggested! 🎉" }),
+                  onSuccess: () => toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" }),
                 });
               }}
               isPending={createProposal.isPending}
