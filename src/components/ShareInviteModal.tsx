@@ -66,67 +66,8 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   const origin = getShareableAppOrigin() || window.location.origin;
   const tripCode = (trip as any).trip_code as string | undefined;
 
-  /* ── invite token ──────────────────────────────────── */
-  const { data: activeInvite, isLoading: inviteLoading } = useQuery({
-    queryKey: ["active-invite", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("invites")
-        .select("*")
-        .eq("trip_id", tripId)
-        .is("revoked_at" as any, null)
-        .gt("expires_at", new Date().toISOString())
-        .order("expires_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!user,
-  });
-
-  const createInvite = useMutation({
-    mutationFn: async () => {
-      const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
-      const token = Array.from(crypto.getRandomValues(new Uint8Array(10)))
-        .map((b) => chars[b % chars.length])
-        .join("");
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { error } = await supabase.from("invites").insert({
-        trip_id: tripId,
-        token,
-        role: "member",
-        expires_at: expiresAt,
-        created_by: user!.id,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["active-invite", tripId] }),
-    onError: () => toast.error("Failed to create invite link"),
-  });
-
-  const revokeInvite = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("invites")
-        .update({ revoked_at: new Date().toISOString() } as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["active-invite", tripId] });
-      toast.success("Invite link revoked");
-    },
-    onError: () => toast.error("Failed to revoke invite"),
-  });
-
-  useEffect(() => {
-    if (open && !inviteLoading && !activeInvite && !createInvite.isPending && !createInvite.isSuccess && user) {
-      createInvite.mutate();
-    }
-  }, [open, inviteLoading, activeInvite, user]);
-
-  const inviteUrl = activeInvite ? `${origin}/i/${activeInvite.token}` : null;
+  /* ── invite URL (uses trip_code directly) ──────────── */
+  const inviteUrl = tripCode ? `${origin}/join/${tripCode}` : null;
 
   /* ── share token ───────────────────────────────────── */
   const { data: activeShare, isLoading: shareLoading } = useQuery({
