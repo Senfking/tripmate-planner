@@ -67,6 +67,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
   const rawDesc = attachment.og_description;
   const displayDesc = rawDesc ? decodeHtml(rawDesc) : null;
   const booking = attachment.booking_data as Record<string, unknown> | null;
+  const isLinkWithNoData = attachment.type === "link" && !booking && !attachment.og_image_url && !isExtracting;
 
   const isImageFile = attachment.file_path && IMAGE_EXTENSIONS.test(attachment.file_path);
   const bannerSrc = attachment.og_image_url || imageUrl;
