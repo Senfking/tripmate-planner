@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { Compass, CalendarDays, Plane, Wallet, Users } from "lucide-react";
 import { SectionCard } from "./SectionCard";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
 
