@@ -135,7 +135,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
               <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
             </div>
 
-            {!expanded && displayDesc && (
+            {!expanded && !booking && displayDesc && (
               <p className="text-xs text-muted-foreground truncate">{displayDesc}</p>
             )}
 
