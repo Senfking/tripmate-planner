@@ -168,6 +168,24 @@ export type Database = {
           },
         ]
       }
+      exchange_rate_cache: {
+        Row: {
+          base_currency: string
+          fetched_at: string | null
+          rates: Json
+        }
+        Insert: {
+          base_currency: string
+          fetched_at?: string | null
+          rates: Json
+        }
+        Update: {
+          base_currency?: string
+          fetched_at?: string | null
+          rates?: Json
+        }
+        Relationships: []
+      }
       expense_splits: {
         Row: {
           expense_id: string

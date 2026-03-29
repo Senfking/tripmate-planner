@@ -22,6 +22,7 @@ export function ExpensesTab({ tripId, myRole }: Props) {
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesError,
+    ratesStale, ratesEmpty, cachedCurrencyCodes,
     itineraryItems, isLoading, updateSettlementCurrency, addExpense,
     updateExpense, deleteExpense,
   } = useExpenses(tripId);
@@ -155,17 +156,24 @@ export function ExpensesTab({ tripId, myRole }: Props) {
         <SettlementCurrencyPicker
           value={settlementCurrency}
           onChange={(c) => updateSettlementCurrency.mutate(c)}
+          cachedCurrencyCodes={cachedCurrencyCodes}
         />
         <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => { setEditingExpense(null); setFormOpen(true); }}>
           <Plus className="h-3.5 w-3.5" /> Add Expense
         </Button>
       </div>
 
-      {/* Rate warning */}
-      {ratesError && (
+      {/* Rate warnings */}
+      {(ratesError || ratesEmpty) && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          Exchange rates unavailable — showing amounts in original currencies
+          Exchange rates unavailable — amounts shown in original currencies
+        </div>
+      )}
+      {ratesStale && !ratesEmpty && !ratesError && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Exchange rates may be outdated
         </div>
       )}
 
