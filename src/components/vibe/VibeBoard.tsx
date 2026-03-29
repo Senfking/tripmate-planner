@@ -159,6 +159,20 @@ export function VibeBoard({
   if (isLocked && !hasSubmitted) {
     return (
       <div className="space-y-4">
+        {canManage && (
+          <div className="flex justify-end md:justify-start">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs"
+              onClick={() => unlockBoard.mutate()}
+              disabled={unlockBoard.isPending}
+            >
+              <Unlock className="h-3.5 w-3.5 mr-1" />
+              Unlock
+            </Button>
+          </div>
+        )}
         <p className="text-sm text-muted-foreground italic">
           You didn't submit answers before the board was locked.
         </p>
