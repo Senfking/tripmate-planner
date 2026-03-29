@@ -231,11 +231,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
                 size="sm"
                 variant={peopleFilter === f.value ? "default" : "outline"}
                 onClick={() => setPeopleFilter(f.value)}
-                className={`shrink-0 text-xs h-7 px-2.5 ${
-                  peopleFilter === f.value && f.value === "others"
-                    ? "border-teal-500 text-teal-600 bg-teal-50 hover:bg-teal-100"
-                    : ""
-                }`}
+                className="shrink-0 text-xs h-7 px-2.5"
               >
                 {f.label}
               </Button>
