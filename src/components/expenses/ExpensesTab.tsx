@@ -56,6 +56,32 @@ export function ExpensesTab({ tripId, myRole }: Props) {
 
   const settlements = useMemo(() => calcSettlements(balances), [balances]);
 
+  // Compute settlement progress per debtor→creditor pair
+  const { settlementProgress, totalSettledOverall } = useMemo(() => {
+    // Identify settlement expenses
+    const settlementExps = expensesWithSplits.filter((e) => e.category === "settlement");
+    // Build a map of settled amounts per pair (payer→split recipient)
+    const settledMap = new Map<string, number>();
+    for (const exp of settlementExps) {
+      for (const split of exp.splits) {
+        const key = `${exp.payer_id}→${split.user_id}`;
+        settledMap.set(key, (settledMap.get(key) || 0) + split.share_amount);
+      }
+    }
+    let totalSettled = 0;
+    settledMap.forEach((v) => { totalSettled += v; });
+
+    // For each current settlement, compute total owed = remaining + settled
+    const progress: SettlementProgress[] = settlements.map((s) => {
+      const key = `${s.from}→${s.to}`;
+      const settled = settledMap.get(key) || 0;
+      const totalOwed = s.amount + settled;
+      return { pairKey: key, totalOwed, totalSettled: settled, remaining: s.amount };
+    });
+
+    return { settlementProgress: progress, totalSettledOverall: totalSettled };
+  }, [expensesWithSplits, settlements]);
+
   // Collapsed summary for balances
   const myBalance = useMemo(() => {
     const entry = balances.find((b) => b.userId === user?.id);
