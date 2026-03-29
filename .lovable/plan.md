@@ -1,56 +1,70 @@
 
-Files I will change:
-- `src/components/itinerary/ItineraryItemCard.tsx`
-- `src/components/itinerary/DaySection.tsx`
 
-Plan:
-1. Fix the drop target wiring in `ItineraryItemCard.tsx`
-   - Keep timed items non-draggable.
-   - Keep the drag handle visible only on untimed items.
-   - But always allow cards to receive `onDragOver` and `onDrop`, including timed items, so an untimed item can be dropped relative to them.
+## Drag UX improvements: live preview, optimistic updates, smooth transitions
 
-2. Tighten the hybrid reorder behavior in `DaySection.tsx`
-   - Preserve the current hybrid value logic:
-     - timed items use virtual position from `start_time`
-     - untimed items use `sort_order`
-   - Keep drag start blocked for timed items.
-   - Ensure the drop handler computes midpoint `sort_order` against whichever neighbors are around the target and resets drag state cleanly.
+### Files to change
+1. **`src/components/itinerary/DaySection.tsx`** — major rewrite of drag logic: track hover target for live placeholder, compute optimistic reorder on drop, add placeholder rendering
+2. **`src/components/itinerary/ItineraryItemCard.tsx`** — add opacity styling when dragged, accept `isDragging` and `isDropTarget` props
+3. **`src/hooks/useItinerary.ts`** — add optimistic update to `reorderItems` mutation with rollback on error
 
-3. Do not touch unrelated itinerary behavior
-   - No attendance changes.
-   - No comments changes.
-   - No delete-flow changes.
-   - No database schema changes.
+### What changes
 
-4. Debug conclusion I’ll implement from
-   - `draggable` is already passed correctly from `DaySection` to `ItineraryItemCard`.
-   - The real bug is that timed cards currently do not attach `onDrop`, so dropping between timed anchors never fires.
-   - Reorder persistence is already working: the untimed item’s `sort_order` in the database is changing.
-   - Query invalidation is already present in `useItinerary`, so no hook changes are needed.
+**1. Live drop preview while dragging (DaySection + ItineraryItemCard)**
+- Add `dragOverTargetId` state in `DaySection` — updated on every `onDragOver` to the id of the card being hovered
+- Render a dashed placeholder element (subtle border, ~48px height) just above the hovered card to show where the item will land
+- Pass `isDragging` prop to the card being dragged — it renders with `opacity-50` and a ring/outline
+- Pass `isDropTarget` prop to the hovered card — used to conditionally render the placeholder gap above it
+- Clear `dragOverTargetId` on `onDragEnd` and `onDrop`
 
-Technical details:
-- Current blocker:
-```text
-DaySection -> ItineraryItemCard(draggable=false for timed)
-ItineraryItemCard disables onDrop when draggable=false
-=> timed items cannot act as drop targets
-=> untimed item cannot be placed between timed items
+**2. Optimistic update on drop (DaySection + useItinerary)**
+- On drop, immediately compute the new sort order and reorder the local items array via `queryClient.setQueryData` before the mutation fires
+- `reorderItems` mutation gets an `onMutate` that snapshots current data, writes the optimistic update, and returns the snapshot
+- `onError` reverts to the snapshot and shows an error toast
+- `onSettled` invalidates the query to sync with the DB
+
+**3. Smooth CSS transition (ItineraryItemCard)**
+- Add `transition-all duration-150` to the card's outer div so position/opacity changes animate smoothly
+
+### Technical detail
+
+Optimistic update in `useItinerary.ts`:
+```typescript
+reorderItems = useMutation({
+  mutationFn: async (reordered) => { /* existing DB writes */ },
+  onMutate: async (reordered) => {
+    await qc.cancelQueries({ queryKey: key });
+    const previous = qc.getQueryData(key);
+    qc.setQueryData(key, (old) => {
+      const updated = [...old];
+      for (const r of reordered) {
+        const item = updated.find(i => i.id === r.id);
+        if (item) item.sort_order = r.sort_order;
+      }
+      return updated;
+    });
+    return { previous };
+  },
+  onError: (err, _, context) => {
+    qc.setQueryData(key, context.previous);
+    toast.error(err.message);
+  },
+  onSettled: () => qc.invalidateQueries({ queryKey: key }),
+});
 ```
 
-- Intended post-fix behavior:
-```text
-Timed item:
-- draggable = false
-- no visible drag handle
-- can receive drop
-
-Untimed item:
-- draggable = true
-- visible drag handle
-- can receive drop
+Placeholder in DaySection — rendered conditionally before the hovered card:
+```tsx
+{items.map(item => (
+  <Fragment key={item.id}>
+    {dragOverTargetId === item.id && dragItemRef.current && dragItemRef.current !== item.id && (
+      <div className="h-12 rounded-lg border-2 border-dashed border-primary/40 transition-all duration-150" />
+    )}
+    <ItineraryItemCard
+      isDragging={dragItemRef.current === item.id}
+      isDropTarget={dragOverTargetId === item.id}
+      ...
+    />
+  </Fragment>
+))}
 ```
 
-- Why only these two files:
-  - `ItineraryItemCard.tsx` controls whether drop events are attached.
-  - `DaySection.tsx` owns drag start/drop midpoint logic.
-  - `useItinerary.ts` already invalidates on reorder, and DB writes are already happening.
