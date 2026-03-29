@@ -84,13 +84,16 @@ export function useAttachments(tripId: string) {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Link saved");
-      // Fire-and-forget link preview fetch
+    // Fire-and-forget link preview fetch
       if (data?.id && data?.url) {
+        console.log("Invoking fetch-link-preview for:", data.id, data.url);
         supabase.functions.invoke("fetch-link-preview", {
           body: { attachment_id: data.id, url: data.url },
         }).then(() => {
           qc.invalidateQueries({ queryKey: key });
-        }).catch(() => { /* preview fetch is best-effort */ });
+        }).catch((err) => {
+          console.error("fetch-link-preview error:", err);
+        });
       }
     },
     onError: (e: Error) => toast.error(e.message),
