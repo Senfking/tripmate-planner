@@ -58,12 +58,10 @@ Deno.serve(async (req) => {
     });
 
     const html = await res.text();
-    console.log("Fetched HTML length:", html.length, "status:", res.status);
 
     const og_title = extractMeta(html, "og:title") || null;
     const og_description = extractMeta(html, "og:description") || null;
     const og_image_url = extractMeta(html, "og:image") || null;
-    console.log("Extracted:", { og_title, og_description, og_image_url });
 
     // Update the attachment row
     const supabaseAdmin = createClient(
