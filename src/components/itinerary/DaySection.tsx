@@ -12,6 +12,7 @@ interface Props {
   items: ItineraryItem[];
   tripId: string;
   myRole?: string;
+  destination?: string;
   onAddItem: (data: any) => void;
   onUpdateItem: (data: any) => void;
   onDeleteItem: (id: string) => void;
@@ -19,7 +20,7 @@ interface Props {
   saving?: boolean;
 }
 
-export function DaySection({ dayDate, dayNumber, items, tripId, myRole, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
+export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
   const dragItem = useRef<string | null>(null);
@@ -70,7 +71,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, onAddIte
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
-          Day {dayNumber} — {dateLabel}
+          Day {dayNumber} — {dateLabel}{destination ? ` · ${destination}` : ""}
         </h3>
         <Button
           variant="ghost"
