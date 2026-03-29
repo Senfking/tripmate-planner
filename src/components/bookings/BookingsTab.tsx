@@ -47,7 +47,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addLink, deleteAttachment, getSignedUrl } = useAttachments(tripId);
+  const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds } = useAttachments(tripId);
   const [mode, setMode] = useState<"none" | "upload" | "link">("none");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -99,6 +99,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
       attachment={a}
       canDelete={isAdmin || a.created_by === user?.id}
       isMine={a.created_by === user?.id}
+      isExtracting={extractingIds.has(a.id)}
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
       getSignedUrl={getSignedUrl}

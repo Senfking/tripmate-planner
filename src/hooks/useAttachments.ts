@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,7 @@ export function useAttachments(tripId: string) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const key = ["attachments", tripId];
+  const [extractingIds, setExtractingIds] = useState<Set<string>>(new Set());
 
   const query = useQuery({
     queryKey: key,
@@ -68,6 +70,7 @@ export function useAttachments(tripId: string) {
 
       // Fire-and-forget AI extraction
       if (data?.id && data?.filePath && data?.fileType) {
+        setExtractingIds((prev) => new Set(prev).add(data.id));
         supabase.functions
           .invoke("extract-booking-info", {
             body: {
@@ -79,7 +82,14 @@ export function useAttachments(tripId: string) {
           .then(() => {
             qc.invalidateQueries({ queryKey: key });
           })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => {
+            setExtractingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(data.id);
+              return next;
+            });
+          });
       }
     },
     onError: (e: Error) => toast.error(e.message),
@@ -145,5 +155,5 @@ export function useAttachments(tripId: string) {
     return data.signedUrl;
   };
 
-  return { query, uploadFile, addLink, deleteAttachment, getSignedUrl };
+  return { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds };
 }
