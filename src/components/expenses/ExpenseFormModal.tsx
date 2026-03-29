@@ -34,6 +34,7 @@ interface Props {
   members: MemberProfile[];
   settlementCurrency: string;
   itineraryItems: { id: string; title: string; day_date: string }[];
+  usedCurrencies?: string[];
   editingExpense?: ExpenseRow | null;
   editingSplits?: { user_id: string; share_amount: number }[];
   onSave: (data: {
@@ -52,7 +53,7 @@ interface Props {
 
 export function ExpenseFormModal({
   open, onOpenChange, members, settlementCurrency,
-  itineraryItems, editingExpense, editingSplits, onSave,
+  itineraryItems, usedCurrencies = [], editingExpense, editingSplits, onSave,
 }: Props) {
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -211,7 +212,7 @@ export function ExpenseFormModal({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Currency</Label>
-          <CurrencyPicker value={currency} onChange={setCurrency} />
+          <CurrencyPicker value={currency} onChange={setCurrency} suggestedCodes={[settlementCurrency, ...usedCurrencies.filter(c => c !== settlementCurrency)]} />
         </div>
       </div>
 

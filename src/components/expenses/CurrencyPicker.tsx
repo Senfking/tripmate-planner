@@ -84,16 +84,27 @@ interface Props {
   disabled?: boolean;
   /** Extra currency codes from cache to show under "Other" when searched */
   cachedCurrencyCodes?: string[];
+  /** Codes to show in a "Suggested" section at the top (settlement + recently used) */
+  suggestedCodes?: string[];
   /** Visual variant */
   variant?: "settlement" | "form";
 }
 
-export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes = [], variant = "form" }: Props) {
+export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes = [], suggestedCodes = [], variant = "form" }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const selectedDef = ALL_PREDEFINED.find((c) => c.code === value);
   const query = search.trim().toUpperCase();
+
+  // Deduplicated suggested currencies (with details from predefined list)
+  const suggested = useMemo(() => {
+    const unique = [...new Set(suggestedCodes)];
+    return unique.map((code) => {
+      const def = ALL_PREDEFINED.find((c) => c.code === code);
+      return def || { code, name: code, flag: "💱" };
+    });
+  }, [suggestedCodes]);
 
   const filteredGroups = useMemo(() => {
     if (!query) return GROUPS;
@@ -104,6 +115,13 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
       ),
     })).filter((g) => g.currencies.length > 0);
   }, [query]);
+
+  const filteredSuggested = useMemo(() => {
+    if (!query) return suggested;
+    return suggested.filter(
+      (c) => c.code.includes(query) || c.name.toUpperCase().includes(query)
+    );
+  }, [query, suggested]);
 
   const otherCurrencies = useMemo(() => {
     if (!query) return [];
@@ -152,6 +170,27 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
 
         <div className="max-h-[300px] overflow-y-auto overscroll-contain">
           <div className="p-1.5 space-y-1">
+            {filteredSuggested.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
+                  Suggested
+                </p>
+                {filteredSuggested.map((c) => (
+                  <button
+                    key={`suggested-${c.code}`}
+                    onClick={() => handleSelect(c.code)}
+                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors ${
+                      value === c.code ? "bg-accent font-medium" : ""
+                    }`}
+                  >
+                    <span>{c.flag}</span>
+                    <span>{c.code}</span>
+                    <span className="text-muted-foreground text-xs ml-auto truncate max-w-[100px]">{c.name}</span>
+                  </button>
+                ))}
+                <div className="border-b my-1" />
+              </div>
+            )}
             {filteredGroups.map((group) => (
               <div key={group.label}>
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
