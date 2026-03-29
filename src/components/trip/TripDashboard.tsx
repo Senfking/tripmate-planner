@@ -312,13 +312,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
   const adminSummary = `${memberCount ?? "…"} members · ${roleLabel}`;
 
   return (
-    <div className="space-y-3 px-4 pb-8">
+    <div className="flex flex-col gap-2.5 px-4 pb-8">
       <SectionCard
         icon="🗳️"
         title="Decisions"
         summary={decisionsSummary}
         to={`/app/trips/${tripId}/decisions`}
         badgeCount={pendingVoteCount}
+        variant="decisions"
       />
       <SectionCard
         icon="🗓️"
@@ -326,6 +327,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         summary={itinerarySummary}
         subline={itinerarySubline}
         to={`/app/trips/${tripId}/itinerary`}
+        variant="itinerary"
       />
       <SectionCard
         icon="📄"
@@ -333,18 +335,21 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         summary={bookingsSummary}
         subline={bookingsSubline}
         to={`/app/trips/${tripId}/bookings`}
+        variant="bookings"
       />
       <SectionCard
         icon="💰"
         title="Expenses"
         summary={expensesSummary}
         to={`/app/trips/${tripId}/expenses`}
+        variant="expenses"
       />
       <SectionCard
         icon="⚙️"
         title="Admin"
         summary={adminSummary}
         to={`/app/trips/${tripId}/admin`}
+        variant="admin"
       />
     </div>
   );
