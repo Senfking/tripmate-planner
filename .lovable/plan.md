@@ -1,115 +1,47 @@
 
 
-## Unified Share & Invite Modal
+# Seed "Carine's Wedding — Brazil May 2025" Test Trip
 
-### Overview
-Merge `ShareModal` and `InviteModal` into a single `ShareInviteModal` component. Replace the two header buttons in `TripHome` with one "Share & Invite" button. Update `index.html` with generic Junto OG meta tags. Generate a branded OG image.
+## Approach
+Execute all data inserts via the database insert tool in sequence. No schema changes needed — all tables already exist.
 
-### Files to change
-1. **`src/components/ShareInviteModal.tsx`** — New file, combines all logic
-2. **`src/pages/TripHome.tsx`** — Single button + single modal
-3. **`src/components/ShareModal.tsx`** — Delete
-4. **`src/components/InviteModal.tsx`** — Delete
-5. **`index.html`** — Update OG meta tags
-6. **`public/og-default.png`** — Generate branded image (1200×630)
+## Execution Order
 
-### ShareInviteModal design
+1. **Insert trip** — Create trip record with name, emoji 💍, dates May 22–31, settlement_currency EUR. `trip_code` auto-generates via trigger. Capture the generated trip ID.
 
-Single `ResponsiveModal` with title "Share & Invite". Props: `tripId`, `tripName`, `open`, `onOpenChange`, `isAdmin`, `trip` (for dates/emoji).
+2. **Insert trip_members** — Oliver (owner) + JuntoB (member) using their known user IDs.
 
-**Data queries** (all from existing patterns):
-- Active invite token (auto-create on open, same as current InviteModal)
-- Active share token (auto-create on open)
-- Trip code
-- Route stops: `trip_route_stops` ordered by `start_date` — for WhatsApp message route line
-- Member first names: `trip_members` → `profiles` (display_name), take first word, "Member" fallback — for WhatsApp message
+3. **Insert trip_route_stops** (3 rows) — Rio May 22–27, Iguazu May 28–29, Florianópolis May 29–31. `route_locked` stays false.
 
-**Section 1 — Invite to trip**
-- Label: "INVITE TO TRIP" (uppercase tracking-wider, xs, muted)
-- Subtext: "Add people as trip members"
-- Truncated invite link input + copy icon button
-- "Code: [trip_code]" muted text
-- "Share invite via WhatsApp" — full-width green (#25D366) button
-- "Revoke link" — small red text button (admin only)
+4. **Insert trip_proposals** (4 rows) — Rio, Iguazu, Florianópolis, Buenos Aires with creators and notes per spec.
 
-**Separator**
+5. **Insert proposal_reactions** — Up/down votes for each proposal per spec.
 
-**Section 2 — Share trip plan**
-- Label: "SHARE TRIP PLAN" (same style)
-- Subtext: "Share a view-only summary — no login needed"
-- Switch: "Include expense summary" with description
-- Truncated share link input + copy icon button
-- "Expires on [date]" muted xs text
-- "Share plan via WhatsApp" — full-width green button
-- "Revoke link" — small red text button (admin only)
+6. **Insert proposal_date_options** (4 rows) — One date range per proposal.
 
-**Separator**
+7. **Insert date_option_votes** — Yes/no/maybe votes per user per date option.
 
-**Section 3 — Also export**
-- Label: "ALSO EXPORT"
-- Two equal-width outline buttons: Add to Calendar, Export CSV
-- Same download logic as current ShareModal
+8. **Insert polls** (3 rows) — Three preference polls, all status "open".
 
-### WhatsApp messages
+9. **Insert poll_options** (7 rows) — Options for each poll.
 
-Helper `buildMembersLine(names[], count)`:
-- 0: omit
-- 1: "Name is going"
-- 2: "Name1 and Name2 are going"
-- 3+: "Name1, Name2 and N others are going"
+10. **Insert votes** — Cast votes where specified (Oliver on all 3 polls Q1+Q2, JuntoB on Q1 only).
 
-Helper `buildRouteLine(stops[])`:
-- stops.length > 0: `"Route: " + stops.map(s => s.destination).join(" → ")`
-- else: omit
+11. **Insert itinerary_items** (~25 rows) — All 10 days of activities with correct dates, times, locations, statuses, and created_by.
 
-**Invite message:**
-```
-Hey! Come plan [Trip Name] with us on Junto ✈️
-[start] – [end]
-[route line]
-[members line]
+12. **Insert attachments** (3 rows) — Hotel link, Iguazu tour link, Airbnb link.
 
-Join the trip here:
-[invite URL]
+13. **Insert expenses** (9 rows) — With correct amounts, currencies, categories, payers, dates.
 
-Or open Junto and enter code: [trip_code]
-```
+14. **Insert expense_splits** (18 rows) — Equal splits between Oliver and JuntoB for each expense.
 
-**Share plan message:**
-```
-[emoji] [Trip Name]
-[start] – [end] · [N days]
-[route line]
-[members line]
+15. **Insert comment** (1 row) — "TEST DATA — remove before production" on the first itinerary item.
 
-See the full trip plan:
-[share URL]
+16. **Report back** — Show the new trip ID and auto-generated trip code.
 
-Want to join us?
-[invite URL]
-
-Planned with Junto 🗺️ juntotravel.lovable.app
-```
-
-Both messages: filter empty lines (no double newlines when route/members omitted).
-
-### TripHome changes
-- Remove `inviteOpen`, `shareOpen` states → single `shareInviteOpen`
-- Remove `canInvite` gating on button visibility (any member can share/invite)
-- Single button: `Share2` icon + "Share" text in the header pill
-- Remove imports of `InviteModal`, `ShareModal`; import `ShareInviteModal`
-- Pass `isAdmin={myRole === 'owner' || myRole === 'admin'}` for revoke-only gating
-
-### index.html OG meta tags
-Replace existing OG tags with:
-```html
-<meta property="og:title" content="Junto — Plan Trips Together" />
-<meta property="og:description" content="Vote on destinations, build itineraries, and split expenses with your group." />
-<meta property="og:image" content="/og-default.png" />
-<meta property="og:type" content="website" />
-```
-Keep existing twitter:card tags, update twitter:image to `/og-default.png`.
-
-### OG image
-Generate `public/og-default.png`: 1200×630, teal gradient (#0D9488 → #0EA5E9), "Junto" white wordmark centered, "Plan trips together" tagline below.
+## Technical Notes
+- All inserts use service-role or direct psql to bypass RLS (since we're inserting on behalf of specific users)
+- User IDs: Oliver = `1d5b21fe-f74c-429b-8d9d-938a4f295013`, JuntoB = `faa40b9a-a94d-43ba-8f6a-ad00855899b1`
+- No UI or code changes
+- Vibe board left empty (no vibe_responses)
 
