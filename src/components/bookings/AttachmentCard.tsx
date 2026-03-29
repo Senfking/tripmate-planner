@@ -48,6 +48,7 @@ interface Props {
   isExtracting?: boolean;
   onOpen: () => void;
   onDelete: () => void;
+  onUploadPrompt?: () => void;
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
