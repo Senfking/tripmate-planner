@@ -221,19 +221,13 @@ export function ShareModal({ tripId, tripName, open, onOpenChange, isAdmin }: Pr
           </div>
         ) : (
           <div className="text-center py-4 space-y-3">
-            {isAdmin ? (
-              <Button
-                onClick={() => generateMutation.mutate()}
-                disabled={generateMutation.isPending}
-              >
-                {generateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                Generate share link
-              </Button>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No share link yet. Ask a trip admin to generate one.
-              </p>
-            )}
+            <Button
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending}
+            >
+              {generateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Generate share link
+            </Button>
           </div>
         )}
 
