@@ -87,7 +87,14 @@ export function ExpensesTab({ tripId, myRole }: Props) {
       )}
 
       {/* Balances */}
-      <BalancesSummary balances={balances} settlements={settlements} currency={settlementCurrency} />
+      <BalancesSummary balances={balances} currency={settlementCurrency} />
+
+      {/* Settle up */}
+      <SettleUpSection
+        settlements={settlements}
+        currency={settlementCurrency}
+        onSettle={(data) => addExpense.mutate(data as any)}
+      />
 
       {/* Expense list */}
       {expenses.length === 0 ? (
