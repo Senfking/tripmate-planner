@@ -1,60 +1,28 @@
 
 
-## Plan: Implement Expenses Tab
+## Updated Plan: Show "All settled ✓" When No Settlements
 
-### Database Migration
+### Change
 
-- Add `category` (text, default `'other'`) to `expenses`
-- Add `itinerary_item_id` (uuid, nullable, references itinerary_items) to `expenses`
-- Add `settlement_currency` (text, default `'EUR'`) to `trips`
+**`src/components/expenses/ExpensesTab.tsx`** — one edit in the Settle Up section area (lines 92–97):
 
-### Files to Create
+- Remove the conditional hiding of `SettleUpSection` when `settlements.length === 0`
+- Always render the Settle Up section header
+- When `settlements.length === 0`: show a static card with the section title and "All settled ✓" in green text (using `CheckCircle2` icon), with no expandable content
+- When `settlements.length > 0`: render the existing `SettleUpSection` as-is with a count badge
 
-1. **`src/lib/settlementCalc.ts`** — Pure functions: `calcNetBalances`, `calcSettlements` (greedy algorithm), currency conversion helper
+This will be incorporated into the collapsible sections work from the approved plan — the "all settled" state becomes the permanent visible state of a non-collapsible header when there are zero settlements.
 
-2. **`src/hooks/useExpenses.ts`** — Data hook
-   - Fetch expenses + splits for trip
-   - Fetch trip members with profiles
-   - CRUD: addExpense (insert expense + splits), updateExpense, deleteExpense
-   - Exchange rates from Frankfurter API, cached with long staleTime
-   - Settlement currency read from trip row; update mutation — **any trip member** can change it (no owner/admin check)
+**`src/components/expenses/SettleUpSection.tsx`** — no changes needed (the `settlements.length === 0` early return can stay since the parent will handle the empty case before rendering this component).
 
-3. **`src/components/expenses/SettlementCurrencyPicker.tsx`** — Compact "Settle in: EUR ▾" popover
-   - Common currencies (EUR, USD, GBP, CHF, THB, JPY, AUD, SGD) + custom text input
-   - **Any trip member** can change — no role restriction
-   - Updates `trips.settlement_currency`
+### What it looks like
 
-4. **`src/components/expenses/ExpenseFormModal.tsx`** — Drawer on mobile, dialog on desktop
-   - Title, Amount, Currency (common + custom), Category select, Date picker
-   - Paid by (member dropdown, default current user)
-   - Split between (member checkboxes, default all), Equal/Custom toggle
-   - Link to itinerary item (optional, grouped by day)
-   - Notes
-   - On save: insert expense + expense_splits
+```text
+┌─────────────────────────────────────────┐
+│  Settle Up    All settled ✓             │
+└─────────────────────────────────────────┘
+```
 
-5. **`src/components/expenses/ExpenseCard.tsx`** — Expandable card
-   - Category icon (Lucide) + title, dual currency display, paid by, date, category badge, itinerary link badge
-   - Expand: split breakdown per member, Edit/Delete buttons
-   - Any member can edit/delete own expenses; owner/admin can edit/delete any
-
-6. **`src/components/expenses/BalancesSummary.tsx`** — Pinned at top
-   - Section 1: Net balances per member (green/red/grey), current user first with "You" badge
-   - Section 2: Settle-up transactions via greedy algorithm
-
-7. **`src/components/expenses/ExpensesTab.tsx`** — Main tab
-   - Settlement currency picker, Balances summary, Add expense button, Expense list (date desc)
-   - Exchange rate warning banner if fetch fails
-
-### Files to Modify
-
-8. **`src/pages/TripHome.tsx`** — Render `ExpensesTab` instead of placeholder, pass `tripId`
-
-### Key Details
-
-- Exchange rates: `useQuery` to `api.frankfurter.app/latest?base={settlementCurrency}`, fallback 1:1 with warning
-- Mobile: drawers per memory preference
-- Categories: Food & Drink, Transport, Accommodation, Activities, Shopping, Other — each with Lucide icon
-- Currency formatting: `Intl.NumberFormat`
-- Settlement currency picker: **no role restriction** — any authenticated trip member can update (it's a display preference)
-- RLS on `trips` already allows any member to update, so no policy changes needed
+- "All settled ✓" in green (`text-emerald-600`) with a small check icon
+- No collapsible trigger or content when empty — just the header row
 
