@@ -27,12 +27,6 @@ const CATEGORIES = [
   { value: "other", label: "Other" },
 ];
 
-const CURRENCY_GROUPS = [
-  { label: "Europe", codes: ["EUR", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON"] },
-  { label: "Americas", codes: ["USD", "CAD", "MXN", "BRL", "ARS", "CLP", "COP"] },
-  { label: "Asia Pacific", codes: ["THB", "JPY", "CNY", "HKD", "SGD", "MYR", "IDR", "VND", "PHP", "KRW", "AUD", "NZD", "INR", "PKR", "BDT", "LKR"] },
-  { label: "Middle East & Africa", codes: ["AED", "SAR", "QAR", "KWD", "ZAR", "EGP", "MAD", "NGN", "KES"] },
-];
 
 interface Props {
   open: boolean;
