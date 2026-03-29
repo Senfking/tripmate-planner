@@ -210,6 +210,13 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   );
 }
 
+/* ---------- Platform name check ---------- */
+
+const PLATFORM_NAMES = ["booking.com", "agoda", "expedia", "hotels.com", "airbnb", "trip.com", "hostelworld"];
+function isPlatformName(name: string): boolean {
+  return PLATFORM_NAMES.some((p) => name.toLowerCase().includes(p));
+}
+
 /* ---------- Date formatting helper ---------- */
 
 function fmtDate(val: unknown): string | null {
