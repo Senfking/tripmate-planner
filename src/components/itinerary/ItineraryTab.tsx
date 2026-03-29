@@ -108,6 +108,7 @@ export function ItineraryTab({ tripId, myRole }: Props) {
           items={itemsByDay[day] || []}
           tripId={tripId}
           myRole={myRole}
+          destination={destinationByDay[day]}
           onAddItem={handleAddItem}
           onUpdateItem={handleUpdateItem}
           onDeleteItem={(id) => deleteItem.mutate(id)}
