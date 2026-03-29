@@ -1,23 +1,52 @@
 
 
-## Replace `window.confirm` with AlertDialog / Drawer for delete
+## Grouped Bookings Tab
 
-The delete button currently calls `onDelete` directly (no confirmation at all — the plan mentioned `window.confirm` but it was never added). We need to wrap the delete action in a proper confirmation UI.
+### Files to change
+- `src/components/bookings/BookingsTab.tsx` — add grouped view logic, sorting, "You" badge
+- `src/components/bookings/AttachmentCard.tsx` — accept optional `isMine` prop, show "You" badge
 
-Per the mobile-drawer memory rule: use `Drawer` on mobile, `AlertDialog` on desktop.
+No new files, no database or storage changes.
 
-### Changes
+### Approach
 
-**File: `src/components/bookings/AttachmentCard.tsx`**
+**BookingsTab.tsx:**
 
-- Add local `confirmOpen` state
-- Import `useIsMobile` hook
-- On mobile: wrap delete in a `Drawer` with title "Delete this item?", description with attachment title, Cancel + Delete buttons
-- On desktop: wrap delete in `AlertDialog` with the same content
-- Delete button sets `confirmOpen = true` instead of calling `onDelete` directly
-- Confirm action calls `onDelete` and closes the dialog/drawer
-- Cancel dismisses without action
-- Delete button styled destructive
+1. Define section config array with type key, label, and icon (reuse Lucide icons from AttachmentCard):
+   ```
+   SECTIONS = [
+     { type: "flight", label: "Flights", icon: Plane },
+     { type: "hotel", label: "Hotels", icon: Hotel },
+     { type: "activity", label: "Activities", icon: Activity },
+     { type: "link", label: "Links", icon: Link2 },
+     { type: "other", label: "Other / Files", icon: File },
+   ]
+   ```
 
-No other files change. The `onDelete` prop contract stays the same — the parent (`BookingsTab`) already handles the mutation.
+2. Add a `sortByOwnership` helper: items where `created_by === user.id` come first, then by `created_at` descending.
+
+3. In the list rendering area, branch on view mode:
+   - **Grouped view** (filter === "all" AND no search): render collapsible sections using Radix `Collapsible` (already installed). For each section, filter attachments by type, skip if empty, apply ownership sort. Section header = clickable row with icon + label + count badge + chevron. Content = list of `AttachmentCard`s. Default expanded (local state initialized to `true` for non-empty sections).
+   - **Filtered view** (specific filter selected, no search): flat list with ownership sort.
+   - **Search view** (search active): flat list across all types with ownership sort. Type icon already shows on each card.
+
+4. Use `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` from existing `@/components/ui/collapsible`. Add CSS transition for smooth animation via `data-[state=open]` / `data-[state=closed]` classes with `grid-rows` trick or simple `overflow-hidden` with `animate-accordion-down/up`.
+
+**AttachmentCard.tsx:**
+
+5. Add optional `isMine?: boolean` prop. When true, show a small "You" badge (muted, text-xs) next to the "Added by" line.
+
+### Section header design
+
+```text
+┌─────────────────────────────────────┐
+│ ✈  Flights                    (2) ▾ │
+├─────────────────────────────────────┤
+│ [AttachmentCard]                    │
+│ [AttachmentCard]                    │
+└─────────────────────────────────────┘
+```
+
+- Icon + label left-aligned, count in muted badge, chevron rotates on collapse
+- Tap anywhere on header to toggle
 
