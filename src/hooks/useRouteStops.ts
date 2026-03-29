@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { differenceInDays, eachDayOfInterval, format, parseISO } from "date-fns";
+import { differenceInDays, parseISO } from "date-fns";
 
 export type RouteStop = {
   id: string;
@@ -59,50 +59,6 @@ export function useRouteStops(tripId: string | undefined) {
       .eq("id", tripId!);
   };
 
-  const createItineraryDays = async (stop: {
-    destination: string;
-    start_date: string;
-    end_date: string;
-  }) => {
-    const days = eachDayOfInterval({
-      start: parseISO(stop.start_date),
-      end: parseISO(stop.end_date),
-    });
-    const dateStrs = days.map((d) => format(d, "yyyy-MM-dd"));
-
-    const { data: existing } = await supabase
-      .from("itinerary_items")
-      .select("id, day_date")
-      .eq("trip_id", tripId!)
-      .in("day_date", dateStrs);
-
-    const existingDates = new Set((existing || []).map((e: any) => e.day_date));
-
-    const toInsert = dateStrs
-      .filter((d) => !existingDates.has(d))
-      .map((d) => ({
-        trip_id: tripId!,
-        day_date: d,
-        title: stop.destination,
-        location_text: stop.destination,
-        sort_order: 0,
-        status: "idea",
-      }));
-
-    if (toInsert.length > 0) {
-      await supabase.from("itinerary_items").insert(toInsert as any);
-    }
-
-    // Update location for existing days
-    for (const d of dateStrs.filter((d) => existingDates.has(d))) {
-      await supabase
-        .from("itinerary_items")
-        .update({ location_text: stop.destination } as any)
-        .eq("trip_id", tripId!)
-        .eq("day_date", d);
-    }
-  };
-
   const addStop = useMutation({
     mutationFn: async (input: {
       destination: string;
@@ -133,7 +89,7 @@ export function useRouteStops(tripId: string | undefined) {
         .order("start_date", { ascending: true });
 
       await updateTripDates((allStops || []) as unknown as RouteStop[]);
-      await createItineraryDays(input);
+      
       return data;
     },
     onSuccess: invalidate,
