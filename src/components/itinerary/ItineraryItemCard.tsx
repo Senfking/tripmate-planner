@@ -1,9 +1,20 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, GripVertical, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ItemComments } from "./ItemComments";
 import { AttendanceRow } from "./AttendanceRow";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { ItineraryItem } from "@/hooks/useItinerary";
 import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +42,7 @@ interface Props {
 
 export function ItineraryItemCard({ item, tripId, myRole, members, attendance, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
   const { user } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const status = statusConfig[item.status] || statusConfig.idea;
   const canDelete = item.created_by === user?.id || myRole === "owner" || myRole === "admin";
   const timeStr = item.start_time ? item.start_time.slice(0, 5) : null;
@@ -72,7 +84,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, o
           <Pencil className="h-3.5 w-3.5" />
         </Button>
         {canDelete && (
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setConfirmOpen(true)}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         )}
@@ -91,6 +103,27 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, o
 
       {/* Comments */}
       <ItemComments tripId={tripId} itemId={item.id} />
+
+      {/* Delete confirmation */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{item.title}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this activity and its comments.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={onDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
