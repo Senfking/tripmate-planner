@@ -1,11 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { BalanceEntry, Settlement, formatCurrency } from "@/lib/settlementCalc";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { BalanceEntry, formatCurrency } from "@/lib/settlementCalc";
+import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Props {
   balances: BalanceEntry[];
-  settlements: Settlement[];
   currency: string;
 }
 
