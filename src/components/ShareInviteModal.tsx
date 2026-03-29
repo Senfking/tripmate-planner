@@ -264,6 +264,14 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       title="Share & Invite"
       className="sm:max-w-[420px]"
     >
+      {shareRestricted ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center space-y-2">
+          <p className="text-sm font-medium text-foreground">Sharing restricted</p>
+          <p className="text-xs text-muted-foreground max-w-[260px]">
+            Only admins and the trip owner can generate invite and share links for this trip.
+          </p>
+        </div>
+      ) : (
       <div className="space-y-5 -mt-1">
         {/* ── Section 1: Invite ────────────────────────── */}
         <section className="space-y-3">
