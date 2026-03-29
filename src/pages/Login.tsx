@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
@@ -12,10 +12,18 @@ import { Separator } from "@/components/ui/separator";
 import { Map, Loader2 } from "lucide-react";
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
+
+  // Redirect if already authenticated (e.g. after OAuth callback)
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(redirectTo || "/app/trips", { replace: true });
+    }
+  }, [authLoading, user, navigate, redirectTo]);
+
   const { isInviteFlow, info } = useInviteInfo();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
