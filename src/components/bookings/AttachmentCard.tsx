@@ -210,6 +210,18 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   );
 }
 
+/* ---------- Date formatting helper ---------- */
+
+function fmtDate(val: unknown): string | null {
+  if (!val || typeof val !== "string") return null;
+  try {
+    const d = parseISO(val);
+    return isValid(d) ? format(d, "MMM d, yyyy") : String(val);
+  } catch {
+    return String(val);
+  }
+}
+
 /* ---------- Compact one-line summary ---------- */
 
 function buildCompactSummary(type: string, data: Record<string, unknown> | null): string | null {
@@ -221,10 +233,10 @@ function buildCompactSummary(type: string, data: Record<string, unknown> | null)
     if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
   } else if (type === "hotel") {
     if (data.provider) parts.push(String(data.provider));
-    if (data.check_in) parts.push(`In: ${data.check_in}`);
-    if (data.check_out) parts.push(`Out: ${data.check_out}`);
+    if (data.check_in) parts.push(`In: ${fmtDate(data.check_in)}`);
+    if (data.check_out) parts.push(`Out: ${fmtDate(data.check_out)}`);
   } else if (type === "activity") {
-    if (data.check_in) parts.push(String(data.check_in));
+    if (data.check_in) parts.push(fmtDate(data.check_in) || String(data.check_in));
     if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
   }
   return parts.length > 0 ? parts.join(" · ") : null;
