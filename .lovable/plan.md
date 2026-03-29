@@ -1,40 +1,62 @@
 
 
-## Updated Plan: Trip Home Card Dashboard
+## Trip Dashboard: Photo Background Cards Redesign
 
-Two additions to the previously approved plan:
+### Files to change
 
-### 1. Decisions Card — Pending Vote Badge
+1. **`src/components/trip/SectionCard.tsx`** — Full rewrite: photo backgrounds, dark overlay, white text, Lucide icons
+2. **`src/components/trip/TripDashboard.tsx`** — Pass Lucide icon components instead of emoji strings; update props
+3. **`src/components/trip/TripOverviewHero.tsx`** — Update to match new hero spec (white 95% bg, refined styling)
+4. **`src/pages/TripHome.tsx`** — Change page background to `#F1F5F9`, adjust spacing
 
-**TripDashboard.tsx** will compute `pendingVoteCount` by running three checks against existing query data:
+No new files. No database changes. No routing changes.
 
-- **Unvoted date options**: Count `proposal_date_options` where the user has no row in `date_option_votes`
-- **Unreacted proposals**: Count `trip_proposals` where the user has no row in `proposal_reactions`
-- **Unanswered polls**: Count open `polls` where the user has no `votes` row for any of the poll's options
+---
 
-These queries already exist in `useProposals` and `useDecisionPolls` — we'll extract the "my votes" data from those hooks or run lightweight count queries directly in TripDashboard.
+### SectionCard.tsx — Complete rewrite
 
-**SectionCard** gets an optional `badgeCount?: number` prop. When > 0, render a small red dot (8px circle, `bg-red-500`) positioned at the top-right of the card icon area.
+Replace the gradient card with a photo-background card:
 
-### 2. Decisions Card — Summary States
+- **Props change**: `icon` becomes a Lucide icon component (`LucideIcon` type), add `imageUrl: string`
+- **Structure**: `<button>` wrapping an `<img>` with `object-fit: cover` + a gradient overlay div + content on top
+- **Overlay**: `linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.1) 100%)`
+- **Card**: 110px height, 16px border-radius, overflow hidden, shadow `0 4px 20px rgba(0,0,0,0.12)`, no border
+- **Text**: White title (17px/600), white/75% summary (13px), 4px gap
+- **Icon**: Lucide icon at 18px, white/70%, left of title
+- **Arrow**: `ArrowRight` white/50%, right side, vertically centered
+- **Badge**: White pill with dark text, 11px, "{n} pending"
+- **Press**: `active:scale-[0.98]` transition
+- **Phase 2 comment** at top of file
 
-The summary line logic in TripDashboard for the Decisions card:
+Remove all gradient style maps (`CARD_STYLES`), emoji icon rendering, and colored badge logic.
 
-```text
-if route_locked && stops.length > 0:
-  "✅ {N}-stop route confirmed · {startDate} – {endDate}"
-  (dates from first stop start to last stop end)
+### TripDashboard.tsx — Icon & image props
 
-else if (totalReactions + totalDateVotes + totalPollVotes) > 0:
-  "⏳ {pendingVoteCount} votes pending · Route not confirmed"
+Pass Lucide icons and Unsplash URLs to each `SectionCard`:
 
-else:
-  "Share your vibe to get started"
-```
+| Card | Icon | Image URL |
+|------|------|-----------|
+| Decisions | `Compass` | `photo-1488646953014-85cb44e25828?w=800&q=80` |
+| Itinerary | `CalendarDays` | `photo-1530521954074-e64f6810b32d?w=800&q=80` |
+| Bookings | `Plane` | `photo-1436491865332-7a61a109cc05?w=800&q=80` |
+| Expenses | `Wallet` | `photo-1580048915913-4f8f5cb481c4?w=800&q=80` |
+| Admin | `Users` | `photo-1529156069898-49953e39b3ac?w=800&q=80` |
 
-### Files affected (same list as before, no new files)
+Remove emoji `icon` strings. Gap between cards stays at `gap-2.5` (10px).
 
-The pending vote logic and summary states are implemented inside **`src/components/trip/TripDashboard.tsx`** (already being created). The **`SectionCard.tsx`** component gains the `badgeCount` prop.
+### TripOverviewHero.tsx — Refined hero
 
-No other files change beyond the original plan.
+- `background: rgba(255,255,255,0.95)`
+- `border: 1px solid rgba(255,255,255,0.8)`
+- `backdrop-filter: blur(12px)`
+- `box-shadow: 0 2px 12px rgba(13,148,136,0.08)`
+- Date text: 14px, `#0F172A`, font-weight 500
+- Status: 13px, `#64748B`
+- Avatar size: 36px (h-9 w-9), 2px white border
+
+### TripHome.tsx — Background
+
+- Change page background from the radial gradient to flat `#F1F5F9`
+- Hero-to-cards spacing: 14px (adjust `space-y` or use explicit margin)
+- Keep header unchanged
 
