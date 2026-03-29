@@ -12,6 +12,7 @@ interface Props {
   items: ItineraryItem[];
   tripId: string;
   myRole?: string;
+  destination?: string;
   onAddItem: (data: any) => void;
   onUpdateItem: (data: any) => void;
   onDeleteItem: (id: string) => void;
@@ -19,7 +20,7 @@ interface Props {
   saving?: boolean;
 }
 
-export function DaySection({ dayDate, dayNumber, items, tripId, myRole, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
+export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
   const dragItem = useRef<string | null>(null);
