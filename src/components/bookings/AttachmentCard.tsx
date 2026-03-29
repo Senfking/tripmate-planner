@@ -24,11 +24,12 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 interface Props {
   attachment: AttachmentRow;
   canDelete: boolean;
+  isMine?: boolean;
   onOpen: () => void;
   onDelete: () => void;
 }
 
-export function AttachmentCard({ attachment, canDelete, onOpen, onDelete }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, onOpen, onDelete }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
   const Icon = TYPE_ICONS[attachment.type] || File;
@@ -90,8 +91,11 @@ export function AttachmentCard({ attachment, canDelete, onOpen, onDelete }: Prop
           {attachment.notes && (
             <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{attachment.notes}</p>
           )}
-          <p className="text-xs text-muted-foreground mt-1">
-            {addedBy} · {timeAgo}
+          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+            {isMine && (
+              <span className="inline-flex items-center rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium leading-none">You</span>
+            )}
+            <span>{addedBy} · {timeAgo}</span>
           </p>
         </div>
         <div className="flex gap-1 shrink-0">
