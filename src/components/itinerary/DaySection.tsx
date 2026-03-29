@@ -128,6 +128,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
   }, []);
 
   const itemIds = items.map(i => i.id);
+  const overlapMap = useMemo(() => computeOverlaps(items), [items]);
 
   return (
     <section className="space-y-3">
