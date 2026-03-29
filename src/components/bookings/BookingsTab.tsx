@@ -50,16 +50,23 @@ export function BookingsTab({ tripId, myRole }: Props) {
   const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
   const [mode, setMode] = useState<"none" | "upload" | "link">("none");
   const [filter, setFilter] = useState("all");
+  const [peopleFilter, setPeopleFilter] = useState<"all" | "mine" | "others">("all");
   const [search, setSearch] = useState("");
 
   const isAdmin = myRole === "owner" || myRole === "admin";
   const attachments = query.data ?? [];
 
   const isSearching = search.trim().length > 0;
-  const isGroupedView = filter === "all" && !isSearching;
+  const isGroupedView = filter === "all" && peopleFilter === "all" && !isSearching;
+
+  const peopleFiltered = useMemo(() => {
+    if (peopleFilter === "mine") return attachments.filter((a) => a.created_by === user?.id);
+    if (peopleFilter === "others") return attachments.filter((a) => a.created_by !== user?.id);
+    return attachments;
+  }, [attachments, peopleFilter, user?.id]);
 
   const filtered = useMemo(() => {
-    let list = attachments;
+    let list = peopleFiltered;
     if (filter !== "all") list = list.filter((a) => a.type === filter);
     if (isSearching) {
       const q = search.toLowerCase();
@@ -70,15 +77,15 @@ export function BookingsTab({ tripId, myRole }: Props) {
       );
     }
     return sortByOwnership(list, user?.id);
-  }, [attachments, filter, search, isSearching, user?.id]);
+  }, [peopleFiltered, filter, search, isSearching, user?.id]);
 
   const groupedSections = useMemo(() => {
     if (!isGroupedView) return [];
     return SECTIONS.map((s) => {
-      const items = attachments.filter((a) => a.type === s.type);
+      const items = peopleFiltered.filter((a) => a.type === s.type);
       return { ...s, items: sortByOwnership(items, user?.id) };
     }).filter((s) => s.items.length > 0);
-  }, [attachments, isGroupedView, user?.id]);
+  }, [peopleFiltered, isGroupedView, user?.id]);
 
   const handleOpen = async (a: AttachmentRow) => {
     if (a.url) {
@@ -212,6 +219,29 @@ export function BookingsTab({ tripId, myRole }: Props) {
                 {f.label}
               </Button>
             ))}
+           </div>
+          <div className="flex gap-1.5 pb-1">
+            {([
+              { value: "all", label: "All people" },
+              { value: "mine", label: "Mine" },
+              { value: "others", label: "Others" },
+            ] as const).map((f) => (
+              <Button
+                key={f.value}
+                size="sm"
+                variant={peopleFilter === f.value ? "default" : "outline"}
+                onClick={() => setPeopleFilter(f.value)}
+                className={`shrink-0 text-xs h-7 px-2.5 ${
+                  peopleFilter === f.value && f.value === "mine"
+                    ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white border-transparent hover:from-teal-700 hover:to-teal-600"
+                    : peopleFilter === f.value && f.value === "others"
+                    ? "border-teal-500 text-teal-600 bg-teal-50 hover:bg-teal-100"
+                    : ""
+                }`}
+              >
+                {f.label}
+              </Button>
+            ))}
           </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -247,7 +277,11 @@ export function BookingsTab({ tripId, myRole }: Props) {
           {filtered.map(renderCard)}
           {filtered.length === 0 && attachments.length > 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">
-              No results matching your filter
+              {peopleFilter === "others"
+                ? "No bookings from other members yet"
+                : peopleFilter === "mine"
+                ? "You haven't added any bookings yet — upload a confirmation or share a link"
+                : "No results matching your filter"}
             </p>
           )}
         </div>
