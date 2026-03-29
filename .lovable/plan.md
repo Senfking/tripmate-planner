@@ -1,72 +1,55 @@
 
 
-## Fix three drag-and-drop issues
+## Replace drag-and-drop with @dnd-kit
 
 ### Files to change
-1. **`src/components/itinerary/DaySection.tsx`** — all three fixes live here
+1. **`package.json`** — add `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
+2. **`src/components/itinerary/DaySection.tsx`** — full rewrite of drag logic using dnd-kit's `DndContext`, `SortableContext`, sensors
+3. **`src/components/itinerary/ItineraryItemCard.tsx`** — remove all native drag props, add dnd-kit `useSortable` hook integration
+4. **`src/hooks/useItinerary.ts`** — no changes needed (optimistic update already works)
 
-`useItinerary.ts` does NOT need changes — the optimistic update and DB persistence logic is already correct. The issues are in the drop handler and rendering logic in DaySection.
+### Approach
 
----
+**DaySection.tsx** becomes the drag orchestrator:
+- Wrap items list in `<DndContext>` with `<SortableContext>` using `verticalListSortingStrategy`
+- Configure sensors: `PointerSensor` (with 8px activation distance to avoid interfering with buttons) + `TouchSensor` (with 250ms delay so scrolling still works on mobile)
+- `onDragStart`: store active item id in state (for opacity styling)
+- `onDragEnd`: compute new `sort_order` from neighbors, call `onReorder`
+- Timed items get `disabled: true` in their `useSortable` config — they cannot be picked up but remain valid drop targets
+- dnd-kit handles placeholder gaps, drop-at-end, and self-drop no-ops natively
 
-### Issue 1: Drop doesn't save the new position
+**ItineraryItemCard.tsx** changes:
+- Remove all native drag event props (`onDragStart`, `onDragEnd`, `onDragOver`, `onDrop`, `draggable`)
+- Add `useSortable` hook with the item's id
+- Apply `transform` and `transition` styles from `useSortable` to the card div
+- Show `GripVertical` handle only when `!item.start_time` — bind it as the drag handle via `listeners` and `attributes` from the hook
+- When `isDragging` (from `useSortable`), apply `opacity-50`
+- Pass `disabled: true` to `useSortable` for timed items
 
-**Root cause**: The `handleDrop` computes `newSortOrder` as the midpoint between `prevVal` and `targetVal`. But when the dragged item is already in the list, its old position affects the index lookup. After the item is conceptually "removed" from its old spot, the target index shifts — but the code doesn't account for this.
-
-**Fix**: When computing the midpoint, skip the dragged item from the neighbor calculation. Find the target index in the list excluding the dragged item, then compute the midpoint from the correct neighbors:
-
+**Sort order calculation on drop** (in DaySection):
 ```text
-filtered = items.filter(i => i.id !== draggedId)
-targetIdx in filtered = index of targetId
-prevItem = filtered[targetIdx - 1]
-targetItem = filtered[targetIdx]
-newSortOrder = midpoint(prevItem value, targetItem value)
+onDragEnd({ active, over }):
+  if no over or active === over → return
+  if active item has start_time → return (safety check)
+  
+  oldIndex = items.findIndex(id === active.id)
+  newIndex = items.findIndex(id === over.id)
+  
+  reordered = arrayMove(items, oldIndex, newIndex)  // from @dnd-kit/sortable
+  
+  // Compute sort_order for the moved item based on neighbors
+  prev = reordered[newIndex - 1]
+  next = reordered[newIndex + 1]
+  prevVal = prev ? getSortValue(prev) : 0
+  nextVal = next ? getSortValue(next) : (prevVal + 2000)
+  newSortOrder = Math.round((prevVal + nextVal) / 2)
+  
+  onReorder([{ id: active.id, sort_order: newSortOrder }])
 ```
 
-This ensures the sort_order value actually places the item in the intended gap.
-
-### Issue 2: Self-drop placeholder bug
-
-**Fix**: In the render loop, suppress the placeholder when the drop target is the item immediately after the dragged item in the current list. Add this check:
-
-```typescript
-const draggedIndex = items.findIndex(i => i.id === dragItemRef.current);
-const targetIndex = items.findIndex(i => i.id === dragOverTargetId);
-const isSamePosition = targetIndex === draggedIndex + 1;
-// Only show placeholder if !isSamePosition
-```
-
-Also suppress the placeholder via `handleDragOver` — don't set `dragOverTargetId` if the target is the immediate next sibling.
-
-### Issue 3: Cannot drop after last card
-
-**Fix**: Add a trailing drop zone `div` after the last card:
-
-```tsx
-{/* Trailing drop zone for "move to end" */}
-{dragItemRef.current && (
-  <div
-    onDragOver={(e) => { e.preventDefault(); setDragOverTargetId("__end__"); }}
-    onDrop={handleDropEnd}
-    className={cn(
-      "min-h-[48px] rounded-lg border-2 border-dashed transition-all duration-150",
-      dragOverTargetId === "__end__" 
-        ? "border-primary/40 bg-primary/5" 
-        : "border-transparent"
-    )}
-  />
-)}
-```
-
-`handleDropEnd` sets `sort_order` to the last item's sort value + 100.
-
----
-
-### Summary of changes in DaySection.tsx
-
-- Rewrite `handleDrop` to exclude the dragged item from neighbor computation
-- Add `handleDropEnd` for trailing drop zone
-- Add self-drop suppression in `handleDragOver` and placeholder rendering
-- Add trailing drop zone div after the items list
-- Use `useState` for tracking drag item ID (instead of ref) so placeholder renders reactively — or keep ref but force re-render via `dragOverTargetId` state updates (current approach works since `dragOverTargetId` already triggers re-render)
+**What stays the same:**
+- All attendance, comments, edit/delete, form modal logic untouched
+- `useItinerary.ts` optimistic update and rollback unchanged
+- `ItineraryTab.tsx` hybrid sort logic unchanged
+- Card visual layout (badge, location, time display) unchanged
 
