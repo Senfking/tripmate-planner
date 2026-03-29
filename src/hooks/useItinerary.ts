@@ -79,6 +79,7 @@ export function useItinerary(tripId: string) {
       id: string;
       title: string;
       start_time?: string | null;
+      end_time?: string | null;
       location_text?: string | null;
       notes?: string | null;
       status?: string;
@@ -88,6 +89,7 @@ export function useItinerary(tripId: string) {
         .update({
           title: item.title,
           start_time: item.start_time || null,
+          end_time: item.end_time || null,
           location_text: item.location_text || null,
           notes: item.notes || null,
           status: item.status || "idea",
