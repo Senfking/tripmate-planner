@@ -28,6 +28,8 @@ export function ItineraryItemCard({ item, tripId, myRole, onEdit, onDelete, onDr
   const status = statusConfig[item.status] || statusConfig.idea;
   const canDelete = item.created_by === user?.id || myRole === "owner" || myRole === "admin";
   const timeStr = item.start_time ? item.start_time.slice(0, 5) : null;
+  const endStr = (item as any).end_time ? (item as any).end_time.slice(0, 5) : null;
+  const timeDisplay = timeStr ? (endStr ? `${timeStr}–${endStr}` : timeStr) : null;
 
   return (
     <div
