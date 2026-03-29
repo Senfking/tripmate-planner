@@ -197,7 +197,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
               </div>
             )}
 
-            {displayDesc && (
+            {displayDesc && !booking && (
               <p className="text-[13px] text-muted-foreground line-clamp-3">{displayDesc}</p>
             )}
 
