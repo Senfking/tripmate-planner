@@ -1,93 +1,56 @@
 
+Files I will change:
+- `src/components/itinerary/ItineraryItemCard.tsx`
+- `src/components/itinerary/DaySection.tsx`
 
-# Itinerary Item Cards: Attendance, Sort, Permissions
+Plan:
+1. Fix the drop target wiring in `ItineraryItemCard.tsx`
+   - Keep timed items non-draggable.
+   - Keep the drag handle visible only on untimed items.
+   - But always allow cards to receive `onDragOver` and `onDrop`, including timed items, so an untimed item can be dropped relative to them.
 
-## Files to create/modify
+2. Tighten the hybrid reorder behavior in `DaySection.tsx`
+   - Preserve the current hybrid value logic:
+     - timed items use virtual position from `start_time`
+     - untimed items use `sort_order`
+   - Keep drag start blocked for timed items.
+   - Ensure the drop handler computes midpoint `sort_order` against whichever neighbors are around the target and resets drag state cleanly.
 
-| Target | Change |
-|--------|--------|
-| **Migration** (new) | Create `itinerary_attendance` table with RLS |
-| `src/hooks/useItineraryAttendance.ts` (new) | Hook for attendance CRUD + trip members query |
-| `src/components/itinerary/AttendanceRow.tsx` (new) | Avatar row with status dots + cycle logic |
-| `src/components/itinerary/AttendanceSheet.tsx` (new) | Bottom drawer showing all members with status |
-| `src/components/itinerary/ItineraryItemCard.tsx` | Add AttendanceRow between title/location and comments |
-| `src/components/itinerary/ItineraryTab.tsx` | Sort items: start_time ASC, nulls last by sort_order |
+3. Do not touch unrelated itinerary behavior
+   - No attendance changes.
+   - No comments changes.
+   - No delete-flow changes.
+   - No database schema changes.
 
-No RLS or delete button changes needed — existing policies and `canDelete` logic already match requirements.
+4. Debug conclusion I’ll implement from
+   - `draggable` is already passed correctly from `DaySection` to `ItineraryItemCard`.
+   - The real bug is that timed cards currently do not attach `onDrop`, so dropping between timed anchors never fires.
+   - Reorder persistence is already working: the untimed item’s `sort_order` in the database is changing.
+   - Query invalidation is already present in `useItinerary`, so no hook changes are needed.
 
----
-
-## 1. Database Migration
-
-```sql
-CREATE TABLE public.itinerary_attendance (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  trip_id uuid NOT NULL REFERENCES public.trips(id) ON DELETE CASCADE,
-  itinerary_item_id uuid NOT NULL REFERENCES public.itinerary_items(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  status text NOT NULL CHECK (status IN ('maybe', 'out')),
-  UNIQUE (itinerary_item_id, user_id)
-);
-ALTER TABLE public.itinerary_attendance ENABLE ROW LEVEL SECURITY;
-
--- Members can see all attendance for their trips
-CREATE POLICY "attendance_select" ON public.itinerary_attendance
-  FOR SELECT TO authenticated USING (public.is_trip_member(trip_id, auth.uid()));
-CREATE POLICY "attendance_insert" ON public.itinerary_attendance
-  FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND public.is_trip_member(trip_id, auth.uid()));
-CREATE POLICY "attendance_update" ON public.itinerary_attendance
-  FOR UPDATE TO authenticated USING (user_id = auth.uid() AND public.is_trip_member(trip_id, auth.uid()));
-CREATE POLICY "attendance_delete" ON public.itinerary_attendance
-  FOR DELETE TO authenticated USING (user_id = auth.uid() AND public.is_trip_member(trip_id, auth.uid()));
+Technical details:
+- Current blocker:
+```text
+DaySection -> ItineraryItemCard(draggable=false for timed)
+ItineraryItemCard disables onDrop when draggable=false
+=> timed items cannot act as drop targets
+=> untimed item cannot be placed between timed items
 ```
 
-## 2. Hook: `useItineraryAttendance`
+- Intended post-fix behavior:
+```text
+Timed item:
+- draggable = false
+- no visible drag handle
+- can receive drop
 
-- Query all `itinerary_attendance` rows for the trip (single query)
-- Query `trip_members` + `profiles` for member list (user_id, display_name)
-- `cycleStatus(itemId)`: no row → INSERT 'maybe' → UPDATE 'out' → DELETE
-- Invalidate queries on success
-
-## 3. AttendanceRow
-
-Placed between title/location block and comments in `ItineraryItemCard`.
-
-**Avatar display rules:**
-- 1 member: show 1 avatar, no pill
-- 2–3 members: show all avatars, no pill
-- 4+ members: show first 3 avatars + `+N` muted pill (N = remaining count)
-
-**Status dots** (small circle bottom-right of avatar):
-- No row (attending): teal dot, `Check` icon
-- `maybe`: amber dot, `HelpCircle` icon
-- `out`: red dot, `X` icon, avatar opacity-50
-
-**Interaction:**
-- Tap own avatar → cycle: in → maybe → out → in
-- Other avatars not tappable
-- Tap `+N` pill or row background → open AttendanceSheet
-
-Code comment: `// TODO Phase 2: use attendance to generate personal itinerary view in global tab`
-
-## 4. AttendanceSheet
-
-Bottom drawer (existing `Drawer` component):
-- Each row: avatar + display name + status icon
-- "You" label next to current user
-- Sorted: attending first, maybe, out last
-
-## 5. Sort Logic
-
-In `ItineraryTab.tsx` where items are grouped by day, sort each day's items:
-1. Items with `start_time` — ascending
-2. Items without `start_time` — at bottom, by `sort_order`
-
-```ts
-items.sort((a, b) => {
-  if (a.start_time && b.start_time) return a.start_time.localeCompare(b.start_time);
-  if (a.start_time) return -1;
-  if (b.start_time) return 1;
-  return (a.sort_order || 0) - (b.sort_order || 0);
-});
+Untimed item:
+- draggable = true
+- visible drag handle
+- can receive drop
 ```
 
+- Why only these two files:
+  - `ItineraryItemCard.tsx` controls whether drop events are attached.
+  - `DaySection.tsx` owns drag start/drop midpoint logic.
+  - `useItinerary.ts` already invalidates on reorder, and DB writes are already happening.
