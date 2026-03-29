@@ -156,6 +156,7 @@ export function ExpensesTab({ tripId, myRole }: Props) {
         <SettlementCurrencyPicker
           value={settlementCurrency}
           onChange={(c) => updateSettlementCurrency.mutate(c)}
+          cachedCurrencyCodes={cachedCurrencyCodes}
         />
         <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => { setEditingExpense(null); setFormOpen(true); }}>
           <Plus className="h-3.5 w-3.5" /> Add Expense
