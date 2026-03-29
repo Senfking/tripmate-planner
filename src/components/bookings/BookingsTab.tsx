@@ -149,11 +149,11 @@ export function BookingsTab({ tripId, myRole }: Props) {
         <div className="flex gap-3">
           <Button onClick={() => setMode("upload")} size="sm">
             <Upload className="h-4 w-4 mr-1" />
-            Upload file
+            Upload confirmation
           </Button>
           <Button onClick={() => setMode("link")} variant="outline" size="sm">
             <Link2 className="h-4 w-4 mr-1" />
-            Save a link
+            Share a link
           </Button>
         </div>
       </div>
