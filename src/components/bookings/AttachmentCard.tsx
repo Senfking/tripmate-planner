@@ -52,7 +52,7 @@ interface Props {
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
-export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, onOpen, onDelete, getSignedUrl }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, onOpen, onDelete, onUploadPrompt, getSignedUrl }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
