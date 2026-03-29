@@ -47,7 +47,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds } = useAttachments(tripId);
+  const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
   const [mode, setMode] = useState<"none" | "upload" | "link">("none");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -100,6 +100,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
       canDelete={isAdmin || a.created_by === user?.id}
       isMine={a.created_by === user?.id}
       isExtracting={extractingIds.has(a.id)}
+      isFetching={fetchingIds.has(a.id)}
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
       onUploadPrompt={() => setMode("upload")}
@@ -148,11 +149,11 @@ export function BookingsTab({ tripId, myRole }: Props) {
         <div className="flex gap-3">
           <Button onClick={() => setMode("upload")} size="sm">
             <Upload className="h-4 w-4 mr-1" />
-            Upload file
+            Upload confirmation
           </Button>
           <Button onClick={() => setMode("link")} variant="outline" size="sm">
             <Link2 className="h-4 w-4 mr-1" />
-            Save a link
+            Share a link
           </Button>
         </div>
       </div>
@@ -169,7 +170,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
           onClick={() => setMode(mode === "upload" ? "none" : "upload")}
         >
           <Upload className="h-4 w-4 mr-1" />
-          Upload file
+           Upload confirmation
         </Button>
         <Button
           size="sm"
@@ -177,7 +178,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
           onClick={() => setMode(mode === "link" ? "none" : "link")}
         >
           <Link2 className="h-4 w-4 mr-1" />
-          Save a link
+          Share a link
         </Button>
       </div>
 

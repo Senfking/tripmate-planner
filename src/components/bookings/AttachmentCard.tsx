@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown } from "lucide-react";
+import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles } from "lucide-react";
+import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -46,13 +47,14 @@ interface Props {
   canDelete: boolean;
   isMine?: boolean;
   isExtracting?: boolean;
+  isFetching?: boolean;
   onOpen: () => void;
   onDelete: () => void;
   onUploadPrompt?: () => void;
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
-export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, onOpen, onDelete, onUploadPrompt, getSignedUrl }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, isFetching, onOpen, onDelete, onUploadPrompt, getSignedUrl }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -141,13 +143,19 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
               <p className="text-xs text-muted-foreground truncate">{compactBookingSummary}</p>
             )}
 
-            {isExtracting && (
-              <p className="text-[11px] font-medium animate-pulse" style={{ color: "#0D9488" }}>
-                ✦ Reading document...
+            {isFetching && (
+              <p className="text-[11px] font-medium animate-pulse flex items-center gap-1" style={{ color: "#0D9488" }}>
+                ✦ Fetching details…
               </p>
             )}
 
-            {!isExtracting && isLinkWithNoData && onUploadPrompt && (
+            {isExtracting && (
+              <p className="text-[11px] font-medium animate-pulse flex items-center gap-1" style={{ color: "#0D9488" }}>
+                <Sparkles className="h-3 w-3" /> AI is reading this document…
+              </p>
+            )}
+
+            {!isExtracting && !isFetching && isLinkWithNoData && onUploadPrompt && (
               <button
                 className="text-[11px] text-muted-foreground hover:text-foreground transition-colors text-left"
                 onClick={(e) => { e.stopPropagation(); onUploadPrompt(); }}
@@ -202,6 +210,18 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
   );
 }
 
+/* ---------- Date formatting helper ---------- */
+
+function fmtDate(val: unknown): string | null {
+  if (!val || typeof val !== "string") return null;
+  try {
+    const d = parseISO(val);
+    return isValid(d) ? format(d, "MMM d, yyyy") : String(val);
+  } catch {
+    return String(val);
+  }
+}
+
 /* ---------- Compact one-line summary ---------- */
 
 function buildCompactSummary(type: string, data: Record<string, unknown> | null): string | null {
@@ -213,10 +233,10 @@ function buildCompactSummary(type: string, data: Record<string, unknown> | null)
     if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
   } else if (type === "hotel") {
     if (data.provider) parts.push(String(data.provider));
-    if (data.check_in) parts.push(`In: ${data.check_in}`);
-    if (data.check_out) parts.push(`Out: ${data.check_out}`);
+    if (data.check_in) parts.push(`In: ${fmtDate(data.check_in)}`);
+    if (data.check_out) parts.push(`Out: ${fmtDate(data.check_out)}`);
   } else if (type === "activity") {
-    if (data.check_in) parts.push(String(data.check_in));
+    if (data.check_in) parts.push(fmtDate(data.check_in) || String(data.check_in));
     if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
   }
   return parts.length > 0 ? parts.join(" · ") : null;
@@ -240,13 +260,13 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
   } else if (type === "hotel") {
     if (data.provider) items.push({ icon: MapPin, text: String(data.provider) });
     if (data.check_in || data.check_out) {
-      const parts = [data.check_in && `In: ${data.check_in}`, data.check_out && `Out: ${data.check_out}`].filter(Boolean).join(" · ");
+      const parts = [data.check_in && `In: ${fmtDate(data.check_in)}`, data.check_out && `Out: ${fmtDate(data.check_out)}`].filter(Boolean).join(" · ");
       items.push({ icon: Calendar, text: parts });
     }
     if (data.booking_reference) items.push({ icon: Hash, text: `Ref: ${data.booking_reference}` });
   } else if (type === "activity") {
     if (data.check_in) {
-      const text = data.departure_time ? `${data.check_in} at ${data.departure_time}` : String(data.check_in);
+      const text = data.departure_time ? `${fmtDate(data.check_in)} at ${data.departure_time}` : (fmtDate(data.check_in) || String(data.check_in));
       items.push({ icon: Calendar, text });
     }
     if (data.booking_reference) items.push({ icon: Hash, text: `Ref: ${data.booking_reference}` });
