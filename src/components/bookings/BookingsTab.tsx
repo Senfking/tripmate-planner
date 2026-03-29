@@ -102,6 +102,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
       isExtracting={extractingIds.has(a.id)}
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
+      onUploadPrompt={() => setMode("upload")}
       getSignedUrl={getSignedUrl}
     />
   );
