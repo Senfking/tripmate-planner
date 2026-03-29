@@ -131,5 +131,6 @@ export function useVibeBoard(tripId: string | undefined) {
     submitAnswers,
     activateBoard,
     lockBoard,
+    unlockBoard,
   };
 }
