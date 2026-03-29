@@ -257,9 +257,8 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
               </div>
               {/* WhatsApp */}
               <Button
-                variant="outline"
                 size="sm"
-                className="w-full gap-2 text-[#25D366] border-[#25D366]/30 hover:bg-[#25D366]/10"
+                className="w-full gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
                 onClick={() => {
                   if (!inviteLink) return;
                   const msg = `Hey! Join our trip ${tripName} on Junto 🗺️\n\nUse this link to join: ${inviteLink}${tripCode ? `\nOr enter code: ${tripCode}` : ""}`;
