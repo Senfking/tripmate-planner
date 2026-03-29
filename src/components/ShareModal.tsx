@@ -6,9 +6,12 @@ import { getShareableAppOrigin } from "@/lib/appUrl";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Copy, Link2, CalendarPlus, Download, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 
 interface Props {
   tripId: string;
@@ -21,8 +24,8 @@ interface Props {
 export function ShareModal({ tripId, tripName, open, onOpenChange, isAdmin }: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const [includeExpenses, setIncludeExpenses] = useState(false);
 
-  // Fetch active (non-revoked, non-expired) share token
   const { data: activeToken, isLoading } = useQuery({
     queryKey: ["share-token", tripId],
     queryFn: async () => {
@@ -35,6 +38,20 @@ export function ShareModal({ tripId, tripName, open, onOpenChange, isAdmin }: Pr
         .order("expires_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!user,
+  });
+
+  const { data: tripData } = useQuery({
+    queryKey: ["trip-dates-share", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trips")
+        .select("tentative_start_date, tentative_end_date")
+        .eq("id", tripId)
+        .single();
       if (error) throw error;
       return data;
     },
@@ -76,8 +93,9 @@ export function ShareModal({ tripId, tripName, open, onOpenChange, isAdmin }: Pr
     onError: () => toast.error("Failed to revoke link"),
   });
 
+  const origin = getShareableAppOrigin() || window.location.origin;
   const shareUrl = activeToken
-    ? `${getShareableAppOrigin() || window.location.origin}/share/${activeToken.token}`
+    ? `${origin}/share/${activeToken.token}${includeExpenses ? "?expenses=1" : ""}`
     : null;
 
   const copyLink = async () => {
@@ -88,6 +106,22 @@ export function ShareModal({ tripId, tripName, open, onOpenChange, isAdmin }: Pr
     } catch {
       toast.error("Failed to copy link");
     }
+  };
+
+  const buildDateStr = () => {
+    const s = tripData?.tentative_start_date;
+    const e = tripData?.tentative_end_date;
+    if (s && e) return `${format(new Date(s), "MMM d")} – ${format(new Date(e), "MMM d")}`;
+    if (s) return `from ${format(new Date(s), "MMM d")}`;
+    return "";
+  };
+
+  const handleWhatsApp = () => {
+    if (!shareUrl) return;
+    const dateStr = buildDateStr();
+    const signupUrl = `${origin}/signup`;
+    const msg = `✈️ ${tripName}${dateStr ? ` · ${dateStr}` : ""}\n\nHere's our trip plan: ${shareUrl}\n\nJoin us on Junto: ${signupUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   const [icsLoading, setIcsLoading] = useState(false);
@@ -127,6 +161,21 @@ export function ShareModal({ tripId, tripName, open, onOpenChange, isAdmin }: Pr
   return (
     <ResponsiveModal open={open} onOpenChange={onOpenChange} title={titleContent} className="sm:max-w-md">
       <div className="space-y-4">
+        {/* Expense toggle */}
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <Label htmlFor="include-expenses" className="text-sm font-medium">Include expense summary</Label>
+            <p className="text-xs text-muted-foreground">Shows total spent and who owes whom</p>
+          </div>
+          <Switch
+            id="include-expenses"
+            checked={includeExpenses}
+            onCheckedChange={setIncludeExpenses}
+          />
+        </div>
+
+        <Separator />
+
         {isLoading ? (
           <div className="flex justify-center py-6">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -146,6 +195,18 @@ export function ShareModal({ tripId, tripName, open, onOpenChange, isAdmin }: Pr
             <p className="text-xs text-muted-foreground">
               Expires on {format(new Date(activeToken.expires_at), "MMM d, yyyy")}
             </p>
+
+            {/* WhatsApp button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 text-[#25D366] border-[#25D366]/30 hover:bg-[#25D366]/10"
+              onClick={handleWhatsApp}
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+              Share via WhatsApp
+            </Button>
+
             {isAdmin && (
               <Button
                 variant="ghost"
