@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { ItineraryItemCard } from "./ItineraryItemCard";
 import { ItemFormModal } from "./ItemFormModal";
 import type { ItineraryItem } from "@/hooks/useItinerary";
+import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 
 interface Props {
   dayDate: string;
@@ -13,6 +14,9 @@ interface Props {
   tripId: string;
   myRole?: string;
   destination?: string;
+  members: TripMember[];
+  attendance: AttendanceRecord[];
+  onCycleAttendance: (itemId: string) => void;
   onAddItem: (data: any) => void;
   onUpdateItem: (data: any) => void;
   onDeleteItem: (id: string) => void;
@@ -20,7 +24,7 @@ interface Props {
   saving?: boolean;
 }
 
-export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
+export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
   const dragItem = useRef<string | null>(null);
@@ -98,6 +102,9 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
               item={item}
               tripId={tripId}
               myRole={myRole}
+              members={members}
+              attendance={attendance}
+              onCycleAttendance={() => onCycleAttendance(item.id)}
               onEdit={() => handleEdit(item)}
               onDelete={() => onDeleteItem(item.id)}
               onDragStart={handleDragStart(item.id)}
