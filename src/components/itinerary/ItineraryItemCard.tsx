@@ -43,8 +43,8 @@ export function ItineraryItemCard({ item, tripId, myRole, onEdit, onDelete, onDr
         <GripVertical className="h-4 w-4 text-muted-foreground/50 mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            {timeStr && (
-              <span className="text-xs font-mono text-muted-foreground">{timeStr}</span>
+            {timeDisplay && (
+              <span className="text-xs font-mono text-muted-foreground">{timeDisplay}</span>
             )}
             <span className="font-medium text-sm truncate">{item.title}</span>
           </div>
