@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -30,6 +30,25 @@ function timeToMinutes(t: string): number {
 
 function getSortValue(item: ItineraryItem): number {
   return item.start_time ? timeToMinutes(item.start_time) : (item.sort_order ?? 0);
+}
+
+function computeOverlaps(items: ItineraryItem[]): Map<string, string[]> {
+  const timed = items.filter(i => i.start_time && i.end_time);
+  const map = new Map<string, string[]>();
+  for (let i = 0; i < timed.length; i++) {
+    for (let j = i + 1; j < timed.length; j++) {
+      const a = timed[i], b = timed[j];
+      const aStart = timeToMinutes(a.start_time!);
+      const aEnd = timeToMinutes(a.end_time!);
+      const bStart = timeToMinutes(b.start_time!);
+      const bEnd = timeToMinutes(b.end_time!);
+      if (aStart < bEnd && bStart < aEnd) {
+        map.set(a.id, [...(map.get(a.id) || []), b.title]);
+        map.set(b.id, [...(map.get(b.id) || []), a.title]);
+      }
+    }
+  }
+  return map;
 }
 
 interface Props {
@@ -109,6 +128,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
   }, []);
 
   const itemIds = items.map(i => i.id);
+  const overlapMap = useMemo(() => computeOverlaps(items), [items]);
 
   return (
     <section className="space-y-3">
@@ -152,6 +172,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
                   members={members}
                   attendance={attendance}
                   activeId={activeId}
+                  overlapTitles={overlapMap.get(item.id)}
                   onCycleAttendance={() => onCycleAttendance(item.id)}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => onDeleteItem(item.id)}

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, GripVertical, MapPin } from "lucide-react";
+import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ItemComments } from "./ItemComments";
 import { AttendanceRow } from "./AttendanceRow";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,12 +46,13 @@ interface Props {
   members: TripMember[];
   attendance: AttendanceRecord[];
   activeId: string | null;
+  overlapTitles?: string[];
   onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, onCycleAttendance, onEdit, onDelete }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, overlapTitles, onCycleAttendance, onEdit, onDelete }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -85,6 +87,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       className={cn(
         "rounded-lg border bg-card p-3 space-y-2 transition-shadow",
         isDragging && "opacity-50 ring-2 ring-primary/30 z-10",
+        overlapTitles?.length && "border-l-[3px] border-l-amber-400",
       )}
     >
       <div className="flex items-start gap-2">
@@ -113,9 +116,23 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
             </div>
           )}
         </div>
-        <Badge className={`shrink-0 text-[10px] px-1.5 py-0 border-0 ${status.className}`}>
-          {status.label}
-        </Badge>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {overlapTitles?.length ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[240px] text-xs">
+                  Overlaps with {overlapTitles.join(", ")} — different people can join different activities
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
+          <Badge className={`text-[10px] px-1.5 py-0 border-0 ${status.className}`}>
+            {status.label}
+          </Badge>
+        </div>
       </div>
 
       {/* Actions */}
