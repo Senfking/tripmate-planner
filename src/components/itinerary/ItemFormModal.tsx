@@ -29,7 +29,8 @@ interface ItemFormModalProps {
 export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, item }: ItemFormModalProps) {
   const isMobile = useIsMobile();
   const [title, setTitle] = useState("");
-  const [startTime, setStartTime] = useState("");
+  const [hour, setHour] = useState("");
+  const [minute, setMinute] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("idea");
@@ -37,7 +38,15 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
   useEffect(() => {
     if (open) {
       setTitle(item?.title || "");
-      setStartTime(item?.start_time?.slice(0, 5) || "");
+      const t = item?.start_time?.slice(0, 5) || "";
+      if (t) {
+        const [h, m] = t.split(":");
+        setHour(h);
+        setMinute(m);
+      } else {
+        setHour("");
+        setMinute("");
+      }
       setLocation(item?.location_text || "");
       setNotes(item?.notes || "");
       setStatus(item?.status || "idea");
@@ -47,16 +56,20 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    const startTime = hour && minute ? `${hour}:${minute}` : null;
     onSave({
       id: item?.id,
       title: title.trim(),
-      start_time: startTime || null,
+      start_time: startTime,
       location_text: location || null,
       notes: notes || null,
       status,
       day_date: dayDate,
     });
   };
+
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+  const minutes = ["00", "15", "30", "45"];
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -65,8 +78,23 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
         <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Visit Colosseum" required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="start_time">Start time</Label>
-        <Input id="start_time" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+        <Label>Start time</Label>
+        <div className="flex items-center gap-2">
+          <Select value={hour} onValueChange={setHour}>
+            <SelectTrigger className="w-[80px]"><SelectValue placeholder="HH" /></SelectTrigger>
+            <SelectContent>{hours.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
+          </Select>
+          <span className="text-muted-foreground font-medium">:</span>
+          <Select value={minute} onValueChange={setMinute}>
+            <SelectTrigger className="w-[80px]"><SelectValue placeholder="MM" /></SelectTrigger>
+            <SelectContent>{minutes.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+          </Select>
+          {(hour || minute) && (
+            <button type="button" onClick={() => { setHour(""); setMinute(""); }} className="text-xs text-muted-foreground hover:text-foreground">
+              Clear
+            </button>
+          )}
+        </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
