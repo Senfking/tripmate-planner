@@ -172,6 +172,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
                   members={members}
                   attendance={attendance}
                   activeId={activeId}
+                  overlapTitles={overlapMap.get(item.id)}
                   onCycleAttendance={() => onCycleAttendance(item.id)}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => onDeleteItem(item.id)}

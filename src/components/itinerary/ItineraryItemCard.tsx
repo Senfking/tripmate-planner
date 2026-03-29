@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, GripVertical, MapPin } from "lucide-react";
+import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ItemComments } from "./ItemComments";
+import { AttendanceRow } from "./AttendanceRow";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AttendanceRow } from "./AttendanceRow";
 import {
   AlertDialog,
