@@ -10,6 +10,7 @@ import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
 import { ExpensesTab } from "@/components/expenses/ExpensesTab";
+import { AdminTab } from "@/components/admin/AdminTab";
 import { format } from "date-fns";
 
 const TRIP_TABS = ["decisions", "itinerary", "bookings", "expenses", "admin"] as const;
