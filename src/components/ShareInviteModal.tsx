@@ -64,6 +64,8 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   const qc = useQueryClient();
   const [includeExpenses, setIncludeExpenses] = useState(false);
 
+  const shareRestricted = (trip as any).share_permission === "admin" && !isAdmin;
+
   const origin = getShareableAppOrigin() || window.location.origin;
   const tripCode = (trip as any).trip_code as string | undefined;
 
