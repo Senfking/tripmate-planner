@@ -79,15 +79,15 @@ export function useAttachments(tripId: string) {
         created_by: user!.id,
       }).select("id").single();
       if (error) throw error;
-      return data;
+      return { id: data.id, url: params.url };
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Link saved");
       // Fire-and-forget link preview fetch
-      if (data?.id) {
+      if (data?.id && data?.url) {
         supabase.functions.invoke("fetch-link-preview", {
-          body: { attachment_id: data.id, url: (addLink.variables as any)?.url },
+          body: { attachment_id: data.id, url: data.url },
         }).then(() => {
           qc.invalidateQueries({ queryKey: key });
         }).catch(() => { /* preview fetch is best-effort */ });
