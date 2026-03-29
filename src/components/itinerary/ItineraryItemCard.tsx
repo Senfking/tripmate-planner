@@ -115,26 +115,50 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, o
       {/* Comments */}
       <ItemComments tripId={tripId} itemId={item.id} />
 
-      {/* Delete confirmation */}
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{item.title}"?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove this activity and its comments.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={onDelete}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete confirmation — drawer on mobile, dialog on desktop */}
+      {isMobile ? (
+        <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Delete "{item.title}"?</DrawerTitle>
+              <DrawerDescription>
+                This will permanently remove this activity and its comments.
+              </DrawerDescription>
+            </DrawerHeader>
+            <DrawerFooter>
+              <Button
+                variant="destructive"
+                onClick={() => { setConfirmOpen(false); onDelete(); }}
+              >
+                Delete
+              </Button>
+              <DrawerClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete "{item.title}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove this activity and its comments.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={onDelete}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
