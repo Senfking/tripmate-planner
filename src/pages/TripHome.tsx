@@ -90,6 +90,7 @@ export default function TripHome() {
   }, [activeTab, tabStorageKey]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const canInvite = myRole === "owner" || myRole === "admin";
 
   if (isLoading) {
