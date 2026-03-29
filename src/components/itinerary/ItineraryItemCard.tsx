@@ -116,9 +116,23 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
             </div>
           )}
         </div>
-        <Badge className={`shrink-0 text-[10px] px-1.5 py-0 border-0 ${status.className}`}>
-          {status.label}
-        </Badge>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {overlapTitles?.length ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[240px] text-xs">
+                  Overlaps with {overlapTitles.join(", ")} — different people can join different activities
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
+          <Badge className={`text-[10px] px-1.5 py-0 border-0 ${status.className}`}>
+            {status.label}
+          </Badge>
+        </div>
       </div>
 
       {/* Actions */}
