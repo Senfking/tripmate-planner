@@ -59,6 +59,12 @@ export default function TripHome() {
     enabled: !!tripId && !!user,
   });
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "decisions";
+  const setActiveTab = useCallback((tab: string) => {
+    setSearchParams({ tab }, { replace: true });
+  }, [setSearchParams]);
+
   const [inviteOpen, setInviteOpen] = useState(false);
   const canInvite = myRole === "owner" || myRole === "admin";
 
