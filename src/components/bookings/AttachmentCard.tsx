@@ -197,7 +197,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
               </div>
             )}
 
-            {displayDesc && (
+            {displayDesc && !booking && (
               <p className="text-[13px] text-muted-foreground line-clamp-3">{displayDesc}</p>
             )}
 
@@ -258,7 +258,11 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
       items.push({ icon: Users, text: data.passenger_names.join(", ") });
     }
   } else if (type === "hotel") {
-    if (data.provider) items.push({ icon: MapPin, text: String(data.provider) });
+    const PLATFORM_NAMES = ["booking.com", "agoda", "expedia", "hotels.com", "airbnb", "trip.com", "hostelworld"];
+    const provider = data.provider ? String(data.provider) : null;
+    if (provider && !PLATFORM_NAMES.some((p) => provider.toLowerCase().includes(p))) {
+      items.push({ icon: MapPin, text: provider });
+    }
     if (data.check_in || data.check_out) {
       const parts = [data.check_in && `In: ${fmtDate(data.check_in)}`, data.check_out && `Out: ${fmtDate(data.check_out)}`].filter(Boolean).join(" · ");
       items.push({ icon: Calendar, text: parts });
