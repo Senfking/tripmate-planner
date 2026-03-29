@@ -26,7 +26,12 @@ const CATEGORIES = [
   { value: "other", label: "Other" },
 ];
 
-const COMMON_CURRENCIES = ["EUR", "USD", "GBP", "CHF", "THB", "JPY", "AUD", "SGD"];
+const CURRENCY_GROUPS = [
+  { label: "Europe", codes: ["EUR", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON"] },
+  { label: "Americas", codes: ["USD", "CAD", "MXN", "BRL", "ARS", "CLP", "COP"] },
+  { label: "Asia Pacific", codes: ["THB", "JPY", "CNY", "HKD", "SGD", "MYR", "IDR", "VND", "PHP", "KRW", "AUD", "NZD", "INR", "PKR", "BDT", "LKR"] },
+  { label: "Middle East & Africa", codes: ["AED", "SAR", "QAR", "KWD", "ZAR", "EGP", "MAD", "NGN", "KES"] },
+];
 
 interface Props {
   open: boolean;
@@ -213,9 +218,14 @@ export function ExpenseFormModal({
           <Label className="text-xs">Currency</Label>
           <Select value={currency} onValueChange={setCurrency}>
             <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {COMMON_CURRENCIES.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+            <SelectContent className="max-h-[300px]">
+              {CURRENCY_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</div>
+                  {group.codes.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </div>
               ))}
             </SelectContent>
           </Select>
