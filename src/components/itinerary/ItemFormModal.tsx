@@ -29,7 +29,8 @@ interface ItemFormModalProps {
 export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, item }: ItemFormModalProps) {
   const isMobile = useIsMobile();
   const [title, setTitle] = useState("");
-  const [startTime, setStartTime] = useState("");
+  const [hour, setHour] = useState("");
+  const [minute, setMinute] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("idea");
@@ -37,7 +38,15 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
   useEffect(() => {
     if (open) {
       setTitle(item?.title || "");
-      setStartTime(item?.start_time?.slice(0, 5) || "");
+      const t = item?.start_time?.slice(0, 5) || "";
+      if (t) {
+        const [h, m] = t.split(":");
+        setHour(h);
+        setMinute(m);
+      } else {
+        setHour("");
+        setMinute("");
+      }
       setLocation(item?.location_text || "");
       setNotes(item?.notes || "");
       setStatus(item?.status || "idea");
