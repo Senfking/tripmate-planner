@@ -147,6 +147,15 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
               </p>
             )}
 
+            {!isExtracting && isLinkWithNoData && onUploadPrompt && (
+              <button
+                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors text-left"
+                onClick={(e) => { e.stopPropagation(); onUploadPrompt(); }}
+              >
+                Upload a screenshot to extract more details
+              </button>
+            )}
+
             <div className="flex items-center gap-1.5 pt-0.5">
               {isMine && (
                 <span className="inline-flex items-center rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium leading-none">You</span>
