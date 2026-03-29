@@ -1,12 +1,17 @@
 import { CalendarDays } from "lucide-react";
 
 const Itinerary = () => (
-  <div className="flex flex-col items-center justify-center gap-4 p-8 pt-24 text-center">
-    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-      <CalendarDays className="h-10 w-10 text-primary" />
+  <div className="flex min-h-[calc(100vh-10rem)] flex-col items-center justify-center px-8 text-center">
+    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+      <CalendarDays className="h-8 w-8 text-primary" />
     </div>
-    <h1 className="text-2xl font-bold text-foreground">Itinerary</h1>
-    <p className="max-w-sm text-muted-foreground">Build your day-by-day travel plan together.</p>
+    <h1 className="mt-5 text-[22px] font-bold text-foreground">Your Itinerary</h1>
+    <p className="mt-3 max-w-[280px] text-[15px] leading-relaxed text-muted-foreground">
+      A chronological view of everything you have planned across all your trips. See what's coming up, filter to just your activities, and never lose track of where you need to be.
+    </p>
+    <span className="mt-5 inline-flex rounded-full border border-primary/30 px-3.5 py-1 text-xs font-medium text-primary">
+      Coming soon
+    </span>
   </div>
 );
 
