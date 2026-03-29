@@ -200,10 +200,12 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          category: string
           created_at: string
           currency: string
           id: string
           incurred_on: string
+          itinerary_item_id: string | null
           notes: string | null
           payer_id: string
           title: string
@@ -212,10 +214,12 @@ export type Database = {
         }
         Insert: {
           amount: number
+          category?: string
           created_at?: string
           currency?: string
           id?: string
           incurred_on: string
+          itinerary_item_id?: string | null
           notes?: string | null
           payer_id: string
           title: string
@@ -224,10 +228,12 @@ export type Database = {
         }
         Update: {
           amount?: number
+          category?: string
           created_at?: string
           currency?: string
           id?: string
           incurred_on?: string
+          itinerary_item_id?: string | null
           notes?: string | null
           payer_id?: string
           title?: string
@@ -235,6 +241,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_itinerary_item_id_fkey"
+            columns: ["itinerary_item_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_trip_id_fkey"
             columns: ["trip_id"]
@@ -730,6 +743,7 @@ export type Database = {
           id: string
           name: string
           route_locked: boolean
+          settlement_currency: string
           tentative_end_date: string | null
           tentative_start_date: string | null
           trip_code: string
@@ -743,6 +757,7 @@ export type Database = {
           id?: string
           name: string
           route_locked?: boolean
+          settlement_currency?: string
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code: string
@@ -756,6 +771,7 @@ export type Database = {
           id?: string
           name?: string
           route_locked?: boolean
+          settlement_currency?: string
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code?: string

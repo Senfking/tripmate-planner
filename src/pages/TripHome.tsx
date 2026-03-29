@@ -9,6 +9,7 @@ import { InviteModal } from "@/components/InviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
+import { ExpensesTab } from "@/components/expenses/ExpensesTab";
 import { format } from "date-fns";
 
 const TRIP_TABS = ["decisions", "itinerary", "bookings", "expenses", "admin"] as const;
@@ -196,7 +197,9 @@ export default function TripHome() {
         <TabsContent value="bookings" className="px-4 py-4">
           <BookingsTab tripId={trip.id} myRole={myRole} />
         </TabsContent>
-        <TabsContent value="expenses">{tabPlaceholder("Expenses")}</TabsContent>
+        <TabsContent value="expenses" className="px-4 py-4">
+          <ExpensesTab tripId={trip.id} myRole={myRole} />
+        </TabsContent>
         <TabsContent value="admin">{tabPlaceholder("Admin")}</TabsContent>
       </Tabs>
 
