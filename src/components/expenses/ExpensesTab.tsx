@@ -1,14 +1,17 @@
 import { useState, useMemo } from "react";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
-import { calcNetBalances, calcSettlements } from "@/lib/settlementCalc";
+import { calcNetBalances, calcSettlements, formatCurrency } from "@/lib/settlementCalc";
 import { SettlementCurrencyPicker } from "./SettlementCurrencyPicker";
 import { BalancesSummary } from "./BalancesSummary";
 import { SettleUpSection } from "./SettleUpSection";
 import { ExpenseCard } from "./ExpenseCard";
 import { ExpenseFormModal } from "./ExpenseFormModal";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Plus, AlertTriangle, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
 
 interface Props {
   tripId: string;
@@ -25,6 +28,9 @@ export function ExpensesTab({ tripId, myRole }: Props) {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
+  const [balancesOpen, setBalancesOpen] = useState(true);
+  const [settleOpen, setSettleOpen] = useState(true);
+  const [expensesOpen, setExpensesOpen] = useState(true);
 
   const profileMap = useMemo(
     () => Object.fromEntries(members.map((m) => [m.userId, m.displayName])),
@@ -50,6 +56,40 @@ export function ExpensesTab({ tripId, myRole }: Props) {
 
   const settlements = useMemo(() => calcSettlements(balances), [balances]);
 
+  // Collapsed summary for balances
+  const myBalance = useMemo(() => {
+    const entry = balances.find((b) => b.userId === user?.id);
+    if (!entry) return null;
+    return entry;
+  }, [balances, user?.id]);
+
+  // Collapsed summary for settle up
+  const settleUpSummary = useMemo(() => {
+    if (settlements.length === 0) return { text: "All settled ✓", color: "text-emerald-600" };
+    const iOwe = settlements.filter((s) => s.from === user?.id).reduce((sum, s) => sum + s.amount, 0);
+    const owedToMe = settlements.filter((s) => s.to === user?.id).reduce((sum, s) => sum + s.amount, 0);
+    if (iOwe > 0.005) return { text: `You owe ${formatCurrency(iOwe, settlementCurrency)}`, color: "text-amber-600" };
+    if (owedToMe > 0.005) return { text: `Awaiting ${formatCurrency(owedToMe, settlementCurrency)}`, color: "text-emerald-600" };
+    return { text: "All settled ✓", color: "text-emerald-600" };
+  }, [settlements, user?.id, settlementCurrency]);
+
+  // Group expenses by date
+  const groupedExpenses = useMemo(() => {
+    const groups = new Map<string, ExpenseRow[]>();
+    expenses.forEach((exp) => {
+      const date = exp.incurred_on;
+      if (!groups.has(date)) groups.set(date, []);
+      groups.get(date)!.push(exp);
+    });
+    // Sort groups by date desc, items within by created_at desc
+    return Array.from(groups.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([date, items]) => ({
+        date,
+        items: [...items].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      }));
+  }, [expenses]);
+
   const editingSplits = editingExpense
     ? splits.filter((s) => s.expense_id === editingExpense.id).map((s) => ({
         user_id: s.user_id,
@@ -66,7 +106,7 @@ export function ExpensesTab({ tripId, myRole }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Top bar */}
       <div className="flex items-center justify-between">
         <SettlementCurrencyPicker
@@ -86,43 +126,127 @@ export function ExpensesTab({ tripId, myRole }: Props) {
         </div>
       )}
 
-      {/* Balances */}
-      <BalancesSummary balances={balances} currency={settlementCurrency} />
+      {/* Balances section */}
+      {balances.length > 0 && (
+        <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
+          <div className="rounded-xl border bg-card p-3 space-y-2">
+            <CollapsibleTrigger className="flex w-full items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${balancesOpen ? "rotate-90" : ""}`} />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{balances.length}</Badge>
+              </div>
+            </CollapsibleTrigger>
+            {!balancesOpen && myBalance && (
+              <p className="text-xs text-muted-foreground pl-6">
+                {myBalance.balance > 0.005
+                  ? <span className="text-emerald-600">You are owed {formatCurrency(myBalance.balance, settlementCurrency)}</span>
+                  : myBalance.balance < -0.005
+                  ? <span className="text-red-500">You owe {formatCurrency(Math.abs(myBalance.balance), settlementCurrency)}</span>
+                  : <span>All settled</span>
+                }
+              </p>
+            )}
+            <CollapsibleContent>
+              <BalancesSummary balances={balances} currency={settlementCurrency} />
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
+      )}
 
-      {/* Settle up */}
-      <SettleUpSection
-        settlements={settlements}
-        currency={settlementCurrency}
-        onSettle={(data) => addExpense.mutate(data as any)}
-      />
-
-      {/* Expense list */}
-      {expenses.length === 0 ? (
-        <div className="text-center py-12 space-y-2">
-          <p className="text-muted-foreground text-sm">No expenses yet</p>
-          <p className="text-xs text-muted-foreground">
-            Tap "Add Expense" to start tracking costs
-          </p>
+      {/* Settle Up section */}
+      {settlements.length === 0 ? (
+        <div className="rounded-xl border bg-card p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Settle Up</span>
+            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              All settled ✓
+            </span>
+          </div>
         </div>
       ) : (
-        <div className="space-y-2">
-          {expenses.map((exp) => (
-            <ExpenseCard
-              key={exp.id}
-              expense={exp}
-              splits={splits.filter((s) => s.expense_id === exp.id)}
-              members={members}
-              myRole={myRole}
-              settlementCurrency={settlementCurrency}
-              baseCurrency={settlementCurrency}
-              rates={rates}
-              itineraryItems={itineraryItems}
-              onEdit={(e) => { setEditingExpense(e); setFormOpen(true); }}
-              onDelete={(id) => deleteExpense.mutate(id)}
-            />
-          ))}
-        </div>
+        <Collapsible open={settleOpen} onOpenChange={setSettleOpen}>
+          <div className="rounded-xl border bg-card p-3 space-y-2">
+            <CollapsibleTrigger className="flex w-full items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${settleOpen ? "rotate-90" : ""}`} />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Settle Up</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{settlements.length}</Badge>
+              </div>
+            </CollapsibleTrigger>
+            {!settleOpen && (
+              <p className={`text-xs pl-6 font-medium ${settleUpSummary.color}`}>
+                {settleUpSummary.text}
+              </p>
+            )}
+            <CollapsibleContent>
+              <SettleUpSection
+                settlements={settlements}
+                currency={settlementCurrency}
+                onSettle={(data) => addExpense.mutate(data as any)}
+              />
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
       )}
+
+      {/* Expenses section */}
+      <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
+        <div className="rounded-xl border bg-card p-3 space-y-2">
+          <CollapsibleTrigger className="flex w-full items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expensesOpen ? "rotate-90" : ""}`} />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Expenses</span>
+              {expenses.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{expenses.length}</Badge>
+              )}
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {expenses.length === 0 ? (
+              <div className="text-center py-8 space-y-1">
+                <p className="text-muted-foreground text-sm">No expenses yet</p>
+                <p className="text-xs text-muted-foreground">
+                  Tap "Add Expense" to start tracking costs
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {groupedExpenses.map(({ date, items }) => (
+                  <div key={date}>
+                    {/* Date divider */}
+                    <div className="flex items-center gap-3 my-2">
+                      <div className="flex-1 border-t border-muted" />
+                      <span className="text-[12px] text-muted-foreground whitespace-nowrap">
+                        {format(parseISO(date), "EEE d MMM")}
+                      </span>
+                      <div className="flex-1 border-t border-muted" />
+                    </div>
+                    <div className="space-y-2">
+                      {items.map((exp) => (
+                        <ExpenseCard
+                          key={exp.id}
+                          expense={exp}
+                          splits={splits.filter((s) => s.expense_id === exp.id)}
+                          members={members}
+                          myRole={myRole}
+                          settlementCurrency={settlementCurrency}
+                          baseCurrency={settlementCurrency}
+                          rates={rates}
+                          itineraryItems={itineraryItems}
+                          onEdit={(e) => { setEditingExpense(e); setFormOpen(true); }}
+                          onDelete={(id) => deleteExpense.mutate(id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
 
       <ExpenseFormModal
         open={formOpen}

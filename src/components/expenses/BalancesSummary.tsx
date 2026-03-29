@@ -22,39 +22,33 @@ export function BalancesSummary({ balances, currency }: Props) {
   });
 
   return (
-    <div className="space-y-3">
-      {/* Net balances */}
-      <div className="rounded-xl border bg-card p-3 space-y-2">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</h3>
-        <div className="space-y-1.5">
-          {sorted.map((b) => {
-            const isMe = b.userId === user?.id;
-            return (
-              <div key={b.userId} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate max-w-[140px]">{b.displayName}</span>
-                  {isMe && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">You</Badge>
-                  )}
-                </span>
-                {b.balance > 0.005 ? (
-                  <span className="text-emerald-600 font-medium">
-                    is owed {formatCurrency(b.balance, currency)}
-                  </span>
-                ) : b.balance < -0.005 ? (
-                  <span className="text-red-500 font-medium">
-                    owes {formatCurrency(Math.abs(b.balance), currency)}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> settled
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+    <div className="space-y-1.5">
+      {sorted.map((b) => {
+        const isMe = b.userId === user?.id;
+        return (
+          <div key={b.userId} className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1.5">
+              <span className="truncate max-w-[140px]">{b.displayName}</span>
+              {isMe && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">You</Badge>
+              )}
+            </span>
+            {b.balance > 0.005 ? (
+              <span className="text-emerald-600 font-medium">
+                is owed {formatCurrency(b.balance, currency)}
+              </span>
+            ) : b.balance < -0.005 ? (
+              <span className="text-red-500 font-medium">
+                owes {formatCurrency(Math.abs(b.balance), currency)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" /> settled
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
