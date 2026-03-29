@@ -7,6 +7,7 @@ import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { InviteModal } from "@/components/InviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
+import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { format } from "date-fns";
 
 export default function TripHome() {
@@ -159,7 +160,9 @@ export default function TripHome() {
             routeLocked={(trip as any).route_locked ?? false}
           />
         </TabsContent>
-        <TabsContent value="itinerary">{tabPlaceholder("Itinerary")}</TabsContent>
+        <TabsContent value="itinerary" className="px-4 py-4">
+          <ItineraryTab tripId={trip.id} myRole={myRole} />
+        </TabsContent>
         <TabsContent value="bookings">{tabPlaceholder("Bookings & Docs")}</TabsContent>
         <TabsContent value="expenses">{tabPlaceholder("Expenses")}</TabsContent>
         <TabsContent value="admin">{tabPlaceholder("Admin")}</TabsContent>

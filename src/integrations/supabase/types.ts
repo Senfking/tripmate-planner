@@ -292,6 +292,7 @@ export type Database = {
       itinerary_items: {
         Row: {
           created_at: string
+          created_by: string
           day_date: string
           id: string
           location_text: string | null
@@ -305,6 +306,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string
           day_date: string
           id?: string
           location_text?: string | null
@@ -318,6 +320,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string
           day_date?: string
           id?: string
           location_text?: string | null
