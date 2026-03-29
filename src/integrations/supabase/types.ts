@@ -53,6 +53,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "attachments_itinerary_item_id_fkey"
             columns: ["itinerary_item_id"]
             isOneToOne: false
