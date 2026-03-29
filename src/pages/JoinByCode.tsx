@@ -46,13 +46,13 @@ export default function JoinByCode() {
   useEffect(() => {
     if (authLoading) return;
 
-    const storedCode = sessionStorage.getItem("join_code");
-    if (storedCode && user && !attempted.current) {
+    const codeToUse = sessionStorage.getItem("join_code") || urlCode?.toUpperCase();
+    if (codeToUse && user && !attempted.current) {
       attempted.current = true;
-      setCode(storedCode);
-      join.mutate(storedCode);
+      setCode(codeToUse);
+      join.mutate(codeToUse);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, urlCode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
