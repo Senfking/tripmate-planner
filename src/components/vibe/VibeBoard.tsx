@@ -3,7 +3,7 @@ import { useVibeBoard } from "@/hooks/useVibeBoard";
 import { VibeQuestion } from "./VibeQuestion";
 import { VibeSummary } from "./VibeSummary";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Lock } from "lucide-react";
+import { Sparkles, Lock, Unlock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const QUESTIONS = [
