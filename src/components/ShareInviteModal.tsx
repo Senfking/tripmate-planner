@@ -28,6 +28,7 @@ interface Props {
     tentative_start_date?: string | null;
     tentative_end_date?: string | null;
     trip_code?: string;
+    share_permission?: string;
   };
 }
 
@@ -62,6 +63,8 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   const { user } = useAuth();
   const qc = useQueryClient();
   const [includeExpenses, setIncludeExpenses] = useState(false);
+
+  const shareRestricted = (trip as any).share_permission === "admin" && !isAdmin;
 
   const origin = getShareableAppOrigin() || window.location.origin;
   const tripCode = (trip as any).trip_code as string | undefined;
@@ -261,6 +264,14 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       title="Share & Invite"
       className="sm:max-w-[420px]"
     >
+      {shareRestricted ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center space-y-2">
+          <p className="text-sm font-medium text-foreground">Sharing restricted</p>
+          <p className="text-xs text-muted-foreground max-w-[260px]">
+            Only admins and the trip owner can generate invite and share links for this trip.
+          </p>
+        </div>
+      ) : (
       <div className="space-y-5 -mt-1">
         {/* ── Section 1: Invite ────────────────────────── */}
         <section className="space-y-3">
@@ -397,6 +408,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
           </div>
         </section>
       </div>
+      )}
     </ResponsiveModal>
   );
 }
