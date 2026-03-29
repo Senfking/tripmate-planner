@@ -199,7 +199,9 @@ export default function TripHome() {
         <TabsContent value="expenses" className="px-4 py-4">
           <ExpensesTab tripId={trip.id} myRole={myRole} />
         </TabsContent>
-        <TabsContent value="admin">{tabPlaceholder("Admin")}</TabsContent>
+        <TabsContent value="admin" className="px-4 py-4">
+          <AdminTab tripId={trip.id} myRole={myRole} tripName={trip.name} />
+        </TabsContent>
       </Tabs>
 
       {trip && (

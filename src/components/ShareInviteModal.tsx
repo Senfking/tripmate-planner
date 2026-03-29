@@ -28,6 +28,7 @@ interface Props {
     tentative_start_date?: string | null;
     tentative_end_date?: string | null;
     trip_code?: string;
+    share_permission?: string;
   };
 }
 
