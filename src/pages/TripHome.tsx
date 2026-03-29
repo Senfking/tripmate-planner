@@ -150,7 +150,7 @@ export default function TripHome() {
       </header>
 
       {/* Tabs */}
-      <Tabs defaultValue="decisions" className="flex-1">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
         <TabsList className="w-full justify-start overflow-x-auto rounded-none border-b bg-background px-2">
           <TabsTrigger value="decisions">Decisions</TabsTrigger>
           <TabsTrigger value="itinerary">Itinerary</TabsTrigger>
