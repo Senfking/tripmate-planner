@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useItinerary } from "@/hooks/useItinerary";
 import { useRouteStops } from "@/hooks/useRouteStops";
+import { useItineraryAttendance } from "@/hooks/useItineraryAttendance";
 import { DaySection } from "./DaySection";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,6 +18,7 @@ interface Props {
 export function ItineraryTab({ tripId, myRole }: Props) {
   const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItinerary(tripId);
   const { stops } = useRouteStops(tripId);
+  const { attendance, members, cycleStatus } = useItineraryAttendance(tripId);
   const [addDayOpen, setAddDayOpen] = useState(false);
   const [newDayDate, setNewDayDate] = useState<string | null>(null);
   const [newDayFormOpen, setNewDayFormOpen] = useState(false);
@@ -55,13 +57,22 @@ export function ItineraryTab({ tripId, myRole }: Props) {
     return map;
   }, [stops]);
 
-  // Group items by day
+  // Group items by day, sorted: start_time ASC, nulls last by sort_order
   const itemsByDay = useMemo(() => {
     const map: Record<string, typeof items> = {};
     items.forEach((i) => {
       if (!map[i.day_date]) map[i.day_date] = [];
       map[i.day_date].push(i);
     });
+    // Sort each day's items
+    for (const day in map) {
+      map[day].sort((a, b) => {
+        if (a.start_time && b.start_time) return a.start_time.localeCompare(b.start_time);
+        if (a.start_time) return -1;
+        if (b.start_time) return 1;
+        return (a.sort_order || 0) - (b.sort_order || 0);
+      });
+    }
     return map;
   }, [items]);
 
@@ -109,6 +120,9 @@ export function ItineraryTab({ tripId, myRole }: Props) {
           tripId={tripId}
           myRole={myRole}
           destination={destinationByDay[day]}
+          members={members}
+          attendance={attendance}
+          onCycleAttendance={(itemId) => cycleStatus.mutate(itemId)}
           onAddItem={handleAddItem}
           onUpdateItem={handleUpdateItem}
           onDeleteItem={(id) => deleteItem.mutate(id)}

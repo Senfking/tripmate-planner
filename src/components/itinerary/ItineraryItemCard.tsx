@@ -2,7 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, GripVertical, MapPin } from "lucide-react";
 import { ItemComments } from "./ItemComments";
+import { AttendanceRow } from "./AttendanceRow";
 import type { ItineraryItem } from "@/hooks/useItinerary";
+import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 import { useAuth } from "@/contexts/AuthContext";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -16,6 +18,9 @@ interface Props {
   item: ItineraryItem;
   tripId: string;
   myRole?: string;
+  members: TripMember[];
+  attendance: AttendanceRecord[];
+  onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onDragStart: (e: React.DragEvent) => void;
@@ -23,7 +28,7 @@ interface Props {
   onDrop: (e: React.DragEvent) => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, onCycleAttendance, onEdit, onDelete, onDragStart, onDragOver, onDrop }: Props) {
   const { user } = useAuth();
   const status = statusConfig[item.status] || statusConfig.idea;
   const canDelete = item.created_by === user?.id || myRole === "owner" || myRole === "admin";
@@ -71,6 +76,17 @@ export function ItineraryItemCard({ item, tripId, myRole, onEdit, onDelete, onDr
           </Button>
         )}
       </div>
+
+      {/* Attendance */}
+      {user && members.length > 0 && (
+        <AttendanceRow
+          members={members}
+          attendance={attendance}
+          itemId={item.id}
+          currentUserId={user.id}
+          onCycle={onCycleAttendance}
+        />
+      )}
 
       {/* Comments */}
       <ItemComments tripId={tripId} itemId={item.id} />
