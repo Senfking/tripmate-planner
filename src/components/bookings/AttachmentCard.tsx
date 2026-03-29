@@ -47,6 +47,7 @@ interface Props {
   canDelete: boolean;
   isMine?: boolean;
   isExtracting?: boolean;
+  isFetching?: boolean;
   onOpen: () => void;
   onDelete: () => void;
   onUploadPrompt?: () => void;
