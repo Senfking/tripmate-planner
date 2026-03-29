@@ -37,6 +37,7 @@ const App = () => (
             <Route path="/app/invite/:token" element={<InviteRedeem />} />
             <Route path="/i/:token" element={<InviteRedeem />} />
             <Route path="/join" element={<JoinByCode />} />
+            <Route path="/join/:code" element={<JoinByCode />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>

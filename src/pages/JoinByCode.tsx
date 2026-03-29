@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +18,8 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default function JoinByCode() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
+  const { code: urlCode } = useParams<{ code?: string }>();
+  const [code, setCode] = useState(urlCode?.toUpperCase() || "");
   const attempted = useRef(false);
 
   const join = useMutation({
@@ -45,13 +46,13 @@ export default function JoinByCode() {
   useEffect(() => {
     if (authLoading) return;
 
-    const storedCode = sessionStorage.getItem("join_code");
-    if (storedCode && user && !attempted.current) {
+    const codeToUse = sessionStorage.getItem("join_code") || urlCode?.toUpperCase();
+    if (codeToUse && user && !attempted.current) {
       attempted.current = true;
-      setCode(storedCode);
-      join.mutate(storedCode);
+      setCode(codeToUse);
+      join.mutate(codeToUse);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, urlCode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,8 +61,8 @@ export default function JoinByCode() {
 
     if (!user) {
       sessionStorage.setItem("join_code", trimmed);
-      sessionStorage.setItem("invite_token", "__code__"); // signal invite flow for contextual UI
-      navigate(`/signup?redirect=/join`, { replace: true });
+      sessionStorage.setItem("invite_token", "__code__");
+      navigate(`/signup?redirect=/join/${trimmed}`, { replace: true });
       return;
     }
 

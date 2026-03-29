@@ -66,67 +66,8 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   const origin = getShareableAppOrigin() || window.location.origin;
   const tripCode = (trip as any).trip_code as string | undefined;
 
-  /* ── invite token ──────────────────────────────────── */
-  const { data: activeInvite, isLoading: inviteLoading } = useQuery({
-    queryKey: ["active-invite", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("invites")
-        .select("*")
-        .eq("trip_id", tripId)
-        .is("revoked_at" as any, null)
-        .gt("expires_at", new Date().toISOString())
-        .order("expires_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!user,
-  });
-
-  const createInvite = useMutation({
-    mutationFn: async () => {
-      const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
-      const token = Array.from(crypto.getRandomValues(new Uint8Array(10)))
-        .map((b) => chars[b % chars.length])
-        .join("");
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { error } = await supabase.from("invites").insert({
-        trip_id: tripId,
-        token,
-        role: "member",
-        expires_at: expiresAt,
-        created_by: user!.id,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["active-invite", tripId] }),
-    onError: () => toast.error("Failed to create invite link"),
-  });
-
-  const revokeInvite = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("invites")
-        .update({ revoked_at: new Date().toISOString() } as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["active-invite", tripId] });
-      toast.success("Invite link revoked");
-    },
-    onError: () => toast.error("Failed to revoke invite"),
-  });
-
-  useEffect(() => {
-    if (open && !inviteLoading && !activeInvite && !createInvite.isPending && !createInvite.isSuccess && user) {
-      createInvite.mutate();
-    }
-  }, [open, inviteLoading, activeInvite, user]);
-
-  const inviteUrl = activeInvite ? `${origin}/i/${activeInvite.token}` : null;
+  /* ── invite URL (uses trip_code directly) ──────────── */
+  const inviteUrl = tripCode ? `${origin}/join/${tripCode}` : null;
 
   /* ── share token ───────────────────────────────────── */
   const { data: activeShare, isLoading: shareLoading } = useQuery({
@@ -149,7 +90,10 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
 
   const createShare = useMutation({
     mutationFn: async () => {
-      const token = crypto.randomUUID();
+      const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+        .map((b) => chars[b % chars.length])
+        .join("");
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       const { error } = await supabase.from("trip_share_tokens").insert({
         trip_id: tripId,
@@ -309,8 +253,6 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
     }
   };
 
-  const isLinkLoading = inviteLoading || createInvite.isPending;
-
   /* ── render ────────────────────────────────────────── */
   return (
     <ResponsiveModal
@@ -327,14 +269,10 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
             <p className="text-xs text-muted-foreground mt-0.5">Add people as trip members</p>
           </div>
 
-          {isLinkLoading ? (
-            <div className="flex justify-center py-3">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : inviteUrl ? (
+          {inviteUrl ? (
             <div className="space-y-2.5">
               <div className="flex items-center gap-1.5">
-                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground truncate font-mono">
+                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground font-mono">
                   {inviteUrl}
                 </div>
                 <Button
@@ -346,11 +284,6 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              {tripCode && (
-                <p className="text-[11px] text-muted-foreground">
-                  Code: <span className="font-mono font-semibold text-foreground/70">{tripCode}</span>
-                </p>
-              )}
               <Button
                 size="sm"
                 className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg h-9 text-sm font-medium shadow-sm"
@@ -359,26 +292,9 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                 <WhatsAppIcon className="h-4 w-4" />
                 Share invite via WhatsApp
               </Button>
-              {isAdmin && (
-                <button
-                  className="text-[11px] text-muted-foreground/60 hover:text-destructive transition-colors"
-                  onClick={() => revokeInvite.mutate(activeInvite!.id)}
-                  disabled={revokeInvite.isPending}
-                >
-                  Revoke link
-                </button>
-              )}
             </div>
           ) : (
-            <Button
-              onClick={() => createInvite.mutate()}
-              disabled={createInvite.isPending}
-              size="sm"
-              variant="outline"
-              className="w-full rounded-lg"
-            >
-              Generate invite link
-            </Button>
+            <p className="text-xs text-muted-foreground">No trip code available</p>
           )}
         </section>
 
@@ -406,7 +322,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
           ) : shareUrl && activeShare ? (
             <div className="space-y-2.5">
               <div className="flex items-center gap-1.5">
-                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground truncate font-mono">
+                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground font-mono">
                   {shareUrl}
                 </div>
                 <Button
