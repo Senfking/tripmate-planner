@@ -28,11 +28,7 @@ export function SettleUpSection({ settlements, currency, onSettle }: Props) {
 
   return (
     <>
-      <div className="rounded-xl border bg-card p-3 space-y-2">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Settle Up
-        </h3>
-        <div className="space-y-2">
+      <div className="space-y-2">
           {settlements.map((s, i) => {
             const iAmDebtor = s.from === user?.id;
             const iAmCreditor = s.to === user?.id;
