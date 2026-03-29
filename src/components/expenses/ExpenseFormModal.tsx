@@ -211,19 +211,7 @@ export function ExpenseFormModal({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Currency</Label>
-          <Select value={currency} onValueChange={setCurrency}>
-            <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {CURRENCY_GROUPS.map((group) => (
-                <div key={group.label}>
-                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</div>
-                  {group.codes.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </div>
-              ))}
-            </SelectContent>
-          </Select>
+          <CurrencyPicker value={currency} onChange={setCurrency} />
         </div>
       </div>
 
