@@ -88,9 +88,8 @@ export default function TripHome() {
     sessionStorage.setItem(tabStorageKey, activeTab);
   }, [activeTab, tabStorageKey]);
 
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const canInvite = myRole === "owner" || myRole === "admin";
+  const [shareInviteOpen, setShareInviteOpen] = useState(false);
+  const isAdmin = myRole === "owner" || myRole === "admin";
 
   if (isLoading) {
     return (
