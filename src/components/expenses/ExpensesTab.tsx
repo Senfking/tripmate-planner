@@ -163,11 +163,17 @@ export function ExpensesTab({ tripId, myRole }: Props) {
         </Button>
       </div>
 
-      {/* Rate warning */}
-      {ratesError && (
+      {/* Rate warnings */}
+      {(ratesError || ratesEmpty) && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          Exchange rates unavailable — showing amounts in original currencies
+          Exchange rates unavailable — amounts shown in original currencies
+        </div>
+      )}
+      {ratesStale && !ratesEmpty && !ratesError && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Exchange rates may be outdated
         </div>
       )}
 
