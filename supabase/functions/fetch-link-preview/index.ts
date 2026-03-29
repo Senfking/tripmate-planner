@@ -79,6 +79,9 @@ Deno.serve(async (req) => {
           og_title = microlinkData.data.title || og_title;
           og_description = microlinkData.data.description || og_description;
           og_image_url = microlinkData.data.image?.url || og_image_url;
+          if (!og_image_url) {
+            og_image_url = microlinkData.data.screenshot?.url || null;
+          }
         }
       } catch {
         // Microlink also failed, proceed with nulls

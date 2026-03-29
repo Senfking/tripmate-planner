@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users } from "lucide-react";
+import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,18 +21,24 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   other: File,
 };
 
-const TYPE_GRADIENTS: Record<string, string> = {
-  flight: "from-blue-500 to-blue-600",
-  hotel: "from-amber-500 to-amber-600",
-  activity: "from-green-500 to-green-600",
-  link: "from-teal-500 to-teal-600",
-  other: "from-slate-400 to-slate-500",
+const TYPE_ICON_COLORS: Record<string, string> = {
+  flight: "bg-blue-50 text-blue-600",
+  hotel: "bg-amber-50 text-amber-600",
+  activity: "bg-green-50 text-green-600",
+  link: "bg-teal-50 text-teal-600",
+  other: "bg-slate-100 text-slate-500",
 };
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif)$/i;
 
 function cleanTitle(title: string): string {
   return title.replace(/^[a-f0-9-]{36,}-/, "");
+}
+
+function decodeHtml(html: string): string {
+  const txt = document.createElement("textarea");
+  txt.innerHTML = html;
+  return txt.value;
 }
 
 interface Props {
@@ -47,20 +53,22 @@ interface Props {
 
 export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, onOpen, onDelete, getSignedUrl }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const Icon = TYPE_ICONS[attachment.type] || File;
+  const iconColor = TYPE_ICON_COLORS[attachment.type] || TYPE_ICON_COLORS.other;
   const addedBy = attachment.profiles?.display_name || "Unknown";
   const timeAgo = formatDistanceToNow(new Date(attachment.created_at), { addSuffix: true });
-  const gradient = TYPE_GRADIENTS[attachment.type] || TYPE_GRADIENTS.other;
 
-  const displayTitle = attachment.og_title || cleanTitle(attachment.title);
+  const rawTitle = attachment.og_title || cleanTitle(attachment.title);
+  const displayTitle = decodeHtml(rawTitle);
+  const rawDesc = attachment.og_description;
+  const displayDesc = rawDesc ? decodeHtml(rawDesc) : null;
   const booking = attachment.booking_data as Record<string, unknown> | null;
 
-  // Resolve banner image
   const isImageFile = attachment.file_path && IMAGE_EXTENSIONS.test(attachment.file_path);
   const bannerSrc = attachment.og_image_url || imageUrl;
-  const hasBanner = !!bannerSrc;
 
   useEffect(() => {
     if (!attachment.og_image_url && isImageFile && attachment.file_path && getSignedUrl) {
@@ -72,6 +80,8 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
     setConfirmOpen(false);
     onDelete();
   };
+
+  const compactBookingSummary = buildCompactSummary(attachment.type, booking);
 
   const confirmUI = isMobile ? (
     <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -103,67 +113,102 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, on
 
   return (
     <>
-      <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
-        {/* Banner — only when there's a real image */}
-        {hasBanner && (
-          <div className="relative h-[100px] overflow-hidden">
-            <img src={bannerSrc} alt="" className="h-full w-full object-cover" />
+      <div
+        className="overflow-hidden rounded-xl border bg-card shadow-sm transition-all cursor-pointer"
+        onClick={() => setExpanded((p) => !p)}
+      >
+        {/* Compact row — always visible */}
+        <div className="flex items-start gap-3 p-3">
+          {/* Type icon */}
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconColor}`}>
+            <Icon className="h-[18px] w-[18px]" />
           </div>
-        )}
 
-        {/* Body */}
-        <div className="p-3 space-y-1.5">
-          {/* Title row — with inline icon when no banner */}
-          <div className="flex items-center gap-2">
-            {!hasBanner && (
-              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br ${gradient}`}>
-                <Icon className="h-4 w-4 text-white/90" />
+          {/* Content */}
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-sm leading-snug truncate flex-1">{displayTitle}</p>
+              <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+            </div>
+
+            {!expanded && displayDesc && (
+              <p className="text-xs text-muted-foreground truncate">{displayDesc}</p>
+            )}
+
+            {!expanded && compactBookingSummary && (
+              <p className="text-xs text-muted-foreground truncate">{compactBookingSummary}</p>
+            )}
+
+            {isExtracting && (
+              <p className="text-[11px] font-medium animate-pulse" style={{ color: "#0D9488" }}>
+                ✦ Reading document...
+              </p>
+            )}
+
+            <div className="flex items-center gap-1.5 pt-0.5">
+              {isMine && (
+                <span className="inline-flex items-center rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium leading-none">You</span>
+              )}
+              <span className="text-[11px] text-muted-foreground">{addedBy} · {timeAgo}</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-0.5 shrink-0 -mr-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+            {canDelete && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Expanded details */}
+        {expanded && (
+          <div className="border-t px-3 pb-3 pt-2 space-y-2 animate-fade-in">
+            {bannerSrc && (
+              <div className="relative h-[100px] overflow-hidden rounded-lg">
+                <img src={bannerSrc} alt="" className="h-full w-full object-cover" />
               </div>
             )}
-            <p className="font-medium text-[15px] leading-snug truncate flex-1">{displayTitle}</p>
-          </div>
 
-          {attachment.og_description && (
-            <p className="text-[13px] text-muted-foreground line-clamp-2">{attachment.og_description}</p>
-          )}
-
-          {/* Structured booking data */}
-          {booking && <BookingDetails type={attachment.type} data={booking} />}
-
-          {/* AI extraction loading state */}
-          {isExtracting && (
-            <p className="text-xs font-medium animate-pulse" style={{ color: "#0D9488" }}>
-              ✦ Reading document...
-            </p>
-          )}
-
-          {/* Meta */}
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
-            {isMine && (
-              <span className="inline-flex items-center rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium leading-none">You</span>
+            {displayDesc && (
+              <p className="text-[13px] text-muted-foreground line-clamp-3">{displayDesc}</p>
             )}
-            <span>{addedBy} · {timeAgo}</span>
-          </p>
-        </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-1 border-t px-2 py-1.5">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onOpen}>
-            <ExternalLink className="h-4 w-4" />
-          </Button>
-          {canDelete && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setConfirmOpen(true)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+            {booking && <BookingDetails type={attachment.type} data={booking} />}
+          </div>
+        )}
       </div>
       {canDelete && confirmUI}
     </>
   );
 }
 
-/* ---------- Structured booking details ---------- */
+/* ---------- Compact one-line summary ---------- */
+
+function buildCompactSummary(type: string, data: Record<string, unknown> | null): string | null {
+  if (!data) return null;
+  const parts: string[] = [];
+  if (type === "flight") {
+    if (data.departure && data.destination) parts.push(`${data.departure} → ${data.destination}`);
+    if (data.departure_time) parts.push(String(data.departure_time));
+    if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
+  } else if (type === "hotel") {
+    if (data.provider) parts.push(String(data.provider));
+    if (data.check_in) parts.push(`In: ${data.check_in}`);
+    if (data.check_out) parts.push(`Out: ${data.check_out}`);
+  } else if (type === "activity") {
+    if (data.check_in) parts.push(String(data.check_in));
+    if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/* ---------- Full structured booking details ---------- */
 
 function BookingDetails({ type, data }: { type: string; data: Record<string, unknown> }) {
   const items: { icon: React.ElementType; text: string }[] = [];
@@ -196,7 +241,7 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
   if (items.length === 0) return null;
 
   return (
-    <div className="space-y-1 pt-1">
+    <div className="space-y-1">
       {items.map((item, i) => {
         const ItemIcon = item.icon;
         return (
