@@ -5,16 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getShareableAppOrigin } from "@/lib/appUrl";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
   Copy,
   Loader2,
-  Trash2,
   CalendarPlus,
   Download,
-  Share2,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "sonner";
