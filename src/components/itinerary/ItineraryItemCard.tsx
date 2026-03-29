@@ -20,6 +20,7 @@ interface Props {
   myRole?: string;
   members: TripMember[];
   attendance: AttendanceRecord[];
+  draggable?: boolean;
   onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
