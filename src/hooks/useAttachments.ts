@@ -25,6 +25,7 @@ export function useAttachments(tripId: string) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const key = ["attachments", tripId];
+  const [extractingIds, setExtractingIds] = useState<Set<string>>(new Set());
 
   const query = useQuery({
     queryKey: key,
