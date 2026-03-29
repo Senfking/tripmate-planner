@@ -3,7 +3,7 @@ import { useVibeBoard } from "@/hooks/useVibeBoard";
 import { VibeQuestion } from "./VibeQuestion";
 import { VibeSummary } from "./VibeSummary";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Lock } from "lucide-react";
+import { Sparkles, Lock, Unlock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const QUESTIONS = [
@@ -71,6 +71,7 @@ export function VibeBoard({
     submitAnswers,
     activateBoard,
     lockBoard,
+    unlockBoard,
   } = useVibeBoard(tripId);
 
   const canManage = myRole === "owner" || myRole === "admin";
@@ -184,6 +185,21 @@ export function VibeBoard({
           >
             <Lock className="h-3.5 w-3.5 mr-1" />
             Lock
+          </Button>
+        </div>
+      )}
+
+      {isLocked && canManage && (
+        <div className="flex justify-end md:justify-start">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs"
+            onClick={() => unlockBoard.mutate()}
+            disabled={unlockBoard.isPending}
+          >
+            <Unlock className="h-3.5 w-3.5 mr-1" />
+            Unlock
           </Button>
         </div>
       )}
