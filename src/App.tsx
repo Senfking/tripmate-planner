@@ -11,6 +11,7 @@ import Signup from "./pages/Signup";
 import TripList from "./pages/TripList";
 import TripNew from "./pages/TripNew";
 import TripHome from "./pages/TripHome";
+import TripSection from "./pages/TripSection";
 import Decisions from "./pages/Decisions";
 import Itinerary from "./pages/Itinerary";
 import Expenses from "./pages/Expenses";
