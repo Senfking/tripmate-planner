@@ -41,7 +41,6 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
     if (!isOpen) {
-      setShowDates(false);
       setDateRange(undefined);
     }
   };
