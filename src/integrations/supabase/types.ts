@@ -289,6 +289,45 @@ export type Database = {
           },
         ]
       }
+      itinerary_attendance: {
+        Row: {
+          id: string
+          itinerary_item_id: string
+          status: string
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          itinerary_item_id: string
+          status: string
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          itinerary_item_id?: string
+          status?: string
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itinerary_attendance_itinerary_item_id_fkey"
+            columns: ["itinerary_item_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itinerary_attendance_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itinerary_items: {
         Row: {
           created_at: string
