@@ -97,6 +97,15 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
   const selectedDef = ALL_PREDEFINED.find((c) => c.code === value);
   const query = search.trim().toUpperCase();
 
+  // Deduplicated suggested currencies (with details from predefined list)
+  const suggested = useMemo(() => {
+    const unique = [...new Set(suggestedCodes)];
+    return unique.map((code) => {
+      const def = ALL_PREDEFINED.find((c) => c.code === code);
+      return def || { code, name: code, flag: "💱" };
+    });
+  }, [suggestedCodes]);
+
   const filteredGroups = useMemo(() => {
     if (!query) return GROUPS;
     return GROUPS.map((g) => ({
@@ -106,6 +115,13 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
       ),
     })).filter((g) => g.currencies.length > 0);
   }, [query]);
+
+  const filteredSuggested = useMemo(() => {
+    if (!query) return suggested;
+    return suggested.filter(
+      (c) => c.code.includes(query) || c.name.toUpperCase().includes(query)
+    );
+  }, [query, suggested]);
 
   const otherCurrencies = useMemo(() => {
     if (!query) return [];
