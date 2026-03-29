@@ -1,16 +1,18 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
-import { useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
 import { InviteModal } from "@/components/InviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
 import { format } from "date-fns";
+
+const TRIP_TABS = ["decisions", "itinerary", "bookings", "expenses", "admin"] as const;
+type TripTab = (typeof TRIP_TABS)[number];
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
