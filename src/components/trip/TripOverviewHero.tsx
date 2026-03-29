@@ -101,8 +101,8 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
         }}
       >
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground">{statusLine}</p>
-          {statusSub && <p className="text-xs text-muted-foreground mt-0.5">{statusSub}</p>}
+          <p className="text-[15px] font-medium text-foreground">{statusLine}</p>
+          {statusSub && <p className="text-xs text-muted-foreground mt-1">{statusSub}</p>}
         </div>
 
         {/* Avatar group */}
