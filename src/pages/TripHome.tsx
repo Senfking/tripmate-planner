@@ -213,13 +213,22 @@ export default function TripHome() {
       </Tabs>
 
       {trip && (
-        <InviteModal
-          tripId={trip.id}
-          tripName={trip.name}
-          open={inviteOpen}
-          onOpenChange={setInviteOpen}
-          isAdmin={canInvite}
-        />
+        <>
+          <InviteModal
+            tripId={trip.id}
+            tripName={trip.name}
+            open={inviteOpen}
+            onOpenChange={setInviteOpen}
+            isAdmin={canInvite}
+          />
+          <ShareModal
+            tripId={trip.id}
+            tripName={trip.name}
+            open={shareOpen}
+            onOpenChange={setShareOpen}
+            isAdmin={canInvite}
+          />
+        </>
       )}
     </div>
   );
