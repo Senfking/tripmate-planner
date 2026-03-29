@@ -204,6 +204,40 @@ export function useDecisionPolls(tripId: string | undefined) {
     },
   });
 
+  const deletePoll = useMutation({
+    mutationFn: async (pollId: string) => {
+      // Delete options first (cascade not guaranteed via RLS)
+      const { error: optErr } = await supabase
+        .from("poll_options")
+        .delete()
+        .eq("poll_id", pollId);
+      if (optErr) throw optErr;
+      const { error } = await supabase
+        .from("polls")
+        .delete()
+        .eq("id", pollId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
+      qc.invalidateQueries({ queryKey: ["poll-vote-counts", tripId] });
+      qc.invalidateQueries({ queryKey: ["my-poll-votes", tripId, user?.id] });
+    },
+  });
+
+  const updatePollTitle = useMutation({
+    mutationFn: async ({ pollId, title }: { pollId: string; title: string }) => {
+      const { error } = await supabase
+        .from("polls")
+        .update({ title })
+        .eq("id", pollId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
+    },
+  });
+
   const prefPolls = (polls.data || []).filter((p) => p.type === "preference");
 
   return {
@@ -216,5 +250,7 @@ export function useDecisionPolls(tripId: string | undefined) {
     addOption,
     vote,
     lockPoll,
+    deletePoll,
+    updatePollTitle,
   };
 }
