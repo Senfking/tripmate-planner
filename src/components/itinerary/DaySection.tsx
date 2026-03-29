@@ -54,14 +54,17 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
   };
 
   const handleDragStart = (id: string) => (e: React.DragEvent) => {
-    // Only untimed items can be dragged
     const item = items.find((i) => i.id === id);
     if (item?.start_time) {
       e.preventDefault();
       return;
     }
-    dragItem.current = id;
+    dragItemRef.current = id;
     e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnd = () => {
+    dragItemRef.current = null;
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -71,34 +74,25 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
 
   const handleDrop = (targetId: string) => (e: React.DragEvent) => {
     e.preventDefault();
-    if (!dragItem.current || dragItem.current === targetId) return;
+    const draggedId = dragItemRef.current;
+    dragItemRef.current = null;
+    if (!draggedId || draggedId === targetId) return;
 
-    const draggedItem = items.find((i) => i.id === dragItem.current);
-    if (!draggedItem || draggedItem.start_time) {
-      dragItem.current = null;
-      return;
-    }
+    const draggedItem = items.find((i) => i.id === draggedId);
+    if (!draggedItem || draggedItem.start_time) return;
 
-    // Find the target's position in the sorted list
     const targetIdx = items.findIndex((i) => i.id === targetId);
-    if (targetIdx === -1) { dragItem.current = null; return; }
+    if (targetIdx === -1) return;
 
-    // Compute the sort value for the position: between prev and target
     const getSortValue = (item: ItineraryItem) =>
       item.start_time ? timeToMinutes(item.start_time) : (item.sort_order ?? 0);
 
     const targetVal = getSortValue(items[targetIdx]);
-
-    // Determine if dropping above or below the target
-    // We place the dragged item just before the target
     const prevIdx = targetIdx - 1;
     const prevVal = prevIdx >= 0 ? getSortValue(items[prevIdx]) : targetVal - 100;
 
     const newSortOrder = Math.round((prevVal + targetVal) / 2);
-
-    // Only update the dragged untimed item's sort_order
     onReorder([{ id: draggedItem.id, sort_order: newSortOrder }]);
-    dragItem.current = null;
   };
 
   return (
