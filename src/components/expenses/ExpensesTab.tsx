@@ -317,6 +317,7 @@ export function ExpensesTab({ tripId, myRole }: Props) {
         members={members}
         settlementCurrency={settlementCurrency}
         itineraryItems={itineraryItems}
+        usedCurrencies={usedCurrencies}
         editingExpense={editingExpense}
         editingSplits={editingSplits}
         onSave={(data) => {
