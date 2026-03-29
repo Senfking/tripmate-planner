@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, type WheelEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -97,7 +97,6 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
   const selectedDef = ALL_PREDEFINED.find((c) => c.code === value);
   const query = search.trim().toUpperCase();
 
-  // Deduplicated suggested currencies (with details from predefined list)
   const suggested = useMemo(() => {
     const unique = [...new Set(suggestedCodes)];
     return unique.map((code) => {
@@ -136,6 +135,14 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
     setOpen(false);
   };
 
+  const handleListWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const container = event.currentTarget;
+    if (container.scrollHeight <= container.clientHeight) return;
+    event.preventDefault();
+    event.stopPropagation();
+    container.scrollTop += event.deltaY;
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -168,7 +175,10 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
           </div>
         </div>
 
-        <div className="max-h-[300px] overflow-y-auto overscroll-contain">
+        <div
+          className="max-h-[300px] overflow-y-auto overscroll-contain"
+          onWheel={handleListWheel}
+        >
           <div className="p-1.5 space-y-1">
             {filteredSuggested.length > 0 && (
               <div>
