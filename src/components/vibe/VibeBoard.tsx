@@ -71,6 +71,7 @@ export function VibeBoard({
     submitAnswers,
     activateBoard,
     lockBoard,
+    unlockBoard,
   } = useVibeBoard(tripId);
 
   const canManage = myRole === "owner" || myRole === "admin";
