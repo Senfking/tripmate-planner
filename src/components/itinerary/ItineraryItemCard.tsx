@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortable } from "@dnd-kit/sortable";
