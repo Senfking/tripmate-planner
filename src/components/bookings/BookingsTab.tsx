@@ -82,10 +82,10 @@ export function BookingsTab({ tripId, myRole }: Props) {
   const groupedSections = useMemo(() => {
     if (!isGroupedView) return [];
     return SECTIONS.map((s) => {
-      const items = attachments.filter((a) => a.type === s.type);
+      const items = peopleFiltered.filter((a) => a.type === s.type);
       return { ...s, items: sortByOwnership(items, user?.id) };
     }).filter((s) => s.items.length > 0);
-  }, [attachments, isGroupedView, user?.id]);
+  }, [peopleFiltered, isGroupedView, user?.id]);
 
   const handleOpen = async (a: AttachmentRow) => {
     if (a.url) {
