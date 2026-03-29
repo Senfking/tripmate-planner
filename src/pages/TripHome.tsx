@@ -130,7 +130,7 @@ export default function TripHome() {
         </div>
       </header>
 
-      {/* Overview hero + dashboard cards */}
+      {/* Dashboard: overview hero + section cards */}
       <div className="flex-1 space-y-4 pt-4">
         <div className="px-4">
           <TripOverviewHero
