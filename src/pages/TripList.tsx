@@ -55,7 +55,7 @@ export default function TripList() {
   }
 
   return (
-    <div className="p-4 space-y-4 relative min-h-[calc(100vh-8rem)]">
+    <div className="px-5 py-5 space-y-4 relative min-h-[calc(100vh-8rem)]">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">My Trips</h1>
         {isRefetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
@@ -80,11 +80,11 @@ export default function TripList() {
           {trips.map((trip) => (
             <Link key={trip.id} to={`/app/trips/${trip.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <span className="text-3xl">{(trip as any).emoji || "✈️"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground truncate">{trip.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <span className="text-3xl shrink-0">{(trip as any).emoji || "✈️"}</span>
+                  <div className="flex-1 min-w-0 pr-1">
+                    <p className="font-semibold text-foreground leading-snug line-clamp-2">{trip.name}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
                       {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
                     </p>
                   </div>
@@ -110,7 +110,7 @@ export default function TripList() {
       {/* FAB */}
       <Link
         to="/app/trips/new"
-        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 h-14 w-14 rounded-full bg-gradient-primary text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
+        className="fixed bottom-28 right-5 md:bottom-6 md:right-6 z-50 h-14 w-14 rounded-full bg-gradient-primary text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
       >
         <Plus className="h-6 w-6" />
       </Link>
