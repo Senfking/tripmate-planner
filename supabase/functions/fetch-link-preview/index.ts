@@ -158,14 +158,24 @@ Return only valid JSON, no other text.`;
             ai_title = extracted.title || null;
             ai_type = extracted.booking_type || null;
 
+            // Format dates nicely (ISO → "Apr 2, 2026")
+            const fmtDate = (s: string | null): string | null => {
+              if (!s) return null;
+              try {
+                const d = new Date(s);
+                if (isNaN(d.getTime())) return s;
+                return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              } catch { return s; }
+            };
+
             // Build compact description from key fields
             const descParts: string[] = [];
             if (extracted.provider) descParts.push(extracted.provider);
             if (extracted.departure && extracted.destination) {
               descParts.push(`${extracted.departure} → ${extracted.destination}`);
             }
-            if (extracted.check_in) descParts.push(`Check-in: ${extracted.check_in}`);
-            if (extracted.check_out) descParts.push(`Check-out: ${extracted.check_out}`);
+            if (extracted.check_in) descParts.push(`In: ${fmtDate(extracted.check_in) || extracted.check_in}`);
+            if (extracted.check_out) descParts.push(`Out: ${fmtDate(extracted.check_out) || extracted.check_out}`);
             if (extracted.total_price) descParts.push(extracted.total_price);
             if (descParts.length > 0) ai_description = descParts.join(" · ");
           }
