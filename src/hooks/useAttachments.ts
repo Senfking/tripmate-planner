@@ -70,19 +70,28 @@ export function useAttachments(tripId: string) {
       type: string;
       notes?: string;
     }) => {
-      const { error } = await supabase.from("attachments").insert({
+      const { data, error } = await supabase.from("attachments").insert({
         trip_id: tripId,
         url: params.url,
         title: params.title,
         type: params.type,
         notes: params.notes || null,
         created_by: user!.id,
-      });
+      }).select("id").single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Link saved");
+      // Fire-and-forget link preview fetch
+      if (data?.id) {
+        supabase.functions.invoke("fetch-link-preview", {
+          body: { attachment_id: data.id, url: (addLink.variables as any)?.url },
+        }).then(() => {
+          qc.invalidateQueries({ queryKey: key });
+        }).catch(() => { /* preview fetch is best-effort */ });
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
