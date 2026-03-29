@@ -10,6 +10,12 @@ import { CalendarPlus, Loader2 } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
 
+/** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
 interface Props {
   tripId: string;
   myRole?: string;
@@ -57,7 +63,7 @@ export function ItineraryTab({ tripId, myRole }: Props) {
     return map;
   }, [stops]);
 
-  // Group items by day, ordered by sort_order only
+  // Hybrid sort: timed items by start_time (as minutes), untimed by sort_order
   const itemsByDay = useMemo(() => {
     const map: Record<string, typeof items> = {};
     items.forEach((i) => {
@@ -65,7 +71,11 @@ export function ItineraryTab({ tripId, myRole }: Props) {
       map[i.day_date].push(i);
     });
     for (const day in map) {
-      map[day].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      map[day].sort((a, b) => {
+        const av = a.start_time ? timeToMinutes(a.start_time) : (a.sort_order ?? 0);
+        const bv = b.start_time ? timeToMinutes(b.start_time) : (b.sort_order ?? 0);
+        return av - bv;
+      });
     }
     return map;
   }, [items]);
