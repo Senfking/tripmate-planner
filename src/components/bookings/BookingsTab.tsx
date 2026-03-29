@@ -277,7 +277,11 @@ export function BookingsTab({ tripId, myRole }: Props) {
           {filtered.map(renderCard)}
           {filtered.length === 0 && attachments.length > 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">
-              No results matching your filter
+              {peopleFilter === "others"
+                ? "No bookings from other members yet"
+                : peopleFilter === "mine"
+                ? "You haven't added any bookings yet — upload a confirmation or share a link"
+                : "No results matching your filter"}
             </p>
           )}
         </div>
