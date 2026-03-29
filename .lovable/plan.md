@@ -1,47 +1,45 @@
 
 
-# Seed "Carine's Wedding — Brazil May 2025" Test Trip
+## Admin Tab — Add Share Permissions Setting
 
-## Approach
-Execute all data inserts via the database insert tool in sequence. No schema changes needed — all tables already exist.
+### Summary
+Add a "Trip Settings" section to the Admin tab with a toggle controlling who can generate share/invite links. Store as a new `share_permission` column on the `trips` table.
 
-## Execution Order
+### Database Migration
+Add column to `trips`:
+```sql
+ALTER TABLE public.trips
+ADD COLUMN share_permission text NOT NULL DEFAULT 'all';
+```
+Values: `'all'` (anyone) or `'admin'` (admins/owner only).
 
-1. **Insert trip** — Create trip record with name, emoji 💍, dates May 22–31, settlement_currency EUR. `trip_code` auto-generates via trigger. Capture the generated trip ID.
+### Files to create/modify
 
-2. **Insert trip_members** — Oliver (owner) + JuntoB (member) using their known user IDs.
+1. **`src/components/admin/AdminTab.tsx`** (new) — Full admin tab with:
+   - **Members section**: list members with profiles join, role badges, action menus (promote/demote/remove via security definer functions)
+   - **Trip Settings section**: radio group or switch for share permission (`all` vs `admin`). Updates `trips.share_permission` via supabase update. Only visible to owner/admins.
+   - **Trip Info section**: trip code (copy), created date, counts for items/attachments/expenses
+   - **Danger Zone**: collapsible red-bordered section with Leave Trip (non-owners) and Delete Trip (owner, requires typing trip name)
 
-3. **Insert trip_route_stops** (3 rows) — Rio May 22–27, Iguazu May 28–29, Florianópolis May 29–31. `route_locked` stays false.
+2. **`src/components/admin/MemberRow.tsx`** (new) — Member row with avatar, name, role badge, dropdown actions
 
-4. **Insert trip_proposals** (4 rows) — Rio, Iguazu, Florianópolis, Buenos Aires with creators and notes per spec.
+3. **`src/components/admin/DeleteTripDialog.tsx`** (new) — AlertDialog requiring trip name typed to confirm
 
-5. **Insert proposal_reactions** — Up/down votes for each proposal per spec.
+4. **`src/pages/TripHome.tsx`** — Replace `tabPlaceholder("Admin")` with `<AdminTab tripId={trip.id} myRole={myRole} tripName={trip.name} />`
 
-6. **Insert proposal_date_options** (4 rows) — One date range per proposal.
+5. **`src/components/ShareInviteModal.tsx`** — Check `trip.share_permission`: if `'admin'` and user is not admin/owner, show a message instead of the invite/link generation UI. The `trip` prop already comes from the parent; we just need to read the new field.
 
-7. **Insert date_option_votes** — Yes/no/maybe votes per user per date option.
+### Security (DB functions via migration)
 
-8. **Insert polls** (3 rows) — Three preference polls, all status "open".
+Two new `SECURITY DEFINER` functions:
+- **`update_member_role(trip_id, target_user_id, new_role)`** — validates caller is owner (for admin promotion) or admin/owner (for demotion to member). Prevents demoting sole owner.
+- **`remove_trip_member(trip_id, target_user_id)`** — validates caller is admin/owner, target is not owner, and caller is not removing themselves if sole owner.
 
-9. **Insert poll_options** (7 rows) — Options for each poll.
+These bypass the `trip_members_update_own` RLS policy which only allows users to update their own row.
 
-10. **Insert votes** — Cast votes where specified (Oliver on all 3 polls Q1+Q2, JuntoB on Q1 only).
-
-11. **Insert itinerary_items** (~25 rows) — All 10 days of activities with correct dates, times, locations, statuses, and created_by.
-
-12. **Insert attachments** (3 rows) — Hotel link, Iguazu tour link, Airbnb link.
-
-13. **Insert expenses** (9 rows) — With correct amounts, currencies, categories, payers, dates.
-
-14. **Insert expense_splits** (18 rows) — Equal splits between Oliver and JuntoB for each expense.
-
-15. **Insert comment** (1 row) — "TEST DATA — remove before production" on the first itinerary item.
-
-16. **Report back** — Show the new trip ID and auto-generated trip code.
-
-## Technical Notes
-- All inserts use service-role or direct psql to bypass RLS (since we're inserting on behalf of specific users)
-- User IDs: Oliver = `1d5b21fe-f74c-429b-8d9d-938a4f295013`, JuntoB = `faa40b9a-a94d-43ba-8f6a-ad00855899b1`
-- No UI or code changes
-- Vibe board left empty (no vibe_responses)
+### Technical details
+- Share permission toggle: `supabase.from('trips').update({ share_permission: value }).eq('id', tripId)` — allowed by existing `trips_update_member` RLS
+- Member list query: `trip_members` select with manual profile lookup (separate query on `profiles` by user IDs)
+- Delete trip: `supabase.from('trips').delete().eq('id', tripId)` — protected by `trips_delete_admin` RLS (admin/owner only)
+- Leave trip: call `remove_trip_member` function on self, or direct delete on own `trip_members` row (allowed by existing delete policy for admins, needs a self-leave function for regular members)
 
