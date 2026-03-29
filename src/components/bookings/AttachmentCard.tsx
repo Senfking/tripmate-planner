@@ -260,13 +260,13 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
   } else if (type === "hotel") {
     if (data.provider) items.push({ icon: MapPin, text: String(data.provider) });
     if (data.check_in || data.check_out) {
-      const parts = [data.check_in && `In: ${data.check_in}`, data.check_out && `Out: ${data.check_out}`].filter(Boolean).join(" · ");
+      const parts = [data.check_in && `In: ${fmtDate(data.check_in)}`, data.check_out && `Out: ${fmtDate(data.check_out)}`].filter(Boolean).join(" · ");
       items.push({ icon: Calendar, text: parts });
     }
     if (data.booking_reference) items.push({ icon: Hash, text: `Ref: ${data.booking_reference}` });
   } else if (type === "activity") {
     if (data.check_in) {
-      const text = data.departure_time ? `${data.check_in} at ${data.departure_time}` : String(data.check_in);
+      const text = data.departure_time ? `${fmtDate(data.check_in)} at ${data.departure_time}` : (fmtDate(data.check_in) || String(data.check_in));
       items.push({ icon: Calendar, text });
     }
     if (data.booking_reference) items.push({ icon: Hash, text: `Ref: ${data.booking_reference}` });
