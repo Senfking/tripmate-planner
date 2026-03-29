@@ -24,6 +24,7 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 interface Props {
   attachment: AttachmentRow;
   canDelete: boolean;
+  isMine?: boolean;
   onOpen: () => void;
   onDelete: () => void;
 }
