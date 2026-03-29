@@ -327,6 +327,8 @@ function PreferencesContent({ tripId, myRole }: { tripId: string; myRole: string
           }
           onVote={(optionId, value) => vote.mutate({ optionId, value })}
           onLock={() => lockPoll.mutate(poll.id)}
+          onDelete={() => deletePoll.mutate(poll.id)}
+          onUpdateTitle={(title) => updatePollTitle.mutate({ pollId: poll.id, title })}
           isAddingOption={addOption.isPending}
           isLocking={lockPoll.isPending}
         />
