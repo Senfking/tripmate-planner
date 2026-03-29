@@ -5,16 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getShareableAppOrigin } from "@/lib/appUrl";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
   Copy,
   Loader2,
-  Trash2,
   CalendarPlus,
   Download,
-  Share2,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "sonner";
@@ -312,175 +309,177 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
     }
   };
 
-  /* ── section label helper ──────────────────────────── */
-  const SectionLabel = ({ children, sub }: { children: React.ReactNode; sub: string }) => (
-    <div className="space-y-0.5">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{children}</p>
-      <p className="text-sm text-muted-foreground">{sub}</p>
-    </div>
-  );
-
   const isLinkLoading = inviteLoading || createInvite.isPending;
 
   /* ── render ────────────────────────────────────────── */
-  const titleContent = (
-    <span className="flex items-center gap-2">
-      <Share2 className="h-5 w-5" />
-      Share &amp; Invite
-    </span>
-  );
-
   return (
-    <ResponsiveModal open={open} onOpenChange={onOpenChange} title={titleContent} className="sm:max-w-md">
-      <div className="space-y-4">
+    <ResponsiveModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Share & Invite"
+      className="sm:max-w-[420px]"
+    >
+      <div className="space-y-5 -mt-1">
         {/* ── Section 1: Invite ────────────────────────── */}
-        <SectionLabel sub="Add people as trip members">Invite to trip</SectionLabel>
-
-        {isLinkLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Invite to trip</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Add people as trip members</p>
           </div>
-        ) : inviteUrl ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <input
-                readOnly
-                value={inviteUrl}
-                className="flex-1 rounded-md border border-input bg-muted px-3 py-2 text-sm truncate"
-              />
-              <Button size="sm" variant="outline" onClick={() => copyToClipboard(inviteUrl)}>
-                <Copy className="h-4 w-4" />
-              </Button>
+
+          {isLinkLoading ? (
+            <div className="flex justify-center py-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
-            {tripCode && (
-              <p className="text-xs text-muted-foreground">
-                Code: <span className="font-mono font-medium">{tripCode}</span>
-              </p>
-            )}
-            <Button
-              size="sm"
-              className="w-full gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
-              onClick={handleWhatsAppInvite}
-            >
-              <WhatsAppIcon className="h-4 w-4" />
-              Share invite via WhatsApp
-            </Button>
-            {isAdmin && (
+          ) : inviteUrl ? (
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground truncate font-mono">
+                  {inviteUrl}
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => copyToClipboard(inviteUrl)}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {tripCode && (
+                <p className="text-[11px] text-muted-foreground">
+                  Code: <span className="font-mono font-semibold text-foreground/70">{tripCode}</span>
+                </p>
+              )}
               <Button
-                variant="ghost"
                 size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={() => revokeInvite.mutate(activeInvite!.id)}
-                disabled={revokeInvite.isPending}
+                className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg h-9 text-sm font-medium shadow-sm"
+                onClick={handleWhatsAppInvite}
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                Revoke link
+                <WhatsAppIcon className="h-4 w-4" />
+                Share invite via WhatsApp
               </Button>
-            )}
-          </div>
-        ) : (
-          <Button
-            onClick={() => createInvite.mutate()}
-            disabled={createInvite.isPending}
-            size="sm"
-            className="w-full"
-          >
-            Generate invite link
-          </Button>
-        )}
+              {isAdmin && (
+                <button
+                  className="text-[11px] text-muted-foreground/60 hover:text-destructive transition-colors"
+                  onClick={() => revokeInvite.mutate(activeInvite!.id)}
+                  disabled={revokeInvite.isPending}
+                >
+                  Revoke link
+                </button>
+              )}
+            </div>
+          ) : (
+            <Button
+              onClick={() => createInvite.mutate()}
+              disabled={createInvite.isPending}
+              size="sm"
+              variant="outline"
+              className="w-full rounded-lg"
+            >
+              Generate invite link
+            </Button>
+          )}
+        </section>
 
-        <Separator />
+        <div className="border-t border-border/50" />
 
         {/* ── Section 2: Share plan ────────────────────── */}
-        <SectionLabel sub="Share a view-only summary — no login needed">Share trip plan</SectionLabel>
-
-        <div className="flex items-center justify-between gap-3">
+        <section className="space-y-3">
           <div>
-            <Label htmlFor="include-expenses" className="text-sm font-medium">Include expense summary</Label>
-            <p className="text-xs text-muted-foreground">Shows total spent and who owes whom</p>
+            <h3 className="text-sm font-semibold text-foreground">Share trip plan</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">View-only summary — no login needed</p>
           </div>
-          <Switch id="include-expenses" checked={includeExpenses} onCheckedChange={setIncludeExpenses} />
-        </div>
 
-        {shareLoading || createShare.isPending ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : shareUrl && activeShare ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <input
-                readOnly
-                value={shareUrl}
-                className="flex-1 rounded-md border border-input bg-muted px-3 py-2 text-sm truncate"
-              />
-              <Button size="sm" variant="outline" onClick={() => copyToClipboard(shareUrl)}>
-                <Copy className="h-4 w-4" />
-              </Button>
+          <div className="flex items-center justify-between gap-3 py-0.5">
+            <div>
+              <Label htmlFor="include-expenses" className="text-xs font-medium">Include expenses</Label>
+              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">Who owes whom</p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Expires on {format(new Date(activeShare.expires_at), "MMM d, yyyy")}
-            </p>
-            <Button
-              size="sm"
-              className="w-full gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
-              onClick={handleWhatsAppShare}
-            >
-              <WhatsAppIcon className="h-4 w-4" />
-              Share plan via WhatsApp
-            </Button>
-            {isAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={() => revokeShare.mutate(activeShare.id)}
-                disabled={revokeShare.isPending}
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                Revoke link
-              </Button>
-            )}
+            <Switch id="include-expenses" checked={includeExpenses} onCheckedChange={setIncludeExpenses} />
           </div>
-        ) : (
-          <Button
-            onClick={() => createShare.mutate()}
-            disabled={createShare.isPending}
-            size="sm"
-            className="w-full"
-          >
-            Generate share link
-          </Button>
-        )}
 
-        <Separator />
+          {shareLoading || createShare.isPending ? (
+            <div className="flex justify-center py-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : shareUrl && activeShare ? (
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground truncate font-mono">
+                  {shareUrl}
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => copyToClipboard(shareUrl)}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Expires {format(new Date(activeShare.expires_at), "MMM d, yyyy")}
+              </p>
+              <Button
+                size="sm"
+                className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg h-9 text-sm font-medium shadow-sm"
+                onClick={handleWhatsAppShare}
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                Share plan via WhatsApp
+              </Button>
+              {isAdmin && (
+                <button
+                  className="text-[11px] text-muted-foreground/60 hover:text-destructive transition-colors"
+                  onClick={() => revokeShare.mutate(activeShare.id)}
+                  disabled={revokeShare.isPending}
+                >
+                  Revoke link
+                </button>
+              )}
+            </div>
+          ) : (
+            <Button
+              onClick={() => createShare.mutate()}
+              disabled={createShare.isPending}
+              size="sm"
+              variant="outline"
+              className="w-full rounded-lg"
+            >
+              Generate share link
+            </Button>
+          )}
+        </section>
+
+        <div className="border-t border-border/50" />
 
         {/* ── Section 3: Export ─────────────────────────── */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Also export</p>
+        <section className="space-y-2.5">
+          <h3 className="text-xs font-medium text-muted-foreground">Export</h3>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 rounded-lg h-9 text-xs"
               disabled={icsLoading}
               onClick={() => downloadFile("export-trip-ics", "junto-itinerary.ics", setIcsLoading)}
             >
               {icsLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5 mr-1.5" />}
-              Add to Calendar
+              Calendar
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 rounded-lg h-9 text-xs"
               disabled={csvLoading}
               onClick={() => downloadFile("export-expenses-csv", "junto-expenses.csv", setCsvLoading)}
             >
               {csvLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}
-              Export CSV
+              Expenses CSV
             </Button>
           </div>
-        </div>
+        </section>
       </div>
     </ResponsiveModal>
   );
