@@ -1,28 +1,85 @@
 
 
-## Updated Plan: Show "All settled ✓" When No Settlements
+## Plan: Upgrade Exchange Rate System (150+ currencies)
 
-### Change
+### Files to create/modify
 
-**`src/components/expenses/ExpensesTab.tsx`** — one edit in the Settle Up section area (lines 92–97):
+1. **Migration**: `exchange_rate_cache` table + pg_cron schedule
+2. **Edge function**: `supabase/functions/refresh-exchange-rates/index.ts`
+3. **`src/hooks/useExpenses.ts`** — DB query instead of Frankfurter API
+4. **`src/components/expenses/SettlementCurrencyPicker.tsx`** — grouped list, search, dynamic "Other" from cache
+5. **`src/components/expenses/ExpensesTab.tsx`** — stale/empty rates warning
 
-- Remove the conditional hiding of `SettleUpSection` when `settlements.length === 0`
-- Always render the Settle Up section header
-- When `settlements.length === 0`: show a static card with the section title and "All settled ✓" in green text (using `CheckCircle2` icon), with no expandable content
-- When `settlements.length > 0`: render the existing `SettleUpSection` as-is with a count badge
+### 1. Database migration
 
-This will be incorporated into the collapsible sections work from the approved plan — the "all settled" state becomes the permanent visible state of a non-collapsible header when there are zero settlements.
+```sql
+-- Table
+CREATE TABLE public.exchange_rate_cache (
+  base_currency text PRIMARY KEY,
+  rates jsonb NOT NULL,
+  fetched_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.exchange_rate_cache ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "rates_select" ON public.exchange_rate_cache
+  FOR SELECT TO authenticated USING (true);
 
-**`src/components/expenses/SettleUpSection.tsx`** — no changes needed (the `settlements.length === 0` early return can stay since the parent will handle the empty case before rendering this component).
-
-### What it looks like
-
-```text
-┌─────────────────────────────────────────┐
-│  Settle Up    All settled ✓             │
-└─────────────────────────────────────────┘
+-- Enable extensions
+CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 ```
 
-- "All settled ✓" in green (`text-emerald-600`) with a small check icon
-- No collapsible trigger or content when empty — just the header row
+Then via **insert query** (not migration, contains project-specific URL):
+
+```sql
+SELECT cron.schedule(
+  'refresh-exchange-rates',
+  '0 6 * * *',
+  $$ SELECT supabase_functions.http_request(
+    'https://dwtbqomfleihcvkfoopm.supabase.co/functions/v1/refresh-exchange-rates',
+    'POST',
+    '{"Content-Type": "application/json"}',
+    '{}',
+    5000
+  ) $$
+);
+```
+
+This uses the built-in `supabase_functions.http_request()` helper which handles auth automatically — no hardcoded service role key.
+
+### 2. Edge function: `refresh-exchange-rates`
+
+- Fetches `https://open.er-api.com/v6/latest/{BASE}` for EUR, USD, GBP (3 calls)
+- Upserts into `exchange_rate_cache` using service role client (from `SUPABASE_SERVICE_ROLE_KEY` secret, already configured)
+- CORS headers, no JWT verification needed (invoked by cron)
+- Returns `{ success: true, updated: ["EUR","USD","GBP"] }`
+- Also invoke once immediately after deploy to seed the cache
+
+### 3. Frontend: `useExpenses.ts`
+
+Replace Frankfurter fetch with:
+
+- Query `exchange_rate_cache` for `base_currency = settlementCurrency`
+- If no direct row, cross-calculate via EUR intermediate: `X/settlement = X/EUR ÷ settlement/EUR`
+- If no cache at all, return empty rates with `fetchedAt: null`
+- Expose `ratesStale` (fetched_at > 25h) and `ratesEmpty` flags
+- `staleTime: 1h` on the query
+
+### 4. `SettlementCurrencyPicker.tsx`
+
+- Regional groups with flag emojis (Europe, Americas, Asia Pacific, Middle East & Africa — ~35 predefined)
+- Search input filtering by code or name
+- Accept `cachedCurrencyCodes` prop from useExpenses (keys from EUR cache row)
+- Searched currencies found in cache but not in predefined groups appear under "Other currencies"
+- ScrollArea with max-height ~300px
+
+### 5. `ExpensesTab.tsx`
+
+- Warning banner when `ratesStale`: "Exchange rates may be outdated"
+- Warning banner when `ratesEmpty`: "Exchange rates unavailable — amounts shown in original currencies"
+
+### No changes to
+
+- Balance/settlement calculations (`settlementCalc.ts`)
+- Settle-up confirmation flow
+- Anything outside Expenses tab + new edge function + migration
 
