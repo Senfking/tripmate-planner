@@ -29,7 +29,7 @@ interface Props {
   onDelete: () => void;
 }
 
-export function AttachmentCard({ attachment, canDelete, onOpen, onDelete }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, onOpen, onDelete }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
   const Icon = TYPE_ICONS[attachment.type] || File;
