@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, GripVertical, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ItemComments } from "./ItemComments";
 import { AttendanceRow } from "./AttendanceRow";
 import {
@@ -42,43 +44,58 @@ interface Props {
   myRole?: string;
   members: TripMember[];
   attendance: AttendanceRecord[];
-  draggable?: boolean;
-  isDragging?: boolean;
+  activeId: string | null;
   onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragEnd: () => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent) => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, draggable = true, isDragging = false, onCycleAttendance, onEdit, onDelete, onDragStart, onDragEnd, onDragOver, onDrop }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, onCycleAttendance, onEdit, onDelete }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
   const status = statusConfig[item.status] || statusConfig.idea;
   const canDelete = item.created_by === user?.id || myRole === "owner" || myRole === "admin";
   const timeStr = item.start_time ? item.start_time.slice(0, 5) : null;
-  const endStr = (item as any).end_time ? (item as any).end_time.slice(0, 5) : null;
+  const endStr = item.end_time ? item.end_time.slice(0, 5) : null;
   const timeDisplay = timeStr ? (endStr ? `${timeStr}–${endStr}` : timeStr) : null;
+
+  const isDraggable = !item.start_time;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: item.id,
+    disabled: !isDraggable,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   return (
     <div
-      draggable={draggable}
-      onDragStart={draggable ? onDragStart : undefined}
-      onDragEnd={draggable ? onDragEnd : undefined}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      ref={setNodeRef}
+      style={style}
       className={cn(
-        "rounded-lg border bg-card p-3 space-y-2 transition-all duration-150",
-        draggable ? "cursor-grab active:cursor-grabbing" : "",
-        isDragging && "opacity-50 ring-2 ring-primary/30"
+        "rounded-lg border bg-card p-3 space-y-2 transition-shadow",
+        isDragging && "opacity-50 ring-2 ring-primary/30 z-10",
       )}
     >
       <div className="flex items-start gap-2">
-        {draggable ? (
-          <GripVertical className="h-4 w-4 text-muted-foreground/50 mt-0.5 shrink-0" />
+        {isDraggable ? (
+          <button
+            className="touch-none cursor-grab active:cursor-grabbing mt-0.5 shrink-0 text-muted-foreground/50 hover:text-muted-foreground"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
         ) : (
           <div className="w-4 shrink-0" />
         )}

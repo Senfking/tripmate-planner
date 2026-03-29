@@ -1,8 +1,22 @@
-import { useState, useRef, Fragment } from "react";
+import { useState, useCallback } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { ItineraryItemCard } from "./ItineraryItemCard";
 import { ItemFormModal } from "./ItemFormModal";
 import type { ItineraryItem } from "@/hooks/useItinerary";
@@ -12,6 +26,10 @@ import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendanc
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
+}
+
+function getSortValue(item: ItineraryItem): number {
+  return item.start_time ? timeToMinutes(item.start_time) : (item.sort_order ?? 0);
 }
 
 interface Props {
@@ -34,11 +52,15 @@ interface Props {
 export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
-  const dragItemRef = useRef<string | null>(null);
-  const [dragOverTargetId, setDragOverTargetId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const dateObj = new Date(dayDate + "T00:00:00");
   const dateLabel = format(dateObj, "EEE d MMM yyyy");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  );
 
   const handleSave = (data: any) => {
     if (data.id) {
@@ -55,80 +77,38 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
     setFormOpen(true);
   };
 
-  const handleDragStart = (id: string) => (e: React.DragEvent) => {
-    const item = items.find((i) => i.id === id);
-    if (item?.start_time) {
-      e.preventDefault();
-      return;
-    }
-    dragItemRef.current = id;
-    e.dataTransfer.effectAllowed = "move";
-  };
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  }, []);
 
-  const handleDragEnd = () => {
-    dragItemRef.current = null;
-    setDragOverTargetId(null);
-  };
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-  const handleDragOver = (targetId: string) => (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    const draggedId = dragItemRef.current;
-    if (!draggedId || draggedId === targetId) return;
-
-    // Suppress placeholder if target is the immediate next sibling (same position)
-    const draggedIndex = items.findIndex(i => i.id === draggedId);
-    const targetIndex = items.findIndex(i => i.id === targetId);
-    if (targetIndex === draggedIndex + 1) {
-      setDragOverTargetId(null);
-      return;
-    }
-
-    setDragOverTargetId(targetId);
-  };
-
-  const getSortValue = (item: ItineraryItem) =>
-    item.start_time ? timeToMinutes(item.start_time) : (item.sort_order ?? 0);
-
-  const handleDrop = (targetId: string) => (e: React.DragEvent) => {
-    e.preventDefault();
-    const draggedId = dragItemRef.current;
-    dragItemRef.current = null;
-    setDragOverTargetId(null);
-    if (!draggedId || draggedId === targetId) return;
-
-    const draggedItem = items.find((i) => i.id === draggedId);
+    const draggedItem = items.find(i => i.id === active.id);
     if (!draggedItem || draggedItem.start_time) return;
 
-    // Exclude dragged item to get correct neighbor indices
-    const filtered = items.filter(i => i.id !== draggedId);
-    const targetIdx = filtered.findIndex((i) => i.id === targetId);
-    if (targetIdx === -1) return;
+    const oldIndex = items.findIndex(i => i.id === active.id);
+    const newIndex = items.findIndex(i => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
-    const targetVal = getSortValue(filtered[targetIdx]);
-    const prevIdx = targetIdx - 1;
-    const prevVal = prevIdx >= 0 ? getSortValue(filtered[prevIdx]) : targetVal - 100;
+    const reordered = arrayMove(items, oldIndex, newIndex);
 
-    const newSortOrder = Math.round((prevVal + targetVal) / 2);
-    onReorder([{ id: draggedItem.id, sort_order: newSortOrder }]);
-  };
+    const prev = reordered[newIndex - 1];
+    const next = reordered[newIndex + 1];
+    const prevVal = prev ? getSortValue(prev) : 0;
+    const nextVal = next ? getSortValue(next) : prevVal + 2000;
+    const newSortOrder = Math.round((prevVal + nextVal) / 2);
 
-  const handleDropEnd = (e: React.DragEvent) => {
-    e.preventDefault();
-    const draggedId = dragItemRef.current;
-    dragItemRef.current = null;
-    setDragOverTargetId(null);
-    if (!draggedId) return;
+    onReorder([{ id: active.id as string, sort_order: newSortOrder }]);
+  }, [items, onReorder]);
 
-    const draggedItem = items.find((i) => i.id === draggedId);
-    if (!draggedItem || draggedItem.start_time) return;
+  const handleDragCancel = useCallback(() => {
+    setActiveId(null);
+  }, []);
 
-    const filtered = items.filter(i => i.id !== draggedId);
-    const lastItem = filtered[filtered.length - 1];
-    const lastVal = lastItem ? getSortValue(lastItem) : 0;
-
-    onReorder([{ id: draggedItem.id, sort_order: lastVal + 1000 }]);
-  };
+  const itemIds = items.map(i => i.id);
 
   return (
     <section className="space-y-3">
@@ -154,58 +134,32 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
           Nothing planned for this day yet — add the first activity ＋
         </button>
       ) : (
-        <div className="space-y-2">
-          {items.map((item) => {
-            const isDraggable = !item.start_time;
-            const isDragging = dragItemRef.current === item.id;
-            const draggedId = dragItemRef.current;
-            const isDropTarget = dragOverTargetId === item.id && draggedId !== null && draggedId !== item.id;
-
-            // Suppress placeholder if it's effectively the same position
-            const draggedIndex = draggedId ? items.findIndex(i => i.id === draggedId) : -1;
-            const targetIndex = items.findIndex(i => i.id === item.id);
-            const isSamePosition = draggedIndex !== -1 && targetIndex === draggedIndex + 1;
-            const showPlaceholder = isDropTarget && !isSamePosition;
-
-            return (
-              <Fragment key={item.id}>
-                {showPlaceholder && (
-                  <div className="h-12 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 transition-all duration-150" />
-                )}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {items.map((item) => (
                 <ItineraryItemCard
+                  key={item.id}
                   item={item}
                   tripId={tripId}
                   myRole={myRole}
                   members={members}
                   attendance={attendance}
-                  draggable={isDraggable}
-                  isDragging={isDragging}
+                  activeId={activeId}
                   onCycleAttendance={() => onCycleAttendance(item.id)}
-                  onDragOver={handleDragOver(item.id)}
-                  onDrop={handleDrop(item.id)}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => onDeleteItem(item.id)}
-                  onDragStart={handleDragStart(item.id)}
-                  onDragEnd={handleDragEnd}
                 />
-              </Fragment>
-            );
-          })}
-
-          {/* Trailing drop zone for "move to end" */}
-          {dragItemRef.current && (
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOverTargetId("__end__"); }}
-              onDrop={handleDropEnd}
-              className={cn(
-                "min-h-[48px] rounded-lg border-2 border-dashed transition-all duration-150",
-                dragOverTargetId === "__end__"
-                  ? "border-primary/40 bg-primary/5"
-                  : "border-transparent"
-              )}
-            />
-          )}
-        </div>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <ItemFormModal
