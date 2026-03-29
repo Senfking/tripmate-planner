@@ -133,8 +133,8 @@ export default function TripHome() {
       </header>
 
       {/* Dashboard: overview hero + section cards */}
-      <div className="flex-1 space-y-4 pt-4">
-        <div className="px-4">
+      <div className="flex-1 pt-4">
+        <div className="px-4 mb-3.5">
           <TripOverviewHero
             tripId={trip.id}
             routeLocked={trip.route_locked ?? false}

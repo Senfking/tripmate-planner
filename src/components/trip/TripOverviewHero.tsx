@@ -110,7 +110,7 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
           className="flex items-center shrink-0 -space-x-2"
         >
           {visibleMembers.map((m) => (
-            <Avatar key={m.user_id} className="h-8 w-8" style={{ border: "2px solid rgba(255,255,255,0.9)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", borderRadius: "9999px" }}>
+            <Avatar key={m.user_id} className="h-9 w-9" style={{ border: "2px solid rgba(255,255,255,0.9)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", borderRadius: "9999px" }}>
               {m.profile?.avatar_url && (
                 <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
               )}
