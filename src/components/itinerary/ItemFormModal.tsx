@@ -31,6 +31,7 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
   const isMobile = useIsMobile();
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("idea");
@@ -39,6 +40,7 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
     if (open) {
       setTitle(item?.title || "");
       setStartTime(item?.start_time?.slice(0, 5) || "");
+      setEndTime((item as any)?.end_time?.slice(0, 5) || "");
       setLocation(item?.location_text || "");
       setNotes(item?.notes || "");
       setStatus(item?.status || "idea");
