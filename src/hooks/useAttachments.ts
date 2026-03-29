@@ -70,6 +70,7 @@ export function useAttachments(tripId: string) {
 
       // Fire-and-forget AI extraction
       if (data?.id && data?.filePath && data?.fileType) {
+        setExtractingIds((prev) => new Set(prev).add(data.id));
         supabase.functions
           .invoke("extract-booking-info", {
             body: {
@@ -81,7 +82,14 @@ export function useAttachments(tripId: string) {
           .then(() => {
             qc.invalidateQueries({ queryKey: key });
           })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => {
+            setExtractingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(data.id);
+              return next;
+            });
+          });
       }
     },
     onError: (e: Error) => toast.error(e.message),
