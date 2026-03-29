@@ -9,6 +9,7 @@ export interface ItineraryItem {
   day_date: string;
   title: string;
   start_time: string | null;
+  end_time: string | null;
   location_text: string | null;
   notes: string | null;
   status: string;
