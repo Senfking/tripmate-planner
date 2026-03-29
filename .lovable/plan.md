@@ -1,73 +1,115 @@
 
 
-## Revised Plan: Rich Share Page — Two Additions
+## Unified Share & Invite Modal
 
-These are incremental changes to the previously approved plan. No new files needed.
+### Overview
+Merge `ShareModal` and `InviteModal` into a single `ShareInviteModal` component. Replace the two header buttons in `TripHome` with one "Share & Invite" button. Update `index.html` with generic Junto OG meta tags. Generate a branded OG image.
 
-### 1. Fallback "Member" name for null display_name
+### Files to change
+1. **`src/components/ShareInviteModal.tsx`** — New file, combines all logic
+2. **`src/pages/TripHome.tsx`** — Single button + single modal
+3. **`src/components/ShareModal.tsx`** — Delete
+4. **`src/components/InviteModal.tsx`** — Delete
+5. **`index.html`** — Update OG meta tags
+6. **`public/og-default.png`** — Generate branded image (1200×630)
 
-**Edge Function (`public-trip-share-view/index.ts`)**
-- When building member first names from profiles, use `"Member"` if `display_name` is null/empty
-- In expense summary calculation, same fallback: any profile lookup that returns null → `"Member"`
-- Never expose user_id or email in any response field
+### ShareInviteModal design
 
-**Implementation**: After fetching profiles, build a `nameMap: Record<string, string>` where:
-```typescript
-const firstName = (profile.display_name || "Member").split(" ")[0];
-nameMap[profile.id] = firstName;
+Single `ResponsiveModal` with title "Share & Invite". Props: `tripId`, `tripName`, `open`, `onOpenChange`, `isAdmin`, `trip` (for dates/emoji).
+
+**Data queries** (all from existing patterns):
+- Active invite token (auto-create on open, same as current InviteModal)
+- Active share token (auto-create on open)
+- Trip code
+- Route stops: `trip_route_stops` ordered by `start_date` — for WhatsApp message route line
+- Member first names: `trip_members` → `profiles` (display_name), take first word, "Member" fallback — for WhatsApp message
+
+**Section 1 — Invite to trip**
+- Label: "INVITE TO TRIP" (uppercase tracking-wider, xs, muted)
+- Subtext: "Add people as trip members"
+- Truncated invite link input + copy icon button
+- "Code: [trip_code]" muted text
+- "Share invite via WhatsApp" — full-width green (#25D366) button
+- "Revoke link" — small red text button (admin only)
+
+**Separator**
+
+**Section 2 — Share trip plan**
+- Label: "SHARE TRIP PLAN" (same style)
+- Subtext: "Share a view-only summary — no login needed"
+- Switch: "Include expense summary" with description
+- Truncated share link input + copy icon button
+- "Expires on [date]" muted xs text
+- "Share plan via WhatsApp" — full-width green button
+- "Revoke link" — small red text button (admin only)
+
+**Separator**
+
+**Section 3 — Also export**
+- Label: "ALSO EXPORT"
+- Two equal-width outline buttons: Add to Calendar, Export CSV
+- Same download logic as current ShareModal
+
+### WhatsApp messages
+
+Helper `buildMembersLine(names[], count)`:
+- 0: omit
+- 1: "Name is going"
+- 2: "Name1 and Name2 are going"
+- 3+: "Name1, Name2 and N others are going"
+
+Helper `buildRouteLine(stops[])`:
+- stops.length > 0: `"Route: " + stops.map(s => s.destination).join(" → ")`
+- else: omit
+
+**Invite message:**
 ```
-Use this map for both `members` array and expense `balances`/`settle_up` names.
+Hey! Come plan [Trip Name] with us on Junto ✈️
+[start] – [end]
+[route line]
+[members line]
 
-### 2. Return route_stops so ShareView can show destination in day headers
+Join the trip here:
+[invite URL]
 
-**Edge Function** — Add `trip_route_stops` fetch to the parallel queries:
-```typescript
-supabase
-  .from("trip_route_stops")
-  .select("destination, start_date, end_date")
-  .eq("trip_id", tripId)
-  .order("start_date")
+Or open Junto and enter code: [trip_code]
 ```
-Return as `route_stops` in the response.
 
-**ShareView (`src/pages/ShareView.tsx`)** — Add route_stops to the `ShareData` interface and use them to compute day headers:
-- For each `day_date`, find the route stop where `start_date <= day_date <= end_date`
-- Day header format: `"Day N — Thu 26 Mar · Rio"` (with destination appended when matched)
-- Day number calculated from the earliest itinerary date or trip start date
-
-### Files to modify
-
-1. **`supabase/functions/public-trip-share-view/index.ts`**
-   - Add route_stops query
-   - Add members query (join trip_members → profiles, extract first name with "Member" fallback)
-   - In expense summary: use same "Member" fallback for all name lookups
-   - Add `end_time` to itinerary_items select
-   - Add OG fields to attachments select (`og_title, og_description, og_image_url`)
-   - Filter attachments to `type = 'link'` only
-
-2. **`src/pages/ShareView.tsx`**
-   - Add `route_stops` and `members` to ShareData interface
-   - Map day_date → destination from route_stops for day headers
-   - Show "Day N — [weekday date] · [destination]" format
-
-3. **`src/components/ShareModal.tsx`**
-   - Add `includeExpenses` toggle state
-   - Append `?expenses=1` to share URL when toggled on
-   - Add WhatsApp share button
-
-4. **`src/components/InviteModal.tsx`**
-   - Add WhatsApp share button below copy link
-
-### Technical detail: day-to-destination mapping
-
-```typescript
-function getDestinationForDate(dayDate: string, stops: RouteStop[]): string | null {
-  for (const stop of stops) {
-    if (dayDate >= stop.start_date && dayDate <= stop.end_date) {
-      return stop.destination;
-    }
-  }
-  return null;
-}
+**Share plan message:**
 ```
+[emoji] [Trip Name]
+[start] – [end] · [N days]
+[route line]
+[members line]
+
+See the full trip plan:
+[share URL]
+
+Want to join us?
+[invite URL]
+
+Planned with Junto 🗺️ juntotravel.lovable.app
+```
+
+Both messages: filter empty lines (no double newlines when route/members omitted).
+
+### TripHome changes
+- Remove `inviteOpen`, `shareOpen` states → single `shareInviteOpen`
+- Remove `canInvite` gating on button visibility (any member can share/invite)
+- Single button: `Share2` icon + "Share" text in the header pill
+- Remove imports of `InviteModal`, `ShareModal`; import `ShareInviteModal`
+- Pass `isAdmin={myRole === 'owner' || myRole === 'admin'}` for revoke-only gating
+
+### index.html OG meta tags
+Replace existing OG tags with:
+```html
+<meta property="og:title" content="Junto — Plan Trips Together" />
+<meta property="og:description" content="Vote on destinations, build itineraries, and split expenses with your group." />
+<meta property="og:image" content="/og-default.png" />
+<meta property="og:type" content="website" />
+```
+Keep existing twitter:card tags, update twitter:image to `/og-default.png`.
+
+### OG image
+Generate `public/og-default.png`: 1200×630, teal gradient (#0D9488 → #0EA5E9), "Junto" white wordmark centered, "Plan trips together" tagline below.
 
