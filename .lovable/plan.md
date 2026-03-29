@@ -1,44 +1,58 @@
 
 
-## Plan: Three Edge Functions + Export Buttons
+## Share Link UI + Public Share Page
+
+### Summary
+Add a Share button to TripHome header, a ShareModal for generating/copying/revoking share links with export actions, a public ShareView page, and remove export buttons from Itinerary and Expenses tabs.
+
+### Database
+No migration needed — `trip_share_tokens` table already exists with correct columns and RLS policies. Insert policy requires admin/owner, select allows any member, update (for revoke) requires admin/owner.
+
+**Note on RLS**: The insert policy on `trip_share_tokens` requires `is_trip_admin_or_owner`. The prompt says "Share button visible to all members" but generating a token requires admin/owner. The generate button will only work for admin/owner due to RLS — we should show the generate button only to admin/owner, while all members can view/copy an existing active link.
 
 ### Files to create
 
-1. **`supabase/functions/public-trip-share-view/index.ts`** — Public POST endpoint, looks up share token, returns sanitized trip data
-2. **`supabase/functions/export-trip-ics/index.ts`** — Auth GET endpoint, generates iCalendar file
-3. **`supabase/functions/export-expenses-csv/index.ts`** — Auth GET endpoint, generates CSV file
+1. **`src/components/ShareModal.tsx`**
+   - Props: `tripId`, `tripName`, `open`, `onOpenChange`, `isAdmin` (owner/admin)
+   - Query `trip_share_tokens` for this trip where `revoked_at IS NULL` and `expires_at > now()` — expired-but-not-revoked tokens are ignored (treated as no token)
+   - If no active token + isAdmin: show "Generate share link" button
+   - If no active token + not admin: show "No share link yet" message
+   - Generate: insert with `crypto.randomUUID()`, 30-day expiry
+   - Display full URL via `getShareableAppOrigin() || window.location.origin` + `/share/${token}`
+   - Copy button with clipboard API + sonner toast
+   - "Expires on [date]" label
+   - Revoke button (admin/owner only) — updates `revoked_at = new Date().toISOString()`
+   - Secondary "Also export" section below with:
+     - "Add to Calendar" (CalendarPlus icon) — calls export-trip-ics edge function
+     - "Export CSV" (Download icon) — calls export-expenses-csv edge function
+   - Both use `variant="outline"` small size
+
+2. **`src/pages/ShareView.tsx`**
+   - Public route, no auth required
+   - On mount: POST to `public-trip-share-view` edge function with token from URL params
+   - Error state: "This share link is invalid or has expired" + "Sign up to Junto" link to `/signup`
+   - Success: trip name/emoji/dates, itinerary grouped by day_date (read-only cards), URL-type attachment links, "Join this trip on Junto" CTA button → `/signup`
+   - NEVER makes direct database queries — edge function only
 
 ### Files to modify
 
-4. **`src/components/itinerary/ItineraryTab.tsx`** — Add "Export to Calendar (.ics)" button
-5. **`src/components/expenses/ExpensesTab.tsx`** — Add "Export CSV" button
+3. **`src/pages/TripHome.tsx`**
+   - Import `ShareModal` and `Share2` icon
+   - Add `shareOpen` state
+   - Add Share button (Share2 icon) in header next to Invite button — visible to all members
+   - Render `<ShareModal>` with `isAdmin={canInvite}`
 
-### Technical details
+4. **`src/components/itinerary/ItineraryTab.tsx`**
+   - Remove the "Export .ics" button block (lines 155-183)
+   - Remove `Download` icon import if no longer used
 
-**Function 1: `public-trip-share-view`**
-- POST with `{ token }`, no JWT required
-- Service role client to query `trip_share_tokens`, validate expiry/revocation
-- Join trips, itinerary_items, attachments, count trip_members
-- Return sanitized payload: trip name/dates, items (no notes/user IDs), attachments (title/type/url only), member_count
-- CORS headers
+5. **`src/components/expenses/ExpensesTab.tsx`**
+   - Remove the "CSV" export button block (lines 169-197)
+   - Remove `Download` icon import if no longer used
 
-**Function 2: `export-trip-ics`**
-- GET `?trip_id=xxx`, JWT required via `getClaims()`
-- Verify membership via `is_trip_member` RPC or query
-- Fetch itinerary_items, generate RFC 5545 iCalendar text
-- DTSTART as DATE if no start_time, DATETIME (with TZID or Z) if start_time set
-- Return `text/calendar` with `Content-Disposition: attachment`
+6. **`src/App.tsx`**
+   - Replace `<div>Share placeholder</div>` on line 35 with `<ShareView />` component import
 
-**Function 3: `export-expenses-csv`**
-- GET `?trip_id=xxx`, JWT required via `getClaims()`
-- Verify membership, fetch expenses + splits + profiles for display names
-- CSV columns: Date, Title, Amount, Currency, Paid By, Participants, Notes
-- Proper CSV escaping (quotes, commas, newlines)
-- Return `text/csv` with `Content-Disposition: attachment`
-
-**Frontend buttons**
-- Itinerary tab: Button with `Download` icon next to "Add day", calls edge function via full URL constructed from `VITE_SUPABASE_PROJECT_ID`, triggers blob download
-- Expenses tab: Button with `Download` icon in the top bar next to "Add Expense", same pattern
-
-**Secrets**: All required secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`) are already configured. No new secrets needed.
+### Key behavior: expired token handling
+When querying for an active token, the filter is: `revoked_at IS NULL AND expires_at > now()`. If a token is expired but not revoked, it simply won't appear — the UI shows "Generate share link" as if no token exists.
 
