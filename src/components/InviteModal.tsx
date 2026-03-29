@@ -269,18 +269,6 @@ export function InviteModal({ tripId, tripName, open, onOpenChange, isAdmin = fa
                 <WhatsAppIcon className="h-4 w-4" />
                 Share via WhatsApp
               </Button>
-                  <Button
-                    onClick={() => revokeInvite.mutate()}
-                    size="sm"
-                    variant="ghost"
-                    className="text-muted-foreground"
-                    disabled={revokeInvite.isPending}
-                  >
-                    <Ban className="h-3.5 w-3.5" />
-                    Revoke
-                  </Button>
-                )}
-              </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span>Expires in {daysLeft} day{daysLeft !== 1 ? "s" : ""}</span>
                 {typeof redemptionCount === "number" && (
