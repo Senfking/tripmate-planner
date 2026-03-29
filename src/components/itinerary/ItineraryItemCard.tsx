@@ -9,7 +9,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { ItemComments } from "./ItemComments";
 import { AttendanceRow } from "./AttendanceRow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AttendanceRow } from "./AttendanceRow";
 import {
   AlertDialog,
   AlertDialogAction,
