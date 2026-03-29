@@ -1,12 +1,18 @@
 import { useState, useMemo } from "react";
-import { useAttachments } from "@/hooks/useAttachments";
+import { useAttachments, type AttachmentRow } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
 import { FileUploadZone } from "./FileUploadZone";
 import { LinkForm } from "./LinkForm";
 import { AttachmentCard } from "./AttachmentCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, Link2, Loader2, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { Upload, Link2, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown } from "lucide-react";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -17,9 +23,26 @@ const FILTERS = [
   { value: "other", label: "Other" },
 ];
 
+const SECTIONS: { type: string; label: string; icon: React.ElementType }[] = [
+  { type: "flight", label: "Flights", icon: Plane },
+  { type: "hotel", label: "Hotels", icon: Hotel },
+  { type: "activity", label: "Activities", icon: Activity },
+  { type: "link", label: "Links", icon: Link2 },
+  { type: "other", label: "Other / Files", icon: File },
+];
+
 interface Props {
   tripId: string;
   myRole: string | undefined;
+}
+
+function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
+  return [...items].sort((a, b) => {
+    const aIsMine = a.created_by === userId ? 0 : 1;
+    const bIsMine = b.created_by === userId ? 0 : 1;
+    if (aIsMine !== bIsMine) return aIsMine - bIsMine;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 }
 
 export function BookingsTab({ tripId, myRole }: Props) {
@@ -32,10 +55,13 @@ export function BookingsTab({ tripId, myRole }: Props) {
   const isAdmin = myRole === "owner" || myRole === "admin";
   const attachments = query.data ?? [];
 
+  const isSearching = search.trim().length > 0;
+  const isGroupedView = filter === "all" && !isSearching;
+
   const filtered = useMemo(() => {
     let list = attachments;
     if (filter !== "all") list = list.filter((a) => a.type === filter);
-    if (search.trim()) {
+    if (isSearching) {
       const q = search.toLowerCase();
       list = list.filter(
         (a) =>
@@ -43,10 +69,18 @@ export function BookingsTab({ tripId, myRole }: Props) {
           (a.notes && a.notes.toLowerCase().includes(q)),
       );
     }
-    return list;
-  }, [attachments, filter, search]);
+    return sortByOwnership(list, user?.id);
+  }, [attachments, filter, search, isSearching, user?.id]);
 
-  const handleOpen = async (a: (typeof attachments)[0]) => {
+  const groupedSections = useMemo(() => {
+    if (!isGroupedView) return [];
+    return SECTIONS.map((s) => {
+      const items = attachments.filter((a) => a.type === s.type);
+      return { ...s, items: sortByOwnership(items, user?.id) };
+    }).filter((s) => s.items.length > 0);
+  }, [attachments, isGroupedView, user?.id]);
+
+  const handleOpen = async (a: AttachmentRow) => {
     if (a.url) {
       window.open(a.url, "_blank");
     } else if (a.file_path) {
@@ -58,6 +92,17 @@ export function BookingsTab({ tripId, myRole }: Props) {
       }
     }
   };
+
+  const renderCard = (a: AttachmentRow) => (
+    <AttachmentCard
+      key={a.id}
+      attachment={a}
+      canDelete={isAdmin || a.created_by === user?.id}
+      isMine={a.created_by === user?.id}
+      onOpen={() => handleOpen(a)}
+      onDelete={() => deleteAttachment.mutate(a)}
+    />
+  );
 
   if (query.isLoading) {
     return (
@@ -157,23 +202,74 @@ export function BookingsTab({ tripId, myRole }: Props) {
         </>
       )}
 
-      {/* List */}
-      <div className="space-y-2">
-        {filtered.map((a) => (
-          <AttachmentCard
-            key={a.id}
-            attachment={a}
-            canDelete={isAdmin || a.created_by === user?.id}
-            onOpen={() => handleOpen(a)}
-            onDelete={() => deleteAttachment.mutate(a)}
-          />
-        ))}
-        {filtered.length === 0 && attachments.length > 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            No results matching your filter
-          </p>
-        )}
-      </div>
+      {/* Grouped view */}
+      {isGroupedView && (
+        <div className="space-y-3">
+          {groupedSections.map((section) => (
+            <SectionGroup
+              key={section.type}
+              label={section.label}
+              icon={section.icon}
+              count={section.items.length}
+            >
+              {section.items.map(renderCard)}
+            </SectionGroup>
+          ))}
+        </div>
+      )}
+
+      {/* Flat list view (filtered or search) */}
+      {!isGroupedView && (
+        <div className="space-y-2">
+          {filtered.map(renderCard)}
+          {filtered.length === 0 && attachments.length > 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">
+              No results matching your filter
+            </p>
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ---------- Collapsible section ---------- */
+
+function SectionGroup({
+  label,
+  icon: Icon,
+  count,
+  children,
+}: {
+  label: string;
+  icon: React.ElementType;
+  count: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-accent/50"
+        >
+          <Icon className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm font-medium flex-1">{label}</span>
+          <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+            {count}
+          </Badge>
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+              open ? "rotate-0" : "-rotate-90"
+            }`}
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+        <div className="space-y-2 pt-2">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
