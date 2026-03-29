@@ -34,6 +34,7 @@ interface Props {
   members: MemberProfile[];
   settlementCurrency: string;
   itineraryItems: { id: string; title: string; day_date: string }[];
+  usedCurrencies?: string[];
   editingExpense?: ExpenseRow | null;
   editingSplits?: { user_id: string; share_amount: number }[];
   onSave: (data: {
