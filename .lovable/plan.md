@@ -1,58 +1,73 @@
 
 
-## Share Link UI + Public Share Page
+## Revised Plan: Rich Share Page — Two Additions
 
-### Summary
-Add a Share button to TripHome header, a ShareModal for generating/copying/revoking share links with export actions, a public ShareView page, and remove export buttons from Itinerary and Expenses tabs.
+These are incremental changes to the previously approved plan. No new files needed.
 
-### Database
-No migration needed — `trip_share_tokens` table already exists with correct columns and RLS policies. Insert policy requires admin/owner, select allows any member, update (for revoke) requires admin/owner.
+### 1. Fallback "Member" name for null display_name
 
-**Note on RLS**: The insert policy on `trip_share_tokens` requires `is_trip_admin_or_owner`. The prompt says "Share button visible to all members" but generating a token requires admin/owner. The generate button will only work for admin/owner due to RLS — we should show the generate button only to admin/owner, while all members can view/copy an existing active link.
+**Edge Function (`public-trip-share-view/index.ts`)**
+- When building member first names from profiles, use `"Member"` if `display_name` is null/empty
+- In expense summary calculation, same fallback: any profile lookup that returns null → `"Member"`
+- Never expose user_id or email in any response field
 
-### Files to create
+**Implementation**: After fetching profiles, build a `nameMap: Record<string, string>` where:
+```typescript
+const firstName = (profile.display_name || "Member").split(" ")[0];
+nameMap[profile.id] = firstName;
+```
+Use this map for both `members` array and expense `balances`/`settle_up` names.
 
-1. **`src/components/ShareModal.tsx`**
-   - Props: `tripId`, `tripName`, `open`, `onOpenChange`, `isAdmin` (owner/admin)
-   - Query `trip_share_tokens` for this trip where `revoked_at IS NULL` and `expires_at > now()` — expired-but-not-revoked tokens are ignored (treated as no token)
-   - If no active token + isAdmin: show "Generate share link" button
-   - If no active token + not admin: show "No share link yet" message
-   - Generate: insert with `crypto.randomUUID()`, 30-day expiry
-   - Display full URL via `getShareableAppOrigin() || window.location.origin` + `/share/${token}`
-   - Copy button with clipboard API + sonner toast
-   - "Expires on [date]" label
-   - Revoke button (admin/owner only) — updates `revoked_at = new Date().toISOString()`
-   - Secondary "Also export" section below with:
-     - "Add to Calendar" (CalendarPlus icon) — calls export-trip-ics edge function
-     - "Export CSV" (Download icon) — calls export-expenses-csv edge function
-   - Both use `variant="outline"` small size
+### 2. Return route_stops so ShareView can show destination in day headers
 
-2. **`src/pages/ShareView.tsx`**
-   - Public route, no auth required
-   - On mount: POST to `public-trip-share-view` edge function with token from URL params
-   - Error state: "This share link is invalid or has expired" + "Sign up to Junto" link to `/signup`
-   - Success: trip name/emoji/dates, itinerary grouped by day_date (read-only cards), URL-type attachment links, "Join this trip on Junto" CTA button → `/signup`
-   - NEVER makes direct database queries — edge function only
+**Edge Function** — Add `trip_route_stops` fetch to the parallel queries:
+```typescript
+supabase
+  .from("trip_route_stops")
+  .select("destination, start_date, end_date")
+  .eq("trip_id", tripId)
+  .order("start_date")
+```
+Return as `route_stops` in the response.
+
+**ShareView (`src/pages/ShareView.tsx`)** — Add route_stops to the `ShareData` interface and use them to compute day headers:
+- For each `day_date`, find the route stop where `start_date <= day_date <= end_date`
+- Day header format: `"Day N — Thu 26 Mar · Rio"` (with destination appended when matched)
+- Day number calculated from the earliest itinerary date or trip start date
 
 ### Files to modify
 
-3. **`src/pages/TripHome.tsx`**
-   - Import `ShareModal` and `Share2` icon
-   - Add `shareOpen` state
-   - Add Share button (Share2 icon) in header next to Invite button — visible to all members
-   - Render `<ShareModal>` with `isAdmin={canInvite}`
+1. **`supabase/functions/public-trip-share-view/index.ts`**
+   - Add route_stops query
+   - Add members query (join trip_members → profiles, extract first name with "Member" fallback)
+   - In expense summary: use same "Member" fallback for all name lookups
+   - Add `end_time` to itinerary_items select
+   - Add OG fields to attachments select (`og_title, og_description, og_image_url`)
+   - Filter attachments to `type = 'link'` only
 
-4. **`src/components/itinerary/ItineraryTab.tsx`**
-   - Remove the "Export .ics" button block (lines 155-183)
-   - Remove `Download` icon import if no longer used
+2. **`src/pages/ShareView.tsx`**
+   - Add `route_stops` and `members` to ShareData interface
+   - Map day_date → destination from route_stops for day headers
+   - Show "Day N — [weekday date] · [destination]" format
 
-5. **`src/components/expenses/ExpensesTab.tsx`**
-   - Remove the "CSV" export button block (lines 169-197)
-   - Remove `Download` icon import if no longer used
+3. **`src/components/ShareModal.tsx`**
+   - Add `includeExpenses` toggle state
+   - Append `?expenses=1` to share URL when toggled on
+   - Add WhatsApp share button
 
-6. **`src/App.tsx`**
-   - Replace `<div>Share placeholder</div>` on line 35 with `<ShareView />` component import
+4. **`src/components/InviteModal.tsx`**
+   - Add WhatsApp share button below copy link
 
-### Key behavior: expired token handling
-When querying for an active token, the filter is: `revoked_at IS NULL AND expires_at > now()`. If a token is expired but not revoked, it simply won't appear — the UI shows "Generate share link" as if no token exists.
+### Technical detail: day-to-destination mapping
+
+```typescript
+function getDestinationForDate(dayDate: string, stops: RouteStop[]): string | null {
+  for (const stop of stops) {
+    if (dayDate >= stop.start_date && dayDate <= stop.end_date) {
+      return stop.destination;
+    }
+  }
+  return null;
+}
+```
 
