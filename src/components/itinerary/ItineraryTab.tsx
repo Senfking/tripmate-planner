@@ -2,13 +2,16 @@ import { useMemo, useState } from "react";
 import { useItinerary } from "@/hooks/useItinerary";
 import { useRouteStops } from "@/hooks/useRouteStops";
 import { useItineraryAttendance } from "@/hooks/useItineraryAttendance";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { DaySection } from "./DaySection";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarPlus, Loader2 } from "lucide-react";
+import { CalendarPlus, Download, Loader2 } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
+import { toast } from "sonner";
 
 /** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
 function timeToMinutes(t: string): number {
