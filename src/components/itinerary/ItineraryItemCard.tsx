@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, GripVertical, MapPin } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ItemComments } from "./ItemComments";
 import { AttendanceRow } from "./AttendanceRow";
 import type { ItineraryItem } from "@/hooks/useItinerary";
