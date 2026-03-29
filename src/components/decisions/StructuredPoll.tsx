@@ -2,8 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Plus, ThumbsUp, ThumbsDown, Check, HelpCircle, X } from "lucide-react";
+import { Lock, Plus, ThumbsUp, ThumbsDown, Check, HelpCircle, X, Trash2, Pencil, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { PollWithOptions, VoteTally } from "@/hooks/useDecisionPolls";
 
 type Props = {
@@ -17,6 +23,8 @@ type Props = {
   onAddOption: (input: { label: string; startDate?: string; endDate?: string }) => void;
   onVote: (optionId: string, value: string) => void;
   onLock: () => void;
+  onDelete?: () => void;
+  onUpdateTitle?: (title: string) => void;
   isAddingOption: boolean;
   isLocking: boolean;
 };
@@ -43,6 +51,8 @@ export function StructuredPoll({
   onAddOption,
   onVote,
   onLock,
+  onDelete,
+  onUpdateTitle,
   isAddingOption,
   isLocking,
 }: Props) {
@@ -55,6 +65,9 @@ export function StructuredPoll({
   const [newLabel, setNewLabel] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(poll.title);
 
   const handleAdd = () => {
     if (!newLabel.trim() && !isDate) return;
@@ -70,6 +83,13 @@ export function StructuredPoll({
     setShowAddForm(false);
   };
 
+  const handleSaveTitle = () => {
+    if (editTitle.trim() && editTitle.trim() !== poll.title) {
+      onUpdateTitle?.(editTitle.trim());
+    }
+    setIsEditing(false);
+  };
+
   return (
     <div className={`rounded-xl border border-border bg-card p-4 space-y-3 ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
       {/* Header */}
@@ -79,8 +99,48 @@ export function StructuredPoll({
             {stepLabel}
           </span>
         )}
-        <h4 className="font-semibold text-foreground text-sm flex-1">{poll.title}</h4>
+        {isEditing ? (
+          <div className="flex-1 flex items-center gap-2">
+            <Input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="h-8 text-sm"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveTitle();
+                if (e.key === "Escape") setIsEditing(false);
+              }}
+            />
+            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={handleSaveTitle}>
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <h4 className="font-semibold text-foreground text-sm flex-1">{poll.title}</h4>
+        )}
         {isLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
+        {canManage && !isEditing && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => { setEditTitle(poll.title); setIsEditing(true); }}>
+                <Pencil className="h-3.5 w-3.5 mr-2" />
+                Edit title
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDelete?.()}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                Delete poll
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {disabled && disabledMessage && (
@@ -95,10 +155,7 @@ export function StructuredPoll({
           ? `${format(new Date(opt.start_date + "T00:00:00"), "MMM d")} – ${format(new Date(opt.end_date + "T00:00:00"), "MMM d")}`
           : opt.label;
 
-        const totalVotes = Object.values(tally).reduce((a, b) => a + b, 0);
-
         if (isPref) {
-          // Simple pick voting for preference polls
           const pickCount = tally["yes"] || 0;
           const isPicked = myVote === "yes";
           return (
