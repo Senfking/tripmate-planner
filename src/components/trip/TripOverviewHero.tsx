@@ -90,18 +90,19 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
   return (
     <>
       <div
-        className="rounded-xl p-4 flex items-center gap-3"
+        className="rounded-2xl p-4 flex items-center gap-3"
         style={{
-          background: "rgba(255, 255, 255, 0.7)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          border: "1px solid rgba(255, 255, 255, 0.5)",
-          boxShadow: "0 4px 24px rgba(13, 148, 136, 0.08)",
+          background: "rgba(255, 255, 255, 0.8)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          border: "1px solid rgba(255, 255, 255, 0.7)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.9)",
+          boxShadow: "0 8px 32px rgba(13, 148, 136, 0.1), 0 1px 0 rgba(255,255,255,0.8)",
         }}
       >
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground">{statusLine}</p>
-          {statusSub && <p className="text-xs text-muted-foreground mt-0.5">{statusSub}</p>}
+          <p className="text-[15px] font-medium text-foreground">{statusLine}</p>
+          {statusSub && <p className="text-xs text-muted-foreground mt-1">{statusSub}</p>}
         </div>
 
         {/* Avatar group */}
