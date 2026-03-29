@@ -10,7 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format, parse } from "date-fns";
 
 const CATEGORIES = [
   { value: "food", label: "Food & Drink" },
@@ -194,7 +198,26 @@ export function ExpenseFormModal({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Date</Label>
-          <Input type="date" value={incurredOn} onChange={(e) => setIncurredOn(e.target.value)} />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn("h-10 w-full justify-start text-left font-normal", !incurredOn && "text-muted-foreground")}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {incurredOn ? format(parse(incurredOn, "yyyy-MM-dd", new Date()), "PPP") : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={incurredOn ? parse(incurredOn, "yyyy-MM-dd", new Date()) : undefined}
+                onSelect={(date) => date && setIncurredOn(format(date, "yyyy-MM-dd"))}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
