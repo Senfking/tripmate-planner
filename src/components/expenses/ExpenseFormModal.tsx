@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 
@@ -22,6 +22,7 @@ const CATEGORIES = [
   { value: "accommodation", label: "Accommodation" },
   { value: "activities", label: "Activities" },
   { value: "shopping", label: "Shopping" },
+  { value: "settlement", label: "Settlement" },
   { value: "other", label: "Other" },
 ];
 
@@ -67,9 +68,13 @@ export function ExpenseFormModal({
   const [splitMode, setSplitMode] = useState<"equal" | "custom">("equal");
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
+  const [settlementDismissed, setSettlementDismissed] = useState(false);
+  const [titleManuallySet, setTitleManuallySet] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setSettlementDismissed(false);
+      setTitleManuallySet(false);
       if (editingExpense) {
         setTitle(editingExpense.title);
         setAmount(String(editingExpense.amount));
@@ -79,6 +84,7 @@ export function ExpenseFormModal({
         setPayerId(editingExpense.payer_id);
         setNotes(editingExpense.notes || "");
         setItineraryItemId(editingExpense.itinerary_item_id || "none");
+        setTitleManuallySet(true);
         if (editingSplits) {
           setSelectedMembers(new Set(editingSplits.map((s) => s.user_id)));
           const allEqual = editingSplits.length > 1 &&
@@ -133,6 +139,34 @@ export function ExpenseFormModal({
 
   const canSubmit = title.trim() && parsedAmount > 0 && selectedMembers.size > 0 && customValid;
 
+  // Settlement auto-detection
+  const looksLikeSettlement = useMemo(() => {
+    if (category === "settlement") return false;
+    if (settlementDismissed) return false;
+    if (selectedMembers.size !== 1) return false;
+    const soleRecipient = Array.from(selectedMembers)[0];
+    if (soleRecipient === payerId) return false;
+    if (parsedAmount <= 0) return false;
+    return true;
+  }, [category, settlementDismissed, selectedMembers, payerId, parsedAmount]);
+
+  const soleRecipientName = useMemo(() => {
+    if (!looksLikeSettlement) return "";
+    const uid = Array.from(selectedMembers)[0];
+    return members.find((m) => m.userId === uid)?.displayName || "Unknown";
+  }, [looksLikeSettlement, selectedMembers, members]);
+
+  const payerName = useMemo(() => {
+    return members.find((m) => m.userId === payerId)?.displayName || "Unknown";
+  }, [payerId, members]);
+
+  const handleAcceptSettlement = () => {
+    setCategory("settlement");
+    if (!titleManuallySet || !title.trim()) {
+      setTitle(`${payerName} → ${soleRecipientName}`);
+    }
+  };
+
   const handleSubmit = () => {
     if (!canSubmit) return;
     onSave({
@@ -163,7 +197,11 @@ export function ExpenseFormModal({
     <div className="space-y-4 p-4 overflow-y-auto max-h-[70vh]">
       <div className="space-y-1.5">
         <Label className="text-xs">Title *</Label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Airbnb deposit" />
+        <Input
+          value={title}
+          onChange={(e) => { setTitle(e.target.value); setTitleManuallySet(true); }}
+          placeholder="e.g. Airbnb deposit"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -284,6 +322,41 @@ export function ExpenseFormModal({
           </p>
         )}
       </div>
+
+      {/* Settlement auto-detect banner */}
+      {looksLikeSettlement && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800 p-2.5">
+          <Lightbulb className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              This looks like a settlement payment
+            </p>
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
+              Mark it as a settlement?
+            </p>
+          </div>
+          <div className="flex gap-1.5 shrink-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 text-[10px] px-2 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400"
+              onClick={handleAcceptSettlement}
+            >
+              Yes
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-6 text-[10px] px-2 text-muted-foreground"
+              onClick={() => setSettlementDismissed(true)}
+            >
+              No
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Link to itinerary */}
       {itineraryItems.length > 0 && (
