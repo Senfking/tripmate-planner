@@ -2,42 +2,60 @@ import { Map, Vote, CalendarDays, DollarSign, MoreHorizontal, type LucideIcon } 
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-const tabs: { to: string; label: string; icon: LucideIcon }[] = [
+const tabs: { to: string; label: string; icon: LucideIcon; featured?: boolean }[] = [
   { to: "/app/trips", label: "Trips", icon: Map },
   { to: "/app/decisions", label: "Decisions", icon: Vote },
-  { to: "/app/itinerary", label: "Itinerary", icon: CalendarDays },
+  { to: "/app/itinerary", label: "Itinerary", icon: CalendarDays, featured: true },
   { to: "/app/expenses", label: "Expenses", icon: DollarSign },
   { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];
 
-function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: LucideIcon }) {
+function NavTab({ to, label, icon: Icon, featured = false }: { to: string; label: string; icon: LucideIcon; featured?: boolean }) {
   const { pathname } = useLocation();
   const isActive = pathname.startsWith(to);
 
   return (
     <RouterNavLink
       to={to}
-      className="group flex flex-col items-center gap-0.5 px-3 py-1.5 transition-all duration-200"
+      className={cn(
+        "relative flex min-w-0 flex-1 flex-col items-center justify-end pb-1 pt-2 transition-all duration-300",
+        featured && "-mt-5"
+      )}
     >
+      {!featured && (
+        <div
+          className={cn(
+            "absolute inset-x-1 top-2 h-11 rounded-[20px] bg-primary/10 opacity-0 transition-opacity duration-300",
+            isActive && "opacity-100"
+          )}
+        />
+      )}
+
       <div
         className={cn(
-          "flex items-center justify-center rounded-2xl transition-all duration-200",
-          isActive
-            ? "bg-primary/12 w-12 h-8"
-            : "w-8 h-8 group-hover:bg-muted/50"
+          "relative flex items-center justify-center transition-all duration-300",
+          featured
+            ? "h-14 w-14 rounded-full border-4 border-background bg-gradient-primary shadow-xl"
+            : isActive
+              ? "h-11 w-14 rounded-[18px]"
+              : "h-11 w-11 rounded-full"
         )}
       >
         <Icon
           className={cn(
-            "transition-all duration-200",
-            isActive ? "h-[22px] w-[22px] text-primary" : "h-5 w-5 text-muted-foreground/70"
+            "transition-all duration-300",
+            featured
+              ? "h-6 w-6 text-primary-foreground"
+              : isActive
+                ? "h-[22px] w-[22px] text-primary"
+                : "h-5 w-5 text-muted-foreground/75"
           )}
         />
       </div>
       <span
         className={cn(
-          "text-[10px] transition-all duration-200",
-          isActive ? "font-semibold text-primary" : "font-medium text-muted-foreground/70"
+          "mt-1.5 text-[10px] font-semibold transition-colors duration-300",
+          featured ? "text-foreground" : isActive ? "text-primary" : "text-muted-foreground/80"
         )}
       >
         {label}
@@ -48,20 +66,15 @@ function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: Lu
 
 export function BottomNav() { 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-      {/* Frosted glass background */}
-      <div className="relative bg-white/80 backdrop-blur-xl border-t border-border/50 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        {/* Subtle top gradient accent line */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-primary opacity-40" />
+    <nav className="fixed inset-x-3 bottom-3 z-50 md:hidden">
+      <div className="relative overflow-visible rounded-[30px] border border-border/70 bg-background/95 px-2 pt-2 shadow-xl backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-primary opacity-60" />
 
-        <div className="flex h-[68px] items-end justify-around pb-2 pt-1.5">
+        <div className="flex items-end justify-between gap-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)]">
           {tabs.map((tab) => (
             <NavTab key={tab.to} {...tab} />
           ))}
         </div>
-
-        {/* Home indicator safe area for iOS */}
-        <div className="h-[env(safe-area-inset-bottom,0px)]" />
       </div>
     </nav>
   );
