@@ -7,6 +7,7 @@ import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { InviteModal } from "@/components/InviteModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
+import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { format } from "date-fns";
 
 export default function TripHome() {
