@@ -77,23 +77,23 @@ export default function TripList() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-3">
             {trips.map((trip) => (
               <Link key={trip.id} to={`/app/trips/${trip.id}`}>
-                <Card className="cursor-pointer overflow-hidden rounded-[26px] border-card-border shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-                  <CardContent className="flex items-center gap-3 px-4 py-5">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-muted/60 text-4xl">
-                      <span>{(trip as any).emoji || "✈️"}</span>
+                <Card className="cursor-pointer overflow-hidden rounded-2xl border-border/60 shadow-sm transition-all duration-200 hover:shadow-md">
+                  <CardContent className="flex items-center gap-3 px-4 py-3.5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-2xl">
+                      {(trip as any).emoji || "✈️"}
                     </div>
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-[1.95rem] font-semibold leading-tight text-foreground line-clamp-2 sm:text-xl">
+                    <div className="min-w-0 flex-1 pr-1">
+                      <p className="text-base font-semibold leading-snug text-foreground line-clamp-2">
                         {trip.name}
                       </p>
-                      <p className="mt-1 text-base text-muted-foreground">
+                      <p className="mt-0.5 text-sm text-muted-foreground">
                         {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5 text-base text-muted-foreground">
+                    <div className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
                       <Users className="h-4 w-4" />
                       <span>{trip.memberCount}</span>
                     </div>
