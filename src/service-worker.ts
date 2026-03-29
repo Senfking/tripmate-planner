@@ -28,6 +28,10 @@ sw.addEventListener('activate', (event) => {
 });
 
 sw.addEventListener('fetch', (event) => {
+  // Never intercept OAuth redirect
+  if (new URL(event.request.url).pathname.startsWith('/~oauth')) {
+    return;
+  }
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() =>
