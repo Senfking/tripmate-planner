@@ -17,6 +17,7 @@ import Expenses from "./pages/Expenses";
 import More from "./pages/More";
 import InviteRedeem from "./pages/InviteRedeem";
 import JoinByCode from "./pages/JoinByCode";
+import ShareView from "./pages/ShareView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,7 +33,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/share/:token" element={<div>Share placeholder</div>} />
+            <Route path="/share/:token" element={<ShareView />} />
             <Route path="/app/invite/:token" element={<InviteRedeem />} />
             <Route path="/i/:token" element={<InviteRedeem />} />
             <Route path="/join" element={<JoinByCode />} />

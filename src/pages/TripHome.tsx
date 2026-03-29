@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, Loader2, MapPin, UserPlus } from "lucide-react";
+import { ArrowLeft, Users, Loader2, MapPin, UserPlus, Share2 } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { InviteModal } from "@/components/InviteModal";
+import { ShareModal } from "@/components/ShareModal";
 import { DecisionsFlow } from "@/components/decisions/DecisionsFlow";
 import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
@@ -89,6 +90,7 @@ export default function TripHome() {
   }, [activeTab, tabStorageKey]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const canInvite = myRole === "owner" || myRole === "admin";
 
   if (isLoading) {
@@ -155,6 +157,13 @@ export default function TripHome() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShareOpen(true)}
+              className="flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm text-white hover:bg-white/30 transition-colors"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Share
+            </button>
             {canInvite && (
               <button
                 onClick={() => setInviteOpen(true)}
@@ -204,13 +213,22 @@ export default function TripHome() {
       </Tabs>
 
       {trip && (
-        <InviteModal
-          tripId={trip.id}
-          tripName={trip.name}
-          open={inviteOpen}
-          onOpenChange={setInviteOpen}
-          isAdmin={canInvite}
-        />
+        <>
+          <InviteModal
+            tripId={trip.id}
+            tripName={trip.name}
+            open={inviteOpen}
+            onOpenChange={setInviteOpen}
+            isAdmin={canInvite}
+          />
+          <ShareModal
+            tripId={trip.id}
+            tripName={trip.name}
+            open={shareOpen}
+            onOpenChange={setShareOpen}
+            isAdmin={canInvite}
+          />
+        </>
       )}
     </div>
   );

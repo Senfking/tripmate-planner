@@ -8,7 +8,7 @@ import { DaySection } from "./DaySection";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarPlus, Download, Loader2 } from "lucide-react";
+import { CalendarPlus, Loader2 } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
 import { toast } from "sonner";
@@ -152,35 +152,6 @@ export function ItineraryTab({ tripId, myRole }: Props) {
             <Calendar mode="single" onSelect={handleAddDay} />
           </PopoverContent>
         </Popover>
-        {items.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) { toast.error("Please sign in to export"); return; }
-                const projId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-                const url = `https://${projId}.supabase.co/functions/v1/export-trip-ics?trip_id=${tripId}`;
-                const res = await fetch(url, {
-                  headers: { Authorization: `Bearer ${session.access_token}` },
-                });
-                if (!res.ok) throw new Error("Export failed");
-                const blob = await res.blob();
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(blob);
-                a.download = "junto-itinerary.ics";
-                a.click();
-                URL.revokeObjectURL(a.href);
-              } catch {
-                toast.error("Failed to export calendar");
-              }
-            }}
-          >
-            <Download className="h-4 w-4 mr-1.5" />
-            Export .ics
-          </Button>
-        )}
       </div>
 
       {newDayDate && (

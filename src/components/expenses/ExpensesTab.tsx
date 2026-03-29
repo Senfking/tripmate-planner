@@ -11,7 +11,7 @@ import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Download, Loader2, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 
@@ -166,35 +166,6 @@ export function ExpensesTab({ tripId, myRole }: Props) {
           cachedCurrencyCodes={cachedCurrencyCodes}
         />
         <div className="flex items-center gap-1.5">
-          {expenses.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5 text-xs"
-              onClick={async () => {
-                try {
-                  const { data: { session } } = await supabase.auth.getSession();
-                  if (!session) { toast.error("Please sign in to export"); return; }
-                  const projId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-                  const url = `https://${projId}.supabase.co/functions/v1/export-expenses-csv?trip_id=${tripId}`;
-                  const res = await fetch(url, {
-                    headers: { Authorization: `Bearer ${session.access_token}` },
-                  });
-                  if (!res.ok) throw new Error("Export failed");
-                  const blob = await res.blob();
-                  const a = document.createElement("a");
-                  a.href = URL.createObjectURL(blob);
-                  a.download = "junto-expenses.csv";
-                  a.click();
-                  URL.revokeObjectURL(a.href);
-                } catch {
-                  toast.error("Failed to export expenses");
-                }
-              }}
-            >
-              <Download className="h-3.5 w-3.5" /> CSV
-            </Button>
-          )}
           <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => { setEditingExpense(null); setFormOpen(true); }}>
             <Plus className="h-3.5 w-3.5" /> Add Expense
           </Button>
