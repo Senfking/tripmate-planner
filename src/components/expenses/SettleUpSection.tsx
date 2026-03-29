@@ -90,7 +90,6 @@ export function SettleUpSection({ settlements, currency, onSettle }: Props) {
             );
           })}
         </div>
-      </div>
 
       <SettleConfirmDrawer
         settlement={confirmSettlement}
