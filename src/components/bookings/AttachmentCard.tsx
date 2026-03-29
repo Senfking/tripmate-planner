@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown } from "lucide-react";
+import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles } from "lucide-react";
+import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
