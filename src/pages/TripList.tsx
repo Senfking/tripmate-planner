@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Users, Loader2, Plane } from "lucide-react";
 import { format } from "date-fns";
 
-export default function TripList() {
+export default function TripList() { 
   const { user } = useAuth();
 
   const { data: trips, isLoading, refetch, isRefetching } = useQuery({

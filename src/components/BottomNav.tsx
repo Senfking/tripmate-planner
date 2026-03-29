@@ -46,7 +46,7 @@ function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: Lu
   );
 }
 
-export function BottomNav() {
+export function BottomNav() { 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
       {/* Frosted glass background */}
