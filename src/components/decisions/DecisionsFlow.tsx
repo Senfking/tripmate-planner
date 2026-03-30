@@ -217,8 +217,9 @@ export function DecisionsFlow({
           isExpanded={expanded.prefs}
           onToggle={() => toggle("prefs")}
           collapsedSummary={undefined}
+          isHighlighted={highlightTarget === "decisions-step-3"}
         >
-          <PreferencesContent tripId={tripId} myRole={myRole} />
+          <PreferencesContent tripId={tripId} myRole={myRole} highlightedPollId={highlightTarget?.startsWith("poll-") ? highlightTarget.replace("poll-", "") : undefined} />
         </StepSection>
       </div>
     </div>
