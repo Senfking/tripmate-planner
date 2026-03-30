@@ -184,15 +184,27 @@ export function useExpenses(tripId: string) {
 
   // Silently trigger a refresh when rates are stale (once per session)
   useEffect(() => {
-    if (
-      ratesStale &&
-      !ratesQuery.isError &&
-      !sessionStorage.getItem("rates_refresh_attempted")
-    ) {
+    const refreshRatesIfStale = async () => {
+      if (
+        !ratesStale ||
+        ratesQuery.isError ||
+        sessionStorage.getItem("rates_refresh_attempted")
+      ) {
+        return;
+      }
+
       sessionStorage.setItem("rates_refresh_attempted", "1");
-      supabase.functions.invoke("refresh-exchange-rates").catch(() => {});
-    }
-  }, [ratesStale, ratesQuery.isError]);
+
+      try {
+        await supabase.functions.invoke("refresh-exchange-rates");
+        await qc.invalidateQueries({ queryKey: ["exchange-rates", settlementCurrency] });
+      } catch {
+        // Silent background refresh — ignore failures
+      }
+    };
+
+    void refreshRatesIfStale();
+  }, [qc, ratesStale, ratesQuery.isError, settlementCurrency]);
 
   // Fetch itinerary items for linking
   const itineraryQuery = useQuery({
