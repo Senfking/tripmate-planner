@@ -346,14 +346,13 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     const myBalance = balances.find((b) => b.userId === userId);
     if (!myBalance || Math.abs(myBalance.balance) < 0.01) {
       expensesBadge = { label: "Settled up", color: "green" };
-      expensesSummary = "All settled up ✅";
     } else if (myBalance.balance > 0) {
       expensesBadge = { label: `Owed ${formatCurrencyShort(myBalance.balance, settlementCurrency)}`, color: "green" };
-      expensesSummary = `You are owed ${formatCurrencyShort(myBalance.balance, settlementCurrency)}`;
     } else {
       expensesBadge = { label: `You owe ${formatCurrencyShort(Math.abs(myBalance.balance), settlementCurrency)}`, color: "red" };
-      expensesSummary = `You owe ${formatCurrencyShort(Math.abs(myBalance.balance), settlementCurrency)}`;
     }
+    const payerCount = new Set(mapped.map((e) => e.payer_id)).size;
+    expensesSummary = `${expenses.length} expense${expenses.length > 1 ? "s" : ""} · ${payerCount} contributor${payerCount > 1 ? "s" : ""}`;
   } else {
     expensesBadge = { label: "No expenses", color: "grey" };
     expensesSummary = "No expenses logged yet";
@@ -373,7 +372,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const roleLabel = myRole ? myRole.charAt(0).toUpperCase() + myRole.slice(1) : "Member";
-  const adminSummary = `${memberCount ?? "…"} members · ${roleLabel}`;
+  const adminSummary = roleLabel;
   const adminBadge: BadgeState = { label: `${memberCount ?? 0} members`, color: "grey" };
 
   return (
