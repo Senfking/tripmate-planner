@@ -68,12 +68,6 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
 
       setLastVisitItemIds(new Set(ids));
 
-      if (ids.length > 0) {
-        clearTimer = window.setTimeout(() => {
-          if (active) setLastVisitItemIds(new Set());
-        }, 4000);
-      }
-
       await tripLastSeenClient.from("trip_last_seen" as any).upsert({
         trip_id: tripId,
         user_id: user.id,
