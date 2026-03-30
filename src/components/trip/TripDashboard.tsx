@@ -272,6 +272,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
   });
 
   let expensesSummary: string;
+  let expensesSummaryColor: string | undefined;
   if (expenses && expenses.length > 0 && userId) {
     const mapped = expenses.map((e) => ({
       id: e.id,
@@ -289,8 +290,10 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
       expensesSummary = "All settled up ✅";
     } else if (myBalance.balance > 0) {
       expensesSummary = `You are owed ${formatCurrencyShort(myBalance.balance, settlementCurrency)}`;
+      expensesSummaryColor = "#10B981";
     } else {
       expensesSummary = `You owe ${formatCurrencyShort(Math.abs(myBalance.balance), settlementCurrency)}`;
+      expensesSummaryColor = "#F59E0B";
     }
   } else {
     expensesSummary = "No expenses logged yet";
