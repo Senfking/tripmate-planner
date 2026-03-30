@@ -1,6 +1,7 @@
-import { Map, Vote, CalendarDays, DollarSign, MoreHorizontal, Plus, type LucideIcon } from "lucide-react";
+import { Map, Vote, CalendarDays, DollarSign, Plus, type LucideIcon } from "lucide-react";
 import { NavLink as RouterNavLink, useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
 
 const leftTabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/app/trips", label: "Trips", icon: Map },
@@ -12,7 +13,7 @@ const rightTabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/app/expenses", label: "Expenses", icon: DollarSign },
 ];
 
-function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: LucideIcon }) {
+function NavTab({ to, label, icon: Icon, badge }: { to: string; label: string; icon: LucideIcon; badge?: number }) {
   const { pathname } = useLocation();
   const isActive = pathname.startsWith(to);
 
@@ -23,7 +24,7 @@ function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: Lu
     >
       <div
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300",
+          "relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300",
           isActive && "bg-primary/10"
         )}
       >
@@ -33,6 +34,11 @@ function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: Lu
             isActive ? "h-[22px] w-[22px] text-primary" : "h-5 w-5 text-muted-foreground/60"
           )}
         />
+        {badge != null && badge > 0 && (
+          <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0D9488] px-1 text-[10px] font-bold text-white">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
       </div>
       <span
         className={cn(
@@ -46,7 +52,10 @@ function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: Lu
   );
 }
 
-export function BottomNav() { 
+export function BottomNav() {
+  const { data } = useGlobalDecisions();
+  const pendingCount = data?.pendingCount ?? 0;
+
   return (
     <nav className="fixed inset-x-4 bottom-4 z-50 md:hidden">
       <div className="relative rounded-[28px] border border-border/60 bg-background/95 shadow-[0_8px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl">
@@ -56,7 +65,11 @@ export function BottomNav() {
         <div className="flex items-end justify-between px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-1">
           {/* Left tabs */}
           {leftTabs.map((tab) => (
-            <NavTab key={tab.to} {...tab} />
+            <NavTab
+              key={tab.to}
+              {...tab}
+              badge={tab.to === "/app/decisions" ? pendingCount : undefined}
+            />
           ))}
 
           {/* Center FAB */}

@@ -1,18 +1,75 @@
-import { Vote } from "lucide-react";
+import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
+import { Link } from "react-router-dom";
+import { CircleCheck, Vote, MapPin, CalendarDays, MessageSquare, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
-const Decisions = () => (
-  <div className="flex min-h-[calc(100vh-10rem)] flex-col items-center justify-center px-8 text-center">
-    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-      <Vote className="h-8 w-8 text-primary" />
+const typeConfig = {
+  vibe: { label: "Vibe Board", icon: MessageSquare },
+  destination: { label: "Destination vote", icon: MapPin },
+  date: { label: "Date vote", icon: CalendarDays },
+  poll: { label: "Preference poll", icon: Vote },
+} as const;
+
+const Decisions = () => {
+  const { data, isLoading } = useGlobalDecisions();
+  const items = data?.items ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[#0D9488]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-10rem)] bg-[#F1F5F9] px-4 pb-32 pt-6">
+      <h1 className="mb-4 text-[22px] font-bold text-foreground">Decisions</h1>
+
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center pt-24 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10">
+            <CircleCheck className="h-8 w-8 text-[#0D9488]" />
+          </div>
+          <h2 className="mt-5 text-lg font-bold text-foreground">You're all caught up!</h2>
+          <p className="mt-2 max-w-[260px] text-[15px] leading-relaxed text-muted-foreground">
+            No pending decisions across your trips.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map((item) => {
+            const cfg = typeConfig[item.type];
+            const Icon = cfg.icon;
+            return (
+              <Link
+                key={item.id}
+                to={`/app/trips/${item.tripId}/decisions`}
+                className="block bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:scale-[0.98] transition-transform"
+              >
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
+                  <span>{item.tripEmoji ?? "✈️"}</span>
+                  <span className="truncate">{item.tripName}</span>
+                </div>
+                <p className="text-[15px] font-medium text-foreground leading-snug">
+                  {item.description}
+                </p>
+                <div className="mt-2.5">
+                  <Badge
+                    variant="outline"
+                    className="border-[#0D9488]/30 text-[#0D9488] text-[11px] font-medium px-2 py-0.5 gap-1"
+                  >
+                    <Icon className="h-3 w-3" />
+                    {cfg.label}
+                  </Badge>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
-    <h1 className="mt-5 text-[22px] font-bold text-foreground">Decisions</h1>
-    <p className="mt-3 max-w-[280px] text-[15px] leading-relaxed text-muted-foreground">
-      All your pending votes across every trip — in one place. Destination votes, date options, preference polls — see what needs your input without opening each trip.
-    </p>
-    <span className="mt-5 inline-flex rounded-full border border-primary/30 px-3.5 py-1 text-xs font-medium text-primary">
-      Coming soon
-    </span>
-  </div>
-);
+  );
+};
 
 export default Decisions;
