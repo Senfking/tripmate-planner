@@ -456,6 +456,39 @@ export function ProposalCard({
           </div>
         </div>
       )}
+      {/* Delete confirmation modal/drawer */}
+      {canDelete && onDeleteProposal && (
+        <ResponsiveModal
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title={`Remove ${proposal.destination} suggestion?`}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will also remove any date options and votes on this card.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => {
+                  onDeleteProposal(proposal.id);
+                  setDeleteOpen(false);
+                }}
+                disabled={isDeleting}
+                className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? "Removing…" : "Remove"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteOpen(false)}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </ResponsiveModal>
+      )}
     </div>
   );
 }
