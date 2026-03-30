@@ -370,5 +370,6 @@ export function useProposals(tripId: string | undefined) {
     reactDest,
     addDateOption,
     voteDateOption,
+    deleteProposal,
   };
 }

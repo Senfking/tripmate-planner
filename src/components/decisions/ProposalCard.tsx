@@ -190,15 +190,47 @@ export function ProposalCard({
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3 relative transition-opacity">
-      {/* In route badge */}
-      {isInRoute && (
-        <Badge className="absolute top-3 right-3 bg-emerald-100 text-emerald-700 border-emerald-200">
-          <Check className="h-3 w-3 mr-1" /> In route
-        </Badge>
-      )}
+      {/* Top-right actions */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+        {isInRoute && (
+          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+            <Check className="h-3 w-3 mr-1" /> In route
+          </Badge>
+        )}
+        {canDelete && !isFrozen && onDeleteProposal && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                aria-label="Delete suggestion"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove {proposal.destination} suggestion?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will also remove any date options and votes on this card.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDeleteProposal(proposal.id)}
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? "Removing…" : "Remove"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
 
       {/* Destination + creator */}
-      <div>
+      <div className="pr-20">
         <h4 className="font-semibold text-foreground text-base">{proposal.destination}</h4>
         <p className="text-xs text-muted-foreground">Suggested by {proposal.creator_name}</p>
       </div>
