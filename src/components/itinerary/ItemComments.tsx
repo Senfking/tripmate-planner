@@ -37,7 +37,7 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
           <p className="text-xs text-muted-foreground">No comments yet.</p>
         )}
         {comments.map((c) => (
-          <div key={c.id} className="text-sm space-y-0.5">
+          <div key={c.id} className={`text-sm space-y-0.5 ${newCommentIds?.has(c.id) ? "animate-realtime-flash" : ""}`}>
             <div className="flex items-center justify-between">
               <span className="font-medium text-xs">{c.display_name || "Member"}</span>
               <div className="flex items-center gap-2">

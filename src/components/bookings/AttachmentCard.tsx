@@ -119,7 +119,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   return (
     <>
       <div
-        className="overflow-hidden rounded-xl border bg-card shadow-sm transition-all cursor-pointer"
+        className={`overflow-hidden rounded-xl border bg-card shadow-sm transition-all cursor-pointer ${isNew ? "animate-realtime-flash" : ""}`}
         onClick={() => setExpanded((p) => !p)}
       >
         {/* Compact row — always visible */}

@@ -56,7 +56,7 @@ export function ExpenseCard({
     expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden">
+    <div className={`rounded-xl border bg-card overflow-hidden ${isNew ? "animate-realtime-flash" : ""}`}>
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full text-left p-3 flex items-start gap-3"
