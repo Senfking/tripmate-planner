@@ -378,6 +378,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
           onUpdateTitle={(title) => updatePollTitle.mutate({ pollId: poll.id, title })}
           isAddingOption={addOption.isPending}
           isLocking={lockPoll.isPending}
+          isHighlighted={poll.id === highlightedPollId}
         />
       ))}
 
