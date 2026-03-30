@@ -10,6 +10,7 @@ interface SectionCardProps {
   icon: LucideIcon;
   title: string;
   summary: string;
+  summaryColor?: string;
   subline?: string;
   to: string;
   badgeCount?: number;
