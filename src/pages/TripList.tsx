@@ -406,7 +406,7 @@ export default function TripList() {
     <div className="relative min-h-[calc(100vh-4rem)] pb-[120px] pt-6" style={{ backgroundColor: "#F1F5F9" }}>
       <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4">
         <div className="flex items-center justify-between px-1 mb-1">
-          <h1 className="text-[26px] font-bold" style={{ color: "#0F172A" }}>
+          <h1 className="text-[22px] font-bold" style={{ color: "#0F172A" }}>
             My Trips
           </h1>
         </div>
