@@ -44,7 +44,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
     lastSeenLoadedRef.current = scopeKey;
 
     let active = true;
-    let clearTimer: number | undefined;
+    
 
     const syncLastSeen = async () => {
       const now = new Date().toISOString();
