@@ -261,23 +261,27 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           {balances.length > 0 && (
             <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
               <div className="rounded-xl border bg-card p-3 space-y-2">
-                <CollapsibleTrigger className="flex w-full items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${balancesOpen ? "rotate-90" : ""}`} />
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</span>
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{balances.length}</Badge>
-                  </div>
+                <CollapsibleTrigger asChild>
+                  <button className="flex w-full flex-col gap-1 text-left">
+                    <div className="flex w-full items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${balancesOpen ? "rotate-90" : ""}`} />
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{balances.length}</Badge>
+                      </div>
+                    </div>
+                    {!balancesOpen && myBalance && (
+                      <p className="text-xs text-muted-foreground pl-6">
+                        {myBalance.balance > 0.005
+                          ? <span className="text-emerald-600">You are owed {formatCurrency(myBalance.balance, settlementCurrency)}</span>
+                          : myBalance.balance < -0.005
+                          ? <span className="text-red-500">You owe {formatCurrency(Math.abs(myBalance.balance), settlementCurrency)}</span>
+                          : <span>All settled</span>
+                        }
+                      </p>
+                    )}
+                  </button>
                 </CollapsibleTrigger>
-                {!balancesOpen && myBalance && (
-                  <p className="text-xs text-muted-foreground pl-6">
-                    {myBalance.balance > 0.005
-                      ? <span className="text-emerald-600">You are owed {formatCurrency(myBalance.balance, settlementCurrency)}</span>
-                      : myBalance.balance < -0.005
-                      ? <span className="text-red-500">You owe {formatCurrency(Math.abs(myBalance.balance), settlementCurrency)}</span>
-                      : <span>All settled</span>
-                    }
-                  </p>
-                )}
                 <CollapsibleContent>
                   <BalancesSummary balances={balances} currency={settlementCurrency} />
                 </CollapsibleContent>
