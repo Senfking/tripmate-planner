@@ -56,6 +56,7 @@ export function StructuredPoll({
   onUpdateTitle,
   isAddingOption,
   isLocking,
+  isHighlighted,
 }: Props) {
   const isLocked = poll.status === "locked";
   const isDate = poll.type === "date";
