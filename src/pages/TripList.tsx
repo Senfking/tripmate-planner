@@ -243,6 +243,7 @@ function TripCard({ trip, isHero }: { trip: EnrichedTrip; isHero: boolean }) {
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-center"
           loading={isHero ? "eager" : "lazy"}
+          onError={(e) => { e.currentTarget.src = DEFAULT_PHOTO; }}
         />
         {/* Gradient overlay */}
         <div
