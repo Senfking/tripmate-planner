@@ -245,7 +245,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {showNewPill && (
         <span
           className={cn(
-            "absolute top-2 right-2 z-30 text-[10px] font-semibold text-white px-[7px] py-[2px] rounded-[10px]",
+            "absolute -top-2 right-2 z-30 text-[10px] font-semibold text-white px-[7px] py-[2px] rounded-[10px]",
             !pillVisible && isNewSinceLastVisit && "opacity-100",
             pillVisible && animPhase === "done" && !isNewSinceLastVisit && "animate-pill-fade-out",
           )}
