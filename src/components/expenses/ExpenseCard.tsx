@@ -71,7 +71,7 @@ export function ExpenseCard({
               <p className="font-semibold text-sm">
                 {formatCurrency(expense.amount, expense.currency)}
               </p>
-              {isDifferentCurrency && (
+              {isDifferentCurrency && convertedAmount != null && (
                 <p className="text-xs text-muted-foreground">
                   ≈ {formatCurrency(convertedAmount, settlementCurrency)}
                 </p>
@@ -113,7 +113,7 @@ export function ExpenseCard({
                   <span className="text-muted-foreground">{member?.displayName || "Unknown"}</span>
                   <span>
                     {formatCurrency(s.share_amount, expense.currency)}
-                    {isDifferentCurrency && (
+                    {isDifferentCurrency && convertedShare != null && (
                       <span className="text-muted-foreground ml-1">
                         ≈ {formatCurrency(convertedShare, settlementCurrency)}
                       </span>

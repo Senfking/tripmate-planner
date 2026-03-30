@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -32,9 +32,12 @@ export interface MemberProfile {
   role: string;
 }
 
+const SESSION_KEY = "junto_rates_refresh_attempted";
+
 export function useExpenses(tripId: string) {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const [refreshingRates, setRefreshingRates] = useState(false);
 
   // Fetch expenses
   const expensesQuery = useQuery({
@@ -182,29 +185,29 @@ export function useExpenses(tripId: string) {
     (expensesQuery.data || []).length > 0 &&
     (expensesQuery.data || []).every((e) => e.currency === settlementCurrency);
 
-  // Silently trigger a refresh when rates are stale (once per session)
+  // Auto-refresh rates when empty or stale (once per session)
   useEffect(() => {
-    const refreshRatesIfStale = async () => {
-      if (
-        !ratesStale ||
-        ratesQuery.isError ||
-        sessionStorage.getItem("rates_refresh_attempted")
-      ) {
-        return;
-      }
+    const shouldRefresh =
+      (ratesEmpty || (ratesStale && !ratesQuery.isError)) &&
+      !sessionStorage.getItem(SESSION_KEY);
 
-      sessionStorage.setItem("rates_refresh_attempted", "1");
+    if (!shouldRefresh) return;
 
+    sessionStorage.setItem(SESSION_KEY, "1");
+    setRefreshingRates(true);
+
+    (async () => {
       try {
         await supabase.functions.invoke("refresh-exchange-rates");
-        await qc.invalidateQueries({ queryKey: ["exchange-rates", settlementCurrency] });
+        await qc.invalidateQueries({ queryKey: ["exchange-rates"] });
+        await qc.invalidateQueries({ queryKey: ["cached-currency-codes"] });
       } catch {
-        // Silent background refresh — ignore failures
+        // Silent — ignore failures
+      } finally {
+        setRefreshingRates(false);
       }
-    };
-
-    void refreshRatesIfStale();
-  }, [qc, ratesStale, ratesQuery.isError, settlementCurrency]);
+    })();
+  }, [qc, ratesEmpty, ratesStale, ratesQuery.isError]);
 
   // Fetch itinerary items for linking
   const itineraryQuery = useQuery({
@@ -340,8 +343,9 @@ export function useExpenses(tripId: string) {
     settlementCurrency,
     rates,
     ratesStale: ratesStale && !allSameCurrency,
-    ratesEmpty,
+    ratesEmpty: ratesEmpty && !allSameCurrency,
     ratesError: ratesQuery.isError,
+    refreshingRates,
     cachedCurrencyCodes: cachedCodesQuery.data || [],
     itineraryItems: itineraryQuery.data || [],
     isLoading: expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading,

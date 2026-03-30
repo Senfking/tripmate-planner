@@ -7,20 +7,13 @@ export function convert(
   rates: Rates
 ): number {
   if (from === to) return amount;
-  // rates are keyed as "FROM_TO" or we derive from base-relative rates
-  // We assume rates object has keys relative to the base currency used in the fetch
-  // e.g. if base=EUR then rates = { USD: 1.08, GBP: 0.86, ... }
-  // To convert FROM -> TO: amount / rates[FROM] * rates[TO]
-  // If FROM is the base, rates[FROM] is 1
   const fromRate = from === "EUR" ? 1 : rates[from] ?? 1;
   const toRate = to === "EUR" ? 1 : rates[to] ?? 1;
-  // Actually we need to handle arbitrary base. Let's normalise via EUR as intermediary
-  // But our fetch uses base=settlementCurrency, so rates are relative to that.
-  // We'll pass baseCurrency alongside rates.
   return amount;
 }
 
 /** Convert amount from `from` currency to `to` currency.
+ *  Returns null if rates are unavailable for the conversion.
  *  `rates` is keyed by currency code, values relative to `baseCurrency`.
  *  e.g. baseCurrency=EUR, rates={USD:1.08, GBP:0.86} means 1 EUR = 1.08 USD */
 export function convertAmount(
@@ -29,13 +22,11 @@ export function convertAmount(
   to: string,
   baseCurrency: string,
   rates: Rates
-): number {
+): number | null {
   if (from === to) return amount;
-  // Convert to base first, then to target
   const fromRate = from === baseCurrency ? 1 : rates[from];
   const toRate = to === baseCurrency ? 1 : rates[to];
-  if (fromRate == null || toRate == null) return amount; // fallback 1:1
-  // 1 base = fromRate units of `from`, so `amount` in `from` = amount / fromRate in base
+  if (fromRate == null || toRate == null) return null;
   const inBase = amount / fromRate;
   return inBase * toRate;
 }
@@ -62,32 +53,44 @@ export interface ExpenseWithSplits {
   splits: { user_id: string; share_amount: number }[];
 }
 
+/** Calculate net balances. Returns { balances, excludedCount } where
+ *  excludedCount is the number of expenses skipped due to missing rates. */
 export function calcNetBalances(
   expenses: ExpenseWithSplits[],
   settlementCurrency: string,
   baseCurrency: string,
   rates: Rates,
   profiles: Record<string, string>
-): BalanceEntry[] {
-  const balances: Record<string, number> = {};
+): { balances: BalanceEntry[]; excludedCount: number } {
+  const balanceMap: Record<string, number> = {};
+  let excludedCount = 0;
 
   for (const exp of expenses) {
     const payerAmount = convertAmount(exp.amount, exp.currency, settlementCurrency, baseCurrency, rates);
-    balances[exp.payer_id] = (balances[exp.payer_id] || 0) + payerAmount;
+    if (payerAmount == null) {
+      // Cannot convert — skip this expense entirely
+      excludedCount++;
+      continue;
+    }
+
+    balanceMap[exp.payer_id] = (balanceMap[exp.payer_id] || 0) + payerAmount;
 
     for (const split of exp.splits) {
       const splitAmount = convertAmount(split.share_amount, exp.currency, settlementCurrency, baseCurrency, rates);
-      balances[split.user_id] = (balances[split.user_id] || 0) - splitAmount;
+      if (splitAmount == null) continue; // already counted as excluded above
+      balanceMap[split.user_id] = (balanceMap[split.user_id] || 0) - splitAmount;
     }
   }
 
-  return Object.entries(balances)
+  const balances = Object.entries(balanceMap)
     .filter(([, b]) => Math.abs(b) > 0.005)
     .map(([userId, balance]) => ({
       userId,
       displayName: profiles[userId] || "Unknown",
       balance: Math.round(balance * 100) / 100,
     }));
+
+  return { balances, excludedCount };
 }
 
 export function calcSettlements(
