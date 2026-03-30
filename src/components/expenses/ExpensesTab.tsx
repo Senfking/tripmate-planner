@@ -23,10 +23,10 @@ interface Props {
 export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const {
-    expenses, splits, members, settlementCurrency, rates, ratesError,
-    ratesStale, ratesEmpty, ratesLoading, refreshingRates, cachedCurrencyCodes,
-    itineraryItems, isLoading, updateSettlementCurrency, addExpense,
-    updateExpense, deleteExpense,
+    expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
+    ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates,
+    cachedCurrencyCodes, itineraryItems, isLoading, updateSettlementCurrency,
+    addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
 
   const allSameCurrency = useMemo(
@@ -295,7 +295,15 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <BalancesSummary balances={balances} currency={settlementCurrency} />
+                  <BalancesSummary
+                    balances={balances}
+                    currency={settlementCurrency}
+                    expenses={expenses}
+                    splits={splits}
+                    members={members}
+                    rates={rates}
+                    ratesFetchedAt={ratesFetchedAt}
+                  />
                 </CollapsibleContent>
               </div>
             </Collapsible>
