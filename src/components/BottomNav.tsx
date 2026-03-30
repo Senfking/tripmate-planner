@@ -59,7 +59,7 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-4 bottom-4 z-50 md:hidden">
       <div
-        className="relative rounded-[28px] backdrop-blur-[24px]"
+        className="relative rounded-[28px]"
         style={{
           background: "rgba(255, 255, 255, 0.55)",
           WebkitBackdropFilter: "blur(24px)",
