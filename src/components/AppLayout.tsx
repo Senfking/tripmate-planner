@@ -1,9 +1,41 @@
+import { useState, useEffect } from "react";
 import { Outlet, Link } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { UserCircle } from "lucide-react";
+
+function OfflineBanner() {
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [showBackOnline, setShowBackOnline] = useState(false);
+
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true);
+    const goOnline = () => {
+      setIsOffline(false);
+      setShowBackOnline(true);
+      setTimeout(() => setShowBackOnline(false), 2000);
+    };
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
+  }, []);
+
+  if (!isOffline && !showBackOnline) return null;
+
+  return (
+    <div
+      className="w-full text-center text-[13px] text-white py-1.5 transition-all duration-300"
+      style={{ backgroundColor: "#1e293b" }}
+    >
+      {isOffline ? "You're offline — showing cached content" : "Back online"}
+    </div>
+  );
+}
 
 export function AppLayout() {
   return (
@@ -12,7 +44,7 @@ export function AppLayout() {
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
           {/* Header */}
-          <header className="sticky top-0 z-40 flex h-[52px] items-center border-b bg-gradient-primary px-4 text-white relative overflow-hidden">
+          <header className="sticky top-0 z-40 flex h-[52px] items-center border-b bg-gradient-primary px-4 text-white relative overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
             {/* Diagonal shine */}
             <div
               className="absolute inset-0 pointer-events-none"
@@ -40,6 +72,8 @@ export function AppLayout() {
               <UserCircle className="h-[22px] w-[22px] text-white" />
             </Link>
           </header>
+
+          <OfflineBanner />
 
           {/* Page content */}
           <main className="flex-1 pb-24 md:pb-0">

@@ -1,5 +1,5 @@
 import { Map, Vote, CalendarDays, DollarSign, Plus, type LucideIcon } from "lucide-react";
-import { NavLink as RouterNavLink, useLocation, Link } from "react-router-dom";
+import { NavLink as RouterNavLink, useLocation, Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
 
@@ -15,16 +15,25 @@ const rightTabs: { to: string; label: string; icon: LucideIcon }[] = [
 
 function NavTab({ to, label, icon: Icon, badge }: { to: string; label: string; icon: LucideIcon; badge?: number }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const isActive = pathname.startsWith(to);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isActive) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
     <RouterNavLink
       to={to}
+      onClick={handleClick}
       className="relative flex min-w-0 flex-1 flex-col items-center justify-end pb-1 pt-2 transition-all duration-300"
     >
       <div
         className={cn(
-          "relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300",
+          "relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-150 active:scale-90",
           isActive && "bg-primary/10"
         )}
       >
