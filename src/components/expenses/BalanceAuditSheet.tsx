@@ -194,7 +194,7 @@ export function BalanceAuditSheet({
 
         {/* Conversion footnote */}
         {audit.foreignCurrencies.length > 0 && (
-          <div className="text-[11px] text-muted-foreground space-y-0.5 pt-2 border-t border-border/30">
+          <div className="text-[11px] text-muted-foreground space-y-0.5">
             {audit.foreignCurrencies.map((cur) => (
               <p key={cur}>
                 {cur} converted {ratesDateStr ? `using rate from ${ratesDateStr}` : "at time of recording"}
