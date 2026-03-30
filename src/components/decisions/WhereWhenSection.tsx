@@ -15,6 +15,7 @@ type Props = {
 };
 
 export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
+  const { user } = useAuth();
   const canManage = myRole === "owner" || myRole === "admin";
   const isOwner = myRole === "owner";
 
