@@ -25,6 +25,7 @@ export function DecisionsFlow({
   memberCount,
   routeLocked,
 }: Props) {
+  const [searchParams] = useSearchParams();
   const canManage = myRole === "owner" || myRole === "admin";
 
   // Vibe data
