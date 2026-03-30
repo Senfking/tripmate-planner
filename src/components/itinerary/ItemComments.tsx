@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 interface Props {
   tripId: string;
   itemId: string;
+  newCommentIds?: Set<string>;
 }
 
 export function ItemComments({ tripId, itemId }: Props) {
