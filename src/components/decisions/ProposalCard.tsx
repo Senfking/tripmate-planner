@@ -106,6 +106,10 @@ export function ProposalCard({
   onAddToRoute,
   isAddingToRoute,
   isAddingDate,
+  currentUserId,
+  canDelete,
+  onDeleteProposal,
+  isDeleting,
 }: Props) {
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
   const isFrozen = isRouteLocked;
