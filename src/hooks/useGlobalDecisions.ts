@@ -182,6 +182,7 @@ export function useGlobalDecisions() {
               type: "poll",
               label: "Preference poll",
               description: `Answer "${poll.title}"`,
+              pollId: poll.id,
             });
           }
         }

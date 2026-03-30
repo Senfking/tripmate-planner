@@ -85,25 +85,40 @@ export function DecisionsFlow({
     prevRouteLocked.current = routeLocked;
   }, [routeLocked]);
 
-  // Deep-link scroll from global Decisions tab
+  // Deep-link scroll + highlight from global Decisions tab
   const didScroll = useRef(false);
+  const [highlightTarget, setHighlightTarget] = useState<string | null>(null);
   useEffect(() => {
     if (didScroll.current) return;
     const scrollTo = searchParams.get("scrollTo");
     if (!scrollTo) return;
     didScroll.current = true;
-    if (scrollTo === "vibe") setExpanded((prev) => ({ ...prev, vibe: true }));
-    else if (scrollTo === "where") setExpanded((prev) => ({ ...prev, where: true }));
-    else if (scrollTo === "polls") setExpanded((prev) => ({ ...prev, prefs: true }));
+    const pollId = searchParams.get("pollId");
+
+    if (scrollTo === "vibe") {
+      setExpanded((prev) => ({ ...prev, vibe: true }));
+      setHighlightTarget("decisions-step-1");
+    } else if (scrollTo === "where") {
+      setExpanded((prev) => ({ ...prev, where: true }));
+      setHighlightTarget("decisions-step-2");
+    } else if (scrollTo === "polls") {
+      setExpanded((prev) => ({ ...prev, prefs: true }));
+      setHighlightTarget(pollId ? `poll-${pollId}` : "decisions-step-3");
+    }
+
     setTimeout(() => {
-      const sectionId =
-        scrollTo === "vibe" ? "decisions-step-1" :
-        scrollTo === "where" ? "decisions-step-2" :
-        scrollTo === "polls" ? "decisions-step-3" : null;
-      if (sectionId) {
-        document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const targetId = scrollTo === "polls" && pollId
+        ? `poll-${pollId}`
+        : scrollTo === "vibe" ? "decisions-step-1"
+        : scrollTo === "where" ? "decisions-step-2"
+        : scrollTo === "polls" ? "decisions-step-3" : null;
+      if (targetId) {
+        document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    }, 150);
+    }, 200);
+
+    // Clear highlight after animation completes
+    setTimeout(() => setHighlightTarget(null), 2500);
   }, [searchParams]);
 
   const toggle = (key: string) =>
