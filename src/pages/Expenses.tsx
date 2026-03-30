@@ -20,7 +20,7 @@ const Expenses = () => {
   const hasExpenses = trips.length > 0;
 
   return (
-    <div className="min-h-[calc(100vh-10rem)] bg-[#F1F5F9] px-4 pb-32 pt-6">
+    <div className="min-h-[calc(100dvh-10rem)] bg-[#F1F5F9] px-4 pb-24 pt-6 overflow-x-hidden">
       <h1 className="mb-4 text-[22px] font-bold text-foreground">Expenses</h1>
 
       {!hasExpenses ? (
