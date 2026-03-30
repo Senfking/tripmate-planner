@@ -200,6 +200,7 @@ export function DecisionsFlow({
           onSkip={canManage ? () => setManuallySkipped(true) : undefined}
           activeBorder={whereUnlocked && !routeLocked}
           collapsedSummary={whereSummary}
+          isHighlighted={highlightTarget === "decisions-step-2"}
         >
           <WhereWhenSection tripId={tripId} myRole={myRole} isRouteLocked={routeLocked} />
         </StepSection>
