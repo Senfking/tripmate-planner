@@ -103,22 +103,22 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
 
   // Show skeleton placeholder during skeleton phase
   if (animPhase === "skeleton") {
+    const skeletonStyle = {
+      ...style,
+      background: "linear-gradient(90deg, hsl(var(--muted) / 0.3) 0%, hsl(174 58% 32% / 0.15) 50%, hsl(var(--muted) / 0.3) 100%)",
+      backgroundSize: "200% 100%",
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
+      border: "1px solid hsl(174 58% 32% / 0.2)",
+      borderRadius: "12px",
+      animation: "shimmer 1.2s ease-in-out infinite",
+    };
     return (
       <div
         ref={setNodeRef}
-        style={style}
-        className="rounded-xl h-[120px] animate-shimmer"
+        style={skeletonStyle}
+        className="h-[120px]"
         aria-hidden
-        style={{
-          ...style,
-          background: "linear-gradient(90deg, hsl(var(--muted) / 0.3) 0%, hsl(174 58% 32% / 0.15) 50%, hsl(var(--muted) / 0.3) 100%)",
-          backgroundSize: "200% 100%",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
-          border: "1px solid hsl(174 58% 32% / 0.2)",
-          borderRadius: "12px",
-          animation: "shimmer 1.2s ease-in-out infinite",
-        }}
       />
     );
   }
