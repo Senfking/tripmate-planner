@@ -514,25 +514,60 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          default_currency: string | null
           display_name: string | null
+          feature_flags: Json
           id: string
+          notification_preferences: Json
+          referral_code: string | null
+          referred_by: string | null
+          stripe_customer_id: string | null
+          subscription_expires_at: string | null
+          subscription_status: string
+          subscription_tier: string
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          default_currency?: string | null
           display_name?: string | null
+          feature_flags?: Json
           id: string
+          notification_preferences?: Json
+          referral_code?: string | null
+          referred_by?: string | null
+          stripe_customer_id?: string | null
+          subscription_expires_at?: string | null
+          subscription_status?: string
+          subscription_tier?: string
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          default_currency?: string | null
           display_name?: string | null
+          feature_flags?: Json
           id?: string
+          notification_preferences?: Json
+          referral_code?: string | null
+          referred_by?: string | null
+          stripe_customer_id?: string | null
+          subscription_expires_at?: string | null
+          subscription_status?: string
+          subscription_tier?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposal_date_options: {
         Row: {
@@ -597,6 +632,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          endpoint: string
+          id: string
+          keys: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          endpoint: string
+          id?: string
+          keys: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          endpoint?: string
+          id?: string
+          keys?: Json
+          user_id?: string
+        }
+        Relationships: []
       }
       trip_last_seen: {
         Row: {
@@ -953,6 +1015,11 @@ export type Database = {
         Args: { _new_role: string; _target_user_id: string; _trip_id: string }
         Returns: Json
       }
+      user_has_feature: {
+        Args: { _feature: string; _user_id: string }
+        Returns: boolean
+      }
+      user_tier: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
