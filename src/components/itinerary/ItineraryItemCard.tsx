@@ -282,8 +282,8 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
             borderRadius: "12px",
             ...(showNewBorder
               ? {
-                  border: "2px solid #0D9488",
-                  boxShadow: "0 0 0 1px rgba(13,148,136,0.15), 0 4px 16px rgba(13,148,136,0.1)",
+                  borderLeft: "3px solid #0D9488",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 0px 1px rgba(0,0,0,0.05)",
                   transition: "border-color 1s ease-out, box-shadow 1s ease-out",
                 }
               : !newBorderVisible && isNewSinceLastVisit
