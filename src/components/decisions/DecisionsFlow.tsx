@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { StepSection } from "./StepSection";
 import { VibeBoard } from "@/components/vibe/VibeBoard";
 import { WhereWhenSection } from "./WhereWhenSection";
@@ -24,6 +25,7 @@ export function DecisionsFlow({
   memberCount,
   routeLocked,
 }: Props) {
+  const [searchParams] = useSearchParams();
   const canManage = myRole === "owner" || myRole === "admin";
 
   // Vibe data
@@ -83,6 +85,27 @@ export function DecisionsFlow({
     prevRouteLocked.current = routeLocked;
   }, [routeLocked]);
 
+  // Deep-link scroll from global Decisions tab
+  const didScroll = useRef(false);
+  useEffect(() => {
+    if (didScroll.current) return;
+    const scrollTo = searchParams.get("scrollTo");
+    if (!scrollTo) return;
+    didScroll.current = true;
+    if (scrollTo === "vibe") setExpanded((prev) => ({ ...prev, vibe: true }));
+    else if (scrollTo === "where") setExpanded((prev) => ({ ...prev, where: true }));
+    else if (scrollTo === "polls") setExpanded((prev) => ({ ...prev, prefs: true }));
+    setTimeout(() => {
+      const sectionId =
+        scrollTo === "vibe" ? "decisions-step-1" :
+        scrollTo === "where" ? "decisions-step-2" :
+        scrollTo === "polls" ? "decisions-step-3" : null;
+      if (sectionId) {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
+  }, [searchParams]);
+
   const toggle = (key: string) =>
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -126,55 +149,61 @@ export function DecisionsFlow({
   return (
     <div className="space-y-3">
       {/* Step 1: Vibe Board */}
-      <StepSection
-        stepNumber={1}
-        title="Vibe Board"
-        statusText={vibeStatus.text}
-        statusVariant={vibeStatus.variant}
-        isExpanded={expanded.vibe}
-        onToggle={() => toggle("vibe")}
-        activeBorder={isActive && !hasSubmittedVibe}
-        collapsedSummary={vibeSummary}
-      >
-        <VibeBoard
-          tripId={tripId}
-          myRole={myRole}
-          isActive={isActive}
-          isLocked={vibeLocked}
-          memberCount={memberCount}
-        />
-      </StepSection>
+      <div id="decisions-step-1">
+        <StepSection
+          stepNumber={1}
+          title="Vibe Board"
+          statusText={vibeStatus.text}
+          statusVariant={vibeStatus.variant}
+          isExpanded={expanded.vibe}
+          onToggle={() => toggle("vibe")}
+          activeBorder={isActive && !hasSubmittedVibe}
+          collapsedSummary={vibeSummary}
+        >
+          <VibeBoard
+            tripId={tripId}
+            myRole={myRole}
+            isActive={isActive}
+            isLocked={vibeLocked}
+            memberCount={memberCount}
+          />
+        </StepSection>
+      </div>
 
       {/* Step 2: Where & When */}
-      <StepSection
-        stepNumber={2}
-        title="Where & When"
-        statusText={whereStatus.text}
-        statusVariant={whereStatus.variant}
-        isExpanded={expanded.where}
-        onToggle={() => toggle("where")}
-        isLocked={!whereUnlocked}
-        lockMessage={`Waiting for ${membersNeeded} more member${membersNeeded !== 1 ? "s" : ""} to share their vibe`}
-        onSkip={canManage ? () => setManuallySkipped(true) : undefined}
-        activeBorder={whereUnlocked && !routeLocked}
-        collapsedSummary={whereSummary}
-      >
-        <WhereWhenSection tripId={tripId} myRole={myRole} isRouteLocked={routeLocked} />
-      </StepSection>
+      <div id="decisions-step-2">
+        <StepSection
+          stepNumber={2}
+          title="Where & When"
+          statusText={whereStatus.text}
+          statusVariant={whereStatus.variant}
+          isExpanded={expanded.where}
+          onToggle={() => toggle("where")}
+          isLocked={!whereUnlocked}
+          lockMessage={`Waiting for ${membersNeeded} more member${membersNeeded !== 1 ? "s" : ""} to share their vibe`}
+          onSkip={canManage ? () => setManuallySkipped(true) : undefined}
+          activeBorder={whereUnlocked && !routeLocked}
+          collapsedSummary={whereSummary}
+        >
+          <WhereWhenSection tripId={tripId} myRole={myRole} isRouteLocked={routeLocked} />
+        </StepSection>
+      </div>
 
       {/* Step 3: Preferences */}
-      <StepSection
-        stepNumber={3}
-        title="Preferences"
-        subtitle="Optional"
-        statusText={prefsStatus.text}
-        statusVariant={prefsStatus.variant}
-        isExpanded={expanded.prefs}
-        onToggle={() => toggle("prefs")}
-        collapsedSummary={undefined}
-      >
-        <PreferencesContent tripId={tripId} myRole={myRole} />
-      </StepSection>
+      <div id="decisions-step-3">
+        <StepSection
+          stepNumber={3}
+          title="Preferences"
+          subtitle="Optional"
+          statusText={prefsStatus.text}
+          statusVariant={prefsStatus.variant}
+          isExpanded={expanded.prefs}
+          onToggle={() => toggle("prefs")}
+          collapsedSummary={undefined}
+        >
+          <PreferencesContent tripId={tripId} myRole={myRole} />
+        </StepSection>
+      </div>
     </div>
   );
 }
