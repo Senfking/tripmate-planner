@@ -41,6 +41,7 @@ export function StepSection({
   onSkip,
   activeBorder,
   collapsedSummary,
+  isHighlighted,
   children,
 }: Props) {
   return (
