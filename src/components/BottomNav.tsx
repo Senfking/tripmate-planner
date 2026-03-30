@@ -57,11 +57,12 @@ export function BottomNav() {
   const pendingCount = data?.pendingCount ?? 0;
 
   return (
-    <nav className="fixed inset-x-4 bottom-4 z-50 md:hidden">
+    <nav className="fixed inset-x-4 bottom-4 z-50 bg-transparent md:hidden">
       <div
-        className="relative rounded-[28px]"
+        className="relative overflow-hidden rounded-[28px]"
         style={{
           background: "rgba(255, 255, 255, 0.55)",
+          backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           border: "1px solid rgba(255, 255, 255, 0.4)",
           boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
