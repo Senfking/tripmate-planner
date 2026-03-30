@@ -139,7 +139,7 @@ export function BalanceAuditSheet({
         </div>
 
         {/* What they paid */}
-        <div className="border-t border-border/30 pt-3">
+        <div>
           <button
             onClick={() => setShowPaidDetail((v) => !v)}
             className="flex w-full items-center justify-between py-0.5"
