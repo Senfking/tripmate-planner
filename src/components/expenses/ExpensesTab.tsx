@@ -295,7 +295,15 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <BalancesSummary balances={balances} currency={settlementCurrency} />
+                  <BalancesSummary
+                    balances={balances}
+                    currency={settlementCurrency}
+                    expenses={expenses}
+                    splits={splits}
+                    members={members}
+                    rates={rates}
+                    ratesFetchedAt={ratesFetchedAt}
+                  />
                 </CollapsibleContent>
               </div>
             </Collapsible>
