@@ -28,13 +28,14 @@ interface Props {
   baseCurrency: string;
   rates: Rates;
   itineraryItems: { id: string; title: string; day_date: string }[];
+  isNew?: boolean;
   onEdit: (expense: ExpenseRow) => void;
   onDelete: (id: string) => void;
 }
 
 export function ExpenseCard({
   expense, splits, members, myRole, settlementCurrency,
-  baseCurrency, rates, itineraryItems, onEdit, onDelete,
+  baseCurrency, rates, itineraryItems, isNew, onEdit, onDelete,
 }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
