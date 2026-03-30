@@ -24,7 +24,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
-    ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates,
+    ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
     cachedCurrencyCodes, itineraryItems, isLoading, updateSettlementCurrency,
     addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
