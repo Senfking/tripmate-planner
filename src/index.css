@@ -166,6 +166,23 @@ html, body, #root {
     background: var(--gradient-primary);
   }
 
+  /* Skeleton shimmer */
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(13, 148, 136, 0.08) 0%,
+      rgba(13, 148, 136, 0.16) 40%,
+      rgba(13, 148, 136, 0.08) 80%
+    );
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
   /* Native-feel button tap feedback */
   button:active,
   [role="button"]:active {
