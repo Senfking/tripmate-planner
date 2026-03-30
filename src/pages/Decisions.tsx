@@ -44,7 +44,12 @@ const Decisions = () => {
             return (
               <Link
                 key={item.id}
-                to={`/app/trips/${item.tripId}/decisions`}
+                to={`/app/trips/${item.tripId}/decisions?scrollTo=${{
+                  vibe: "vibe",
+                  destination: "where",
+                  date: "where",
+                  poll: "polls",
+                }[item.type]}`}
                 className="block bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:scale-[0.98] transition-transform"
               >
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { StepSection } from "./StepSection";
 import { VibeBoard } from "@/components/vibe/VibeBoard";
 import { WhereWhenSection } from "./WhereWhenSection";
