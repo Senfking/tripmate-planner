@@ -4,27 +4,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { UserCircle } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-
-function ProfileButton() {
-  const { profile } = useAuth();
-  const initial = profile?.display_name?.charAt(0)?.toUpperCase();
-
-  return (
-    <Link
-      to="/app/more"
-      className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30"
-    >
-      {initial ? (
-        <span className="text-sm font-semibold text-white" style={{ fontSize: 14 }}>
-          {initial}
-        </span>
-      ) : (
-        <UserCircle className="h-5 w-5" />
-      )}
-    </Link>
-  );
-}
 
 export function AppLayout() {
   return (
@@ -54,7 +33,12 @@ export function AppLayout() {
               </span>
             </div>
 
-            <ProfileButton />
+            <Link
+              to="/app/more"
+              className="ml-auto relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30"
+            >
+              <UserCircle className="h-[22px] w-[22px] text-white" />
+            </Link>
           </header>
 
           {/* Page content */}
