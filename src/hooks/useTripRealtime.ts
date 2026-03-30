@@ -29,7 +29,7 @@ const UNFILTERED_TABLES = [
 
 // Query key mapping per table
 const TABLE_QUERY_KEYS: Record<string, (tripId: string) => string[][]> = {
-  itinerary_items: (t) => [["itinerary-items", t], ["itinerary-items-summary", t], ["itinerary-items-for-expenses", t]],
+  itinerary_items: (t) => [["itinerary", t], ["itinerary-items-summary", t], ["itinerary-items-for-expenses", t]],
   itinerary_attendance: (t) => [["itinerary-attendance", t], ["my-attendance-summary", t]],
   votes: (t) => [["poll-vote-counts"], ["my-poll-votes", t], ["trip-polls", t], ["trip-poll-options", t]],
   date_option_votes: (t) => [["trip-date-options", t], ["my-date-votes", t]],
