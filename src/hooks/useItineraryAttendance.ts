@@ -48,9 +48,7 @@ export function useItineraryAttendance(tripId: string) {
 
       const userIds = memberRows.map((m) => m.user_id);
       const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, display_name")
-        .in("id", userIds);
+        .rpc("get_public_profiles", { _user_ids: userIds });
 
       const nameMap = new Map((profiles || []).map((p) => [p.id, p.display_name]));
       return userIds.map((uid) => ({

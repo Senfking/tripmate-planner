@@ -45,9 +45,7 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
       // Fetch profiles for all members
       const userIds = data.map((m) => m.user_id);
       const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_url")
-        .in("id", userIds);
+        .rpc("get_public_profiles", { _user_ids: userIds });
 
       const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
       return data.map((m) => ({

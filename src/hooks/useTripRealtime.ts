@@ -131,11 +131,8 @@ export function useTripRealtime(tripId: string | undefined) {
         displayName = member.displayName || member.display_name || "Someone";
       } else {
         const { data } = await supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("id", userId)
-          .single();
-        if (data?.display_name) displayName = data.display_name;
+          .rpc("get_public_profiles", { _user_ids: [userId] });
+        if (data?.[0]?.display_name) displayName = data[0].display_name;
       }
     } catch {}
 
