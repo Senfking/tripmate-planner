@@ -84,6 +84,11 @@ export default {
           from: { opacity: "1" },
           to: { opacity: "0" },
         },
+        "highlight-pulse": {
+          "0%": { boxShadow: "0 0 0 0 rgba(13,148,136,0.4)", borderColor: "rgba(13,148,136,1)" },
+          "40%": { boxShadow: "0 0 0 8px rgba(13,148,136,0.15)", borderColor: "rgba(13,148,136,0.6)" },
+          "100%": { boxShadow: "0 0 0 0 rgba(13,148,136,0)", borderColor: "var(--tw-border-opacity, rgba(0,0,0,0.1))" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -91,6 +96,7 @@ export default {
         "calm-pulse": "calm-pulse 2s ease-in-out infinite",
         "fade-in-card": "fade-in-card 300ms ease-out forwards",
         "pill-fade-out": "pill-fade-out 500ms ease-out forwards",
+        "highlight-pulse": "highlight-pulse 1.2s ease-out 0.25s 1 both",
       },
     },
   },

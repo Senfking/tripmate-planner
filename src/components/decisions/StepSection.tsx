@@ -17,6 +17,7 @@ type Props = {
   onSkip?: () => void;
   activeBorder?: boolean;
   collapsedSummary?: string;
+  isHighlighted?: boolean;
   children: React.ReactNode;
 };
 
@@ -40,6 +41,7 @@ export function StepSection({
   onSkip,
   activeBorder,
   collapsedSummary,
+  isHighlighted,
   children,
 }: Props) {
   return (
@@ -47,7 +49,8 @@ export function StepSection({
       className={cn(
         "rounded-xl border bg-card shadow-sm transition-all duration-200",
         activeBorder && "border-primary border-[1.5px]",
-        isLocked && "opacity-70"
+        isLocked && "opacity-70",
+        isHighlighted && "animate-highlight-pulse"
       )}
     >
       {/* Header */}

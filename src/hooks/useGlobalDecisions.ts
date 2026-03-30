@@ -11,6 +11,8 @@ export interface PendingItem {
   type: "vibe" | "destination" | "date" | "poll";
   label: string;
   description: string;
+  /** For type "poll", the actual poll UUID for deep-link scrolling */
+  pollId?: string;
 }
 
 export function useGlobalDecisions() {
@@ -180,6 +182,7 @@ export function useGlobalDecisions() {
               type: "poll",
               label: "Preference poll",
               description: `Answer "${poll.title}"`,
+              pollId: poll.id,
             });
           }
         }

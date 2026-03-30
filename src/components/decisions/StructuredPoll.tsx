@@ -27,6 +27,7 @@ type Props = {
   onUpdateTitle?: (title: string) => void;
   isAddingOption: boolean;
   isLocking: boolean;
+  isHighlighted?: boolean;
 };
 
 const DEST_BUTTONS = [
@@ -55,6 +56,7 @@ export function StructuredPoll({
   onUpdateTitle,
   isAddingOption,
   isLocking,
+  isHighlighted,
 }: Props) {
   const isLocked = poll.status === "locked";
   const isDate = poll.type === "date";
@@ -91,7 +93,7 @@ export function StructuredPoll({
   };
 
   return (
-    <div className={`rounded-xl border border-border bg-card p-4 space-y-3 ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
+    <div id={`poll-${poll.id}`} className={`rounded-xl border border-border bg-card p-4 space-y-3 ${disabled ? "opacity-50 pointer-events-none" : ""} ${isHighlighted ? "animate-highlight-pulse" : ""}`}>
       {/* Header */}
       <div className="flex items-center gap-2">
         {stepLabel && (
