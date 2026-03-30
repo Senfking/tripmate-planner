@@ -114,12 +114,15 @@ export function DecisionsFlow({
       : scrollTo === "polls" ? "decisions-step-3" : null;
 
     if (targetId) {
-      // Retry until element is available (section expand + render)
       let attempts = 0;
       const tryScroll = () => {
         const el = document.getElementById(targetId);
         if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Use manual scroll calculation so even the last item scrolls to top-third of viewport
+          const rect = el.getBoundingClientRect();
+          const scrollContainer = document.documentElement;
+          const targetY = rect.top + scrollContainer.scrollTop - window.innerHeight * 0.2;
+          window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
         } else if (attempts < 5) {
           attempts++;
           setTimeout(tryScroll, 150);
