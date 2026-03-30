@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { calcNetBalances, calcSettlements, formatCurrency } from "@/lib/settlementCalc";
 import { SettlementCurrencyPicker } from "./SettlementCurrencyPicker";
 import { BalancesSummary } from "./BalancesSummary";
@@ -14,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { toast } from "sonner";
 
 interface Props {
   tripId: string;
@@ -39,8 +37,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
-  const [balancesOpen, setBalancesOpen] = useState(true);
-  const [settleOpen, setSettleOpen] = useState(true);
+  const [balancesOpen, setBalancesOpen] = useState(false);
+  const [settleOpen, setSettleOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(true);
 
   const profileMap = useMemo(
@@ -67,11 +65,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
 
   const settlements = useMemo(() => calcSettlements(balances), [balances]);
 
-  // Compute settlement progress per debtor→creditor pair
   const { settlementProgress, totalSettledOverall } = useMemo(() => {
-    // Identify settlement expenses
     const settlementExps = expensesWithSplits.filter((e) => e.category === "settlement");
-    // Build a map of settled amounts per pair (payer→split recipient)
     const settledMap = new Map<string, number>();
     for (const exp of settlementExps) {
       for (const split of exp.splits) {
@@ -82,7 +77,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     let totalSettled = 0;
     settledMap.forEach((v) => { totalSettled += v; });
 
-    // For each current settlement, compute total owed = remaining + settled
     const progress: SettlementProgress[] = settlements.map((s) => {
       const key = `${s.from}→${s.to}`;
       const settled = settledMap.get(key) || 0;
@@ -93,14 +87,43 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     return { settlementProgress: progress, totalSettledOverall: totalSettled };
   }, [expensesWithSplits, settlements]);
 
-  // Collapsed summary for balances
   const myBalance = useMemo(() => {
     const entry = balances.find((b) => b.userId === user?.id);
     if (!entry) return null;
     return entry;
   }, [balances, user?.id]);
 
-  // Collapsed summary for settle up
+  // Hero card data
+  const heroData = useMemo(() => {
+    const iOwe = settlements.filter((s) => s.from === user?.id);
+    const owedToMe = settlements.filter((s) => s.to === user?.id);
+    const totalIOwe = iOwe.reduce((sum, s) => sum + s.amount, 0);
+    const totalOwedToMe = owedToMe.reduce((sum, s) => sum + s.amount, 0);
+
+    if (totalIOwe > 0.005) {
+      return {
+        type: "owe" as const,
+        amount: totalIOwe,
+        subline: iOwe.length === 1 ? `to ${iOwe[0].toName}` : `to ${iOwe.length} people`,
+      };
+    }
+    if (totalOwedToMe > 0.005) {
+      return {
+        type: "owed" as const,
+        amount: totalOwedToMe,
+        subline: owedToMe.length === 1 ? `from ${owedToMe[0].fromName}` : `from ${owedToMe.length} people`,
+      };
+    }
+    return { type: "settled" as const, amount: 0, subline: "" };
+  }, [settlements, user?.id]);
+
+  // Settle up: separate mine vs others
+  const { mySettlements, otherSettlements } = useMemo(() => {
+    const mine = settlements.filter((s) => s.from === user?.id || s.to === user?.id);
+    const others = settlements.filter((s) => s.from !== user?.id && s.to !== user?.id);
+    return { mySettlements: mine, otherSettlements: others };
+  }, [settlements, user?.id]);
+
   const settleUpSummary = useMemo(() => {
     if (settlements.length === 0) return { text: "All settled ✓", color: "text-emerald-600" };
     const iOwe = settlements.filter((s) => s.from === user?.id).reduce((sum, s) => sum + s.amount, 0);
@@ -110,12 +133,10 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     return { text: "All settled ✓", color: "text-emerald-600" };
   }, [settlements, user?.id, settlementCurrency]);
 
-  // Unique currencies used in existing expenses (for suggested list)
   const usedCurrencies = useMemo(() => {
     return [...new Set(expenses.map((e) => e.currency))];
   }, [expenses]);
 
-  // Group expenses by date
   const groupedExpenses = useMemo(() => {
     const groups = new Map<string, ExpenseRow[]>();
     expenses.forEach((exp) => {
@@ -123,7 +144,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       if (!groups.has(date)) groups.set(date, []);
       groups.get(date)!.push(exp);
     });
-    // Sort groups by date desc, items within by created_at desc
     return Array.from(groups.entries())
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([date, items]) => ({
@@ -132,12 +152,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       }));
   }, [expenses]);
 
-  const totalExpenses = useMemo(() => {
-    if (expenses.length === 0) return null;
-    // Sum expenses converted to settlement currency where possible
+  const { totalExpenses, nonSettlementCount } = useMemo(() => {
     let total = 0;
+    let count = 0;
     for (const exp of expenses) {
       if (exp.category === "settlement") continue;
+      count++;
       if (exp.currency === settlementCurrency) {
         total += exp.amount;
       } else if (rates && rates[exp.currency]) {
@@ -146,7 +166,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         total += exp.amount;
       }
     }
-    return total;
+    return { totalExpenses: count > 0 ? total : null, nonSettlementCount: count };
   }, [expenses, settlementCurrency, rates]);
 
   const editingSplits = editingExpense
@@ -194,6 +214,39 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
+      {/* Hero summary card */}
+      {canShowBalances && expenses.length > 0 && (
+        <div className="rounded-xl border bg-card p-5 text-center">
+          {heroData.type === "settled" ? (
+            <div className="flex flex-col items-center gap-1">
+              <CheckCircle2 className="h-8 w-8 text-[#0D9488]" />
+              <p className="text-lg font-bold text-[#0D9488] mt-1">All settled up ✓</p>
+            </div>
+          ) : heroData.type === "owe" ? (
+            <>
+              <p className="text-2xl font-bold text-[#EF4444]">
+                You owe {formatCurrency(heroData.amount, settlementCurrency)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-0.5">{heroData.subline}</p>
+              <Button
+                size="sm"
+                className="mt-3 h-8 gap-1.5 text-xs bg-[#0D9488] hover:bg-[#0D9488]/90"
+                onClick={() => setSettleOpen(true)}
+              >
+                Settle up
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-[#0D9488]">
+                You're owed {formatCurrency(heroData.amount, settlementCurrency)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-0.5">{heroData.subline}</p>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Balances & Settle Up — wait for rates */}
       {!canShowBalances ? (
         <div className="rounded-xl border bg-card p-3 space-y-2">
@@ -204,7 +257,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       ) : (
         <>
-          {/* Balances section */}
+          {/* Balances section — collapsed by default */}
           {balances.length > 0 && (
             <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
               <div className="rounded-xl border bg-card p-3 space-y-2">
@@ -232,7 +285,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </Collapsible>
           )}
 
-          {/* Settle Up section */}
+          {/* Settle Up section — collapsed by default */}
           {settlements.length === 0 ? (
             <div className="rounded-xl border bg-card p-3">
               <div className="flex items-center justify-between">
@@ -259,13 +312,41 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   </p>
                 )}
                 <CollapsibleContent>
-                  <SettleUpSection
-                    settlements={settlements}
-                    currency={settlementCurrency}
-                    settlementProgress={settlementProgress}
-                    totalSettledOverall={totalSettledOverall}
-                    onSettle={(data) => addExpense.mutate(data as any)}
-                  />
+                  {/* My settlements (prominent) */}
+                  {mySettlements.length > 0 && (
+                    <SettleUpSection
+                      settlements={mySettlements}
+                      currency={settlementCurrency}
+                      settlementProgress={settlementProgress.filter((p) =>
+                        mySettlements.some((s) => `${s.from}→${s.to}` === p.pairKey)
+                      )}
+                      totalSettledOverall={totalSettledOverall}
+                      onSettle={(data) => addExpense.mutate(data as any)}
+                    />
+                  )}
+                  {/* Third-party settlements (de-emphasised) */}
+                  {otherSettlements.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-muted">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+                        Between others
+                      </p>
+                      <div className="space-y-1">
+                        {otherSettlements.map((s, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between text-xs text-muted-foreground px-1 py-1"
+                          >
+                            <span className="truncate">
+                              {s.fromName} → {s.toName}
+                            </span>
+                            <span className="whitespace-nowrap ml-2">
+                              {formatCurrency(s.amount, settlementCurrency)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CollapsibleContent>
               </div>
             </Collapsible>
@@ -273,7 +354,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </>
       )}
 
-      {/* Expenses section */}
+      {/* Expenses section — open by default */}
       <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
         <div className="rounded-xl border bg-card p-3 space-y-2">
           <CollapsibleTrigger className="flex w-full items-center justify-between">
@@ -302,7 +383,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               <div className="space-y-1">
                 {groupedExpenses.map(({ date, items }) => (
                   <div key={date}>
-                    {/* Date divider */}
                     <div className="flex items-center gap-3 my-2">
                       <div className="flex-1 border-t border-muted" />
                       <span className="text-[12px] text-muted-foreground whitespace-nowrap">
@@ -330,6 +410,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                     </div>
                   </div>
                 ))}
+                {/* Total footer */}
+                {totalExpenses !== null && (
+                  <p className="text-xs text-muted-foreground text-center pt-3 border-t border-muted mt-3">
+                    Total: {formatCurrency(totalExpenses, settlementCurrency)} across {nonSettlementCount} expense{nonSettlementCount !== 1 ? "s" : ""}
+                  </p>
+                )}
               </div>
             )}
           </CollapsibleContent>
