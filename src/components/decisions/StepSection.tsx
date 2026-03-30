@@ -17,6 +17,7 @@ type Props = {
   onSkip?: () => void;
   activeBorder?: boolean;
   collapsedSummary?: string;
+  isHighlighted?: boolean;
   children: React.ReactNode;
 };
 
