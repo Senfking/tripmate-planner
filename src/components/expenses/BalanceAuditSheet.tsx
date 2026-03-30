@@ -118,7 +118,7 @@ export function BalanceAuditSheet({
       onOpenChange={onOpenChange}
       title={`How ${displayName}'s balance was calculated`}
     >
-      <div className="space-y-3 pb-4 max-h-[70vh] overflow-y-auto">
+      <div className="divide-y divide-border/30 pb-4 max-h-[70vh] overflow-y-auto [&>*]:pt-3 [&>*:first-child]:pt-0">
         {/* Summary card */}
         <div className="rounded-lg bg-muted/60 p-3">
           <div className="flex justify-between text-sm py-1.5">
@@ -139,7 +139,7 @@ export function BalanceAuditSheet({
         </div>
 
         {/* What they paid */}
-        <div className="border-t border-border/30 pt-3">
+        <div>
           <button
             onClick={() => setShowPaidDetail((v) => !v)}
             className="flex w-full items-center justify-between py-0.5"
@@ -166,7 +166,7 @@ export function BalanceAuditSheet({
         </div>
 
         {/* Their share */}
-        <div className="border-t border-border/30 pt-3">
+        <div>
           <button
             onClick={() => setShowOwedDetail((v) => !v)}
             className="flex w-full items-center justify-between py-0.5"
@@ -194,7 +194,7 @@ export function BalanceAuditSheet({
 
         {/* Conversion footnote */}
         {audit.foreignCurrencies.length > 0 && (
-          <div className="text-[11px] text-muted-foreground space-y-0.5 pt-2 border-t border-border/30">
+          <div className="text-[11px] text-muted-foreground space-y-0.5">
             {audit.foreignCurrencies.map((cur) => (
               <p key={cur}>
                 {cur} converted {ratesDateStr ? `using rate from ${ratesDateStr}` : "at time of recording"}
