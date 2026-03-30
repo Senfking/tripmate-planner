@@ -31,6 +31,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     reactDest,
     addDateOption,
     voteDateOption,
+    deleteProposal,
   } = useProposals(tripId);
 
   const {
