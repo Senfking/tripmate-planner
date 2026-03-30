@@ -15,7 +15,19 @@ import {
   Plus,
   CalendarDays,
   Trophy,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { DateRangePicker } from "./DateRangePicker";
 import { validateRouteDate } from "./routeValidation";
 import type { Proposal, DateOption, DateVotes } from "@/hooks/useProposals";
