@@ -174,6 +174,7 @@ export function DecisionsFlow({
           onToggle={() => toggle("vibe")}
           activeBorder={isActive && !hasSubmittedVibe}
           collapsedSummary={vibeSummary}
+          isHighlighted={highlightTarget === "decisions-step-1"}
         >
           <VibeBoard
             tripId={tripId}
