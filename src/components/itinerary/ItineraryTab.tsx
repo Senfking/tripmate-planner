@@ -78,7 +78,6 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
     void syncLastSeen();
 
     return () => { active = false; };
-    };
   }, [tripId, user, isLoading, items]);
 
   // Compute all day dates from route stops + existing items
