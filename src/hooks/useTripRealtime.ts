@@ -60,6 +60,13 @@ const TOAST_MESSAGES: Record<string, string> = {
   votes: "cast a vote",
 };
 
+const DELETE_TOAST_MESSAGES: Record<string, string> = {
+  itinerary_items: "removed an activity",
+  attachments: "removed a booking",
+  expenses: "removed an expense",
+  trip_route_stops: "removed a stop",
+};
+
 const TOAST_TABLES = new Set(Object.keys(TOAST_MESSAGES));
 
 export function useTripRealtime(tripId: string | undefined) {
