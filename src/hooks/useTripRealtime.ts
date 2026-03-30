@@ -124,20 +124,30 @@ export function useTripRealtime(tripId: string | undefined) {
 
   const handleChange = useCallback(
     (table: string, payload: RealtimePostgresChangesPayload<any>) => {
-      const userId = payload.new && typeof payload.new === "object"
-        ? (payload.new as any).user_id || (payload.new as any).created_by || (payload.new as any).payer_id || (payload.new as any).confirmed_by
+      const newRecord = payload.new && typeof payload.new === "object" ? payload.new as any : null;
+      const oldRecord = payload.old && typeof payload.old === "object" ? payload.old as any : null;
+
+      const userId = newRecord
+        ? (newRecord.user_id || newRecord.created_by || newRecord.payer_id || newRecord.confirmed_by)
+        : oldRecord
+        ? (oldRecord.user_id || oldRecord.created_by || oldRecord.payer_id || oldRecord.confirmed_by)
         : null;
       const isOtherUser = userId && userId !== user?.id;
-      const recordId = payload.new && typeof payload.new === "object" ? (payload.new as any).id : null;
+      const recordId = newRecord?.id;
 
       // Track new inserts from other users for highlight
       if (payload.eventType === "INSERT" && isOtherUser && recordId) {
         addNewId(recordId);
       }
 
-      // Activity toast
+      // Activity toast for INSERTs
       if (payload.eventType === "INSERT" && isOtherUser && TOAST_TABLES.has(table) && userId) {
-        showActivityToast(table, userId);
+        showActivityToast(table, userId, "insert");
+      }
+
+      // Activity toast for DELETEs
+      if (payload.eventType === "DELETE" && isOtherUser && DELETE_TOAST_MESSAGES[table] && userId) {
+        showActivityToast(table, userId, "delete");
       }
 
       // Debounced query invalidation
