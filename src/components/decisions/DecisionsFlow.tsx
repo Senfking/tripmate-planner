@@ -85,6 +85,27 @@ export function DecisionsFlow({
     prevRouteLocked.current = routeLocked;
   }, [routeLocked]);
 
+  // Deep-link scroll from global Decisions tab
+  const didScroll = useRef(false);
+  useEffect(() => {
+    if (didScroll.current) return;
+    const scrollTo = searchParams.get("scrollTo");
+    if (!scrollTo) return;
+    didScroll.current = true;
+    if (scrollTo === "vibe") setExpanded((prev) => ({ ...prev, vibe: true }));
+    else if (scrollTo === "where") setExpanded((prev) => ({ ...prev, where: true }));
+    else if (scrollTo === "polls") setExpanded((prev) => ({ ...prev, prefs: true }));
+    setTimeout(() => {
+      const sectionId =
+        scrollTo === "vibe" ? "decisions-step-1" :
+        scrollTo === "where" ? "decisions-step-2" :
+        scrollTo === "polls" ? "decisions-step-3" : null;
+      if (sectionId) {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
+  }, [searchParams]);
+
   const toggle = (key: string) =>
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
