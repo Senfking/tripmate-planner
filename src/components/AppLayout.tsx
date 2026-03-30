@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { UserCircle } from "lucide-react";
 
 function OfflineBanner() {
@@ -77,9 +78,11 @@ export function AppLayout() {
 
           {/* Page content */}
           <main className="flex-1 pb-24 md:pb-0">
-            <div className="animate-fade-in">
-              <Outlet />
-            </div>
+            <PullToRefresh>
+              <div className="animate-fade-in">
+                <Outlet />
+              </div>
+            </PullToRefresh>
           </main>
         </div>
 
