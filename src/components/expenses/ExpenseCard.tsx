@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
-  ArrowLeftRight, Pencil, Trash2, MapPin,
+  ArrowLeftRight, Pencil, Trash2, MapPin, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { format } from "date-fns";
 
