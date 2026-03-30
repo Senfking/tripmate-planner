@@ -132,12 +132,13 @@ function StatusBadge({ info }: { info: ReturnType<typeof getTripStatus> | undefi
 
 /* ─── Trip Card ─── */
 function TripCard({ trip, isHero }: { trip: EnrichedTrip; isHero: boolean }) {
+  const statusInfo = trip.statusInfo ?? getTripStatus(trip.tentative_start_date, trip.tentative_end_date);
   const height = isHero ? "h-[220px]" : "h-[140px]";
   const radius = isHero ? "rounded-[20px]" : "rounded-[16px]";
   const titleSize = isHero ? "text-[22px]" : "text-[18px]";
 
   const heroLabel =
-    isHero && trip.statusInfo.status === "live"
+    isHero && statusInfo.status === "live"
       ? "Happening now"
       : isHero && (trip.statusInfo.status === "countdown" || trip.statusInfo.status === "upcoming")
         ? "Next trip"
