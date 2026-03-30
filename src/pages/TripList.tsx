@@ -354,6 +354,7 @@ export default function TripList() {
             src={DEFAULT_PHOTO}
             alt="Travel"
             className="h-full w-full object-cover"
+            onError={(e) => { e.currentTarget.src = DEFAULT_PHOTO; }}
           />
           <div
             className="absolute inset-0"
