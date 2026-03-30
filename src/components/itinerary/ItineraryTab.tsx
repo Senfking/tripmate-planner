@@ -46,8 +46,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
     let active = true;
 
     const syncLastSeen = async () => {
-      const now = new Date().toISOString();
-
+      // Step 1: Read last_seen_at BEFORE anything else
       const { data: row } = await supabase
         .from("trip_last_seen")
         .select("last_seen_at")
@@ -57,24 +56,25 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
 
       if (!active) return;
 
-      const lastSeen = row?.last_seen_at ?? null;
+      // First visit → epoch so ALL other-user items appear as "New"
+      const lastSeen = row?.last_seen_at ?? new Date(0).toISOString();
       console.log("[ItineraryTab] last_seen_at:", lastSeen);
 
-      const ids = lastSeen
-        ? items
-            .filter((item) => item.created_by !== user.id && item.created_at > lastSeen)
-            .map((item) => item.id)
-        : [];
+      // Step 2-3: Compare items against the fetched timestamp
+      const ids = items
+        .filter((item) => item.created_by !== user.id && item.created_at > lastSeen)
+        .map((item) => item.id);
 
       console.log("[ItineraryTab] new-since-last-visit count:", ids.length);
 
       setLastVisitItemIds(new Set(ids));
 
+      // Step 4: ONLY NOW upsert last_seen_at = now()
       await supabase.from("trip_last_seen").upsert(
         {
           trip_id: tripId,
           user_id: user.id,
-          last_seen_at: now,
+          last_seen_at: new Date().toISOString(),
         },
         { onConflict: "user_id,trip_id" }
       );
