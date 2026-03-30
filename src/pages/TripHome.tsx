@@ -14,7 +14,7 @@ export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-
+  useTripRealtime(tripId);
   const { data: trip, isLoading } = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async () => {
