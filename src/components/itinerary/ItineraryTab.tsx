@@ -34,57 +34,44 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
   const [newDayDate, setNewDayDate] = useState<string | null>(null);
   const [newDayFormOpen, setNewDayFormOpen] = useState(false);
   const [lastVisitItemIds, setLastVisitItemIds] = useState<Set<string>>(new Set());
-  // Stores the last_seen_at value fetched once at mount time
-  const prevLastSeenRef = useRef<string | null>(null);
-  const didSyncRef = useRef(false);
+  const [prevLastSeen, setPrevLastSeen] = useState<string | undefined>(undefined);
 
-  // Step 1: Fetch last_seen_at once on mount (independent of items loading)
+  // Effect A: fetch last_seen_at on mount
   useEffect(() => {
     if (!tripId || !user) return;
-
-    let active = true;
-    didSyncRef.current = false;
-    prevLastSeenRef.current = null;
+    setPrevLastSeen(undefined);
     setLastVisitItemIds(new Set());
 
-    const fetchLastSeen = async () => {
-      const { data: row } = await supabase
-        .from("trip_last_seen")
-        .select("last_seen_at")
-        .eq("trip_id", tripId)
-        .eq("user_id", user.id)
-        .maybeSingle();
+    supabase
+      .from("trip_last_seen")
+      .select("last_seen_at")
+      .eq("trip_id", tripId)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data: row }) => {
+        setPrevLastSeen(
+          row?.last_seen_at ?? new Date(0).toISOString()
+        );
+      });
+  }, [tripId, user?.id]);
 
-      if (!active) return;
-
-      // First visit → epoch so ALL other-user items appear as "New"
-      prevLastSeenRef.current = row?.last_seen_at ?? new Date(0).toISOString();
-      console.log("[ItineraryTab] last_seen_at:", prevLastSeenRef.current);
-    };
-
-    void fetchLastSeen();
-
-    return () => { active = false; };
-  }, [tripId, user]);
-
-  // Step 2-4: Once items are loaded AND we have prevLastSeen, compare & upsert
+  // Effect B: compare once both are ready
   useEffect(() => {
-    if (!tripId || !user || isLoading) return;
-    if (prevLastSeenRef.current === null) return; // last_seen fetch not done yet
-    if (didSyncRef.current) return; // already compared for this mount
-    didSyncRef.current = true;
+    if (prevLastSeen === undefined) return;
+    if (isLoading) return;
+    if (!tripId || !user) return;
 
-    const lastSeen = prevLastSeenRef.current;
-
-    const ids = items
-      .filter((item) => item.created_by !== user.id && item.created_at > lastSeen)
+    const newIds = items
+      .filter(
+        (item) =>
+          item.created_by !== user.id &&
+          item.created_at > prevLastSeen
+      )
       .map((item) => item.id);
 
-    console.log("[ItineraryTab] new-since-last-visit count:", ids.length);
-    setLastVisitItemIds(new Set(ids));
+    setLastVisitItemIds(new Set(newIds));
 
-    // Step 4: upsert AFTER comparison
-    void supabase.from("trip_last_seen").upsert(
+    supabase.from("trip_last_seen").upsert(
       {
         trip_id: tripId,
         user_id: user.id,
@@ -92,7 +79,10 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
       },
       { onConflict: "user_id,trip_id" }
     );
-  }, [tripId, user, isLoading, items]);
+
+    // Reset so new real-time items don't re-trigger this comparison
+    setPrevLastSeen(undefined);
+  }, [prevLastSeen, isLoading]);
 
   // Compute all day dates from route stops + existing items
   const allDays = useMemo(() => {
