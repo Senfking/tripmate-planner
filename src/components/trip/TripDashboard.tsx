@@ -342,7 +342,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         share_amount: Number(s.share_amount),
       })),
     }));
-    const balances = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
+    const { balances } = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
     const myBalance = balances.find((b) => b.userId === userId);
     if (!myBalance || Math.abs(myBalance.balance) < 0.01) {
       expensesBadge = { label: "Settled up", color: "green" };

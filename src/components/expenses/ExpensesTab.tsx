@@ -58,7 +58,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     [expenses, splits]
   );
 
-  const balances = useMemo(
+  const { balances, excludedCount } = useMemo(
     () => calcNetBalances(expensesWithSplits, settlementCurrency, settlementCurrency, rates, profileMap),
     [expensesWithSplits, settlementCurrency, rates, profileMap]
   );
