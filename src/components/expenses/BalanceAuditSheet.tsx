@@ -85,7 +85,7 @@ export function BalanceAuditSheet({
     return { paid, owed, totalPaid, totalOwed, netBalance, foreignCurrencies: [...foreignCurrencies] };
   }, [expenses, splits, userId, settlementCurrency, rates, profileMap]);
 
-  const ratesDateStr = ratesFetchedAt ? format(ratesFetchedAt, "d MMM yyyy") : "unknown date";
+  const ratesDateStr = ratesFetchedAt ? format(ratesFetchedAt, "d MMM yyyy") : null;
 
   const renderRow = (line: AuditLine, i: number, section: "paid" | "owed") => {
     const isForeign = line.originalCurrency !== settlementCurrency;
@@ -93,9 +93,9 @@ export function BalanceAuditSheet({
     const subLeft = [line.date, showPayer ? `paid by ${line.payer}` : null].filter(Boolean).join(" · ");
 
     return (
-      <div key={i} className={`py-2 px-2 ${i > 0 ? "border-b border-muted/30" : "border-b border-muted/30"}`}>
+      <div key={i} className={`py-2 ${i > 0 ? "border-t border-border/50" : ""}`}>
         <div className="flex items-start justify-between gap-2 text-xs">
-          <span className="line-clamp-2 leading-snug">{line.title}</span>
+          <span className="font-medium line-clamp-2 leading-snug">{line.title}</span>
           <span className="font-medium shrink-0">
             {formatCurrency(line.convertedAmount ?? line.originalAmount, settlementCurrency)}
           </span>
@@ -112,8 +112,6 @@ export function BalanceAuditSheet({
     );
   };
 
-  const netColor = audit.netBalance > 0.005 ? "bg-emerald-500" : audit.netBalance < -0.005 ? "bg-red-500" : "bg-muted-foreground";
-
   return (
     <ResponsiveModal
       open={open}
@@ -122,40 +120,31 @@ export function BalanceAuditSheet({
     >
       <div className="space-y-4 pb-4 max-h-[70vh] overflow-y-auto">
         {/* Summary card */}
-        <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: "#0D9488" }} />
-              {displayName} paid
-            </span>
+        <div className="rounded-lg bg-muted/40 p-3">
+          <div className="flex justify-between text-sm py-1.5">
+            <span>{displayName} paid</span>
             <span className="font-medium">{formatCurrency(audit.totalPaid, settlementCurrency)}</span>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: "#D97706" }} />
-              {displayName}'s total share
-            </span>
+          <div className="flex justify-between text-sm py-1.5 border-t border-border/50">
+            <span>Total share</span>
             <span className="font-medium">−{formatCurrency(audit.totalOwed, settlementCurrency)}</span>
           </div>
-          <div className="flex items-center justify-between text-sm font-bold pt-1.5 border-t border-muted">
-            <span className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full shrink-0 ${netColor}`} />
-              Net balance
-            </span>
+          <div className="flex justify-between text-sm font-bold py-1.5 border-t border-border/50">
+            <span>Net balance</span>
             <span className={audit.netBalance > 0.005 ? "text-emerald-600" : audit.netBalance < -0.005 ? "text-red-500" : ""}>
               {formatCurrency(Math.abs(audit.netBalance), settlementCurrency)}
-              {audit.netBalance > 0.005 ? " (owed)" : audit.netBalance < -0.005 ? " (owes)" : " (settled)"}
+              {audit.netBalance > 0.005 ? " owed" : audit.netBalance < -0.005 ? " owes" : " settled"}
             </span>
           </div>
         </div>
 
         {/* What they paid */}
-        <div>
+        <div className="border-t border-border/30 pt-3">
           <button
             onClick={() => setShowPaidDetail((v) => !v)}
-            className="flex w-full items-center justify-between border-l-[3px] border-primary pl-2 py-1"
+            className="flex w-full items-center justify-between py-0.5"
           >
-            <span className="text-[13px] font-bold text-foreground">
+            <span className="text-[13px] font-semibold text-foreground">
               What {displayName} paid ({audit.paid.length})
             </span>
             <span className="flex items-center gap-1.5">
@@ -166,9 +155,9 @@ export function BalanceAuditSheet({
             </span>
           </button>
           {showPaidDetail && (
-            <div className="mt-1.5">
+            <div className="mt-2">
               {audit.paid.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-2">No expenses paid</p>
+                <p className="text-xs text-muted-foreground italic">No expenses paid</p>
               ) : (
                 audit.paid.map((line, i) => renderRow(line, i, "paid"))
               )}
@@ -177,12 +166,12 @@ export function BalanceAuditSheet({
         </div>
 
         {/* Their share */}
-        <div>
+        <div className="border-t border-border/30 pt-3">
           <button
             onClick={() => setShowOwedDetail((v) => !v)}
-            className="flex w-full items-center justify-between border-l-[3px] border-primary pl-2 py-1"
+            className="flex w-full items-center justify-between py-0.5"
           >
-            <span className="text-[13px] font-bold text-foreground">
+            <span className="text-[13px] font-semibold text-foreground">
               {displayName}'s share ({audit.owed.length})
             </span>
             <span className="flex items-center gap-1.5">
@@ -193,9 +182,9 @@ export function BalanceAuditSheet({
             </span>
           </button>
           {showOwedDetail && (
-            <div className="mt-1.5">
+            <div className="mt-2">
               {audit.owed.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-2">No expense shares</p>
+                <p className="text-xs text-muted-foreground italic">No expense shares</p>
               ) : (
                 audit.owed.map((line, i) => renderRow(line, i, "owed"))
               )}
@@ -205,10 +194,11 @@ export function BalanceAuditSheet({
 
         {/* Conversion footnote */}
         {audit.foreignCurrencies.length > 0 && (
-          <div className="text-[11px] text-muted-foreground space-y-0.5 pt-2 border-t border-muted/40">
-            <p className="font-medium">Rates used for conversion:</p>
+          <div className="text-[11px] text-muted-foreground space-y-0.5 pt-2 border-t border-border/30">
             {audit.foreignCurrencies.map((cur) => (
-              <p key={cur}>{cur} → rate from {ratesDateStr}</p>
+              <p key={cur}>
+                {cur} converted {ratesDateStr ? `using rate from ${ratesDateStr}` : "at time of recording"}
+              </p>
             ))}
           </div>
         )}
