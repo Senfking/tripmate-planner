@@ -25,10 +25,16 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesError,
-    ratesStale, ratesEmpty, cachedCurrencyCodes,
+    ratesStale, ratesEmpty, ratesLoading, cachedCurrencyCodes,
     itineraryItems, isLoading, updateSettlementCurrency, addExpense,
     updateExpense, deleteExpense,
   } = useExpenses(tripId);
+
+  const allSameCurrency = useMemo(
+    () => expenses.every((e) => e.currency === settlementCurrency),
+    [expenses, settlementCurrency]
+  );
+  const canShowBalances = !ratesLoading || allSameCurrency || Object.keys(rates).length > 0;
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
