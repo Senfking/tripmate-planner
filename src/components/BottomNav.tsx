@@ -78,7 +78,7 @@ export function BottomNav() {
         }}
       >
 
-        <div className="flex items-end justify-between px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-1">
+        <div className="flex items-end justify-between px-3 pb-1.5 pt-1">
           {/* Left tabs */}
           {leftTabs.map((tab) => (
             <NavTab
