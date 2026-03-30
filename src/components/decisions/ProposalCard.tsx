@@ -56,6 +56,10 @@ type Props = {
   }) => void;
   isAddingToRoute: boolean;
   isAddingDate: boolean;
+  currentUserId?: string;
+  canDelete?: boolean;
+  onDeleteProposal?: (proposalId: string) => void;
+  isDeleting?: boolean;
 };
 
 const DATE_VOTE_BUTTONS = [
