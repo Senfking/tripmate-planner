@@ -59,10 +59,13 @@ export function ExpenseCard({
     ? itineraryItems.find((it) => it.id === expense.itinerary_item_id)
     : null;
 
-  // Personal share indicator
   const isSettlement = expense.category === "settlement";
   const isPayer = expense.payer_id === user?.id;
   const mySplit = user ? splits.find((s) => s.user_id === user.id) : null;
+  // "You lent" = total minus your own split (what others owe you)
+  const youLentAmount = isPayer && mySplit
+    ? expense.amount - mySplit.share_amount
+    : isPayer ? expense.amount : 0;
 
   const canModify =
     expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
