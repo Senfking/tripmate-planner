@@ -346,8 +346,12 @@ export default function TripList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64" style={{ backgroundColor: "#F1F5F9" }}>
-        <Loader2 className="h-8 w-8 animate-spin" style={{ color: "#0D9488" }} />
+      <div className="min-h-[calc(100vh-4rem)] pb-[120px] pt-6" style={{ backgroundColor: "#F1F5F9" }}>
+        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4">
+          <div className="h-7 w-28 rounded-lg bg-[rgba(13,148,136,0.06)] animate-pulse mb-1" />
+          <div className="h-[220px] rounded-[20px] bg-[rgba(13,148,136,0.06)] animate-pulse" />
+          <div className="h-[140px] rounded-[16px] bg-[rgba(13,148,136,0.06)] animate-pulse" />
+        </div>
       </div>
     );
   }

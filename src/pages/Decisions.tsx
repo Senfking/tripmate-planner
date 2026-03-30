@@ -16,8 +16,13 @@ const Decisions = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0D9488]" />
+      <div className="min-h-[calc(100vh-10rem)] bg-[#F1F5F9] px-4 pb-32 pt-6">
+        <div className="h-7 w-32 rounded-lg bg-[rgba(13,148,136,0.06)] animate-pulse mb-4" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[72px] rounded-[14px] bg-[rgba(13,148,136,0.06)] animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }

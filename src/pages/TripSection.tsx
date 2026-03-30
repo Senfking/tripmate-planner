@@ -128,8 +128,8 @@ export default function TripSection() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 z-40 bg-card border-b px-4 py-3">
+    <div className="flex flex-col min-h-screen animate-slide-in">
+      <header className="sticky top-0 z-40 bg-card border-b px-4 py-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}>
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigate(`/app/trips/${tripId}`)}

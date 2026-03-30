@@ -97,9 +97,9 @@ export default function TripHome() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: "#F1F5F9" }}>
+    <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
       {/* Header with shine overlay */}
-      <header className="sticky top-0 z-40 text-white p-4 pb-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0D9488, #0EA5E9)" }}>
+      <header className="sticky top-0 z-40 text-white p-4 pb-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0D9488, #0EA5E9)", paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
         {/* Diagonal shine */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)" }} />
         <button
