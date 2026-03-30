@@ -131,6 +131,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
           destination={destinationByDay[day]}
           members={members}
           attendance={attendance}
+          newItemIds={newItemIds}
           onCycleAttendance={(itemId) => cycleStatus.mutate(itemId)}
           onAddItem={handleAddItem}
           onUpdateItem={handleUpdateItem}
