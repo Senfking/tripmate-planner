@@ -44,7 +44,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
     lastSeenLoadedRef.current = scopeKey;
 
     let active = true;
-    let clearTimer: number | undefined;
+    
 
     const syncLastSeen = async () => {
       const now = new Date().toISOString();
@@ -68,12 +68,6 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
 
       setLastVisitItemIds(new Set(ids));
 
-      if (ids.length > 0) {
-        clearTimer = window.setTimeout(() => {
-          if (active) setLastVisitItemIds(new Set());
-        }, 4000);
-      }
-
       await tripLastSeenClient.from("trip_last_seen" as any).upsert({
         trip_id: tripId,
         user_id: user.id,
@@ -83,10 +77,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
 
     void syncLastSeen();
 
-    return () => {
-      active = false;
-      if (clearTimer) window.clearTimeout(clearTimer);
-    };
+    return () => { active = false; };
   }, [tripId, user, isLoading, items]);
 
   // Compute all day dates from route stops + existing items

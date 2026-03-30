@@ -64,25 +64,34 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
   const endStr = item.end_time ? item.end_time.slice(0, 5) : null;
   const timeDisplay = timeStr ? (endStr ? `${timeStr}–${endStr}` : timeStr) : null;
 
-  // Skeleton animation state machine: "skeleton" → "crossfade" → "glow" → "done"
-  const [animPhase, setAnimPhase] = useState<"skeleton" | "crossfade" | "glow" | "done">(
+  // Animation phases: "skeleton" → "fadein" → "pill" → "done"
+  const [animPhase, setAnimPhase] = useState<"skeleton" | "fadein" | "pill" | "done">(
     isNew ? "skeleton" : "done"
   );
+  const [pillVisible, setPillVisible] = useState(false);
   const animStarted = useRef(false);
 
   useEffect(() => {
     if (!isNew || animStarted.current) return;
     animStarted.current = true;
 
-    // skeleton → crossfade after 600ms
-    const t1 = setTimeout(() => setAnimPhase("crossfade"), 600);
-    // crossfade → glow after 800ms (600 + 200)
-    const t2 = setTimeout(() => setAnimPhase("glow"), 800);
-    // glow → done after 2300ms (800 + 1500)
-    const t3 = setTimeout(() => setAnimPhase("done"), 2300);
+    // skeleton → fadein after 600ms
+    const t1 = setTimeout(() => setAnimPhase("fadein"), 600);
+    // fadein → pill after 900ms (600 + 300ms fade)
+    const t2 = setTimeout(() => {
+      setAnimPhase("pill");
+      setPillVisible(true);
+    }, 900);
+    // pill fades after 8s
+    const t3 = setTimeout(() => setPillVisible(false), 8900);
+    const t4 = setTimeout(() => setAnimPhase("done"), 9400);
 
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [isNew]);
+
+  // For "new since last visit" items — show pill persistently
+  const showNewPill = pillVisible || Boolean(isNewSinceLastVisit);
+  const showLastVisitTint = Boolean(isNewSinceLastVisit);
 
   const isDraggable = !item.start_time;
   const {
@@ -102,16 +111,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
     transition,
   };
 
-  const showSkeleton = isNew && (animPhase === "skeleton" || animPhase === "crossfade");
-  const showGlowStripe = animPhase === "glow" || Boolean(isNewSinceLastVisit);
-
-  const skeletonStyle = {
-    background: "linear-gradient(120deg, hsl(var(--primary-foreground) / 0.06) 0%, hsl(var(--primary) / 0.18) 40%, hsl(var(--primary-foreground) / 0.12) 55%, hsl(var(--primary) / 0.08) 100%)",
-    backgroundSize: "300% 300%",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    border: "1px solid hsl(var(--primary) / 0.25)",
-  };
+  const showSkeleton = isNew && animPhase === "skeleton";
 
   const cardContent = (
     <>
@@ -237,38 +237,48 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         isDragging && "z-10",
       )}
     >
-      {showGlowStripe ? (
-        <div
+      {/* "New" pill badge */}
+      {showNewPill && (
+        <span
           className={cn(
-            "pointer-events-none absolute inset-y-0 left-0 z-20 w-[3px] rounded-l-lg bg-primary",
-            animPhase === "glow" && "animate-glow-stripe"
+            "absolute top-2 right-2 z-30 text-[10px] font-semibold text-white px-[7px] py-[2px] rounded-[10px]",
+            !pillVisible && isNewSinceLastVisit && "opacity-100",
+            pillVisible && animPhase === "done" && !isNewSinceLastVisit && "animate-pill-fade-out",
           )}
-        />
-      ) : null}
+          style={{ backgroundColor: "#0D9488" }}
+        >
+          New
+        </span>
+      )}
 
-      <div
-        className={cn(
-          "relative z-10 rounded-lg border bg-card p-3 space-y-2 transition-[opacity,box-shadow] duration-200",
-          isDragging && "opacity-50 ring-2 ring-primary/30",
-          overlapTitles?.length && "border-l-[3px] border-l-amber-400",
-          animPhase === "skeleton" && "opacity-0",
-          animPhase === "crossfade" && "animate-crossfade-in",
-          animPhase === "glow" && "animate-realtime-flash",
-        )}
-      >
-        {cardContent}
-      </div>
-
-      {showSkeleton ? (
+      {/* Skeleton placeholder */}
+      {showSkeleton && (
         <div
           aria-hidden
-          style={skeletonStyle}
-          className={cn(
-            "pointer-events-none absolute inset-0 z-20 rounded-lg animate-shimmer-diag transition-opacity duration-200",
-            animPhase === "crossfade" ? "opacity-0" : "opacity-100"
-          )}
+          className="rounded-xl animate-calm-pulse"
+          style={{
+            height: "100px",
+            background: "rgba(13, 148, 136, 0.06)",
+            border: "1px solid rgba(13, 148, 136, 0.15)",
+            borderRadius: "12px",
+          }}
         />
-      ) : null}
+      )}
+
+      {/* Real card — hidden during skeleton, fades in after */}
+      {!showSkeleton && (
+        <div
+          className={cn(
+            "rounded-lg border bg-card p-3 space-y-2 transition-colors duration-200",
+            isDragging && "opacity-50 ring-2 ring-primary/30",
+            overlapTitles?.length && "border-l-[3px] border-l-amber-400",
+            animPhase === "fadein" && "animate-fade-in-card",
+          )}
+          style={showLastVisitTint ? { backgroundColor: "rgba(13, 148, 136, 0.04)" } : undefined}
+        >
+          {cardContent}
+        </div>
+      )}
     </div>
   );
 }
