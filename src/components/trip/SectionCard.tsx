@@ -25,7 +25,7 @@ export function SectionCard({ icon: Icon, title, summary, summaryColor, subline,
       onClick={() => navigate(to)}
       className="relative w-full text-left overflow-hidden transition-transform duration-150 ease-out active:scale-[0.98]"
       style={{
-        height: 110,
+        minHeight: 110,
         borderRadius: 16,
         boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
       }}
