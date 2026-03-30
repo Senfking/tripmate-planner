@@ -219,7 +219,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           Exchange rates may be outdated
         </div>
       )}
-      {excludedCount > 0 && !allSameCurrency && (
+      {excludedCount > 0 && !allSameCurrency && ratesEmpty && (
         <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-700">
           <Info className="h-4 w-4 shrink-0" />
           {excludedCount} expense{excludedCount > 1 ? "s" : ""} in other currencies excluded from balances — rates unavailable

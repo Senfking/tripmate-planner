@@ -199,6 +199,8 @@ export function useExpenses(tripId: string) {
     (async () => {
       try {
         await supabase.functions.invoke("refresh-exchange-rates");
+        // Give the edge function a moment to write to the DB before re-reading
+        await new Promise((r) => setTimeout(r, 2000));
         await qc.invalidateQueries({ queryKey: ["exchange-rates"] });
         await qc.invalidateQueries({ queryKey: ["cached-currency-codes"] });
       } catch {
