@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { UserCircle } from "lucide-react";
 
 function OfflineBanner() {
