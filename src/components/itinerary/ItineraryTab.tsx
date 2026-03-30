@@ -77,9 +77,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
 
     void syncLastSeen();
 
-    return () => {
-      active = false;
-      if (clearTimer) window.clearTimeout(clearTimer);
+    return () => { active = false; };
     };
   }, [tripId, user, isLoading, items]);
 
