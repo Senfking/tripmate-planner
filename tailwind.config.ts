@@ -80,10 +80,15 @@ export default {
             height: "0",
           },
         },
+        "realtime-flash": {
+          "0%": { backgroundColor: "rgba(13, 148, 136, 0.15)" },
+          "100%": { backgroundColor: "transparent" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "realtime-flash": "realtime-flash 1.5s ease-out forwards",
       },
     },
   },

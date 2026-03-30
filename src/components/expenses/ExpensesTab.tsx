@@ -18,9 +18,10 @@ import { toast } from "sonner";
 interface Props {
   tripId: string;
   myRole?: string;
+  newItemIds?: Set<string>;
 }
 
-export function ExpensesTab({ tripId, myRole }: Props) {
+export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesError,
@@ -302,6 +303,7 @@ export function ExpensesTab({ tripId, myRole }: Props) {
                           baseCurrency={settlementCurrency}
                           rates={rates}
                           itineraryItems={itineraryItems}
+                          isNew={newItemIds?.has(exp.id)}
                           onEdit={(e) => { setEditingExpense(e); setFormOpen(true); }}
                           onDelete={(id) => deleteExpense.mutate(id)}
                         />

@@ -8,6 +8,7 @@ import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
 import { ExpensesTab } from "@/components/expenses/ExpensesTab";
 import { AdminTab } from "@/components/admin/AdminTab";
+import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
 
 const SECTION_TITLES: Record<string, string> = {
   decisions: "Decisions",
@@ -17,10 +18,26 @@ const SECTION_TITLES: Record<string, string> = {
   admin: "Admin",
 };
 
+function LiveIndicator({ status }: { status: ConnectionStatus }) {
+  const config = {
+    connected: { color: "bg-emerald-500", pulse: true, label: "Live" },
+    reconnecting: { color: "bg-amber-500", pulse: false, label: "Reconnecting…" },
+    disconnected: { color: "bg-muted-foreground/50", pulse: false, label: "Offline" },
+  }[status];
+
+  return (
+    <div className="flex items-center gap-1.5 ml-auto">
+      <span className={`h-1.5 w-1.5 rounded-full ${config.color} ${config.pulse ? "animate-pulse" : ""}`} />
+      <span className="text-[11px] text-muted-foreground">{config.label}</span>
+    </div>
+  );
+}
+
 export default function TripSection() {
   const { tripId, section } = useParams<{ tripId: string; section: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { connectionStatus, newItemIds } = useTripRealtime(tripId);
 
   const { data: trip, isLoading } = useQuery({
     queryKey: ["trip", tripId],
@@ -98,11 +115,11 @@ export default function TripSection() {
           />
         );
       case "itinerary":
-        return <ItineraryTab tripId={trip.id} myRole={myRole} />;
+        return <ItineraryTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
       case "bookings":
-        return <BookingsTab tripId={trip.id} myRole={myRole} />;
+        return <BookingsTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
       case "expenses":
-        return <ExpensesTab tripId={trip.id} myRole={myRole} />;
+        return <ExpensesTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
       case "admin":
         return <AdminTab tripId={trip.id} myRole={myRole} tripName={trip.name} />;
       default:
@@ -113,14 +130,17 @@ export default function TripSection() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="sticky top-0 z-40 bg-card border-b px-4 py-3">
-        <button
-          onClick={() => navigate(`/app/trips/${tripId}`)}
-          className="flex items-center gap-1 text-muted-foreground mb-1 hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm">{trip.name}</span>
-        </button>
-        <h1 className="text-lg font-bold text-foreground">{SECTION_TITLES[section]}</h1>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}`)}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm">{trip.name}</span>
+          </button>
+          <LiveIndicator status={connectionStatus} />
+        </div>
+        <h1 className="text-lg font-bold text-foreground mt-1">{SECTION_TITLES[section]}</h1>
       </header>
       <div className="flex-1 px-4 py-4">{renderContent()}</div>
     </div>

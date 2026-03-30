@@ -22,9 +22,10 @@ function timeToMinutes(t: string): number {
 interface Props {
   tripId: string;
   myRole?: string;
+  newItemIds?: Set<string>;
 }
 
-export function ItineraryTab({ tripId, myRole }: Props) {
+export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
   const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItinerary(tripId);
   const { stops } = useRouteStops(tripId);
   const { attendance, members, cycleStatus } = useItineraryAttendance(tripId);
@@ -130,6 +131,7 @@ export function ItineraryTab({ tripId, myRole }: Props) {
           destination={destinationByDay[day]}
           members={members}
           attendance={attendance}
+          newItemIds={newItemIds}
           onCycleAttendance={(itemId) => cycleStatus.mutate(itemId)}
           onAddItem={handleAddItem}
           onUpdateItem={handleUpdateItem}

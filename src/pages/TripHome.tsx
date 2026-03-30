@@ -8,12 +8,13 @@ import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { TripOverviewHero } from "@/components/trip/TripOverviewHero";
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { format } from "date-fns";
+import { useTripRealtime } from "@/hooks/useTripRealtime";
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-
+  useTripRealtime(tripId);
   const { data: trip, isLoading } = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async () => {

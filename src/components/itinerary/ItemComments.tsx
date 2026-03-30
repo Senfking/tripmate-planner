@@ -10,9 +10,10 @@ import { formatDistanceToNow } from "date-fns";
 interface Props {
   tripId: string;
   itemId: string;
+  newCommentIds?: Set<string>;
 }
 
-export function ItemComments({ tripId, itemId }: Props) {
+export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
   const { user } = useAuth();
   const { comments, postComment, deleteComment } = useItemComments(tripId, itemId);
   const [open, setOpen] = useState(false);
@@ -36,7 +37,7 @@ export function ItemComments({ tripId, itemId }: Props) {
           <p className="text-xs text-muted-foreground">No comments yet.</p>
         )}
         {comments.map((c) => (
-          <div key={c.id} className="text-sm space-y-0.5">
+          <div key={c.id} className={`text-sm space-y-0.5 ${newCommentIds?.has(c.id) ? "animate-realtime-flash" : ""}`}>
             <div className="flex items-center justify-between">
               <span className="font-medium text-xs">{c.display_name || "Member"}</span>
               <div className="flex items-center gap-2">

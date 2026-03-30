@@ -34,6 +34,7 @@ const SECTIONS: { type: string; label: string; icon: React.ElementType }[] = [
 interface Props {
   tripId: string;
   myRole: string | undefined;
+  newItemIds?: Set<string>;
 }
 
 function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
@@ -45,7 +46,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
   });
 }
 
-export function BookingsTab({ tripId, myRole }: Props) {
+export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
   const [mode, setMode] = useState<"none" | "upload" | "link">("none");
@@ -108,6 +109,7 @@ export function BookingsTab({ tripId, myRole }: Props) {
       isMine={a.created_by === user?.id}
       isExtracting={extractingIds.has(a.id)}
       isFetching={fetchingIds.has(a.id)}
+      isNew={newItemIds?.has(a.id)}
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
       onUploadPrompt={() => setMode("upload")}

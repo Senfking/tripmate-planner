@@ -48,13 +48,14 @@ interface Props {
   isMine?: boolean;
   isExtracting?: boolean;
   isFetching?: boolean;
+  isNew?: boolean;
   onOpen: () => void;
   onDelete: () => void;
   onUploadPrompt?: () => void;
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
-export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, isFetching, onOpen, onDelete, onUploadPrompt, getSignedUrl }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, isFetching, isNew, onOpen, onDelete, onUploadPrompt, getSignedUrl }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -118,7 +119,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   return (
     <>
       <div
-        className="overflow-hidden rounded-xl border bg-card shadow-sm transition-all cursor-pointer"
+        className={`overflow-hidden rounded-xl border bg-card shadow-sm transition-all cursor-pointer ${isNew ? "animate-realtime-flash" : ""}`}
         onClick={() => setExpanded((p) => !p)}
       >
         {/* Compact row — always visible */}

@@ -47,12 +47,13 @@ interface Props {
   attendance: AttendanceRecord[];
   activeId: string | null;
   overlapTitles?: string[];
+  isNew?: boolean;
   onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, overlapTitles, onCycleAttendance, onEdit, onDelete }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, overlapTitles, isNew, onCycleAttendance, onEdit, onDelete }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -88,6 +89,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         "rounded-lg border bg-card p-3 space-y-2 transition-shadow",
         isDragging && "opacity-50 ring-2 ring-primary/30 z-10",
         overlapTitles?.length && "border-l-[3px] border-l-amber-400",
+        isNew && "animate-realtime-flash",
       )}
     >
       <div className="flex items-start gap-2">

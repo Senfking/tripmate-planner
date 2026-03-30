@@ -28,13 +28,14 @@ interface Props {
   baseCurrency: string;
   rates: Rates;
   itineraryItems: { id: string; title: string; day_date: string }[];
+  isNew?: boolean;
   onEdit: (expense: ExpenseRow) => void;
   onDelete: (id: string) => void;
 }
 
 export function ExpenseCard({
   expense, splits, members, myRole, settlementCurrency,
-  baseCurrency, rates, itineraryItems, onEdit, onDelete,
+  baseCurrency, rates, itineraryItems, isNew, onEdit, onDelete,
 }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
@@ -55,7 +56,7 @@ export function ExpenseCard({
     expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden">
+    <div className={`rounded-xl border bg-card overflow-hidden ${isNew ? "animate-realtime-flash" : ""}`}>
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full text-left p-3 flex items-start gap-3"
