@@ -66,7 +66,7 @@ export function BottomNav() {
   const pendingCount = data?.pendingCount ?? 0;
 
   return (
-    <nav className="fixed inset-x-4 bottom-4 z-50 bg-transparent md:hidden">
+    <nav className="fixed inset-x-4 z-50 bg-transparent md:hidden" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}>
       <div
         className="relative overflow-hidden rounded-[28px]"
         style={{
@@ -78,7 +78,7 @@ export function BottomNav() {
         }}
       >
 
-        <div className="flex items-end justify-between px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-1">
+        <div className="flex items-end justify-between px-3 pb-1.5 pt-1">
           {/* Left tabs */}
           {leftTabs.map((tab) => (
             <NavTab
