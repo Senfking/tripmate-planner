@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
