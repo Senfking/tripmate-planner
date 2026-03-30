@@ -150,55 +150,60 @@ export function DecisionsFlow({
     <div className="space-y-3">
       {/* Step 1: Vibe Board */}
       <div id="decisions-step-1">
-      <StepSection
-        stepNumber={1}
-        title="Vibe Board"
-        statusText={vibeStatus.text}
-        statusVariant={vibeStatus.variant}
-        isExpanded={expanded.vibe}
-        onToggle={() => toggle("vibe")}
-        activeBorder={isActive && !hasSubmittedVibe}
-        collapsedSummary={vibeSummary}
-      >
-        <VibeBoard
-          tripId={tripId}
-          myRole={myRole}
-          isActive={isActive}
-          isLocked={vibeLocked}
-          memberCount={memberCount}
-        />
-      </StepSection>
+        <StepSection
+          stepNumber={1}
+          title="Vibe Board"
+          statusText={vibeStatus.text}
+          statusVariant={vibeStatus.variant}
+          isExpanded={expanded.vibe}
+          onToggle={() => toggle("vibe")}
+          activeBorder={isActive && !hasSubmittedVibe}
+          collapsedSummary={vibeSummary}
+        >
+          <VibeBoard
+            tripId={tripId}
+            myRole={myRole}
+            isActive={isActive}
+            isLocked={vibeLocked}
+            memberCount={memberCount}
+          />
+        </StepSection>
+      </div>
 
       {/* Step 2: Where & When */}
-      <StepSection
-        stepNumber={2}
-        title="Where & When"
-        statusText={whereStatus.text}
-        statusVariant={whereStatus.variant}
-        isExpanded={expanded.where}
-        onToggle={() => toggle("where")}
-        isLocked={!whereUnlocked}
-        lockMessage={`Waiting for ${membersNeeded} more member${membersNeeded !== 1 ? "s" : ""} to share their vibe`}
-        onSkip={canManage ? () => setManuallySkipped(true) : undefined}
-        activeBorder={whereUnlocked && !routeLocked}
-        collapsedSummary={whereSummary}
-      >
-        <WhereWhenSection tripId={tripId} myRole={myRole} isRouteLocked={routeLocked} />
-      </StepSection>
+      <div id="decisions-step-2">
+        <StepSection
+          stepNumber={2}
+          title="Where & When"
+          statusText={whereStatus.text}
+          statusVariant={whereStatus.variant}
+          isExpanded={expanded.where}
+          onToggle={() => toggle("where")}
+          isLocked={!whereUnlocked}
+          lockMessage={`Waiting for ${membersNeeded} more member${membersNeeded !== 1 ? "s" : ""} to share their vibe`}
+          onSkip={canManage ? () => setManuallySkipped(true) : undefined}
+          activeBorder={whereUnlocked && !routeLocked}
+          collapsedSummary={whereSummary}
+        >
+          <WhereWhenSection tripId={tripId} myRole={myRole} isRouteLocked={routeLocked} />
+        </StepSection>
+      </div>
 
       {/* Step 3: Preferences */}
-      <StepSection
-        stepNumber={3}
-        title="Preferences"
-        subtitle="Optional"
-        statusText={prefsStatus.text}
-        statusVariant={prefsStatus.variant}
-        isExpanded={expanded.prefs}
-        onToggle={() => toggle("prefs")}
-        collapsedSummary={undefined}
-      >
-        <PreferencesContent tripId={tripId} myRole={myRole} />
-      </StepSection>
+      <div id="decisions-step-3">
+        <StepSection
+          stepNumber={3}
+          title="Preferences"
+          subtitle="Optional"
+          statusText={prefsStatus.text}
+          statusVariant={prefsStatus.variant}
+          isExpanded={expanded.prefs}
+          onToggle={() => toggle("prefs")}
+          collapsedSummary={undefined}
+        >
+          <PreferencesContent tripId={tripId} myRole={myRole} />
+        </StepSection>
+      </div>
     </div>
   );
 }
