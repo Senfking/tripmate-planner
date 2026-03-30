@@ -17,17 +17,7 @@ import {
   Trophy,
   Trash2,
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { DateRangePicker } from "./DateRangePicker";
 import { validateRouteDate } from "./routeValidation";
 import type { Proposal, DateOption, DateVotes } from "@/hooks/useProposals";
@@ -114,6 +104,7 @@ export function ProposalCard({
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
   const isFrozen = isRouteLocked;
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [datesExpanded, setDatesExpanded] = useState(false);
   const [showDateForm, setShowDateForm] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -198,34 +189,13 @@ export function ProposalCard({
           </Badge>
         )}
         {canDelete && !isFrozen && onDeleteProposal && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button
-                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                aria-label="Delete suggestion"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove {proposal.destination} suggestion?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will also remove any date options and votes on this card.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => onDeleteProposal(proposal.id)}
-                  disabled={isDeleting}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {isDeleting ? "Removing…" : "Remove"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            aria-label="Delete suggestion"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         )}
       </div>
 
@@ -485,6 +455,39 @@ export function ProposalCard({
             </Button>
           </div>
         </div>
+      )}
+      {/* Delete confirmation modal/drawer */}
+      {canDelete && onDeleteProposal && (
+        <ResponsiveModal
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title={`Remove ${proposal.destination} suggestion?`}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will also remove any date options and votes on this card.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => {
+                  onDeleteProposal(proposal.id);
+                  setDeleteOpen(false);
+                }}
+                disabled={isDeleting}
+                className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? "Removing…" : "Remove"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteOpen(false)}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </ResponsiveModal>
       )}
     </div>
   );
