@@ -59,8 +59,8 @@ export function SectionCard({ icon: Icon, title, summary, summaryColor, subline,
             )}
           </div>
           <p
-            className="text-[13px] text-white mt-1 truncate"
-            style={{ opacity: 0.75, letterSpacing: "0.01em" }}
+            className="text-[13px] mt-1 truncate"
+            style={{ color: summaryColor ?? "rgba(255,255,255,0.75)", letterSpacing: "0.01em" }}
           >
             {summary}
           </p>

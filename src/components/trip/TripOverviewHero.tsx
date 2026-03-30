@@ -67,7 +67,7 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
     const days = Math.ceil(
       (new Date(last.end_date).getTime() - new Date(first.start_date).getTime()) / (1000 * 60 * 60 * 24)
     );
-    statusLine = `🗺️ ${stops.length} stop${stops.length > 1 ? "s" : ""} · ${format(new Date(first.start_date), "MMM d")} – ${format(new Date(last.end_date), "MMM d, yyyy")}`;
+    statusLine = `${stops.length} stop${stops.length > 1 ? "s" : ""} · ${format(new Date(first.start_date), "MMM d")} – ${format(new Date(last.end_date), "MMM d")}`;
     statusSub = `${days} day${days !== 1 ? "s" : ""}`;
   } else if (startDate || endDate) {
     const parts: string[] = [];

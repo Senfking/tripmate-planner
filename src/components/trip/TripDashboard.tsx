@@ -345,6 +345,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         icon={Wallet}
         title="Expenses"
         summary={expensesSummary}
+        summaryColor={expensesSummaryColor}
         to={`/app/trips/${tripId}/expenses`}
         imageUrl="https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?w=800&q=80"
       />
