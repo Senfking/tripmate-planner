@@ -173,7 +173,7 @@ export function useExpenses(tripId: string) {
   const rates = ratesQuery.data?.rates || {};
   const ratesFetchedAt = ratesQuery.data?.fetchedAt || null;
   const ratesStale = ratesFetchedAt
-    ? Date.now() - ratesFetchedAt.getTime() > 25 * 60 * 60 * 1000
+    ? Date.now() - ratesFetchedAt.getTime() > 12 * 60 * 60 * 1000
     : false;
   const ratesEmpty = Object.keys(rates).length === 0 && !ratesQuery.isLoading;
 
