@@ -34,8 +34,13 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     setError(null);
     setGoogleLoading(true);
+
+    const callbackUrl = redirectTo
+      ? `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`
+      : `${window.location.origin}/auth/callback`;
+
     const { error: err } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: callbackUrl,
     });
     setGoogleLoading(false);
     if (err) setError(friendlyError(String(err)));

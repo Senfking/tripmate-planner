@@ -19,6 +19,7 @@ import More from "./pages/More";
 import InviteRedeem from "./pages/InviteRedeem";
 import JoinByCode from "./pages/JoinByCode";
 import ShareView from "./pages/ShareView";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/i/:token" element={<InviteRedeem />} />
             <Route path="/join" element={<JoinByCode />} />
             <Route path="/join/:code" element={<JoinByCode />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
