@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
-  ArrowLeftRight, Pencil, Trash2, MapPin, ArrowUp, ArrowDown,
+  ArrowLeftRight, Pencil, Trash2, MapPin,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -59,10 +59,13 @@ export function ExpenseCard({
     ? itineraryItems.find((it) => it.id === expense.itinerary_item_id)
     : null;
 
-  // Personal share indicator
   const isSettlement = expense.category === "settlement";
   const isPayer = expense.payer_id === user?.id;
   const mySplit = user ? splits.find((s) => s.user_id === user.id) : null;
+  // "You lent" = total minus your own split (what others owe you)
+  const youLentAmount = isPayer && mySplit
+    ? expense.amount - mySplit.share_amount
+    : isPayer ? expense.amount : 0;
 
   const canModify =
     expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
@@ -87,12 +90,29 @@ export function ExpenseCard({
           <div className="flex items-start justify-between gap-2">
             <p className="font-semibold text-[15px] leading-snug line-clamp-2">{expense.title}</p>
             <div className="text-right shrink-0">
-              <p className="font-bold text-[15px]">
-                {formatCurrency(expense.amount, expense.currency)}
-              </p>
-              {isDifferentCurrency && convertedAmount != null && (
-                <p className="text-xs text-muted-foreground">
-                  ≈ {formatCurrency(convertedAmount, settlementCurrency)}
+              {!isSettlement && isPayer && youLentAmount > 0 ? (
+                <>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
+                  <p className="text-[17px] font-bold" style={{ color: "#0D9488" }}>
+                    {formatCurrency(youLentAmount, expense.currency)}
+                  </p>
+                  {youLentAmount !== expense.amount && (
+                    <p className="text-[11px] text-muted-foreground">total {formatCurrency(expense.amount, expense.currency)}</p>
+                  )}
+                </>
+              ) : !isSettlement && !isPayer && mySplit ? (
+                <>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#D97706" }}>you owe</p>
+                  <p className="text-[17px] font-bold">
+                    {formatCurrency(mySplit.share_amount, expense.currency)}
+                  </p>
+                  {mySplit.share_amount !== expense.amount && (
+                    <p className="text-[11px] text-muted-foreground">total {formatCurrency(expense.amount, expense.currency)}</p>
+                  )}
+                </>
+              ) : (
+                <p className="font-bold text-[15px]">
+                  {formatCurrency(expense.amount, expense.currency)}
                 </p>
               )}
             </div>
@@ -102,18 +122,6 @@ export function ExpenseCard({
             <span className="text-xs text-muted-foreground">
               {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
             </span>
-            {!isSettlement && isPayer && (
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#0D9488]/10 text-[#0D9488]">
-                <ArrowUp className="h-3 w-3" />
-                You paid
-              </span>
-            )}
-            {!isSettlement && !isPayer && mySplit && (
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-                <ArrowDown className="h-3 w-3" />
-                Your share {formatCurrency(mySplit.share_amount, expense.currency)}
-              </span>
-            )}
             {linkedItem && (
               <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 gap-0.5 font-normal">
                 <MapPin className="h-2.5 w-2.5" />
