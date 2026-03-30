@@ -11,7 +11,7 @@ import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface Props {
