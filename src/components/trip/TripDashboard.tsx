@@ -316,7 +316,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
   const adminSummary = `${memberCount ?? "…"} members · ${roleLabel}`;
 
   return (
-    <div className="flex flex-col gap-2.5 px-4 pb-8">
+    <div className="flex flex-col gap-2.5 px-4 pb-12">
       <SectionCard
         icon={Compass}
         title="Decisions"
