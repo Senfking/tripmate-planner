@@ -164,7 +164,7 @@ function TripCard({ trip, isHero }: { trip: EnrichedTrip; isHero: boolean }) {
 
         {/* Status badge — top right */}
         <div className="absolute right-3 top-3">
-          <StatusBadge info={trip.statusInfo} />
+          <StatusBadge info={statusInfo} />
         </div>
 
         {/* Content — bottom left */}
