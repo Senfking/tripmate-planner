@@ -47,7 +47,7 @@ export function SectionCard({ icon: Icon, title, summary, summaryColor, subline,
       />
 
       {/* Content */}
-      <div className="relative h-full flex items-center px-4">
+      <div className="relative h-full flex items-center px-4 py-[18px]">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <Icon size={18} className="shrink-0" style={{ color: "rgba(255,255,255,0.7)" }} />
