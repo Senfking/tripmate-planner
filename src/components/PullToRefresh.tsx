@@ -2,55 +2,83 @@ import { useRef, useState, useCallback, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
-const THRESHOLD = 60;
-const MAX_PULL = 100;
+const THRESHOLD = 64;
+const MAX_PULL = 120;
 
 export function PullToRefresh({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const startY = useRef(0);
-  const pulling = useRef(false);
+  const pullRef = useRef(0);
+  const startYRef = useRef(0);
+  const activeRef = useRef(false);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+
+  const updateIndicator = useCallback((distance: number) => {
+    const el = indicatorRef.current;
+    if (!el) return;
+    const progress = Math.min(distance / THRESHOLD, 1);
+    const scale = 0.4 + progress * 0.6;
+    const rotation = distance * 4;
+    el.style.transform = `translateY(${distance - 40}px) scale(${scale}) rotate(${rotation}deg)`;
+    el.style.opacity = String(progress);
+  }, []);
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (refreshing) return;
-    // Only activate when scrolled to top
-    if (window.scrollY > 0) return;
-    startY.current = e.touches[0].clientY;
-    pulling.current = true;
+    if (refreshing || window.scrollY > 0) return;
+    startYRef.current = e.touches[0].clientY;
+    activeRef.current = true;
   }, [refreshing]);
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!pulling.current || refreshing) return;
-    const delta = e.touches[0].clientY - startY.current;
+    if (!activeRef.current || refreshing) return;
+    const delta = e.touches[0].clientY - startYRef.current;
     if (delta < 0) {
-      pulling.current = false;
-      setPullDistance(0);
+      activeRef.current = false;
+      pullRef.current = 0;
+      updateIndicator(0);
       return;
     }
-    // Rubber-band effect
-    const distance = Math.min(delta * 0.5, MAX_PULL);
-    setPullDistance(distance);
-  }, [refreshing]);
+    // Rubber-band damping
+    const distance = Math.min(delta * 0.4, MAX_PULL);
+    pullRef.current = distance;
+    updateIndicator(distance);
+  }, [refreshing, updateIndicator]);
 
   const onTouchEnd = useCallback(async () => {
-    if (!pulling.current && pullDistance === 0) return;
-    pulling.current = false;
+    if (!activeRef.current && pullRef.current === 0) return;
+    const distance = pullRef.current;
+    activeRef.current = false;
+    pullRef.current = 0;
 
-    if (pullDistance >= THRESHOLD) {
+    if (distance >= THRESHOLD) {
       setRefreshing(true);
-      setPullDistance(THRESHOLD);
+      // Animate to resting position
+      const el = indicatorRef.current;
+      if (el) {
+        el.style.transition = "transform 200ms ease-out";
+        el.style.transform = "translateY(20px) scale(1) rotate(0deg)";
+        el.style.opacity = "1";
+      }
       await queryClient.invalidateQueries();
-      // Small delay so spinner is visible
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 300));
       setRefreshing(false);
+      if (el) {
+        el.style.transition = "all 200ms ease-out";
+        el.style.transform = "translateY(-40px) scale(0.4) rotate(0deg)";
+        el.style.opacity = "0";
+        setTimeout(() => { el.style.transition = "none"; }, 200);
+      }
+    } else {
+      // Snap back
+      const el = indicatorRef.current;
+      if (el) {
+        el.style.transition = "all 200ms ease-out";
+        el.style.transform = "translateY(-40px) scale(0.4) rotate(0deg)";
+        el.style.opacity = "0";
+        setTimeout(() => { el.style.transition = "none"; }, 200);
+      }
     }
-    setPullDistance(0);
-  }, [pullDistance, queryClient]);
-
-  const showIndicator = pullDistance > 0 || refreshing;
-  const indicatorOpacity = refreshing ? 1 : Math.min(pullDistance / THRESHOLD, 1);
-  const indicatorScale = refreshing ? 1 : 0.5 + Math.min(pullDistance / THRESHOLD, 1) * 0.5;
+  }, [queryClient]);
 
   return (
     <div
@@ -59,28 +87,28 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
       onTouchEnd={onTouchEnd}
       className="relative"
     >
-      {/* Pull indicator */}
-      {showIndicator && (
-        <div
-          className="flex items-center justify-center pointer-events-none"
-          style={{
-            height: refreshing ? THRESHOLD : pullDistance,
-            transition: refreshing ? "none" : pulling.current ? "none" : "height 200ms ease-out",
-          }}
-        >
+      {/* Floating spinner overlay — doesn't push content */}
+      <div
+        ref={indicatorRef}
+        className="absolute left-1/2 z-50 -ml-5 pointer-events-none"
+        style={{
+          top: 0,
+          width: 40,
+          height: 40,
+          opacity: 0,
+          transform: "translateY(-40px) scale(0.4) rotate(0deg)",
+          willChange: "transform, opacity",
+        }}
+      >
+        <div className="flex h-full w-full items-center justify-center rounded-full bg-white shadow-lg border border-border">
           <Loader2
-            className="text-primary"
+            className="h-5 w-5 text-primary"
             style={{
-              width: 22,
-              height: 22,
-              opacity: indicatorOpacity,
-              transform: `scale(${indicatorScale})${refreshing ? "" : ` rotate(${pullDistance * 3}deg)`}`,
-              transition: pulling.current ? "none" : "all 200ms ease-out",
-              animation: refreshing ? "spin 0.8s linear infinite" : "none",
+              animation: refreshing ? "spin 0.7s linear infinite" : "none",
             }}
           />
         </div>
-      )}
+      </div>
       {children}
     </div>
   );
