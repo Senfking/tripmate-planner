@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useItinerary } from "@/hooks/useItinerary";
 import { useRouteStops } from "@/hooks/useRouteStops";
 import { useItineraryAttendance } from "@/hooks/useItineraryAttendance";
