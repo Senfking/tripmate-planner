@@ -117,6 +117,23 @@ export function useExpenses(tripId: string) {
 
   // Exchange rates: DB cache first, then live API fallback
   const settlementCurrency = settlementQuery.data || "EUR";
+
+  // Safely parse jsonb rates from Supabase (could be string, object, or null)
+  const parseRates = (raw: unknown): Record<string, number> | null => {
+    if (!raw) return null;
+    let obj: Record<string, unknown>;
+    if (typeof raw === "string") {
+      try { obj = JSON.parse(raw); } catch { return null; }
+    } else if (typeof raw === "object" && !Array.isArray(raw)) {
+      obj = raw as Record<string, unknown>;
+    } else {
+      return null;
+    }
+    const entries = Object.entries(obj);
+    if (entries.length === 0) return null;
+    return obj as Record<string, number>;
+  };
+
   const ratesQuery = useQuery({
     queryKey: ["exchange-rates", settlementCurrency],
     queryFn: async (): Promise<{
@@ -124,37 +141,48 @@ export function useExpenses(tripId: string) {
       fetchedAt: Date | null;
       source: "cache" | "live" | "none";
     }> => {
-      // 1. Try direct cache hit for the settlement currency
-      const { data } = await supabase
-        .from("exchange_rate_cache")
-        .select("rates, fetched_at")
-        .eq("base_currency", settlementCurrency)
-        .maybeSingle();
-
-      if (data?.rates && Object.keys(data.rates as Record<string, number>).length > 0) {
-        return {
-          rates: data.rates as Record<string, number>,
-          fetchedAt: new Date(data.fetched_at!),
-          source: "cache",
-        };
-      }
-
-      // 2. Cross-calculate via EUR as intermediate
-      const { data: eurData } = await supabase
+      // 1. Try EUR cache row first (most likely to exist)
+      const { data: eurRow } = await supabase
         .from("exchange_rate_cache")
         .select("rates, fetched_at")
         .eq("base_currency", "EUR")
         .maybeSingle();
 
-      if (eurData?.rates && Object.keys(eurData.rates as Record<string, number>).length > 0) {
-        const eurRates = eurData.rates as Record<string, number>;
+      const eurRates = parseRates(eurRow?.rates);
+
+      if (eurRates) {
+        const fetchedAt = eurRow?.fetched_at ? new Date(eurRow.fetched_at) : new Date();
+
+        if (settlementCurrency === "EUR") {
+          return { rates: eurRates, fetchedAt, source: "cache" };
+        }
+
+        // Cross-calculate from EUR to settlement currency
         const eurToSettlement = eurRates[settlementCurrency];
-        if (eurToSettlement) {
+        if (eurToSettlement && eurToSettlement > 0) {
           const crossRates: Record<string, number> = {};
           for (const [code, eurRate] of Object.entries(eurRates)) {
             crossRates[code] = (eurRate as number) / eurToSettlement;
           }
-          return { rates: crossRates, fetchedAt: new Date(eurData.fetched_at!), source: "cache" };
+          return { rates: crossRates, fetchedAt, source: "cache" };
+        }
+      }
+
+      // 2. Try direct cache hit for the settlement currency
+      if (settlementCurrency !== "EUR") {
+        const { data: directRow } = await supabase
+          .from("exchange_rate_cache")
+          .select("rates, fetched_at")
+          .eq("base_currency", settlementCurrency)
+          .maybeSingle();
+
+        const directRates = parseRates(directRow?.rates);
+        if (directRates) {
+          return {
+            rates: directRates,
+            fetchedAt: directRow?.fetched_at ? new Date(directRow.fetched_at) : new Date(),
+            source: "cache",
+          };
         }
       }
 
@@ -163,18 +191,16 @@ export function useExpenses(tripId: string) {
         const res = await fetch("https://open.er-api.com/v6/latest/EUR");
         const json = await res.json();
         if (json.result === "success" && json.rates) {
-          // Fire and forget: populate DB cache for next time
           supabase.functions.invoke("refresh-exchange-rates").catch(() => {});
 
-          const eurRates = json.rates as Record<string, number>;
-          // If settlement !== EUR, cross-calculate
+          const liveEurRates = json.rates as Record<string, number>;
           if (settlementCurrency === "EUR") {
-            return { rates: eurRates, fetchedAt: new Date(), source: "live" };
+            return { rates: liveEurRates, fetchedAt: new Date(), source: "live" };
           }
-          const eurToSettlement = eurRates[settlementCurrency];
-          if (eurToSettlement) {
+          const eurToSettlement = liveEurRates[settlementCurrency];
+          if (eurToSettlement && eurToSettlement > 0) {
             const crossRates: Record<string, number> = {};
-            for (const [code, eurRate] of Object.entries(eurRates)) {
+            for (const [code, eurRate] of Object.entries(liveEurRates)) {
               crossRates[code] = (eurRate as number) / eurToSettlement;
             }
             return { rates: crossRates, fetchedAt: new Date(), source: "live" };
@@ -186,7 +212,7 @@ export function useExpenses(tripId: string) {
 
       return { rates: {} as Record<string, number>, fetchedAt: null, source: "none" };
     },
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 60,
     retry: 1,
   });
 
@@ -199,9 +225,8 @@ export function useExpenses(tripId: string) {
         .select("rates")
         .eq("base_currency", "EUR")
         .maybeSingle();
-      if (data?.rates && Object.keys(data.rates as Record<string, number>).length > 0) {
-        return Object.keys(data.rates as Record<string, number>);
-      }
+      const parsed = parseRates(data?.rates);
+      if (parsed) return Object.keys(parsed);
       // Fallback: use rates from the main query if available
       const mainRates = ratesQuery.data?.rates;
       if (mainRates && Object.keys(mainRates).length > 0) {
