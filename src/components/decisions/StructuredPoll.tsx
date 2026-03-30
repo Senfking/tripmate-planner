@@ -27,6 +27,7 @@ type Props = {
   onUpdateTitle?: (title: string) => void;
   isAddingOption: boolean;
   isLocking: boolean;
+  isHighlighted?: boolean;
 };
 
 const DEST_BUTTONS = [
