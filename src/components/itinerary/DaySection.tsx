@@ -60,6 +60,7 @@ interface Props {
   destination?: string;
   members: TripMember[];
   attendance: AttendanceRecord[];
+  newItemIds?: Set<string>;
   onCycleAttendance: (itemId: string) => void;
   onAddItem: (data: any) => void;
   onUpdateItem: (data: any) => void;
@@ -68,7 +69,7 @@ interface Props {
   saving?: boolean;
 }
 
-export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
+export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, newItemIds, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
