@@ -294,6 +294,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                     )}
                   </button>
                 </CollapsibleTrigger>
+                {!allSameCurrency && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 absolute top-3 right-3"
+                    onClick={(e) => { e.stopPropagation(); refreshRates(); }}
+                    disabled={refreshingRates}
+                  >
+                    {refreshingRates
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      : <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </Button>
+                )}
                 <CollapsibleContent>
                   <BalancesSummary
                     balances={balances}
