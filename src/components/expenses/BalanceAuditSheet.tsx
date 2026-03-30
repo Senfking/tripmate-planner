@@ -41,7 +41,7 @@ export function BalanceAuditSheet({
   const audit = useMemo(() => {
     const paid: AuditLine[] = [];
     const owed: AuditLine[] = [];
-    const conversions: { from: string; amount: number; converted: number; currency: string }[] = [];
+    const foreignCurrencies = new Set<string>();
     let totalPaid = 0;
     let totalOwed = 0;
 
@@ -49,9 +49,7 @@ export function BalanceAuditSheet({
       if (exp.payer_id === userId) {
         const converted = convertAmount(exp.amount, exp.currency, settlementCurrency, settlementCurrency, rates);
         if (converted != null) totalPaid += converted;
-        if (exp.currency !== settlementCurrency && converted != null) {
-          conversions.push({ from: exp.currency, amount: exp.amount, converted, currency: settlementCurrency });
-        }
+        if (exp.currency !== settlementCurrency) foreignCurrencies.add(exp.currency);
         paid.push({
           title: exp.title,
           originalAmount: exp.amount,
@@ -64,9 +62,7 @@ export function BalanceAuditSheet({
       for (const s of mySplits) {
         const converted = convertAmount(s.share_amount, exp.currency, settlementCurrency, settlementCurrency, rates);
         if (converted != null) totalOwed += converted;
-        if (exp.currency !== settlementCurrency && converted != null) {
-          conversions.push({ from: exp.currency, amount: s.share_amount, converted, currency: settlementCurrency });
-        }
+        if (exp.currency !== settlementCurrency) foreignCurrencies.add(exp.currency);
         owed.push({
           title: exp.title,
           payer: profileMap[exp.payer_id] || "Unknown",
@@ -78,64 +74,62 @@ export function BalanceAuditSheet({
     }
 
     const netBalance = totalPaid - totalOwed;
-    const uniqueConversions = new Map<string, typeof conversions[0]>();
-    for (const c of conversions) {
-      if (!uniqueConversions.has(c.from)) uniqueConversions.set(c.from, c);
-    }
-
-    return { paid, owed, totalPaid, totalOwed, netBalance, conversions: [...uniqueConversions.values()] };
+    return { paid, owed, totalPaid, totalOwed, netBalance, foreignCurrencies: [...foreignCurrencies] };
   }, [expenses, splits, userId, settlementCurrency, rates, profileMap]);
 
-  const ratesDateStr = ratesFetchedAt ? format(ratesFetchedAt, "MMM d, yyyy 'at' HH:mm") : "unknown date";
+  const ratesDateStr = ratesFetchedAt ? format(ratesFetchedAt, "d MMM yyyy") : "unknown date";
 
-  const renderLine = (line: AuditLine, i: number) => (
-    <div key={i} className="flex items-center justify-between text-xs gap-2">
-      <span className="truncate max-w-[180px]">{line.title}</span>
-      <div className="text-right shrink-0">
-        {line.originalCurrency !== settlementCurrency ? (
-          <span>
-            <span className="text-muted-foreground">
+  const renderPaidLine = (line: AuditLine, i: number) => {
+    const isForeign = line.originalCurrency !== settlementCurrency;
+    return (
+      <div
+        key={i}
+        className={`py-3 px-2 ${i % 2 === 1 ? "bg-muted/30" : ""} ${i > 0 ? "border-t border-muted/40" : ""}`}
+      >
+        <div className="flex items-start justify-between gap-2 text-xs">
+          <span className="line-clamp-2 leading-snug">{line.title}</span>
+          <span className="font-medium shrink-0">
+            {formatCurrency(line.convertedAmount ?? line.originalAmount, settlementCurrency)}
+          </span>
+        </div>
+        {isForeign && (
+          <div className="flex justify-end mt-0.5">
+            <span className="text-[11px] text-muted-foreground">
               {formatCurrency(line.originalAmount, line.originalCurrency)}
             </span>
-            {line.convertedAmount != null && (
-              <>
-                <ArrowRight className="inline h-3 w-3 mx-0.5 text-muted-foreground" />
-                <span className="font-medium">{formatCurrency(line.convertedAmount, settlementCurrency)}</span>
-              </>
-            )}
-          </span>
-        ) : (
-          <span className="font-medium">{formatCurrency(line.originalAmount, settlementCurrency)}</span>
+          </div>
         )}
       </div>
-    </div>
-  );
+    );
+  };
 
-  const renderOwedLine = (line: AuditLine, i: number) => (
-    <div key={i} className="flex items-center justify-between text-xs gap-2">
-      <div className="min-w-0">
-        <span className="truncate block max-w-[160px]">{line.title}</span>
-        <span className="text-[11px] text-muted-foreground">paid by {line.payer}</span>
-      </div>
-      <div className="text-right shrink-0">
-        {line.originalCurrency !== settlementCurrency ? (
-          <span>
-            <span className="text-muted-foreground">
+  const renderOwedLine = (line: AuditLine, i: number) => {
+    const isForeign = line.originalCurrency !== settlementCurrency;
+    const showPayer = line.payer && line.payer !== displayName;
+    return (
+      <div
+        key={i}
+        className={`py-3 px-2 ${i % 2 === 1 ? "bg-muted/30" : ""} ${i > 0 ? "border-t border-muted/40" : ""}`}
+      >
+        <div className="flex items-start justify-between gap-2 text-xs">
+          <span className="line-clamp-2 leading-snug">{line.title}</span>
+          <span className="font-medium shrink-0">
+            {formatCurrency(line.convertedAmount ?? line.originalAmount, settlementCurrency)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between mt-0.5">
+          {showPayer ? (
+            <span className="text-[11px] text-muted-foreground">paid by {line.payer}</span>
+          ) : <span />}
+          {isForeign && (
+            <span className="text-[11px] text-muted-foreground">
               {formatCurrency(line.originalAmount, line.originalCurrency)}
             </span>
-            {line.convertedAmount != null && (
-              <>
-                <ArrowRight className="inline h-3 w-3 mx-0.5 text-muted-foreground" />
-                <span className="font-medium">{formatCurrency(line.convertedAmount, settlementCurrency)}</span>
-              </>
-            )}
-          </span>
-        ) : (
-          <span className="font-medium">{formatCurrency(line.originalAmount, settlementCurrency)}</span>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <ResponsiveModal
@@ -144,7 +138,7 @@ export function BalanceAuditSheet({
       title={`How ${displayName}'s balance was calculated`}
     >
       <div className="space-y-5 pb-4 max-h-[70vh] overflow-y-auto">
-        {/* Final calculation — always visible at top */}
+        {/* Summary card */}
         <div className="rounded-lg bg-muted/50 p-3 space-y-1">
           <div className="flex justify-between text-sm">
             <span>{displayName} paid</span>
@@ -163,49 +157,49 @@ export function BalanceAuditSheet({
           </div>
         </div>
 
-        {/* What they paid — collapsed by default */}
+        {/* What they paid */}
         <div>
           <button
             onClick={() => setShowPaidDetail((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1"
+            className="flex w-full items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider py-1"
           >
             <span>What {displayName} paid ({audit.paid.length})</span>
-            {showPaidDetail ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            <span className="flex items-center gap-1">
+              <span className="normal-case tracking-normal font-medium">
+                {formatCurrency(audit.totalPaid, settlementCurrency)}
+              </span>
+              <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showPaidDetail ? "rotate-90" : ""}`} />
+            </span>
           </button>
-          {!showPaidDetail && audit.paid.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {audit.paid.length} expense{audit.paid.length !== 1 ? "s" : ""} · {formatCurrency(audit.totalPaid, settlementCurrency)} total
-            </p>
-          )}
           {showPaidDetail && (
-            <div className="space-y-1 mt-1">
+            <div className="mt-1 rounded-lg overflow-hidden border border-muted/40">
               {audit.paid.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No expenses paid</p>
+                <p className="text-xs text-muted-foreground italic p-3">No expenses paid</p>
               ) : (
-                audit.paid.map(renderLine)
+                audit.paid.map(renderPaidLine)
               )}
             </div>
           )}
         </div>
 
-        {/* What they owe — collapsed by default */}
+        {/* Their share */}
         <div>
           <button
             onClick={() => setShowOwedDetail((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1"
+            className="flex w-full items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider py-1"
           >
             <span>{displayName}'s share ({audit.owed.length})</span>
-            {showOwedDetail ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            <span className="flex items-center gap-1">
+              <span className="normal-case tracking-normal font-medium">
+                {formatCurrency(audit.totalOwed, settlementCurrency)}
+              </span>
+              <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showOwedDetail ? "rotate-90" : ""}`} />
+            </span>
           </button>
-          {!showOwedDetail && audit.owed.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {audit.owed.length} share{audit.owed.length !== 1 ? "s" : ""} · {formatCurrency(audit.totalOwed, settlementCurrency)} total
-            </p>
-          )}
           {showOwedDetail && (
-            <div className="space-y-1 mt-1">
+            <div className="mt-1 rounded-lg overflow-hidden border border-muted/40">
               {audit.owed.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No expense shares</p>
+                <p className="text-xs text-muted-foreground italic p-3">No expense shares</p>
               ) : (
                 audit.owed.map(renderOwedLine)
               )}
@@ -213,14 +207,11 @@ export function BalanceAuditSheet({
           )}
         </div>
 
-        {/* Conversion notes */}
-        {audit.conversions.length > 0 && (
-          <div className="text-[11px] text-muted-foreground space-y-0.5">
-            <p className="font-medium">Currency conversions used:</p>
-            {audit.conversions.map((c, i) => (
-              <p key={i}>
-                * {formatCurrency(c.amount, c.from)} → {formatCurrency(c.converted, c.currency)} using rate from {ratesDateStr}
-              </p>
+        {/* Conversion footnote */}
+        {audit.foreignCurrencies.length > 0 && (
+          <div className="text-[11px] text-muted-foreground space-y-0.5 pt-1 border-t border-muted/40">
+            {audit.foreignCurrencies.map((cur) => (
+              <p key={cur}>{cur} · Rate from {ratesDateStr}</p>
             ))}
           </div>
         )}
