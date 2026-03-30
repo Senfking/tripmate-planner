@@ -94,7 +94,8 @@ function formatDateRange(start: string | null, end: string | null) {
 }
 
 /* ─── Status Badge ─── */
-function StatusBadge({ info }: { info: ReturnType<typeof getTripStatus> }) {
+function StatusBadge({ info }: { info: ReturnType<typeof getTripStatus> | undefined }) {
+  if (!info) return null;
   switch (info.status) {
     case "live":
       return (
