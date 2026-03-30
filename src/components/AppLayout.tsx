@@ -8,7 +8,7 @@ import { UserCircle } from "lucide-react";
 export function AppLayout() {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
           {/* Header */}
