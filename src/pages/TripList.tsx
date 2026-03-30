@@ -140,7 +140,7 @@ function TripCard({ trip, isHero }: { trip: EnrichedTrip; isHero: boolean }) {
   const heroLabel =
     isHero && statusInfo.status === "live"
       ? "Happening now"
-      : isHero && (trip.statusInfo.status === "countdown" || trip.statusInfo.status === "upcoming")
+      : isHero && (statusInfo.status === "countdown" || statusInfo.status === "upcoming")
         ? "Next trip"
         : null;
 
