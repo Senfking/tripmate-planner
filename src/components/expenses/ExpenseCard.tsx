@@ -69,10 +69,10 @@ export function ExpenseCard({
     >
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left p-3 flex items-start gap-3"
+        className="w-full text-left p-3 flex items-center gap-3"
       >
         <div
-          className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0"
+          className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
           style={{ backgroundColor: cat.bg }}
         >
           <Icon className="h-5 w-5" style={{ color: cat.color }} />
@@ -80,7 +80,7 @@ export function ExpenseCard({
         <div className="flex-1 min-w-0">
           {/* Row 1: Title + Amount */}
           <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold text-[15px] truncate">{expense.title}</p>
+            <p className="font-semibold text-[15px] leading-snug line-clamp-2">{expense.title}</p>
             <div className="text-right shrink-0">
               <p className="font-bold text-[15px]">
                 {formatCurrency(expense.amount, expense.currency)}
@@ -92,17 +92,13 @@ export function ExpenseCard({
               )}
             </div>
           </div>
-          {/* Row 2: Payer · Date */}
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
-          </p>
-          {/* Row 3: Badges */}
-          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 py-0 font-normal">
-              {cat.label}
-            </Badge>
+          {/* Row 2: Payer · Date · optional itinerary link */}
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <span className="text-xs text-muted-foreground">
+              {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
+            </span>
             {linkedItem && (
-              <Badge variant="secondary" className="text-[10px] h-4.5 px-1.5 py-0 gap-0.5 font-normal">
+              <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 gap-0.5 font-normal">
                 <MapPin className="h-2.5 w-2.5" />
                 {linkedItem.title}
               </Badge>
