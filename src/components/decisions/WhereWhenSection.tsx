@@ -118,13 +118,13 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
       ) : (
         <div className="space-y-3">
-         {proposals.map((p) => {
-119:             const pDateOptions = dateOptionsByProposal(p.id);
-120:             const isCreator = user?.id === p.created_by;
-121:             const hasOtherVotes = (destVotes[p.id]?.up || 0) + (destVotes[p.id]?.down || 0) > (myDestVotes[p.id] ? 1 : 0);
-122:             const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
-123:             return (
-124:               <ProposalCard
+          {proposals.map((p) => {
+            const pDateOptions = dateOptionsByProposal(p.id);
+            const isCreator = user?.id === p.created_by;
+            const hasOtherVotes = (destVotes[p.id]?.up || 0) + (destVotes[p.id]?.down || 0) > (myDestVotes[p.id] ? 1 : 0);
+            const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
+            return (
+              <ProposalCard
                 key={p.id}
                 proposal={p}
                 destVotes={destVotes[p.id] || { up: 0, down: 0 }}
