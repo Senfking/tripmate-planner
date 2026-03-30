@@ -102,9 +102,17 @@ const PHOTO_DB: [string[], string][] = [
 const DEFAULT_PHOTO = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80";
 
 function resolvePhoto(tripName: string, routeStopDests: string[]): string {
-  const searchText = [tripName, ...routeStopDests].join(" ").toLowerCase();
+  // 1. Match on trip name first (primary identity)
+  const nameLower = tripName.toLowerCase();
   for (const [keywords, url] of PHOTO_DB) {
-    if (keywords.some((kw) => searchText.includes(kw))) return url;
+    if (keywords.some((kw) => nameLower.includes(kw))) return url;
+  }
+  // 2. Then check route stops individually — first stop wins
+  for (const dest of routeStopDests) {
+    const destLower = dest.toLowerCase();
+    for (const [keywords, url] of PHOTO_DB) {
+      if (keywords.some((kw) => destLower.includes(kw))) return url;
+    }
   }
   // Dynamic fallback: use first route stop or cleaned trip name
   const searchTerm = routeStopDests[0] || tripName
