@@ -13,7 +13,7 @@ interface Props {
   newCommentIds?: Set<string>;
 }
 
-export function ItemComments({ tripId, itemId }: Props) {
+export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
   const { user } = useAuth();
   const { comments, postComment, deleteComment } = useItemComments(tripId, itemId);
   const [open, setOpen] = useState(false);
