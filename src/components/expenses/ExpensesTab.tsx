@@ -11,7 +11,7 @@ import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface Props {
@@ -24,7 +24,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
-    ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates,
+    ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
     cachedCurrencyCodes, itineraryItems, isLoading, updateSettlementCurrency,
     addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
@@ -272,7 +272,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           {/* Balances section — collapsed by default */}
           {balances.length > 0 && (
             <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
-              <div className="rounded-xl border bg-card p-3 space-y-2">
+              <div className="rounded-xl border bg-card p-3 space-y-2 relative">
                 <CollapsibleTrigger asChild>
                   <button className="flex w-full flex-col gap-1 text-left">
                     <div className="flex w-full items-center justify-between">
@@ -294,6 +294,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                     )}
                   </button>
                 </CollapsibleTrigger>
+                {!allSameCurrency && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 absolute top-3 right-3"
+                    onClick={(e) => { e.stopPropagation(); refreshRates(); }}
+                    disabled={refreshingRates}
+                  >
+                    {refreshingRates
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      : <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </Button>
+                )}
                 <CollapsibleContent>
                   <BalancesSummary
                     balances={balances}
