@@ -17,7 +17,7 @@ interface SectionCardProps {
   imageUrl: string;
 }
 
-export function SectionCard({ icon: Icon, title, summary, subline, to, badgeCount, imageUrl }: SectionCardProps) {
+export function SectionCard({ icon: Icon, title, summary, summaryColor, subline, to, badgeCount, imageUrl }: SectionCardProps) {
   const navigate = useNavigate();
 
   return (
