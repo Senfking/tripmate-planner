@@ -598,6 +598,32 @@ export type Database = {
           },
         ]
       }
+      trip_last_seen: {
+        Row: {
+          last_seen_at: string
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_last_seen_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_members: {
         Row: {
           id: string
