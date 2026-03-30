@@ -72,13 +72,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "attachments_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "attachments_itinerary_item_id_fkey"
             columns: ["itinerary_item_id"]
             isOneToOne: false
@@ -574,13 +567,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "profiles_referred_by_fkey"
-            columns: ["referred_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       proposal_date_options: {
@@ -973,24 +959,7 @@ export type Database = {
       }
     }
     Views: {
-      profiles_public: {
-        Row: {
-          avatar_url: string | null
-          display_name: string | null
-          id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          display_name?: string | null
-          id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          display_name?: string | null
-          id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       generate_trip_code: { Args: never; Returns: string }
@@ -1008,6 +977,14 @@ export type Database = {
           count: number
           poll_option_id: string
           value: string
+        }[]
+      }
+      get_public_profiles: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          id: string
         }[]
       }
       get_trip_proposal_reaction_counts: {
