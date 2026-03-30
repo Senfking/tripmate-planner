@@ -149,6 +149,7 @@ export function DecisionsFlow({
   return (
     <div className="space-y-3">
       {/* Step 1: Vibe Board */}
+      <div id="decisions-step-1">
       <StepSection
         stepNumber={1}
         title="Vibe Board"
