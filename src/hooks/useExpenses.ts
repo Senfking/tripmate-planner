@@ -177,6 +177,23 @@ export function useExpenses(tripId: string) {
     : false;
   const ratesEmpty = Object.keys(rates).length === 0 && !ratesQuery.isLoading;
 
+  // If all expenses use the settlement currency, no conversion needed
+  const allSameCurrency =
+    (expensesQuery.data || []).length > 0 &&
+    (expensesQuery.data || []).every((e) => e.currency === settlementCurrency);
+
+  // Silently trigger a refresh when rates are stale (once per session)
+  useEffect(() => {
+    if (
+      ratesStale &&
+      !ratesQuery.isError &&
+      !sessionStorage.getItem("rates_refresh_attempted")
+    ) {
+      sessionStorage.setItem("rates_refresh_attempted", "1");
+      supabase.functions.invoke("refresh-exchange-rates").catch(() => {});
+    }
+  }, [ratesStale, ratesQuery.isError]);
+
   // Fetch itinerary items for linking
   const itineraryQuery = useQuery({
     queryKey: ["itinerary-items-for-expenses", tripId],
