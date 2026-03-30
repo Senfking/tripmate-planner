@@ -94,14 +94,13 @@ export function useTripRealtime(tripId: string | undefined) {
     }, 2000);
   }, []);
 
-  const showActivityToast = useCallback(async (table: string, userId: string) => {
+  const showActivityToast = useCallback(async (table: string, userId: string, eventType: "insert" | "delete" = "insert") => {
     const now = Date.now();
     if (now - lastToastAt.current < 5000) return;
     lastToastAt.current = now;
 
     let displayName = "Someone";
     try {
-      // Try cache first
       const cached = queryClient.getQueryData<any[]>(["trip-members-profiles", tripId]);
       const member = cached?.find((m: any) => m.userId === userId || m.user_id === userId);
       if (member) {
@@ -116,10 +115,16 @@ export function useTripRealtime(tripId: string | undefined) {
       }
     } catch {}
 
-    toast({
-      description: `${displayName} ${TOAST_MESSAGES[table]}`,
-      duration: 3000,
-    });
+    const message = eventType === "delete"
+      ? DELETE_TOAST_MESSAGES[table]
+      : TOAST_MESSAGES[table];
+
+    if (message) {
+      toast({
+        description: `${displayName} ${message}`,
+        duration: 3000,
+      });
+    }
   }, [queryClient, tripId]);
 
   const handleChange = useCallback(

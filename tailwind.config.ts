@@ -84,11 +84,17 @@ export default {
           "0%": { backgroundColor: "rgba(13, 148, 136, 0.15)" },
           "100%": { backgroundColor: "transparent" },
         },
+        "slide-in-fade": {
+          from: { opacity: "0", transform: "translateY(-12px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "realtime-flash": "realtime-flash 1.5s ease-out forwards",
+        "slide-in-fade": "slide-in-fade 400ms ease-out",
+        "new-item": "slide-in-fade 400ms ease-out, realtime-flash 1.5s ease-out 400ms forwards",
       },
     },
   },
