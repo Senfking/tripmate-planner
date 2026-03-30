@@ -102,6 +102,18 @@ export function ExpenseCard({
             <span className="text-xs text-muted-foreground">
               {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
             </span>
+            {!isSettlement && isPayer && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#0D9488]/10 text-[#0D9488]">
+                <ArrowUp className="h-3 w-3" />
+                You paid
+              </span>
+            )}
+            {!isSettlement && !isPayer && mySplit && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                <ArrowDown className="h-3 w-3" />
+                Your share {formatCurrency(mySplit.share_amount, expense.currency)}
+              </span>
+            )}
             {linkedItem && (
               <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 gap-0.5 font-normal">
                 <MapPin className="h-2.5 w-2.5" />
