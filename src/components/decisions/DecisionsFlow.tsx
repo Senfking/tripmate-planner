@@ -237,7 +237,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/hooks/use-toast";
 
-function PreferencesContent({ tripId, myRole }: { tripId: string; myRole: string | undefined }) {
+function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: string; myRole: string | undefined; highlightedPollId?: string }) {
   const canManage = myRole === "owner" || myRole === "admin";
   const isMobile = useIsMobile();
   const { prefPolls, voteCounts, myVotes, createPoll, addOption, vote, lockPoll, deletePoll, updatePollTitle } =
