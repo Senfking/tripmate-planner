@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,10 +26,16 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesError,
-    ratesStale, ratesEmpty, cachedCurrencyCodes,
+    ratesStale, ratesEmpty, ratesLoading, cachedCurrencyCodes,
     itineraryItems, isLoading, updateSettlementCurrency, addExpense,
     updateExpense, deleteExpense,
   } = useExpenses(tripId);
+
+  const allSameCurrency = useMemo(
+    () => expenses.every((e) => e.currency === settlementCurrency),
+    [expenses, settlementCurrency]
+  );
+  const canShowBalances = !ratesLoading || allSameCurrency || Object.keys(rates).length > 0;
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
@@ -187,71 +194,83 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Balances section */}
-      {balances.length > 0 && (
-        <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
-          <div className="rounded-xl border bg-card p-3 space-y-2">
-            <CollapsibleTrigger className="flex w-full items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${balancesOpen ? "rotate-90" : ""}`} />
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{balances.length}</Badge>
-              </div>
-            </CollapsibleTrigger>
-            {!balancesOpen && myBalance && (
-              <p className="text-xs text-muted-foreground pl-6">
-                {myBalance.balance > 0.005
-                  ? <span className="text-emerald-600">You are owed {formatCurrency(myBalance.balance, settlementCurrency)}</span>
-                  : myBalance.balance < -0.005
-                  ? <span className="text-red-500">You owe {formatCurrency(Math.abs(myBalance.balance), settlementCurrency)}</span>
-                  : <span>All settled</span>
-                }
-              </p>
-            )}
-            <CollapsibleContent>
-              <BalancesSummary balances={balances} currency={settlementCurrency} />
-            </CollapsibleContent>
-          </div>
-        </Collapsible>
-      )}
-
-      {/* Settle Up section */}
-      {settlements.length === 0 ? (
-        <div className="rounded-xl border bg-card p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Settle Up</span>
-            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              All settled ✓
-            </span>
-          </div>
+      {/* Balances & Settle Up — wait for rates */}
+      {!canShowBalances ? (
+        <div className="rounded-xl border bg-card p-3 space-y-2">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</span>
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-36" />
+          <p className="text-xs text-muted-foreground">Loading exchange rates…</p>
         </div>
       ) : (
-        <Collapsible open={settleOpen} onOpenChange={setSettleOpen}>
-          <div className="rounded-xl border bg-card p-3 space-y-2">
-            <CollapsibleTrigger className="flex w-full items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${settleOpen ? "rotate-90" : ""}`} />
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Settle Up</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{settlements.length}</Badge>
+        <>
+          {/* Balances section */}
+          {balances.length > 0 && (
+            <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
+              <div className="rounded-xl border bg-card p-3 space-y-2">
+                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${balancesOpen ? "rotate-90" : ""}`} />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{balances.length}</Badge>
+                  </div>
+                </CollapsibleTrigger>
+                {!balancesOpen && myBalance && (
+                  <p className="text-xs text-muted-foreground pl-6">
+                    {myBalance.balance > 0.005
+                      ? <span className="text-emerald-600">You are owed {formatCurrency(myBalance.balance, settlementCurrency)}</span>
+                      : myBalance.balance < -0.005
+                      ? <span className="text-red-500">You owe {formatCurrency(Math.abs(myBalance.balance), settlementCurrency)}</span>
+                      : <span>All settled</span>
+                    }
+                  </p>
+                )}
+                <CollapsibleContent>
+                  <BalancesSummary balances={balances} currency={settlementCurrency} />
+                </CollapsibleContent>
               </div>
-            </CollapsibleTrigger>
-            {!settleOpen && (
-              <p className={`text-xs pl-6 font-medium ${settleUpSummary.color}`}>
-                {settleUpSummary.text}
-              </p>
-            )}
-            <CollapsibleContent>
-              <SettleUpSection
-                settlements={settlements}
-                currency={settlementCurrency}
-                settlementProgress={settlementProgress}
-                totalSettledOverall={totalSettledOverall}
-                onSettle={(data) => addExpense.mutate(data as any)}
-              />
-            </CollapsibleContent>
-          </div>
-        </Collapsible>
+            </Collapsible>
+          )}
+
+          {/* Settle Up section */}
+          {settlements.length === 0 ? (
+            <div className="rounded-xl border bg-card p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Settle Up</span>
+                <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  All settled ✓
+                </span>
+              </div>
+            </div>
+          ) : (
+            <Collapsible open={settleOpen} onOpenChange={setSettleOpen}>
+              <div className="rounded-xl border bg-card p-3 space-y-2">
+                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${settleOpen ? "rotate-90" : ""}`} />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Settle Up</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{settlements.length}</Badge>
+                  </div>
+                </CollapsibleTrigger>
+                {!settleOpen && (
+                  <p className={`text-xs pl-6 font-medium ${settleUpSummary.color}`}>
+                    {settleUpSummary.text}
+                  </p>
+                )}
+                <CollapsibleContent>
+                  <SettleUpSection
+                    settlements={settlements}
+                    currency={settlementCurrency}
+                    settlementProgress={settlementProgress}
+                    totalSettledOverall={totalSettledOverall}
+                    onSettle={(data) => addExpense.mutate(data as any)}
+                  />
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
+          )}
+        </>
       )}
 
       {/* Expenses section */}

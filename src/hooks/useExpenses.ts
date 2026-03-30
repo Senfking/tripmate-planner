@@ -315,6 +315,7 @@ export function useExpenses(tripId: string) {
     cachedCurrencyCodes: cachedCodesQuery.data || [],
     itineraryItems: itineraryQuery.data || [],
     isLoading: expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading,
+    ratesLoading: ratesQuery.isLoading,
     updateSettlementCurrency,
     addExpense,
     updateExpense,
