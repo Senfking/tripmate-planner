@@ -10,7 +10,7 @@ export function AppLayout() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
           {/* Header */}
           <header className="sticky top-0 z-40 flex h-16 items-center border-b bg-gradient-primary px-4 text-white">
             <SidebarTrigger className="hidden md:inline-flex text-white" />
