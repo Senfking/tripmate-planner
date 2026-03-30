@@ -378,6 +378,22 @@ export function useExpenses(tripId: string) {
     onError: () => toast.error("Failed to delete expense"),
   });
 
+  // Manual refresh function
+  const refreshRates = async () => {
+    setRefreshingRates(true);
+    try {
+      await supabase.functions.invoke("refresh-exchange-rates");
+      await new Promise((r) => setTimeout(r, 2000));
+      await qc.invalidateQueries({ queryKey: ["exchange-rates"] });
+      await qc.invalidateQueries({ queryKey: ["cached-currency-codes"] });
+      toast.success("Rates updated");
+    } catch {
+      toast.error("Failed to refresh rates");
+    } finally {
+      setRefreshingRates(false);
+    }
+  };
+
   return {
     expenses: expensesQuery.data || [],
     splits: splitsQuery.data || [],
@@ -389,6 +405,7 @@ export function useExpenses(tripId: string) {
     ratesEmpty: ratesEmpty && !allSameCurrency,
     ratesError: ratesQuery.isError,
     refreshingRates,
+    refreshRates,
     cachedCurrencyCodes: cachedCodesQuery.data || [],
     itineraryItems: itineraryQuery.data || [],
     isLoading: expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading,
