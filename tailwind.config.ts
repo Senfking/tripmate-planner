@@ -65,56 +65,32 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
-        "realtime-flash": {
-          "0%": { backgroundColor: "hsl(var(--primary) / 0.15)" },
-          "100%": { backgroundColor: "transparent" },
+        "calm-pulse": {
+          "0%, 100%": { opacity: "0.4" },
+          "50%": { opacity: "1" },
         },
-        "slide-in-fade": {
-          from: { opacity: "0", transform: "translateY(-12px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "shimmer": {
-          "0%": { backgroundPosition: "200% 0" },
-          "100%": { backgroundPosition: "-200% 0" },
-        },
-        "shimmer-diag": {
-          "0%": { backgroundPosition: "100% 0%" },
-          "100%": { backgroundPosition: "0% 100%" },
-        },
-        "crossfade-in": {
+        "fade-in-card": {
           from: { opacity: "0" },
           to: { opacity: "1" },
         },
-        "glow-stripe": {
-          "0%": { opacity: "0.95" },
-          "100%": { opacity: "0" },
+        "pill-fade-out": {
+          from: { opacity: "1" },
+          to: { opacity: "0" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "realtime-flash": "realtime-flash 1.5s ease-out forwards",
-        "slide-in-fade": "slide-in-fade 400ms ease-out",
-        "shimmer": "shimmer 1.2s ease-in-out infinite",
-        "shimmer-diag": "shimmer-diag 1.4s ease-in-out infinite",
-        "crossfade-in": "crossfade-in 200ms ease-out forwards",
-        "glow-stripe": "glow-stripe 3s ease-out forwards",
-        "new-item": "slide-in-fade 400ms ease-out, realtime-flash 1.5s ease-out 400ms forwards",
+        "calm-pulse": "calm-pulse 2s ease-in-out infinite",
+        "fade-in-card": "fade-in-card 300ms ease-out forwards",
+        "pill-fade-out": "pill-fade-out 500ms ease-out forwards",
       },
     },
   },

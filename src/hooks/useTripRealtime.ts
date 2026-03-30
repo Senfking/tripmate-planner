@@ -114,7 +114,7 @@ export function useTripRealtime(tripId: string | undefined) {
         next.delete(id);
         return next;
       });
-    }, 2000);
+    }, 10000);
   }, []);
 
   const showActivityToast = useCallback(async (table: string, userId: string, eventType: "insert" | "delete" = "insert") => {
@@ -188,6 +188,7 @@ export function useTripRealtime(tripId: string | undefined) {
     const oldRecord = payload.old && typeof payload.old === "object" ? payload.old as any : null;
 
     if (tripId && oldRecord?.id) {
+      // Directly remove from cache for instant UI update
       queryClient.setQueryData<any[]>(["itinerary", tripId], (old) =>
         old?.filter((item) => item.id !== oldRecord.id)
       );
@@ -196,6 +197,7 @@ export function useTripRealtime(tripId: string | undefined) {
       );
     }
 
+    // Show toast to other users
     const userId = oldRecord?.created_by || oldRecord?.user_id;
     if (userId && userId !== user?.id) {
       showActivityToast("itinerary_items", userId, "delete");
@@ -226,6 +228,7 @@ export function useTripRealtime(tripId: string | undefined) {
       );
     }
 
+    // Explicit INSERT/UPDATE for itinerary_items and itinerary_attendance
     for (const event of ["INSERT", "UPDATE"] as const) {
       channel.on(
         "postgres_changes" as any,
@@ -250,6 +253,7 @@ export function useTripRealtime(tripId: string | undefined) {
       );
     }
 
+    // Explicit DELETE for itinerary_items — uses direct cache removal
     channel.on(
       "postgres_changes" as any,
       {
@@ -261,6 +265,7 @@ export function useTripRealtime(tripId: string | undefined) {
       handleItineraryDelete
     );
 
+    // Explicit DELETE for itinerary_attendance — invalidate attendance query
     channel.on(
       "postgres_changes" as any,
       {
@@ -296,7 +301,6 @@ export function useTripRealtime(tripId: string | undefined) {
     });
 
     return () => {
-      // Clear all debounce timers
       debounceTimers.current.forEach((timer) => clearTimeout(timer));
       debounceTimers.current.clear();
       supabase.removeChannel(channel);
