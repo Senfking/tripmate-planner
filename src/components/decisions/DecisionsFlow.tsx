@@ -106,16 +106,27 @@ export function DecisionsFlow({
       setHighlightTarget(pollId ? `poll-${pollId}` : "decisions-step-3");
     }
 
-    setTimeout(() => {
-      const targetId = scrollTo === "polls" && pollId
-        ? `poll-${pollId}`
-        : scrollTo === "vibe" ? "decisions-step-1"
-        : scrollTo === "where" ? "decisions-step-2"
-        : scrollTo === "polls" ? "decisions-step-3" : null;
-      if (targetId) {
-        document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 200);
+    // Scroll after section expands and content renders
+    const targetId = scrollTo === "polls" && pollId
+      ? `poll-${pollId}`
+      : scrollTo === "vibe" ? "decisions-step-1"
+      : scrollTo === "where" ? "decisions-step-2"
+      : scrollTo === "polls" ? "decisions-step-3" : null;
+
+    if (targetId) {
+      // Retry until element is available (section expand + render)
+      let attempts = 0;
+      const tryScroll = () => {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (attempts < 5) {
+          attempts++;
+          setTimeout(tryScroll, 150);
+        }
+      };
+      setTimeout(tryScroll, 350);
+    }
 
     // Clear highlight after animation completes
     setTimeout(() => setHighlightTarget(null), 2500);
