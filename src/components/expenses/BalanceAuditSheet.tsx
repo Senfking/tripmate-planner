@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
 import { convertAmount, formatCurrency, Rates } from "@/lib/settlementCalc";
 import { format } from "date-fns";
-import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 
 interface Props {
