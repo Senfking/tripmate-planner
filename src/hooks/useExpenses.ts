@@ -225,9 +225,8 @@ export function useExpenses(tripId: string) {
         .select("rates")
         .eq("base_currency", "EUR")
         .maybeSingle();
-      if (data?.rates && Object.keys(data.rates as Record<string, number>).length > 0) {
-        return Object.keys(data.rates as Record<string, number>);
-      }
+      const parsed = parseRates(data?.rates);
+      if (parsed) return Object.keys(parsed);
       // Fallback: use rates from the main query if available
       const mainRates = ratesQuery.data?.rates;
       if (mainRates && Object.keys(mainRates).length > 0) {
