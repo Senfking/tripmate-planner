@@ -44,35 +44,40 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
     lastSeenLoadedRef.current = scopeKey;
 
     let active = true;
-    
 
     const syncLastSeen = async () => {
       const now = new Date().toISOString();
 
-      const tripLastSeenClient = supabase as any;
-
-      const { data: row } = await tripLastSeenClient
-        .from("trip_last_seen" as any)
+      const { data: row } = await supabase
+        .from("trip_last_seen")
         .select("last_seen_at")
         .eq("trip_id", tripId)
         .eq("user_id", user.id)
-        .maybeSingle() as { data: { last_seen_at: string | null } | null };
+        .maybeSingle();
 
       if (!active) return;
 
-      const ids = row?.last_seen_at
+      const lastSeen = row?.last_seen_at ?? null;
+      console.log("[ItineraryTab] last_seen_at:", lastSeen);
+
+      const ids = lastSeen
         ? items
-            .filter((item) => item.created_by !== user.id && item.created_at > row.last_seen_at)
+            .filter((item) => item.created_by !== user.id && item.created_at > lastSeen)
             .map((item) => item.id)
         : [];
 
+      console.log("[ItineraryTab] new-since-last-visit count:", ids.length);
+
       setLastVisitItemIds(new Set(ids));
 
-      await tripLastSeenClient.from("trip_last_seen" as any).upsert({
-        trip_id: tripId,
-        user_id: user.id,
-        last_seen_at: now,
-      });
+      await supabase.from("trip_last_seen").upsert(
+        {
+          trip_id: tripId,
+          user_id: user.id,
+          last_seen_at: now,
+        },
+        { onConflict: "user_id,trip_id" }
+      );
     };
 
     void syncLastSeen();
