@@ -272,6 +272,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
   });
 
   let expensesSummary: string;
+  let expensesSummaryColor: string | undefined;
   if (expenses && expenses.length > 0 && userId) {
     const mapped = expenses.map((e) => ({
       id: e.id,
@@ -289,8 +290,10 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
       expensesSummary = "All settled up ✅";
     } else if (myBalance.balance > 0) {
       expensesSummary = `You are owed ${formatCurrencyShort(myBalance.balance, settlementCurrency)}`;
+      expensesSummaryColor = "#10B981";
     } else {
       expensesSummary = `You owe ${formatCurrencyShort(Math.abs(myBalance.balance), settlementCurrency)}`;
+      expensesSummaryColor = "#F59E0B";
     }
   } else {
     expensesSummary = "No expenses logged yet";
@@ -313,7 +316,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
   const adminSummary = `${memberCount ?? "…"} members · ${roleLabel}`;
 
   return (
-    <div className="flex flex-col gap-2.5 px-4 pb-8">
+    <div className="flex flex-col gap-2.5 px-4 pb-12">
       <SectionCard
         icon={Compass}
         title="Decisions"
@@ -342,6 +345,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         icon={Wallet}
         title="Expenses"
         summary={expensesSummary}
+        summaryColor={expensesSummaryColor}
         to={`/app/trips/${tripId}/expenses`}
         imageUrl="https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?w=800&q=80"
       />
