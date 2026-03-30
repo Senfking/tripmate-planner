@@ -1,80 +1,59 @@
 
 
-## Real-Time Enhancements: Highlight, Toasts, Live Indicator
+# Global Nav Redesign — Updated Plan
 
-Three additions to the realtime system, building on the `useTripRealtime` hook (to be created per the approved plan).
+## Overview
 
-### Files to change
+Replace the three placeholder tab screens (Decisions, Itinerary, Expenses) with cross-trip dashboard views. Update bottom nav with badge. No changes to TripHome or trip-level screens.
 
-1. **`tailwind.config.ts`** — Add `realtime-flash` keyframe (teal bg fading out over 1.5s)
-2. **New: `src/hooks/useTripRealtime.ts`** — Extend with insert tracking, activity toasts, and connection status
-3. **New: `src/hooks/useRealtimeHighlight.ts`** — Tiny hook returning a Set of recently-inserted record IDs; cards check membership to apply flash class
-4. **`src/components/itinerary/ItineraryItemCard.tsx`** — Accept `isNew` prop, apply `animate-realtime-flash` class
-5. **`src/components/expenses/ExpenseCard.tsx`** — Same `isNew` prop + flash class
-6. **`src/components/bookings/AttachmentCard.tsx`** — Same pattern
-7. **`src/components/itinerary/ItemComments.tsx`** — Flash on new comment rows
-8. **`src/pages/TripSection.tsx`** — Add live connection indicator in header
-9. **`src/components/itinerary/ItineraryTab.tsx`** — Pass `newItemIds` down to cards
-10. **`src/components/expenses/ExpensesTab.tsx`** — Pass `newItemIds` down to cards
-11. **`src/components/bookings/BookingsTab.tsx`** — Pass `newItemIds` down to cards
+## Addition 1: Exclude confirmed proposals from pending decisions
+
+In `useGlobalDecisions`, after fetching `trip_proposals` and `proposal_date_options`, also fetch `trip_route_stops` for each trip. Filter out any proposal where `trip_route_stops` has a row with a matching `proposal_id`. This removes confirmed destinations from pending vote counts and the badge number.
+
+## Addition 2: Visual style spec for all three pages
+
+- Page background: `bg-[#F1F5F9]` (applied to the outer wrapper div)
+- Cards: `bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]`
+- Teal `#0D9488` for badges, active toggle states, positive balances ("you are owed")
+- Red `#EF4444` for negative balances ("you owe")
+- Empty states use Lucide icons (CircleCheck for Decisions, CalendarDays for Itinerary, Wallet for Expenses) — no emoji
+- All modals/drawers use `ResponsiveModal` (Drawer on mobile, Dialog on desktop)
 
 ---
 
-### 1. Tailwind keyframe — `realtime-flash`
+## Files to create
 
-```
-"realtime-flash": {
-  "0%": { backgroundColor: "rgba(13, 148, 136, 0.15)" },
-  "100%": { backgroundColor: "transparent" }
-}
-```
-Animation: `"realtime-flash": "realtime-flash 1.5s ease-out forwards"`
+1. **`src/hooks/useGlobalDecisions.ts`** — Fetches user's trips via `trip_members`, then checks:
+   - Vibe Board: trip has `vibe_board_active=true`, `vibe_board_locked=false`, user has no `vibe_responses`
+   - Destination votes: `trip_proposals` where user has no `proposal_reactions` AND proposal has no matching `trip_route_stops.proposal_id`
+   - Date votes: `proposal_date_options` where user has no `date_option_votes` AND parent proposal has no matching `trip_route_stops.proposal_id`
+   - Preference polls: open `polls` with `poll_options` where user has no `votes`
+   - Returns flat list sorted by trip `tentative_start_date` ASC (nulls last) + `pendingCount`
+   - Uses `refetchOnWindowFocus: true`
 
-### 2. `useTripRealtime` hook design
+2. **`src/hooks/useGlobalItinerary.ts`** — Fetches all trips, then `itinerary_items` where `day_date >= today`, plus `itinerary_attendance` for user, plus `trip_route_stops` for placeholder cards. Groups by trip then date.
 
-The hook (from the approved realtime plan) will be extended with three additional responsibilities:
+3. **`src/hooks/useGlobalExpenses.ts`** — Fetches all trips, then `expenses` and `expense_splits` across those trips. Calculates per-trip net balance (paid - splits) and overall net.
 
-**A. Insert tracking for highlights**
-- Maintain a `newIds` Set (via React state) of record IDs from INSERT events where `payload.new.user_id !== currentUserId` (or no user_id column — skip highlight)
-- After 2s, remove each ID from the set (auto-cleanup via setTimeout)
-- Expose `newItemIds: Set<string>` from the hook
+## Files to modify
 
-**B. Activity toasts**
-- On INSERT from another user on `itinerary_items`, `attachments`, `expenses`, `trip_route_stops`, `votes`:
-  - Throttle: max one toast per 5 seconds (track `lastToastAt` timestamp)
-  - Fetch display_name from profiles cache (use queryClient's cached profiles data, or a quick `.from('profiles').select('display_name').eq('id', userId).single()`)
-  - Show toast: `"[Name] added an activity"` / `"added a booking"` / `"added an expense"` / `"confirmed a stop"` / `"cast a vote"`
-  - Use the existing `toast()` from `@/hooks/use-toast`
+4. **`src/pages/Decisions.tsx`** — Replace placeholder with pending-decisions feed. Cards show trip emoji+name, description, type badge (teal pill). Tap navigates to `/app/trips/:tripId/decisions`. Empty state: CircleCheck icon + "You're all caught up!" + subtitle.
 
-**C. Connection status**
-- Track Supabase channel status via the `.subscribe((status) => ...)` callback
-- Map to three states: `"connected"` | `"reconnecting"` | `"disconnected"`
-- Supabase client handles reconnection with backoff internally; we just reflect the status
-- Expose `connectionStatus` from the hook
+5. **`src/pages/Itinerary.tsx`** — Replace placeholder with cross-trip upcoming items. Toggle filter "All activities" / "My Plan". Grouped by trip (header: emoji+name+date range), then by date. Item cards: date, title, location, status, attendance dot. Route stop placeholders with "Plan this" link. Two empty states with CalendarDays icon.
 
-### 3. Live indicator in TripSection header
+6. **`src/pages/Expenses.tsx`** — Replace placeholder with balance summary. Top card: overall net (green/red/teal). Per-trip cards below with emoji+name+balance+"View" button. Empty state with Wallet icon.
 
-After the section title in the header, render a small status pill:
-- **Connected**: 6px green dot (`#10B981`) with `animate-pulse` + "Live" text (text-xs, text-muted-foreground)
-- **Reconnecting**: 6px amber dot (`#F59E0B`) + "Reconnecting..." 
-- **Disconnected**: 6px grey dot (`#94A3B8`) + "Offline"
+7. **`src/pages/More.tsx`** — Add user display name + email at top, "Join a trip" link, logout button.
 
-Positioned inline after the h1, right-aligned using `ml-auto`.
+8. **`src/components/BottomNav.tsx`** — Accept/fetch `pendingCount` from `useGlobalDecisions`. Render teal badge circle with count on Decisions tab when > 0.
 
-### 4. Card highlight pattern
+9. **`src/components/AppSidebar.tsx`** — Same badge on desktop sidebar Decisions item.
 
-Each card component gets an optional `isNew?: boolean` prop. When true, the outer container div gets an additional `animate-realtime-flash` class. The parent tab components receive `newItemIds` from the realtime hook and pass `isNew={newItemIds.has(item.id)}` to each card.
+## No database changes required
 
-### Data flow
+All data already exists. Read-only queries against existing RLS-protected tables.
 
-```text
-useTripRealtime(tripId)
-  ├── newItemIds: Set<string>     → passed to Tab components → cards
-  ├── connectionStatus: string    → used in TripSection header
-  └── (internal) toast triggers   → fires toast() directly
-```
+## Query strategy
 
-### Database change
-
-None — realtime publication is handled by the parent realtime plan's migration.
+All three hooks use `refetchOnWindowFocus: true`. Queries keyed by user ID. Each hook fetches trips first (via `trip_members` join), then related data in parallel where possible.
 
