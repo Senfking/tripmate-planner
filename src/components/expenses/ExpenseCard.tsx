@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
-  ArrowLeftRight, Pencil, Trash2, MapPin,
+  ArrowLeftRight, Pencil, Trash2, MapPin, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -59,6 +59,11 @@ export function ExpenseCard({
     ? itineraryItems.find((it) => it.id === expense.itinerary_item_id)
     : null;
 
+  // Personal share indicator
+  const isSettlement = expense.category === "settlement";
+  const isPayer = expense.payer_id === user?.id;
+  const mySplit = user ? splits.find((s) => s.user_id === user.id) : null;
+
   const canModify =
     expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
 
@@ -97,6 +102,18 @@ export function ExpenseCard({
             <span className="text-xs text-muted-foreground">
               {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
             </span>
+            {!isSettlement && isPayer && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#0D9488]/10 text-[#0D9488]">
+                <ArrowUp className="h-3 w-3" />
+                You paid
+              </span>
+            )}
+            {!isSettlement && !isPayer && mySplit && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                <ArrowDown className="h-3 w-3" />
+                Your share {formatCurrency(mySplit.share_amount, expense.currency)}
+              </span>
+            )}
             {linkedItem && (
               <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 gap-0.5 font-normal">
                 <MapPin className="h-2.5 w-2.5" />
