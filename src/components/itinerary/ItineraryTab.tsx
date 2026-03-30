@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useItinerary } from "@/hooks/useItinerary";
 import { useRouteStops } from "@/hooks/useRouteStops";
 import { useItineraryAttendance } from "@/hooks/useItineraryAttendance";
@@ -26,12 +26,68 @@ interface Props {
 }
 
 export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
+  const { user } = useAuth();
   const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItinerary(tripId);
   const { stops } = useRouteStops(tripId);
   const { attendance, members, cycleStatus } = useItineraryAttendance(tripId);
   const [addDayOpen, setAddDayOpen] = useState(false);
   const [newDayDate, setNewDayDate] = useState<string | null>(null);
   const [newDayFormOpen, setNewDayFormOpen] = useState(false);
+  const [lastVisitItemIds, setLastVisitItemIds] = useState<Set<string>>(new Set());
+  const lastSeenLoadedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!tripId || !user || isLoading) return;
+
+    const scopeKey = `${tripId}:${user.id}`;
+    if (lastSeenLoadedRef.current === scopeKey) return;
+    lastSeenLoadedRef.current = scopeKey;
+
+    let active = true;
+    let clearTimer: number | undefined;
+
+    const syncLastSeen = async () => {
+      const now = new Date().toISOString();
+
+      const tripLastSeenClient = supabase as any;
+
+      const { data: row } = await tripLastSeenClient
+        .from("trip_last_seen" as any)
+        .select("last_seen_at")
+        .eq("trip_id", tripId)
+        .eq("user_id", user.id)
+        .maybeSingle() as { data: { last_seen_at: string | null } | null };
+
+      if (!active) return;
+
+      const ids = row?.last_seen_at
+        ? items
+            .filter((item) => item.created_by !== user.id && item.created_at > row.last_seen_at)
+            .map((item) => item.id)
+        : [];
+
+      setLastVisitItemIds(new Set(ids));
+
+      if (ids.length > 0) {
+        clearTimer = window.setTimeout(() => {
+          if (active) setLastVisitItemIds(new Set());
+        }, 4000);
+      }
+
+      await tripLastSeenClient.from("trip_last_seen" as any).upsert({
+        trip_id: tripId,
+        user_id: user.id,
+        last_seen_at: now,
+      });
+    };
+
+    void syncLastSeen();
+
+    return () => {
+      active = false;
+      if (clearTimer) window.clearTimeout(clearTimer);
+    };
+  }, [tripId, user, isLoading, items]);
 
   // Compute all day dates from route stops + existing items
   const allDays = useMemo(() => {
@@ -132,6 +188,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
           members={members}
           attendance={attendance}
           newItemIds={newItemIds}
+           lastVisitItemIds={lastVisitItemIds}
           onCycleAttendance={(itemId) => cycleStatus.mutate(itemId)}
           onAddItem={handleAddItem}
           onUpdateItem={handleUpdateItem}

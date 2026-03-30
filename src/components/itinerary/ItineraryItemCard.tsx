@@ -48,12 +48,13 @@ interface Props {
   activeId: string | null;
   overlapTitles?: string[];
   isNew?: boolean;
+  isNewSinceLastVisit?: boolean;
   onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, overlapTitles, isNew, onCycleAttendance, onEdit, onDelete }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, overlapTitles, isNew, isNewSinceLastVisit, onCycleAttendance, onEdit, onDelete }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -101,40 +102,19 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
     transition,
   };
 
-  // Show skeleton placeholder during skeleton phase
-  if (animPhase === "skeleton") {
-    const skeletonStyle = {
-      ...style,
-      background: "linear-gradient(90deg, hsl(var(--muted) / 0.3) 0%, hsl(174 58% 32% / 0.15) 50%, hsl(var(--muted) / 0.3) 100%)",
-      backgroundSize: "200% 100%",
-      backdropFilter: "blur(8px)",
-      WebkitBackdropFilter: "blur(8px)",
-      border: "1px solid hsl(174 58% 32% / 0.2)",
-      borderRadius: "12px",
-      animation: "shimmer 1.2s ease-in-out infinite",
-    };
-    return (
-      <div
-        ref={setNodeRef}
-        style={skeletonStyle}
-        className="h-[120px]"
-        aria-hidden
-      />
-    );
-  }
+  const showSkeleton = isNew && (animPhase === "skeleton" || animPhase === "crossfade");
+  const showGlowStripe = animPhase === "glow" || Boolean(isNewSinceLastVisit);
 
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "rounded-lg border bg-card p-3 space-y-2 transition-shadow",
-        isDragging && "opacity-50 ring-2 ring-primary/30 z-10",
-        overlapTitles?.length && "border-l-[3px] border-l-amber-400",
-        animPhase === "crossfade" && "animate-crossfade-in",
-        animPhase === "glow" && "animate-realtime-flash",
-      )}
-    >
+  const skeletonStyle = {
+    background: "linear-gradient(120deg, hsl(var(--primary-foreground) / 0.06) 0%, hsl(var(--primary) / 0.18) 40%, hsl(var(--primary-foreground) / 0.12) 55%, hsl(var(--primary) / 0.08) 100%)",
+    backgroundSize: "300% 300%",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    border: "1px solid hsl(var(--primary) / 0.25)",
+  };
+
+  const cardContent = (
+    <>
       <div className="flex items-start gap-2">
         {isDraggable ? (
           <button
@@ -179,7 +159,6 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2 justify-end md:justify-start">
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
           <Pencil className="h-3.5 w-3.5" />
@@ -191,7 +170,6 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         )}
       </div>
 
-      {/* Attendance */}
       {user && members.length > 0 && (
         <AttendanceRow
           members={members}
@@ -202,10 +180,8 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         />
       )}
 
-      {/* Comments */}
       <ItemComments tripId={tripId} itemId={item.id} />
 
-      {/* Delete confirmation — drawer on mobile, dialog on desktop */}
       {isMobile ? (
         <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
           <DrawerContent>
@@ -249,6 +225,50 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
           </AlertDialogContent>
         </AlertDialog>
       )}
+    </>
+  );
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "relative",
+        isDragging && "z-10",
+      )}
+    >
+      {showGlowStripe ? (
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 z-20 w-[3px] rounded-l-lg bg-primary",
+            animPhase === "glow" && "animate-glow-stripe"
+          )}
+        />
+      ) : null}
+
+      <div
+        className={cn(
+          "relative z-10 rounded-lg border bg-card p-3 space-y-2 transition-[opacity,box-shadow] duration-200",
+          isDragging && "opacity-50 ring-2 ring-primary/30",
+          overlapTitles?.length && "border-l-[3px] border-l-amber-400",
+          animPhase === "skeleton" && "opacity-0",
+          animPhase === "crossfade" && "animate-crossfade-in",
+          animPhase === "glow" && "animate-realtime-flash",
+        )}
+      >
+        {cardContent}
+      </div>
+
+      {showSkeleton ? (
+        <div
+          aria-hidden
+          style={skeletonStyle}
+          className={cn(
+            "pointer-events-none absolute inset-0 z-20 rounded-lg animate-shimmer-diag transition-opacity duration-200",
+            animPhase === "crossfade" ? "opacity-0" : "opacity-100"
+          )}
+        />
+      ) : null}
     </div>
   );
 }

@@ -27,6 +27,8 @@ const UNFILTERED_TABLES = [
   "expense_splits",
 ] as const;
 
+const EXPLICIT_EVENT_TABLES = new Set(["itinerary_items", "itinerary_attendance"]);
+
 // Query key mapping per table
 const TABLE_QUERY_KEYS: Record<string, (tripId: string) => string[][]> = {
   itinerary_items: (t) => [["itinerary", t], ["itinerary-items-summary", t], ["itinerary-items-for-expenses", t]],
@@ -40,7 +42,7 @@ const TABLE_QUERY_KEYS: Record<string, (tripId: string) => string[][]> = {
   expenses: (t) => [["expenses", t], ["expenses-summary", t]],
   expense_splits: (t) => [["expense-splits", t], ["expenses-summary", t]],
   trip_route_stops: (t) => [["route-stops", t], ["trip-route-stops", t]],
-  trip_members: (t) => [["trip-members-count", t], ["trip-members-profiles", t]],
+  trip_members: (t) => [["trip-members-count", t], ["trip-members-profiles", t], ["trip_members_profiles", t]],
 };
 
 // Dashboard keys to also invalidate
@@ -79,6 +81,27 @@ export function useTripRealtime(tripId: string | undefined) {
   const lastToastAt = useRef(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
+  const scheduleInvalidation = useCallback((table: string) => {
+    const existing = debounceTimers.current.get(table);
+    if (existing) clearTimeout(existing);
+
+    debounceTimers.current.set(
+      table,
+      setTimeout(() => {
+        debounceTimers.current.delete(table);
+        if (!tripId) return;
+
+        const keys = TABLE_QUERY_KEYS[table]?.(tripId) || [];
+        const dashKeys = DASHBOARD_KEYS(tripId);
+        const allKeys = [...keys, ...dashKeys];
+
+        for (const key of allKeys) {
+          queryClient.invalidateQueries({ queryKey: key });
+        }
+      }, 300)
+    );
+  }, [queryClient, tripId]);
+
   const addNewId = useCallback((id: string) => {
     setNewItemIds((prev) => {
       const next = new Set(prev);
@@ -101,7 +124,8 @@ export function useTripRealtime(tripId: string | undefined) {
 
     let displayName = "Someone";
     try {
-      const cached = queryClient.getQueryData<any[]>(["trip-members-profiles", tripId]);
+      const cached = queryClient.getQueryData<any[]>(["trip-members-profiles", tripId])
+        ?? queryClient.getQueryData<any[]>(["trip_members_profiles", tripId]);
       const member = cached?.find((m: any) => m.userId === userId || m.user_id === userId);
       if (member) {
         displayName = member.displayName || member.display_name || "Someone";
@@ -155,35 +179,30 @@ export function useTripRealtime(tripId: string | undefined) {
         showActivityToast(table, userId, "delete");
       }
 
-      // Direct cache removal for itinerary_items DELETE — instant without network round-trip
-      if (payload.eventType === "DELETE" && table === "itinerary_items" && oldRecord?.id && tripId) {
-        queryClient.setQueryData<any[]>(["itinerary", tripId], (old) =>
-          old?.filter((item) => item.id !== oldRecord.id)
-        );
-      }
-
-      // Debounced query invalidation
-      const existing = debounceTimers.current.get(table);
-      if (existing) clearTimeout(existing);
-
-      debounceTimers.current.set(
-        table,
-        setTimeout(() => {
-          debounceTimers.current.delete(table);
-          if (!tripId) return;
-
-          const keys = TABLE_QUERY_KEYS[table]?.(tripId) || [];
-          const dashKeys = DASHBOARD_KEYS(tripId);
-          const allKeys = [...keys, ...dashKeys];
-
-          for (const key of allKeys) {
-            queryClient.invalidateQueries({ queryKey: key });
-          }
-        }, 300)
-      );
+      scheduleInvalidation(table);
     },
-    [tripId, user?.id, queryClient, addNewId, showActivityToast]
+    [user?.id, addNewId, showActivityToast, scheduleInvalidation]
   );
+
+  const handleItineraryDelete = useCallback((payload: RealtimePostgresChangesPayload<any>) => {
+    const oldRecord = payload.old && typeof payload.old === "object" ? payload.old as any : null;
+
+    if (tripId && oldRecord?.id) {
+      queryClient.setQueryData<any[]>(["itinerary", tripId], (old) =>
+        old?.filter((item) => item.id !== oldRecord.id)
+      );
+      queryClient.setQueryData<any[]>(["itinerary-items", tripId], (old) =>
+        old?.filter((item) => item.id !== oldRecord.id)
+      );
+    }
+
+    const userId = oldRecord?.created_by || oldRecord?.user_id;
+    if (userId && userId !== user?.id) {
+      showActivityToast("itinerary_items", userId, "delete");
+    }
+
+    scheduleInvalidation("itinerary_items");
+  }, [tripId, queryClient, user?.id, showActivityToast, scheduleInvalidation]);
 
   useEffect(() => {
     if (!tripId || !user) return;
@@ -193,6 +212,8 @@ export function useTripRealtime(tripId: string | undefined) {
 
     // Add filtered table listeners
     for (const table of TRIP_FILTERED_TABLES) {
+      if (EXPLICIT_EVENT_TABLES.has(table)) continue;
+
       channel.on(
         "postgres_changes" as any,
         {
@@ -204,6 +225,52 @@ export function useTripRealtime(tripId: string | undefined) {
         (payload: RealtimePostgresChangesPayload<any>) => handleChange(table, payload)
       );
     }
+
+    for (const event of ["INSERT", "UPDATE"] as const) {
+      channel.on(
+        "postgres_changes" as any,
+        {
+          event,
+          schema: "public",
+          table: "itinerary_items",
+          filter: `trip_id=eq.${tripId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<any>) => handleChange("itinerary_items", payload)
+      );
+
+      channel.on(
+        "postgres_changes" as any,
+        {
+          event,
+          schema: "public",
+          table: "itinerary_attendance",
+          filter: `trip_id=eq.${tripId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<any>) => handleChange("itinerary_attendance", payload)
+      );
+    }
+
+    channel.on(
+      "postgres_changes" as any,
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "itinerary_items",
+        filter: `trip_id=eq.${tripId}`,
+      },
+      handleItineraryDelete
+    );
+
+    channel.on(
+      "postgres_changes" as any,
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "itinerary_attendance",
+        filter: `trip_id=eq.${tripId}`,
+      },
+      (payload: RealtimePostgresChangesPayload<any>) => handleChange("itinerary_attendance", payload)
+    );
 
     // Add unfiltered table listeners
     for (const table of UNFILTERED_TABLES) {
@@ -236,7 +303,7 @@ export function useTripRealtime(tripId: string | undefined) {
       channelRef.current = null;
       setConnectionStatus("disconnected");
     };
-  }, [tripId, user, handleChange]);
+  }, [tripId, user, handleChange, handleItineraryDelete]);
 
   return { connectionStatus, newItemIds };
 }
