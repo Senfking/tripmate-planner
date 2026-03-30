@@ -155,6 +155,13 @@ export function useTripRealtime(tripId: string | undefined) {
         showActivityToast(table, userId, "delete");
       }
 
+      // Direct cache removal for itinerary_items DELETE — instant without network round-trip
+      if (payload.eventType === "DELETE" && table === "itinerary_items" && oldRecord?.id && tripId) {
+        queryClient.setQueryData<any[]>(["itinerary", tripId], (old) =>
+          old?.filter((item) => item.id !== oldRecord.id)
+        );
+      }
+
       // Debounced query invalidation
       const existing = debounceTimers.current.get(table);
       if (existing) clearTimeout(existing);

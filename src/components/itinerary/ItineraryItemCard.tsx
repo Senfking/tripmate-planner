@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock } from "lucide-react";
@@ -63,6 +63,26 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
   const endStr = item.end_time ? item.end_time.slice(0, 5) : null;
   const timeDisplay = timeStr ? (endStr ? `${timeStr}–${endStr}` : timeStr) : null;
 
+  // Skeleton animation state machine: "skeleton" → "crossfade" → "glow" → "done"
+  const [animPhase, setAnimPhase] = useState<"skeleton" | "crossfade" | "glow" | "done">(
+    isNew ? "skeleton" : "done"
+  );
+  const animStarted = useRef(false);
+
+  useEffect(() => {
+    if (!isNew || animStarted.current) return;
+    animStarted.current = true;
+
+    // skeleton → crossfade after 600ms
+    const t1 = setTimeout(() => setAnimPhase("crossfade"), 600);
+    // crossfade → glow after 800ms (600 + 200)
+    const t2 = setTimeout(() => setAnimPhase("glow"), 800);
+    // glow → done after 2300ms (800 + 1500)
+    const t3 = setTimeout(() => setAnimPhase("done"), 2300);
+
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [isNew]);
+
   const isDraggable = !item.start_time;
   const {
     attributes,
@@ -81,6 +101,28 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
     transition,
   };
 
+  // Show skeleton placeholder during skeleton phase
+  if (animPhase === "skeleton") {
+    const skeletonStyle = {
+      ...style,
+      background: "linear-gradient(90deg, hsl(var(--muted) / 0.3) 0%, hsl(174 58% 32% / 0.15) 50%, hsl(var(--muted) / 0.3) 100%)",
+      backgroundSize: "200% 100%",
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
+      border: "1px solid hsl(174 58% 32% / 0.2)",
+      borderRadius: "12px",
+      animation: "shimmer 1.2s ease-in-out infinite",
+    };
+    return (
+      <div
+        ref={setNodeRef}
+        style={skeletonStyle}
+        className="h-[120px]"
+        aria-hidden
+      />
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -89,7 +131,8 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         "rounded-lg border bg-card p-3 space-y-2 transition-shadow",
         isDragging && "opacity-50 ring-2 ring-primary/30 z-10",
         overlapTitles?.length && "border-l-[3px] border-l-amber-400",
-        isNew && "animate-new-item",
+        animPhase === "crossfade" && "animate-crossfade-in",
+        animPhase === "glow" && "animate-realtime-flash",
       )}
     >
       <div className="flex items-start gap-2">
