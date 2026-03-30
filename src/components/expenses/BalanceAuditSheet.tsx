@@ -120,7 +120,7 @@ export function BalanceAuditSheet({
     >
       <div className="space-y-3 pb-4 max-h-[70vh] overflow-y-auto">
         {/* Summary card */}
-        <div className="rounded-lg bg-muted/40 p-3">
+        <div className="rounded-lg bg-muted/60 p-3">
           <div className="flex justify-between text-sm py-1.5">
             <span>{displayName} paid</span>
             <span className="font-medium">{formatCurrency(audit.totalPaid, settlementCurrency)}</span>
