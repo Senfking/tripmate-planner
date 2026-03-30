@@ -104,6 +104,7 @@ export function ProposalCard({
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
   const isFrozen = isRouteLocked;
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [datesExpanded, setDatesExpanded] = useState(false);
   const [showDateForm, setShowDateForm] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
