@@ -275,7 +275,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const bookingsBadge: BadgeState = (() => {
-    if (tripEnded) return endedBadge;
     const count = attachments?.length ?? 0;
     if (count > 0) return { label: `${count} docs saved`, color: "green" };
     return { label: "No docs yet", color: "grey" };
