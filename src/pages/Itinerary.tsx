@@ -16,11 +16,11 @@ const Itinerary = () => {
   if (isLoading) {
     return (
       <div className="min-h-[calc(100vh-10rem)] bg-[#F1F5F9] px-4 pb-32 pt-6">
-        <div className="h-7 w-28 rounded-lg bg-[rgba(13,148,136,0.06)] animate-pulse mb-4" />
-        <div className="h-10 rounded-xl bg-[rgba(13,148,136,0.06)] animate-pulse mb-4" />
+        <div className="h-7 w-28 rounded-lg skeleton-shimmer mb-4" />
+        <div className="h-10 rounded-xl skeleton-shimmer mb-4" />
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-[56px] rounded-[14px] bg-[rgba(13,148,136,0.06)] animate-pulse" />
+            <div key={i} className="h-[56px] rounded-[14px] skeleton-shimmer" style={{ animationDelay: `${i * 150}ms` }} />
           ))}
         </div>
       </div>

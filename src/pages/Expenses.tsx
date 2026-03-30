@@ -11,11 +11,11 @@ const Expenses = () => {
   if (isLoading) {
     return (
       <div className="min-h-[calc(100dvh-10rem)] bg-[#F1F5F9] px-4 pb-24 pt-6">
-        <div className="h-7 w-28 rounded-lg bg-[rgba(13,148,136,0.06)] animate-pulse mb-4" />
-        <div className="h-[100px] rounded-[14px] bg-[rgba(13,148,136,0.06)] animate-pulse mb-4" />
+        <div className="h-7 w-28 rounded-lg skeleton-shimmer mb-4" />
+        <div className="h-[100px] rounded-[14px] skeleton-shimmer mb-4" />
         <div className="space-y-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-[72px] rounded-[14px] bg-[rgba(13,148,136,0.06)] animate-pulse" />
+            <div key={i} className="h-[72px] rounded-[14px] skeleton-shimmer" style={{ animationDelay: `${i * 150}ms` }} />
           ))}
         </div>
       </div>
