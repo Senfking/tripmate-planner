@@ -69,29 +69,33 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
     isNew ? "skeleton" : "done"
   );
   const [pillVisible, setPillVisible] = useState(false);
+  const [newBorderVisible, setNewBorderVisible] = useState(Boolean(isNewSinceLastVisit));
   const animStarted = useRef(false);
 
   useEffect(() => {
     if (!isNew || animStarted.current) return;
     animStarted.current = true;
 
-    // skeleton → fadein after 600ms
     const t1 = setTimeout(() => setAnimPhase("fadein"), 600);
-    // fadein → pill after 900ms (600 + 300ms fade)
     const t2 = setTimeout(() => {
       setAnimPhase("pill");
       setPillVisible(true);
     }, 900);
-    // pill fades after 8s
     const t3 = setTimeout(() => setPillVisible(false), 8900);
     const t4 = setTimeout(() => setAnimPhase("done"), 9400);
 
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [isNew]);
 
-  // For "new since last visit" items — show pill persistently
+  // Fade out "new since last visit" border after 8s
+  useEffect(() => {
+    if (!isNewSinceLastVisit) return;
+    const t = setTimeout(() => setNewBorderVisible(false), 8000);
+    return () => clearTimeout(t);
+  }, [isNewSinceLastVisit]);
+
   const showNewPill = pillVisible || Boolean(isNewSinceLastVisit);
-  const showLastVisitTint = Boolean(isNewSinceLastVisit);
+  const showNewBorder = newBorderVisible;
 
   const isDraggable = !item.start_time;
   const {
@@ -269,12 +273,29 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-lg border bg-card p-3 space-y-2 transition-colors duration-200",
+            "rounded-lg bg-card p-3 space-y-2",
             isDragging && "opacity-50 ring-2 ring-primary/30",
-            overlapTitles?.length && "border-l-[3px] border-l-amber-400",
+            overlapTitles?.length && !showNewBorder && "border border-l-[3px] border-l-amber-400",
+            !overlapTitles?.length && !showNewBorder && "border",
             animPhase === "fadein" && "animate-fade-in-card",
           )}
-          style={showLastVisitTint ? { backgroundColor: "rgba(13, 148, 136, 0.04)" } : undefined}
+          style={{
+            borderRadius: "12px",
+            ...(showNewBorder
+              ? {
+                  border: "2px solid #0D9488",
+                  boxShadow: "0 0 0 1px rgba(13,148,136,0.15), 0 4px 16px rgba(13,148,136,0.1)",
+                  transition: "border-color 1s ease-out, box-shadow 1s ease-out",
+                }
+              : !newBorderVisible && isNewSinceLastVisit
+              ? {
+                  border: undefined,
+                  borderColor: "transparent",
+                  boxShadow: "none",
+                  transition: "border-color 1s ease-out, box-shadow 1s ease-out",
+                }
+              : undefined),
+          }}
         >
           {cardContent}
         </div>

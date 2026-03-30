@@ -188,7 +188,6 @@ export function useTripRealtime(tripId: string | undefined) {
     const oldRecord = payload.old && typeof payload.old === "object" ? payload.old as any : null;
 
     if (tripId && oldRecord?.id) {
-      // Directly remove from cache for instant UI update
       queryClient.setQueryData<any[]>(["itinerary", tripId], (old) =>
         old?.filter((item) => item.id !== oldRecord.id)
       );
@@ -197,10 +196,20 @@ export function useTripRealtime(tripId: string | undefined) {
       );
     }
 
-    // Show toast to other users
+    // Show toast to other users — if created_by is missing (no REPLICA IDENTITY FULL), assume other user
     const userId = oldRecord?.created_by || oldRecord?.user_id;
-    if (userId && userId !== user?.id) {
-      showActivityToast("itinerary_items", userId, "delete");
+    const isOtherUser = userId ? userId !== user?.id : true;
+    if (isOtherUser) {
+      if (userId) {
+        showActivityToast("itinerary_items", userId, "delete");
+      } else {
+        // No user info available — show generic toast
+        const now = Date.now();
+        if (now - lastToastAt.current >= 5000) {
+          lastToastAt.current = now;
+          toast({ description: "A member removed an activity", duration: 3000 });
+        }
+      }
     }
 
     scheduleInvalidation("itinerary_items");
