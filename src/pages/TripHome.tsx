@@ -147,6 +147,8 @@ export default function TripHome() {
           routeLocked={trip.route_locked ?? false}
           settlementCurrency={trip.settlement_currency}
           myRole={myRole}
+          startDate={trip.tentative_start_date}
+          endDate={trip.tentative_end_date}
         />
       </div>
 

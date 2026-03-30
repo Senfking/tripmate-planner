@@ -1,10 +1,13 @@
-// TODO Phase 2: replace static Unsplash images
-// with dynamic trip cover photo set by the owner,
-// or pull og_image_url from the trip's first
-// confirmed booking attachment.
-
 import { ArrowRight, type LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
+const DOT_COLORS: Record<string, string> = {
+  green: "#10B981",
+  amber: "#F59E0B",
+  red: "#EF4444",
+  teal: "#0D9488",
+  grey: "#94A3B8",
+};
 
 interface SectionCardProps {
   icon: LucideIcon;
@@ -13,11 +16,11 @@ interface SectionCardProps {
   summaryColor?: string;
   subline?: string;
   to: string;
-  badgeCount?: number;
+  badge?: { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
   imageUrl: string;
 }
 
-export function SectionCard({ icon: Icon, title, summary, summaryColor, subline, to, badgeCount, imageUrl }: SectionCardProps) {
+export function SectionCard({ icon: Icon, title, summary, summaryColor, subline, to, badge, imageUrl }: SectionCardProps) {
   const navigate = useNavigate();
 
   return (
@@ -46,17 +49,44 @@ export function SectionCard({ icon: Icon, title, summary, summaryColor, subline,
         }}
       />
 
+      {/* Status badge */}
+      {badge && (
+        <div
+          className="absolute flex items-center gap-[5px]"
+          style={{
+            top: 12,
+            right: 12,
+            background: "rgba(0,0,0,0.45)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: 20,
+            padding: "3px 8px",
+            fontSize: 11,
+            fontWeight: 500,
+            color: "white",
+          }}
+        >
+          <span
+            className={badge.pulse ? "animate-pulse" : ""}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: DOT_COLORS[badge.color],
+              flexShrink: 0,
+            }}
+          />
+          {badge.label}
+        </div>
+      )}
+
       {/* Content */}
       <div className="relative h-full flex items-center px-4 py-[18px]">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <Icon size={18} className="shrink-0" style={{ color: "rgba(255,255,255,0.7)" }} />
             <p className="text-[17px] font-semibold text-white">{title}</p>
-            {badgeCount != null && badgeCount > 0 && (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "#0D9488", color: "white" }}>
-                {badgeCount} pending
-              </span>
-            )}
           </div>
           <p
             className="text-[13px] mt-1 truncate"

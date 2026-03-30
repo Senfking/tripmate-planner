@@ -1,21 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays, isWithinInterval, parseISO } from "date-fns";
 import { Compass, CalendarDays, Plane, Wallet, Users } from "lucide-react";
 import { SectionCard } from "./SectionCard";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
+
+type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
 
 interface TripDashboardProps {
   tripId: string;
   routeLocked: boolean;
   settlementCurrency: string;
   myRole: string | undefined;
+  startDate: string | null;
+  endDate: string | null;
 }
 
-export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole }: TripDashboardProps) {
+export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate }: TripDashboardProps) {
   const { user } = useAuth();
   const userId = user?.id;
+  const today = new Date();
+  const todayStr = today.toISOString().split("T")[0];
+
+  const tripEnded = endDate ? new Date(endDate) < new Date(todayStr) : false;
+  const endedBadge: BadgeState = { label: "Trip ended", color: "grey" };
 
   // Route stops
   const { data: stops } = useQuery({
@@ -130,11 +139,25 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
     enabled: !!userId && !!pollOptions?.length,
   });
 
+  // Vibe responses for current user
+  const { data: myVibeResponses } = useQuery({
+    queryKey: ["my-vibe-responses-count", tripId, userId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("vibe_responses")
+        .select("id", { count: "exact", head: true })
+        .eq("trip_id", tripId)
+        .eq("user_id", userId!);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!userId,
+  });
+
   // Pending vote count
   const unreactedProposals = (proposals?.length ?? 0) - (myReactions?.length ?? 0);
   const unvotedDateOptions = (dateOptions?.length ?? 0) - (myDateVotes?.length ?? 0);
 
-  // For polls: count polls where user has voted on 0 options
   const votedPollOptionIds = new Set(myPollVotes?.map((v) => v.poll_option_id) ?? []);
   const pollsWithoutVote = (polls ?? []).filter((p) => {
     const opts = (pollOptions ?? []).filter((o) => o.poll_id === p.id);
@@ -143,8 +166,16 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
 
   const pendingVoteCount = Math.max(0, unreactedProposals) + Math.max(0, unvotedDateOptions) + pollsWithoutVote.length;
 
-  // Total votes cast across the trip (to determine "in progress" state)
   const totalVoteActivity = (myReactions?.length ?? 0) + (myDateVotes?.length ?? 0) + (myPollVotes?.length ?? 0);
+
+  // --- Decisions badge ---
+  const decisionsBadge: BadgeState = (() => {
+    if (tripEnded) return endedBadge;
+    if ((myVibeResponses ?? 0) === 0) return { label: "Vibe pending", color: "amber" };
+    if (pendingVoteCount > 0) return { label: `${pendingVoteCount} pending`, color: "amber" };
+    if (routeLocked) return { label: "Route confirmed", color: "teal" };
+    return { label: "Not started", color: "grey" };
+  })();
 
   // Decisions summary
   let decisionsSummary: string;
@@ -190,15 +221,35 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
     enabled: !!userId,
   });
 
+  // --- Itinerary badge ---
+  const itineraryBadge: BadgeState = (() => {
+    if (tripEnded) return endedBadge;
+    if (startDate && endDate) {
+      const s = parseISO(startDate);
+      const e = parseISO(endDate);
+      if (isWithinInterval(today, { start: s, end: e })) {
+        return { label: "In progress", color: "green", pulse: true };
+      }
+      const daysToGo = differenceInCalendarDays(s, today);
+      if (daysToGo > 0 && daysToGo <= 60) return { label: `${daysToGo} days to go`, color: "teal" };
+      if (daysToGo > 60) return { label: "Upcoming", color: "teal" };
+    } else if (startDate) {
+      const daysToGo = differenceInCalendarDays(parseISO(startDate), today);
+      if (daysToGo > 0 && daysToGo <= 60) return { label: `${daysToGo} days to go`, color: "teal" };
+      if (daysToGo > 60) return { label: "Upcoming", color: "teal" };
+    }
+    const itemCount = itineraryItems?.length ?? 0;
+    if (itemCount === 0) return { label: "Nothing planned", color: "grey" };
+    return { label: `${itemCount} activities`, color: "green" };
+  })();
+
   let itinerarySummary: string;
   let itinerarySubline: string | undefined;
   if (itineraryItems && itineraryItems.length > 0) {
-    const today = new Date().toISOString().split("T")[0];
-    const upcoming = itineraryItems.find((i) => i.day_date >= today);
+    const upcoming = itineraryItems.find((i) => i.day_date >= todayStr);
     itinerarySummary = `${itineraryItems.length} activit${itineraryItems.length > 1 ? "ies" : "y"} planned`;
     if (upcoming) itinerarySummary += ` · Next: ${upcoming.title}`;
 
-    // Count items user is attending (status 'in' or no attendance row)
     const outIds = new Set(
       (myAttendance ?? []).filter((a) => a.status === "out").map((a) => a.itinerary_item_id)
     );
@@ -222,6 +273,13 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
       return data;
     },
   });
+
+  const bookingsBadge: BadgeState = (() => {
+    if (tripEnded) return endedBadge;
+    const count = attachments?.length ?? 0;
+    if (count > 0) return { label: `${count} docs saved`, color: "green" };
+    return { label: "No docs yet", color: "grey" };
+  })();
 
   let bookingsSummary: string;
   let bookingsSubline: string | undefined;
@@ -273,6 +331,35 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
 
   let expensesSummary: string;
   let expensesSummaryColor: string | undefined;
+  let expensesBadge: BadgeState;
+
+  if (tripEnded) {
+    expensesBadge = endedBadge;
+  } else if (expenses && expenses.length > 0 && userId) {
+    const mapped = expenses.map((e) => ({
+      id: e.id,
+      payer_id: e.payer_id,
+      amount: Number(e.amount),
+      currency: e.currency,
+      splits: (e.expense_splits ?? []).map((s) => ({
+        user_id: s.user_id,
+        share_amount: Number(s.share_amount),
+      })),
+    }));
+    const balances = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
+    const myBalance = balances.find((b) => b.userId === userId);
+    if (!myBalance || Math.abs(myBalance.balance) < 0.01) {
+      expensesBadge = { label: "Settled up", color: "green" };
+    } else if (myBalance.balance > 0) {
+      expensesBadge = { label: `Owed ${formatCurrencyShort(myBalance.balance, settlementCurrency)}`, color: "green" };
+    } else {
+      expensesBadge = { label: `You owe ${formatCurrencyShort(Math.abs(myBalance.balance), settlementCurrency)}`, color: "red" };
+    }
+  } else {
+    expensesBadge = { label: "No expenses", color: "grey" };
+  }
+
+  // Expenses summary text (separate from badge)
   if (expenses && expenses.length > 0 && userId) {
     const mapped = expenses.map((e) => ({
       id: e.id,
@@ -314,6 +401,9 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
 
   const roleLabel = myRole ? myRole.charAt(0).toUpperCase() + myRole.slice(1) : "Member";
   const adminSummary = `${memberCount ?? "…"} members · ${roleLabel}`;
+  const adminBadge: BadgeState = tripEnded
+    ? endedBadge
+    : { label: `${memberCount ?? 0} members`, color: "grey" };
 
   return (
     <div className="flex flex-col gap-2.5 px-4 pb-12">
@@ -322,7 +412,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         title="Decisions"
         summary={decisionsSummary}
         to={`/app/trips/${tripId}/decisions`}
-        badgeCount={pendingVoteCount}
+        badge={decisionsBadge}
         imageUrl="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80"
       />
       <SectionCard
@@ -331,6 +421,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         summary={itinerarySummary}
         subline={itinerarySubline}
         to={`/app/trips/${tripId}/itinerary`}
+        badge={itineraryBadge}
         imageUrl="https://images.unsplash.com/photo-1530521954074-e64f6810b32d?w=800&q=80"
       />
       <SectionCard
@@ -339,6 +430,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         summary={bookingsSummary}
         subline={bookingsSubline}
         to={`/app/trips/${tripId}/bookings`}
+        badge={bookingsBadge}
         imageUrl="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80"
       />
       <SectionCard
@@ -347,6 +439,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         summary={expensesSummary}
         summaryColor={expensesSummaryColor}
         to={`/app/trips/${tripId}/expenses`}
+        badge={expensesBadge}
         imageUrl="https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?w=800&q=80"
       />
       <SectionCard
@@ -354,6 +447,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole 
         title="Admin"
         summary={adminSummary}
         to={`/app/trips/${tripId}/admin`}
+        badge={adminBadge}
         imageUrl="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
       />
     </div>
