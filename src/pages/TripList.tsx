@@ -94,7 +94,8 @@ function formatDateRange(start: string | null, end: string | null) {
 }
 
 /* ─── Status Badge ─── */
-function StatusBadge({ info }: { info: ReturnType<typeof getTripStatus> }) {
+function StatusBadge({ info }: { info: ReturnType<typeof getTripStatus> | undefined }) {
+  if (!info) return null;
   switch (info.status) {
     case "live":
       return (
@@ -131,14 +132,15 @@ function StatusBadge({ info }: { info: ReturnType<typeof getTripStatus> }) {
 
 /* ─── Trip Card ─── */
 function TripCard({ trip, isHero }: { trip: EnrichedTrip; isHero: boolean }) {
+  const statusInfo = trip.statusInfo ?? getTripStatus(trip.tentative_start_date, trip.tentative_end_date);
   const height = isHero ? "h-[220px]" : "h-[140px]";
   const radius = isHero ? "rounded-[20px]" : "rounded-[16px]";
   const titleSize = isHero ? "text-[22px]" : "text-[18px]";
 
   const heroLabel =
-    isHero && trip.statusInfo.status === "live"
+    isHero && statusInfo.status === "live"
       ? "Happening now"
-      : isHero && (trip.statusInfo.status === "countdown" || trip.statusInfo.status === "upcoming")
+      : isHero && (statusInfo.status === "countdown" || statusInfo.status === "upcoming")
         ? "Next trip"
         : null;
 
@@ -162,7 +164,7 @@ function TripCard({ trip, isHero }: { trip: EnrichedTrip; isHero: boolean }) {
 
         {/* Status badge — top right */}
         <div className="absolute right-3 top-3">
-          <StatusBadge info={trip.statusInfo} />
+          <StatusBadge info={statusInfo} />
         </div>
 
         {/* Content — bottom left */}
