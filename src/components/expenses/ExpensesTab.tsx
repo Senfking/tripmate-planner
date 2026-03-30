@@ -23,10 +23,10 @@ interface Props {
 export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const {
-    expenses, splits, members, settlementCurrency, rates, ratesError,
-    ratesStale, ratesEmpty, ratesLoading, refreshingRates, cachedCurrencyCodes,
-    itineraryItems, isLoading, updateSettlementCurrency, addExpense,
-    updateExpense, deleteExpense,
+    expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
+    ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates,
+    cachedCurrencyCodes, itineraryItems, isLoading, updateSettlementCurrency,
+    addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
 
   const allSameCurrency = useMemo(
