@@ -53,7 +53,7 @@ export function SectionCard({ icon: Icon, title, summary, summaryColor, subline,
             <Icon size={18} className="shrink-0" style={{ color: "rgba(255,255,255,0.7)" }} />
             <p className="text-[17px] font-semibold text-white">{title}</p>
             {badgeCount != null && badgeCount > 0 && (
-              <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-900">
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "#0D9488", color: "white" }}>
                 {badgeCount} pending
               </span>
             )}
