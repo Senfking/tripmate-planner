@@ -11,7 +11,7 @@ import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface Props {
@@ -24,7 +24,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesError,
-    ratesStale, ratesEmpty, ratesLoading, cachedCurrencyCodes,
+    ratesStale, ratesEmpty, ratesLoading, refreshingRates, cachedCurrencyCodes,
     itineraryItems, isLoading, updateSettlementCurrency, addExpense,
     updateExpense, deleteExpense,
   } = useExpenses(tripId);
@@ -58,7 +58,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     [expenses, splits]
   );
 
-  const balances = useMemo(
+  const { balances, excludedCount } = useMemo(
     () => calcNetBalances(expensesWithSplits, settlementCurrency, settlementCurrency, rates, profileMap),
     [expensesWithSplits, settlementCurrency, rates, profileMap]
   );
@@ -200,17 +200,29 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       </div>
 
-      {/* Rate warnings */}
-      {(ratesError || ratesEmpty) && (
+      {/* Rate status messages — suppressed when all expenses use settlement currency */}
+      {refreshingRates && !allSameCurrency && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-700">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          Fetching exchange rates…
+        </div>
+      )}
+      {!refreshingRates && !allSameCurrency && (ratesError || ratesEmpty) && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           Exchange rates unavailable — amounts shown in original currencies
         </div>
       )}
-      {ratesStale && !ratesEmpty && !ratesError && (
+      {!refreshingRates && !allSameCurrency && ratesStale && !ratesEmpty && !ratesError && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           Exchange rates may be outdated
+        </div>
+      )}
+      {excludedCount > 0 && !allSameCurrency && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-700">
+          <Info className="h-4 w-4 shrink-0" />
+          {excludedCount} expense{excludedCount > 1 ? "s" : ""} in other currencies excluded from balances — rates unavailable
         </div>
       )}
 
