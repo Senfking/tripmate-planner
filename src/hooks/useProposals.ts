@@ -284,6 +284,26 @@ export function useProposals(tripId: string | undefined) {
     onSuccess: invalidateAll,
   });
 
+  const deleteProposal = useMutation({
+    mutationFn: async ({ proposalId }: { proposalId: string }) => {
+      // Check if proposal is referenced by a route stop
+      const { data: routeStops } = await supabase
+        .from("trip_route_stops")
+        .select("id")
+        .eq("proposal_id", proposalId)
+        .limit(1);
+      if (routeStops && routeStops.length > 0) {
+        throw new Error("IN_ROUTE");
+      }
+      const { error } = await supabase
+        .from("trip_proposals")
+        .delete()
+        .eq("id", proposalId);
+      if (error) throw error;
+    },
+    onSuccess: invalidateAll,
+  });
+
   // ─── Derived data ───
   const proposalList = proposals.data || [];
   const destVotes = destVoteCounts.data || ({} as DestVotes);
@@ -350,5 +370,6 @@ export function useProposals(tripId: string | undefined) {
     reactDest,
     addDateOption,
     voteDateOption,
+    deleteProposal,
   };
 }

@@ -1,5 +1,6 @@
 import { useProposals } from "@/hooks/useProposals";
 import { useRouteStops } from "@/hooks/useRouteStops";
+import { useAuth } from "@/contexts/AuthContext";
 import { ProposalCard } from "./ProposalCard";
 import { ProposalForm } from "./ProposalForm";
 import { LeadingComboBanner } from "./LeadingComboBanner";
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
+  const { user } = useAuth();
   const canManage = myRole === "owner" || myRole === "admin";
   const isOwner = myRole === "owner";
 
@@ -29,6 +31,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     reactDest,
     addDateOption,
     voteDateOption,
+    deleteProposal,
   } = useProposals(tripId);
 
   const {
@@ -117,6 +120,9 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         <div className="space-y-3">
           {proposals.map((p) => {
             const pDateOptions = dateOptionsByProposal(p.id);
+            const isCreator = user?.id === p.created_by;
+            const hasOtherVotes = (destVotes[p.id]?.up || 0) + (destVotes[p.id]?.down || 0) > (myDestVotes[p.id] ? 1 : 0);
+            const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
             return (
               <ProposalCard
                 key={p.id}
@@ -144,6 +150,25 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                 }}
                 isAddingToRoute={addStop.isPending}
                 isAddingDate={addDateOption.isPending}
+                currentUserId={user?.id}
+                canDelete={canDeleteThis}
+                onDeleteProposal={(proposalId) => {
+                  deleteProposal.mutate({ proposalId }, {
+                    onSuccess: () => toast({ title: `${p.destination} removed` }),
+                    onError: (err) => {
+                      if (err.message === "IN_ROUTE") {
+                        toast({
+                          title: "Can't remove",
+                          description: "This destination is already in your route. Remove it from the route first.",
+                          variant: "destructive",
+                        });
+                      } else {
+                        toast({ title: "Failed to remove suggestion", variant: "destructive" });
+                      }
+                    },
+                  });
+                }}
+                isDeleting={deleteProposal.isPending}
               />
             );
           })}
