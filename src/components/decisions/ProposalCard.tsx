@@ -189,34 +189,13 @@ export function ProposalCard({
           </Badge>
         )}
         {canDelete && !isFrozen && onDeleteProposal && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button
-                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                aria-label="Delete suggestion"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove {proposal.destination} suggestion?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will also remove any date options and votes on this card.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => onDeleteProposal(proposal.id)}
-                  disabled={isDeleting}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {isDeleting ? "Removing…" : "Remove"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            aria-label="Delete suggestion"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         )}
       </div>
 
