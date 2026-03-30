@@ -30,7 +30,7 @@ const UNFILTERED_TABLES = [
 // Query key mapping per table
 const TABLE_QUERY_KEYS: Record<string, (tripId: string) => string[][]> = {
   itinerary_items: (t) => [["itinerary", t], ["itinerary-items-summary", t], ["itinerary-items-for-expenses", t]],
-  itinerary_attendance: (t) => [["itinerary-attendance", t], ["my-attendance-summary", t]],
+  itinerary_attendance: (t) => [["itinerary_attendance", t]],
   votes: (t) => [["poll-vote-counts"], ["my-poll-votes", t], ["trip-polls", t], ["trip-poll-options", t]],
   date_option_votes: (t) => [["trip-date-options", t], ["my-date-votes", t]],
   proposal_reactions: (t) => [["my-reactions", t], ["trip-proposals", t]],
@@ -60,6 +60,13 @@ const TOAST_MESSAGES: Record<string, string> = {
   votes: "cast a vote",
 };
 
+const DELETE_TOAST_MESSAGES: Record<string, string> = {
+  itinerary_items: "removed an activity",
+  attachments: "removed a booking",
+  expenses: "removed an expense",
+  trip_route_stops: "removed a stop",
+};
+
 const TOAST_TABLES = new Set(Object.keys(TOAST_MESSAGES));
 
 export function useTripRealtime(tripId: string | undefined) {
@@ -87,14 +94,13 @@ export function useTripRealtime(tripId: string | undefined) {
     }, 2000);
   }, []);
 
-  const showActivityToast = useCallback(async (table: string, userId: string) => {
+  const showActivityToast = useCallback(async (table: string, userId: string, eventType: "insert" | "delete" = "insert") => {
     const now = Date.now();
     if (now - lastToastAt.current < 5000) return;
     lastToastAt.current = now;
 
     let displayName = "Someone";
     try {
-      // Try cache first
       const cached = queryClient.getQueryData<any[]>(["trip-members-profiles", tripId]);
       const member = cached?.find((m: any) => m.userId === userId || m.user_id === userId);
       if (member) {
@@ -109,28 +115,44 @@ export function useTripRealtime(tripId: string | undefined) {
       }
     } catch {}
 
-    toast({
-      description: `${displayName} ${TOAST_MESSAGES[table]}`,
-      duration: 3000,
-    });
+    const message = eventType === "delete"
+      ? DELETE_TOAST_MESSAGES[table]
+      : TOAST_MESSAGES[table];
+
+    if (message) {
+      toast({
+        description: `${displayName} ${message}`,
+        duration: 3000,
+      });
+    }
   }, [queryClient, tripId]);
 
   const handleChange = useCallback(
     (table: string, payload: RealtimePostgresChangesPayload<any>) => {
-      const userId = payload.new && typeof payload.new === "object"
-        ? (payload.new as any).user_id || (payload.new as any).created_by || (payload.new as any).payer_id || (payload.new as any).confirmed_by
+      const newRecord = payload.new && typeof payload.new === "object" ? payload.new as any : null;
+      const oldRecord = payload.old && typeof payload.old === "object" ? payload.old as any : null;
+
+      const userId = newRecord
+        ? (newRecord.user_id || newRecord.created_by || newRecord.payer_id || newRecord.confirmed_by)
+        : oldRecord
+        ? (oldRecord.user_id || oldRecord.created_by || oldRecord.payer_id || oldRecord.confirmed_by)
         : null;
       const isOtherUser = userId && userId !== user?.id;
-      const recordId = payload.new && typeof payload.new === "object" ? (payload.new as any).id : null;
+      const recordId = newRecord?.id;
 
       // Track new inserts from other users for highlight
       if (payload.eventType === "INSERT" && isOtherUser && recordId) {
         addNewId(recordId);
       }
 
-      // Activity toast
+      // Activity toast for INSERTs
       if (payload.eventType === "INSERT" && isOtherUser && TOAST_TABLES.has(table) && userId) {
-        showActivityToast(table, userId);
+        showActivityToast(table, userId, "insert");
+      }
+
+      // Activity toast for DELETEs
+      if (payload.eventType === "DELETE" && isOtherUser && DELETE_TOAST_MESSAGES[table] && userId) {
+        showActivityToast(table, userId, "delete");
       }
 
       // Debounced query invalidation
