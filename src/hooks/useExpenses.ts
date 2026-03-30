@@ -327,7 +327,7 @@ export function useExpenses(tripId: string) {
     members: membersQuery.data || [],
     settlementCurrency,
     rates,
-    ratesStale,
+    ratesStale: ratesStale && !allSameCurrency,
     ratesEmpty,
     ratesError: ratesQuery.isError,
     cachedCurrencyCodes: cachedCodesQuery.data || [],
