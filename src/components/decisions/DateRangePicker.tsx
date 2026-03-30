@@ -59,7 +59,7 @@ export function DateRangePicker({
       : placeholder;
 
   const calendarContent = (
-    <div className="space-y-3">
+    <div className="flex flex-col items-center space-y-3">
       <Calendar
         mode="range"
         selected={draft}
