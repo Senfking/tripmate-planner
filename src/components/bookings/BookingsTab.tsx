@@ -109,6 +109,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       isMine={a.created_by === user?.id}
       isExtracting={extractingIds.has(a.id)}
       isFetching={fetchingIds.has(a.id)}
+      isNew={newItemIds?.has(a.id)}
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
       onUploadPrompt={() => setMode("upload")}

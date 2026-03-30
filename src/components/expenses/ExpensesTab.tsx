@@ -303,6 +303,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                           baseCurrency={settlementCurrency}
                           rates={rates}
                           itineraryItems={itineraryItems}
+                          isNew={newItemIds?.has(exp.id)}
                           onEdit={(e) => { setEditingExpense(e); setFormOpen(true); }}
                           onDelete={(id) => deleteExpense.mutate(id)}
                         />
