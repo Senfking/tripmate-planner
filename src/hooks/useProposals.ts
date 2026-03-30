@@ -301,7 +301,24 @@ export function useProposals(tripId: string | undefined) {
         .eq("id", proposalId);
       if (error) throw error;
     },
-    onSuccess: invalidateAll,
+    onMutate: async ({ proposalId }) => {
+      // Cancel outgoing refetches
+      await qc.cancelQueries({ queryKey: ["trip-proposals", tripId] });
+      // Snapshot previous value
+      const prev = qc.getQueryData<Proposal[]>(["trip-proposals", tripId]);
+      // Optimistically remove from cache
+      qc.setQueryData<Proposal[]>(["trip-proposals", tripId], (old) =>
+        (old || []).filter((p) => p.id !== proposalId)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, context) => {
+      // Roll back on failure
+      if (context?.prev) {
+        qc.setQueryData(["trip-proposals", tripId], context.prev);
+      }
+    },
+    onSettled: invalidateAll,
   });
 
   // ─── Derived data ───
