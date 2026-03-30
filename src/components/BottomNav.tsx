@@ -59,16 +59,14 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-4 bottom-4 z-50 md:hidden">
       <div
-        className="relative rounded-[28px] backdrop-blur-[20px]"
+        className="relative rounded-[28px] backdrop-blur-[24px]"
         style={{
-          background: "rgba(255, 255, 255, 0.75)",
-          WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(255, 255, 255, 0.5)",
-          boxShadow: "0 -1px 0 rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.08)",
+          background: "rgba(255, 255, 255, 0.55)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: "1px solid rgba(255, 255, 255, 0.4)",
+          boxShadow: "0 -1px 0 rgba(0,0,0,0.03), 0 8px 32px rgba(0,0,0,0.06)",
         }}
       >
-        {/* Subtle top accent */}
-        <div className="pointer-events-none absolute inset-x-16 top-0 h-[1.5px] rounded-full bg-gradient-primary opacity-60" />
 
         <div className="flex items-end justify-between px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-1">
           {/* Left tabs */}

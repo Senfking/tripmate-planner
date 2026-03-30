@@ -4,7 +4,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { UserCircle } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 
 export function AppLayout() {
   return (
