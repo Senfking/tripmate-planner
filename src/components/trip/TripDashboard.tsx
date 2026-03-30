@@ -275,7 +275,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const bookingsBadge: BadgeState = (() => {
-    if (tripEnded) return endedBadge;
     const count = attachments?.length ?? 0;
     if (count > 0) return { label: `${count} docs saved`, color: "green" };
     return { label: "No docs yet", color: "grey" };
@@ -330,36 +329,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   let expensesSummary: string;
-  let expensesSummaryColor: string | undefined;
   let expensesBadge: BadgeState;
 
-  if (tripEnded) {
-    expensesBadge = endedBadge;
-  } else if (expenses && expenses.length > 0 && userId) {
-    const mapped = expenses.map((e) => ({
-      id: e.id,
-      payer_id: e.payer_id,
-      amount: Number(e.amount),
-      currency: e.currency,
-      splits: (e.expense_splits ?? []).map((s) => ({
-        user_id: s.user_id,
-        share_amount: Number(s.share_amount),
-      })),
-    }));
-    const balances = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
-    const myBalance = balances.find((b) => b.userId === userId);
-    if (!myBalance || Math.abs(myBalance.balance) < 0.01) {
-      expensesBadge = { label: "Settled up", color: "green" };
-    } else if (myBalance.balance > 0) {
-      expensesBadge = { label: `Owed ${formatCurrencyShort(myBalance.balance, settlementCurrency)}`, color: "green" };
-    } else {
-      expensesBadge = { label: `You owe ${formatCurrencyShort(Math.abs(myBalance.balance), settlementCurrency)}`, color: "red" };
-    }
-  } else {
-    expensesBadge = { label: "No expenses", color: "grey" };
-  }
-
-  // Expenses summary text (separate from badge)
   if (expenses && expenses.length > 0 && userId) {
     const mapped = expenses.map((e) => ({
       id: e.id,
@@ -374,15 +345,17 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     const balances = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
     const myBalance = balances.find((b) => b.userId === userId);
     if (!myBalance || Math.abs(myBalance.balance) < 0.01) {
+      expensesBadge = { label: "Settled up", color: "green" };
       expensesSummary = "All settled up ✅";
     } else if (myBalance.balance > 0) {
+      expensesBadge = { label: `Owed ${formatCurrencyShort(myBalance.balance, settlementCurrency)}`, color: "green" };
       expensesSummary = `You are owed ${formatCurrencyShort(myBalance.balance, settlementCurrency)}`;
-      expensesSummaryColor = "#10B981";
     } else {
+      expensesBadge = { label: `You owe ${formatCurrencyShort(Math.abs(myBalance.balance), settlementCurrency)}`, color: "red" };
       expensesSummary = `You owe ${formatCurrencyShort(Math.abs(myBalance.balance), settlementCurrency)}`;
-      expensesSummaryColor = "#F59E0B";
     }
   } else {
+    expensesBadge = { label: "No expenses", color: "grey" };
     expensesSummary = "No expenses logged yet";
   }
 
@@ -401,9 +374,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   const roleLabel = myRole ? myRole.charAt(0).toUpperCase() + myRole.slice(1) : "Member";
   const adminSummary = `${memberCount ?? "…"} members · ${roleLabel}`;
-  const adminBadge: BadgeState = tripEnded
-    ? endedBadge
-    : { label: `${memberCount ?? 0} members`, color: "grey" };
+  const adminBadge: BadgeState = { label: `${memberCount ?? 0} members`, color: "grey" };
 
   return (
     <div className="flex flex-col gap-2.5 px-4 pb-12">
@@ -437,7 +408,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         icon={Wallet}
         title="Expenses"
         summary={expensesSummary}
-        summaryColor={expensesSummaryColor}
+        
         to={`/app/trips/${tripId}/expenses`}
         badge={expensesBadge}
         imageUrl="https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?w=800&q=80"
