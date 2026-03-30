@@ -82,9 +82,7 @@ export function useExpenses(tripId: string) {
 
       const userIds = data.map((m) => m.user_id);
       const { data: profiles, error: pErr } = await supabase
-        .from("profiles")
-        .select("id, display_name")
-        .in("id", userIds);
+        .rpc("get_public_profiles", { _user_ids: userIds });
       if (pErr) throw pErr;
 
       const profileMap = Object.fromEntries(

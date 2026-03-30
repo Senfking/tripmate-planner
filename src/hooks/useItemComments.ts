@@ -31,9 +31,7 @@ export function useItemComments(tripId: string, itemId: string) {
       // Fetch display names for unique user ids
       const userIds = [...new Set(data.map((c) => c.user_id))];
       const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, display_name")
-        .in("id", userIds);
+        .rpc("get_public_profiles", { _user_ids: userIds });
       const nameMap = new Map(
         (profiles || []).map((p) => [p.id, p.display_name])
       );

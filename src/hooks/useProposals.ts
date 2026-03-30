@@ -53,9 +53,7 @@ export function useProposals(tripId: string | undefined) {
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, display_name")
-          .in("id", userIds);
+          .rpc("get_public_profiles", { _user_ids: userIds });
         for (const p of profiles || []) {
           profileMap[p.id] = p.display_name || "Someone";
         }
