@@ -118,10 +118,13 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
       ) : (
         <div className="space-y-3">
-          {proposals.map((p) => {
-            const pDateOptions = dateOptionsByProposal(p.id);
-            return (
-              <ProposalCard
+         {proposals.map((p) => {
+119:             const pDateOptions = dateOptionsByProposal(p.id);
+120:             const isCreator = user?.id === p.created_by;
+121:             const hasOtherVotes = (destVotes[p.id]?.up || 0) + (destVotes[p.id]?.down || 0) > (myDestVotes[p.id] ? 1 : 0);
+122:             const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
+123:             return (
+124:               <ProposalCard
                 key={p.id}
                 proposal={p}
                 destVotes={destVotes[p.id] || { up: 0, down: 0 }}
@@ -147,6 +150,25 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                 }}
                 isAddingToRoute={addStop.isPending}
                 isAddingDate={addDateOption.isPending}
+                currentUserId={user?.id}
+                canDelete={canDeleteThis}
+                onDeleteProposal={(proposalId) => {
+                  deleteProposal.mutate({ proposalId }, {
+                    onSuccess: () => toast({ title: `${p.destination} removed` }),
+                    onError: (err) => {
+                      if (err.message === "IN_ROUTE") {
+                        toast({
+                          title: "Can't remove",
+                          description: "This destination is already in your route. Remove it from the route first.",
+                          variant: "destructive",
+                        });
+                      } else {
+                        toast({ title: "Failed to remove suggestion", variant: "destructive" });
+                      }
+                    },
+                  });
+                }}
+                isDeleting={deleteProposal.isPending}
               />
             );
           })}
