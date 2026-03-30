@@ -49,12 +49,14 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
     const syncLastSeen = async () => {
       const now = new Date().toISOString();
 
-      const { data: row } = await supabase
+      const tripLastSeenClient = supabase as any;
+
+      const { data: row } = await tripLastSeenClient
         .from("trip_last_seen" as any)
         .select("last_seen_at")
         .eq("trip_id", tripId)
         .eq("user_id", user.id)
-        .maybeSingle();
+        .maybeSingle() as { data: { last_seen_at: string | null } | null };
 
       if (!active) return;
 
@@ -72,7 +74,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
         }, 4000);
       }
 
-      await supabase.from("trip_last_seen" as any).upsert({
+      await tripLastSeenClient.from("trip_last_seen" as any).upsert({
         trip_id: tripId,
         user_id: user.id,
         last_seen_at: now,
