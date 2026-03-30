@@ -47,12 +47,13 @@ interface Props {
   attendance: AttendanceRecord[];
   activeId: string | null;
   overlapTitles?: string[];
+  isNew?: boolean;
   onCycleAttendance: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, overlapTitles, onCycleAttendance, onEdit, onDelete }: Props) {
+export function ItineraryItemCard({ item, tripId, myRole, members, attendance, activeId, overlapTitles, isNew, onCycleAttendance, onEdit, onDelete }: Props) {
   const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isMobile = useIsMobile();
