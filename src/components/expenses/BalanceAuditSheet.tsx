@@ -20,7 +20,9 @@ interface Props {
 
 interface AuditLine {
   title: string;
+  date: string;
   payer?: string;
+  isSelfPaid: boolean;
   originalAmount: number;
   originalCurrency: string;
   convertedAmount: number | null;
@@ -46,12 +48,16 @@ export function BalanceAuditSheet({
     let totalOwed = 0;
 
     for (const exp of expenses) {
+      const dateStr = format(new Date(exp.incurred_on), "MMM d");
+
       if (exp.payer_id === userId) {
         const converted = convertAmount(exp.amount, exp.currency, settlementCurrency, settlementCurrency, rates);
         if (converted != null) totalPaid += converted;
         if (exp.currency !== settlementCurrency) foreignCurrencies.add(exp.currency);
         paid.push({
           title: exp.title,
+          date: dateStr,
+          isSelfPaid: true,
           originalAmount: exp.amount,
           originalCurrency: exp.currency,
           convertedAmount: converted,
@@ -65,7 +71,9 @@ export function BalanceAuditSheet({
         if (exp.currency !== settlementCurrency) foreignCurrencies.add(exp.currency);
         owed.push({
           title: exp.title,
+          date: dateStr,
           payer: profileMap[exp.payer_id] || "Unknown",
+          isSelfPaid: exp.payer_id === userId,
           originalAmount: s.share_amount,
           originalCurrency: exp.currency,
           convertedAmount: converted,
@@ -79,38 +87,13 @@ export function BalanceAuditSheet({
 
   const ratesDateStr = ratesFetchedAt ? format(ratesFetchedAt, "d MMM yyyy") : "unknown date";
 
-  const renderPaidLine = (line: AuditLine, i: number) => {
+  const renderRow = (line: AuditLine, i: number, section: "paid" | "owed") => {
     const isForeign = line.originalCurrency !== settlementCurrency;
-    return (
-      <div
-        key={i}
-        className={`py-3 px-2 ${i % 2 === 1 ? "bg-muted/30" : ""} ${i > 0 ? "border-t border-muted/40" : ""}`}
-      >
-        <div className="flex items-start justify-between gap-2 text-xs">
-          <span className="line-clamp-2 leading-snug">{line.title}</span>
-          <span className="font-medium shrink-0">
-            {formatCurrency(line.convertedAmount ?? line.originalAmount, settlementCurrency)}
-          </span>
-        </div>
-        {isForeign && (
-          <div className="flex justify-end mt-0.5">
-            <span className="text-[11px] text-muted-foreground">
-              {formatCurrency(line.originalAmount, line.originalCurrency)}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  };
+    const showPayer = section === "owed" && !line.isSelfPaid;
+    const subLeft = [line.date, showPayer ? `paid by ${line.payer}` : null].filter(Boolean).join(" · ");
 
-  const renderOwedLine = (line: AuditLine, i: number) => {
-    const isForeign = line.originalCurrency !== settlementCurrency;
-    const showPayer = line.payer && line.payer !== displayName;
     return (
-      <div
-        key={i}
-        className={`py-3 px-2 ${i % 2 === 1 ? "bg-muted/30" : ""} ${i > 0 ? "border-t border-muted/40" : ""}`}
-      >
+      <div key={i} className={`py-2 px-2 ${i > 0 ? "border-b border-muted/30" : "border-b border-muted/30"}`}>
         <div className="flex items-start justify-between gap-2 text-xs">
           <span className="line-clamp-2 leading-snug">{line.title}</span>
           <span className="font-medium shrink-0">
@@ -118,9 +101,7 @@ export function BalanceAuditSheet({
           </span>
         </div>
         <div className="flex items-center justify-between mt-0.5">
-          {showPayer ? (
-            <span className="text-[11px] text-muted-foreground">paid by {line.payer}</span>
-          ) : <span />}
+          <span className="text-[11px] text-muted-foreground">{subLeft}</span>
           {isForeign && (
             <span className="text-[11px] text-muted-foreground">
               {formatCurrency(line.originalAmount, line.originalCurrency)}
@@ -131,25 +112,36 @@ export function BalanceAuditSheet({
     );
   };
 
+  const netColor = audit.netBalance > 0.005 ? "bg-emerald-500" : audit.netBalance < -0.005 ? "bg-red-500" : "bg-muted-foreground";
+
   return (
     <ResponsiveModal
       open={open}
       onOpenChange={onOpenChange}
       title={`How ${displayName}'s balance was calculated`}
     >
-      <div className="space-y-5 pb-4 max-h-[70vh] overflow-y-auto">
+      <div className="space-y-4 pb-4 max-h-[70vh] overflow-y-auto">
         {/* Summary card */}
-        <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-          <div className="flex justify-between text-sm">
-            <span>{displayName} paid</span>
+        <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: "#0D9488" }} />
+              {displayName} paid
+            </span>
             <span className="font-medium">{formatCurrency(audit.totalPaid, settlementCurrency)}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span>{displayName}'s total share</span>
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: "#D97706" }} />
+              {displayName}'s total share
+            </span>
             <span className="font-medium">−{formatCurrency(audit.totalOwed, settlementCurrency)}</span>
           </div>
-          <div className="flex justify-between text-sm font-bold pt-1 border-t border-muted">
-            <span>Net balance</span>
+          <div className="flex items-center justify-between text-sm font-bold pt-1.5 border-t border-muted">
+            <span className="flex items-center gap-2">
+              <span className={`h-2 w-2 rounded-full shrink-0 ${netColor}`} />
+              Net balance
+            </span>
             <span className={audit.netBalance > 0.005 ? "text-emerald-600" : audit.netBalance < -0.005 ? "text-red-500" : ""}>
               {formatCurrency(Math.abs(audit.netBalance), settlementCurrency)}
               {audit.netBalance > 0.005 ? " (owed)" : audit.netBalance < -0.005 ? " (owes)" : " (settled)"}
@@ -161,22 +153,24 @@ export function BalanceAuditSheet({
         <div>
           <button
             onClick={() => setShowPaidDetail((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider py-1"
+            className="flex w-full items-center justify-between border-l-[3px] border-primary pl-2 py-1"
           >
-            <span>What {displayName} paid ({audit.paid.length})</span>
-            <span className="flex items-center gap-1">
-              <span className="normal-case tracking-normal font-medium">
+            <span className="text-[13px] font-bold text-foreground">
+              What {displayName} paid ({audit.paid.length})
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
                 {formatCurrency(audit.totalPaid, settlementCurrency)}
               </span>
-              <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showPaidDetail ? "rotate-90" : ""}`} />
+              <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${showPaidDetail ? "rotate-90" : ""}`} />
             </span>
           </button>
           {showPaidDetail && (
-            <div className="mt-1 rounded-lg overflow-hidden border border-muted/40">
+            <div className="mt-1.5">
               {audit.paid.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic p-3">No expenses paid</p>
+                <p className="text-xs text-muted-foreground italic px-2">No expenses paid</p>
               ) : (
-                audit.paid.map(renderPaidLine)
+                audit.paid.map((line, i) => renderRow(line, i, "paid"))
               )}
             </div>
           )}
@@ -186,22 +180,24 @@ export function BalanceAuditSheet({
         <div>
           <button
             onClick={() => setShowOwedDetail((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider py-1"
+            className="flex w-full items-center justify-between border-l-[3px] border-primary pl-2 py-1"
           >
-            <span>{displayName}'s share ({audit.owed.length})</span>
-            <span className="flex items-center gap-1">
-              <span className="normal-case tracking-normal font-medium">
+            <span className="text-[13px] font-bold text-foreground">
+              {displayName}'s share ({audit.owed.length})
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
                 {formatCurrency(audit.totalOwed, settlementCurrency)}
               </span>
-              <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showOwedDetail ? "rotate-90" : ""}`} />
+              <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${showOwedDetail ? "rotate-90" : ""}`} />
             </span>
           </button>
           {showOwedDetail && (
-            <div className="mt-1 rounded-lg overflow-hidden border border-muted/40">
+            <div className="mt-1.5">
               {audit.owed.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic p-3">No expense shares</p>
+                <p className="text-xs text-muted-foreground italic px-2">No expense shares</p>
               ) : (
-                audit.owed.map(renderOwedLine)
+                audit.owed.map((line, i) => renderRow(line, i, "owed"))
               )}
             </div>
           )}
@@ -209,9 +205,10 @@ export function BalanceAuditSheet({
 
         {/* Conversion footnote */}
         {audit.foreignCurrencies.length > 0 && (
-          <div className="text-[11px] text-muted-foreground space-y-0.5 pt-1 border-t border-muted/40">
+          <div className="text-[11px] text-muted-foreground space-y-0.5 pt-2 border-t border-muted/40">
+            <p className="font-medium">Rates used for conversion:</p>
             {audit.foreignCurrencies.map((cur) => (
-              <p key={cur}>{cur} · Rate from {ratesDateStr}</p>
+              <p key={cur}>{cur} → rate from {ratesDateStr}</p>
             ))}
           </div>
         )}
