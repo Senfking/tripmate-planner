@@ -5,7 +5,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { UserCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -38,15 +38,40 @@ function OfflineBanner() {
   );
 }
 
+function HeaderAvatar() {
+  const { profile, user } = useAuth();
+
+  const initials = (() => {
+    if (profile?.display_name) return profile.display_name.charAt(0).toUpperCase();
+    if (user?.email) return user.email.charAt(0).toUpperCase();
+    return "?";
+  })();
+
+  return (
+    <Link
+      to="/app/more"
+      className="ml-auto relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30 overflow-hidden"
+    >
+      {profile?.avatar_url ? (
+        <img
+          src={profile.avatar_url}
+          alt="Profile"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span className="text-white text-sm font-semibold">{initials}</span>
+      )}
+    </Link>
+  );
+}
+
 export function AppLayout() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
-          {/* Header */}
           <header className="sticky top-0 z-40 flex h-[52px] items-center border-b bg-gradient-primary px-4 text-white relative overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-            {/* Diagonal shine */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
@@ -66,17 +91,11 @@ export function AppLayout() {
               </span>
             </div>
 
-            <Link
-              to="/app/more"
-              className="ml-auto relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30"
-            >
-              <UserCircle className="h-[22px] w-[22px] text-white" />
-            </Link>
+            <HeaderAvatar />
           </header>
 
           <OfflineBanner />
 
-          {/* Page content */}
           <main className="flex-1 pb-24 md:pb-0">
             <PullToRefresh>
               <div className="animate-fade-in">

@@ -2,7 +2,23 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-type Profile = { id: string; display_name: string | null };
+type NotificationPreferences = {
+  new_activity: boolean;
+  new_expense: boolean;
+  new_member: boolean;
+  route_confirmed: boolean;
+  decisions_reminder: boolean;
+};
+
+type Profile = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  default_currency: string | null;
+  subscription_tier: string;
+  notification_preferences: NotificationPreferences;
+  referral_code: string | null;
+};
 
 interface AuthContextValue {
   user: User | null;
@@ -12,9 +28,12 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, displayName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const PROFILE_SELECT = "id, display_name, avatar_url, default_currency, subscription_tier, notification_preferences, referral_code";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -25,20 +44,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, display_name")
+      .select(PROFILE_SELECT)
       .eq("id", userId)
       .single();
-    setProfile(data);
+    if (data) {
+      setProfile({
+        ...data,
+        notification_preferences: (data.notification_preferences as unknown as NotificationPreferences) ?? {
+          new_activity: true,
+          new_expense: true,
+          new_member: true,
+          route_confirmed: true,
+          decisions_reminder: true,
+        },
+      });
+    }
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    const currentUser = user;
+    if (currentUser) {
+      await fetchProfile(currentUser.id);
+    }
+  }, [user, fetchProfile]);
+
   useEffect(() => {
-    // Set up listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         if (newSession?.user) {
-          // Use setTimeout to avoid potential deadlock with Supabase client
           setTimeout(() => fetchProfile(newSession.user.id), 0);
         } else {
           setProfile(null);
@@ -47,7 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Then check existing session
     supabase.auth.getSession().then(({ data: { session: existing } }) => {
       setSession(existing);
       setUser(existing?.user ?? null);
@@ -82,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
