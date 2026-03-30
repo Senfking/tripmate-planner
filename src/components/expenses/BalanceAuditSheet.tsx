@@ -118,7 +118,7 @@ export function BalanceAuditSheet({
       onOpenChange={onOpenChange}
       title={`How ${displayName}'s balance was calculated`}
     >
-      <div className="space-y-3 pb-4 max-h-[70vh] overflow-y-auto">
+      <div className="divide-y divide-border/30 pb-4 max-h-[70vh] overflow-y-auto [&>*]:pt-3 [&>*:first-child]:pt-0">
         {/* Summary card */}
         <div className="rounded-lg bg-muted/60 p-3">
           <div className="flex justify-between text-sm py-1.5">
