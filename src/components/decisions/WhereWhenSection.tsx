@@ -1,5 +1,6 @@
 import { useProposals } from "@/hooks/useProposals";
 import { useRouteStops } from "@/hooks/useRouteStops";
+import { useAuth } from "@/contexts/AuthContext";
 import { ProposalCard } from "./ProposalCard";
 import { ProposalForm } from "./ProposalForm";
 import { LeadingComboBanner } from "./LeadingComboBanner";
