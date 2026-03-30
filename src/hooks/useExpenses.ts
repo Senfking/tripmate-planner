@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -172,9 +173,26 @@ export function useExpenses(tripId: string) {
   const rates = ratesQuery.data?.rates || {};
   const ratesFetchedAt = ratesQuery.data?.fetchedAt || null;
   const ratesStale = ratesFetchedAt
-    ? Date.now() - ratesFetchedAt.getTime() > 25 * 60 * 60 * 1000
+    ? Date.now() - ratesFetchedAt.getTime() > 12 * 60 * 60 * 1000
     : false;
   const ratesEmpty = Object.keys(rates).length === 0 && !ratesQuery.isLoading;
+
+  // If all expenses use the settlement currency, no conversion needed
+  const allSameCurrency =
+    (expensesQuery.data || []).length > 0 &&
+    (expensesQuery.data || []).every((e) => e.currency === settlementCurrency);
+
+  // Silently trigger a refresh when rates are stale (once per session)
+  useEffect(() => {
+    if (
+      ratesStale &&
+      !ratesQuery.isError &&
+      !sessionStorage.getItem("rates_refresh_attempted")
+    ) {
+      sessionStorage.setItem("rates_refresh_attempted", "1");
+      supabase.functions.invoke("refresh-exchange-rates").catch(() => {});
+    }
+  }, [ratesStale, ratesQuery.isError]);
 
   // Fetch itinerary items for linking
   const itineraryQuery = useQuery({
@@ -309,7 +327,7 @@ export function useExpenses(tripId: string) {
     members: membersQuery.data || [],
     settlementCurrency,
     rates,
-    ratesStale,
+    ratesStale: ratesStale && !allSameCurrency,
     ratesEmpty,
     ratesError: ratesQuery.isError,
     cachedCurrencyCodes: cachedCodesQuery.data || [],
