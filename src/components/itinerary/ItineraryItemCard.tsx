@@ -273,10 +273,9 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-lg bg-card p-3 space-y-2",
+            "rounded-lg bg-white dark:bg-card p-3 space-y-2",
             isDragging && "opacity-50 ring-2 ring-primary/30",
-            overlapTitles?.length && !showNewBorder && "border border-l-[3px] border-l-amber-400",
-            !overlapTitles?.length && !showNewBorder && "border",
+            !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400",
             animPhase === "fadein" && "animate-fade-in-card",
           )}
           style={{
@@ -289,12 +288,14 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
                 }
               : !newBorderVisible && isNewSinceLastVisit
               ? {
-                  border: undefined,
-                  borderColor: "transparent",
-                  boxShadow: "none",
+                  border: "1px solid transparent",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 0px 1px rgba(0,0,0,0.05)",
                   transition: "border-color 1s ease-out, box-shadow 1s ease-out",
                 }
-              : undefined),
+              : {
+                  border: "none",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 0px 1px rgba(0,0,0,0.05)",
+                }),
           }}
         >
           {cardContent}

@@ -58,7 +58,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
   // Effect B: compare once both are ready
   useEffect(() => {
     if (prevLastSeen === undefined) return;
-    if (isLoading) return;
+    if (!items) return;
     if (!tripId || !user) return;
 
     const newIds = items
