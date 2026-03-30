@@ -81,7 +81,7 @@ export default {
           },
         },
         "realtime-flash": {
-          "0%": { backgroundColor: "rgba(13, 148, 136, 0.15)" },
+          "0%": { backgroundColor: "hsl(var(--primary) / 0.15)" },
           "100%": { backgroundColor: "transparent" },
         },
         "slide-in-fade": {
@@ -92,9 +92,17 @@ export default {
           "0%": { backgroundPosition: "200% 0" },
           "100%": { backgroundPosition: "-200% 0" },
         },
+        "shimmer-diag": {
+          "0%": { backgroundPosition: "100% 0%" },
+          "100%": { backgroundPosition: "0% 100%" },
+        },
         "crossfade-in": {
           from: { opacity: "0" },
           to: { opacity: "1" },
+        },
+        "glow-stripe": {
+          "0%": { opacity: "0.95" },
+          "100%": { opacity: "0" },
         },
       },
       animation: {
@@ -103,7 +111,9 @@ export default {
         "realtime-flash": "realtime-flash 1.5s ease-out forwards",
         "slide-in-fade": "slide-in-fade 400ms ease-out",
         "shimmer": "shimmer 1.2s ease-in-out infinite",
+        "shimmer-diag": "shimmer-diag 1.4s ease-in-out infinite",
         "crossfade-in": "crossfade-in 200ms ease-out forwards",
+        "glow-stripe": "glow-stripe 3s ease-out forwards",
         "new-item": "slide-in-fade 400ms ease-out, realtime-flash 1.5s ease-out 400ms forwards",
       },
     },

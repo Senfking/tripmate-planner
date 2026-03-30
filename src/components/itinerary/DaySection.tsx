@@ -61,6 +61,7 @@ interface Props {
   members: TripMember[];
   attendance: AttendanceRecord[];
   newItemIds?: Set<string>;
+  lastVisitItemIds?: Set<string>;
   onCycleAttendance: (itemId: string) => void;
   onAddItem: (data: any) => void;
   onUpdateItem: (data: any) => void;
@@ -69,7 +70,7 @@ interface Props {
   saving?: boolean;
 }
 
-export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, newItemIds, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
+export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, newItemIds, lastVisitItemIds, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -175,6 +176,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
                   activeId={activeId}
                   overlapTitles={overlapMap.get(item.id)}
                   isNew={newItemIds?.has(item.id)}
+                   isNewSinceLastVisit={lastVisitItemIds?.has(item.id)}
                   onCycleAttendance={() => onCycleAttendance(item.id)}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => onDeleteItem(item.id)}

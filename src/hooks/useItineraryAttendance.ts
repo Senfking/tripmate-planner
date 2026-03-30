@@ -33,6 +33,8 @@ export function useItineraryAttendance(tripId: string) {
       return data as AttendanceRecord[];
     },
     enabled: !!tripId && !!user,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: members = [] } = useQuery({
