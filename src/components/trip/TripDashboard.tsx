@@ -372,7 +372,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const roleLabel = myRole ? myRole.charAt(0).toUpperCase() + myRole.slice(1) : "Member";
-  const adminSummary = `${memberCount ?? "…"} members · ${roleLabel}`;
+  const adminSummary = roleLabel;
   const adminBadge: BadgeState = { label: `${memberCount ?? 0} members`, color: "grey" };
 
   return (
