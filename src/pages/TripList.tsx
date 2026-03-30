@@ -260,15 +260,15 @@ export default function TripList() {
         countMap[m.trip_id] = (countMap[m.trip_id] || 0) + 1;
       });
 
-      // First stop destination per trip
-      const firstStopMap: Record<string, string> = {};
+      const stopDestsMap: Record<string, string[]> = {};
       (stopsRes.data as any[] | null)?.forEach((s: any) => {
-        if (!firstStopMap[s.trip_id]) firstStopMap[s.trip_id] = s.destination;
+        if (!stopDestsMap[s.trip_id]) stopDestsMap[s.trip_id] = [];
+        stopDestsMap[s.trip_id].push(s.destination);
       });
 
       const enriched: EnrichedTrip[] = data.map((t) => {
         const statusInfo = getTripStatus(t.tentative_start_date, t.tentative_end_date);
-        const photoUrl = resolvePhoto(t.name, firstStopMap[t.id] ?? null);
+        const photoUrl = resolvePhoto(t.name, stopDestsMap[t.id] ?? []);
         return {
           id: t.id,
           name: t.name,
