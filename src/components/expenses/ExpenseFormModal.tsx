@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { MemberProfile, ExpenseRow } from "@/hooks/useExpenses";
@@ -13,9 +13,11 @@ import { CurrencyPicker } from "./CurrencyPicker";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Lightbulb } from "lucide-react";
+import { CalendarIcon, Lightbulb, Camera, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const CATEGORIES = [
   { value: "food", label: "Food & Drink" },
@@ -71,6 +73,8 @@ export function ExpenseFormModal({
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
   const [settlementDismissed, setSettlementDismissed] = useState(false);
   const [titleManuallySet, setTitleManuallySet] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -168,6 +172,45 @@ export function ExpenseFormModal({
     }
   };
 
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+
+    setScanning(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke("scan-receipt", {
+        body: { image: base64 },
+      });
+
+      if (error || data?.error) {
+        toast.error("Couldn't read receipt — fill in manually");
+        return;
+      }
+
+      if (data.title) { setTitle(data.title); setTitleManuallySet(true); }
+      if (data.amount) setAmount(String(data.amount));
+      if (data.currency) setCurrency(data.currency);
+      if (data.date) setIncurredOn(data.date);
+      if (data.category && CATEGORIES.some(c => c.value === data.category)) {
+        setCategory(data.category);
+      }
+      toast.success("Receipt scanned ✓");
+    } catch {
+      toast.error("Couldn't read receipt — fill in manually");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const handleSubmit = () => {
     if (!canSubmit) return;
     onSave({
@@ -196,6 +239,38 @@ export function ExpenseFormModal({
 
   const formContent = (
     <div className="space-y-4 p-4 overflow-y-auto max-h-[70vh]">
+      {/* Hidden file input for receipt scanning */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleScanReceipt}
+      />
+
+      {/* Scan receipt button */}
+      {!editingExpense && (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={scanning}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-[#0D9488]/30 bg-[#0D9488]/5 hover:bg-[#0D9488]/10 py-3 text-[13px] font-medium text-[#0D9488] transition-colors disabled:opacity-60"
+        >
+          {scanning ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Scanning receipt…
+            </>
+          ) : (
+            <>
+              <Camera className="h-4 w-4" />
+              Scan a receipt
+            </>
+          )}
+        </button>
+      )}
+
       <div className="space-y-1.5">
         <Label className="text-xs">Title *</Label>
         <Input
