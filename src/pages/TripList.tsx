@@ -435,7 +435,7 @@ export default function TripList() {
   if (!trips || trips.length === 0) {
     return (
       <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
-        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" />
+        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={[]} />
 
         <div className="flex flex-1 flex-col items-center px-6 pt-8">
           <Button asChild className="w-full max-w-[260px]">
