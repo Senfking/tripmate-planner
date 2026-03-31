@@ -121,7 +121,7 @@ export default function ShareView() {
             The trip organizer may have revoked it, or it may have expired.
           </p>
         </div>
-        <Button asChild className="bg-teal-600 hover:bg-teal-700">
+        <Button asChild>
           <Link to="/signup">Sign up to Junto</Link>
         </Button>
       </div>
@@ -201,7 +201,7 @@ export default function ShareView() {
               <div className="absolute left-2.5 top-1 bottom-1 w-0.5 bg-teal-200 rounded" />
               {route_stops.map((stop, i) => (
                 <div key={i} className="relative flex items-start gap-3">
-                  <div className="absolute -left-6 top-1 h-5 w-5 rounded-full bg-teal-600 text-white text-[10px] font-bold flex items-center justify-center z-10">
+                  <div className="absolute -left-6 top-1 h-5 w-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center z-10" style={{ background: "var(--gradient-primary)" }}>
                     {i + 1}
                   </div>
                   <div>
@@ -370,7 +370,7 @@ export default function ShareView() {
         {/* Footer CTA */}
         <footer className="text-center py-6 space-y-4 border-t border-gray-100">
           <p className="text-sm text-gray-500">Planning a trip?</p>
-          <Button asChild size="lg" className="bg-teal-600 hover:bg-teal-700">
+          <Button asChild size="lg">
             <Link to="/signup">Join Junto free →</Link>
           </Button>
           <p className="text-xs text-gray-400">
