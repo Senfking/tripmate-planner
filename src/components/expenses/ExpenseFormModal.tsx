@@ -395,47 +395,65 @@ export function ExpenseFormModal({
         <div className="flex items-center justify-between">
           <Label className="text-xs">Split between</Label>
           <div className="flex gap-1">
-            <Button
-              type="button" size="sm" variant={splitMode === "equal" ? "default" : "outline"}
-              className="h-6 text-[10px] px-2"
-              onClick={() => setSplitMode("equal")}
-            >Equal</Button>
-            <Button
-              type="button" size="sm" variant={splitMode === "custom" ? "default" : "outline"}
-              className="h-6 text-[10px] px-2"
-              onClick={() => setSplitMode("custom")}
-            >Custom</Button>
+            {(["equal", "percent", "custom"] as const).map((mode) => (
+              <Button
+                key={mode}
+                type="button" size="sm"
+                variant={splitMode === mode ? "default" : "outline"}
+                className="h-6 text-[10px] px-2 capitalize"
+                onClick={() => {
+                  setSplitMode(mode);
+                  if (mode !== splitMode) setCustomAmounts({});
+                }}
+              >
+                {mode === "percent" ? "%" : mode}
+              </Button>
+            ))}
           </div>
         </div>
-        <div className="space-y-1.5 max-h-40 overflow-y-auto">
-          {members.map((m) => (
-            <div key={m.userId} className="flex items-center gap-2">
-              <Checkbox
-                checked={selectedMembers.has(m.userId)}
-                onCheckedChange={(checked) => {
-                  const next = new Set(selectedMembers);
-                  checked ? next.add(m.userId) : next.delete(m.userId);
-                  setSelectedMembers(next);
-                }}
-              />
-              <span className="text-sm flex-1 truncate">
-                {m.displayName}{m.userId === user?.id ? " (You)" : ""}
-              </span>
-              {splitMode === "custom" && selectedMembers.has(m.userId) && (
-                <Input
-                  type="number" step="0.01" min="0"
-                  className="w-24 h-8 text-xs"
-                  value={customAmounts[m.userId] || ""}
-                  onChange={(e) => setCustomAmounts({ ...customAmounts, [m.userId]: e.target.value })}
-                  placeholder="0.00"
+        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+          {members.map((m) => {
+            const isSelected = selectedMembers.has(m.userId);
+            const showInput = (splitMode === "custom" || splitMode === "percent") && isSelected;
+            return (
+              <div key={m.userId} className="flex items-center gap-2 min-h-[36px]">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(checked) => {
+                    const next = new Set(selectedMembers);
+                    checked ? next.add(m.userId) : next.delete(m.userId);
+                    setSelectedMembers(next);
+                  }}
                 />
-              )}
-            </div>
-          ))}
+                <span className="text-sm flex-1 truncate min-w-0">
+                  {m.displayName}{m.userId === user?.id ? " (You)" : ""}
+                </span>
+                {showInput && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Input
+                      type="number" step="0.01" min="0"
+                      className="w-20 h-8 text-xs text-right"
+                      value={customAmounts[m.userId] || ""}
+                      onChange={(e) => setCustomAmounts({ ...customAmounts, [m.userId]: e.target.value })}
+                      placeholder={splitMode === "percent" ? "0" : "0.00"}
+                    />
+                    {splitMode === "percent" && (
+                      <span className="text-xs text-muted-foreground">%</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         {splitMode === "custom" && !customValid && (
           <p className="text-xs text-destructive">
             Amounts sum to {customSum.toFixed(2)} but total is {parsedAmount.toFixed(2)}
+          </p>
+        )}
+        {splitMode === "percent" && !customValid && (
+          <p className="text-xs text-destructive">
+            Percentages sum to {customSum.toFixed(0)}% — should be 100%
           </p>
         )}
       </div>
