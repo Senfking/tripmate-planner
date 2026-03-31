@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { MemberProfile, ExpenseRow } from "@/hooks/useExpenses";
@@ -13,9 +13,11 @@ import { CurrencyPicker } from "./CurrencyPicker";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Lightbulb } from "lucide-react";
+import { CalendarIcon, Lightbulb, Camera, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const CATEGORIES = [
   { value: "food", label: "Food & Drink" },
