@@ -15,6 +15,7 @@ type Props = {
   isLocked: boolean;
   memberCount: number;
   routeLocked: boolean;
+  myAttendanceStatus?: string;
 };
 
 export function DecisionsFlow({
