@@ -58,7 +58,7 @@ const Expenses = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-2 px-4 pt-3 pb-24">
+        <div className="space-y-2 px-4 mt-4 pb-24">
           {trips.map((trip) => (
             <div
               key={trip.tripId}
