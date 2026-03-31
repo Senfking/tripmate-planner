@@ -87,7 +87,7 @@ export function useGlobalExpenses() {
 
       const tripIds = memberships.map((m) => m.trip_id);
 
-      const [{ data: trips }, { data: expenses }] = await Promise.all([
+      const [{ data: trips }, { data: expenses }, { data: routeStops }] = await Promise.all([
         supabase
           .from("trips")
           .select("id, name, emoji, settlement_currency")
@@ -96,7 +96,19 @@ export function useGlobalExpenses() {
           .from("expenses")
           .select("id, trip_id, payer_id, amount, currency")
           .in("trip_id", tripIds),
+        supabase
+          .from("trip_route_stops")
+          .select("trip_id, destination")
+          .in("trip_id", tripIds)
+          .order("start_date", { ascending: true }),
       ]);
+
+      // Build destination map for photo resolution
+      const stopDestsMap: Record<string, string[]> = {};
+      (routeStops as any[] | null)?.forEach((s: any) => {
+        if (!stopDestsMap[s.trip_id]) stopDestsMap[s.trip_id] = [];
+        stopDestsMap[s.trip_id].push(s.destination);
+      });
 
       const allExpenseIds = (expenses ?? []).map((e) => e.id);
 
