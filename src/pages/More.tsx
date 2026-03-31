@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CurrencyPicker } from "@/components/expenses/CurrencyPicker";
@@ -75,66 +76,166 @@ function AvatarCropDrawer({
   onSave: (blob: Blob) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const stateRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 });
-  const dragRef = useRef<{ startX: number; startY: number; startOX: number; startOY: number } | null>(null);
+  // x, y = top-left of visible region in image-pixel coords; scale = image pixels per canvas pixel
+  const stateRef = useRef({ x: 0, y: 0, scale: 1, minScale: 0.5, maxScale: 4 });
+  const dragRef = useRef<{ lastX: number; lastY: number } | null>(null);
+  const pinchRef = useRef<{ dist: number; startScale: number } | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [zoomValue, setZoomValue] = useState(0); // 0-100 range for slider
+  const SIZE = 280;
 
-  useEffect(() => {
-    if (!file || !open) { setLoaded(false); return; }
-    const img = new window.Image();
-    img.onload = () => {
-      imgRef.current = img;
-      const minDim = Math.min(img.width, img.height);
-      stateRef.current = {
-        offsetX: (img.width - minDim) / 2,
-        offsetY: (img.height - minDim) / 2,
-        scale: minDim / 280,
-      };
-      setLoaded(true);
-      draw();
-    };
-    img.src = URL.createObjectURL(file);
-    return () => URL.revokeObjectURL(img.src);
-  }, [file, open]);
+  const clampState = () => {
+    const s = stateRef.current;
+    const img = imgRef.current;
+    if (!img) return;
+    s.scale = Math.max(s.minScale, Math.min(s.maxScale, s.scale));
+    const viewW = SIZE * s.scale;
+    const viewH = SIZE * s.scale;
+    s.x = Math.max(0, Math.min(img.width - viewW, s.x));
+    s.y = Math.max(0, Math.min(img.height - viewH, s.y));
+  };
 
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current;
     const img = imgRef.current;
     if (!canvas || !img) return;
     const ctx = canvas.getContext("2d")!;
     const s = stateRef.current;
-    ctx.clearRect(0, 0, 280, 280);
-    ctx.drawImage(img, s.offsetX, s.offsetY, 280 * s.scale, 280 * s.scale, 0, 0, 280, 280);
-  };
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.drawImage(img, s.x, s.y, SIZE * s.scale, SIZE * s.scale, 0, 0, SIZE, SIZE);
+  }, []);
 
+  const updateZoomSlider = useCallback(() => {
+    const s = stateRef.current;
+    const pct = 1 - (s.scale - s.minScale) / (s.maxScale - s.minScale);
+    setZoomValue(Math.round(pct * 100));
+  }, []);
+
+  useEffect(() => {
+    if (!file || !open) { setLoaded(false); return; }
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      imgRef.current = img;
+      const minDim = Math.min(img.width, img.height);
+      // Start fully zoomed out to fit the smaller dimension
+      const fitScale = minDim / SIZE;
+      const maxScale = Math.max(img.width, img.height) / SIZE;
+      stateRef.current = {
+        x: (img.width - SIZE * fitScale) / 2,
+        y: (img.height - SIZE * fitScale) / 2,
+        scale: fitScale,
+        minScale: Math.min(fitScale * 0.3, 0.5),
+        maxScale: Math.max(maxScale, fitScale * 3),
+      };
+      setLoaded(true);
+      updateZoomSlider();
+      requestAnimationFrame(draw);
+    };
+    img.src = URL.createObjectURL(file);
+    return () => URL.revokeObjectURL(img.src);
+  }, [file, open, draw, updateZoomSlider]);
+
+  // ── Pointer drag (mouse + single touch) ──
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "touch" && pinchRef.current) return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX, startY: e.clientY, startOX: stateRef.current.offsetX, startOY: stateRef.current.offsetY };
+    dragRef.current = { lastX: e.clientX, lastY: e.clientY };
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!dragRef.current || !imgRef.current) return;
-    const d = dragRef.current;
     const s = stateRef.current;
-    const dx = (e.clientX - d.startX) * s.scale;
-    const dy = (e.clientY - d.startY) * s.scale;
-    s.offsetX = Math.max(0, Math.min(imgRef.current.width - 280 * s.scale, d.startOX - dx));
-    s.offsetY = Math.max(0, Math.min(imgRef.current.height - 280 * s.scale, d.startOY - dy));
+    const dx = (e.clientX - dragRef.current.lastX) * s.scale;
+    const dy = (e.clientY - dragRef.current.lastY) * s.scale;
+    s.x -= dx;
+    s.y -= dy;
+    dragRef.current = { lastX: e.clientX, lastY: e.clientY };
+    clampState();
     draw();
   };
 
   const handlePointerUp = () => { dragRef.current = null; };
 
+  // ── Touch pinch-to-zoom ──
+  const touchesRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      touchesRef.current.set(t.identifier, { x: t.clientX, y: t.clientY });
+    }
+    if (touchesRef.current.size === 2) {
+      const pts = Array.from(touchesRef.current.values());
+      const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      pinchRef.current = { dist, startScale: stateRef.current.scale };
+      dragRef.current = null; // cancel drag during pinch
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      touchesRef.current.set(t.identifier, { x: t.clientX, y: t.clientY });
+    }
+    if (pinchRef.current && touchesRef.current.size >= 2) {
+      const pts = Array.from(touchesRef.current.values());
+      const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      const ratio = pinchRef.current.dist / dist; // pinch out = smaller scale (zoom in)
+      const s = stateRef.current;
+      const centerX = s.x + (SIZE * s.scale) / 2;
+      const centerY = s.y + (SIZE * s.scale) / 2;
+      s.scale = pinchRef.current.startScale * ratio;
+      clampState();
+      // Re-center after zoom
+      s.x = centerX - (SIZE * s.scale) / 2;
+      s.y = centerY - (SIZE * s.scale) / 2;
+      clampState();
+      updateZoomSlider();
+      draw();
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      touchesRef.current.delete(e.changedTouches[i].identifier);
+    }
+    if (touchesRef.current.size < 2) {
+      pinchRef.current = null;
+    }
+  };
+
+  // ── Mouse wheel zoom ──
   const handleWheel = (e: React.WheelEvent) => {
-    if (!imgRef.current) return;
     e.preventDefault();
     const s = stateRef.current;
-    const minScale = Math.min(imgRef.current.width, imgRef.current.height) / 280;
-    const newScale = Math.max(0.5, Math.min(minScale, s.scale * (1 + e.deltaY * 0.001)));
-    s.scale = newScale;
-    s.offsetX = Math.max(0, Math.min(imgRef.current.width - 280 * s.scale, s.offsetX));
-    s.offsetY = Math.max(0, Math.min(imgRef.current.height - 280 * s.scale, s.offsetY));
+    const centerX = s.x + (SIZE * s.scale) / 2;
+    const centerY = s.y + (SIZE * s.scale) / 2;
+    s.scale *= (1 + e.deltaY * 0.002);
+    clampState();
+    s.x = centerX - (SIZE * s.scale) / 2;
+    s.y = centerY - (SIZE * s.scale) / 2;
+    clampState();
+    updateZoomSlider();
+    draw();
+  };
+
+  // ── Zoom slider ──
+  const handleZoomChange = (val: number[]) => {
+    const pct = val[0] / 100;
+    const s = stateRef.current;
+    const centerX = s.x + (SIZE * s.scale) / 2;
+    const centerY = s.y + (SIZE * s.scale) / 2;
+    // pct=0 means max scale (zoomed out), pct=100 means min scale (zoomed in)
+    s.scale = s.maxScale - pct * (s.maxScale - s.minScale);
+    clampState();
+    s.x = centerX - (SIZE * s.scale) / 2;
+    s.y = centerY - (SIZE * s.scale) / 2;
+    clampState();
+    setZoomValue(val[0]);
     draw();
   };
 
@@ -146,7 +247,7 @@ function AvatarCropDrawer({
     out.width = 512;
     out.height = 512;
     const ctx = out.getContext("2d")!;
-    ctx.drawImage(img, s.offsetX, s.offsetY, 280 * s.scale, 280 * s.scale, 0, 0, 512, 512);
+    ctx.drawImage(img, s.x, s.y, SIZE * s.scale, SIZE * s.scale, 0, 0, 512, 512);
     out.toBlob((blob) => { if (blob) onSave(blob); }, "image/jpeg", 0.85);
   };
 
@@ -156,20 +257,42 @@ function AvatarCropDrawer({
         <DrawerHeader>
           <DrawerTitle>Crop your photo</DrawerTitle>
         </DrawerHeader>
-        <div className="flex justify-center px-4 pb-2">
-          <canvas
-            ref={canvasRef}
-            width={280}
-            height={280}
-            className="rounded-full border-2 border-primary/30 touch-none cursor-grab active:cursor-grabbing"
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onWheel={handleWheel}
-            style={{ width: 280, height: 280 }}
-          />
+        <div className="flex flex-col items-center gap-3 px-4 pb-2">
+          <div
+            ref={containerRef}
+            className="relative overflow-hidden rounded-full border-2 border-primary/30"
+            style={{ width: SIZE, height: SIZE, touchAction: "none" }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            <canvas
+              ref={canvasRef}
+              width={SIZE}
+              height={SIZE}
+              className="cursor-grab active:cursor-grabbing"
+              style={{ width: SIZE, height: SIZE }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onWheel={handleWheel}
+            />
+          </div>
+          {/* Zoom slider */}
+          <div className="flex items-center gap-3 w-full max-w-[280px]">
+            <span className="text-xs text-muted-foreground">−</span>
+            <Slider
+              value={[zoomValue]}
+              onValueChange={handleZoomChange}
+              min={0}
+              max={100}
+              step={1}
+              className="flex-1"
+            />
+            <span className="text-xs text-muted-foreground">+</span>
+          </div>
+          <p className="text-xs text-muted-foreground">Drag to reposition · pinch or slide to zoom</p>
         </div>
-        <p className="text-xs text-muted-foreground text-center">Drag to reposition</p>
         <DrawerFooter>
           <Button onClick={handleSave} disabled={!loaded}>Save</Button>
           <DrawerClose asChild>
