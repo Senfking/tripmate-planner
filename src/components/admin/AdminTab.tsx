@@ -116,6 +116,25 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
 
   const sharePermission = (trip as any)?.share_permission ?? "all";
 
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+
+  const updateTripName = useMutation({
+    mutationFn: async (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error("Trip name cannot be empty");
+      const { error } = await supabase.from("trips").update({ name: trimmed }).eq("id", tripId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trips"] });
+      toast.success("Trip name updated");
+      setEditingName(false);
+    },
+    onError: (e) => toast.error(e.message || "Failed to update name"),
+  });
+
   const updateSharePerm = useMutation({
     mutationFn: async (value: string) => {
       const { error } = await supabase
