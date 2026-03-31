@@ -282,26 +282,24 @@ export default function TripHome() {
 
       {/* ─── CONTENT SHEET ─── */}
       <div className="flex-1 rounded-t-3xl -mt-6 relative z-10" style={{ background: "#F1F5F9" }}>
-        <div className="pt-4">
-          {/* Status row — no card, sits on background */}
+        {/* Status row — first element inside the sheet */}
+        <div className="px-4 pt-4 pb-2">
           <StatusRow
             startDate={trip.tentative_start_date}
             endDate={trip.tentative_end_date}
             onShare={() => setShareInviteOpen(true)}
           />
-
-          {/* Section cards */}
-          <div className="mt-2">
-            <TripDashboard
-              tripId={trip.id}
-              routeLocked={trip.route_locked ?? false}
-              settlementCurrency={trip.settlement_currency}
-              myRole={myRole}
-              startDate={trip.tentative_start_date}
-              endDate={trip.tentative_end_date}
-            />
-          </div>
         </div>
+
+        {/* Section cards */}
+        <TripDashboard
+          tripId={trip.id}
+          routeLocked={trip.route_locked ?? false}
+          settlementCurrency={trip.settlement_currency}
+          myRole={myRole}
+          startDate={trip.tentative_start_date}
+          endDate={trip.tentative_end_date}
+        />
       </div>
 
       <MemberListSheet
