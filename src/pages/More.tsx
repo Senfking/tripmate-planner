@@ -633,7 +633,6 @@ const More = () => {
   };
 
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
-  const tier = (profile?.subscription_tier || "free") as "free" | "pro";
 
   return (
     <div className="min-h-[calc(100vh-10rem)] bg-muted/40 px-4 pb-32 pt-6 space-y-4">
