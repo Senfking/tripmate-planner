@@ -66,12 +66,20 @@ function HeaderAvatar() {
 }
 
 export function AppLayout() {
+  const location = useLocation();
+  const isTripsListPage = location.pathname === "/app/trips";
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
-          <header className="sticky top-0 z-40 flex h-[52px] items-center border-b bg-gradient-primary px-4 text-white relative overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          <header
+            className={`sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden ${
+              isTripsListPage ? "bg-transparent border-b-0" : "border-b bg-gradient-primary"
+            }`}
+            style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+          >
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
