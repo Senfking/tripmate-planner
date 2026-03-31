@@ -121,7 +121,7 @@ export default function ShareView() {
             The trip organizer may have revoked it, or it may have expired.
           </p>
         </div>
-        <Button asChild className="bg-teal-600 hover:bg-teal-700">
+        <Button asChild>
           <Link to="/signup">Sign up to Junto</Link>
         </Button>
       </div>
