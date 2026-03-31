@@ -1,6 +1,6 @@
 import { useGlobalExpenses } from "@/hooks/useGlobalExpenses";
 import { Link } from "react-router-dom";
-import { Wallet, ChevronRight, CircleDollarSign } from "lucide-react";
+import { Wallet, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
