@@ -32,7 +32,7 @@ export interface MemberProfile {
   role: string;
 }
 
-const SESSION_KEY = "junto_rates_refresh_attempted";
+
 
 export function useExpenses(tripId: string) {
   const { user } = useAuth();
