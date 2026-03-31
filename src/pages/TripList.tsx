@@ -405,7 +405,7 @@ export default function TripList() {
     return (
       <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Your trips" subtitle="Loading…" />
-        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-3">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-4 mt-4">
           <div className="h-[320px] rounded-3xl skeleton-shimmer" style={{ opacity: 0.1 }} />
           <div className="h-[160px] rounded-2xl skeleton-shimmer" style={{ opacity: 0.1, animationDelay: "150ms" }} />
         </div>
