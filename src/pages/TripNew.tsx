@@ -63,7 +63,7 @@ export default function TripNew() {
   };
 
   return (
-    <div className="min-h-[calc(100dvh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title="New Trip" subtitle="Plan your next adventure" />
 
       <div className="px-4 mt-4 pb-32 max-w-lg mx-auto">
