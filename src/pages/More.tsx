@@ -212,7 +212,7 @@ const More = () => {
   // Crop state
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [showCropDrawer, setShowCropDrawer] = useState(false);
-
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   // Auth provider
   const [authProvider, setAuthProvider] = useState<string | null>(null);
 
@@ -321,8 +321,31 @@ const More = () => {
     if (!file) return;
     setCropFile(file);
     setShowCropDrawer(true);
+    setShowPhotoOptions(false);
     // Reset input so same file can be re-selected
     e.target.value = "";
+  };
+
+  const handleEditExistingPhoto = async () => {
+    if (!profile?.avatar_url) return;
+    setShowPhotoOptions(false);
+    try {
+      const res = await fetch(profile.avatar_url);
+      const blob = await res.blob();
+      const file = new File([blob], "avatar.jpg", { type: blob.type || "image/jpeg" });
+      setCropFile(file);
+      setShowCropDrawer(true);
+    } catch {
+      toast({ title: "Failed to load current photo", variant: "destructive" });
+    }
+  };
+
+  const handleAvatarTap = () => {
+    if (profile?.avatar_url) {
+      setShowPhotoOptions(true);
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleCroppedUpload = async (blob: Blob) => {
@@ -501,7 +524,7 @@ const More = () => {
             )}
           </div>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleAvatarTap}
             className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md"
           >
             <Camera className="h-3.5 w-3.5" />
@@ -804,6 +827,40 @@ const More = () => {
           Send feedback →
         </button>
       </p>
+
+      {/* ── PHOTO OPTIONS DRAWER ── */}
+      <Drawer open={showPhotoOptions} onOpenChange={setShowPhotoOptions}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Profile photo</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 space-y-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3"
+              onClick={() => { setShowPhotoOptions(false); fileInputRef.current?.click(); }}
+            >
+              <Camera className="h-4 w-4" />
+              Upload new photo
+            </Button>
+            {profile?.avatar_url && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={handleEditExistingPhoto}
+              >
+                <Pencil className="h-4 w-4" />
+                Edit current photo
+              </Button>
+            )}
+          </div>
+          <DrawerFooter>
+            <DrawerClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* ── CROP DRAWER ── */}
       <AvatarCropDrawer
