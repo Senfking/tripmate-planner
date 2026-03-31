@@ -90,11 +90,12 @@ export function MemberRow({
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-medium truncate">
             {displayName || "Unknown"}{isMe && " (you)"}
           </span>
           {roleBadge(role)}
+          {attendanceBadge(attendanceStatus)}
         </div>
         <p className="text-[11px] text-muted-foreground">
           Joined {format(new Date(joinedAt), "MMM d, yyyy")}
