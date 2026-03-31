@@ -5,14 +5,19 @@ import { AttachmentCard } from "./AttachmentCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible";
-import { Progress } from "@/components/ui/progress";
 import { useRef } from "react";
-import { Camera, Image, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload, Plus } from "lucide-react";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -46,22 +51,54 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
-  const [showManual, setShowManual] = useState(false);
+  const { query, uploadFile, addManual, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
+  const isMobile = useIsMobile();
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualType, setManualType] = useState("other");
+  const [manualNotes, setManualNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [peopleFilter, setPeopleFilter] = useState<"all" | "mine" | "others">("all");
   const [search, setSearch] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
-  const manualInputRef = useRef<HTMLInputElement>(null);
 
-  const ACCEPT = ".pdf,.jpg,.jpeg,.png";
+  const ACCEPT_ALL = ".pdf,.jpg,.jpeg,.png,.webp";
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) uploadFile.mutate(file);
     e.target.value = "";
   };
+
+  const handleManualSubmit = () => {
+    if (!manualTitle.trim()) return;
+    addManual.mutate(
+      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined },
+      {
+        onSuccess: () => {
+          setShowManualForm(false);
+          setManualTitle("");
+          setManualType("other");
+          setManualNotes("");
+        },
+      }
+    );
+  };
+
+  const openManualForm = () => {
+    setManualTitle("");
+    setManualType("other");
+    setManualNotes("");
+    setShowManualForm(true);
+  };
+
+  const BOOKING_TYPES = [
+    { value: "flight", label: "Flight" },
+    { value: "hotel", label: "Hotel" },
+    { value: "activity", label: "Activity" },
+    { value: "other", label: "Other" },
+  ];
 
   const isAdmin = myRole === "owner" || myRole === "admin";
   const attachments = query.data ?? [];
@@ -145,88 +182,65 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     );
   };
 
-  if (query.isLoading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+  /* ── Manual form modal ── */
+  const manualFormContent = (
+    <div className="space-y-4 p-4">
+      <div className="space-y-1.5">
+        <Label className="text-xs">Title *</Label>
+        <Input value={manualTitle} onChange={(e) => setManualTitle(e.target.value)} placeholder="e.g. Bangkok Airbnb" />
       </div>
-    );
-  }
-
-  // Empty state
-  if (attachments.length === 0 && !showManual) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
-        <p className="text-4xl">📄</p>
-        <div>
-          <p className="text-lg font-semibold text-foreground">No docs saved yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Upload a confirmation to get started
-          </p>
-        </div>
-        {/* Hidden inputs */}
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
-        <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-        <input ref={manualInputRef} type="file" accept={ACCEPT} className="hidden" onChange={handleFile} />
-
-        {/* AI scan section */}
-        <div className="w-full max-w-xs space-y-3">
-          <div className="rounded-xl border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/[0.03] p-4 space-y-3">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
-              <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Take a photo or upload a confirmation — we'll extract the details automatically
-            </p>
-            {uploadFile.isPending ? (
-              <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Processing…
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
-                  <Camera className="h-4 w-4 text-[#0D9488]" />
-                  Take photo
-                </button>
-                <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
-                  <Image className="h-4 w-4 text-[#0D9488]" />
-                  Choose photo
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-[11px] text-muted-foreground">or add manually</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-
-          <Button variant="outline" size="sm" className="w-full" onClick={() => manualInputRef.current?.click()} disabled={uploadFile.isPending}>
-            <Upload className="h-4 w-4 mr-1.5" />
-            Upload file
-          </Button>
-        </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Type</Label>
+        <Select value={manualType} onValueChange={setManualType}>
+          <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {BOOKING_TYPES.map((t) => (
+              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-    );
-  }
+      <div className="space-y-1.5">
+        <Label className="text-xs">Notes (optional)</Label>
+        <Textarea value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} rows={3} placeholder="Confirmation #, dates, details…" className="text-sm" />
+      </div>
+      <Button onClick={handleManualSubmit} disabled={!manualTitle.trim() || addManual.isPending} className="w-full">
+        {addManual.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+        Add Booking
+      </Button>
+    </div>
+  );
 
-  return (
-    <div className="space-y-4">
-      {/* Hidden inputs */}
+  const manualFormModal = isMobile ? (
+    <Drawer open={showManualForm} onOpenChange={setShowManualForm}>
+      <DrawerContent>
+        <DrawerHeader><DrawerTitle>Add Booking Manually</DrawerTitle></DrawerHeader>
+        {manualFormContent}
+      </DrawerContent>
+    </Drawer>
+  ) : (
+    <Dialog open={showManualForm} onOpenChange={setShowManualForm}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Add Booking Manually</DialogTitle></DialogHeader>
+        {manualFormContent}
+      </DialogContent>
+    </Dialog>
+  );
+
+  /* ── AI scan section (reusable) ── */
+  const aiSection = (
+    <>
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
-      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-      <input ref={manualInputRef} type="file" accept={ACCEPT} className="hidden" onChange={handleFile} />
+      <input ref={galleryInputRef} type="file" accept={ACCEPT_ALL} className="hidden" onChange={handleFile} />
 
-      {/* AI scan section */}
       <div className="rounded-xl border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/[0.03] p-4 space-y-3">
         <div className="flex items-center gap-1.5">
           <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
           <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Upload a confirmation — we'll extract the details automatically
+        </p>
         {uploadFile.isPending ? (
           <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -239,23 +253,57 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               Take photo
             </button>
             <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
-              <Image className="h-4 w-4 text-[#0D9488]" />
-              Choose photo
+              <Upload className="h-4 w-4 text-[#0D9488]" />
+              Upload file
             </button>
           </div>
         )}
       </div>
 
-      {/* Divider + manual upload */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-border" />
         <span className="text-[11px] text-muted-foreground">or add manually</span>
         <div className="flex-1 h-px bg-border" />
       </div>
-      <Button variant="outline" size="sm" className="w-full" onClick={() => manualInputRef.current?.click()} disabled={uploadFile.isPending}>
-        <Upload className="h-4 w-4 mr-1.5" />
-        Upload file
+
+      <Button variant="outline" size="sm" className="w-full" onClick={openManualForm}>
+        <Plus className="h-4 w-4 mr-1.5" />
+        Add details manually
       </Button>
+    </>
+  );
+
+  if (query.isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Empty state
+  if (attachments.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 px-2">
+        <p className="text-4xl">📄</p>
+        <div>
+          <p className="text-lg font-semibold text-foreground">No docs saved yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Upload a confirmation to get started
+          </p>
+        </div>
+        <div className="w-full max-w-xs space-y-3">
+          {aiSection}
+        </div>
+        {manualFormModal}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {aiSection}
+      {manualFormModal}
 
       {/* Filters + search */}
       {attachments.length > 0 && (
