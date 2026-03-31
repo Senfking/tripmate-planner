@@ -252,7 +252,7 @@ export function AttendanceInviteOverlay({
                   Who's joining
                 </p>
                 <div className="space-y-1 mb-6">
-                  {otherMembers.map((m) => {
+                  {sortedMembers.map((m) => {
                     const badge = STATUS_BADGES[m.attendance_status] ?? STATUS_BADGES.pending;
                     return (
                       <div
