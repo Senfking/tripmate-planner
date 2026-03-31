@@ -290,10 +290,9 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
           style={{
             ...(showNewBorder
               ? {
-                  borderLeft: "3px solid #0D9488",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                   border: "1px solid rgba(13,148,136,0.15)",
                   borderLeft: "3px solid #0D9488",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                   transition: "border-color 1s ease-out, box-shadow 1s ease-out",
                 }
               : !newBorderVisible && isNewSinceLastVisit
