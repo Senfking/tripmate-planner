@@ -15,11 +15,19 @@ const Decisions = () => {
   const { data, isLoading } = useGlobalDecisions();
   const items = data?.items ?? [];
 
+  // Subtitle
+  const subtitle = (() => {
+    if (isLoading) return "Loading…";
+    if (items.length === 0) return "All caught up";
+    const tripIds = new Set(items.map((i) => i.tripId));
+    return `${items.length} vote${items.length !== 1 ? "s" : ""} pending across ${tripIds.size} trip${tripIds.size !== 1 ? "s" : ""}`;
+  })();
+
   if (isLoading) {
     return (
-      <div className="min-h-[calc(100vh-10rem)] bg-[#F1F5F9] px-4 pb-32 pt-6">
-        <div className="h-7 w-32 rounded-lg skeleton-shimmer mb-4" />
-        <div className="space-y-3">
+      <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
+        <TabHeroHeader title="Decisions" subtitle="Loading…" />
+        <div className="px-4 pt-4 space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-[72px] rounded-[14px] skeleton-shimmer" style={{ animationDelay: `${i * 150}ms` }} />
           ))}
@@ -29,8 +37,8 @@ const Decisions = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-10rem)] bg-[#F1F5F9] px-4 pb-32 pt-6">
-      <h1 className="mb-4 text-[22px] font-bold text-foreground">Decisions</h1>
+    <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
+      <TabHeroHeader title="Decisions" subtitle={subtitle} />
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center pt-24 text-center">
