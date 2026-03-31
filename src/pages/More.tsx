@@ -359,11 +359,15 @@ const More = () => {
     }
   }, [profile?.notification_preferences]);
 
-  /* ── fetch auth provider ── */
+  /* ── detect auth identity ── */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setAuthProvider(data.user?.app_metadata?.provider || null);
+      const identities = data.user?.identities ?? [];
+      const hasPasswordIdentity = identities.some((i) => i.provider === "email");
+      const hasGoogle = identities.some((i) => i.provider === "google");
+      setIsGoogleOnly(hasGoogle && !hasPasswordIdentity);
     });
+  }, []);
   }, []);
 
   /* ── fetch trips ── */
