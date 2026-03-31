@@ -321,8 +321,31 @@ const More = () => {
     if (!file) return;
     setCropFile(file);
     setShowCropDrawer(true);
+    setShowPhotoOptions(false);
     // Reset input so same file can be re-selected
     e.target.value = "";
+  };
+
+  const handleEditExistingPhoto = async () => {
+    if (!profile?.avatar_url) return;
+    setShowPhotoOptions(false);
+    try {
+      const res = await fetch(profile.avatar_url);
+      const blob = await res.blob();
+      const file = new File([blob], "avatar.jpg", { type: blob.type || "image/jpeg" });
+      setCropFile(file);
+      setShowCropDrawer(true);
+    } catch {
+      toast({ title: "Failed to load current photo", variant: "destructive" });
+    }
+  };
+
+  const handleAvatarTap = () => {
+    if (profile?.avatar_url) {
+      setShowPhotoOptions(true);
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleCroppedUpload = async (blob: Blob) => {
