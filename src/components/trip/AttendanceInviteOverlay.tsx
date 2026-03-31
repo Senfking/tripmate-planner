@@ -159,11 +159,11 @@ export function AttendanceInviteOverlay({
       <div
         className="fixed inset-0 z-[59] bg-black/50"
         style={{
-          opacity: isFull ? 1 : 0,
-          pointerEvents: isFull ? "auto" : "none",
-          transition: "opacity 0.4s ease",
+          opacity: isFull && !closing ? 1 : 0,
+          pointerEvents: isFull && !closing ? "auto" : "none",
+          transition: "opacity 0.45s ease",
         }}
-        onClick={isFull ? handleDismiss : undefined}
+        onClick={isFull && !closing ? handleDismiss : undefined}
       />
 
       {/* The sheet itself */}
