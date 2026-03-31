@@ -280,18 +280,18 @@ const Itinerary = () => {
                     </div>
                   ))}
 
-                  {/* Destination shift — full-width subtle divider before the day */}
+                  {/* Destination arrival — visible divider before the day */}
                   {destStarts.map((dest, i) => (
                     <div
                       key={`dest-start-${dest.tripId}-${dest.destination}-${i}`}
-                      className="flex items-center gap-2 py-2 px-1"
+                      className="flex items-center gap-2.5 py-2.5 px-1"
                     >
-                      <div className="flex-1 h-px bg-muted-foreground/8" />
-                      <MapPin className="h-3 w-3 text-muted-foreground/25 shrink-0" />
-                      <span className="text-[10px] font-medium text-muted-foreground/40 whitespace-nowrap">
-                        {dest.destination}
+                      <div className="flex-1 h-px bg-[#0D9488]/15" />
+                      <MapPin className="h-3.5 w-3.5 text-[#0D9488]/60 shrink-0" />
+                      <span className="text-[11px] font-semibold text-[#0D9488]/70 whitespace-nowrap">
+                        → {dest.destination}
                       </span>
-                      <div className="flex-1 h-px bg-muted-foreground/8" />
+                      <div className="flex-1 h-px bg-[#0D9488]/15" />
                     </div>
                   ))}
 
