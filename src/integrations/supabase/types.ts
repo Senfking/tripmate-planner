@@ -275,6 +275,30 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       invite_redemptions: {
         Row: {
           id: string
