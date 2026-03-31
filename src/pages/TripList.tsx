@@ -416,6 +416,21 @@ export default function TripList() {
   const greeting = getGreeting(profile?.display_name);
   const subtitle = getTripsSubtitle(trips);
 
+  // Build pills
+  const tripsPills: HeroPill[] = [];
+  if (trips && trips.length > 0) {
+    tripsPills.push({ icon: <Plane className="h-3 w-3" />, label: `${trips.length} trip${trips.length !== 1 ? "s" : ""}` });
+    const liveCount = trips.filter((t) => t.statusInfo.status === "live").length;
+    if (liveCount > 0) {
+      tripsPills.push({ icon: <Radio className="h-3 w-3" />, label: "Live now" });
+    } else {
+      const next = trips.find((t) => t.statusInfo.status === "countdown");
+      if (next?.statusInfo.daysToGo !== undefined) {
+        tripsPills.push({ icon: <Calendar className="h-3 w-3" />, label: `Next in ${next.statusInfo.daysToGo}d` });
+      }
+    }
+  }
+
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
