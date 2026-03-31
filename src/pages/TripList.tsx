@@ -278,9 +278,34 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
   );
 }
 
+/* ─── Greeting helper ─── */
+function getGreeting(displayName: string | null | undefined): string {
+  const hour = new Date().getHours();
+  const first = displayName?.split(" ")[0] ?? "";
+  const name = first ? `, ${first}` : "";
+  if (hour >= 6 && hour < 12) return `Good morning${name}`;
+  if (hour >= 12 && hour < 18) return `Good afternoon${name}`;
+  return `Good evening${name}`;
+}
+
+function getTripsSubtitle(trips: EnrichedTrip[] | undefined): string {
+  if (!trips || trips.length === 0) return "No trips yet";
+  const count = trips.length;
+  const liveCount = trips.filter((t) => t.statusInfo.status === "live").length;
+  if (liveCount > 0) {
+    return `${count} trip${count !== 1 ? "s" : ""} · ${liveCount} happening now`;
+  }
+  // Find next upcoming
+  const nextCountdown = trips.find((t) => t.statusInfo.status === "countdown");
+  if (nextCountdown?.statusInfo.daysToGo !== undefined) {
+    return `${count} trip${count !== 1 ? "s" : ""} · next in ${nextCountdown.statusInfo.daysToGo} days`;
+  }
+  return `${count} trip${count !== 1 ? "s" : ""}`;
+}
+
 /* ─── Main Page ─── */
 export default function TripList() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const { data: trips, isLoading } = useQuery({
     queryKey: ["trips", user?.id],

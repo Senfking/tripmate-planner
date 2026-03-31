@@ -2,6 +2,7 @@ import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
 import { Link } from "react-router-dom";
 import { CircleCheck, Vote, MapPin, CalendarDays, MessageSquare, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
 
 const typeConfig = {
   vibe: { label: "Vibe Board", icon: MessageSquare },
