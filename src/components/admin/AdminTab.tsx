@@ -304,33 +304,44 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <Card className="border-destructive/40 p-4 space-y-3">
+             <Card className="border-destructive/40 p-4 space-y-3">
               {/* Leave trip — non-owners */}
               {!isOwner && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full border-destructive/40 text-destructive hover:bg-destructive/10">
-                      Leave this trip
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Leave trip?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        You'll lose access to this trip's data. You can rejoin later if someone invites you.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => leaveTrip.mutate()}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        {leaveTrip.isPending ? "Leaving…" : "Leave trip"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+                    onClick={() => setLeaveOpen(true)}
+                  >
+                    Leave this trip
+                  </Button>
+                  <Drawer open={leaveOpen} onOpenChange={setLeaveOpen}>
+                    <DrawerContent>
+                      <DrawerHeader className="text-center">
+                        <DrawerTitle>Leave trip?</DrawerTitle>
+                        <p className="text-[13px] text-muted-foreground mt-1">
+                          You'll lose access to this trip's data. You can rejoin later if someone invites you.
+                        </p>
+                      </DrawerHeader>
+                      <div className="px-4 pb-6 space-y-2.5">
+                        <Button
+                          className="w-full h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 text-[14px] font-medium"
+                          onClick={() => { setLeaveOpen(false); leaveTrip.mutate(); }}
+                        >
+                          {leaveTrip.isPending ? "Leaving…" : "Leave trip"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full h-11 rounded-xl text-[14px] font-medium"
+                          onClick={() => setLeaveOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </DrawerContent>
+                  </Drawer>
+                </>
               )}
 
               {/* Delete trip — owner only */}
