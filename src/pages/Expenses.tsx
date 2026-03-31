@@ -1,6 +1,6 @@
 import { useGlobalExpenses } from "@/hooks/useGlobalExpenses";
 import { Link } from "react-router-dom";
-import { Wallet, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
+import { Wallet, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
@@ -11,22 +11,18 @@ const Expenses = () => {
   const { overallNet = 0, currency = "EUR", trips = [] } = data ?? {};
   const hasExpenses = trips.length > 0;
 
+  // Subtitle = key summary sentence (no amount — that's in the header children)
   const subtitle = (() => {
     if (isLoading) return "Loading…";
     if (!hasExpenses) return "No expenses yet";
     if (Math.abs(overallNet) < 0.01) return "All settled up";
     const tripCount = trips.length;
-    if (overallNet > 0) return `You're owed ${formatCurrency(overallNet, currency)} across ${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
-    return `You owe ${formatCurrency(Math.abs(overallNet), currency)} across ${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
+    return `Across ${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
   })();
 
+  // Pills = trip count only (balance is shown large in children)
   const pills: HeroPill[] = [];
   if (!isLoading && hasExpenses) {
-    if (overallNet > 0.005) {
-      pills.push({ icon: <Wallet className="h-3 w-3" />, label: `Owed ${formatCurrency(overallNet, currency)}` });
-    } else if (overallNet < -0.005) {
-      pills.push({ icon: <Wallet className="h-3 w-3" />, label: `You owe ${formatCurrency(Math.abs(overallNet), currency)}` });
-    }
     pills.push({ label: `${trips.length} trip${trips.length !== 1 ? "s" : ""}` });
   }
 
@@ -43,9 +39,23 @@ const Expenses = () => {
     );
   }
 
+  // Large centered balance display inside the header
+  const balanceChildren = hasExpenses && Math.abs(overallNet) >= 0.01 ? (
+    <div className="mt-4 flex flex-col items-center">
+      <span className="text-[32px] font-extrabold text-white tracking-tight leading-none">
+        {formatCurrency(Math.abs(overallNet), currency)}
+      </span>
+      <span className="text-[12px] font-medium text-white/60 mt-1">
+        {overallNet > 0 ? "You're owed" : "You owe"}
+      </span>
+    </div>
+  ) : null;
+
   return (
     <div className="min-h-[calc(100dvh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title="Expenses" subtitle={subtitle} pills={pills} />
+      <TabHeroHeader title="Expenses" subtitle={subtitle} pills={pills}>
+        {balanceChildren}
+      </TabHeroHeader>
 
       {!hasExpenses ? (
         <div className="flex flex-col items-center justify-center pt-20 text-center px-4 mt-4">

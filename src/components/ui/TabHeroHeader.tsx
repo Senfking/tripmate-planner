@@ -16,8 +16,8 @@ function HeaderAvatar() {
       to="/app/more"
       className="absolute z-10 flex h-[38px] w-[38px] items-center justify-center rounded-full bg-white/20 ring-2 ring-white/25 overflow-hidden"
       style={{
-        top: "calc(env(safe-area-inset-top, 0px) + 18px)",
-        right: 22,
+        top: "calc(env(safe-area-inset-top, 0px) + 16px)",
+        right: 20,
         boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
       }}
     >
@@ -47,8 +47,8 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
     <div
       className="relative w-full overflow-hidden"
       style={{
-        borderBottomLeftRadius: 28,
-        borderBottomRightRadius: 28,
+        borderBottomLeftRadius: 14,
+        borderBottomRightRadius: 14,
         boxShadow: "0 8px 24px rgba(13, 148, 136, 0.25)",
       }}
     >
@@ -57,8 +57,8 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
         className="absolute inset-0"
         style={{
           background: "linear-gradient(145deg, #0f766e 0%, #0D9488 40%, #0891b2 100%)",
-          borderBottomLeftRadius: 28,
-          borderBottomRightRadius: 28,
+          borderBottomLeftRadius: 14,
+          borderBottomRightRadius: 14,
         }}
       />
       {/* Glass shine overlay */}
@@ -67,8 +67,8 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
         style={{
           background:
             "linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.0) 45%, rgba(255,255,255,0.04) 100%)",
-          borderBottomLeftRadius: 28,
-          borderBottomRightRadius: 28,
+          borderBottomLeftRadius: 14,
+          borderBottomRightRadius: 14,
         }}
       />
 
@@ -86,13 +86,14 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
           minHeight: 172,
         }}
       >
-        {/* ROW 1 — JUNTO label */}
-        <span
-          className="text-[10px] tracking-[0.2em] uppercase text-white/50"
-          style={{ fontWeight: 900 }}
-        >
-          JUNTO
-        </span>
+        {/* ROW 1 — JUNTO label centered */}
+        <div className="flex justify-center w-full">
+          <span
+            className="text-xs font-bold tracking-[0.25em] uppercase text-white/80"
+          >
+            JUNTO
+          </span>
+        </div>
 
         {/* ROW 2 — Title */}
         <h1 className="text-[28px] font-bold text-white tracking-tight leading-none mt-3">

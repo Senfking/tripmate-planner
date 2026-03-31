@@ -15,21 +15,20 @@ const Decisions = () => {
   const { data, isLoading } = useGlobalDecisions();
   const items = data?.items ?? [];
 
-  // Subtitle & pills
+  // Subtitle = key number only
   const subtitle = (() => {
     if (isLoading) return "Loading…";
     if (items.length === 0) return "All caught up";
-    const tripIds = new Set(items.map((i) => i.tripId));
-    return `${items.length} vote${items.length !== 1 ? "s" : ""} pending across ${tripIds.size} trip${tripIds.size !== 1 ? "s" : ""}`;
+    return `${items.length} vote${items.length !== 1 ? "s" : ""} pending`;
   })();
 
+  // Pills = different/actionable info (trip count)
   const pills: HeroPill[] = [];
   if (!isLoading) {
     if (items.length > 0) {
-      pills.push({ icon: <Vote className="h-3 w-3" />, label: `${items.length} pending` });
-    }
-    // Could add resolved count if available
-    if (items.length === 0) {
+      const tripIds = new Set(items.map((i) => i.tripId));
+      pills.push({ icon: <MapPin className="h-3 w-3" />, label: `${tripIds.size} trip${tripIds.size !== 1 ? "s" : ""}` });
+    } else {
       pills.push({ icon: <CheckCircle className="h-3 w-3" />, label: "All resolved" });
     }
   }
