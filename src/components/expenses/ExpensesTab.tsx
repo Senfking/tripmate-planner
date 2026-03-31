@@ -163,7 +163,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       } else if (rates && rates[exp.currency]) {
         total += exp.amount / rates[exp.currency];
       } else {
-        total += exp.amount;
+        // rates unavailable for this currency — skip from total
       }
     }
     return { totalExpenses: count > 0 ? total : null, nonSettlementCount: count };
