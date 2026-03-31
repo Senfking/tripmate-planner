@@ -272,6 +272,7 @@ export function AttendanceInviteOverlay({
                         </Avatar>
                         <span className="flex-1 text-[14px] font-medium text-foreground truncate">
                           {m.profile?.display_name || "Member"}
+                          {m.user_id === currentUserId && <span className="text-muted-foreground font-normal"> (You)</span>}
                         </span>
                         <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full", badge.className)}>
                           {badge.label}
