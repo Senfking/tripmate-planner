@@ -34,6 +34,21 @@ const roleBadge = (role: string) => {
   }
 };
 
+const attendanceBadge = (status: string | undefined) => {
+  switch (status) {
+    case "going":
+      return <Badge className="bg-[#0D9488]/10 text-[#0D9488] border-[#0D9488]/30 text-[10px] px-1.5 py-0">Going</Badge>;
+    case "maybe":
+      return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] px-1.5 py-0">Maybe</Badge>;
+    case "not_going":
+      return <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">Can't make it</Badge>;
+    case "pending":
+      return <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">Pending</Badge>;
+    default:
+      return null;
+  }
+};
+
 function getInitials(name: string | null) {
   if (!name) return "?";
   return name
