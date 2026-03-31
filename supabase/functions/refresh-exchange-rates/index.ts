@@ -55,10 +55,10 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, updated }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("refresh-exchange-rates error:", err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

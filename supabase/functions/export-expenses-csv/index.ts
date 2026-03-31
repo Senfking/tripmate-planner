@@ -132,8 +132,8 @@ Deno.serve(async (req) => {
         "Content-Disposition": 'attachment; filename="junto-expenses.csv"',
       },
     });
-  } catch (err) {
-    console.error("Unhandled error in export-expenses-csv:", err.message);
+  } catch (err: unknown) {
+    console.error("Unhandled error in export-expenses-csv:", (err as Error).message);
     return new Response(JSON.stringify({ error: "Internal error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
