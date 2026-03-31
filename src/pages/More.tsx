@@ -828,6 +828,40 @@ const More = () => {
         </button>
       </p>
 
+      {/* ── PHOTO OPTIONS DRAWER ── */}
+      <Drawer open={showPhotoOptions} onOpenChange={setShowPhotoOptions}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Profile photo</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 space-y-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3"
+              onClick={() => { setShowPhotoOptions(false); fileInputRef.current?.click(); }}
+            >
+              <Camera className="h-4 w-4" />
+              Upload new photo
+            </Button>
+            {profile?.avatar_url && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={handleEditExistingPhoto}
+              >
+                <Pencil className="h-4 w-4" />
+                Edit current photo
+              </Button>
+            )}
+          </div>
+          <DrawerFooter>
+            <DrawerClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
       {/* ── CROP DRAWER ── */}
       <AvatarCropDrawer
         file={cropFile}
