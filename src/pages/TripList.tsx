@@ -293,6 +293,56 @@ function getGreeting(displayName: string | null | undefined): string {
   return `Good evening${name}`;
 }
 
+/* ─── Join Drawer ─── */
+function JoinDrawer({
+  open, onOpenChange, code, onCodeChange, error, loading, onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  code: string;
+  onCodeChange: (v: string) => void;
+  error: string;
+  loading: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader className="text-left">
+          <DrawerTitle>Enter invite code</DrawerTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Ask a trip organiser for their 6–8 letter code
+          </p>
+        </DrawerHeader>
+        <div className="px-4 pb-6 space-y-4">
+          <Input
+            value={code}
+            onChange={(e) => onCodeChange(e.target.value.slice(0, 8))}
+            placeholder="e.g. 6D9MCG"
+            className="text-center text-[24px] font-mono tracking-[0.15em] h-14 rounded-xl border-input"
+            maxLength={8}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && code.length >= 4 && !loading) onSubmit();
+            }}
+          />
+          {error && (
+            <p className="text-xs text-destructive text-center">{error}</p>
+          )}
+          <Button
+            className="w-full h-11 rounded-xl text-sm font-semibold text-white"
+            style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+            disabled={code.length < 4 || loading}
+            onClick={onSubmit}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Join trip"}
+          </Button>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 /* ─── Main Page ─── */
 export default function TripList() {
   const { user, profile } = useAuth();
