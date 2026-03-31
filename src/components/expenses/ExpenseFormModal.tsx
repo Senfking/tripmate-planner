@@ -239,6 +239,38 @@ export function ExpenseFormModal({
 
   const formContent = (
     <div className="space-y-4 p-4 overflow-y-auto max-h-[70vh]">
+      {/* Hidden file input for receipt scanning */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleScanReceipt}
+      />
+
+      {/* Scan receipt button */}
+      {!editingExpense && (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={scanning}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-[#0D9488]/30 bg-[#0D9488]/5 hover:bg-[#0D9488]/10 py-3 text-[13px] font-medium text-[#0D9488] transition-colors disabled:opacity-60"
+        >
+          {scanning ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Scanning receipt…
+            </>
+          ) : (
+            <>
+              <Camera className="h-4 w-4" />
+              Scan a receipt
+            </>
+          )}
+        </button>
+      )}
+
       <div className="space-y-1.5">
         <Label className="text-xs">Title *</Label>
         <Input
