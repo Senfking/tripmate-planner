@@ -32,8 +32,27 @@ export default function TripNew() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const joinMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const { data, error } = await supabase.rpc("join_by_code", { _code: code });
+      if (error) throw error;
+      const result = data as any;
+      if (result?.error) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (data: any) => {
+      setJoinOpen(false);
+      toast.success(`Joined ${data.trip_name || "trip"}!`);
+      navigate(`/app/trips/${data.trip_id}`);
+    },
+    onError: () => {
+      setJoinError("Code not found — check with your organiser");
+    },
+  });
     e.preventDefault();
     setError("");
 
