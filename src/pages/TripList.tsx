@@ -377,7 +377,7 @@ export default function TripList() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen pb-[120px]" style={{ backgroundColor: "#0f0f0f", marginTop: "-52px", paddingTop: "52px" }}>
+      <div className="min-h-screen pb-[120px]" style={{ backgroundColor: "#F1F5F9", marginTop: "-52px", paddingTop: "52px" }}>
         <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-4">
           <div className="h-[320px] rounded-3xl skeleton-shimmer" style={{ opacity: 0.1 }} />
           <div className="h-[160px] rounded-2xl skeleton-shimmer" style={{ opacity: 0.1, animationDelay: "150ms" }} />
@@ -389,7 +389,7 @@ export default function TripList() {
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
-      <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#0f0f0f", marginTop: "-52px" }}>
+      <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9", marginTop: "-52px" }}>
         {/* Hero image */}
         <div className="relative h-[320px] w-full overflow-hidden">
           <img
@@ -401,7 +401,7 @@ export default function TripList() {
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(to bottom, transparent 40%, #0f0f0f 100%)",
+              background: "linear-gradient(to bottom, transparent 40%, #F1F5F9 100%)",
             }}
           />
         </div>
@@ -433,7 +433,7 @@ export default function TripList() {
   const otherTrips = trips.filter((t) => t !== liveTrip);
 
   return (
-    <div className="relative min-h-screen" style={{ backgroundColor: "#0f0f0f", marginTop: "-52px" }}>
+    <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9", marginTop: "-52px" }}>
       {/* Top scrim for header readability */}
       <div
         className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
