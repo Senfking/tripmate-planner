@@ -75,6 +75,7 @@ export function ExpenseFormModal({
   const [titleManuallySet, setTitleManuallySet] = useState(false);
   const [scanning, setScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
