@@ -214,7 +214,7 @@ const Itinerary = () => {
               const isTmrw = isTomorrow(d);
 
               return (
-                <div key={date} className="flex gap-3 mb-0.5">
+                <div key={date} id={`day-${date}`} className="flex gap-3 mb-0.5 scroll-mt-4">
                   {/* Date column */}
                   <div className="flex flex-col items-center w-[52px] shrink-0 pt-1">
                     <span className={cn(
