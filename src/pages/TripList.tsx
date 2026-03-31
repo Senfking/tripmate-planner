@@ -401,7 +401,7 @@ export default function TripList() {
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(to bottom, transparent 40%, #0f0f0f 100%)",
+              background: "linear-gradient(to bottom, transparent 40%, #F1F5F9 100%)",
             }}
           />
         </div>
