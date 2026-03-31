@@ -437,7 +437,7 @@ export default function TripList() {
       <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={[]} />
 
-        <div className="flex flex-1 flex-col items-center px-6 pt-8">
+        <div className="flex flex-1 flex-col items-center px-6 pt-8 mt-4">
           <Button asChild className="w-full max-w-[260px]">
             <Link to="/app/trips/new">Start a trip</Link>
           </Button>
