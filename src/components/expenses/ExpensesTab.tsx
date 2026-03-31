@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,8 +11,10 @@ import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   tripId: string;
