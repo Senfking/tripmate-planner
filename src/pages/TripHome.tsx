@@ -2,17 +2,18 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Loader2, MapPin, Share2, Plane } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Loader2, MapPin, Share2 } from "lucide-react";
+import { useState, useCallback } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { MemberListSheet } from "@/components/trip/MemberListSheet";
+import { AttendanceInviteOverlay } from "@/components/trip/AttendanceInviteOverlay";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { format, parseISO, isWithinInterval, differenceInCalendarDays, differenceInDays } from "date-fns";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
 import { toast } from "sonner";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
+import { cn } from "@/lib/utils";
 
 function getInitial(name: string | null | undefined) {
   return (name || "?").charAt(0).toUpperCase();
@@ -33,14 +34,24 @@ function LiveIndicator({ status }: { status: ConnectionStatus }) {
   );
 }
 
+const ATTENDANCE_BADGE: Record<string, { label: string; className: string }> = {
+  going: { label: "✓ You're going", className: "bg-[#0D9488]/10 text-[#0D9488] border-[#0D9488]/20" },
+  maybe: { label: "~ Maybe", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  not_going: { label: "✗ Can't make it", className: "bg-muted text-muted-foreground border-border" },
+};
+
 function StatusRow({
   startDate,
   endDate,
   onShare,
+  attendanceStatus,
+  onAttendanceTap,
 }: {
   startDate: string | null;
   endDate: string | null;
   onShare: () => void;
+  attendanceStatus?: string;
+  onAttendanceTap?: () => void;
 }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -53,14 +64,12 @@ function StatusRow({
     const totalDays = differenceInDays(e, s) + 1;
 
     if (e < today) {
-      // Past
       content = (
         <span className="text-sm text-muted-foreground">
           {format(s, "MMM yyyy")} · {totalDays} days
         </span>
       );
     } else if (isWithinInterval(today, { start: s, end: e })) {
-      // Live
       const dayNumber = differenceInDays(today, s) + 1;
       content = (
         <span className="text-sm font-semibold text-foreground">
@@ -89,9 +98,20 @@ function StatusRow({
     );
   }
 
+  const badge = attendanceStatus && attendanceStatus !== "pending" ? ATTENDANCE_BADGE[attendanceStatus] : null;
+
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center gap-2">
       {content}
+      {badge && onAttendanceTap && (
+        <button
+          onClick={onAttendanceTap}
+          className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors", badge.className)}
+        >
+          {badge.label}
+        </button>
+      )}
+      <div className="flex-1" />
       <button
         onClick={onShare}
         className="flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-colors shrink-0"
@@ -156,6 +176,7 @@ export default function TripHome() {
       qc.invalidateQueries({ queryKey: ["my-trip-membership", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-members-full", tripId] });
       qc.invalidateQueries({ queryKey: ["admin-members", tripId] });
+      qc.invalidateQueries({ queryKey: ["global-decisions"] });
       if (status === "going") toast.success("You're in! 🎉");
       else if (status === "maybe") toast.success("Marked as maybe");
       else toast.success("Got it — you can still follow along");
@@ -168,7 +189,7 @@ export default function TripHome() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("user_id, role, joined_at")
+        .select("user_id, role, joined_at, attendance_status")
         .eq("trip_id", tripId!)
         .order("joined_at");
       if (error) throw error;
@@ -200,6 +221,39 @@ export default function TripHome() {
 
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
+
+  // Attendance overlay state
+  const sessionKey = `junto_invite_dismissed_${tripId}`;
+  const [overlayDismissed, setOverlayDismissed] = useState(() =>
+    !!sessionStorage.getItem(sessionKey)
+  );
+  const [overlayForcedOpen, setOverlayForcedOpen] = useState(false);
+
+  const isPending = myAttendanceStatus === "pending";
+  const showOverlay = (isPending && !overlayDismissed) || overlayForcedOpen;
+  const showPeekingTab = isPending && overlayDismissed && !overlayForcedOpen;
+
+  const handleOverlayDismiss = useCallback(() => {
+    sessionStorage.setItem(sessionKey, "1");
+    setOverlayDismissed(true);
+    setOverlayForcedOpen(false);
+  }, [sessionKey]);
+
+  const handleOverlayRespond = useCallback(
+    (status: string) => {
+      updateAttendance.mutate(status);
+      sessionStorage.removeItem(sessionKey);
+      setOverlayDismissed(true);
+      setOverlayForcedOpen(false);
+    },
+    [updateAttendance, sessionKey]
+  );
+
+  const handleOpenOverlay = useCallback(() => {
+    setOverlayForcedOpen(true);
+    setOverlayDismissed(false);
+  }, []);
+
   const isAdmin = myRole === "owner" || myRole === "admin";
 
   if (isLoading) {
@@ -234,24 +288,19 @@ export default function TripHome() {
 
   const visibleMembers = members?.slice(0, 4) ?? [];
   const memberCount = members?.length ?? 0;
-
-  // Resolve the same photo used on the trip list card
   const coverPhoto = resolvePhoto(trip.name, routeStops ?? []);
 
   return (
     <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
       {/* ─── HERO SECTION ─── */}
       <div className="relative w-full overflow-hidden" style={{ height: 220 }}>
-        {/* Teal fallback */}
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
-        {/* Cover photo */}
         <img
           src={coverPhoto}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
-        {/* Scrim overlay */}
         <div
           className="absolute inset-0"
           style={{
@@ -259,7 +308,6 @@ export default function TripHome() {
           }}
         />
 
-        {/* TOP LEFT — Back button */}
         <button
           onClick={() => navigate("/app/trips")}
           className="absolute left-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
@@ -269,12 +317,10 @@ export default function TripHome() {
           My Trips
         </button>
 
-        {/* TOP RIGHT — Live indicator */}
         <div className="absolute right-4" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
           <LiveIndicator status={connectionStatus} />
         </div>
 
-        {/* BOTTOM — Trip info + avatars on same row */}
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-white leading-tight truncate">{trip.name}</h1>
@@ -309,55 +355,16 @@ export default function TripHome() {
 
       {/* ─── CONTENT SHEET ─── */}
       <div className="flex-1 rounded-t-3xl -mt-6 relative z-10" style={{ background: "#F1F5F9" }}>
-        {/* Status row — first element inside the sheet */}
         <div className="px-4 pt-4 pb-2">
           <StatusRow
             startDate={trip.tentative_start_date}
             endDate={trip.tentative_end_date}
             onShare={() => setShareInviteOpen(true)}
+            attendanceStatus={myAttendanceStatus}
+            onAttendanceTap={handleOpenOverlay}
           />
         </div>
 
-        {/* Attendance confirmation card */}
-        {myAttendanceStatus === "pending" && (
-          <div className="mx-4 mb-3 rounded-2xl bg-white border shadow-sm p-4" style={{ borderColor: "rgba(13,148,136,0.2)" }}>
-            <p className="text-[11px] text-muted-foreground">{trip.emoji ?? "✈️"} {trip.name}</p>
-            <p className="text-[17px] font-bold text-foreground mt-1">Are you going?</p>
-            <p className="text-sm text-muted-foreground mt-1">Let the group know so they can plan around you.</p>
-            <div className="flex gap-2 mt-4">
-              <Button
-                size="sm"
-                className="flex-1 text-white text-xs"
-                style={{ background: "#0D9488" }}
-                onClick={() => updateAttendance.mutate("going")}
-                disabled={updateAttendance.isPending}
-              >
-                ✈️ Going
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 text-xs"
-                style={{ borderColor: "#0D9488", color: "#0D9488" }}
-                onClick={() => updateAttendance.mutate("maybe")}
-                disabled={updateAttendance.isPending}
-              >
-                🤔 Maybe
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 text-xs text-muted-foreground"
-                onClick={() => updateAttendance.mutate("not_going")}
-                disabled={updateAttendance.isPending}
-              >
-                ✗ Can't make it
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Section cards */}
         <TripDashboard
           tripId={trip.id}
           routeLocked={trip.route_locked ?? false}
@@ -367,6 +374,36 @@ export default function TripHome() {
           endDate={trip.tentative_end_date}
         />
       </div>
+
+      {/* ─── PEEKING TAB ─── */}
+      {showPeekingTab && (
+        <button
+          onClick={handleOpenOverlay}
+          className="fixed left-0 right-0 z-[49] flex items-center justify-center h-11 text-[13px] font-medium text-white animate-peek-bounce"
+          style={{
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem + 56px)",
+            background: "linear-gradient(135deg, #0D9488, #0369a1)",
+          }}
+        >
+          ✈️&nbsp; Are you going to this trip? Tap to answer →
+        </button>
+      )}
+
+      {/* ─── ATTENDANCE OVERLAY ─── */}
+      <AttendanceInviteOverlay
+        tripId={trip.id}
+        tripName={trip.name}
+        tripEmoji={trip.emoji}
+        startDate={trip.tentative_start_date}
+        endDate={trip.tentative_end_date}
+        coverPhoto={coverPhoto}
+        members={members ?? []}
+        currentUserId={user!.id}
+        open={showOverlay}
+        onDismiss={handleOverlayDismiss}
+        onRespond={handleOverlayRespond}
+        isPending={updateAttendance.isPending}
+      />
 
       <MemberListSheet
         open={memberSheetOpen}

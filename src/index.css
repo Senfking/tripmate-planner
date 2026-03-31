@@ -189,4 +189,65 @@ html, body, #root {
     transform: scale(0.97);
     transition: transform 100ms ease;
   }
+
+  /* Attendance overlay animations */
+  @keyframes overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes overlay-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes sheet-down {
+    from { transform: translateY(0); }
+    to { transform: translateY(100%); }
+  }
+  .animate-overlay-in { animation: overlay-in 0.3s ease-out forwards; }
+  .animate-overlay-out { animation: overlay-out 0.3s ease-in forwards; }
+  .animate-sheet-up { animation: sheet-up 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+  .animate-sheet-down { animation: sheet-down 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+
+  /* Confetti burst */
+  .confetti-burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+  .confetti-burst::before,
+  .confetti-burst::after {
+    content: "🎉✨🎊";
+    position: absolute;
+    font-size: 24px;
+    animation: confetti-pop 1s ease-out forwards;
+  }
+  .confetti-burst::before {
+    transform: translate(-50%, -50%) rotate(-15deg);
+  }
+  .confetti-burst::after {
+    transform: translate(-50%, -50%) rotate(15deg);
+    animation-delay: 0.1s;
+  }
+  @keyframes confetti-pop {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+    50% { opacity: 1; transform: translate(-50%, -120%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -180%) scale(0.8); }
+  }
+
+  /* Peeking tab bounce */
+  @keyframes peek-bounce {
+    0%, 90%, 100% { transform: translateY(0); }
+    93% { transform: translateY(-4px); }
+    96% { transform: translateY(0); }
+  }
+  .animate-peek-bounce {
+    animation: peek-bounce 3s ease-in-out infinite;
+  }
 }
