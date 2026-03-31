@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calcNetBalances } from "@/lib/settlementCalc";
@@ -42,11 +42,13 @@ async function fetchEurRates(): Promise<Record<string, number>> {
 
 export function useGlobalExpenses() {
   const { user } = useAuth();
+  const qc = useQueryClient();
 
   return useQuery({
     queryKey: ["global-expenses", user?.id],
     enabled: !!user,
     refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 5,
     queryFn: async (): Promise<GlobalExpensesResult> => {
       const userId = user!.id;
 
@@ -60,7 +62,7 @@ export function useGlobalExpenses() {
 
       const tripIds = memberships.map((m) => m.trip_id);
 
-      const [{ data: trips }, { data: expenses }, eurRates] =
+      const [{ data: trips }, { data: expenses }, ratesData] =
         await Promise.all([
           supabase
             .from("trips")
@@ -70,8 +72,13 @@ export function useGlobalExpenses() {
             .from("expenses")
             .select("id, trip_id, payer_id, amount, currency")
             .in("trip_id", tripIds),
-          fetchEurRates(),
+          qc.fetchQuery({
+            queryKey: ["exchange-rates", "EUR"],
+            queryFn: fetchEurRates,
+            staleTime: 1000 * 60 * 60,
+          }),
         ]);
+      const eurRates = ratesData ?? {};
 
       const allExpenseIds = (expenses ?? []).map((e) => e.id);
 
