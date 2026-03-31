@@ -2,10 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import type { VibeAggregate } from "@/hooks/useVibeBoard";
 
 const QUESTION_LABELS: Record<string, string> = {
-  energy: "Trip energy",
-  budget: "Budget vibe",
-  accommodation: "Accommodation",
-  length: "Trip length",
+  energy: "Vibe",
+  budget: "Budget style",
+  accommodation: "Where we sleep",
+  length: "How long",
   musthave: "Must-haves",
 };
 
