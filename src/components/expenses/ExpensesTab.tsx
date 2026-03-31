@@ -456,7 +456,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   </div>
                 ))}
                 {/* Total footer */}
-                {totalExpenses !== null && (
+                {!ratesLoading && totalExpenses !== null && (
                   <p className="text-xs text-muted-foreground text-center pt-3 border-t border-muted mt-3">
                     Total: {formatCurrency(totalExpenses, settlementCurrency)} across {nonSettlementCount} expense{nonSettlementCount !== 1 ? "s" : ""}
                   </p>
