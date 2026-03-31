@@ -1,23 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { calcNetBalances } from "@/lib/settlementCalc";
 
 export interface TripBalance {
   tripId: string;
   tripName: string;
   tripEmoji: string | null;
   currency: string;
-  net: number; // positive = owed to user, negative = user owes
+  net: number;
 }
 
 export interface GlobalExpensesResult {
   overallNet: number;
-  currency: string; // primary currency (from first trip or EUR)
+  currency: string;
   trips: TripBalance[];
 }
 
 async function fetchEurRates(): Promise<Record<string, number>> {
-  // Try DB cache first
   const { data } = await supabase
     .from("exchange_rate_cache")
     .select("rates")
@@ -28,7 +28,6 @@ async function fetchEurRates(): Promise<Record<string, number>> {
     return data.rates as Record<string, number>;
   }
 
-  // Fallback: live API
   try {
     const res = await fetch("https://open.er-api.com/v6/latest/EUR");
     const json = await res.json();
@@ -39,17 +38,6 @@ async function fetchEurRates(): Promise<Record<string, number>> {
     // ignore
   }
   return {};
-}
-
-function convertToEur(
-  amount: number,
-  currency: string,
-  eurRates: Record<string, number>
-): number | null {
-  if (currency === "EUR") return amount;
-  const rate = eurRates[currency];
-  if (!rate) return null;
-  return amount / rate;
 }
 
 export function useGlobalExpenses() {
@@ -72,7 +60,7 @@ export function useGlobalExpenses() {
 
       const tripIds = memberships.map((m) => m.trip_id);
 
-      const [{ data: trips }, { data: expenses }, { data: splits }, eurRates] =
+      const [{ data: trips }, { data: expenses }, eurRates] =
         await Promise.all([
           supabase
             .from("trips")
@@ -82,89 +70,110 @@ export function useGlobalExpenses() {
             .from("expenses")
             .select("id, trip_id, payer_id, amount, currency")
             .in("trip_id", tripIds),
-          supabase
-            .from("expense_splits")
-            .select("expense_id, user_id, share_amount")
-            .eq("user_id", userId),
           fetchEurRates(),
         ]);
+
+      const allExpenseIds = (expenses ?? []).map((e) => e.id);
+
+      // Fetch all splits for these expenses (not just user's)
+      let allSplits: { expense_id: string; user_id: string; share_amount: number }[] = [];
+      if (allExpenseIds.length > 0) {
+        const { data: splitsData } = await supabase
+          .from("expense_splits")
+          .select("expense_id, user_id, share_amount")
+          .in("expense_id", allExpenseIds);
+        allSplits = (splitsData ?? []).map((s) => ({
+          expense_id: s.expense_id,
+          user_id: s.user_id,
+          share_amount: Number(s.share_amount),
+        }));
+      }
+
+      // Collect all user IDs for profile lookup
+      const userIdSet = new Set<string>();
+      for (const e of expenses ?? []) userIdSet.add(e.payer_id);
+      for (const s of allSplits) userIdSet.add(s.user_id);
+      const allUserIds = Array.from(userIdSet);
+
+      // Fetch profiles
+      const profileMap: Record<string, string> = {};
+      if (allUserIds.length > 0) {
+        const { data: profiles } = await supabase.rpc("get_public_profiles", {
+          _user_ids: allUserIds,
+        });
+        for (const p of profiles ?? []) {
+          profileMap[p.id] = p.display_name || "Unknown";
+        }
+      }
 
       const tripMap = new Map(
         (trips ?? []).map((t) => [t.id, t])
       );
 
-      // Build expense→trip and expense→currency maps
       const expenseTripMap = new Map<string, string>();
-      const expenseCurrencyMap = new Map<string, string>();
       for (const e of expenses ?? []) {
         expenseTripMap.set(e.id, e.trip_id);
-        expenseCurrencyMap.set(e.id, e.currency);
-      }
-
-      // Build per-trip balances using settlement currency conversion
-      const balanceMap = new Map<string, number>();
-
-      // Helper to convert amount to trip's settlement currency
-      const convertToSettlement = (
-        amount: number,
-        fromCurrency: string,
-        settlementCurrency: string
-      ): number | null => {
-        if (fromCurrency === settlementCurrency) return amount;
-        // Convert via EUR: amount → EUR → settlement
-        const inEur = convertToEur(amount, fromCurrency, eurRates);
-        if (inEur == null) return null;
-        if (settlementCurrency === "EUR") return inEur;
-        const settlementRate = eurRates[settlementCurrency];
-        if (!settlementRate) return null;
-        return inEur * settlementRate;
-      };
-
-      // Add amounts user paid
-      for (const e of expenses ?? []) {
-        if (e.payer_id === userId) {
-          const trip = tripMap.get(e.trip_id);
-          const sc = trip?.settlement_currency || "EUR";
-          const converted = convertToSettlement(Number(e.amount), e.currency, sc);
-          if (converted != null) {
-            balanceMap.set(e.trip_id, (balanceMap.get(e.trip_id) ?? 0) + converted);
-          }
-        }
-      }
-
-      // Subtract user's splits
-      for (const s of splits ?? []) {
-        const tripId = expenseTripMap.get(s.expense_id);
-        const currency = expenseCurrencyMap.get(s.expense_id);
-        if (tripId && currency) {
-          const trip = tripMap.get(tripId);
-          const sc = trip?.settlement_currency || "EUR";
-          const converted = convertToSettlement(Number(s.share_amount), currency, sc);
-          if (converted != null) {
-            balanceMap.set(tripId, (balanceMap.get(tripId) ?? 0) - converted);
-          }
-        }
       }
 
       const tripBalances: TripBalance[] = [];
       let overallNet = 0;
 
-      for (const [tripId, net] of balanceMap) {
-        const trip = tripMap.get(tripId);
-        if (!trip) continue;
-        if (Math.abs(net) < 0.005) continue; // skip settled trips
+      for (const [tripId, trip] of tripMap) {
+        const sc = trip.settlement_currency || "EUR";
+
+        // Build cross-rates for this trip's settlement currency
+        let ratesForTrip = eurRates;
+        if (sc !== "EUR" && eurRates[sc]) {
+          const cross: Record<string, number> = {};
+          for (const [code, rate] of Object.entries(eurRates)) {
+            cross[code] = rate / eurRates[sc];
+          }
+          ratesForTrip = cross;
+        }
+
+        const expensesForTrip = (expenses ?? []).filter(
+          (e) => e.trip_id === tripId
+        );
+        const splitsForTrip = allSplits.filter(
+          (s) => expenseTripMap.get(s.expense_id) === tripId
+        );
+
+        const expensesWithSplits = expensesForTrip.map((e) => ({
+          id: e.id,
+          payer_id: e.payer_id,
+          amount: Number(e.amount),
+          currency: e.currency,
+          splits: splitsForTrip
+            .filter((s) => s.expense_id === e.id)
+            .map((s) => ({
+              user_id: s.user_id,
+              share_amount: s.share_amount,
+            })),
+        }));
+
+        const { balances } = calcNetBalances(
+          expensesWithSplits,
+          sc,
+          sc,
+          ratesForTrip,
+          profileMap
+        );
+
+        const myBalance = balances.find((b) => b.userId === userId);
+        const net = myBalance?.balance ?? 0;
+
+        if (Math.abs(net) < 0.005) continue;
 
         tripBalances.push({
           tripId,
           tripName: trip.name,
           tripEmoji: trip.emoji,
-          currency: trip.settlement_currency,
+          currency: sc,
           net,
         });
         overallNet += net;
       }
 
-      // Sort: largest absolute balance first
       tripBalances.sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
 
       const primaryCurrency =
