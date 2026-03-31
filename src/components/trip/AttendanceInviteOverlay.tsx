@@ -136,7 +136,7 @@ export function AttendanceInviteOverlay({
 
       setTimeout(() => {
         setClosing(true);
-      }, 5300);
+      }, 5000);
 
       setTimeout(() => {
         setClosing(false);
@@ -199,9 +199,11 @@ export function AttendanceInviteOverlay({
         >
           {/* Message row with inline X button */}
           <div className="flex items-center px-4 text-[13px] font-semibold text-white" style={{ height: 44 }}>
-            <span className="flex-1 text-center" style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
-              👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
-            </span>
+            {!isFull && (
+              <span className="flex-1 text-center" style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
+                👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
+              </span>
+            )}
             {!isFull && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
