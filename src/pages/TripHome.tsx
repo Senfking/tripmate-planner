@@ -273,9 +273,14 @@ export default function TripHome() {
   const handleOverlayRespond = useCallback(
     (status: string) => {
       updateAttendance.mutate(status);
-      sessionStorage.removeItem(sessionKey);
-      setOverlayDismissed(true);
-      setOverlayForcedOpen(false);
+
+      const delay = status === "going" ? 2400 : 400;
+
+      setTimeout(() => {
+        sessionStorage.removeItem(sessionKey);
+        setOverlayDismissed(true);
+        setOverlayForcedOpen(false);
+      }, delay);
     },
     [updateAttendance, sessionKey]
   );
