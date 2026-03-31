@@ -243,6 +243,32 @@ export function AttendanceInviteOverlay({
   };
 
   // ─── PEEKING MODE ───
+  const PEEKING_MESSAGES = [
+    "Your friends booked flights. You booked nothing. Tap to fix that. ↑",
+    "Being 'maybe' is just 'no' with better PR. Prove us wrong. ↑",
+    "The group chat has a nickname for you. Change the narrative. ↑",
+    "At this point the trip has more commitment than you do. One tap. ↑",
+    "Somewhere your future self is deeply embarrassed. Save them. ↑",
+    "Other people have mortgages and still said yes. Your move. ↑",
+    "The vibe is immaculate. Don't be the reason it isn't. ↑",
+    "Plot twist: you say yes, it's legendary, you never shut up about it. ↑",
+  ];
+
+  const [messageIndex, setMessageIndex] = useState(() => Math.floor(Math.random() * PEEKING_MESSAGES.length));
+  const [messageFade, setMessageFade] = useState(1);
+
+  useEffect(() => {
+    if (!peeking || open) return;
+    const interval = setInterval(() => {
+      setMessageFade(0);
+      setTimeout(() => {
+        setMessageIndex((i) => (i + 1) % PEEKING_MESSAGES.length);
+        setMessageFade(1);
+      }, 300);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [peeking, open]);
+
   if (peeking && !open) {
     return (
       <div
@@ -258,7 +284,9 @@ export function AttendanceInviteOverlay({
             boxShadow: "0 -4px 20px rgba(13,148,136,0.3)",
           }}
         >
-          👀&nbsp; Still thinking? Everyone's waiting… no pressure though 😏
+          <span style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
+            👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
+          </span>
         </div>
 
         {/* Peek of the actual overlay content */}
