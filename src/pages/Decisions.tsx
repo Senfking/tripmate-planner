@@ -52,7 +52,7 @@ const Decisions = () => {
       <TabHeroHeader title="Decisions" subtitle={subtitle} pills={pills} />
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center pt-24 text-center px-4">
+        <div className="flex flex-col items-center justify-center pt-24 text-center px-4 mt-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10">
             <CircleCheck className="h-8 w-8 text-[#0D9488]" />
           </div>
