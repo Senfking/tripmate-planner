@@ -155,7 +155,7 @@ export function AttendanceInviteOverlay({
     (m) => m.attendance_status === "going" || m.attendance_status === "maybe"
   );
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
