@@ -406,22 +406,7 @@ export default function TripHome() {
         />
       </div>
 
-      {/* ─── PEEKING TAB ─── */}
-      {showPeekingTab && (
-        <button
-          onClick={handleOpenOverlay}
-          className="fixed left-0 right-0 z-[49] flex items-center justify-center py-3.5 px-4 text-[13px] font-medium text-white animate-peek-bounce rounded-t-2xl"
-          style={{
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem + 56px)",
-            background: "linear-gradient(135deg, #0D9488, #0369a1)",
-            boxShadow: "0 -4px 20px rgba(13,148,136,0.25)",
-          }}
-        >
-          👀&nbsp; We see you lurking… commit already, you're not fooling anyone
-        </button>
-      )}
-
-      {/* ─── ATTENDANCE OVERLAY ─── */}
+      {/* ─── ATTENDANCE OVERLAY (peeking or full) ─── */}
       <AttendanceInviteOverlay
         tripId={trip.id}
         tripName={trip.name}
@@ -432,6 +417,8 @@ export default function TripHome() {
         members={members ?? []}
         currentUserId={user!.id}
         open={showOverlay}
+        peeking={showPeekingTab}
+        onPeekTap={handleOpenOverlay}
         onDismiss={handleOverlayDismiss}
         onRespond={handleOverlayRespond}
         isPending={updateAttendance.isPending}
