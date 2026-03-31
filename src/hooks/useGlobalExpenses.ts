@@ -62,7 +62,7 @@ export function useGlobalExpenses() {
 
       const tripIds = memberships.map((m) => m.trip_id);
 
-      const [{ data: trips }, { data: expenses }, eurRates] =
+      const [{ data: trips }, { data: expenses }, ratesData] =
         await Promise.all([
           supabase
             .from("trips")
@@ -72,8 +72,13 @@ export function useGlobalExpenses() {
             .from("expenses")
             .select("id, trip_id, payer_id, amount, currency")
             .in("trip_id", tripIds),
-          fetchEurRates(),
+          qc.fetchQuery({
+            queryKey: ["exchange-rates", "EUR"],
+            queryFn: fetchEurRates,
+            staleTime: 1000 * 60 * 60,
+          }),
         ]);
+      const eurRates = ratesData ?? {};
 
       const allExpenseIds = (expenses ?? []).map((e) => e.id);
 

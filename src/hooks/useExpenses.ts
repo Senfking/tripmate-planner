@@ -395,6 +395,7 @@ export function useExpenses(tripId: string) {
       await new Promise((r) => setTimeout(r, 2000));
       await qc.invalidateQueries({ queryKey: ["exchange-rates"] });
       await qc.invalidateQueries({ queryKey: ["cached-currency-codes"] });
+      await qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Rates updated");
     } catch {
       toast.error("Failed to refresh rates");
