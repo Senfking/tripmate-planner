@@ -41,7 +41,10 @@ export function VibeQuestion({
           )}
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className={cn(
+        "grid gap-2",
+        multiSelect ? "grid-cols-2" : "grid-cols-2"
+      )}>
         {options.map((opt) => {
           const isSelected = selected.includes(opt.label);
           return (
@@ -50,7 +53,7 @@ export function VibeQuestion({
               disabled={disabled}
               onClick={() => onSelect(opt.label)}
               className={cn(
-                "rounded-xl text-left transition-all min-h-[44px] px-4 py-2",
+                "rounded-xl text-left transition-all py-3 px-4",
                 "disabled:opacity-60 disabled:cursor-not-allowed",
                 isSelected
                   ? "text-white border border-transparent shadow-md"
