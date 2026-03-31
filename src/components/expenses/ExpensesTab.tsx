@@ -261,7 +261,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               <p className="text-sm text-muted-foreground mt-0.5">{heroData.subline}</p>
               <Button
                 size="sm"
-                className="mt-3 h-8 gap-1.5 text-xs bg-[#0D9488] hover:bg-[#0D9488]/90"
+                className="mt-3 h-8 gap-1.5 text-xs"
                 onClick={() => setSettleOpen(true)}
               >
                 Settle up

@@ -370,7 +370,7 @@ export default function ShareView() {
         {/* Footer CTA */}
         <footer className="text-center py-6 space-y-4 border-t border-gray-100">
           <p className="text-sm text-gray-500">Planning a trip?</p>
-          <Button asChild size="lg" className="bg-teal-600 hover:bg-teal-700">
+          <Button asChild size="lg">
             <Link to="/signup">Join Junto free →</Link>
           </Button>
           <p className="text-xs text-gray-400">
