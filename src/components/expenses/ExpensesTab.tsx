@@ -238,9 +238,10 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       {!canShowBalances ? (
         <div className="rounded-xl border bg-card p-3 space-y-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</span>
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-4 w-36" />
-          <p className="text-xs text-muted-foreground">Loading exchange rates…</p>
+          <div className="flex items-center gap-2 py-2 px-1">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Checking exchange rates…</span>
+          </div>
         </div>
       ) : (
         <>
