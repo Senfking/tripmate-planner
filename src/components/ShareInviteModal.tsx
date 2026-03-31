@@ -354,13 +354,21 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                 </button>
               </div>
               {isAdmin && (
-                <button
-                  className="text-[12px] text-muted-foreground hover:text-destructive transition-colors"
-                  onClick={() => revokeShare.mutate(activeShare.id)}
-                  disabled={revokeShare.isPending}
-                >
-                  Revoke link
-                </button>
+                <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
+                  <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] text-muted-foreground leading-snug">
+                      Revoking disables this share link permanently. You can generate a new one anytime.
+                    </p>
+                    <button
+                      className="text-[12px] font-medium text-destructive hover:text-destructive/80 transition-colors mt-1"
+                      onClick={() => revokeShare.mutate(activeShare.id)}
+                      disabled={revokeShare.isPending}
+                    >
+                      {revokeShare.isPending ? "Revoking…" : "Revoke this link"}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           ) : (
