@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Check } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -154,7 +155,7 @@ export function AttendanceInviteOverlay({
     (m) => m.attendance_status === "going" || m.attendance_status === "maybe"
   );
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -344,6 +345,7 @@ export function AttendanceInviteOverlay({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
