@@ -54,6 +54,7 @@ type Props = {
   isActive: boolean;
   isLocked: boolean;
   memberCount: number;
+  myAttendanceStatus?: string;
 };
 
 export function VibeBoard({
