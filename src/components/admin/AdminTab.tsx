@@ -46,7 +46,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("user_id, role, joined_at")
+        .select("user_id, role, joined_at, attendance_status")
         .eq("trip_id", tripId)
         .order("joined_at", { ascending: true });
       if (error) throw error;
@@ -57,6 +57,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       return (data || []).map((m) => ({
         ...m,
         display_name: profileMap.get(m.user_id) || null,
+        attendance_status: (m as any).attendance_status ?? "pending",
       }));
     },
     enabled: !!user,
