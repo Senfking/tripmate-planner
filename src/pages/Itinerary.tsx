@@ -79,9 +79,9 @@ const Itinerary = () => {
 
   return (
     <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title="Itinerary" subtitle={nextActivitySubtitle} />
+      <TabHeroHeader title="Itinerary" subtitle={nextActivitySubtitle} pills={itineraryPills} />
 
-      <div className="px-4 pt-3 pb-32">
+      <div className="px-4 mt-4 pb-32">
         {/* Toggle */}
         <div className="mb-4 flex gap-1 rounded-xl bg-white p-1 border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {(["all", "mine"] as const).map((f) => (
