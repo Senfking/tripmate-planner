@@ -260,8 +260,9 @@ export default function TripHome() {
   const [overlayForcedOpen, setOverlayForcedOpen] = useState(false);
 
   const isPending = myAttendanceStatus === "pending";
-  const showOverlay = (isPending && !overlayDismissed) || overlayForcedOpen;
-  const showPeekingTab = isPending && overlayDismissed && !overlayForcedOpen;
+  const hasLoaded = myMembership !== undefined;
+  const showOverlay = hasLoaded && ((isPending && !overlayDismissed) || overlayForcedOpen);
+  const showPeekingTab = hasLoaded && isPending && overlayDismissed && !overlayForcedOpen;
 
   const handleOverlayDismiss = useCallback(() => {
     sessionStorage.setItem(sessionKey, "1");

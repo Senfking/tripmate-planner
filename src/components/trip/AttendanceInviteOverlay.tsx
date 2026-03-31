@@ -143,16 +143,17 @@ export function AttendanceInviteOverlay({
   };
 
   // The sheet is always rendered at full height.
-  // When "peeking", we translate it down so only the message banner is visible.
+  // When "peeking", we translate it down so only the top strip is visible.
   // When "open", translateY(0) shows the full sheet.
-  // This makes it one seamless component — peeking IS the full sheet, just scrolled down.
   const isFull = open || closing;
 
-  // Calculate how far down to push the sheet when peeking.
-  // We want only the message banner (~44px) visible above the bottom nav.
-  // The sheet is 100vh tall, positioned at bottom:0, so we translate it down by (100vh - banner height).
-  // We use calc to handle this: translateY(calc(100% - 44px))
-  const peekTranslate = "calc(100% - 44px)";
+  // Peeking shows: message banner (44px) + avatar row (52px) = 96px visible above bottom nav
+  const peekHeight = 96;
+  const peekTranslate = `calc(100% - ${peekHeight}px)`;
+
+  const goingMembers = members.filter(
+    (m) => m.attendance_status === "going" || m.attendance_status === "maybe"
+  );
 
   return (
     <>
@@ -173,29 +174,57 @@ export function AttendanceInviteOverlay({
         style={{
           transform: isFull ? "translateY(0)" : `translateY(${peekTranslate})`,
           transition: "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)",
-          // When peeking, only the top strip should be tappable
           pointerEvents: isFull ? "auto" : "none",
         }}
-        onClick={!isFull ? onPeekTap : undefined}
       >
-        {/* Peeking message banner — always rendered at the top of the sheet */}
+        {/* Peeking top strip — message + avatars */}
         <div
           className={cn(
-            "flex items-center justify-center px-4 text-[13px] font-semibold text-white rounded-t-2xl overflow-hidden shrink-0",
+            "shrink-0 rounded-t-2xl overflow-hidden",
             !isFull && "animate-peek-bounce cursor-pointer"
           )}
           style={{
             background: "linear-gradient(135deg, #0D9488, #0369a1)",
             boxShadow: !isFull ? "0 -4px 20px rgba(13,148,136,0.3)" : "none",
-            height: 44,
-            // When peeking, this banner needs to receive pointer events
-            pointerEvents: !isFull ? "auto" : "auto",
+            pointerEvents: "auto",
           }}
           onClick={!isFull ? (e) => { e.stopPropagation(); onPeekTap?.(); } : undefined}
         >
-          <span style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
-            👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
-          </span>
+          {/* Message row */}
+          <div className="flex items-center justify-center px-4 text-[13px] font-semibold text-white" style={{ height: 44 }}>
+            <span style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
+              👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
+            </span>
+          </div>
+          {/* Avatar row — visible when peeking, collapses when full */}
+          <div
+            className="flex items-center gap-2 px-4 overflow-hidden"
+            style={{
+              maxHeight: isFull ? 0 : 52,
+              paddingTop: isFull ? 0 : 4,
+              paddingBottom: isFull ? 0 : 10,
+              opacity: isFull ? 0 : 1,
+              transition: "max-height 0.4s cubic-bezier(0.32, 0.72, 0, 1), padding 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease",
+            }}
+          >
+            <div className="flex items-center -space-x-1.5">
+              {goingMembers.slice(0, 6).map((m) => (
+                <Avatar key={m.user_id} className="h-8 w-8 ring-2 ring-white/30">
+                  {m.profile?.avatar_url && (
+                    <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
+                  )}
+                  <AvatarFallback className="bg-white/20 text-white text-[10px] font-medium">
+                    {getInitial(m.profile?.display_name)}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            {goingMembers.length > 0 && (
+              <span className="text-[12px] text-white/80 font-medium">
+                {goingMembers.length} going
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Full overlay body — hero + content */}
