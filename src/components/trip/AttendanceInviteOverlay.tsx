@@ -130,13 +130,13 @@ export function AttendanceInviteOverlay({
     if (status === "going") {
       setShowConfetti(true);
       setTimeout(() => setSuccessState(true), 400);
-      setTimeout(() => setClosing(true), 1900);
+      setTimeout(() => setClosing(true), 4400);
       setTimeout(() => {
         setClosing(false);
         setSuccessState(false);
         setShowConfetti(false);
         onDismiss();
-      }, 2350);
+      }, 4850);
     } else {
       handleDismiss();
     }
@@ -270,18 +270,37 @@ export function AttendanceInviteOverlay({
           {/* Content */}
           <div className="flex-1 rounded-t-3xl -mt-4 relative bg-card px-5 pt-5 pb-8 overflow-y-auto">
             {successState ? (
-              <div className="flex flex-col items-center justify-center py-16 animate-success-fade-in">
-                {showConfetti && (
-                  <div className="confetti-burst">
-                    {[...Array(8)].map((_, i) => (
-                      <span key={i} className={`confetti-dot confetti-dot-${i}`} />
-                    ))}
-                  </div>
-                )}
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0D9488]/10">
-                  <Check className="h-8 w-8 text-[#0D9488]" />
+              <div className="flex flex-col items-center justify-center py-12 relative overflow-hidden" style={{ minHeight: 300 }}>
+                {/* Confetti dots */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  {[...Array(12)].map((_, i) => (
+                    <span key={i} className={`confetti-dot confetti-dot-${i}`} />
+                  ))}
                 </div>
-                <p className="mt-4 text-xl font-bold text-foreground">You're in! 🎉</p>
+
+                {/* Big animated checkmark */}
+                <div
+                  className="flex h-20 w-20 items-center justify-center rounded-full bg-[#0D9488]/10"
+                  style={{ animation: "scale-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards" }}
+                >
+                  <Check className="h-10 w-10 text-[#0D9488]" />
+                </div>
+
+                {/* Main message */}
+                <div className="text-center mt-5" style={{ animation: "fade-up 0.5s ease 0.3s both" }}>
+                  <p className="text-2xl font-bold text-foreground">You're in! 🎉</p>
+                  <p className="text-[14px] text-muted-foreground mt-2">
+                    Get ready — this is going to be epic.
+                  </p>
+                </div>
+
+                {/* Trip name pill */}
+                <div
+                  className="mt-6 px-4 py-2 rounded-full bg-[#0D9488]/10 text-[#0D9488] text-[13px] font-semibold"
+                  style={{ animation: "fade-up 0.5s ease 0.5s both" }}
+                >
+                  ✈️ {tripName}
+                </div>
               </div>
             ) : (
               <>

@@ -283,7 +283,7 @@ export default function TripHome() {
     (status: string) => {
       updateAttendance.mutate(status);
 
-      const delay = status === "going" ? 2400 : 400;
+      const delay = status === "going" ? 5000 : 400;
 
       setTimeout(() => {
         sessionStorage.removeItem(sessionKey);

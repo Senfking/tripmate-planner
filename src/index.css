@@ -221,40 +221,46 @@ html, body, #root {
     animation: success-fade-in 0.4s ease forwards;
   }
 
-  /* Confetti dots */
-  .confetti-burst {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    overflow: hidden;
+  /* Scale-in for checkmark */
+  @keyframes scale-in {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
   }
 
+  /* Fade-up for text */
+  @keyframes fade-up {
+    from { transform: translateY(16px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  /* Confetti dots */
   .confetti-dot {
     position: absolute;
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     opacity: 0;
-    animation: confetti-rise 2.5s ease-out forwards;
+    animation: confetti-rise 2.8s ease-out forwards;
   }
 
-  .confetti-dot-0 { left: 15%; top: 60%; background: #0D9488; animation-delay: 0ms; }
-  .confetti-dot-1 { left: 30%; top: 70%; background: #F59E0B; animation-delay: 100ms; }
-  .confetti-dot-2 { left: 50%; top: 65%; background: #3B82F6; animation-delay: 50ms; }
-  .confetti-dot-3 { left: 65%; top: 70%; background: #0D9488; animation-delay: 150ms; }
-  .confetti-dot-4 { left: 80%; top: 60%; background: #F59E0B; animation-delay: 80ms; }
-  .confetti-dot-5 { left: 20%; top: 50%; background: #EC4899; animation-delay: 200ms; }
-  .confetti-dot-6 { left: 45%; top: 75%; background: #8B5CF6; animation-delay: 120ms; }
-  .confetti-dot-7 { left: 70%; top: 55%; background: #3B82F6; animation-delay: 60ms; }
+  .confetti-dot-0  { left: 10%; top: 70%; background: #0D9488; animation-delay: 0ms; }
+  .confetti-dot-1  { left: 25%; top: 80%; background: #F59E0B; animation-delay: 80ms; }
+  .confetti-dot-2  { left: 40%; top: 65%; background: #3B82F6; animation-delay: 40ms; }
+  .confetti-dot-3  { left: 55%; top: 75%; background: #EC4899; animation-delay: 120ms; }
+  .confetti-dot-4  { left: 70%; top: 70%; background: #0D9488; animation-delay: 60ms; }
+  .confetti-dot-5  { left: 85%; top: 65%; background: #F59E0B; animation-delay: 160ms; }
+  .confetti-dot-6  { left: 15%; top: 55%; background: #8B5CF6; animation-delay: 200ms; }
+  .confetti-dot-7  { left: 50%; top: 85%; background: #3B82F6; animation-delay: 100ms; }
+  .confetti-dot-8  { left: 30%; top: 60%; background: #EC4899; animation-delay: 140ms; }
+  .confetti-dot-9  { left: 65%; top: 55%; background: #8B5CF6; animation-delay: 180ms; }
+  .confetti-dot-10 { left: 80%; top: 80%; background: #0D9488; animation-delay: 220ms; }
+  .confetti-dot-11 { left: 45%; top: 50%; background: #F59E0B; animation-delay: 260ms; }
 
   @keyframes confetti-rise {
-    0% { transform: translateY(0) scale(0); opacity: 0; }
-    15% { opacity: 1; transform: translateY(-20px) scale(1); }
-    85% { opacity: 0.6; transform: translateY(-120px) scale(0.8); }
-    100% { opacity: 0; transform: translateY(-160px) scale(0.4); }
+    0%   { transform: translateY(0) scale(0); opacity: 0; }
+    15%  { transform: translateY(-30px) scale(1); opacity: 1; }
+    85%  { transform: translateY(-140px) scale(0.8); opacity: 0.7; }
+    100% { transform: translateY(-200px) scale(0.3); opacity: 0; }
   }
 
   /* Peeking tab bounce */
