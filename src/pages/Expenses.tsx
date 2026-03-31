@@ -1,30 +1,22 @@
 import { useGlobalExpenses } from "@/hooks/useGlobalExpenses";
 import { Link } from "react-router-dom";
-import { Wallet, ArrowRight } from "lucide-react";
+import { Wallet, ArrowRight, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
-import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
+import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
 
 const Expenses = () => {
   const { data, isLoading } = useGlobalExpenses();
   const { overallNet = 0, currency = "EUR", trips = [] } = data ?? {};
   const hasExpenses = trips.length > 0;
 
-  // Subtitle = key summary sentence (no amount — that's in the header children)
   const subtitle = (() => {
     if (isLoading) return "Loading…";
-    if (!hasExpenses) return "No expenses yet";
-    if (Math.abs(overallNet) < 0.01) return "All settled up";
-    const tripCount = trips.length;
-    return `Across ${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
+    if (!hasExpenses) return "Track shared costs across all your trips";
+    if (Math.abs(overallNet) < 0.01) return "All settled up across your trips";
+    return `${trips.length} trip${trips.length !== 1 ? "s" : ""} with open balances`;
   })();
-
-  // Pills = trip count only (balance is shown large in children)
-  const pills: HeroPill[] = [];
-  if (!isLoading && hasExpenses) {
-    pills.push({ label: `${trips.length} trip${trips.length !== 1 ? "s" : ""}` });
-  }
 
   if (isLoading) {
     return (
@@ -39,22 +31,59 @@ const Expenses = () => {
     );
   }
 
-  // Large centered balance display inside the header
-  const balanceChildren = hasExpenses && Math.abs(overallNet) >= 0.01 ? (
-    <div className="mt-4 flex flex-col items-center">
-      <span className="text-[32px] font-extrabold text-white tracking-tight leading-none">
-        {formatCurrency(Math.abs(overallNet), currency)}
-      </span>
-      <span className="text-[12px] font-medium text-white/60 mt-1">
-        {overallNet > 0 ? "You're owed" : "You owe"}
-      </span>
+  // Balance display in header — bank-style
+  const balanceDisplay = (
+    <div className="mt-4 flex items-end justify-between">
+      <div>
+        {hasExpenses ? (
+          <>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1">
+              {Math.abs(overallNet) < 0.01 ? "Net balance" : overallNet > 0 ? "You're owed" : "You owe"}
+            </p>
+            <p className="text-[36px] font-extrabold text-white tracking-tight leading-none">
+              {Math.abs(overallNet) < 0.01 ? "€0" : formatCurrency(Math.abs(overallNet), currency)}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1">
+              Net balance
+            </p>
+            <p className="text-[36px] font-extrabold text-white tracking-tight leading-none">
+              €0
+            </p>
+          </>
+        )}
+      </div>
+      {/* Status indicator */}
+      <div className="mb-1">
+        {Math.abs(overallNet) < 0.01 ? (
+          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
+            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+            <span className="text-[11px] font-semibold text-white/80">Settled</span>
+          </div>
+        ) : overallNet > 0 ? (
+          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
+            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
+            <span className="text-[11px] font-semibold text-white/80">{trips.length} trip{trips.length !== 1 ? "s" : ""}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
+            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
+            <TrendingDown className="h-3.5 w-3.5 text-orange-300" />
+            <span className="text-[11px] font-semibold text-white/80">{trips.length} trip{trips.length !== 1 ? "s" : ""}</span>
+          </div>
+        )}
+      </div>
     </div>
-  ) : null;
+  );
 
   return (
     <div className="min-h-[calc(100dvh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title="Expenses" subtitle={subtitle} pills={pills}>
-        {balanceChildren}
+      <TabHeroHeader title="Expenses" subtitle={subtitle}>
+        {balanceDisplay}
       </TabHeroHeader>
 
       {!hasExpenses ? (
@@ -70,9 +99,10 @@ const Expenses = () => {
       ) : (
         <div className="space-y-2 px-4 mt-4 pb-24">
           {trips.map((trip) => (
-            <div
+            <Link
               key={trip.tripId}
-              className="bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 flex items-center gap-3"
+              to={`/app/trips/${trip.tripId}/expenses`}
+              className="flex items-center gap-3 bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:scale-[0.98] transition-transform"
             >
               <span className="text-xl">{trip.tripEmoji ?? "✈️"}</span>
               <div className="flex-1 min-w-0">
@@ -96,12 +126,8 @@ const Expenses = () => {
                     : "Settled"}
                 </p>
               </div>
-              <Button size="sm" variant="ghost" className="shrink-0 gap-1 text-xs" asChild>
-                <Link to={`/app/trips/${trip.tripId}/expenses`}>
-                  View <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+            </Link>
           ))}
         </div>
       )}
