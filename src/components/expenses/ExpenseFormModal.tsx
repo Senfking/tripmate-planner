@@ -282,6 +282,9 @@ export function ExpenseFormModal({
               <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
               <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Scan a receipt — we'll extract the amount and details automatically
+            </p>
 
             {scanning ? (
               <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
