@@ -924,20 +924,10 @@ const More = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Join a trip link */}
-      <div className="flex justify-center pt-2">
-        <Button variant="outline" className="gap-2" asChild>
-          <Link to="/join">
-            <Hash className="h-4 w-4" />
-            Join a trip
-          </Link>
-        </Button>
-      </div>
-
       {/* ── Sign Out button ── */}
       <Button
         variant="outline"
-        className="w-full text-destructive border-destructive/30"
+        className="w-full mt-6 mb-2 text-destructive border-destructive/30"
         onClick={handleSignOut}
       >
         <LogOut className="h-4 w-4 mr-2" />
