@@ -198,6 +198,7 @@ export function DecisionsFlow({
             isActive={isActive}
             isLocked={vibeLocked}
             memberCount={memberCount}
+            myAttendanceStatus={myAttendanceStatus}
           />
         </StepSection>
       </div>

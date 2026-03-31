@@ -115,6 +115,7 @@ export default function TripSection() {
             isLocked={trip.vibe_board_locked ?? false}
             memberCount={memberCount ?? 0}
             routeLocked={trip.route_locked ?? false}
+            myAttendanceStatus={myAttendanceStatus}
           />
         );
       case "itinerary":
