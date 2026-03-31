@@ -2,10 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import type { VibeAggregate } from "@/hooks/useVibeBoard";
 
 const QUESTION_LABELS: Record<string, string> = {
-  energy: "Trip energy",
-  budget: "Budget vibe",
-  accommodation: "Accommodation",
-  length: "Trip length",
+  energy: "Vibe",
+  budget: "Budget style",
+  accommodation: "Where we sleep",
+  length: "How long",
   musthave: "Must-haves",
 };
 
@@ -13,23 +13,27 @@ const QUESTION_ORDER = ["energy", "budget", "accommodation", "length", "musthave
 
 const SUMMARY_PHRASES: Record<string, Record<string, string>> = {
   energy: {
-    "Full send 🔥": "a full-send energy trip",
-    "Balanced 😎": "a balanced trip",
-    "Chill 🧘": "a chill trip",
+    "Full send": "a full-send trip",
+    "Go with the flow": "a go-with-the-flow trip",
+    "Balanced": "a balanced trip",
+    "Slow & easy": "a slow & easy trip",
   },
   budget: {
-    "Splash out 💸": "splashing out on budget",
-    "Fair split ⚖️": "a fair-split budget",
-    "Keep it lean 🪙": "a lean budget",
+    "Treat ourselves": "treating yourselves",
+    "Mid-range": "a mid-range budget",
+    "Budget-friendly": "a budget-friendly approach",
+    "As cheap as possible": "keeping it cheap",
   },
   accommodation: {
-    "Together 🏠": "staying together",
-    "Own rooms 🏨": "own rooms",
-    "Don't mind 🤷": "flexible accommodation",
+    "All together": "staying together",
+    "Own rooms": "own rooms",
+    "Hostel life": "hostel life",
+    "Don't mind": "flexible accommodation",
   },
   length: {
-    Weekend: "a weekend",
+    "Long weekend": "a long weekend",
     "4–5 days": "4–5 days",
+    "A full week": "a full week",
     "Week+": "a week+",
   },
 };
