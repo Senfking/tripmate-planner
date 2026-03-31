@@ -200,31 +200,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       </div>
 
-      {/* Rate status messages — suppressed when all expenses use settlement currency */}
-      {refreshingRates && !allSameCurrency && (
-        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-700">
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-          Fetching exchange rates…
-        </div>
-      )}
-      {!refreshingRates && !allSameCurrency && (ratesError || ratesEmpty) && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          Exchange rates unavailable — amounts shown in original currencies
-        </div>
-      )}
-      {!refreshingRates && !allSameCurrency && ratesStale && !ratesEmpty && !ratesError && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          Exchange rates may be outdated
-        </div>
-      )}
-      {excludedCount > 0 && !allSameCurrency && ratesEmpty && (
-        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-700">
-          <Info className="h-4 w-4 shrink-0" />
-          {excludedCount} expense{excludedCount > 1 ? "s" : ""} in other currencies excluded from balances — rates unavailable
-        </div>
-      )}
 
       {/* Hero summary card */}
       {canShowBalances && expenses.length > 0 && (
@@ -263,9 +238,10 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       {!canShowBalances ? (
         <div className="rounded-xl border bg-card p-3 space-y-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balances</span>
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-4 w-36" />
-          <p className="text-xs text-muted-foreground">Loading exchange rates…</p>
+          <div className="flex items-center gap-2 py-2 px-1">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Checking exchange rates…</span>
+          </div>
         </div>
       ) : (
         <>
@@ -466,6 +442,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           </CollapsibleContent>
         </div>
       </Collapsible>
+
+      {!ratesLoading && ratesEmpty && !allSameCurrency && (
+        <p className="text-xs text-center text-muted-foreground px-2">
+          Exchange rates couldn't be loaded — amounts shown in original currencies
+        </p>
+      )}
 
       <ExpenseFormModal
         open={formOpen}

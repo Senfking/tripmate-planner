@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -248,6 +248,17 @@ export function useExpenses(tripId: string) {
     (expensesQuery.data || []).length > 0 &&
     (expensesQuery.data || []).every((e) => e.currency === settlementCurrency);
 
+  // Silent background refresh when rates are stale
+  useEffect(() => {
+    if (!ratesStale || ratesQuery.isError) return;
+    supabase.functions.invoke("refresh-exchange-rates")
+      .then(() => new Promise((r) => setTimeout(r, 2000)))
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["exchange-rates"] });
+        qc.invalidateQueries({ queryKey: ["cached-currency-codes"] });
+      })
+      .catch(() => {}); // silent failure — user never knows
+  }, [ratesStale, ratesQuery.isError, qc]);
 
   // Fetch itinerary items for linking
   const itineraryQuery = useQuery({
