@@ -41,14 +41,13 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
 };
 
 const PEEKING_MESSAGES = [
-  "Your friends booked flights. You booked nothing. Tap to fix that. ↑",
-  "Being 'maybe' is just 'no' with better PR. Prove us wrong. ↑",
-  "The group chat has a nickname for you. Change the narrative. ↑",
-  "At this point the trip has more commitment than you do. One tap. ↑",
-  "Somewhere your future self is deeply embarrassed. Save them. ↑",
-  "Other people have mortgages and still said yes. Your move. ↑",
-  "The vibe is immaculate. Don't be the reason it isn't. ↑",
-  "Plot twist: you say yes, it's legendary, you never shut up about it. ↑",
+  "We both know your weekend is free, just say yes ↑",
+  "Still pretending you have plans? Cute ↑",
+  "FOMO is already winning, just admit it loser ↑",
+  "The group chat is side-eyeing you hard rn ↑",
+  "You're one 'maybe later' from becoming the meme ↑",
+  "Your plants have more of a social life than you ↑",
+  "Say yes or we're replacing you with someone fun ↑",
 ];
 
 function getInitial(name: string | null | undefined) {
