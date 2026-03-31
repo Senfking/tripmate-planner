@@ -1,7 +1,6 @@
 import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
 import { Link } from "react-router-dom";
-import { CircleCheck, Vote, MapPin, CalendarDays, MessageSquare, CheckCircle, ArrowRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { CircleCheck, Vote, MapPin, CalendarDays, MessageSquare, ArrowRight } from "lucide-react";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 
 const typeConfig = {
@@ -19,10 +18,9 @@ const Decisions = () => {
   const subtitle = (() => {
     if (isLoading) return "Loading…";
     if (items.length === 0) return "No pending votes — you're all caught up";
-    return `${items.length} vote${items.length !== 1 ? "s" : ""} need${items.length === 1 ? "s" : ""} your input`;
+    return `${items.length} vote${items.length !== 1 ? "s" : ""} across ${tripIds.size} trip${tripIds.size !== 1 ? "s" : ""}`;
   })();
 
-  // Group by type for pills
   const pills: HeroPill[] = [];
   if (!isLoading && items.length > 0) {
     const destVotes = items.filter((i) => i.type === "destination" || i.type === "date").length;
@@ -48,28 +46,7 @@ const Decisions = () => {
 
   return (
     <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title="Decisions" subtitle={subtitle} pills={pills}>
-        {/* Pending count badge in header */}
-        {items.length > 0 && (
-          <div className="mt-4 flex items-center gap-3">
-            <div
-              className="flex items-center justify-center rounded-full"
-              style={{
-                width: 44,
-                height: 44,
-                background: "rgba(255,255,255,0.15)",
-                border: "1.5px solid rgba(255,255,255,0.25)",
-              }}
-            >
-              <span className="text-[20px] font-bold text-white">{items.length}</span>
-            </div>
-            <div>
-              <p className="text-[13px] font-semibold text-white/90">Pending</p>
-              <p className="text-[11px] text-white/50">across {tripIds.size} trip{tripIds.size !== 1 ? "s" : ""}</p>
-            </div>
-          </div>
-        )}
-      </TabHeroHeader>
+      <TabHeroHeader title="Decisions" subtitle={subtitle} pills={pills} />
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center pt-24 text-center px-4 mt-4">
@@ -97,7 +74,6 @@ const Decisions = () => {
                 }[item.type]}${item.pollId ? `&pollId=${item.pollId}` : ""}`}
                 className="group flex items-center gap-3 bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:scale-[0.98] transition-transform"
               >
-                {/* Icon */}
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
                   style={{ background: "rgba(13,148,136,0.08)" }}
