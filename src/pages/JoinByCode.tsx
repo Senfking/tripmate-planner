@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Hash, AlertCircle } from "lucide-react";
+import { Loader2, Hash, AlertCircle, ArrowLeft } from "lucide-react";
 
 const ERROR_MESSAGES: Record<string, string> = {
   not_found: "That code doesn't match any trip. Double-check and try again.",
