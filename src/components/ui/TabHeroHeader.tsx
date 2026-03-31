@@ -73,25 +73,24 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
       {/* Avatar — top right */}
       <HeaderAvatar />
 
-      {/* Content — fixed minimum height for consistency */}
+      {/* Content — consistent structure */}
       <div
-        className="relative z-10 flex flex-col justify-end"
+        className="relative z-10 flex flex-col"
         style={{
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
           paddingLeft: 22,
           paddingRight: 22,
-          paddingBottom: 20,
-          minHeight: 200,
+          paddingBottom: 18,
         }}
       >
-        {/* JUNTO — centered, prominent */}
-        <div className="flex justify-center w-full mb-auto pb-2">
+        {/* JUNTO — centered */}
+        <div className="flex justify-center w-full mb-3">
           <span className="text-[13px] font-extrabold tracking-[0.3em] uppercase text-white/70">
             JUNTO
           </span>
         </div>
 
-        {/* Title */}
+        {/* Title — always at same vertical position */}
         <h1 className="text-[26px] font-bold text-white tracking-tight leading-tight">
           {title}
         </h1>
@@ -103,7 +102,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
 
         {/* Pills — actionable row */}
         {pills && pills.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+          <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
             {pills.map((pill, i) => {
               const inner = (
                 <span
