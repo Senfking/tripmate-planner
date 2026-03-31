@@ -133,7 +133,7 @@ function TripCard({ trip, isHero }: { trip: EnrichedTrip; isHero: boolean }) {
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-center"
           loading={isHero ? "eager" : "lazy"}
-          onError={(e) => { e.currentTarget.src = DEFAULT_PHOTO; }}
+          onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
         {/* Gradient overlay */}
         <div
@@ -245,10 +245,10 @@ export default function TripList() {
         {/* Hero image */}
         <div className="relative h-[260px] w-full overflow-hidden">
           <img
-            src={DEFAULT_PHOTO}
+            src={DEFAULT_TRIP_PHOTO}
             alt="Travel"
             className="h-full w-full object-cover"
-            onError={(e) => { e.currentTarget.src = DEFAULT_PHOTO; }}
+            onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
           />
           <div
             className="absolute inset-0"
