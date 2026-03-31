@@ -61,10 +61,17 @@ export function VibeSummary({ aggregates, respondentCount, memberCount }: Props)
   const byQuestion: Record<string, { answer: string; count: number }[]> = {};
   for (const a of aggregates) {
     if (!byQuestion[a.question_key]) byQuestion[a.question_key] = [];
-    byQuestion[a.question_key].push({
-      answer: a.answer_value,
-      count: Number(a.response_count),
-    });
+    // Normalize: strip trailing emojis so old "Balanced 😎" merges with new "Balanced"
+    const normalizedAnswer = stripEmoji(a.answer_value);
+    const existing = byQuestion[a.question_key].find((e) => e.answer === normalizedAnswer);
+    if (existing) {
+      existing.count += Number(a.response_count);
+    } else {
+      byQuestion[a.question_key].push({
+        answer: normalizedAnswer,
+        count: Number(a.response_count),
+      });
+    }
   }
 
   for (const key of Object.keys(byQuestion)) {
