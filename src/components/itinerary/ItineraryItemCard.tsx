@@ -122,26 +122,28 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       <div className="flex items-start gap-2">
         {isDraggable ? (
           <button
-            className="touch-none cursor-grab active:cursor-grabbing mt-0.5 shrink-0 text-muted-foreground/50 hover:text-muted-foreground"
+            className="touch-none cursor-grab active:cursor-grabbing mt-1 shrink-0 text-muted-foreground/30 hover:text-muted-foreground"
             {...attributes}
             {...listeners}
           >
             <GripVertical className="h-4 w-4" />
           </button>
         ) : (
-          <div className="w-4 shrink-0" />
+          <div className="w-0 shrink-0" />
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-1 text-xs font-mono text-muted-foreground">
-              <Clock className="h-3 w-3 shrink-0" />
-              {timeDisplay || "tbc"}
+          <p className="text-[14px] font-medium text-foreground truncate">{item.title}</p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Clock className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+              {timeDisplay || "Time tbc"}
             </span>
-            <span className="font-medium text-sm truncate">{item.title}</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span className="truncate">{item.location_text || "tbc"}</span>
+            {item.location_text && (
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <span className="truncate max-w-[140px]">{item.location_text}</span>
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -170,7 +172,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         </div>
       </div>
 
-      <div className="flex items-center gap-2 justify-end md:justify-start">
+      <div className="flex items-center gap-1 justify-end md:justify-start">
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
           <Pencil className="h-3.5 w-3.5" />
         </Button>
@@ -280,28 +282,28 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-lg bg-white dark:bg-card p-3 space-y-2",
+            "rounded-[14px] bg-white dark:bg-card p-3 space-y-2",
             isDragging && "opacity-50 ring-2 ring-primary/30",
-            !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400",
+            !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400/60",
             animPhase === "fadein" && "animate-fade-in-card",
           )}
           style={{
-            borderRadius: "12px",
             ...(showNewBorder
               ? {
+                  border: "1px solid rgba(13,148,136,0.15)",
                   borderLeft: "3px solid #0D9488",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 0px 1px rgba(0,0,0,0.05)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                   transition: "border-color 1s ease-out, box-shadow 1s ease-out",
                 }
               : !newBorderVisible && isNewSinceLastVisit
               ? {
-                  border: "1px solid transparent",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 0px 1px rgba(0,0,0,0.05)",
+                  border: "1px solid rgba(241,245,249,1)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                   transition: "border-color 1s ease-out, box-shadow 1s ease-out",
                 }
               : {
-                  border: "none",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 0px 1px rgba(0,0,0,0.05)",
+                  border: "1px solid rgba(241,245,249,1)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }),
           }}
         >
