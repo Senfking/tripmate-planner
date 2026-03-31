@@ -1,8 +1,11 @@
 import { cn } from "@/lib/utils";
 
+export type VibeOption = { label: string; sub: string | null };
+
 type Props = {
   label: string;
-  options: string[];
+  emoji?: string;
+  options: VibeOption[];
   selected: string[];
   multiSelect?: boolean;
   disabled?: boolean;
@@ -12,6 +15,7 @@ type Props = {
 
 export function VibeQuestion({
   label,
+  emoji,
   options,
   selected,
   multiSelect,
@@ -20,39 +24,49 @@ export function VibeQuestion({
   onSelect,
 }: Props) {
   return (
-    <div className={cn("mt-6 first:mt-0 rounded-lg p-2 -mx-2 transition-colors", missing && "bg-destructive/5 ring-1 ring-destructive/20")}>
-      <div className="border-l-2 border-[#0D9488] pl-3">
+    <div className={cn("mt-6 first:mt-0 rounded-xl p-3 -mx-1 transition-colors", missing && "bg-destructive/5 ring-1 ring-destructive/20")}>
+      <div className="flex items-center gap-2 mb-3">
+        {emoji && <span className="text-lg">{emoji}</span>}
         <p className="text-[15px] font-semibold text-foreground">
           {label}
           {multiSelect && (
             <span className="text-muted-foreground font-normal ml-1 text-[13px]">
-              (pick up to 2)
+              · pick up to 2
             </span>
           )}
           {missing && (
             <span className="text-destructive font-normal ml-1 text-xs">
-              — please select
+              — pick one
             </span>
           )}
         </p>
       </div>
-      <div className="flex flex-wrap gap-2 mt-3">
+      <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
-          const isSelected = selected.includes(opt);
+          const isSelected = selected.includes(opt.label);
           return (
             <button
-              key={opt}
+              key={opt.label}
               disabled={disabled}
-              onClick={() => onSelect(opt)}
+              onClick={() => onSelect(opt.label)}
               className={cn(
-                "h-10 px-5 rounded-full text-sm font-medium transition-all",
+                "rounded-xl text-left transition-all",
                 "disabled:opacity-60 disabled:cursor-not-allowed",
+                opt.sub ? "px-4 py-2" : "h-10 px-5",
                 isSelected
-                  ? "bg-[#0D9488] text-white border border-transparent shadow-sm"
-                  : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#0D9488]/40"
+                  ? "bg-[#0D9488] text-white border border-transparent shadow-md scale-[1.02]"
+                  : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#0D9488]/40 hover:shadow-sm active:scale-[0.97]"
               )}
             >
-              {opt.replace(/\s*[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2702}-\u{27B0}\u{200D}\u{FE0F}\u{2640}\u{2642}\u{2694}-\u{269F}\u{1FA70}-\u{1FAFF}]+$/u, "")}
+              <span className="text-[14px] font-medium leading-tight">{opt.label}</span>
+              {opt.sub && (
+                <span className={cn(
+                  "block text-[11px] leading-tight mt-0.5",
+                  isSelected ? "text-white/70" : "text-muted-foreground"
+                )}>
+                  {opt.sub}
+                </span>
+              )}
             </button>
           );
         })}
