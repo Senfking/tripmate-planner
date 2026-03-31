@@ -1,10 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Users, Plus, Plane, Calendar, Radio } from "lucide-react";
+import { Loader2, Users, Plus, Plane, Calendar, Radio, Hash, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { toast } from "sonner";
 import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO, isToday, isTomorrow } from "date-fns";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
@@ -284,9 +293,92 @@ function getGreeting(displayName: string | null | undefined): string {
   return `Good evening${name}`;
 }
 
+/* ─── Join Drawer ─── */
+function JoinDrawer({
+  open, onOpenChange, code, onCodeChange, error, loading, onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  code: string;
+  onCodeChange: (v: string) => void;
+  error: string;
+  loading: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader className="text-left">
+          <DrawerTitle>Enter invite code</DrawerTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Ask a trip organiser for their 6–8 letter code
+          </p>
+        </DrawerHeader>
+        <div className="px-4 pb-6 space-y-4">
+          <Input
+            value={code}
+            onChange={(e) => onCodeChange(e.target.value.slice(0, 8))}
+            placeholder="e.g. 6D9MCG"
+            className="text-center text-[24px] font-mono tracking-[0.15em] h-14 rounded-xl border-input"
+            maxLength={8}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && code.length >= 4 && !loading) onSubmit();
+            }}
+          />
+          {error && (
+            <p className="text-xs text-destructive text-center">{error}</p>
+          )}
+          <Button
+            className="w-full h-11 rounded-xl text-sm font-semibold text-white"
+            style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+            disabled={code.length < 4 || loading}
+            onClick={onSubmit}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Join trip"}
+          </Button>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 /* ─── Main Page ─── */
 export default function TripList() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState("");
+
+  const joinMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const { data, error } = await supabase.rpc("join_by_code", { _code: code });
+      if (error) throw error;
+      const result = data as any;
+      if (result?.error) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (data: any) => {
+      setJoinOpen(false);
+      setJoinCode("");
+      setJoinError("");
+      toast.success(`Joined ${data.trip_name || "trip"}!`);
+      navigate(`/app/trips/${data.trip_id}`);
+    },
+    onError: (err: any) => {
+      if (err.message === "already_member") {
+        setJoinError("");
+        setJoinOpen(false);
+        setJoinCode("");
+        const tripId = (err as any)?.trip_id;
+        if (tripId) navigate(`/app/trips/${tripId}`);
+        else toast.info("You're already a member of this trip");
+      } else {
+        setJoinError("Code not found — check with your organiser");
+      }
+    },
+  });
 
   const { data: trips, isLoading } = useQuery({
     queryKey: ["trips", user?.id],
@@ -427,14 +519,23 @@ export default function TripList() {
           <Button asChild className="w-full max-w-[260px] mt-6">
             <Link to="/app/trips/new">Start a trip</Link>
           </Button>
-          <Link
-            to="/join"
-            className="mt-3 text-sm font-medium"
+          <button
+            className="mt-3 text-sm font-medium bg-transparent border-none cursor-pointer"
             style={{ color: "#0D9488" }}
+            onClick={() => setJoinOpen(true)}
           >
             Join with a code
-          </Link>
+          </button>
         </div>
+        <JoinDrawer
+          open={joinOpen}
+          onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}
+          code={joinCode}
+          onCodeChange={(v) => { setJoinCode(v.toUpperCase()); setJoinError(""); }}
+          error={joinError}
+          loading={joinMutation.isPending}
+          onSubmit={() => joinMutation.mutate(joinCode)}
+        />
       </div>
     );
   }
@@ -453,6 +554,17 @@ export default function TripList() {
           <RegularCard key={trip.id} trip={trip} />
         ))}
 
+        {/* Join a trip row */}
+        <button
+          onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
+          className="flex items-center rounded-2xl border border-dashed px-4 py-3.5 bg-card transition-colors"
+          style={{ borderColor: "rgba(13,148,136,0.3)" }}
+        >
+          <Hash className="h-5 w-5 shrink-0" style={{ color: "#0D9488" }} />
+          <span className="ml-3 flex-1 text-left font-medium text-foreground text-sm">Join a trip</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+
         <Link to="/app/trips/new" className="block">
           <div
             className="flex h-[56px] items-center justify-center rounded-2xl transition-colors"
@@ -468,6 +580,17 @@ export default function TripList() {
           </div>
         </Link>
       </div>
+
+      {/* Join trip drawer */}
+      <JoinDrawer
+        open={joinOpen}
+        onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}
+        code={joinCode}
+        onCodeChange={(v) => { setJoinCode(v.toUpperCase()); setJoinError(""); }}
+        error={joinError}
+        loading={joinMutation.isPending}
+        onSubmit={() => joinMutation.mutate(joinCode)}
+      />
     </div>
   );
 }
