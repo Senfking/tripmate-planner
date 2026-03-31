@@ -336,8 +336,8 @@ const More = () => {
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [showCropDrawer, setShowCropDrawer] = useState(false);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
-  // Auth provider
-  const [authProvider, setAuthProvider] = useState<string | null>(null);
+  // Auth identity detection
+  const [isGoogleOnly, setIsGoogleOnly] = useState(false);
 
   // Stats
   const [tripCount, setTripCount] = useState(0);
@@ -359,10 +359,13 @@ const More = () => {
     }
   }, [profile?.notification_preferences]);
 
-  /* ── fetch auth provider ── */
+  /* ── detect auth identity ── */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setAuthProvider(data.user?.app_metadata?.provider || null);
+      const identities = data.user?.identities ?? [];
+      const hasPasswordIdentity = identities.some((i) => i.provider === "email");
+      const hasGoogle = identities.some((i) => i.provider === "google");
+      setIsGoogleOnly(hasGoogle && !hasPasswordIdentity);
     });
   }, []);
 
@@ -629,7 +632,6 @@ const More = () => {
     }
   };
 
-  const isGoogleUser = authProvider === "google";
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
 
   return (
@@ -682,7 +684,7 @@ const More = () => {
               <Mail className="h-3.5 w-3.5" />
               {user.email}
             </p>
-            {isGoogleUser && (
+            {isGoogleOnly && (
               <p className="text-xs text-muted-foreground mt-1">Signed in with Google</p>
             )}
           </div>
@@ -756,7 +758,7 @@ const More = () => {
             <SettingRow icon={Coins} label={`Default currency: ${profile?.default_currency || "EUR"}`} onClick={() => setShowCurrency(true)} />
           )}
 
-          {!isGoogleUser && (
+          {!isGoogleOnly && (
             <>
               <SettingRow icon={KeyRound} label="Change password" onClick={handleResetPassword} />
               <SettingRow icon={Mail} label="Change email" onClick={() => setShowEmailDrawer(true)} />
