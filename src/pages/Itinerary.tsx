@@ -126,9 +126,13 @@ const Itinerary = () => {
               const placeholderCount = (placeholderStartMap.get(date) ?? []).length;
               const isActive = isToday(d);
               return (
-                <div
+                <button
                   key={date}
-                  className="flex flex-col items-center shrink-0"
+                  onClick={() => {
+                    const el = document.getElementById(`day-${date}`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="flex flex-col items-center shrink-0 cursor-pointer active:scale-95 transition-transform"
                   style={{
                     minWidth: 48,
                     padding: "6px 4px",
@@ -159,7 +163,7 @@ const Itinerary = () => {
                       />
                     ))}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
