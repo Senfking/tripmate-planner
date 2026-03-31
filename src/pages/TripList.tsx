@@ -215,7 +215,6 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Progress bar: planning progress from creation to start date
   let progress = 0;
   if (trip.tentative_start_date) {
     const start = parseISO(trip.tentative_start_date);
@@ -244,12 +243,10 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
           }}
         />
 
-        {/* Status badge — top right */}
         <div className="absolute right-3 top-3">
           <StatusBadge info={trip.statusInfo} />
         </div>
 
-        {/* Content — bottom left */}
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-3.5">
           <p className="text-lg font-bold leading-tight text-white line-clamp-2">
             {trip.emoji || "✈️"} {trip.name}
@@ -259,13 +256,11 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
           </p>
         </div>
 
-        {/* Member count — bottom right */}
         <div className="absolute bottom-3.5 right-4 flex items-center gap-1 rounded-full bg-white/10 backdrop-blur-sm px-2 py-0.5 text-[11px] text-white/60">
           <Users className="h-3 w-3" />
           <span>{trip.memberCount}</span>
         </div>
 
-        {/* Progress bar at bottom */}
         {trip.statusInfo.status !== "ended" && (
           <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "rgba(255,255,255,0.2)" }}>
             <div
@@ -289,21 +284,6 @@ function getGreeting(displayName: string | null | undefined): string {
   return `Good evening${name}`;
 }
 
-function getTripsSubtitle(trips: EnrichedTrip[] | undefined): string {
-  if (!trips || trips.length === 0) return "No trips yet";
-  const count = trips.length;
-  const liveCount = trips.filter((t) => t.statusInfo.status === "live").length;
-  if (liveCount > 0) {
-    return `${count} trip${count !== 1 ? "s" : ""} · ${liveCount} happening now`;
-  }
-  // Find next upcoming
-  const nextCountdown = trips.find((t) => t.statusInfo.status === "countdown");
-  if (nextCountdown?.statusInfo.daysToGo !== undefined) {
-    return `${count} trip${count !== 1 ? "s" : ""} · next in ${nextCountdown.statusInfo.daysToGo} days`;
-  }
-  return `${count} trip${count !== 1 ? "s" : ""}`;
-}
-
 /* ─── Main Page ─── */
 export default function TripList() {
   const { user, profile } = useAuth();
@@ -316,7 +296,6 @@ export default function TripList() {
 
       const tripIds = data.map((t) => t.id);
 
-      // Parallel: member counts + route stops + member profiles + next activities
       const [membersRes, stopsRes, memberDetailsRes, activitiesRes] = await Promise.all([
         supabase.from("trip_members").select("trip_id").in("trip_id", tripIds),
         supabase
@@ -349,7 +328,6 @@ export default function TripList() {
         stopDestsMap[s.trip_id].push(s.destination);
       });
 
-      // Member details per trip (for avatar display)
       const membersByTrip: Record<string, { user_id: string }[]> = {};
       memberDetailsRes.data?.forEach((m: any) => {
         if (!membersByTrip[m.trip_id]) membersByTrip[m.trip_id] = [];
@@ -358,7 +336,6 @@ export default function TripList() {
         }
       });
 
-      // Get profiles for all visible members
       const allUserIds = [...new Set(Object.values(membersByTrip).flat().map((m) => m.user_id))];
       let profileMap = new Map<string, { display_name: string | null; avatar_url?: string | null }>();
       if (allUserIds.length > 0) {
@@ -366,7 +343,6 @@ export default function TripList() {
         profileMap = new Map(profiles?.map((p: any) => [p.id, p]) ?? []);
       }
 
-      // Next activity per trip
       const nextActivityMap: Record<string, { title: string; day_date: string; start_time: string | null }> = {};
       activitiesRes.data?.forEach((a: any) => {
         if (!nextActivityMap[a.trip_id]) {
@@ -415,30 +391,40 @@ export default function TripList() {
 
   const greeting = getGreeting(profile?.display_name);
   const tripCount = trips?.length ?? 0;
-  const subtitle = `${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
+  const liveCount = trips?.filter((t) => t.statusInfo.status === "live").length ?? 0;
+  const nextCountdown = trips?.find((t) => t.statusInfo.status === "countdown");
 
-  // Pills = actionable/different info (not repeating subtitle)
-  const tripsPills: HeroPill[] = [];
-  if (trips && trips.length > 0) {
-    const liveCount = trips.filter((t) => t.statusInfo.status === "live").length;
-    if (liveCount > 0) {
-      tripsPills.push({ icon: <Radio className="h-3 w-3" />, label: `${liveCount} live now` });
-    } else {
-      const next = trips.find((t) => t.statusInfo.status === "countdown");
-      if (next?.statusInfo.daysToGo !== undefined) {
-        tripsPills.push({ icon: <Calendar className="h-3 w-3" />, label: `Next in ${next.statusInfo.daysToGo}d` });
-      }
-    }
+  const subtitle = (() => {
+    if (tripCount === 0) return "No trips yet — start planning!";
+    if (liveCount > 0) return `${tripCount} trip${tripCount !== 1 ? "s" : ""} · ${liveCount} happening now`;
+    if (nextCountdown?.statusInfo.daysToGo !== undefined)
+      return `${tripCount} trip${tripCount !== 1 ? "s" : ""} · next in ${nextCountdown.statusInfo.daysToGo}d`;
+    return `${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
+  })();
+
+  // Actionable pills — quick actions
+  const tripsPills: HeroPill[] = [
+    { icon: <Plus className="h-3 w-3" />, label: "New trip", to: "/app/trips/new" },
+  ];
+  if (liveCount > 0) {
+    tripsPills.unshift({ icon: <Radio className="h-3 w-3" />, label: `${liveCount} live` });
   }
 
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
       <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
-        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={[]} />
+        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={tripsPills} />
 
-        <div className="flex flex-1 flex-col items-center px-6 pt-8 mt-4">
-          <Button asChild className="w-full max-w-[260px]">
+        <div className="flex flex-1 flex-col items-center px-6 pt-12 mt-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10 mb-5">
+            <Plane className="h-8 w-8 text-[#0D9488]" />
+          </div>
+          <h2 className="text-lg font-bold text-foreground">Plan your first trip</h2>
+          <p className="mt-2 max-w-[260px] text-center text-[15px] leading-relaxed text-muted-foreground">
+            Create a trip or join one with a code to get started.
+          </p>
+          <Button asChild className="w-full max-w-[260px] mt-6">
             <Link to="/app/trips/new">Start a trip</Link>
           </Button>
           <Link
@@ -462,15 +448,11 @@ export default function TripList() {
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 mt-4 pb-[100px]">
-        {/* Hero card for live trip */}
         {liveTrip && <HeroCard trip={liveTrip} />}
-
-        {/* Regular cards */}
         {otherTrips.map((trip) => (
           <RegularCard key={trip.id} trip={trip} />
         ))}
 
-        {/* Create trip CTA */}
         <Link to="/app/trips/new" className="block">
           <div
             className="flex h-[56px] items-center justify-center rounded-2xl transition-colors"
