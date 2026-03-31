@@ -276,6 +276,7 @@ export function VibeBoard({
             <VibeQuestion
               key={q.key}
               label={q.label}
+              emoji={q.emoji}
               options={q.options}
               selected={draft[q.key] || []}
               multiSelect={q.multiSelect}
