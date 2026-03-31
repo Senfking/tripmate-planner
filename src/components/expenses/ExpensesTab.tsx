@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,8 +11,10 @@ import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   tripId: string;
@@ -40,6 +42,49 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const [balancesOpen, setBalancesOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const receiptCameraRef = useRef<HTMLInputElement>(null);
+  const receiptFileRef = useRef<HTMLInputElement>(null);
+
+  const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setScanning(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.readAsDataURL(file);
+      });
+      const { data, error } = await supabase.functions.invoke("scan-receipt", {
+        body: { image: base64 },
+      });
+      if (error || data?.error) throw new Error(data?.message || "Scan failed");
+      // Pre-fill the expense form with scanned data
+      const scanned = data?.result || data;
+      setEditingExpense({
+        id: "",
+        title: scanned.title || scanned.merchant || "",
+        amount: scanned.amount || 0,
+        currency: scanned.currency || settlementCurrency,
+        category: scanned.category || "other",
+        payer_id: user?.id || "",
+        trip_id: tripId,
+        incurred_on: scanned.date || new Date().toISOString().slice(0, 10),
+        notes: scanned.notes || null,
+        itinerary_item_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as ExpenseRow);
+      setFormOpen(true);
+      toast.success("Receipt scanned — review the details");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to scan receipt");
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const profileMap = useMemo(
     () => Object.fromEntries(members.map((m) => [m.userId, m.displayName])),
@@ -200,8 +245,37 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       </div>
 
+      {/* AI receipt scan */}
+      <input ref={receiptCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptScan} />
+      <input ref={receiptFileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={handleReceiptScan} />
 
-      {/* Hero summary card */}
+      <div className="rounded-xl border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/[0.03] p-4 space-y-3">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
+          <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Scan a receipt — we'll extract the amount and details automatically
+        </p>
+        {scanning ? (
+          <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Processing…
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => receiptCameraRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
+              <Camera className="h-4 w-4 text-[#0D9488]" />
+              Take photo
+            </button>
+            <button type="button" onClick={() => receiptFileRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
+              <Upload className="h-4 w-4 text-[#0D9488]" />
+              Upload file
+            </button>
+          </div>
+        )}
+      </div>
+
       {canShowBalances && expenses.length > 0 && (
         <div className="rounded-xl border bg-card p-5 text-center">
           {heroData.type === "settled" ? (
