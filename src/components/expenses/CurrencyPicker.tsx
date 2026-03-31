@@ -1,7 +1,9 @@
-import { useState, useMemo, type WheelEvent } from "react";
+import { useState, useMemo, useRef, type WheelEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronDown, Search } from "lucide-react";
 
 interface CurrencyDef {
@@ -93,6 +95,8 @@ interface Props {
 export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes = [], suggestedCodes = [], variant = "form" }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const isMobile = useIsMobile();
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const selectedDef = ALL_PREDEFINED.find((c) => c.code === value);
   const query = search.trim().toUpperCase();
@@ -143,10 +147,7 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
     container.scrollTop += event.deltaY;
   };
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        {variant === "settlement" ? (
+  const triggerButton = variant === "settlement" ? (
           <Button variant="outline" size="sm" disabled={disabled} className="h-8 gap-1.5 text-xs font-medium">
             <span>{selectedDef?.flag || "💱"}</span>
             Settle in: {value}
@@ -160,23 +161,32 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
             </span>
             <ChevronDown className="h-3.5 w-3.5 opacity-60" />
           </Button>
-        )}
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-0 z-[9999]" align="start">
-        <div className="p-2 border-b">
+        );
+
+  const listContent = (
+    <>
+      <div className="p-2 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
+              ref={searchRef}
               placeholder="Search currency..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 pl-7 text-xs"
+              autoFocus={false}
+              onFocus={(e) => {
+                // On mobile prevent auto-scroll jump
+                if (isMobile) {
+                  e.target.scrollIntoView({ block: "nearest" });
+                }
+              }}
             />
           </div>
         </div>
 
         <div
-          className="max-h-[300px] overflow-y-auto overscroll-contain"
+          className="max-h-[60vh] sm:max-h-[300px] overflow-y-auto overscroll-contain"
           onWheel={handleListWheel}
         >
           <div className="p-1.5 space-y-1">
@@ -249,6 +259,31 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
             )}
           </div>
         </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <div onClick={() => !disabled && setOpen(true)}>{triggerButton}</div>
+        <Drawer open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch(""); }}>
+          <DrawerContent>
+            <div className="pb-6">
+              {listContent}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch(""); }}>
+      <PopoverTrigger asChild>
+        {triggerButton}
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0 z-[9999]" align="start">
+        {listContent}
       </PopoverContent>
     </Popover>
   );
