@@ -129,6 +129,16 @@ export function ExpenseFormModal({
       }));
     }
 
+    if (splitMode === "percent") {
+      return selected.map((uid) => {
+        const pct = parseFloat(customAmounts[uid] || "0") || 0;
+        return {
+          user_id: uid,
+          share_amount: Math.round(parsedAmount * pct) / 100,
+        };
+      });
+    }
+
     // Equal split
     const base = Math.floor((parsedAmount / selected.length) * 100) / 100;
     const remainder = Math.round((parsedAmount - base * selected.length) * 100) / 100;
@@ -140,8 +150,15 @@ export function ExpenseFormModal({
 
   const customSum = splitMode === "custom"
     ? computedSplits.reduce((s, c) => s + c.share_amount, 0)
+    : splitMode === "percent"
+    ? (() => {
+        const totalPct = Array.from(selectedMembers).reduce((s, uid) => s + (parseFloat(customAmounts[uid] || "0") || 0), 0);
+        return totalPct;
+      })()
     : parsedAmount;
-  const customValid = splitMode !== "custom" || Math.abs(customSum - parsedAmount) < 0.01;
+  const customValid = splitMode === "equal"
+    || (splitMode === "custom" && Math.abs(customSum - parsedAmount) < 0.01)
+    || (splitMode === "percent" && Math.abs(customSum - 100) < 0.1);
 
   const canSubmit = title.trim() && parsedAmount > 0 && selectedMembers.size > 0 && customValid;
 
