@@ -1,15 +1,20 @@
 import { Badge } from "@/components/ui/badge";
 import type { VibeAggregate } from "@/hooks/useVibeBoard";
 
-const QUESTION_LABELS: Record<string, string> = {
-  energy: "Vibe",
-  budget: "Budget style",
-  accommodation: "Where we sleep",
-  length: "How long",
-  musthave: "Must-haves",
+const QUESTION_CONFIG: Record<string, { label: string; emoji: string }> = {
+  energy: { label: "Vibe", emoji: "⚡" },
+  budget: { label: "Budget style", emoji: "💰" },
+  accommodation: { label: "Where we sleep", emoji: "🛏️" },
+  length: { label: "How long", emoji: "📅" },
+  musthave: { label: "Must-haves", emoji: "✨" },
 };
 
 const QUESTION_ORDER = ["energy", "budget", "accommodation", "length", "musthave"];
+
+// Keep labels map for summary sentence building
+const QUESTION_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(QUESTION_CONFIG).map(([k, v]) => [k, v.label])
+);
 
 const SUMMARY_PHRASES: Record<string, Record<string, string>> = {
   energy: {
@@ -129,8 +134,9 @@ export function VibeSummary({ aggregates, respondentCount, memberCount }: Props)
           return (
             <div key={key} className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-medium text-muted-foreground">
-                  {QUESTION_LABELS[key]}
+                <span className="text-base">{QUESTION_CONFIG[key].emoji}</span>
+                <span className="text-[14px] font-semibold text-foreground">
+                  {QUESTION_CONFIG[key].label}
                 </span>
                 <Badge
                   variant="secondary"
