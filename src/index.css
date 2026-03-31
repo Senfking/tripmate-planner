@@ -243,11 +243,13 @@ html, body, #root {
 
   /* Peeking tab bounce */
   @keyframes peek-bounce {
-    0%, 90%, 100% { transform: translateY(0); }
-    93% { transform: translateY(-4px); }
-    96% { transform: translateY(0); }
+    0%, 85%, 100% { transform: translateY(0); }
+    89% { transform: translateY(-10px); }
+    93% { transform: translateY(0); }
+    95% { transform: translateY(-5px); }
+    97% { transform: translateY(0); }
   }
   .animate-peek-bounce {
-    animation: peek-bounce 3s ease-in-out infinite;
+    animation: peek-bounce 5s ease-in-out infinite;
   }
 }

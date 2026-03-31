@@ -410,14 +410,14 @@ export default function TripHome() {
       {showPeekingTab && (
         <button
           onClick={handleOpenOverlay}
-          className="fixed left-4 right-4 z-[49] flex items-center justify-center h-11 text-[13px] font-medium text-white animate-peek-bounce rounded-2xl"
+          className="fixed left-0 right-0 z-[49] flex items-center justify-center py-3.5 px-4 text-[13px] font-medium text-white animate-peek-bounce rounded-t-2xl"
           style={{
             bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem + 56px)",
             background: "linear-gradient(135deg, #0D9488, #0369a1)",
-            boxShadow: "0 4px 16px rgba(13,148,136,0.3)",
+            boxShadow: "0 -4px 20px rgba(13,148,136,0.25)",
           }}
         >
-          👀&nbsp; We see you lurking… are you in or what?
+          👀&nbsp; We see you lurking… commit already, you're not fooling anyone
         </button>
       )}
 
