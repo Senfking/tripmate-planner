@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useGlobalItinerary, type TripItineraryGroup } from "@/hooks/useGlobalItinerary";
 import { Link } from "react-router-dom";
 import { CalendarDays, MapPin, Clock, Plane } from "lucide-react";
@@ -126,9 +126,13 @@ const Itinerary = () => {
               const placeholderCount = (placeholderStartMap.get(date) ?? []).length;
               const isActive = isToday(d);
               return (
-                <div
+                <button
                   key={date}
-                  className="flex flex-col items-center shrink-0"
+                  onClick={() => {
+                    const el = document.getElementById(`day-${date}`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="flex flex-col items-center shrink-0 cursor-pointer active:scale-95 transition-transform"
                   style={{
                     minWidth: 48,
                     padding: "6px 4px",
@@ -159,7 +163,7 @@ const Itinerary = () => {
                       />
                     ))}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -210,7 +214,7 @@ const Itinerary = () => {
               const isTmrw = isTomorrow(d);
 
               return (
-                <div key={date} className="flex gap-3 mb-0.5">
+                <div key={date} id={`day-${date}`} className="flex gap-3 mb-0.5 scroll-mt-4">
                   {/* Date column */}
                   <div className="flex flex-col items-center w-[52px] shrink-0 pt-1">
                     <span className={cn(
