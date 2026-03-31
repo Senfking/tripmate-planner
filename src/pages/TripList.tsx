@@ -459,9 +459,9 @@ export default function TripList() {
 
   return (
     <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title={greeting} subtitle={subtitle} />
+      <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-3 pb-[100px]">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 mt-4 pb-[100px]">
         {/* Hero card for live trip */}
         {liveTrip && <HeroCard trip={liveTrip} />}
 
