@@ -168,12 +168,15 @@ export function AttendanceInviteOverlay({
 
       {/* The sheet itself */}
       <div
-        className={cn("fixed left-0 right-0 z-[60] flex flex-col", !isFull && "animate-peek-bounce")}
+        className={cn(
+          "fixed left-0 right-0 z-[60] flex flex-col",
+          !isFull && "animate-peek-bounce",
+          closing && "animate-sheet-down"
+        )}
         style={{
           top: isFull ? 0 : undefined,
           bottom: isFull ? 0 : "calc(env(safe-area-inset-bottom, 0px) + 1rem + 56px)",
           height: isFull ? "100%" : undefined,
-          transition: isFull ? "none" : undefined,
         }}
         onClick={!isFull ? onPeekTap : undefined}
       >
