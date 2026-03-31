@@ -98,13 +98,15 @@ export default function TripHome() {
 
   return (
     <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
-      {/* Header with shine overlay */}
-      <header className="sticky top-0 z-40 text-white p-4 pb-0 relative overflow-visible" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
-        {/* Gradient background + bottom fade */}
+      {/* Header with photo background */}
+      <header className="sticky top-0 z-40 text-white p-4 pb-0 relative overflow-hidden" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
+        {/* Background: photo with overlay, or solid teal fallback */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, #0D9488, #0EA5E9)" }} />
-        <div className="absolute left-0 right-0 pointer-events-none" style={{ bottom: "-40px", height: "56px", background: "linear-gradient(to bottom, #0D9488 0%, #0D948800 100%)" }} />
-        {/* Diagonal shine */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)" }} />
+        <div
+          className="absolute inset-0 pointer-events-none bg-cover bg-center"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80')" }}
+        />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.50), rgba(13,148,136,0.80))" }} />
         <button
           onClick={() => navigate("/app/trips")}
           className="relative flex items-center gap-1 text-white/80 mb-3 hover:text-white transition-colors"
