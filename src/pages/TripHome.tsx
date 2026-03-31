@@ -236,7 +236,7 @@ export default function TripHome() {
         <button
           onClick={() => navigate("/app/trips")}
           className="absolute left-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           My Trips
