@@ -67,20 +67,21 @@ function HeaderAvatar() {
 
 export function AppLayout() {
   const location = useLocation();
-  const isTripsListPage = location.pathname === "/app/trips";
+
+  // Global tabs use their own TabHeroHeader — hide the app header
+  const globalTabPaths = ["/app/trips", "/app/decisions", "/app/itinerary", "/app/expenses"];
+  const isGlobalTab = globalTabPaths.includes(location.pathname);
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
-          <header
-            className={`sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden ${
-              isTripsListPage ? "bg-transparent border-b-0" : "border-b bg-gradient-primary"
-            }`}
-            style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
-          >
-            {!isTripsListPage && (
+          {!isGlobalTab && (
+            <header
+              className="sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden border-b bg-gradient-primary"
+              style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+            >
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
@@ -88,21 +89,21 @@ export function AppLayout() {
                     "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%)",
                 }}
               />
-            )}
 
-            <SidebarTrigger className="hidden md:inline-flex text-white relative z-10" />
+              <SidebarTrigger className="hidden md:inline-flex text-white relative z-10" />
 
-            <div className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center pointer-events-none md:hidden">
-              <span
-                className="text-white font-bold"
-                style={{ fontSize: 18, letterSpacing: "0.18em" }}
-              >
-                JUNTO
-              </span>
-            </div>
+              <div className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center pointer-events-none md:hidden">
+                <span
+                  className="text-white font-bold"
+                  style={{ fontSize: 18, letterSpacing: "0.18em" }}
+                >
+                  JUNTO
+                </span>
+              </div>
 
-            <HeaderAvatar />
-          </header>
+              <HeaderAvatar />
+            </header>
+          )}
 
           <OfflineBanner />
 

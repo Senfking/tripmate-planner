@@ -4,8 +4,9 @@ import { Link } from "react-router-dom";
 import { CalendarDays, MapPin, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
 
 type Filter = "all" | "mine";
 
@@ -13,12 +14,31 @@ const Itinerary = () => {
   const { data: groups, isLoading } = useGlobalItinerary();
   const [filter, setFilter] = useState<Filter>("all");
 
+  // Find next upcoming activity for subtitle
+  const nextActivitySubtitle = (() => {
+    if (isLoading) return "Loading…";
+    if (!groups || groups.length === 0) return "Nothing planned yet — add activities to your trips";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (const g of groups) {
+      for (const item of g.items) {
+        const d = parseISO(item.dayDate);
+        if (d >= today) {
+          if (isToday(d)) return `Next: ${item.title} · Tonight`;
+          if (isTomorrow(d)) return `Next: ${item.title} · Tomorrow`;
+          const days = differenceInDays(d, today);
+          return `Next: ${item.title} · In ${days} days`;
+        }
+      }
+    }
+    return "Nothing planned yet — add activities to your trips";
+  })();
+
   if (isLoading) {
     return (
-      <div className="min-h-[calc(100vh-10rem)] bg-[#F1F5F9] px-4 pb-32 pt-6">
-        <div className="h-7 w-28 rounded-lg skeleton-shimmer mb-4" />
-        <div className="h-10 rounded-xl skeleton-shimmer mb-4" />
-        <div className="space-y-2">
+      <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
+        <TabHeroHeader title="Itinerary" subtitle="Loading…" />
+        <div className="px-4 pt-4 space-y-2">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-[56px] rounded-[14px] skeleton-shimmer" style={{ animationDelay: `${i * 150}ms` }} />
           ))}
@@ -41,48 +61,50 @@ const Itinerary = () => {
   const isEmpty = filtered.length === 0;
 
   return (
-    <div className="min-h-[calc(100vh-10rem)] bg-[#F1F5F9] px-4 pb-32 pt-6">
-      <h1 className="mb-4 text-[22px] font-bold text-foreground">Itinerary</h1>
+    <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
+      <TabHeroHeader title="Itinerary" subtitle={nextActivitySubtitle} />
 
-      {/* Toggle */}
-      <div className="mb-4 flex gap-1 rounded-xl bg-white p-1 border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        {(["all", "mine"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={cn(
-              "flex-1 rounded-lg py-2 text-sm font-medium transition-all",
-              filter === f
-                ? "bg-[#0D9488] text-white shadow-sm"
-                : "text-muted-foreground"
-            )}
-          >
-            {f === "all" ? "All activities" : "My Plan"}
-          </button>
-        ))}
-      </div>
-
-      {isEmpty ? (
-        <div className="flex flex-col items-center justify-center pt-20 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10">
-            <CalendarDays className="h-8 w-8 text-[#0D9488]" />
-          </div>
-          <h2 className="mt-5 text-lg font-bold text-foreground">
-            {filter === "all" ? "Nothing planned yet" : "Nothing confirmed for you yet"}
-          </h2>
-          <p className="mt-2 max-w-[260px] text-[15px] leading-relaxed text-muted-foreground">
-            {filter === "all"
-              ? "Confirm your trip route to start building your itinerary."
-              : "Mark yourself as attending activities in your trips."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {filtered.map((group) => (
-            <TripGroup key={group.tripId} group={group} />
+      <div className="px-4 pt-3 pb-32">
+        {/* Toggle */}
+        <div className="mb-4 flex gap-1 rounded-xl bg-white p-1 border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          {(["all", "mine"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "flex-1 rounded-lg py-2 text-sm font-medium transition-all",
+                filter === f
+                  ? "bg-[#0D9488] text-white shadow-sm"
+                  : "text-muted-foreground"
+              )}
+            >
+              {f === "all" ? "All activities" : "My Plan"}
+            </button>
           ))}
         </div>
-      )}
+
+        {isEmpty ? (
+          <div className="flex flex-col items-center justify-center pt-20 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10">
+              <CalendarDays className="h-8 w-8 text-[#0D9488]" />
+            </div>
+            <h2 className="mt-5 text-lg font-bold text-foreground">
+              {filter === "all" ? "Nothing planned yet" : "Nothing confirmed for you yet"}
+            </h2>
+            <p className="mt-2 max-w-[260px] text-[15px] leading-relaxed text-muted-foreground">
+              {filter === "all"
+                ? "Confirm your trip route to start building your itinerary."
+                : "Mark yourself as attending activities in your trips."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {filtered.map((group) => (
+              <TripGroup key={group.tripId} group={group} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
