@@ -134,8 +134,9 @@ export function VibeSummary({ aggregates, respondentCount, memberCount }: Props)
           return (
             <div key={key} className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-medium text-muted-foreground">
-                  {QUESTION_LABELS[key]}
+                <span className="text-base">{QUESTION_CONFIG[key].emoji}</span>
+                <span className="text-[14px] font-semibold text-foreground">
+                  {QUESTION_CONFIG[key].label}
                 </span>
                 <Badge
                   variant="secondary"
