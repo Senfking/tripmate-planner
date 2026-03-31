@@ -368,7 +368,6 @@ const More = () => {
       setIsGoogleOnly(hasGoogle && !hasPasswordIdentity);
     });
   }, []);
-  }, []);
 
   /* ── fetch trips ── */
   useEffect(() => {
