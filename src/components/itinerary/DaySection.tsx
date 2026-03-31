@@ -188,7 +188,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
             onDragCancel={handleDragCancel}
           >
             <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {items.map((item) => (
                   <ItineraryItemCard
                     key={item.id}
