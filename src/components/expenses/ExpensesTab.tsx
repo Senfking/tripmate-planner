@@ -443,6 +443,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       </Collapsible>
 
+      {!ratesLoading && ratesEmpty && !allSameCurrency && (
+        <p className="text-xs text-center text-muted-foreground px-2">
+          Exchange rates couldn't be loaded — amounts shown in original currencies
+        </p>
+      )}
+
       <ExpenseFormModal
         open={formOpen}
         onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingExpense(null); }}
