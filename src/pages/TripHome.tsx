@@ -248,7 +248,7 @@ export default function TripHome() {
         </div>
 
         {/* BOTTOM — Trip info + avatars on same row */}
-        <div className="absolute left-4 right-4 bottom-0 pb-5 flex items-end justify-between gap-3">
+        <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-white leading-tight truncate">{trip.name}</h1>
             <p className="text-sm text-white/80 mt-0.5">
