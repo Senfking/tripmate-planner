@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, Share2 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
@@ -31,6 +32,35 @@ function LiveIndicator({ status }: { status: ConnectionStatus }) {
       <span className={`h-1.5 w-1.5 rounded-full ${config.color} ${config.pulse ? "animate-pulse" : ""}`} />
       <span className="text-[11px] text-white/90 font-medium">{config.label}</span>
     </div>
+  );
+}
+
+function HeroAvatar() {
+  const { profile, user } = useAuth();
+  const initials = (() => {
+    if (profile?.display_name) return profile.display_name.charAt(0).toUpperCase();
+    if (user?.email) return user.email.charAt(0).toUpperCase();
+    return "?";
+  })();
+
+  return (
+    <Link
+      to="/app/more"
+      className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden"
+      style={{
+        background: "rgba(0,0,0,0.3)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      }}
+    >
+      {profile?.avatar_url ? (
+        <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+      ) : (
+        <span className="text-white text-xs font-semibold">{initials}</span>
+      )}
+    </Link>
   );
 }
 
@@ -317,8 +347,9 @@ export default function TripHome() {
           My Trips
         </button>
 
-        <div className="absolute right-4" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
+        <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
           <LiveIndicator status={connectionStatus} />
+          <HeroAvatar />
         </div>
 
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
