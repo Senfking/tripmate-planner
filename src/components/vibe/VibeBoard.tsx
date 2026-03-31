@@ -4,7 +4,7 @@ import { VibeQuestion } from "./VibeQuestion";
 import { VibeSummary } from "./VibeSummary";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Lock, Unlock } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const QUESTIONS = [
   {
