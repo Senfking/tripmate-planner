@@ -43,7 +43,7 @@ export function VibeQuestion({
       </div>
       <div className={cn(
         "grid gap-2",
-        multiSelect ? "grid-cols-2" : "grid-cols-2"
+        multiSelect ? "grid-cols-3" : "grid-cols-2"
       )}>
         {options.map((opt) => {
           const isSelected = selected.includes(opt.label);
@@ -53,18 +53,19 @@ export function VibeQuestion({
               disabled={disabled}
               onClick={() => onSelect(opt.label)}
               className={cn(
-                "rounded-xl text-left transition-all py-3 px-4",
+                "rounded-xl transition-all px-3 flex items-center",
                 "disabled:opacity-60 disabled:cursor-not-allowed",
+                multiSelect ? "h-11 justify-center text-center" : "h-14 text-left flex-col items-start justify-center",
                 isSelected
                   ? "text-white border border-transparent shadow-md"
                   : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#0D9488]/40 hover:shadow-sm active:scale-[0.97]"
               )}
               style={isSelected ? { background: "linear-gradient(135deg, #0D9488, #0369a1)" } : undefined}
             >
-              <span className="text-[14px] font-medium leading-tight">{opt.label}</span>
+              <span className={cn("font-medium leading-tight", multiSelect ? "text-[13px]" : "text-[14px]")}>{opt.label}</span>
               {opt.sub && (
                 <span className={cn(
-                  "block text-[11px] leading-tight mt-0.5",
+                  "text-[11px] leading-tight mt-0.5",
                   isSelected ? "text-white/70" : "text-muted-foreground"
                 )}>
                   {opt.sub}
