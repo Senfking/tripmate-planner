@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calcNetBalances } from "@/lib/settlementCalc";
@@ -17,7 +17,6 @@ export interface GlobalExpensesResult {
   trips: TripBalance[];
 }
 
-// Mirrors the parseRates helper in useExpenses exactly.
 function parseRates(raw: unknown): Record<string, number> | null {
   if (!raw) return null;
   let obj: Record<string, unknown>;
@@ -31,69 +30,50 @@ function parseRates(raw: unknown): Record<string, number> | null {
   return Object.keys(obj).length > 0 ? (obj as Record<string, number>) : null;
 }
 
-// Fetches raw EUR-based rates from DB cache with live-API fallback.
-// Uses queryKey ["exchange-rates", "EUR"] — the same key useExpenses uses when
-// settlementCurrency is "EUR" — so both hooks share a single React Query cache
-// entry and can never diverge due to independent fetches.
-async function fetchEurRates(): Promise<{
-  rates: Record<string, number>;
-  fetchedAt: Date | null;
-  source: "cache" | "live" | "none";
-}> {
+// Returns plain Record<string, number> — the same shape and queryKey that
+// useExpenses uses via qc.fetchQuery(["exchange-rates", "EUR"]).
+// Both hooks share a single cache entry and can never diverge.
+async function fetchEurRates(): Promise<Record<string, number>> {
   const { data: eurRow } = await supabase
     .from("exchange_rate_cache")
-    .select("rates, fetched_at")
+    .select("rates")
     .eq("base_currency", "EUR")
     .maybeSingle();
 
-  const eurRates = parseRates(eurRow?.rates);
-  if (eurRates) {
-    return {
-      rates: eurRates,
-      fetchedAt: eurRow?.fetched_at ? new Date(eurRow.fetched_at) : new Date(),
-      source: "cache",
-    };
-  }
+  const parsed = parseRates(eurRow?.rates);
+  if (parsed) return parsed;
 
   try {
     const res = await fetch("https://open.er-api.com/v6/latest/EUR");
     const json = await res.json();
     if (json.result === "success" && json.rates) {
-      return { rates: json.rates as Record<string, number>, fetchedAt: new Date(), source: "live" };
+      return json.rates as Record<string, number>;
     }
   } catch {
     // ignore
   }
 
-  return { rates: {}, fetchedAt: null, source: "none" };
+  return {};
 }
 
 export function useGlobalExpenses() {
   const { user } = useAuth();
-
-  // Shared cache: same queryKey and staleTime as useExpenses uses for EUR trips.
-  // When useExpenses populates this entry (or vice versa) both hooks read
-  // identical rate data for the lifetime of the 1-hour cache window.
-  const ratesQuery = useQuery({
-    queryKey: ["exchange-rates", "EUR"],
-    queryFn: fetchEurRates,
-    staleTime: 1000 * 60 * 60,
-    retry: 1,
-  });
-
-  // Include the rates timestamp in the key so the global query automatically
-  // re-computes whenever the shared rates cache is refreshed.
-  const ratesFetchedAt = ratesQuery.data?.fetchedAt?.getTime() ?? 0;
-  const eurRates = ratesQuery.data?.rates ?? {};
+  const qc = useQueryClient();
 
   return useQuery({
-    queryKey: ["global-expenses", user?.id, ratesFetchedAt],
-    // Wait for the rates query to settle before computing balances so we never
-    // run the calculation with an empty rates object on first render.
-    enabled: !!user && !ratesQuery.isLoading,
+    queryKey: ["global-expenses", user?.id],
+    enabled: !!user,
     refetchOnWindowFocus: true,
     queryFn: async (): Promise<GlobalExpensesResult> => {
       const userId = user!.id;
+
+      // Share the exact same cache entry as useExpenses — same key, same return
+      // type (plain Record<string, number>), same staleTime.
+      const eurRates = await qc.fetchQuery({
+        queryKey: ["exchange-rates", "EUR"],
+        queryFn: fetchEurRates,
+        staleTime: 1000 * 60 * 60,
+      });
 
       const { data: memberships } = await supabase
         .from("trip_members")
@@ -159,8 +139,8 @@ export function useGlobalExpenses() {
       for (const [tripId, trip] of tripMap) {
         const sc = trip.settlement_currency || "EUR";
 
-        // Cross-calculate from the shared EUR rates to this trip's settlement
-        // currency — identical math to what useExpenses does in its ratesQuery.
+        // Cross-calculate from EUR rates to this trip's settlement currency —
+        // identical math to what useExpenses does in its ratesQuery.
         let ratesForTrip = eurRates;
         if (sc !== "EUR" && eurRates[sc]) {
           const cross: Record<string, number> = {};
