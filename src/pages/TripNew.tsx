@@ -202,6 +202,3 @@ export default function TripNew() {
     </div>
   );
 }
-    </div>
-  );
-}
