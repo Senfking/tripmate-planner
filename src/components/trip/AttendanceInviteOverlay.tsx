@@ -110,9 +110,13 @@ export function AttendanceInviteOverlay({
   const isVisible = open || peeking || closing;
   if (!isVisible) return null;
 
-  const otherMembers = members
-    .filter((m) => m.user_id !== currentUserId)
-    .sort((a, b) => (STATUS_ORDER[a.attendance_status] ?? 9) - (STATUS_ORDER[b.attendance_status] ?? 9));
+  const sortedMembers = [...members]
+    .sort((a, b) => {
+      // Current user always first
+      if (a.user_id === currentUserId) return -1;
+      if (b.user_id === currentUserId) return 1;
+      return (STATUS_ORDER[a.attendance_status] ?? 9) - (STATUS_ORDER[b.attendance_status] ?? 9);
+    });
 
   const dateStr = formatDateRange(startDate, endDate);
 
@@ -248,7 +252,7 @@ export function AttendanceInviteOverlay({
                   Who's joining
                 </p>
                 <div className="space-y-1 mb-6">
-                  {otherMembers.map((m) => {
+                  {sortedMembers.map((m) => {
                     const badge = STATUS_BADGES[m.attendance_status] ?? STATUS_BADGES.pending;
                     return (
                       <div
@@ -268,6 +272,7 @@ export function AttendanceInviteOverlay({
                         </Avatar>
                         <span className="flex-1 text-[14px] font-medium text-foreground truncate">
                           {m.profile?.display_name || "Member"}
+                          {m.user_id === currentUserId && <span className="text-muted-foreground font-normal"> (You)</span>}
                         </span>
                         <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full", badge.className)}>
                           {badge.label}
@@ -275,7 +280,7 @@ export function AttendanceInviteOverlay({
                       </div>
                     );
                   })}
-                  {otherMembers.length === 0 && (
+                  {sortedMembers.length === 0 && (
                     <p className="text-sm text-muted-foreground py-2">You're the first one here!</p>
                   )}
                 </div>
