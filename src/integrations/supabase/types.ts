@@ -712,6 +712,7 @@ export type Database = {
       }
       trip_members: {
         Row: {
+          attendance_status: string
           id: string
           joined_at: string
           role: string
@@ -719,6 +720,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attendance_status?: string
           id?: string
           joined_at?: string
           role: string
@@ -726,6 +728,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attendance_status?: string
           id?: string
           joined_at?: string
           role?: string
