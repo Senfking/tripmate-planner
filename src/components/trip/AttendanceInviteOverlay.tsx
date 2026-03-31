@@ -41,13 +41,12 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
 };
 
 const PEEKING_MESSAGES = [
-  "We both know your weekend is free, just say yes ↑",
-  "Still pretending you have plans? Cute ↑",
-  "FOMO is already winning, just admit it loser ↑",
-  "The group chat is side-eyeing you hard rn ↑",
-  "You're one 'maybe later' from becoming the meme ↑",
-  "Your plants have more of a social life than you ↑",
-  "Say yes or we're replacing you with someone fun ↑",
+  "We both know your weekend is free, just say yes",
+  "Still pretending you have plans? Cute",
+  "FOMO is already winning, just admit it loser",
+  "The group chat is side-eyeing you hard rn",
+  "Your plants have more of a social life than you",
+  "Say yes or we're replacing you with someone fun",
 ];
 
 function getInitial(name: string | null | undefined) {
