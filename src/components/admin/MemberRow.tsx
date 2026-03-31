@@ -15,6 +15,7 @@ interface MemberRowProps {
   displayName: string | null;
   role: string;
   joinedAt: string;
+  attendanceStatus?: string;
   myRole: string | undefined;
   myUserId: string;
   onPromote: (userId: string) => void;
