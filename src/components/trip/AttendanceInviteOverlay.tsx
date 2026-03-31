@@ -345,8 +345,8 @@ export function AttendanceInviteOverlay({
                   <button
                     onClick={() => handleRespond("going")}
                     disabled={isPending}
-                    className="w-full rounded-2xl text-[16px] font-bold text-white transition-colors active:scale-[0.97]"
-                    style={{ background: "#0D9488", height: 52 }}
+                    className="w-full rounded-2xl text-[16px] font-bold text-white transition-all active:scale-[0.97]"
+                    style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)", height: 52 }}
                   >
                     ✈️  I'm going!
                   </button>
