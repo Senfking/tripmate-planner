@@ -633,7 +633,7 @@ const More = () => {
     }
   };
 
-  const isGoogleUser = authProvider === "google";
+  const tier = (profile?.subscription_tier || "free") as "free" | "pro";
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
 
   return (
