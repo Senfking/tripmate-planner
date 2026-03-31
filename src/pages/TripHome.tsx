@@ -10,6 +10,7 @@ import { MemberListSheet } from "@/components/trip/MemberListSheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, parseISO, isWithinInterval, differenceInCalendarDays } from "date-fns";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
+import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 
 function getInitial(name: string | null | undefined) {
   return (name || "?").charAt(0).toUpperCase();
@@ -30,18 +31,74 @@ function LiveIndicator({ status }: { status: ConnectionStatus }) {
   );
 }
 
-function getStatusLabel(startDate: string | null, endDate: string | null, routeLocked: boolean): string {
+function StatusRow({
+  startDate,
+  endDate,
+  onShare,
+}: {
+  startDate: string | null;
+  endDate: string | null;
+  onShare: () => void;
+}) {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let content: React.ReactNode;
+
   if (startDate && endDate) {
     const s = parseISO(startDate);
     const e = parseISO(endDate);
-    if (e < today) return "Trip completed";
-    if (isWithinInterval(today, { start: s, end: e })) return "Live now";
-    const daysToGo = differenceInCalendarDays(s, today);
-    if (daysToGo <= 7) return `${daysToGo} day${daysToGo !== 1 ? "s" : ""} to go`;
-    if (routeLocked) return "Upcoming";
+
+    if (e < today) {
+      // Past
+      content = (
+        <span className="text-sm text-muted-foreground">
+          Completed · {format(e, "MMMM yyyy")}
+        </span>
+      );
+    } else if (isWithinInterval(today, { start: s, end: e })) {
+      // Live
+      content = (
+        <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: "#0D9488" }}>
+          <span className="h-2 w-2 rounded-full animate-pulse" style={{ background: "#0D9488" }} />
+          Happening now
+        </span>
+      );
+    } else {
+      const daysToGo = differenceInCalendarDays(s, today);
+      if (daysToGo <= 7) {
+        content = (
+          <span className="text-sm font-medium text-foreground">
+            ✈️ In {daysToGo} day{daysToGo !== 1 ? "s" : ""}
+          </span>
+        );
+      } else {
+        content = (
+          <span className="text-sm text-muted-foreground">
+            {daysToGo} days to go
+          </span>
+        );
+      }
+    }
+  } else {
+    content = (
+      <span className="text-sm text-muted-foreground">Dates TBD</span>
+    );
   }
-  return "Planning in progress";
+
+  return (
+    <div className="flex items-center justify-between px-4 pt-3 pb-1">
+      {content}
+      <button
+        onClick={onShare}
+        className="flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-colors"
+        style={{ color: "#0D9488", border: "1px solid rgba(13, 148, 136, 0.4)" }}
+      >
+        <Share2 className="h-3 w-3" />
+        Share
+      </button>
+    </div>
+  );
 }
 
 export default function TripHome() {
@@ -99,6 +156,21 @@ export default function TripHome() {
     enabled: !!tripId && !!user,
   });
 
+  // Route stops for photo resolution
+  const { data: routeStops } = useQuery({
+    queryKey: ["trip-route-stops", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_route_stops")
+        .select("destination")
+        .eq("trip_id", tripId!)
+        .order("start_date");
+      if (error) throw error;
+      return data.map((s) => s.destination);
+    },
+    enabled: !!tripId && !!user,
+  });
+
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
   const isAdmin = myRole === "owner" || myRole === "admin";
@@ -135,15 +207,14 @@ export default function TripHome() {
 
   const visibleMembers = members?.slice(0, 4) ?? [];
   const memberCount = members?.length ?? 0;
-  const statusLabel = getStatusLabel(trip.tentative_start_date, trip.tentative_end_date, trip.route_locked ?? false);
 
-  // Default cover photo — in future, use trip.cover_photo_url if available
-  const coverPhoto = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80";
+  // Resolve the same photo used on the trip list card
+  const coverPhoto = resolvePhoto(trip.name, routeStops ?? []);
 
   return (
     <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
       {/* ─── HERO SECTION ─── */}
-      <div className="relative w-full overflow-hidden" style={{ height: 260 }}>
+      <div className="relative w-full overflow-hidden" style={{ height: 220 }}>
         {/* Teal fallback */}
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         {/* Cover photo */}
@@ -151,12 +222,13 @@ export default function TripHome() {
           src={coverPhoto}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
         {/* Scrim overlay */}
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.0) 30%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.85) 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.9) 100%)",
           }}
         />
 
@@ -175,66 +247,60 @@ export default function TripHome() {
           <LiveIndicator status={connectionStatus} />
         </div>
 
-        {/* BOTTOM LEFT — Trip info */}
-        <div className="absolute left-4 bottom-4 right-28">
-          <h1 className="text-2xl font-bold text-white leading-tight truncate">{trip.name}</h1>
-          <p className="text-sm text-white/80 mt-0.5">
-            {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
-          </p>
-        </div>
-
-        {/* BOTTOM RIGHT — Avatar stack + count */}
-        <button
-          onClick={() => setMemberSheetOpen(true)}
-          className="absolute right-4 bottom-4 flex flex-col items-end gap-1"
-        >
-          <div className="flex items-center -space-x-2">
-            {visibleMembers.map((m) => (
-              <Avatar key={m.user_id} className="h-8 w-8 ring-2 ring-white/50">
-                {m.profile?.avatar_url && (
-                  <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
-                )}
-                <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-medium">
-                  {getInitial(m.profile?.display_name)}
-                </AvatarFallback>
-              </Avatar>
-            ))}
+        {/* BOTTOM — Trip info + avatars on same row */}
+        <div className="absolute left-4 right-4 bottom-0 pb-5 flex items-end justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold text-white leading-tight truncate">{trip.name}</h1>
+            <p className="text-sm text-white/80 mt-0.5">
+              {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
+            </p>
           </div>
-          {memberCount > 0 && (
-            <span className="text-[11px] text-white/70 font-medium">
-              {memberCount} member{memberCount !== 1 ? "s" : ""}
-            </span>
-          )}
-        </button>
+          <button
+            onClick={() => setMemberSheetOpen(true)}
+            className="flex items-center gap-2 shrink-0"
+          >
+            <div className="flex items-center -space-x-2">
+              {visibleMembers.map((m) => (
+                <Avatar key={m.user_id} className="h-7 w-7 ring-2 ring-white/50">
+                  {m.profile?.avatar_url && (
+                    <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
+                  )}
+                  <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-medium">
+                    {getInitial(m.profile?.display_name)}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            {memberCount > 0 && (
+              <span className="text-[11px] text-white/70 font-medium whitespace-nowrap">
+                {memberCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* ─── CONTENT SHEET ─── */}
       <div className="flex-1 rounded-t-3xl -mt-6 relative z-10" style={{ background: "#F1F5F9" }}>
         <div className="pt-4">
-          {/* Status info bar */}
-          <div className="mx-4 mb-3 flex items-center justify-between rounded-2xl bg-white px-4 py-3 shadow-sm">
-            <span className="text-sm font-medium" style={{ color: "#0D9488" }}>
-              {statusLabel}
-            </span>
-            <button
-              onClick={() => setShareInviteOpen(true)}
-              className="flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-colors"
-              style={{ color: "#0D9488", border: "1px solid rgba(13, 148, 136, 0.3)" }}
-            >
-              <Share2 className="h-3 w-3" />
-              Share
-            </button>
-          </div>
-
-          {/* Section cards */}
-          <TripDashboard
-            tripId={trip.id}
-            routeLocked={trip.route_locked ?? false}
-            settlementCurrency={trip.settlement_currency}
-            myRole={myRole}
+          {/* Status row — no card, sits on background */}
+          <StatusRow
             startDate={trip.tentative_start_date}
             endDate={trip.tentative_end_date}
+            onShare={() => setShareInviteOpen(true)}
           />
+
+          {/* Section cards */}
+          <div className="mt-2">
+            <TripDashboard
+              tripId={trip.id}
+              routeLocked={trip.route_locked ?? false}
+              settlementCurrency={trip.settlement_currency}
+              myRole={myRole}
+              startDate={trip.tentative_start_date}
+              endDate={trip.tentative_end_date}
+            />
+          </div>
         </div>
       </div>
 
