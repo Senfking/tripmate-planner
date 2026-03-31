@@ -68,7 +68,7 @@ export function ExpenseFormModal({
   const [payerId, setPayerId] = useState(user?.id || "");
   const [notes, setNotes] = useState("");
   const [itineraryItemId, setItineraryItemId] = useState<string>("none");
-  const [splitMode, setSplitMode] = useState<"equal" | "custom">("equal");
+  const [splitMode, setSplitMode] = useState<"equal" | "custom" | "percent">("equal");
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
   const [settlementDismissed, setSettlementDismissed] = useState(false);
