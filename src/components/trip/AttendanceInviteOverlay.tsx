@@ -151,7 +151,7 @@ export function AttendanceInviteOverlay({
   };
 
   // ─── SINGLE CONTAINER: full or peeking ───
-  const isFull = open;
+  const isFull = open || closing;
 
   return (
     <>
