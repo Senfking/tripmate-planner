@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from "react";
-import { format } from "date-fns";
+import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, MapPin } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DndContext,
   closestCenter,
@@ -70,13 +71,15 @@ interface Props {
   saving?: boolean;
 }
 
-export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, newItemIds, lastVisitItemIds, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving }: Props) {
+export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, newItemIds, lastVisitItemIds, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving, isLast }: Props & { isLast?: boolean }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const dateObj = new Date(dayDate + "T00:00:00");
-  const dateLabel = format(dateObj, "EEE d MMM yyyy");
+  const isActiveDay = isToday(dateObj);
+  const isTmrw = isTomorrow(dateObj);
+  const hasItems = items.length > 0;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -133,59 +136,91 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
   const overlapMap = useMemo(() => computeOverlaps(items), [items]);
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">
-          Day {dayNumber} — {dateLabel}{destination ? ` · ${destination}` : ""}
-        </h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs"
-          onClick={() => { setEditItem(null); setFormOpen(true); }}
-        >
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add
-        </Button>
+    <section className="flex gap-3">
+      {/* Date column */}
+      <div className="flex flex-col items-center w-[52px] shrink-0 pt-1">
+        <span className={cn(
+          "text-[10px] font-bold uppercase tracking-wider",
+          isActiveDay ? "text-[#0D9488]" : "text-muted-foreground"
+        )}>
+          {isActiveDay ? "Today" : isTmrw ? "Tmrw" : format(dateObj, "EEE")}
+        </span>
+        <span className={cn(
+          "text-[22px] font-bold leading-none mt-0.5",
+          isActiveDay ? "text-[#0D9488]" : hasItems ? "text-foreground" : "text-muted-foreground/40"
+        )}>
+          {format(dateObj, "d")}
+        </span>
+        <span className={cn(
+          "text-[10px] font-medium",
+          isActiveDay ? "text-[#0D9488]/60" : "text-muted-foreground/60"
+        )}>
+          {format(dateObj, "MMM")}
+        </span>
+        {!isLast && (
+          <div className="flex-1 w-px mt-2" style={{ background: "rgba(0,0,0,0.08)" }} />
+        )}
       </div>
 
-      {items.length === 0 ? (
-        <button
-          onClick={() => { setEditItem(null); setFormOpen(true); }}
-          className="w-full rounded-lg border border-dashed border-muted-foreground/30 p-6 text-center text-sm text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
-        >
-          Nothing planned for this day yet — add the first activity ＋
-        </button>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
-        >
-          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
-              {items.map((item) => (
-                <ItineraryItemCard
-                  key={item.id}
-                  item={item}
-                  tripId={tripId}
-                  myRole={myRole}
-                  members={members}
-                  attendance={attendance}
-                  activeId={activeId}
-                  overlapTitles={overlapMap.get(item.id)}
-                  isNew={newItemIds?.has(item.id)}
-                   isNewSinceLastVisit={lastVisitItemIds?.has(item.id)}
-                  onCycleAttendance={() => onCycleAttendance(item.id)}
-                  onEdit={() => handleEdit(item)}
-                  onDelete={() => onDeleteItem(item.id)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
+      {/* Content column */}
+      <div className="flex-1 min-w-0 pb-4 space-y-2">
+        {/* Destination label */}
+        {destination && (
+          <div className="flex items-center gap-1 mb-1">
+            <MapPin className="h-3 w-3 text-[#0D9488]/60 shrink-0" />
+            <span className="text-[11px] font-medium text-[#0D9488]/70 truncate">{destination}</span>
+          </div>
+        )}
+
+        {items.length === 0 ? (
+          <button
+            onClick={() => { setEditItem(null); setFormOpen(true); }}
+            className="w-full rounded-[14px] border border-dashed border-muted-foreground/20 p-4 text-center text-[13px] text-muted-foreground/50 hover:border-primary/40 hover:text-foreground transition-colors"
+          >
+            Tap to add activity +
+          </button>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {items.map((item) => (
+                  <ItineraryItemCard
+                    key={item.id}
+                    item={item}
+                    tripId={tripId}
+                    myRole={myRole}
+                    members={members}
+                    attendance={attendance}
+                    activeId={activeId}
+                    overlapTitles={overlapMap.get(item.id)}
+                    isNew={newItemIds?.has(item.id)}
+                    isNewSinceLastVisit={lastVisitItemIds?.has(item.id)}
+                    onCycleAttendance={() => onCycleAttendance(item.id)}
+                    onEdit={() => handleEdit(item)}
+                    onDelete={() => onDeleteItem(item.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+
+        {/* Inline add button */}
+        {items.length > 0 && (
+          <button
+            onClick={() => { setEditItem(null); setFormOpen(true); }}
+            className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/50 hover:text-[#0D9488] transition-colors pl-1 pt-0.5"
+          >
+            <Plus className="h-3 w-3" /> Add activity
+          </button>
+        )}
+      </div>
 
       <ItemFormModal
         open={formOpen}
