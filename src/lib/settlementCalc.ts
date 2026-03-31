@@ -1,17 +1,5 @@
 export type Rates = Record<string, number>;
 
-export function convert(
-  amount: number,
-  from: string,
-  to: string,
-  rates: Rates
-): number {
-  if (from === to) return amount;
-  const fromRate = from === "EUR" ? 1 : rates[from] ?? 1;
-  const toRate = to === "EUR" ? 1 : rates[to] ?? 1;
-  return amount;
-}
-
 /** Convert amount from `from` currency to `to` currency.
  *  Returns null if rates are unavailable for the conversion.
  *  `rates` is keyed by currency code, values relative to `baseCurrency`.
