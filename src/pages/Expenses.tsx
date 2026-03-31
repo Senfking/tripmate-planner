@@ -1,6 +1,6 @@
 import { useGlobalExpenses } from "@/hooks/useGlobalExpenses";
 import { Link } from "react-router-dom";
-import { Wallet, ChevronRight, CircleDollarSign } from "lucide-react";
+import { Wallet, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
@@ -86,7 +86,7 @@ const Expenses = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-2.5 px-4 mt-4 pb-24">
+        <div className="space-y-3 px-4 mt-4 pb-24">
           {trips.map((trip) => {
             const isSettled = Math.abs(trip.net) < 0.01;
             const isPositive = trip.net > 0;
@@ -95,62 +95,54 @@ const Expenses = () => {
               <Link
                 key={trip.tripId}
                 to={`/app/trips/${trip.tripId}/expenses`}
-                className="group block rounded-2xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-[#F1F5F9] active:scale-[0.98] transition-transform overflow-hidden"
+                className="group block rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] active:scale-[0.98] transition-transform"
               >
-                <div className="p-4">
-                  {/* Top row: trip name + arrow */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[16px]"
-                        style={{ background: "rgba(13,148,136,0.08)" }}
-                      >
-                        {trip.tripEmoji ?? "✈️"}
-                      </div>
-                      <p className="text-[15px] font-semibold text-foreground truncate">
-                        {trip.tripName}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
-                  </div>
-
-                  {/* Balance row */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={cn(
-                        "h-2 w-2 rounded-full",
-                        isSettled ? "bg-muted-foreground/20" : isPositive ? "bg-emerald-500" : "bg-orange-500"
-                      )} />
-                      <span className="text-[12px] font-medium text-muted-foreground">
-                        {isSettled ? "Settled" : isPositive ? "You're owed" : "You owe"}
-                      </span>
-                    </div>
-                    <span className={cn(
-                      "text-[16px] font-bold tabular-nums",
-                      isSettled
-                        ? "text-muted-foreground/50"
-                        : isPositive
-                        ? "text-emerald-600"
-                        : "text-orange-600"
-                    )}>
-                      {isSettled
-                        ? "€0.00"
-                        : `${isPositive ? "+" : "−"}${formatCurrency(Math.abs(trip.net), trip.currency)}`}
-                    </span>
+                {/* Photo header */}
+                <div className="relative h-[72px] overflow-hidden">
+                  <img
+                    src={trip.photoUrl}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 100%)",
+                    }}
+                  />
+                  <div className="relative z-10 flex items-center justify-between h-full px-4">
+                    <p className="text-[15px] font-bold text-white truncate">
+                      {trip.tripName}
+                    </p>
+                    <ChevronRight className="h-4 w-4 text-white/50 shrink-0" />
                   </div>
                 </div>
 
-                {/* Subtle bottom accent bar */}
-                {!isSettled && (
-                  <div
-                    className="h-[2px]"
-                    style={{
-                      background: isPositive
-                        ? "linear-gradient(90deg, rgba(16,185,129,0.4) 0%, rgba(16,185,129,0) 100%)"
-                        : "linear-gradient(90deg, rgba(249,115,22,0.4) 0%, rgba(249,115,22,0) 100%)",
-                    }}
-                  />
-                )}
+                {/* Balance row */}
+                <div className="bg-white px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "h-2 w-2 rounded-full",
+                      isSettled ? "bg-muted-foreground/20" : isPositive ? "bg-emerald-500" : "bg-orange-500"
+                    )} />
+                    <span className="text-[13px] font-medium text-muted-foreground">
+                      {isSettled ? "All settled" : isPositive ? "You're owed" : "You owe"}
+                    </span>
+                  </div>
+                  <span className={cn(
+                    "text-[17px] font-bold tabular-nums",
+                    isSettled
+                      ? "text-muted-foreground/50"
+                      : isPositive
+                      ? "text-emerald-600"
+                      : "text-orange-600"
+                  )}>
+                    {isSettled
+                      ? "€0.00"
+                      : `${isPositive ? "+" : "−"}${formatCurrency(Math.abs(trip.net), trip.currency)}`}
+                  </span>
+                </div>
               </Link>
             );
           })}
