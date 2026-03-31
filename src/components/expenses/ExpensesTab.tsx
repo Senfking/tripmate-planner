@@ -163,7 +163,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       } else if (rates && rates[exp.currency]) {
         total += exp.amount / rates[exp.currency];
       } else {
-        total += exp.amount;
+        // rates unavailable for this currency — skip from total
       }
     }
     return { totalExpenses: count > 0 ? total : null, nonSettlementCount: count };
@@ -409,7 +409,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   )}
                 </div>
               </div>
-              {!expensesOpen && totalExpenses !== null && (
+              {!expensesOpen && !ratesLoading && totalExpenses !== null && (
                 <p className="text-xs text-muted-foreground pl-6">
                   Total: {formatCurrency(totalExpenses, settlementCurrency)}
                 </p>
@@ -456,7 +456,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   </div>
                 ))}
                 {/* Total footer */}
-                {totalExpenses !== null && (
+                {!ratesLoading && totalExpenses !== null && (
                   <p className="text-xs text-muted-foreground text-center pt-3 border-t border-muted mt-3">
                     Total: {formatCurrency(totalExpenses, settlementCurrency)} across {nonSettlementCount} expense{nonSettlementCount !== 1 ? "s" : ""}
                   </p>
