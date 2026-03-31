@@ -35,7 +35,7 @@ import {
   Star,
   MessageSquare,
 } from "lucide-react";
-import WhatsAppIcon from "@/components/WhatsAppIcon";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "@/hooks/use-toast";
 
 /* ───────── helpers ───────── */
