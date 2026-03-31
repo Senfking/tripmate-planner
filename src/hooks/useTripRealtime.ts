@@ -33,9 +33,9 @@ const EXPLICIT_EVENT_TABLES = new Set(["itinerary_items", "itinerary_attendance"
 const TABLE_QUERY_KEYS: Record<string, (tripId: string) => string[][]> = {
   itinerary_items: (t) => [["itinerary", t], ["itinerary-items-summary", t], ["itinerary-items-for-expenses", t]],
   itinerary_attendance: (t) => [["itinerary_attendance", t]],
-  votes: (t) => [["poll-vote-counts"], ["my-poll-votes", t], ["trip-polls", t], ["trip-poll-options", t]],
-  date_option_votes: (t) => [["trip-date-options", t], ["my-date-votes", t]],
-  proposal_reactions: (t) => [["my-reactions", t], ["trip-proposals", t]],
+  votes: (t) => [["poll-vote-counts"], ["my-poll-votes", t], ["trip-polls", t], ["trip-poll-options", t], ["global-decisions"]],
+  date_option_votes: (t) => [["trip-date-options", t], ["my-date-votes", t], ["global-decisions"]],
+  proposal_reactions: (t) => [["my-reactions", t], ["trip-proposals", t], ["global-decisions"]],
   vibe_responses: (t) => [["my-vibe-responses-count", t], ["vibe-responses", t], ["vibe-aggregates", t]],
   comments: () => [["item-comments"]],
   attachments: (t) => [["attachments", t], ["attachments-summary", t]],
