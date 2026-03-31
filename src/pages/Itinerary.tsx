@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useGlobalItinerary, type TripItineraryGroup } from "@/hooks/useGlobalItinerary";
 import { Link } from "react-router-dom";
 import { CalendarDays, MapPin, Clock, Plane } from "lucide-react";
