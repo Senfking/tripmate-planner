@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
 import { useAttachments, type AttachmentRow } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
-import { FileUploadZone } from "./FileUploadZone";
-import { LinkForm } from "./LinkForm";
 import { AttachmentCard } from "./AttachmentCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +10,15 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible";
-import { Upload, Link2, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useRef } from "react";
+import { Camera, Image, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload } from "lucide-react";
 
 const FILTERS = [
   { value: "all", label: "All" },
   { value: "flight", label: "Flights" },
   { value: "hotel", label: "Hotels" },
   { value: "activity", label: "Activities" },
-  { value: "link", label: "Links" },
   { value: "other", label: "Other" },
 ];
 
@@ -27,7 +26,6 @@ const SECTIONS: { type: string; label: string; icon: React.ElementType }[] = [
   { type: "flight", label: "Flights", icon: Plane },
   { type: "hotel", label: "Hotels", icon: Hotel },
   { type: "activity", label: "Activities", icon: Activity },
-  { type: "link", label: "Links", icon: Link2 },
   { type: "other", label: "Other / Files", icon: File },
 ];
 
@@ -48,11 +46,22 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
-  const [mode, setMode] = useState<"none" | "upload" | "link">("none");
+  const { query, uploadFile, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
+  const [showManual, setShowManual] = useState(false);
   const [filter, setFilter] = useState("all");
   const [peopleFilter, setPeopleFilter] = useState<"all" | "mine" | "others">("all");
   const [search, setSearch] = useState("");
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const manualInputRef = useRef<HTMLInputElement>(null);
+
+  const ACCEPT = ".pdf,.jpg,.jpeg,.png";
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadFile.mutate(file);
+    e.target.value = "";
+  };
 
   const isAdmin = myRole === "owner" || myRole === "admin";
   const attachments = query.data ?? [];
@@ -112,7 +121,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       isNew={newItemIds?.has(a.id)}
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
-      onUploadPrompt={() => setMode("upload")}
+      onUploadPrompt={() => galleryInputRef.current?.click()}
       getSignedUrl={getSignedUrl}
     />
   );
@@ -145,24 +154,60 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   }
 
   // Empty state
-  if (attachments.length === 0 && mode === "none") {
+  if (attachments.length === 0 && !showManual) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
         <p className="text-4xl">📄</p>
         <div>
           <p className="text-lg font-semibold text-foreground">No docs saved yet</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload a file or save a link to get started
+            Upload a confirmation to get started
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button onClick={() => setMode("upload")} size="sm">
-            <Upload className="h-4 w-4 mr-1" />
-            Upload confirmation
-          </Button>
-          <Button onClick={() => setMode("link")} variant="outline" size="sm">
-            <Link2 className="h-4 w-4 mr-1" />
-            Share a link
+        {/* Hidden inputs */}
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+        <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+        <input ref={manualInputRef} type="file" accept={ACCEPT} className="hidden" onChange={handleFile} />
+
+        {/* AI scan section */}
+        <div className="w-full max-w-xs space-y-3">
+          <div className="rounded-xl border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/[0.03] p-4 space-y-3">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
+              <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Take a photo or upload a confirmation — we'll extract the details automatically
+            </p>
+            {uploadFile.isPending ? (
+              <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing…
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
+                  <Camera className="h-4 w-4 text-[#0D9488]" />
+                  Take photo
+                </button>
+                <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
+                  <Image className="h-4 w-4 text-[#0D9488]" />
+                  Choose photo
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[11px] text-muted-foreground">or add manually</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          <Button variant="outline" size="sm" className="w-full" onClick={() => manualInputRef.current?.click()} disabled={uploadFile.isPending}>
+            <Upload className="h-4 w-4 mr-1.5" />
+            Upload file
           </Button>
         </div>
       </div>
@@ -171,40 +216,46 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Add buttons */}
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={mode === "upload" ? "default" : "outline"}
-          onClick={() => setMode(mode === "upload" ? "none" : "upload")}
-        >
-          <Upload className="h-4 w-4 mr-1" />
-           Upload confirmation
-        </Button>
-        <Button
-          size="sm"
-          variant={mode === "link" ? "default" : "outline"}
-          onClick={() => setMode(mode === "link" ? "none" : "link")}
-        >
-          <Link2 className="h-4 w-4 mr-1" />
-          Share a link
-        </Button>
+      {/* Hidden inputs */}
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <input ref={manualInputRef} type="file" accept={ACCEPT} className="hidden" onChange={handleFile} />
+
+      {/* AI scan section */}
+      <div className="rounded-xl border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/[0.03] p-4 space-y-3">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
+          <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
+        </div>
+        {uploadFile.isPending ? (
+          <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Processing…
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
+              <Camera className="h-4 w-4 text-[#0D9488]" />
+              Take photo
+            </button>
+            <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
+              <Image className="h-4 w-4 text-[#0D9488]" />
+              Choose photo
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Add mode panels */}
-      {mode === "upload" && (
-        <FileUploadZone
-          onUpload={(file) => uploadFile.mutate(file)}
-          isPending={uploadFile.isPending}
-        />
-      )}
-      {mode === "link" && (
-        <LinkForm
-          onSubmit={(data) => addLink.mutate(data, { onSuccess: () => setMode("none") })}
-          isPending={addLink.isPending}
-          onCancel={() => setMode("none")}
-        />
-      )}
+      {/* Divider + manual upload */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[11px] text-muted-foreground">or add manually</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <Button variant="outline" size="sm" className="w-full" onClick={() => manualInputRef.current?.click()} disabled={uploadFile.isPending}>
+        <Upload className="h-4 w-4 mr-1.5" />
+        Upload file
+      </Button>
 
       {/* Filters + search */}
       {attachments.length > 0 && (
