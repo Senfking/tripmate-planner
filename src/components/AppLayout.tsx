@@ -70,14 +70,14 @@ export function AppLayout() {
 
   // Global tabs use their own TabHeroHeader — hide the app header
   const globalTabPaths = ["/app/trips", "/app/trips/new", "/app/decisions", "/app/itinerary", "/app/expenses"];
-  const isGlobalTab = globalTabPaths.includes(location.pathname);
+  const hideHeader = globalTabPaths.includes(location.pathname) || location.pathname === "/app/more";
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
-          {!isGlobalTab && (
+          {!hideHeader && (
             <header
               className="sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden border-b bg-gradient-primary"
               style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
