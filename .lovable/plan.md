@@ -1,84 +1,119 @@
 
 
-# My Account Screen — Implementation Plan
+# My Account Screen Redesign
 
 ## Overview
-Replace the minimal More.tsx with a full-featured My Account page (7 sections), update AuthContext to expose extended profile fields, update the header avatar, create an avatars storage bucket, and add a delete-account edge function.
+Six changes to the My Account screen plus fixing 5 edge function TypeScript build errors (`'err' is of type 'unknown'`).
 
-## Files to change/create
+## Build Error Fixes (prerequisite)
+
+Cast `err` to `Error` in catch blocks across 5 edge functions:
+- `export-expenses-csv/index.ts` line 136: `(err as Error).message`
+- `export-trip-ics/index.ts` line 127: `(err as Error).message`
+- `fetch-link-preview/index.ts` line 239: `(e as Error).message`
+- `public-trip-share-view/index.ts` line 254: `(err as Error).message`
+- `refresh-exchange-rates/index.ts` lines 59+61: `(err as Error).message` (and keep `err` in console.error on line 59)
+
+## Database Migration
+
+Create a `feedback` table with RLS (users insert own rows only):
+
+```sql
+CREATE TABLE public.feedback (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  body text,
+  rating smallint NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "feedback_insert_own" ON public.feedback
+  FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+CREATE POLICY "feedback_select_own" ON public.feedback
+  FOR SELECT TO authenticated USING (user_id = auth.uid());
+```
+
+## Changes to `src/pages/More.tsx`
+
+### Change 1 — Remove "Change profile photo" row + add crop UI
+- Delete the `<SettingRow icon={ImageIcon} label="Change profile photo" .../>` row (line 370).
+- Remove `ImageIcon` from imports.
+- After file selection, instead of immediately uploading, show a crop drawer:
+  - Load the selected image into an offscreen `Image`, draw onto a canvas.
+  - Display a square crop preview with drag-to-pan and pinch-to-zoom (touch events + mouse drag).
+  - "Save" button crops to 512×512 square, converts to JPEG blob, uploads to storage.
+  - "Cancel" closes the drawer without uploading.
+- New state: `cropFile`, `showCropDrawer`. New helper component `AvatarCropDrawer` rendered inline or as a subcomponent.
+
+### Change 2 — Hide password/email for Google users
+- On mount, call `supabase.auth.getUser()` and read `user.app_metadata.provider`.
+- Store in state: `authProvider`.
+- If `authProvider === "google"`:
+  - Hide "Change password" and "Change email" `SettingRow` entries.
+  - Show `<p className="text-xs text-muted-foreground mt-1">Signed in with Google</p>` below the email in the profile header.
+- Otherwise show both rows as normal.
+
+### Change 3 — Stats card
+- Add a new `useEffect` that runs two queries:
+  1. `supabase.from("trip_members").select("id", { count: "exact", head: true }).eq("user_id", userId)` → trip count.
+  2. `supabase.from("trip_members").select("user_id, trip_id")` for all trips the user is in, then count distinct other user_ids. This requires fetching trip_ids first, then all members of those trips. Use two sequential queries.
+- Display between profile header and Account Settings card:
+  ```
+  <Card>
+    <CardContent className="p-4 flex items-center justify-around">
+      <div className="text-center">
+        <p className="text-lg font-bold">4</p>
+        <p className="text-xs text-muted-foreground">✈️ Trips</p>
+      </div>
+      <div className="h-8 w-px bg-border" />
+      <div className="text-center">
+        <p className="text-lg font-bold">6</p>
+        <p className="text-xs text-muted-foreground">👥 Travelled with</p>
+      </div>
+    </CardContent>
+  </Card>
+  ```
+
+### Change 4 — Invite friends with WhatsApp + referral count
+- Replace the referral section content:
+  1. Keep referral code pill + copy button row.
+  2. Add referral count: query `supabase.from("profiles").select("id", { count: "exact", head: true }).eq("referred_by", userId)`. Display "🎉 N friends joined" or "No friends joined yet".
+  3. Two buttons side by side:
+     - WhatsApp (green bg, white text): `window.open("https://wa.me/?text=...")`. Use the WhatsApp share URL with the user's referral code.
+     - Copy link (outline): copies `https://juntotravel.app/join?ref=[CODE]`, shows "Copied!" toast.
+
+### Change 5 — App version + feedback footer
+- Below Danger Zone (and the "Join a trip" link), add:
+  ```
+  <p className="text-center text-xs text-muted-foreground">
+    Junto · v0.1 · <button onClick={openFeedbackDrawer}>Send feedback →</button>
+  </p>
+  ```
+- New Feedback Drawer with:
+  - Textarea ("What's on your mind?")
+  - Star rating (1–5) using 5 clickable star icons
+  - Submit button that inserts into `feedback` table
+  - State: `showFeedbackDrawer`, `feedbackBody`, `feedbackRating`, `submittingFeedback`
+
+### Change 6 — Sign out prominence
+- Move the Sign Out button out of the Danger Zone collapsible.
+- Place it just above the footer version row as a full-width outline button with red text:
+  ```
+  <Button variant="outline" className="w-full text-destructive border-destructive/30" onClick={handleSignOut}>
+    <LogOut className="h-4 w-4 mr-2" /> Sign out
+  </Button>
+  ```
+- Remove the "Sign out" row from inside the Danger Zone (keep "Sign out all devices" and "Delete account" there).
+
+## Files to change
 
 | Action | File |
 |--------|------|
 | Rewrite | `src/pages/More.tsx` |
-| Edit | `src/contexts/AuthContext.tsx` |
-| Edit | `src/components/AppLayout.tsx` |
-| Create | `supabase/functions/delete-account/index.ts` |
-| Migration | Create `avatars` storage bucket + RLS policies |
-
-## Database Migration
-
-Create public `avatars` storage bucket with owner-only write, public read:
-
-```sql
-INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
-
-CREATE POLICY "Avatar public read" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
-CREATE POLICY "Avatar owner insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "Avatar owner update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "Avatar owner delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-```
-
-## 1. AuthContext Update
-
-Extend `Profile` type to include `avatar_url`, `default_currency`, `subscription_tier`, `notification_preferences`, `referral_code`. Update the `select` query to fetch all these fields. Add a `refreshProfile()` method so the More page can re-fetch after updates.
-
-## 2. AppLayout Header Avatar
-
-Replace the `UserCircle` icon in the header with:
-- If `profile.avatar_url` exists: circular `<img>` (22px)
-- Otherwise: initials from `display_name` or email first letter, white text on white/20 bg
-
-## 3. More.tsx — Full Rewrite
-
-Seven sections stacked vertically on the `#F1F5F9` background:
-
-**Section 1 — Profile Header**: 80px Avatar (image or initials fallback), camera badge for photo upload, display name, email, plan badge (Free grey / Pro teal).
-
-**Section 2 — Account Settings**: Card with chevron rows:
-- Edit display name: inline input with save, updates `profiles.display_name`
-- Change profile photo: file input (images only), canvas resize to 512x512, upload to `avatars/{uid}/avatar.jpg`, update `profiles.avatar_url`
-- Default currency: opens `CurrencyPicker`, saves to `profiles.default_currency`
-- Change password: calls `supabase.auth.resetPasswordForEmail()`, shows toast
-- Change email: bottom sheet with email input, calls `supabase.auth.updateUser({ email })`, shows toast
-
-**Section 3 — My Plan**: Card showing tier name. "Upgrade to Pro" or "Manage subscription" button, both disabled with "Coming soon" toast.
-
-**Section 4 — Notifications**: Card with Switch toggles for 5 notification keys, reading/writing `profiles.notification_preferences` jsonb. Note about push coming soon.
-
-**Section 5 — My Trips**: Query `trip_members` joined with `trips` for the current user. Show up to 5 rows (emoji + name + role badge). "See all trips" link if more.
-
-**Section 6 — Referral**: Card showing `profiles.referral_code` in monospace pill with copy button. Toast on copy.
-
-**Section 7 — Danger Zone**: Collapsible (red label, collapsed by default).
-- Sign out all devices: `supabase.auth.signOut({ scope: 'global' })`
-- Sign out: existing logic
-- Delete account: confirm bottom sheet. Check sole ownership via query. If clear, require email confirmation, then call `delete-account` edge function.
-
-## 4. Edge Function: `delete-account`
-
-`supabase/functions/delete-account/index.ts`:
-- CORS headers
-- Validate JWT from Authorization header
-- Create service-role Supabase client
-- Check if user is sole owner of any trips (query `trip_members` where role='owner' and no other owner exists)
-- If sole owner: return 400 with trip names
-- Otherwise: call `supabase.auth.admin.deleteUser(userId)`
-- Return 200 success
-
-## Technical Details
-
-- Avatar resize uses an offscreen `<canvas>` element, draws image at max 512x512 maintaining aspect ratio, exports as JPEG
-- Notification preferences are read/written as a JSON object on `profiles.notification_preferences` using a single `update` call with optimistic UI
-- My Trips query: `supabase.from('trip_members').select('role, trips(id, name, emoji)').eq('user_id', uid).limit(6)` — show 5, use 6th to know if "See all" is needed
-- All profile updates use `supabase.from('profiles').update({...}).eq('id', uid)` followed by `refreshProfile()`
+| Fix | `supabase/functions/export-expenses-csv/index.ts` |
+| Fix | `supabase/functions/export-trip-ics/index.ts` |
+| Fix | `supabase/functions/fetch-link-preview/index.ts` |
+| Fix | `supabase/functions/public-trip-share-view/index.ts` |
+| Fix | `supabase/functions/refresh-exchange-rates/index.ts` |
+| Migration | Create `feedback` table |
 
