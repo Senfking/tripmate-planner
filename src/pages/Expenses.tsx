@@ -4,7 +4,7 @@ import { Wallet, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
-import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
+import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 
 const Expenses = () => {
   const { data, isLoading } = useGlobalExpenses();

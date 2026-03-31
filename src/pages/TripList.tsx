@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO, isToday, isTomorrow } from "date-fns";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
-import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
+import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
