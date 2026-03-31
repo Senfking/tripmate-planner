@@ -27,6 +27,8 @@ export interface TripItineraryGroup {
   tripId: string;
   tripName: string;
   tripEmoji: string | null;
+  tripStartDate: string | null;
+  tripEndDate: string | null;
   items: ItineraryItemGlobal[];
   placeholders: RouteStopPlaceholder[];
 }
@@ -57,7 +59,7 @@ export function useGlobalItinerary() {
         { data: attendance },
         { data: routeStops },
       ] = await Promise.all([
-        supabase.from("trips").select("id, name, emoji").in("id", tripIds),
+        supabase.from("trips").select("id, name, emoji, tentative_start_date, tentative_end_date").in("id", tripIds),
         supabase
           .from("itinerary_items")
           .select("id, trip_id, title, day_date, start_time, end_time, location_text, status")
@@ -88,6 +90,19 @@ export function useGlobalItinerary() {
       // Group items by trip
       const groupMap = new Map<string, TripItineraryGroup>();
 
+      // Initialize groups for all trips that have dates or stops
+      for (const trip of trips ?? []) {
+        groupMap.set(trip.id, {
+          tripId: trip.id,
+          tripName: trip.name,
+          tripEmoji: trip.emoji,
+          tripStartDate: trip.tentative_start_date,
+          tripEndDate: trip.tentative_end_date,
+          items: [],
+          placeholders: [],
+        });
+      }
+
       for (const item of items ?? []) {
         const trip = tripMap.get(item.trip_id);
         if (!trip) continue;
@@ -97,6 +112,8 @@ export function useGlobalItinerary() {
             tripId: trip.id,
             tripName: trip.name,
             tripEmoji: trip.emoji,
+            tripStartDate: trip.tentative_start_date,
+            tripEndDate: trip.tentative_end_date,
             items: [],
             placeholders: [],
           });
@@ -115,7 +132,7 @@ export function useGlobalItinerary() {
         });
       }
 
-      // Add route stop placeholders for trips with stops but no items
+      // Always add route stops as placeholders
       for (const stop of routeStops ?? []) {
         const trip = tripMap.get(stop.trip_id);
         if (!trip) continue;
@@ -125,28 +142,26 @@ export function useGlobalItinerary() {
             tripId: trip.id,
             tripName: trip.name,
             tripEmoji: trip.emoji,
+            tripStartDate: trip.tentative_start_date,
+            tripEndDate: trip.tentative_end_date,
             items: [],
             placeholders: [],
           });
         }
 
-        const group = groupMap.get(trip.id)!;
-        // Only add placeholder if there are no items for this trip
-        if (group.items.length === 0) {
-          group.placeholders.push({
-            id: stop.id,
-            destination: stop.destination,
-            startDate: stop.start_date,
-            endDate: stop.end_date,
-            tripId: stop.trip_id,
-          });
-        }
+        groupMap.get(trip.id)!.placeholders.push({
+          id: stop.id,
+          destination: stop.destination,
+          startDate: stop.start_date,
+          endDate: stop.end_date,
+          tripId: stop.trip_id,
+        });
       }
 
       // Sort groups by earliest item date or stop date
       return Array.from(groupMap.values()).sort((a, b) => {
-        const aDate = a.items[0]?.dayDate ?? a.placeholders[0]?.startDate ?? "9999";
-        const bDate = b.items[0]?.dayDate ?? b.placeholders[0]?.startDate ?? "9999";
+        const aDate = a.items[0]?.dayDate ?? a.placeholders[0]?.startDate ?? a.tripStartDate ?? "9999";
+        const bDate = b.items[0]?.dayDate ?? b.placeholders[0]?.startDate ?? b.tripStartDate ?? "9999";
         return aDate.localeCompare(bDate);
       });
     },
