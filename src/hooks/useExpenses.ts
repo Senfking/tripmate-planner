@@ -30,6 +30,7 @@ export interface MemberProfile {
   userId: string;
   displayName: string;
   role: string;
+  attendanceStatus: string;
 }
 
 
