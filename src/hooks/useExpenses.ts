@@ -77,7 +77,7 @@ export function useExpenses(tripId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("user_id, role")
+        .select("user_id, role, attendance_status")
         .eq("trip_id", tripId);
       if (error) throw error;
 
@@ -94,6 +94,7 @@ export function useExpenses(tripId: string) {
         userId: m.user_id,
         displayName: profileMap[m.user_id] || "Member",
         role: m.role,
+        attendanceStatus: (m as any).attendance_status ?? "pending",
       })) as MemberProfile[];
     },
     enabled: !!tripId && !!user,

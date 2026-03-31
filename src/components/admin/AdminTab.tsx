@@ -204,6 +204,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
                 displayName={m.display_name}
                 role={m.role}
                 joinedAt={m.joined_at}
+                attendanceStatus={m.attendance_status}
                 myRole={myRole}
                 myUserId={user!.id}
                 onPromote={(id) => roleAction.mutate({ targetUserId: id, newRole: "admin" })}
