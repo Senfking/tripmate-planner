@@ -477,6 +477,15 @@ export default function TripList() {
             Join with a code
           </button>
         </div>
+        <JoinDrawer
+          open={joinOpen}
+          onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}
+          code={joinCode}
+          onCodeChange={(v) => { setJoinCode(v.toUpperCase()); setJoinError(""); }}
+          error={joinError}
+          loading={joinMutation.isPending}
+          onSubmit={() => joinMutation.mutate(joinCode)}
+        />
       </div>
     );
   }
