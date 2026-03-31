@@ -155,7 +155,7 @@ export function AttendanceInviteOverlay({
   const isFull = open || closing;
 
   // Peeking shows: message banner (44px) + avatar row (52px) = 96px visible above bottom nav
-  const peekHeight = 96;
+  const peekHeight = 120;
   const peekTranslate = `calc(100% - ${peekHeight}px)`;
 
   const goingMembers = members.filter(
@@ -197,21 +197,18 @@ export function AttendanceInviteOverlay({
           }}
           onClick={!isFull ? (e) => { e.stopPropagation(); onPeekTap?.(); } : undefined}
         >
-          {/* Message row with inline X button */}
-          <div className="flex items-center px-4 text-[13px] font-semibold text-white" style={{ height: 44 }}>
-            {!isFull && (
-              <span className="flex-1 text-center" style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
-                👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
-              </span>
-            )}
-            {!isFull && (
-              <button
-                onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
-                className="shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-white/20 ml-2"
-              >
-                <X className="h-3 w-3 text-white" />
-              </button>
-            )}
+          {/* Message row — only visible when peeking */}
+          <div
+            className="flex items-center px-4 text-[13px] font-semibold text-white overflow-hidden"
+            style={{
+              maxHeight: isFull ? 0 : 44,
+              opacity: isFull ? 0 : 1,
+              transition: "max-height 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease",
+            }}
+          >
+            <span className="flex-1 text-center" style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
+              👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
+            </span>
           </div>
           {/* Avatar row — visible when peeking, collapses when full */}
           <div
