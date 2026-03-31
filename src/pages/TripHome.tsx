@@ -318,6 +318,45 @@ export default function TripHome() {
           />
         </div>
 
+        {/* Attendance confirmation card */}
+        {myAttendanceStatus === "pending" && (
+          <div className="mx-4 mb-3 rounded-2xl bg-white border shadow-sm p-4" style={{ borderColor: "rgba(13,148,136,0.2)" }}>
+            <p className="text-[11px] text-muted-foreground">{trip.emoji ?? "✈️"} {trip.name}</p>
+            <p className="text-[17px] font-bold text-foreground mt-1">Are you going?</p>
+            <p className="text-sm text-muted-foreground mt-1">Let the group know so they can plan around you.</p>
+            <div className="flex gap-2 mt-4">
+              <Button
+                size="sm"
+                className="flex-1 text-white text-xs"
+                style={{ background: "#0D9488" }}
+                onClick={() => updateAttendance.mutate("going")}
+                disabled={updateAttendance.isPending}
+              >
+                ✈️ Going
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs"
+                style={{ borderColor: "#0D9488", color: "#0D9488" }}
+                onClick={() => updateAttendance.mutate("maybe")}
+                disabled={updateAttendance.isPending}
+              >
+                🤔 Maybe
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs text-muted-foreground"
+                onClick={() => updateAttendance.mutate("not_going")}
+                disabled={updateAttendance.isPending}
+              >
+                ✗ Can't make it
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Section cards */}
         <TripDashboard
           tripId={trip.id}
