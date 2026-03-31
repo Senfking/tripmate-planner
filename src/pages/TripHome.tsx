@@ -99,7 +99,10 @@ export default function TripHome() {
   return (
     <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
       {/* Header with shine overlay */}
-      <header className="sticky top-0 z-40 text-white p-4 pb-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0D9488, #0EA5E9)", paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
+      <header className="sticky top-0 z-40 text-white p-4 pb-0 relative overflow-visible" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
+        {/* Gradient background + bottom fade */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, #0D9488, #0EA5E9)" }} />
+        <div className="absolute left-0 right-0 pointer-events-none" style={{ bottom: "-40px", height: "56px", background: "linear-gradient(to bottom, #0D9488 0%, #0D948800 100%)" }} />
         {/* Diagonal shine */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)" }} />
         <button
@@ -109,8 +112,7 @@ export default function TripHome() {
           <ArrowLeft className="h-4 w-4" />
           <span className="text-sm">My Trips</span>
         </button>
-        <div className="relative flex items-center gap-3">
-          <span className="text-3xl">{trip.emoji || "✈️"}</span>
+        <div className="relative flex items-center gap-3 pb-5">
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold truncate">{trip.name}</h1>
             <p className="text-sm text-white/80">
