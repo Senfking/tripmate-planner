@@ -32,15 +32,8 @@ const Expenses = () => {
 
   // Centered balance display
   const balanceDisplay = (
-    <div className="mt-4 flex flex-col items-center">
-      <p className="text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1.5">
-        {!hasExpenses || Math.abs(overallNet) < 0.01
-          ? "Net balance"
-          : overallNet > 0
-          ? "You're owed"
-          : "You owe"}
-      </p>
-      <div className="flex items-center gap-2.5">
+    <div className="mt-3 flex flex-col items-center">
+      <div className="flex items-center gap-2">
         {hasExpenses && Math.abs(overallNet) >= 0.01 && (
           overallNet > 0
             ? <TrendingUp className="h-5 w-5 text-emerald-300" />
@@ -49,12 +42,19 @@ const Expenses = () => {
         {hasExpenses && Math.abs(overallNet) < 0.01 && (
           <CheckCircle2 className="h-5 w-5 text-emerald-300" />
         )}
-        <p className="text-[36px] font-extrabold text-white tracking-tight leading-none">
+        <p className="text-[34px] font-extrabold text-white tracking-tight leading-none">
           {!hasExpenses || Math.abs(overallNet) < 0.01
             ? "€0"
             : formatCurrency(Math.abs(overallNet), currency)}
         </p>
       </div>
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-white/50 mt-1.5">
+        {!hasExpenses || Math.abs(overallNet) < 0.01
+          ? "All settled"
+          : overallNet > 0
+          ? "You're owed"
+          : "You owe"}
+      </p>
     </div>
   );
 
@@ -80,28 +80,19 @@ const Expenses = () => {
             <Link
               key={trip.tripId}
               to={`/app/trips/${trip.tripId}/expenses`}
-              className="flex items-center gap-3 bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:scale-[0.98] transition-transform"
+              className="group flex items-center gap-3 bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:scale-[0.98] transition-transform"
             >
-              <span className="text-xl">{trip.tripEmoji ?? "✈️"}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium text-foreground truncate">
-                  {trip.tripName}
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-foreground truncate">
+                  {trip.tripEmoji ?? "✈️"} {trip.tripName}
                 </p>
-                <p
-                  className={cn(
-                    "text-sm font-semibold",
-                    trip.net > 0.005
-                      ? "text-[#0D9488]"
-                      : trip.net < -0.005
-                      ? "text-[#EF4444]"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {trip.net > 0.005
-                    ? `Owed ${formatCurrency(trip.net, trip.currency)}`
-                    : trip.net < -0.005
-                    ? `Owe ${formatCurrency(Math.abs(trip.net), trip.currency)}`
-                    : "Settled"}
+                <p className={cn(
+                  "text-sm font-medium mt-0.5",
+                  trip.net > 0 ? "text-emerald-600" : trip.net < 0 ? "text-orange-600" : "text-muted-foreground"
+                )}>
+                  {Math.abs(trip.net) < 0.01
+                    ? "Settled"
+                    : `${trip.net > 0 ? "+" : "-"}${formatCurrency(Math.abs(trip.net), trip.currency)}`}
                 </p>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />

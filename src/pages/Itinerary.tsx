@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGlobalItinerary, type TripItineraryGroup } from "@/hooks/useGlobalItinerary";
 import { Link } from "react-router-dom";
-import { CalendarDays, MapPin, Clock } from "lucide-react";
+import { CalendarDays, MapPin, Clock, Plane } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -16,13 +16,11 @@ const Itinerary = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Gather all items across all trips
   const allItems = (groups ?? []).flatMap((g) =>
     g.items.map((item) => ({ ...item, tripName: g.tripName, tripEmoji: g.tripEmoji }))
   );
   const totalActivities = allItems.length;
 
-  // Gather all placeholders
   const allPlaceholders = (groups ?? []).flatMap((g) =>
     g.placeholders.map((p) => ({ ...p, tripName: g.tripName, tripEmoji: g.tripEmoji }))
   );
@@ -42,8 +40,8 @@ const Itinerary = () => {
     if (totalActivities === 0 && allPlaceholders.length === 0) return "Nothing planned yet";
     if (totalActivities === 0 && allPlaceholders.length > 0)
       return `${allPlaceholders.length} destination${allPlaceholders.length !== 1 ? "s" : ""} on your route`;
-    if (nextItem) return `Next up: ${nextItem.title}`;
-    return `${totalActivities} upcoming activities`;
+    if (nextItem) return `Next: ${nextItem.title} · ${nextRelative}`;
+    return `${totalActivities} activities planned`;
   })();
 
   const pills: HeroPill[] = [];
@@ -51,11 +49,8 @@ const Itinerary = () => {
     if (totalActivities > 0) {
       pills.push({ icon: <CalendarDays className="h-3 w-3" />, label: `${totalActivities} planned` });
     }
-    if (nextRelative) {
-      pills.push({ icon: <Clock className="h-3 w-3" />, label: nextRelative });
-    }
-    if (allPlaceholders.length > 0 && totalActivities > 0) {
-      pills.push({ icon: <MapPin className="h-3 w-3" />, label: `${allPlaceholders.length} stops` });
+    if (allPlaceholders.length > 0) {
+      pills.push({ icon: <MapPin className="h-3 w-3" />, label: `${allPlaceholders.length} stop${allPlaceholders.length !== 1 ? "s" : ""}` });
     }
   }
 
@@ -81,7 +76,7 @@ const Itinerary = () => {
     };
   }).filter((g) => g.items.length > 0 || g.placeholders.length > 0);
 
-  // Timeline items
+  // Timeline items with trip info
   const timelineItems = filteredGroups.flatMap((g) =>
     g.items.map((item) => ({ ...item, tripName: g.tripName, tripEmoji: g.tripEmoji }))
   );
@@ -94,20 +89,27 @@ const Itinerary = () => {
     dateMap.set(item.dayDate, existing);
   }
 
-  // Also add placeholders into the timeline by their start date
+  // Placeholders by start date AND end date (for boundary markers)
   const filteredPlaceholders = filteredGroups.flatMap((g) =>
     g.placeholders.map((p) => ({ ...p, tripName: g.tripName, tripEmoji: g.tripEmoji }))
   );
 
-  // Collect all unique dates (from items + placeholder start dates)
-  const placeholderDateMap = new Map<string, typeof filteredPlaceholders>();
+  const placeholderStartMap = new Map<string, typeof filteredPlaceholders>();
+  const placeholderEndMap = new Map<string, typeof filteredPlaceholders>();
   for (const p of filteredPlaceholders) {
-    const existing = placeholderDateMap.get(p.startDate) ?? [];
-    existing.push(p);
-    placeholderDateMap.set(p.startDate, existing);
+    const starts = placeholderStartMap.get(p.startDate) ?? [];
+    starts.push(p);
+    placeholderStartMap.set(p.startDate, starts);
+    const ends = placeholderEndMap.get(p.endDate) ?? [];
+    ends.push(p);
+    placeholderEndMap.set(p.endDate, ends);
   }
 
-  const allDatesSet = new Set([...dateMap.keys(), ...placeholderDateMap.keys()]);
+  const allDatesSet = new Set([
+    ...dateMap.keys(),
+    ...placeholderStartMap.keys(),
+    ...placeholderEndMap.keys(),
+  ]);
   const sortedDates = Array.from(allDatesSet).sort();
 
   const isEmpty = sortedDates.length === 0;
@@ -115,22 +117,22 @@ const Itinerary = () => {
   return (
     <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title="Itinerary" subtitle={subtitle} pills={pills}>
-        {/* Mini calendar strip in header */}
+        {/* Mini calendar strip */}
         {sortedDates.length > 0 && (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             {sortedDates.slice(0, 5).map((date) => {
               const d = parseISO(date);
               const itemCount = (dateMap.get(date) ?? []).length;
-              const placeholderCount = (placeholderDateMap.get(date) ?? []).length;
+              const placeholderCount = (placeholderStartMap.get(date) ?? []).length;
               const isActive = isToday(d);
               return (
                 <div
                   key={date}
                   className="flex flex-col items-center shrink-0"
                   style={{
-                    minWidth: 52,
-                    padding: "7px 5px",
-                    borderRadius: 14,
+                    minWidth: 48,
+                    padding: "6px 4px",
+                    borderRadius: 12,
                     background: isActive ? "rgba(255,255,255,0.20)" : "rgba(255,255,255,0.08)",
                     border: isActive ? "1px solid rgba(255,255,255,0.30)" : "1px solid transparent",
                   }}
@@ -139,16 +141,16 @@ const Itinerary = () => {
                     {format(d, "EEE")}
                   </span>
                   <span className={cn(
-                    "text-[18px] font-bold leading-none mt-0.5",
+                    "text-[17px] font-bold leading-none mt-0.5",
                     isActive ? "text-white" : "text-white/80"
                   )}>
                     {format(d, "d")}
                   </span>
-                  <div className="flex gap-0.5 mt-1.5">
+                  <div className="flex gap-0.5 mt-1">
                     {Array.from({ length: Math.min(itemCount + placeholderCount, 3) }).map((_, i) => (
                       <span
                         key={i}
-                        className="h-1.5 w-1.5 rounded-full"
+                        className="h-1 w-1 rounded-full"
                         style={{
                           background: i < itemCount
                             ? (isActive ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)")
@@ -202,7 +204,8 @@ const Itinerary = () => {
             {sortedDates.map((date, dateIdx) => {
               const d = parseISO(date);
               const items = dateMap.get(date) ?? [];
-              const placeholders = placeholderDateMap.get(date) ?? [];
+              const startsHere = placeholderStartMap.get(date) ?? [];
+              const endsHere = placeholderEndMap.get(date) ?? [];
               const isActiveDay = isToday(d);
               const isTmrw = isTomorrow(d);
 
@@ -233,8 +236,23 @@ const Itinerary = () => {
                     )}
                   </div>
 
-                  {/* Items + placeholders for this date */}
+                  {/* Items + boundary markers */}
                   <div className="flex-1 min-w-0 pb-4 space-y-1.5">
+                    {/* Trip start markers */}
+                    {startsHere.map((stop) => (
+                      <div
+                        key={`start-${stop.id}`}
+                        className="flex items-center gap-2 py-1.5"
+                      >
+                        <Plane className="h-3 w-3 text-[#0D9488]/60 -rotate-45" />
+                        <span className="text-[11px] font-medium text-[#0D9488]/70">
+                          {stop.tripEmoji ?? "✈️"} {stop.destination} begins
+                        </span>
+                        <div className="flex-1 h-px bg-[#0D9488]/10" />
+                      </div>
+                    ))}
+
+                    {/* Activity cards */}
                     {items.map((item) => (
                       <Link
                         key={item.id}
@@ -287,8 +305,8 @@ const Itinerary = () => {
                       </Link>
                     ))}
 
-                    {/* Placeholders shown as destination cards in the timeline */}
-                    {placeholders.map((stop) => (
+                    {/* Destination cards (only on start date, not end) */}
+                    {startsHere.filter((stop) => items.length === 0).length > 0 && items.length === 0 && startsHere.map((stop) => (
                       <Link
                         key={stop.id}
                         to={`/app/trips/${stop.tripId}/itinerary`}
@@ -297,11 +315,6 @@ const Itinerary = () => {
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-[#0D9488]/50 shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-[11px] text-muted-foreground">
-                                {(stop as any).tripEmoji ?? "✈️"} {(stop as any).tripName}
-                              </span>
-                            </div>
                             <p className="text-[14px] font-medium text-foreground truncate">
                               {stop.destination}
                             </p>
@@ -314,6 +327,20 @@ const Itinerary = () => {
                           </Badge>
                         </div>
                       </Link>
+                    ))}
+
+                    {/* Trip end markers */}
+                    {endsHere.map((stop) => (
+                      <div
+                        key={`end-${stop.id}`}
+                        className="flex items-center gap-2 py-1.5"
+                      >
+                        <Plane className="h-3 w-3 text-muted-foreground/40 rotate-[135deg]" />
+                        <span className="text-[11px] font-medium text-muted-foreground/50">
+                          {stop.destination} ends
+                        </span>
+                        <div className="flex-1 h-px bg-muted-foreground/8" />
+                      </div>
                     ))}
                   </div>
                 </div>
