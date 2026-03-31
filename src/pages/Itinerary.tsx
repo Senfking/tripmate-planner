@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useGlobalItinerary, type TripItineraryGroup } from "@/hooks/useGlobalItinerary";
 import { Link } from "react-router-dom";
-import { CalendarDays, MapPin, Loader2 } from "lucide-react";
+import { CalendarDays, MapPin, Loader2, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
+import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 
 type Filter = "all" | "mine";
 
@@ -14,31 +14,48 @@ const Itinerary = () => {
   const { data: groups, isLoading } = useGlobalItinerary();
   const [filter, setFilter] = useState<Filter>("all");
 
-  // Find next upcoming activity for subtitle
+  // Find next upcoming activity for subtitle + pills
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let nextLabel = "";
+  let totalActivities = 0;
+
   const nextActivitySubtitle = (() => {
     if (isLoading) return "Loading…";
     if (!groups || groups.length === 0) return "Nothing planned yet — add activities to your trips";
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     for (const g of groups) {
+      totalActivities += g.items.length;
       for (const item of g.items) {
         const d = parseISO(item.dayDate);
-        if (d >= today) {
-          if (isToday(d)) return `Next: ${item.title} · Tonight`;
-          if (isTomorrow(d)) return `Next: ${item.title} · Tomorrow`;
-          const days = differenceInDays(d, today);
-          return `Next: ${item.title} · In ${days} days`;
+        if (d >= today && !nextLabel) {
+          if (isToday(d)) nextLabel = "Tonight";
+          else if (isTomorrow(d)) nextLabel = "Tomorrow";
+          else nextLabel = `In ${differenceInDays(d, today)}d`;
         }
       }
     }
+    if (nextLabel) {
+      const nextItem = groups.flatMap((g) => g.items).find((item) => parseISO(item.dayDate) >= today);
+      if (nextItem) return `Next: ${nextItem.title} · ${nextLabel}`;
+    }
     return "Nothing planned yet — add activities to your trips";
   })();
+
+  const itineraryPills: HeroPill[] = [];
+  if (!isLoading && groups && groups.length > 0) {
+    if (totalActivities > 0) {
+      itineraryPills.push({ icon: <MapPin className="h-3 w-3" />, label: `${totalActivities} activities` });
+    }
+    if (nextLabel) {
+      itineraryPills.push({ icon: <Clock className="h-3 w-3" />, label: `Next: ${nextLabel}` });
+    }
+  }
 
   if (isLoading) {
     return (
       <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Itinerary" subtitle="Loading…" />
-        <div className="px-4 pt-4 space-y-2">
+        <div className="px-4 mt-4 space-y-2">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-[56px] rounded-[14px] skeleton-shimmer" style={{ animationDelay: `${i * 150}ms` }} />
           ))}
@@ -62,9 +79,9 @@ const Itinerary = () => {
 
   return (
     <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title="Itinerary" subtitle={nextActivitySubtitle} />
+      <TabHeroHeader title="Itinerary" subtitle={nextActivitySubtitle} pills={itineraryPills} />
 
-      <div className="px-4 pt-3 pb-32">
+      <div className="px-4 mt-4 pb-32">
         {/* Toggle */}
         <div className="mb-4 flex gap-1 rounded-xl bg-white p-1 border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {(["all", "mine"] as const).map((f) => (

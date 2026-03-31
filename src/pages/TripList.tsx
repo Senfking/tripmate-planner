@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Users, Plus } from "lucide-react";
+import { Loader2, Users, Plus, Plane, Calendar, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO, isToday, isTomorrow } from "date-fns";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
-import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
+import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
@@ -405,7 +405,7 @@ export default function TripList() {
     return (
       <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Your trips" subtitle="Loading…" />
-        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-3">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-4 mt-4">
           <div className="h-[320px] rounded-3xl skeleton-shimmer" style={{ opacity: 0.1 }} />
           <div className="h-[160px] rounded-2xl skeleton-shimmer" style={{ opacity: 0.1, animationDelay: "150ms" }} />
         </div>
@@ -416,13 +416,28 @@ export default function TripList() {
   const greeting = getGreeting(profile?.display_name);
   const subtitle = getTripsSubtitle(trips);
 
+  // Build pills
+  const tripsPills: HeroPill[] = [];
+  if (trips && trips.length > 0) {
+    tripsPills.push({ icon: <Plane className="h-3 w-3" />, label: `${trips.length} trip${trips.length !== 1 ? "s" : ""}` });
+    const liveCount = trips.filter((t) => t.statusInfo.status === "live").length;
+    if (liveCount > 0) {
+      tripsPills.push({ icon: <Radio className="h-3 w-3" />, label: "Live now" });
+    } else {
+      const next = trips.find((t) => t.statusInfo.status === "countdown");
+      if (next?.statusInfo.daysToGo !== undefined) {
+        tripsPills.push({ icon: <Calendar className="h-3 w-3" />, label: `Next in ${next.statusInfo.daysToGo}d` });
+      }
+    }
+  }
+
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
       <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
-        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" />
+        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={[]} />
 
-        <div className="flex flex-1 flex-col items-center px-6 pt-8">
+        <div className="flex flex-1 flex-col items-center px-6 pt-8 mt-4">
           <Button asChild className="w-full max-w-[260px]">
             <Link to="/app/trips/new">Start a trip</Link>
           </Button>
@@ -444,9 +459,9 @@ export default function TripList() {
 
   return (
     <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title={greeting} subtitle={subtitle} />
+      <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-3 pb-[100px]">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 mt-4 pb-[100px]">
         {/* Hero card for live trip */}
         {liveTrip && <HeroCard trip={liveTrip} />}
 
