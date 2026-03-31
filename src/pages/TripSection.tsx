@@ -53,20 +53,23 @@ export default function TripSection() {
     enabled: !!tripId && !!user,
   });
 
-  const { data: myRole } = useQuery({
-    queryKey: ["my-trip-role", tripId],
+  const { data: myMembership } = useQuery({
+    queryKey: ["my-trip-membership", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("role")
+        .select("role, attendance_status")
         .eq("trip_id", tripId!)
         .eq("user_id", user!.id)
         .single();
       if (error) throw error;
-      return data.role;
+      return data as { role: string; attendance_status: string };
     },
     enabled: !!tripId && !!user,
   });
+
+  const myRole = myMembership?.role;
+  const myAttendanceStatus = myMembership?.attendance_status;
 
   const { data: memberCount } = useQuery({
     queryKey: ["trip-members-count", tripId],
