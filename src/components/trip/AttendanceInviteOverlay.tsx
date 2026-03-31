@@ -244,18 +244,20 @@ export function AttendanceInviteOverlay({
 
         {/* Full overlay body — hero + content */}
         <div className="flex-1 flex flex-col bg-card overflow-hidden">
-          {/* Close button */}
-          <button
-            onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
-            className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-white/80 hover:text-white transition-colors"
-            style={{
-              top: "calc(env(safe-area-inset-top, 0px) + 44px + 12px)",
-              background: "rgba(0,0,0,0.4)",
-              backdropFilter: "blur(8px)",
-            }}
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {/* Close button — only when full screen */}
+          {isFull && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
+              className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-white/80 hover:text-white transition-colors"
+              style={{
+                top: "calc(env(safe-area-inset-top, 0px) + 44px + 12px)",
+                background: "rgba(0,0,0,0.4)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
 
           {/* Hero */}
           <div className="relative w-full" style={{ minHeight: "45%" }}>
