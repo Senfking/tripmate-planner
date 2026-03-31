@@ -496,6 +496,7 @@ export default function TripList() {
 
   // Actionable pills — quick actions
   const tripsPills: HeroPill[] = [
+    { icon: <Hash className="h-3 w-3" />, label: "Join", onClick: () => { setJoinCode(""); setJoinError(""); setJoinOpen(true); } },
     { icon: <Plus className="h-3 w-3" />, label: "New trip", to: "/app/trips/new" },
   ];
   if (liveCount > 0) {
