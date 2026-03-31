@@ -345,6 +345,7 @@ export function AttendanceInviteOverlay({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
