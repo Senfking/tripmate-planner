@@ -62,7 +62,7 @@ const Decisions = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-3 px-4 pt-3 pb-32">
+        <div className="space-y-3 px-4 mt-4 pb-32">
           {items.map((item) => {
             const cfg = typeConfig[item.type];
             const Icon = cfg.icon;

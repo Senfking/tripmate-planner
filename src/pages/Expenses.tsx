@@ -20,11 +20,21 @@ const Expenses = () => {
     return `You owe ${formatCurrency(Math.abs(overallNet), currency)} across ${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
   })();
 
+  const pills: HeroPill[] = [];
+  if (!isLoading && hasExpenses) {
+    if (overallNet > 0.005) {
+      pills.push({ icon: <Wallet className="h-3 w-3" />, label: `Owed ${formatCurrency(overallNet, currency)}` });
+    } else if (overallNet < -0.005) {
+      pills.push({ icon: <Wallet className="h-3 w-3" />, label: `You owe ${formatCurrency(Math.abs(overallNet), currency)}` });
+    }
+    pills.push({ label: `${trips.length} trip${trips.length !== 1 ? "s" : ""}` });
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-[calc(100dvh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Expenses" subtitle="Loading…" />
-        <div className="px-4 pt-4 space-y-2">
+        <div className="px-4 mt-4 space-y-2">
           {[1, 2].map((i) => (
             <div key={i} className="h-[72px] rounded-[14px] skeleton-shimmer" style={{ animationDelay: `${i * 150}ms` }} />
           ))}
@@ -35,7 +45,7 @@ const Expenses = () => {
 
   return (
     <div className="min-h-[calc(100dvh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title="Expenses" subtitle={subtitle} />
+      <TabHeroHeader title="Expenses" subtitle={subtitle} pills={pills} />
 
       {!hasExpenses ? (
         <div className="flex flex-col items-center justify-center pt-20 text-center px-4">
