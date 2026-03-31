@@ -163,5 +163,23 @@ export function useAttachments(tripId: string) {
     return data.signedUrl;
   };
 
-  return { query, uploadFile, addLink, deleteAttachment, getSignedUrl, extractingIds, fetchingIds };
+  const addManual = useMutation({
+    mutationFn: async (params: { title: string; type: string; notes?: string }) => {
+      const { error } = await supabase.from("attachments").insert({
+        trip_id: tripId,
+        title: params.title,
+        type: params.type,
+        notes: params.notes || null,
+        created_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Booking added");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return { query, uploadFile, addLink, addManual, deleteAttachment, getSignedUrl, extractingIds, fetchingIds };
 }
