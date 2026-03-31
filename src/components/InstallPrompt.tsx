@@ -73,17 +73,21 @@ export function InstallPrompt() {
 
   if (isIOS && isSafari && !isInStandaloneMode && !iosDismissed) {
     return (
-      <div className="fixed bottom-24 left-4 right-4 z-50 flex items-center gap-3 rounded-xl border bg-card p-4 shadow-lg md:bottom-4 md:left-auto md:right-4 md:max-w-sm">
-        <IOSShareIcon className="h-5 w-5 shrink-0 text-primary" />
-        <div className="flex-1">
-          <p className="text-sm font-medium">Add Junto to your home screen</p>
-          <p className="text-xs text-muted-foreground">
-            Tap <IOSShareIcon className="inline h-3.5 w-3.5 align-text-bottom" /> Share → Add to Home Screen
-          </p>
+      <div className="fixed bottom-24 left-4 right-4 z-50 rounded-xl border bg-card p-4 shadow-lg md:bottom-4 md:left-auto md:right-4 md:max-w-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">Get the full app experience</p>
+            <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">
+              Open your <span className="font-medium text-foreground">browser menu</span> (tap <IOSShareIcon className="inline h-3.5 w-3.5 align-text-bottom text-foreground" /> at the bottom of Safari) then choose <span className="font-medium text-foreground">"Add to Home Screen"</span>.
+            </p>
+            <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+              This is a Safari setting — not a button inside the app.
+            </p>
+          </div>
+          <button onClick={handleIOSDismiss} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <button onClick={handleIOSDismiss} className="text-muted-foreground hover:text-foreground">
-          <X className="h-4 w-4" />
-        </button>
       </div>
     );
   }
