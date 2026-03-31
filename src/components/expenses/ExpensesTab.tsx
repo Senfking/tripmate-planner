@@ -42,6 +42,50 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const [balancesOpen, setBalancesOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const receiptCameraRef = useRef<HTMLInputElement>(null);
+  const receiptFileRef = useRef<HTMLInputElement>(null);
+
+  const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setScanning(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.readAsDataURL(file);
+      });
+      const { data, error } = await supabase.functions.invoke("scan-receipt", {
+        body: { image: base64 },
+      });
+      if (error || data?.error) throw new Error(data?.message || "Scan failed");
+      // Pre-fill the expense form with scanned data
+      const scanned = data?.result || data;
+      setEditingExpense({
+        id: "",
+        title: scanned.title || scanned.merchant || "",
+        amount: scanned.amount || 0,
+        currency: scanned.currency || settlementCurrency,
+        category: scanned.category || "other",
+        payer_id: user?.id || "",
+        trip_id: tripId,
+        incurred_on: scanned.date || new Date().toISOString().slice(0, 10),
+        notes: scanned.notes || null,
+        itinerary_item_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as ExpenseRow);
+      setFormOpen(true);
+      toast.success("Receipt scanned — review the details");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to scan receipt");
+    } finally {
+      setScanning(false);
+    }
+  };
+  const [expensesOpen, setExpensesOpen] = useState(true);
 
   const profileMap = useMemo(
     () => Object.fromEntries(members.map((m) => [m.userId, m.displayName])),
