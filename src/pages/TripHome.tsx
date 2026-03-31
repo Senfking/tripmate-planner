@@ -35,6 +35,35 @@ function LiveIndicator({ status }: { status: ConnectionStatus }) {
   );
 }
 
+function HeroAvatar() {
+  const { profile, user } = useAuth();
+  const initials = (() => {
+    if (profile?.display_name) return profile.display_name.charAt(0).toUpperCase();
+    if (user?.email) return user.email.charAt(0).toUpperCase();
+    return "?";
+  })();
+
+  return (
+    <Link
+      to="/app/more"
+      className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden"
+      style={{
+        background: "rgba(0,0,0,0.3)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      }}
+    >
+      {profile?.avatar_url ? (
+        <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+      ) : (
+        <span className="text-white text-xs font-semibold">{initials}</span>
+      )}
+    </Link>
+  );
+}
+
 const ATTENDANCE_BADGE: Record<string, { label: string; className: string }> = {
   going: { label: "✓ You're going", className: "bg-[#0D9488]/10 text-[#0D9488] border-[#0D9488]/20" },
   maybe: { label: "~ Maybe", className: "bg-amber-50 text-amber-700 border-amber-200" },
