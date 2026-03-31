@@ -190,11 +190,19 @@ export function AttendanceInviteOverlay({
           }}
           onClick={!isFull ? (e) => { e.stopPropagation(); onPeekTap?.(); } : undefined}
         >
-          {/* Message row */}
-          <div className="flex items-center justify-center px-4 text-[13px] font-semibold text-white" style={{ height: 44 }}>
-            <span style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
+          {/* Message row with inline X button */}
+          <div className="flex items-center px-4 text-[13px] font-semibold text-white" style={{ height: 44 }}>
+            <span className="flex-1 text-center" style={{ opacity: messageFade, transition: "opacity 0.3s ease" }}>
               👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
             </span>
+            {!isFull && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
+                className="shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-white/20 ml-2"
+              >
+                <X className="h-3 w-3 text-white" />
+              </button>
+            )}
           </div>
           {/* Avatar row — visible when peeking, collapses when full */}
           <div
