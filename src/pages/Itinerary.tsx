@@ -386,17 +386,18 @@ const Itinerary = () => {
                     </div>
                   </div>
 
-                  {/* Destination end — full-width subtle divider after the day */}
+                  {/* Destination departure — visible divider after the day */}
                   {destEnds.map((dest, i) => (
                     <div
                       key={`dest-end-${dest.tripId}-${dest.destination}-${i}`}
-                      className="flex items-center gap-2 py-1.5 px-1"
+                      className="flex items-center gap-2.5 py-2 px-1"
                     >
-                      <div className="flex-1 h-px bg-muted-foreground/6" />
-                      <span className="text-[10px] font-medium text-muted-foreground/30 whitespace-nowrap">
-                        leaving {dest.destination}
+                      <div className="flex-1 h-px bg-muted-foreground/15" />
+                      <MapPin className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                      <span className="text-[11px] font-medium text-muted-foreground/50 whitespace-nowrap">
+                        ← leaving {dest.destination}
                       </span>
-                      <div className="flex-1 h-px bg-muted-foreground/6" />
+                      <div className="flex-1 h-px bg-muted-foreground/15" />
                     </div>
                   ))}
 
