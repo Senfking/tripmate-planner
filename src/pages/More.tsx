@@ -758,7 +758,7 @@ const More = () => {
             <SettingRow icon={Coins} label={`Default currency: ${profile?.default_currency || "EUR"}`} onClick={() => setShowCurrency(true)} />
           )}
 
-          {!isGoogleUser && (
+          {!isGoogleOnly && (
             <>
               <SettingRow icon={KeyRound} label="Change password" onClick={handleResetPassword} />
               <SettingRow icon={Mail} label="Change email" onClick={() => setShowEmailDrawer(true)} />
