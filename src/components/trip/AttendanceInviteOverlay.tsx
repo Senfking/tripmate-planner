@@ -245,8 +245,14 @@ export function AttendanceInviteOverlay({
               {/* Content */}
               <div className="flex-1 rounded-t-3xl -mt-4 relative bg-card px-5 pt-5 pb-8 overflow-y-auto">
                 {successState ? (
-                  <div className="flex flex-col items-center justify-center py-16">
-                    {showConfetti && <div className="confetti-burst" />}
+                  <div className="flex flex-col items-center justify-center py-16 animate-success-fade-in">
+                    {showConfetti && (
+                      <div className="confetti-burst">
+                        {[...Array(8)].map((_, i) => (
+                          <span key={i} className={`confetti-dot confetti-dot-${i}`} />
+                        ))}
+                      </div>
+                    )}
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0D9488]/10">
                       <Check className="h-8 w-8 text-[#0D9488]" />
                     </div>
