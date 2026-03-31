@@ -53,6 +53,8 @@ export default function TripNew() {
       setJoinError("Code not found — check with your organiser");
     },
   });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
