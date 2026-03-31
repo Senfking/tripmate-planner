@@ -296,6 +296,39 @@ function getGreeting(displayName: string | null | undefined): string {
 /* ─── Main Page ─── */
 export default function TripList() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState("");
+
+  const joinMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const { data, error } = await supabase.rpc("join_by_code", { _code: code });
+      if (error) throw error;
+      const result = data as any;
+      if (result?.error) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (data: any) => {
+      setJoinOpen(false);
+      setJoinCode("");
+      setJoinError("");
+      toast.success(`Joined ${data.trip_name || "trip"}!`);
+      navigate(`/app/trips/${data.trip_id}`);
+    },
+    onError: (err: any) => {
+      if (err.message === "already_member") {
+        setJoinError("");
+        setJoinOpen(false);
+        setJoinCode("");
+        const tripId = (err as any)?.trip_id;
+        if (tripId) navigate(`/app/trips/${tripId}`);
+        else toast.info("You're already a member of this trip");
+      } else {
+        setJoinError("Code not found — check with your organiser");
+      }
+    },
+  });
 
   const { data: trips, isLoading } = useQuery({
     queryKey: ["trips", user?.id],
