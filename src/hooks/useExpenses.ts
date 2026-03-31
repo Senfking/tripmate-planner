@@ -248,31 +248,6 @@ export function useExpenses(tripId: string) {
     (expensesQuery.data || []).length > 0 &&
     (expensesQuery.data || []).every((e) => e.currency === settlementCurrency);
 
-  // Auto-refresh rates when empty or stale (once per session)
-  useEffect(() => {
-    const shouldRefresh =
-      (ratesEmpty || (ratesStale && !ratesQuery.isError)) &&
-      !sessionStorage.getItem(SESSION_KEY);
-
-    if (!shouldRefresh) return;
-
-    sessionStorage.setItem(SESSION_KEY, "1");
-    setRefreshingRates(true);
-
-    (async () => {
-      try {
-        await supabase.functions.invoke("refresh-exchange-rates");
-        // Give the edge function a moment to write to the DB before re-reading
-        await new Promise((r) => setTimeout(r, 2000));
-        await qc.invalidateQueries({ queryKey: ["exchange-rates"] });
-        await qc.invalidateQueries({ queryKey: ["cached-currency-codes"] });
-      } catch {
-        // Silent — ignore failures
-      } finally {
-        setRefreshingRates(false);
-      }
-    })();
-  }, [qc, ratesEmpty, ratesStale, ratesQuery.isError]);
 
   // Fetch itinerary items for linking
   const itineraryQuery = useQuery({
