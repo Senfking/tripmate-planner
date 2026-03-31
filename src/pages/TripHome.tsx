@@ -125,19 +125,42 @@ export default function TripHome() {
     enabled: !!tripId && !!user,
   });
 
-  const { data: myRole } = useQuery({
-    queryKey: ["my-trip-role", tripId],
+  const { data: myMembership } = useQuery({
+    queryKey: ["my-trip-membership", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("role")
+        .select("role, attendance_status")
         .eq("trip_id", tripId!)
         .eq("user_id", user!.id)
         .single();
       if (error) throw error;
-      return data.role;
+      return data as { role: string; attendance_status: string };
     },
     enabled: !!tripId && !!user,
+  });
+
+  const myRole = myMembership?.role;
+  const myAttendanceStatus = myMembership?.attendance_status;
+
+  const updateAttendance = useMutation({
+    mutationFn: async (status: string) => {
+      const { error } = await supabase
+        .from("trip_members")
+        .update({ attendance_status: status } as any)
+        .eq("trip_id", tripId!)
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: (_, status) => {
+      qc.invalidateQueries({ queryKey: ["my-trip-membership", tripId] });
+      qc.invalidateQueries({ queryKey: ["trip-members-full", tripId] });
+      qc.invalidateQueries({ queryKey: ["admin-members", tripId] });
+      if (status === "going") toast.success("You're in! 🎉");
+      else if (status === "maybe") toast.success("Marked as maybe");
+      else toast.success("Got it — you can still follow along");
+    },
+    onError: () => toast.error("Failed to update attendance"),
   });
 
   const { data: members } = useQuery({
