@@ -194,6 +194,9 @@ const Itinerary = () => {
                   )}>
                     {format(d, "d")}
                   </span>
+                  <span className="text-[8px] font-medium uppercase text-white/30 mt-0.5">
+                    {format(d, "MMM")}
+                  </span>
                   {itemCount > 0 && (
                     <div className="flex gap-0.5 mt-1">
                       {Array.from({ length: Math.min(itemCount, 3) }).map((_, i) => (
