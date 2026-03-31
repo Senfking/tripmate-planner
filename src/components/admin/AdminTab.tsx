@@ -151,6 +151,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
 
   /* ── Danger zone actions ───────────────────── */
   const [dangerOpen, setDangerOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   const leaveTrip = useMutation({
     mutationFn: async () => {
