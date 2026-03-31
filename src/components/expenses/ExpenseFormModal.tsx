@@ -392,9 +392,9 @@ export function ExpenseFormModal({
 
       {/* Split between */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Label className="text-xs">Split between</Label>
-          <div className="flex gap-1">
+          <div className="flex gap-1 self-start sm:self-auto">
             {(["equal", "percent", "custom"] as const).map((mode) => (
               <Button
                 key={mode}
@@ -411,12 +411,12 @@ export function ExpenseFormModal({
             ))}
           </div>
         </div>
-        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+        <div className="space-y-1.5 max-h-48 overflow-y-auto overflow-x-hidden">
           {members.map((m) => {
             const isSelected = selectedMembers.has(m.userId);
             const showInput = (splitMode === "custom" || splitMode === "percent") && isSelected;
             return (
-              <div key={m.userId} className="flex items-center gap-2 min-h-[36px]">
+              <div key={m.userId} className="grid min-h-[36px] grid-cols-[auto,minmax(0,1fr),auto] items-center gap-2 min-w-0">
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={(checked) => {
@@ -429,10 +429,10 @@ export function ExpenseFormModal({
                   {m.displayName}{m.userId === user?.id ? " (You)" : ""}
                 </span>
                 {showInput && (
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex min-w-0 items-center justify-end gap-1">
                     <Input
-                      type="number" step="0.01" min="0"
-                      className="w-20 h-8 text-xs text-right"
+                      type="number" step="0.01" min="0" inputMode="decimal"
+                      className="h-9 w-[4.75rem] px-2 text-right text-base md:h-8 md:w-20 md:text-sm"
                       value={customAmounts[m.userId] || ""}
                       onChange={(e) => setCustomAmounts({ ...customAmounts, [m.userId]: e.target.value })}
                       placeholder={splitMode === "percent" ? "0" : "0.00"}
