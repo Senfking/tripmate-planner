@@ -54,6 +54,7 @@ type Props = {
   isActive: boolean;
   isLocked: boolean;
   memberCount: number;
+  myAttendanceStatus?: string;
 };
 
 export function VibeBoard({
@@ -62,6 +63,7 @@ export function VibeBoard({
   isActive,
   isLocked,
   memberCount,
+  myAttendanceStatus,
 }: Props) {
   const {
     myResponses,
@@ -135,6 +137,21 @@ export function VibeBoard({
       },
     });
   };
+
+  // Gate: pending or not_going users can't participate
+  if (myAttendanceStatus === "pending" || myAttendanceStatus === "not_going") {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center space-y-3">
+        <Sparkles className="h-8 w-8 mx-auto text-muted-foreground/50" />
+        <p className="text-sm text-muted-foreground">
+          Confirm your attendance first to share your travel vibe.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => window.history.back()}>
+          Go to trip to confirm →
+        </Button>
+      </div>
+    );
+  }
 
   // Inactive state
   if (!isActive) {

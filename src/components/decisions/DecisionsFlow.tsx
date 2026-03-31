@@ -15,6 +15,7 @@ type Props = {
   isLocked: boolean;
   memberCount: number;
   routeLocked: boolean;
+  myAttendanceStatus?: string;
 };
 
 export function DecisionsFlow({
@@ -24,6 +25,7 @@ export function DecisionsFlow({
   isLocked: vibeLocked,
   memberCount,
   routeLocked,
+  myAttendanceStatus,
 }: Props) {
   const [searchParams] = useSearchParams();
   const canManage = myRole === "owner" || myRole === "admin";
@@ -196,6 +198,7 @@ export function DecisionsFlow({
             isActive={isActive}
             isLocked={vibeLocked}
             memberCount={memberCount}
+            myAttendanceStatus={myAttendanceStatus}
           />
         </StepSection>
       </div>

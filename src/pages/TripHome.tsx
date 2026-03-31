@@ -1,15 +1,17 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Loader2, MapPin, Share2 } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Share2, Plane } from "lucide-react";
 import { useState } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { MemberListSheet } from "@/components/trip/MemberListSheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { format, parseISO, isWithinInterval, differenceInCalendarDays, differenceInDays } from "date-fns";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
+import { toast } from "sonner";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 
 function getInitial(name: string | null | undefined) {
@@ -106,6 +108,7 @@ export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { connectionStatus } = useTripRealtime(tripId);
 
   const { data: trip, isLoading } = useQuery({
@@ -122,19 +125,42 @@ export default function TripHome() {
     enabled: !!tripId && !!user,
   });
 
-  const { data: myRole } = useQuery({
-    queryKey: ["my-trip-role", tripId],
+  const { data: myMembership } = useQuery({
+    queryKey: ["my-trip-membership", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("role")
+        .select("role, attendance_status")
         .eq("trip_id", tripId!)
         .eq("user_id", user!.id)
         .single();
       if (error) throw error;
-      return data.role;
+      return data as { role: string; attendance_status: string };
     },
     enabled: !!tripId && !!user,
+  });
+
+  const myRole = myMembership?.role;
+  const myAttendanceStatus = myMembership?.attendance_status;
+
+  const updateAttendance = useMutation({
+    mutationFn: async (status: string) => {
+      const { error } = await supabase
+        .from("trip_members")
+        .update({ attendance_status: status } as any)
+        .eq("trip_id", tripId!)
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: (_, status) => {
+      qc.invalidateQueries({ queryKey: ["my-trip-membership", tripId] });
+      qc.invalidateQueries({ queryKey: ["trip-members-full", tripId] });
+      qc.invalidateQueries({ queryKey: ["admin-members", tripId] });
+      if (status === "going") toast.success("You're in! 🎉");
+      else if (status === "maybe") toast.success("Marked as maybe");
+      else toast.success("Got it — you can still follow along");
+    },
+    onError: () => toast.error("Failed to update attendance"),
   });
 
   const { data: members } = useQuery({
@@ -291,6 +317,45 @@ export default function TripHome() {
             onShare={() => setShareInviteOpen(true)}
           />
         </div>
+
+        {/* Attendance confirmation card */}
+        {myAttendanceStatus === "pending" && (
+          <div className="mx-4 mb-3 rounded-2xl bg-white border shadow-sm p-4" style={{ borderColor: "rgba(13,148,136,0.2)" }}>
+            <p className="text-[11px] text-muted-foreground">{trip.emoji ?? "✈️"} {trip.name}</p>
+            <p className="text-[17px] font-bold text-foreground mt-1">Are you going?</p>
+            <p className="text-sm text-muted-foreground mt-1">Let the group know so they can plan around you.</p>
+            <div className="flex gap-2 mt-4">
+              <Button
+                size="sm"
+                className="flex-1 text-white text-xs"
+                style={{ background: "#0D9488" }}
+                onClick={() => updateAttendance.mutate("going")}
+                disabled={updateAttendance.isPending}
+              >
+                ✈️ Going
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs"
+                style={{ borderColor: "#0D9488", color: "#0D9488" }}
+                onClick={() => updateAttendance.mutate("maybe")}
+                disabled={updateAttendance.isPending}
+              >
+                🤔 Maybe
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs text-muted-foreground"
+                onClick={() => updateAttendance.mutate("not_going")}
+                disabled={updateAttendance.isPending}
+              >
+                ✗ Can't make it
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Section cards */}
         <TripDashboard

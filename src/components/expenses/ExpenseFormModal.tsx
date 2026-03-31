@@ -105,7 +105,7 @@ export function ExpenseFormModal({
         setNotes("");
         setItineraryItemId("none");
         setSplitMode("equal");
-        setSelectedMembers(new Set(members.map((m) => m.userId)));
+        setSelectedMembers(new Set(members.filter(m => m.attendanceStatus === "going" || m.attendanceStatus === "maybe").map((m) => m.userId)));
         setCustomAmounts({});
       }
     }
