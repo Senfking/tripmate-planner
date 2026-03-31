@@ -73,6 +73,8 @@ export function ExpenseFormModal({
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
   const [settlementDismissed, setSettlementDismissed] = useState(false);
   const [titleManuallySet, setTitleManuallySet] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
