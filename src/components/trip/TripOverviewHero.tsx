@@ -42,7 +42,6 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
         .order("joined_at");
       if (error) throw error;
 
-      // Fetch profiles for all members
       const userIds = data.map((m) => m.user_id);
       const { data: profiles } = await supabase
         .rpc("get_public_profiles", { _user_ids: userIds });
@@ -57,16 +56,16 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
 
   // Status summary
   let statusLine: string;
-  let statusSub: string | null = null;
+  let statusAccent: string | null = null;
 
   if (routeLocked && stops && stops.length > 0) {
     const first = stops[0];
     const last = stops[stops.length - 1];
+    statusLine = `${stops.length} stop${stops.length > 1 ? "s" : ""} · ${format(new Date(first.start_date), "MMM d")} – ${format(new Date(last.end_date), "MMM d")}`;
     const days = Math.ceil(
       (new Date(last.end_date).getTime() - new Date(first.start_date).getTime()) / (1000 * 60 * 60 * 24)
     );
-    statusLine = `${stops.length} stop${stops.length > 1 ? "s" : ""} · ${format(new Date(first.start_date), "MMM d")} – ${format(new Date(last.end_date), "MMM d")}`;
-    statusSub = `${days} day${days !== 1 ? "s" : ""}`;
+    statusAccent = `${days} day${days !== 1 ? "s" : ""}`;
   } else if (startDate || endDate) {
     const parts: string[] = [];
     if (startDate && endDate) {
@@ -76,14 +75,15 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
     } else {
       parts.push(`Until ${format(new Date(endDate!), "MMM d")}`);
     }
-    parts.push("Planning in progress");
     statusLine = parts.join(" · ");
+    statusAccent = "Planning in progress";
   } else {
-    statusLine = "Dates TBD · Planning in progress";
+    statusLine = "Dates TBD";
+    statusAccent = "Planning in progress";
   }
 
   const visibleMembers = members?.slice(0, 5) ?? [];
-  const extraCount = (members?.length ?? 0) - 5;
+  const memberCount = members?.length ?? 0;
 
   return (
     <>
@@ -93,33 +93,41 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
           background: "rgba(255, 255, 255, 0.95)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
-          border: "1px solid rgba(255, 255, 255, 0.8)",
-          boxShadow: "0 2px 12px rgba(13, 148, 136, 0.08)",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)",
         }}
       >
         <div className="flex-1 min-w-0">
           <p className="text-[14px] font-medium" style={{ color: "#0F172A" }}>{statusLine}</p>
-          {statusSub && <p className="text-[13px] mt-1" style={{ color: "#64748B" }}>{statusSub}</p>}
+          {statusAccent && (
+            <p className="text-[13px] mt-1 font-medium" style={{ color: "#0D9488" }}>
+              {statusAccent}
+            </p>
+          )}
         </div>
 
-        {/* Avatar group */}
+        {/* Avatar group + member count */}
         <button
           onClick={() => setSheetOpen(true)}
-          className="flex items-center shrink-0 -space-x-2"
+          className="flex items-center gap-2 shrink-0"
         >
-          {visibleMembers.map((m) => (
-            <Avatar key={m.user_id} className="h-9 w-9" style={{ border: "2px solid rgba(255,255,255,0.9)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", borderRadius: "9999px" }}>
-              {m.profile?.avatar_url && (
-                <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
-              )}
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-                {getInitial(m.profile?.display_name)}
-              </AvatarFallback>
-            </Avatar>
-          ))}
-          {extraCount > 0 && (
-            <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-card bg-muted text-xs font-medium text-muted-foreground">
-              +{extraCount}
+          <div className="flex items-center -space-x-2">
+            {visibleMembers.map((m) => (
+              <Avatar
+                key={m.user_id}
+                className="h-8 w-8 ring-2 ring-white"
+              >
+                {m.profile?.avatar_url && (
+                  <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
+                )}
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                  {getInitial(m.profile?.display_name)}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
+          {memberCount > 0 && (
+            <span className="text-[12px] text-muted-foreground whitespace-nowrap">
+              {memberCount} member{memberCount !== 1 ? "s" : ""}
             </span>
           )}
         </button>
