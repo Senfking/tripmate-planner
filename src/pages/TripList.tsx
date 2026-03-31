@@ -469,13 +469,13 @@ export default function TripList() {
           <Button asChild className="w-full max-w-[260px] mt-6">
             <Link to="/app/trips/new">Start a trip</Link>
           </Button>
-          <Link
-            to="/join"
-            className="mt-3 text-sm font-medium"
+          <button
+            className="mt-3 text-sm font-medium bg-transparent border-none cursor-pointer"
             style={{ color: "#0D9488" }}
+            onClick={() => setJoinOpen(true)}
           >
             Join with a code
-          </Link>
+          </button>
         </div>
       </div>
     );
