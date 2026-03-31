@@ -243,7 +243,7 @@ export default function TripHome() {
         </button>
 
         {/* TOP RIGHT — Live indicator */}
-        <div className="absolute right-4" style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
+        <div className="absolute right-4" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
           <LiveIndicator status={connectionStatus} />
         </div>
 
