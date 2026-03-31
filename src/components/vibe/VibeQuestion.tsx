@@ -53,9 +53,9 @@ export function VibeQuestion({
               disabled={disabled}
               onClick={() => onSelect(opt.label)}
               className={cn(
-                "rounded-xl transition-all px-3 flex items-center",
+                "rounded-xl transition-all px-4 py-2.5 flex",
                 "disabled:opacity-60 disabled:cursor-not-allowed",
-                multiSelect ? "h-11 justify-center text-center" : "h-14 text-left flex-col items-start justify-center",
+                multiSelect ? "min-h-[48px] justify-center text-center items-center" : "min-h-[60px] text-left flex-col items-start justify-center",
                 isSelected
                   ? "text-white border border-transparent shadow-md"
                   : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#0D9488]/40 hover:shadow-sm active:scale-[0.97]"
