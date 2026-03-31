@@ -88,12 +88,11 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
   return (
     <>
       <div
-        className="rounded-2xl p-4 flex items-center gap-3"
+        className="rounded-2xl p-4 flex items-center gap-3 border-none shadow-md"
         style={{
           background: "rgba(255, 255, 255, 0.95)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)",
         }}
       >
         <div className="flex-1 min-w-0">
