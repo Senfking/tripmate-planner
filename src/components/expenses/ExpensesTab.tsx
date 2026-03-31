@@ -409,7 +409,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   )}
                 </div>
               </div>
-              {!expensesOpen && totalExpenses !== null && (
+              {!expensesOpen && !ratesLoading && totalExpenses !== null && (
                 <p className="text-xs text-muted-foreground pl-6">
                   Total: {formatCurrency(totalExpenses, settlementCurrency)}
                 </p>
