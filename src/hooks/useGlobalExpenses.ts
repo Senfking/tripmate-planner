@@ -201,6 +201,7 @@ export function useGlobalExpenses() {
           tripEmoji: trip.emoji,
           currency: sc,
           net,
+          photoUrl: resolvePhoto(trip.name, stopDestsMap[tripId] ?? []),
         });
         overallNet += net;
       }
