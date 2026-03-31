@@ -261,153 +261,159 @@ const Itinerary = () => {
               const destEnds = destEndMap.get(date) ?? [];
               const isActiveDay = isToday(d);
               const isTmrw = isTomorrow(d);
-              const hasContent = items.length > 0 || tripStarts.length > 0 || tripEnds.length > 0 || destStarts.length > 0 || destEnds.length > 0;
+              const hasItems = items.length > 0;
 
               return (
-                <div key={date} id={`day-${date}`} className="flex gap-3 mb-0.5 scroll-mt-4">
-                  {/* Date column */}
-                  <div className="flex flex-col items-center w-[52px] shrink-0 pt-1">
-                    <span className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider",
-                      isActiveDay ? "text-[#0D9488]" : "text-muted-foreground"
-                    )}>
-                      {isActiveDay ? "Today" : isTmrw ? "Tmrw" : format(d, "EEE")}
-                    </span>
-                    <span className={cn(
-                      "text-[22px] font-bold leading-none mt-0.5",
-                      isActiveDay ? "text-[#0D9488]" : hasContent ? "text-foreground" : "text-muted-foreground/40"
-                    )}>
-                      {format(d, "d")}
-                    </span>
-                    <span className={cn(
-                      "text-[10px] font-medium",
-                      isActiveDay ? "text-[#0D9488]/60" : "text-muted-foreground/60"
-                    )}>
-                      {format(d, "MMM")}
-                    </span>
-                    {dateIdx < sortedDates.length - 1 && (
-                      <div className="flex-1 w-px mt-2 mb-0" style={{ background: "rgba(0,0,0,0.08)" }} />
-                    )}
-                  </div>
+                <div key={date} id={`day-${date}`} className="scroll-mt-4">
+                  {/* Trip start — full-width banner before the day */}
+                  {tripStarts.map((trip, i) => (
+                    <div
+                      key={`trip-start-${trip.tripId}-${i}`}
+                      className="flex items-center gap-2.5 py-3 px-1"
+                    >
+                      <div className="flex-1 h-px bg-[#0D9488]/20" />
+                      <Plane className="h-3.5 w-3.5 text-[#0D9488] -rotate-45 shrink-0" />
+                      <span className="text-[11px] font-semibold text-[#0D9488] whitespace-nowrap">
+                        {trip.tripEmoji ?? "✈️"} {trip.tripName} begins
+                      </span>
+                      <div className="flex-1 h-px bg-[#0D9488]/20" />
+                    </div>
+                  ))}
 
-                  {/* Content column */}
-                  <div className="flex-1 min-w-0 pb-3 space-y-1.5">
-                    {/* Trip start markers — prominent */}
-                    {tripStarts.map((trip, i) => (
-                      <div
-                        key={`trip-start-${trip.tripId}-${i}`}
-                        className="flex items-center gap-2 py-2"
-                      >
-                        <Plane className="h-3.5 w-3.5 text-[#0D9488] -rotate-45" />
-                        <span className="text-[12px] font-semibold text-[#0D9488]">
-                          {trip.tripEmoji ?? "✈️"} {trip.tripName} begins
-                        </span>
-                        <div className="flex-1 h-px bg-[#0D9488]/20" />
-                      </div>
-                    ))}
+                  {/* Destination shift — full-width subtle divider before the day */}
+                  {destStarts.map((dest, i) => (
+                    <div
+                      key={`dest-start-${dest.tripId}-${dest.destination}-${i}`}
+                      className="flex items-center gap-2 py-2 px-1"
+                    >
+                      <div className="flex-1 h-px bg-muted-foreground/8" />
+                      <MapPin className="h-3 w-3 text-muted-foreground/25 shrink-0" />
+                      <span className="text-[10px] font-medium text-muted-foreground/40 whitespace-nowrap">
+                        {dest.destination}
+                      </span>
+                      <div className="flex-1 h-px bg-muted-foreground/8" />
+                    </div>
+                  ))}
 
-                    {/* Destination shift markers — subtle */}
-                    {destStarts.map((dest, i) => (
-                      <div
-                        key={`dest-start-${dest.tripId}-${dest.destination}-${i}`}
-                        className="flex items-center gap-2 py-1"
-                      >
-                        <MapPin className="h-3 w-3 text-muted-foreground/30" />
-                        <span className="text-[11px] font-medium text-muted-foreground/50">
-                          → {dest.destination}
-                        </span>
-                        <div className="flex-1 h-px bg-muted-foreground/6" />
-                      </div>
-                    ))}
+                  {/* Day row */}
+                  <div className="flex gap-3 mb-0.5">
+                    {/* Date column */}
+                    <div className="flex flex-col items-center w-[52px] shrink-0 pt-1">
+                      <span className={cn(
+                        "text-[10px] font-bold uppercase tracking-wider",
+                        isActiveDay ? "text-[#0D9488]" : "text-muted-foreground"
+                      )}>
+                        {isActiveDay ? "Today" : isTmrw ? "Tmrw" : format(d, "EEE")}
+                      </span>
+                      <span className={cn(
+                        "text-[22px] font-bold leading-none mt-0.5",
+                        isActiveDay ? "text-[#0D9488]" : hasItems ? "text-foreground" : "text-muted-foreground/40"
+                      )}>
+                        {format(d, "d")}
+                      </span>
+                      <span className={cn(
+                        "text-[10px] font-medium",
+                        isActiveDay ? "text-[#0D9488]/60" : "text-muted-foreground/60"
+                      )}>
+                        {format(d, "MMM")}
+                      </span>
+                      {dateIdx < sortedDates.length - 1 && (
+                        <div className="flex-1 w-px mt-2 mb-0" style={{ background: "rgba(0,0,0,0.08)" }} />
+                      )}
+                    </div>
 
-                    {/* Activity cards */}
-                    {items.map((item) => (
-                      <Link
-                        key={item.id}
-                        to={`/app/trips/${item.tripId}/itinerary`}
-                        className={cn(
-                          "block rounded-[14px] border shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-3 active:scale-[0.98] transition-transform",
-                          isActiveDay ? "bg-white border-[#0D9488]/15" : "bg-white border-[#F1F5F9]"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          {item.attendance === "in" && (
-                            <span className="h-2 w-2 rounded-full bg-[#0D9488] shrink-0" />
+                    {/* Content column */}
+                    <div className="flex-1 min-w-0 pb-3 space-y-1.5">
+                      {/* Activity cards */}
+                      {items.map((item) => (
+                        <Link
+                          key={item.id}
+                          to={`/app/trips/${item.tripId}/itinerary`}
+                          className={cn(
+                            "block rounded-[14px] border shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-3 active:scale-[0.98] transition-transform",
+                            isActiveDay ? "bg-white border-[#0D9488]/15" : "bg-white border-[#F1F5F9]"
                           )}
-                          {item.attendance === "maybe" && (
-                            <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-[11px] text-muted-foreground">
-                                {item.tripEmoji ?? "✈️"} {item.tripName}
-                              </span>
-                              {item.startTime && (
-                                <span className="text-[11px] text-muted-foreground/60">
-                                  · {item.startTime.slice(0, 5)}
+                        >
+                          <div className="flex items-center gap-2">
+                            {item.attendance === "in" && (
+                              <span className="h-2 w-2 rounded-full bg-[#0D9488] shrink-0" />
+                            )}
+                            {item.attendance === "maybe" && (
+                              <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-[11px] text-muted-foreground">
+                                  {item.tripEmoji ?? "✈️"} {item.tripName}
                                 </span>
+                                {item.startTime && (
+                                  <span className="text-[11px] text-muted-foreground/60">
+                                    · {item.startTime.slice(0, 5)}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[14px] font-medium text-foreground truncate">
+                                {item.title}
+                              </p>
+                              {item.locationText && (
+                                <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  {item.locationText}
+                                </p>
                               )}
                             </div>
-                            <p className="text-[14px] font-medium text-foreground truncate">
-                              {item.title}
-                            </p>
-                            {item.locationText && (
-                              <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
-                                <MapPin className="h-3 w-3 shrink-0" />
-                                {item.locationText}
-                              </p>
-                            )}
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] shrink-0",
+                                item.status === "confirmed"
+                                  ? "border-[#0D9488]/30 text-[#0D9488]"
+                                  : "border-muted-foreground/30 text-muted-foreground"
+                              )}
+                            >
+                              {item.status}
+                            </Badge>
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[10px] shrink-0",
-                              item.status === "confirmed"
-                                ? "border-[#0D9488]/30 text-[#0D9488]"
-                                : "border-muted-foreground/30 text-muted-foreground"
-                            )}
-                          >
-                            {item.status}
-                          </Badge>
+                        </Link>
+                      ))}
+
+                      {/* Empty day */}
+                      {!hasItems && (
+                        <div className="py-1">
+                          <span className="text-[11px] text-muted-foreground/30 italic">Free day</span>
                         </div>
-                      </Link>
-                    ))}
-
-                    {/* Empty day — no items, no markers, just a free day */}
-                    {!hasContent && (
-                      <div className="py-1">
-                        <span className="text-[11px] text-muted-foreground/30 italic">Free day</span>
-                      </div>
-                    )}
-
-                    {/* Destination end markers — subtle */}
-                    {destEnds.map((dest, i) => (
-                      <div
-                        key={`dest-end-${dest.tripId}-${dest.destination}-${i}`}
-                        className="flex items-center gap-2 py-1"
-                      >
-                        <MapPin className="h-3 w-3 text-muted-foreground/20" />
-                        <span className="text-[11px] font-medium text-muted-foreground/35">
-                          {dest.destination} ·
-                        </span>
-                        <div className="flex-1 h-px bg-muted-foreground/5" />
-                      </div>
-                    ))}
-
-                    {/* Trip end markers — prominent */}
-                    {tripEnds.map((trip, i) => (
-                      <div
-                        key={`trip-end-${trip.tripId}-${i}`}
-                        className="flex items-center gap-2 py-2"
-                      >
-                        <Plane className="h-3.5 w-3.5 text-muted-foreground/40 rotate-[135deg]" />
-                        <span className="text-[12px] font-semibold text-muted-foreground/50">
-                          {trip.tripEmoji ?? "✈️"} {trip.tripName} ends
-                        </span>
-                        <div className="flex-1 h-px bg-muted-foreground/10" />
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
+
+                  {/* Destination end — full-width subtle divider after the day */}
+                  {destEnds.map((dest, i) => (
+                    <div
+                      key={`dest-end-${dest.tripId}-${dest.destination}-${i}`}
+                      className="flex items-center gap-2 py-1.5 px-1"
+                    >
+                      <div className="flex-1 h-px bg-muted-foreground/6" />
+                      <span className="text-[10px] font-medium text-muted-foreground/30 whitespace-nowrap">
+                        leaving {dest.destination}
+                      </span>
+                      <div className="flex-1 h-px bg-muted-foreground/6" />
+                    </div>
+                  ))}
+
+                  {/* Trip end — full-width banner after the day */}
+                  {tripEnds.map((trip, i) => (
+                    <div
+                      key={`trip-end-${trip.tripId}-${i}`}
+                      className="flex items-center gap-2.5 py-3 px-1"
+                    >
+                      <div className="flex-1 h-px bg-muted-foreground/10" />
+                      <Plane className="h-3.5 w-3.5 text-muted-foreground/35 rotate-[135deg] shrink-0" />
+                      <span className="text-[11px] font-semibold text-muted-foreground/45 whitespace-nowrap">
+                        {trip.tripEmoji ?? "✈️"} {trip.tripName} ends
+                      </span>
+                      <div className="flex-1 h-px bg-muted-foreground/10" />
+                    </div>
+                  ))}
                 </div>
               );
             })}
