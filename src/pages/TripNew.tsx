@@ -152,8 +152,56 @@ export default function TripNew() {
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Create Trip
           </Button>
+
+          <button
+            type="button"
+            onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
+            className="w-full text-center text-sm font-medium mt-3 bg-transparent border-none cursor-pointer"
+            style={{ color: "#0D9488" }}
+          >
+            or join an existing trip
+          </button>
         </form>
+
+        {/* Join drawer */}
+        <Drawer open={joinOpen} onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>Enter invite code</DrawerTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ask a trip organiser for their 6–8 letter code
+              </p>
+            </DrawerHeader>
+            <div className="px-4 pb-6 space-y-4">
+              <Input
+                value={joinCode}
+                onChange={(e) => { setJoinCode(e.target.value.toUpperCase().slice(0, 8)); setJoinError(""); }}
+                placeholder="e.g. 6D9MCG"
+                className="text-center text-[24px] font-mono tracking-[0.15em] h-14 rounded-xl border-input"
+                maxLength={8}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && joinCode.length >= 4 && !joinMutation.isPending) joinMutation.mutate(joinCode);
+                }}
+              />
+              {joinError && (
+                <p className="text-xs text-destructive text-center">{joinError}</p>
+              )}
+              <Button
+                className="w-full h-11 rounded-xl text-sm font-semibold text-white"
+                style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+                disabled={joinCode.length < 4 || joinMutation.isPending}
+                onClick={() => joinMutation.mutate(joinCode)}
+              >
+                {joinMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Join trip"}
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
       </div>
+    </div>
+  );
+}
     </div>
   );
 }
