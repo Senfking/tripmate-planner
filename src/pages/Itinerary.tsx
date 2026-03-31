@@ -55,7 +55,7 @@ const Itinerary = () => {
     return (
       <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Itinerary" subtitle="Loading…" />
-        <div className="px-4 pt-4 space-y-2">
+        <div className="px-4 mt-4 space-y-2">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-[56px] rounded-[14px] skeleton-shimmer" style={{ animationDelay: `${i * 150}ms` }} />
           ))}
