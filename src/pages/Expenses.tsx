@@ -1,6 +1,6 @@
 import { useGlobalExpenses } from "@/hooks/useGlobalExpenses";
 import { Link } from "react-router-dom";
-import { Wallet, ArrowRight, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-react";
+import { Wallet, ChevronRight, CircleDollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
@@ -30,31 +30,42 @@ const Expenses = () => {
     );
   }
 
-  // Centered balance display
+  const balanceLabel = !hasExpenses || Math.abs(overallNet) < 0.01
+    ? "All settled"
+    : overallNet > 0
+    ? "You're owed"
+    : "You owe";
+
   const balanceDisplay = (
     <div className="mt-3 flex flex-col items-center">
-      <div className="flex items-center gap-2">
-        {hasExpenses && Math.abs(overallNet) >= 0.01 && (
-          overallNet > 0
-            ? <TrendingUp className="h-5 w-5 text-emerald-300" />
-            : <TrendingDown className="h-5 w-5 text-orange-300" />
-        )}
-        {hasExpenses && Math.abs(overallNet) < 0.01 && (
-          <CheckCircle2 className="h-5 w-5 text-emerald-300" />
-        )}
-        <p className="text-[34px] font-extrabold text-white tracking-tight leading-none">
-          {!hasExpenses || Math.abs(overallNet) < 0.01
-            ? "€0"
-            : formatCurrency(Math.abs(overallNet), currency)}
-        </p>
-      </div>
-      <p className="text-[11px] uppercase tracking-wider font-semibold text-white/50 mt-1.5">
-        {!hasExpenses || Math.abs(overallNet) < 0.01
-          ? "All settled"
-          : overallNet > 0
-          ? "You're owed"
-          : "You owe"}
+      <p className="text-[10px] uppercase tracking-[0.15em] font-semibold text-white/40 mb-2">
+        Total balance
       </p>
+      <p className="text-[34px] font-extrabold text-white tracking-tight leading-none">
+        {!hasExpenses || Math.abs(overallNet) < 0.01
+          ? "€0.00"
+          : formatCurrency(Math.abs(overallNet), currency)}
+      </p>
+      <span
+        className={cn(
+          "mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+          !hasExpenses || Math.abs(overallNet) < 0.01
+            ? "bg-white/10 text-white/60"
+            : overallNet > 0
+            ? "bg-emerald-400/15 text-emerald-200"
+            : "bg-orange-400/15 text-orange-200"
+        )}
+      >
+        <span className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          !hasExpenses || Math.abs(overallNet) < 0.01
+            ? "bg-white/40"
+            : overallNet > 0
+            ? "bg-emerald-300"
+            : "bg-orange-300"
+        )} />
+        {balanceLabel}
+      </span>
     </div>
   );
 
@@ -75,29 +86,74 @@ const Expenses = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-2 px-4 mt-4 pb-24">
-          {trips.map((trip) => (
-            <Link
-              key={trip.tripId}
-              to={`/app/trips/${trip.tripId}/expenses`}
-              className="group flex items-center gap-3 bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:scale-[0.98] transition-transform"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-semibold text-foreground truncate">
-                  {trip.tripEmoji ?? "✈️"} {trip.tripName}
-                </p>
-                <p className={cn(
-                  "text-sm font-medium mt-0.5",
-                  trip.net > 0 ? "text-emerald-600" : trip.net < 0 ? "text-orange-600" : "text-muted-foreground"
-                )}>
-                  {Math.abs(trip.net) < 0.01
-                    ? "Settled"
-                    : `${trip.net > 0 ? "+" : "-"}${formatCurrency(Math.abs(trip.net), trip.currency)}`}
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-            </Link>
-          ))}
+        <div className="space-y-2.5 px-4 mt-4 pb-24">
+          {trips.map((trip) => {
+            const isSettled = Math.abs(trip.net) < 0.01;
+            const isPositive = trip.net > 0;
+
+            return (
+              <Link
+                key={trip.tripId}
+                to={`/app/trips/${trip.tripId}/expenses`}
+                className="group block rounded-2xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-[#F1F5F9] active:scale-[0.98] transition-transform overflow-hidden"
+              >
+                <div className="p-4">
+                  {/* Top row: trip name + arrow */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[16px]"
+                        style={{ background: "rgba(13,148,136,0.08)" }}
+                      >
+                        {trip.tripEmoji ?? "✈️"}
+                      </div>
+                      <p className="text-[15px] font-semibold text-foreground truncate">
+                        {trip.tripName}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+                  </div>
+
+                  {/* Balance row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "h-2 w-2 rounded-full",
+                        isSettled ? "bg-muted-foreground/20" : isPositive ? "bg-emerald-500" : "bg-orange-500"
+                      )} />
+                      <span className="text-[12px] font-medium text-muted-foreground">
+                        {isSettled ? "Settled" : isPositive ? "You're owed" : "You owe"}
+                      </span>
+                    </div>
+                    <span className={cn(
+                      "text-[16px] font-bold tabular-nums",
+                      isSettled
+                        ? "text-muted-foreground/50"
+                        : isPositive
+                        ? "text-emerald-600"
+                        : "text-orange-600"
+                    )}>
+                      {isSettled
+                        ? "€0.00"
+                        : `${isPositive ? "+" : "−"}${formatCurrency(Math.abs(trip.net), trip.currency)}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Subtle bottom accent bar */}
+                {!isSettled && (
+                  <div
+                    className="h-[2px]"
+                    style={{
+                      background: isPositive
+                        ? "linear-gradient(90deg, rgba(16,185,129,0.4) 0%, rgba(16,185,129,0) 100%)"
+                        : "linear-gradient(90deg, rgba(249,115,22,0.4) 0%, rgba(249,115,22,0) 100%)",
+                    }}
+                  />
+                )}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
