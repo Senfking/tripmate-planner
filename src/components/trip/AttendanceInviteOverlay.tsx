@@ -279,7 +279,7 @@ export function AttendanceInviteOverlay({
                       </div>
                     );
                   })}
-                  {otherMembers.length === 0 && (
+                  {sortedMembers.length === 0 && (
                     <p className="text-sm text-muted-foreground py-2">You're the first one here!</p>
                   )}
                 </div>
