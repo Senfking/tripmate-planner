@@ -119,68 +119,63 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
 
   const cardContent = (
     <>
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-1.5">
         {isDraggable ? (
           <button
-            className="touch-none cursor-grab active:cursor-grabbing mt-1 shrink-0 text-muted-foreground/30 hover:text-muted-foreground"
+            className="touch-none cursor-grab active:cursor-grabbing mt-0.5 shrink-0 text-muted-foreground/30 hover:text-muted-foreground"
             {...attributes}
             {...listeners}
           >
-            <GripVertical className="h-4 w-4" />
+            <GripVertical className="h-3.5 w-3.5" />
           </button>
         ) : (
           <div className="w-0 shrink-0" />
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-medium text-foreground truncate">{item.title}</p>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Clock className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-              {timeDisplay || "Time tbc"}
+          <div className="flex items-center gap-1.5">
+            <p className="text-[13px] font-medium text-foreground truncate flex-1">{item.title}</p>
+            {overlapTitles?.length ? (
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="appearance-none" onClick={(e) => e.currentTarget.focus()} onTouchStart={(e) => e.currentTarget.focus()}>
+                      <AlertTriangle className="h-3 w-3 text-amber-500 cursor-help" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[240px] text-xs">
+                    Overlaps with {overlapTitles.join(", ")}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
+            <Badge className={`text-[9px] px-1.5 py-0 leading-[16px] border-0 ${status.className}`}>
+              {status.label}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2 mt-px">
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <Clock className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
+              {timeDisplay || "tbc"}
             </span>
             {item.location_text && (
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-                <span className="truncate max-w-[140px]">{item.location_text}</span>
+              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                <MapPin className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
+                <span className="truncate max-w-[120px]">{item.location_text}</span>
               </span>
             )}
+            <div className="flex items-center gap-0 ml-auto shrink-0">
+              <button onClick={onEdit} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors">
+                <Pencil className="h-3 w-3" />
+              </button>
+              {canDelete && (
+                <button onClick={() => setConfirmOpen(true)} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive transition-colors">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+              <ItemComments tripId={tripId} itemId={item.id} />
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {overlapTitles?.length ? (
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="appearance-none"
-                    onClick={(e) => e.currentTarget.focus()}
-                    onTouchStart={(e) => e.currentTarget.focus()}
-                  >
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500 cursor-help" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[240px] text-xs">
-                  Overlaps with {overlapTitles.join(", ")} — different people can join different activities
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : null}
-          <Badge className={`text-[10px] px-1.5 py-0 border-0 ${status.className}`}>
-            {status.label}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-1 justify-end md:justify-start">
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        {canDelete && (
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setConfirmOpen(true)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        )}
       </div>
 
       {user && members.length > 0 && (
@@ -192,8 +187,6 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
           onCycle={onCycleAttendance}
         />
       )}
-
-      <ItemComments tripId={tripId} itemId={item.id} />
 
       {isMobile ? (
         <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -282,7 +275,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-[14px] bg-white dark:bg-card p-3 space-y-2",
+            "rounded-xl bg-white dark:bg-card p-2 space-y-1",
             isDragging && "opacity-50 ring-2 ring-primary/30",
             !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400/60",
             animPhase === "fadein" && "animate-fade-in-card",
