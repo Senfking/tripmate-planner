@@ -267,18 +267,18 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
           </p>
         </div>
       ) : (
-      <div className="space-y-6 -mt-1">
+      <div className="space-y-5 -mt-1">
         {/* ── Section 1: Invite members ────────────────── */}
         <section className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Invite to trip</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Share the code or link to add members</p>
+            <h3 className="text-[15px] font-semibold text-foreground">Invite to trip</h3>
+            <p className="text-[13px] text-muted-foreground font-normal mt-0.5">Share the code or link to add members</p>
           </div>
 
           {tripCode ? (
             <div className="space-y-3">
               <button
-                className="w-full flex flex-col items-center py-4 rounded-xl bg-muted/50 hover:bg-muted/80 transition-colors"
+                className="w-full flex flex-col items-center py-5 rounded-xl bg-muted/50 hover:bg-muted/80 transition-colors"
                 onClick={() => {
                   navigator.clipboard.writeText(tripCode);
                   toast.success("Code copied!");
@@ -287,22 +287,20 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                 <span className="text-[28px] font-bold font-mono tracking-[0.15em] text-foreground">
                   {tripCode}
                 </span>
-                <span className="text-[11px] text-muted-foreground mt-1">Tap to copy</span>
+                <span className="text-[12px] text-muted-foreground mt-1">Tap to copy</span>
               </button>
 
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="flex-1 rounded-lg h-9 text-xs gap-1.5"
+                  className="flex-1 rounded-xl h-11 text-[14px] font-medium gap-1.5"
                   onClick={() => inviteUrl && copyToClipboard(inviteUrl)}
                 >
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-4 w-4" />
                   Copy link
                 </Button>
                 <Button
-                  size="sm"
-                  className="flex-1 gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg h-9 text-xs font-medium shadow-sm"
+                  className="flex-1 gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-xl h-11 text-[14px] font-medium shadow-sm"
                   onClick={handleWhatsAppInvite}
                 >
                   <WhatsAppIcon className="h-4 w-4" />
@@ -311,21 +309,21 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
               </div>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">No trip code available</p>
+            <p className="text-[13px] text-muted-foreground">No trip code available</p>
           )}
         </section>
 
         {/* ── Section 2: Share plan ────────────────────── */}
         <section className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Share plan</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">View-only — no login needed</p>
+            <h3 className="text-[15px] font-semibold text-foreground">Share plan</h3>
+            <p className="text-[13px] text-muted-foreground font-normal mt-0.5">View-only — no login needed</p>
           </div>
 
           <div className="flex items-center justify-between gap-3 py-0.5">
             <div>
-              <Label htmlFor="include-expenses" className="text-xs font-medium">Include expenses</Label>
-              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">Who owes whom</p>
+              <Label htmlFor="include-expenses" className="text-[14px] font-medium text-foreground">Include expenses</Label>
+              <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">Who owes whom</p>
             </div>
             <Switch id="include-expenses" checked={includeExpenses} onCheckedChange={setIncludeExpenses} />
           </div>
@@ -337,27 +335,26 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
           ) : shareUrl && activeShare ? (
             <div className="space-y-2.5">
               <Button
-                size="sm"
-                className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg h-9 text-sm font-medium shadow-sm"
+                className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-xl h-11 text-[14px] font-medium shadow-sm"
                 onClick={handleWhatsAppShare}
               >
                 <WhatsAppIcon className="h-4 w-4" />
                 Share plan via WhatsApp
               </Button>
               <div className="flex items-center justify-between">
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[12px] text-muted-foreground">
                   Expires {format(new Date(activeShare.expires_at), "MMM d, yyyy")}
                 </p>
                 <button
                   className="text-muted-foreground hover:text-foreground transition-colors p-1"
                   onClick={() => copyToClipboard(shareUrl)}
                 >
-                  <Copy className="h-3 w-3" />
+                  <Copy className="h-3.5 w-3.5" />
                 </button>
               </div>
               {isAdmin && (
                 <button
-                  className="text-[11px] text-muted-foreground/60 hover:text-destructive transition-colors"
+                  className="text-[12px] text-muted-foreground hover:text-destructive transition-colors"
                   onClick={() => revokeShare.mutate(activeShare.id)}
                   disabled={revokeShare.isPending}
                 >
@@ -369,9 +366,8 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
             <Button
               onClick={() => createShare.mutate()}
               disabled={createShare.isPending}
-              size="sm"
               variant="outline"
-              className="w-full rounded-lg"
+              className="w-full rounded-xl h-11 text-[14px] font-medium"
             >
               Generate share link
             </Button>
@@ -380,26 +376,24 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
 
         {/* ── Section 3: Export ─────────────────────────── */}
         <section className="space-y-2.5">
-          <h3 className="text-xs font-medium text-muted-foreground">Export</h3>
+          <h3 className="text-[12px] font-medium text-muted-foreground">Export</h3>
           <div className="flex gap-2">
             <Button
               variant="outline"
-              size="sm"
-              className="flex-1 rounded-lg h-9 text-xs"
+              className="flex-1 rounded-xl h-11 text-[14px] font-medium"
               disabled={icsLoading}
               onClick={() => downloadFile("export-trip-ics", "junto-itinerary.ics", setIcsLoading)}
             >
-              {icsLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5 mr-1.5" />}
+              {icsLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CalendarPlus className="h-4 w-4 mr-1.5" />}
               Calendar
             </Button>
             <Button
               variant="outline"
-              size="sm"
-              className="flex-1 rounded-lg h-9 text-xs"
+              className="flex-1 rounded-xl h-11 text-[14px] font-medium"
               disabled={csvLoading}
               onClick={() => downloadFile("export-expenses-csv", "junto-expenses.csv", setCsvLoading)}
             >
-              {csvLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}
+              {csvLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
               Expenses CSV
             </Button>
           </div>
