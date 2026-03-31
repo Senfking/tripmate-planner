@@ -87,11 +87,11 @@ function StatusRow({
   }
 
   return (
-    <div className="flex items-center justify-between px-4 pt-3 pb-1">
+    <div className="flex items-center justify-between">
       {content}
       <button
         onClick={onShare}
-        className="flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-colors"
+        className="flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-colors shrink-0"
         style={{ color: "#0D9488", border: "1px solid rgba(13, 148, 136, 0.4)" }}
       >
         <Share2 className="h-3 w-3" />
@@ -236,14 +236,14 @@ export default function TripHome() {
         <button
           onClick={() => navigate("/app/trips")}
           className="absolute left-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           My Trips
         </button>
 
         {/* TOP RIGHT — Live indicator */}
-        <div className="absolute right-4" style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
+        <div className="absolute right-4" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
           <LiveIndicator status={connectionStatus} />
         </div>
 
@@ -282,26 +282,24 @@ export default function TripHome() {
 
       {/* ─── CONTENT SHEET ─── */}
       <div className="flex-1 rounded-t-3xl -mt-6 relative z-10" style={{ background: "#F1F5F9" }}>
-        <div className="pt-4">
-          {/* Status row — no card, sits on background */}
+        {/* Status row — first element inside the sheet */}
+        <div className="px-4 pt-4 pb-2">
           <StatusRow
             startDate={trip.tentative_start_date}
             endDate={trip.tentative_end_date}
             onShare={() => setShareInviteOpen(true)}
           />
-
-          {/* Section cards */}
-          <div className="mt-2">
-            <TripDashboard
-              tripId={trip.id}
-              routeLocked={trip.route_locked ?? false}
-              settlementCurrency={trip.settlement_currency}
-              myRole={myRole}
-              startDate={trip.tentative_start_date}
-              endDate={trip.tentative_end_date}
-            />
-          </div>
         </div>
+
+        {/* Section cards */}
+        <TripDashboard
+          tripId={trip.id}
+          routeLocked={trip.route_locked ?? false}
+          settlementCurrency={trip.settlement_currency}
+          myRole={myRole}
+          startDate={trip.tentative_start_date}
+          endDate={trip.tentative_end_date}
+        />
       </div>
 
       <MemberListSheet

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO } from "date-fns";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 
+
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
 
