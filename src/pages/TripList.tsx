@@ -433,7 +433,7 @@ export default function TripList() {
   const otherTrips = trips.filter((t) => t !== liveTrip);
 
   return (
-    <div className="relative min-h-screen" style={{ backgroundColor: "#0f0f0f", marginTop: "-52px" }}>
+    <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9", marginTop: "-52px" }}>
       {/* Top scrim for header readability */}
       <div
         className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
