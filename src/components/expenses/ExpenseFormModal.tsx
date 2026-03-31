@@ -172,6 +172,45 @@ export function ExpenseFormModal({
     }
   };
 
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+
+    setScanning(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke("scan-receipt", {
+        body: { image: base64 },
+      });
+
+      if (error || data?.error) {
+        toast.error("Couldn't read receipt — fill in manually");
+        return;
+      }
+
+      if (data.title) { setTitle(data.title); setTitleManuallySet(true); }
+      if (data.amount) setAmount(String(data.amount));
+      if (data.currency) setCurrency(data.currency);
+      if (data.date) setIncurredOn(data.date);
+      if (data.category && CATEGORIES.some(c => c.value === data.category)) {
+        setCategory(data.category);
+      }
+      toast.success("Receipt scanned ✓");
+    } catch {
+      toast.error("Couldn't read receipt — fill in manually");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const handleSubmit = () => {
     if (!canSubmit) return;
     onSave({
