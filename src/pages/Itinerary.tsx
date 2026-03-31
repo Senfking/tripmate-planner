@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGlobalItinerary, type TripItineraryGroup } from "@/hooks/useGlobalItinerary";
 import { Link } from "react-router-dom";
-import { CalendarDays, MapPin, Loader2, Clock } from "lucide-react";
+import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isToday, isTomorrow, differenceInDays } from "date-fns";
@@ -14,31 +14,38 @@ const Itinerary = () => {
   const { data: groups, isLoading } = useGlobalItinerary();
   const [filter, setFilter] = useState<Filter>("all");
 
-  // Find next upcoming activity for subtitle + pills
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  let nextLabel = "";
-  let totalActivities = 0;
 
-  const nextActivitySubtitle = (() => {
-    if (isLoading) return "Loading…";
-    if (!groups || groups.length === 0) return "Nothing planned yet — add activities to your trips";
+  // Find next upcoming item across all trips
+  let totalActivities = 0;
+  let nextItem: { title: string; dayDate: string } | null = null;
+
+  if (groups) {
     for (const g of groups) {
-      totalActivities += g.items.length;
       for (const item of g.items) {
-        const d = parseISO(item.dayDate);
-        if (d >= today && !nextLabel) {
-          if (isToday(d)) nextLabel = "Tonight";
-          else if (isTomorrow(d)) nextLabel = "Tomorrow";
-          else nextLabel = `In ${differenceInDays(d, today)}d`;
+        totalActivities++;
+        if (!nextItem && parseISO(item.dayDate) >= today) {
+          nextItem = { title: item.title, dayDate: item.dayDate };
         }
       }
     }
-    if (nextLabel) {
-      const nextItem = groups.flatMap((g) => g.items).find((item) => parseISO(item.dayDate) >= today);
-      if (nextItem) return `Next: ${nextItem.title} · ${nextLabel}`;
-    }
-    return "Nothing planned yet — add activities to your trips";
+  }
+
+  // Relative time label for next item
+  const nextRelative = (() => {
+    if (!nextItem) return "";
+    const d = parseISO(nextItem.dayDate);
+    if (isToday(d)) return "Tonight";
+    if (isTomorrow(d)) return "Tomorrow";
+    return `In ${differenceInDays(d, today)}d`;
+  })();
+
+  const subtitle = (() => {
+    if (isLoading) return "Loading…";
+    if (!groups || groups.length === 0) return "Nothing planned yet";
+    if (nextItem) return `Next: ${nextItem.title} · ${nextRelative}`;
+    return `${totalActivities} activities completed`;
   })();
 
   const itineraryPills: HeroPill[] = [];
@@ -46,8 +53,8 @@ const Itinerary = () => {
     if (totalActivities > 0) {
       itineraryPills.push({ icon: <MapPin className="h-3 w-3" />, label: `${totalActivities} activities` });
     }
-    if (nextLabel) {
-      itineraryPills.push({ icon: <Clock className="h-3 w-3" />, label: `Next: ${nextLabel}` });
+    if (nextRelative) {
+      itineraryPills.push({ icon: <Clock className="h-3 w-3" />, label: nextRelative });
     }
   }
 
@@ -64,7 +71,6 @@ const Itinerary = () => {
     );
   }
 
-  // Apply filter
   const filtered: TripItineraryGroup[] = (groups ?? []).map((g) => {
     if (filter === "all") return g;
     return {
@@ -79,10 +85,9 @@ const Itinerary = () => {
 
   return (
     <div className="min-h-[calc(100vh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title="Itinerary" subtitle={nextActivitySubtitle} pills={itineraryPills} />
+      <TabHeroHeader title="Itinerary" subtitle={subtitle} pills={itineraryPills} />
 
       <div className="px-4 mt-4 pb-32">
-        {/* Toggle */}
         <div className="mb-4 flex gap-1 rounded-xl bg-white p-1 border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {(["all", "mine"] as const).map((f) => (
             <button
@@ -138,7 +143,6 @@ function TripGroup({ group }: { group: TripItineraryGroup }) {
       ? `${format(parseISO(minDate), "d MMM")} – ${format(parseISO(maxDate), "d MMM")}`
       : "";
 
-  // Group items by date
   const byDate = new Map<string, typeof group.items>();
   for (const item of group.items) {
     const existing = byDate.get(item.dayDate) ?? [];
@@ -171,7 +175,6 @@ function TripGroup({ group }: { group: TripItineraryGroup }) {
                 className="block bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-3 mb-1.5 active:scale-[0.98] transition-transform"
               >
                 <div className="flex items-center gap-2">
-                  {/* Attendance dot */}
                   {item.attendance === "in" && (
                     <span className="h-2 w-2 rounded-full bg-[#0D9488] shrink-0" />
                   )}
@@ -206,7 +209,6 @@ function TripGroup({ group }: { group: TripItineraryGroup }) {
           </div>
         ))}
 
-        {/* Placeholders for route stops without items */}
         {group.placeholders.map((stop) => (
           <div
             key={stop.id}

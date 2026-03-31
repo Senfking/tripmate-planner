@@ -414,15 +414,15 @@ export default function TripList() {
   }
 
   const greeting = getGreeting(profile?.display_name);
-  const subtitle = getTripsSubtitle(trips);
+  const tripCount = trips?.length ?? 0;
+  const subtitle = `${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
 
-  // Build pills
+  // Pills = actionable/different info (not repeating subtitle)
   const tripsPills: HeroPill[] = [];
   if (trips && trips.length > 0) {
-    tripsPills.push({ icon: <Plane className="h-3 w-3" />, label: `${trips.length} trip${trips.length !== 1 ? "s" : ""}` });
     const liveCount = trips.filter((t) => t.statusInfo.status === "live").length;
     if (liveCount > 0) {
-      tripsPills.push({ icon: <Radio className="h-3 w-3" />, label: "Live now" });
+      tripsPills.push({ icon: <Radio className="h-3 w-3" />, label: `${liveCount} live now` });
     } else {
       const next = trips.find((t) => t.statusInfo.status === "countdown");
       if (next?.statusInfo.daysToGo !== undefined) {
