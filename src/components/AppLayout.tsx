@@ -69,7 +69,7 @@ export function AppLayout() {
   const location = useLocation();
 
   // Global tabs use their own TabHeroHeader — hide the app header
-  const globalTabPaths = ["/app/trips", "/app/decisions", "/app/itinerary", "/app/expenses"];
+  const globalTabPaths = ["/app/trips", "/app/trips/new", "/app/decisions", "/app/itinerary", "/app/expenses"];
   const isGlobalTab = globalTabPaths.includes(location.pathname);
 
   return (
