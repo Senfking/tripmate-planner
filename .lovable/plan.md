@@ -1,18 +1,23 @@
 
 
-# Updated Plan Detail: Not-Going Member Opacity
+# Fix: Make My Account (More) page accessible
 
-**Change to Part 1 (AttendanceInviteOverlay) — Member Roster rendering:**
+## Problem
+The profile avatar in the top-right links to `/app/more`, but it's not consistently accessible:
+- On **TripHome** (`/app/trips/:tripId`): rendered outside `AppLayout`, so no avatar icon exists at all
+- On **global tabs**: the `TabHeroHeader` has an avatar, but the parent `div` has `overflow-hidden` which could clip it depending on safe-area insets
+- The **BottomNav** has no "More" tab — there's no persistent navigation to the account page
 
-Members with `attendance_status === 'not_going'` should render their entire row at `opacity-50`. This applies to the avatar, display name, and status badge together.
+## Solution
+Add a persistent way to access My Account from anywhere:
 
-Implementation: wrap each member row in a container and conditionally apply `opacity-50` when status is `not_going`.
+### 1. Add avatar to TripHome hero (consistency)
+In `src/pages/TripHome.tsx`, add a profile avatar button in the top-right of the hero section (next to the LiveIndicator), linking to `/app/more`. Same style as `TabHeroHeader`'s avatar — frosted circle with initials or photo.
 
-```tsx
-<div className={cn("flex items-center gap-3 py-2", m.attendance_status === "not_going" && "opacity-50")}>
-```
+### 2. Verify TabHeroHeader avatar isn't clipped
+In `src/components/ui/TabHeroHeader.tsx`, ensure the avatar's absolute position stays within the `overflow-hidden` container bounds. The current positioning looks correct but I'll verify the avatar renders properly by ensuring `z-10` is sufficient relative to the gradient overlays.
 
-Same treatment applies to the avatar row in the **Global Decisions attendance card** (Part 4) — but since that only shows "going" members, no change needed there.
-
-No other changes to the previously approved plan.
+### Files changed
+- `src/pages/TripHome.tsx` — add avatar link to `/app/more` in hero top-right area (alongside LiveIndicator)
+- `src/components/ui/TabHeroHeader.tsx` — minor adjustment if clipping is confirmed
 
