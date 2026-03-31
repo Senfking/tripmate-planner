@@ -130,13 +130,13 @@ export function AttendanceInviteOverlay({
     if (status === "going") {
       setShowConfetti(true);
       setTimeout(() => setSuccessState(true), 400);
-      setTimeout(() => setClosing(true), 1900);
+      setTimeout(() => setClosing(true), 4400);
       setTimeout(() => {
         setClosing(false);
         setSuccessState(false);
         setShowConfetti(false);
         onDismiss();
-      }, 2350);
+      }, 4850);
     } else {
       handleDismiss();
     }
