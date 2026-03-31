@@ -7,10 +7,9 @@ import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
-import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
 
 const TRAVEL_EMOJIS = [
   "✈️", "🏖️", "🏔️", "🌍", "🗺️", "🚗", "🚂", "⛷️",
@@ -63,10 +62,22 @@ export default function TripNew() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
-      <TabHeroHeader title="New Trip" subtitle="Plan your next adventure" />
+    <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-card border-b px-4 py-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => navigate("/app/trips")}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm">My Trips</span>
+          </button>
+        </div>
+        <h1 className="text-lg font-bold text-foreground mt-1">New Trip</h1>
+      </header>
 
-      <div className="px-4 mt-4 pb-32 max-w-lg mx-auto">
+      <div className="flex-1 px-4 py-5 pb-32 max-w-lg mx-auto w-full">
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Name */}
           <div className="space-y-2">
@@ -117,8 +128,8 @@ export default function TripNew() {
 
           <Button
             type="submit"
-            className="w-full h-12 mt-6 rounded-xl text-[15px] font-semibold"
-            style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 100%)" }}
+            className="w-full h-12 mt-6 rounded-xl text-[15px] font-semibold text-white shadow-md"
+            style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
             disabled={loading}
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
