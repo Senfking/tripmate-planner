@@ -302,7 +302,7 @@ export function VibeBoard({
         <Button
           className="w-full"
           onClick={handleSubmit}
-          disabled={!allAnswered || submitAnswers.isPending}
+          disabled={submitAnswers.isPending}
         >
           {submitAnswers.isPending
             ? "Submitting…"
