@@ -110,9 +110,13 @@ export function AttendanceInviteOverlay({
   const isVisible = open || peeking || closing;
   if (!isVisible) return null;
 
-  const otherMembers = members
-    .filter((m) => m.user_id !== currentUserId)
-    .sort((a, b) => (STATUS_ORDER[a.attendance_status] ?? 9) - (STATUS_ORDER[b.attendance_status] ?? 9));
+  const sortedMembers = [...members]
+    .sort((a, b) => {
+      // Current user always first
+      if (a.user_id === currentUserId) return -1;
+      if (b.user_id === currentUserId) return 1;
+      return (STATUS_ORDER[a.attendance_status] ?? 9) - (STATUS_ORDER[b.attendance_status] ?? 9);
+    });
 
   const dateStr = formatDateRange(startDate, endDate);
 
