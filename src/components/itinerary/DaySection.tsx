@@ -163,7 +163,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
       </div>
 
       {/* Content column */}
-      <div className="flex-1 min-w-0 pb-4 space-y-2">
+      <div className="flex-1 min-w-0 pb-3 space-y-1.5">
         {/* Destination label */}
         {destination && (
           <div className="flex items-center gap-1 mb-1">
