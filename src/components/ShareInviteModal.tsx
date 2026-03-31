@@ -12,6 +12,7 @@ import {
   Loader2,
   CalendarPlus,
   Download,
+  Info,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "sonner";
