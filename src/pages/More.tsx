@@ -764,6 +764,8 @@ const More = () => {
               <SettingRow icon={Mail} label="Change email" onClick={() => setShowEmailDrawer(true)} />
             </>
           )}
+
+          <SettingRow icon={Hash} label="Join a trip" onClick={() => navigate("/join")} />
         </CardContent>
       </Card>
 
