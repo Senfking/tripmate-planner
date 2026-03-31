@@ -94,7 +94,13 @@ export default function TripNew() {
     <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title="New Trip" subtitle="Plan your next adventure" />
 
-      <div className="px-4 mt-4 pb-32 max-w-lg mx-auto w-full">
+      <div className="px-4 mt-3 pb-32 max-w-lg mx-auto w-full">
+        <button
+          onClick={() => navigate("/app/trips")}
+          className="flex items-center gap-1 text-sm text-muted-foreground mb-4 bg-transparent border-none cursor-pointer"
+        >
+          <span>← Back to trips</span>
+        </button>
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Name */}
           <div className="space-y-2">
