@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, Share2 } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { MemberListSheet } from "@/components/trip/MemberListSheet";
@@ -254,10 +254,19 @@ export default function TripHome() {
 
   // Attendance overlay state
   const sessionKey = `junto_invite_dismissed_${tripId}`;
-  const [overlayDismissed, setOverlayDismissed] = useState(() =>
-    !!sessionStorage.getItem(sessionKey)
-  );
+  const [overlayDismissed, setOverlayDismissed] = useState(false);
   const [overlayForcedOpen, setOverlayForcedOpen] = useState(false);
+
+  // When membership loads, decide overlay state based on attendance_status
+  useEffect(() => {
+    if (!myMembership) return;
+    if (myMembership.attendance_status === "pending") {
+      sessionStorage.removeItem(sessionKey);
+      setOverlayDismissed(false);
+    } else {
+      setOverlayDismissed(!!sessionStorage.getItem(sessionKey));
+    }
+  }, [myMembership?.attendance_status, sessionKey]);
 
   const isPending = myAttendanceStatus === "pending";
   const hasLoaded = myMembership !== undefined;
