@@ -81,6 +81,7 @@ export function AttendanceInviteOverlay({
 }: AttendanceInviteOverlayProps) {
   const [successState, setSuccessState] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   // Rotating messages
   const [messageIndex, setMessageIndex] = useState(() => Math.floor(Math.random() * PEEKING_MESSAGES.length));
@@ -103,10 +104,11 @@ export function AttendanceInviteOverlay({
     if (open) {
       setSuccessState(false);
       setShowConfetti(false);
+      setClosing(false);
     }
   }, [open]);
 
-  const isVisible = open || peeking;
+  const isVisible = open || peeking || closing;
   if (!isVisible) return null;
 
   const otherMembers = members
@@ -121,12 +123,30 @@ export function AttendanceInviteOverlay({
 
   const handleRespond = (status: string) => {
     onRespond(status);
+
     if (status === "going") {
+      // Step 1: Show confetti, keep member list visible
       setShowConfetti(true);
-      setSuccessState(true);
-      setTimeout(() => onDismiss(), 1500);
+
+      // Step 2: Fade into success state after 400ms
+      setTimeout(() => {
+        setSuccessState(true);
+      }, 400);
+
+      // Step 3: Slide overlay down after success visible 1.5s
+      setTimeout(() => {
+        setClosing(true);
+      }, 1900);
+
+      // Step 4: Clean up after slide-down completes
+      setTimeout(() => {
+        setClosing(false);
+        setSuccessState(false);
+        setShowConfetti(false);
+        onDismiss();
+      }, 2350);
     } else {
-      onDismiss();
+      handleDismiss();
     }
   };
 
