@@ -275,7 +275,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-[14px] bg-white dark:bg-card p-3 space-y-2",
+            "rounded-xl bg-white dark:bg-card p-2 space-y-1",
             isDragging && "opacity-50 ring-2 ring-primary/30",
             !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400/60",
             animPhase === "fadein" && "animate-fade-in-card",
