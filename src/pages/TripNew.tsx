@@ -7,10 +7,17 @@ import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useMutation } from "@tanstack/react-query";
 
 const TRAVEL_EMOJIS = [
   "✈️", "🏖️", "🏔️", "🌍", "🗺️", "🚗", "🚂", "⛷️",
@@ -25,6 +32,27 @@ export default function TripNew() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState("");
+
+  const joinMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const { data, error } = await supabase.rpc("join_by_code", { _code: code });
+      if (error) throw error;
+      const result = data as any;
+      if (result?.error) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (data: any) => {
+      setJoinOpen(false);
+      toast.success(`Joined ${data.trip_name || "trip"}!`);
+      navigate(`/app/trips/${data.trip_id}`);
+    },
+    onError: () => {
+      setJoinError("Code not found — check with your organiser");
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +152,52 @@ export default function TripNew() {
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Create Trip
           </Button>
+
+          <button
+            type="button"
+            onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
+            className="w-full text-center text-sm font-medium mt-3 bg-transparent border-none cursor-pointer"
+            style={{ color: "#0D9488" }}
+          >
+            or join an existing trip
+          </button>
         </form>
+
+        {/* Join drawer */}
+        <Drawer open={joinOpen} onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>Enter invite code</DrawerTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ask a trip organiser for their 6–8 letter code
+              </p>
+            </DrawerHeader>
+            <div className="px-4 pb-6 space-y-4">
+              <Input
+                value={joinCode}
+                onChange={(e) => { setJoinCode(e.target.value.toUpperCase().slice(0, 8)); setJoinError(""); }}
+                placeholder="e.g. 6D9MCG"
+                className="text-center text-[24px] font-mono tracking-[0.15em] h-14 rounded-xl border-input"
+                maxLength={8}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && joinCode.length >= 4 && !joinMutation.isPending) joinMutation.mutate(joinCode);
+                }}
+              />
+              {joinError && (
+                <p className="text-xs text-destructive text-center">{joinError}</p>
+              )}
+              <Button
+                className="w-full h-11 rounded-xl text-sm font-semibold text-white"
+                style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+                disabled={joinCode.length < 4 || joinMutation.isPending}
+                onClick={() => joinMutation.mutate(joinCode)}
+              >
+                {joinMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Join trip"}
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
       </div>
     </div>
   );
