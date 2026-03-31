@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
@@ -66,19 +66,29 @@ function HeaderAvatar() {
 }
 
 export function AppLayout() {
+  const location = useLocation();
+  const isTripsListPage = location.pathname === "/app/trips";
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
-          <header className="sticky top-0 z-40 flex h-[52px] items-center border-b bg-gradient-primary px-4 text-white relative overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%)",
-              }}
-            />
+          <header
+            className={`sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden ${
+              isTripsListPage ? "bg-transparent border-b-0" : "border-b bg-gradient-primary"
+            }`}
+            style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+          >
+            {!isTripsListPage && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%)",
+                }}
+              />
+            )}
 
             <SidebarTrigger className="hidden md:inline-flex text-white relative z-10" />
 
