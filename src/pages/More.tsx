@@ -684,7 +684,7 @@ const More = () => {
               <Mail className="h-3.5 w-3.5" />
               {user.email}
             </p>
-            {isGoogleUser && (
+            {isGoogleOnly && (
               <p className="text-xs text-muted-foreground mt-1">Signed in with Google</p>
             )}
           </div>
