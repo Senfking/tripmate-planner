@@ -193,20 +193,18 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
         />
       ))}
 
-      {/* Add Day + Export buttons */}
-      <div className="flex items-center justify-between md:justify-start gap-2">
-        <Popover open={addDayOpen} onOpenChange={setAddDayOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
-              <CalendarPlus className="h-4 w-4 mr-1.5" />
-              Add day
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-            <Calendar mode="single" onSelect={handleAddDay} />
-          </PopoverContent>
-        </Popover>
-      </div>
+      {/* Add Day */}
+      <Popover open={addDayOpen} onOpenChange={setAddDayOpen}>
+        <PopoverTrigger asChild>
+          <button className="w-full rounded-xl border border-dashed border-muted-foreground/20 py-3 text-center text-[13px] font-medium text-muted-foreground/60 hover:border-primary/40 hover:text-foreground transition-colors flex items-center justify-center gap-1.5">
+            <CalendarPlus className="h-4 w-4" />
+            Add day
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 pointer-events-auto" align="center">
+          <Calendar mode="single" onSelect={handleAddDay} />
+        </PopoverContent>
+      </Popover>
 
       {newDayDate && (
         <ItemFormModal
