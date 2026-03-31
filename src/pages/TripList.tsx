@@ -389,7 +389,7 @@ export default function TripList() {
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
-      <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#0f0f0f", marginTop: "-52px" }}>
+      <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9", marginTop: "-52px" }}>
         {/* Hero image */}
         <div className="relative h-[320px] w-full overflow-hidden">
           <img
