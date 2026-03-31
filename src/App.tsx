@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
+import { supabase } from "@/integrations/supabase/client";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import TripList from "./pages/TripList";
@@ -24,8 +26,32 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+function AppInner() {
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    qc.prefetchQuery({
+      queryKey: ["exchange-rates", "EUR"],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from("exchange_rate_cache")
+          .select("rates, fetched_at")
+          .eq("base_currency", "EUR")
+          .maybeSingle();
+        if (data?.rates) {
+          return {
+            rates: data.rates,
+            fetchedAt: new Date(data.fetched_at),
+            source: "cache" as const,
+          };
+        }
+        return { rates: {}, fetchedAt: null, source: "none" as const };
+      },
+      staleTime: 1000 * 60 * 60,
+    });
+  }, [qc]);
+
+  return (
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -65,6 +91,12 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
+  );
+}
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AppInner />
   </QueryClientProvider>
 );
 
