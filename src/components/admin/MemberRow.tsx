@@ -64,6 +64,7 @@ export function MemberRow({
   displayName,
   role,
   joinedAt,
+  attendanceStatus,
   myRole,
   myUserId,
   onPromote,
