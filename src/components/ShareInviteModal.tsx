@@ -272,50 +272,59 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
           </p>
         </div>
       ) : (
-      <div className="space-y-5 -mt-1">
-        {/* ── Section 1: Invite ────────────────────────── */}
+      <div className="space-y-6 -mt-1">
+        {/* ── Section 1: Invite members ────────────────── */}
         <section className="space-y-3">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Invite to trip</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Add people as trip members</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Share the code or link to add members</p>
           </div>
 
-          {inviteUrl ? (
-            <div className="space-y-2.5">
-              <div className="flex items-center gap-1.5">
-                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground font-mono">
-                  {inviteUrl}
-                </div>
+          {tripCode ? (
+            <div className="space-y-3">
+              <button
+                className="w-full flex flex-col items-center py-4 rounded-xl bg-muted/50 hover:bg-muted/80 transition-colors"
+                onClick={() => {
+                  navigator.clipboard.writeText(tripCode);
+                  toast.success("Code copied!");
+                }}
+              >
+                <span className="text-[28px] font-bold font-mono tracking-[0.15em] text-foreground">
+                  {tripCode}
+                </span>
+                <span className="text-[11px] text-muted-foreground mt-1">Tap to copy</span>
+              </button>
+
+              <div className="flex gap-2">
                 <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                  onClick={() => copyToClipboard(inviteUrl)}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 rounded-lg h-9 text-xs gap-1.5"
+                  onClick={() => inviteUrl && copyToClipboard(inviteUrl)}
                 >
                   <Copy className="h-3.5 w-3.5" />
+                  Copy link
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg h-9 text-xs font-medium shadow-sm"
+                  onClick={handleWhatsAppInvite}
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  Share via WhatsApp
                 </Button>
               </div>
-              <Button
-                size="sm"
-                className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg h-9 text-sm font-medium shadow-sm"
-                onClick={handleWhatsAppInvite}
-              >
-                <WhatsAppIcon className="h-4 w-4" />
-                Share invite via WhatsApp
-              </Button>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">No trip code available</p>
           )}
         </section>
 
-        <div className="border-t border-border/50" />
-
         {/* ── Section 2: Share plan ────────────────────── */}
         <section className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Share trip plan</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">View-only summary — no login needed</p>
+            <h3 className="text-sm font-semibold text-foreground">Share plan</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">View-only — no login needed</p>
           </div>
 
           <div className="flex items-center justify-between gap-3 py-0.5">
@@ -332,22 +341,6 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
             </div>
           ) : shareUrl && activeShare ? (
             <div className="space-y-2.5">
-              <div className="flex items-center gap-1.5">
-                <div className="flex-1 min-w-0 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground font-mono">
-                  {shareUrl}
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                  onClick={() => copyToClipboard(shareUrl)}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Expires {format(new Date(activeShare.expires_at), "MMM d, yyyy")}
-              </p>
               <Button
                 size="sm"
                 className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg h-9 text-sm font-medium shadow-sm"
@@ -356,6 +349,17 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                 <WhatsAppIcon className="h-4 w-4" />
                 Share plan via WhatsApp
               </Button>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-muted-foreground">
+                  Expires {format(new Date(activeShare.expires_at), "MMM d, yyyy")}
+                </p>
+                <button
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                  onClick={() => copyToClipboard(shareUrl)}
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+              </div>
               {isAdmin && (
                 <button
                   className="text-[11px] text-muted-foreground/60 hover:text-destructive transition-colors"
@@ -378,8 +382,6 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
             </Button>
           )}
         </section>
-
-        <div className="border-t border-border/50" />
 
         {/* ── Section 3: Export ─────────────────────────── */}
         <section className="space-y-2.5">
