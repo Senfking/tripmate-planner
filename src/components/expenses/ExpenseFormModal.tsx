@@ -269,7 +269,7 @@ export function ExpenseFormModal({
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*"
+        accept=".jpg,.jpeg,.png,.webp,.pdf"
         className="hidden"
         onChange={handleScanReceipt}
       />
