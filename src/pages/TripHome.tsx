@@ -8,7 +8,7 @@ import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { MemberListSheet } from "@/components/trip/MemberListSheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, parseISO, isWithinInterval, differenceInCalendarDays } from "date-fns";
+import { format, parseISO, isWithinInterval, differenceInCalendarDays, differenceInDays } from "date-fns";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 
@@ -48,34 +48,35 @@ function StatusRow({
   if (startDate && endDate) {
     const s = parseISO(startDate);
     const e = parseISO(endDate);
+    const totalDays = differenceInDays(e, s) + 1;
 
     if (e < today) {
       // Past
       content = (
         <span className="text-sm text-muted-foreground">
-          Completed · {format(e, "MMMM yyyy")}
+          {format(s, "MMM yyyy")} · {totalDays} days
         </span>
       );
     } else if (isWithinInterval(today, { start: s, end: e })) {
       // Live
+      const dayNumber = differenceInDays(today, s) + 1;
       content = (
-        <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: "#0D9488" }}>
-          <span className="h-2 w-2 rounded-full animate-pulse" style={{ background: "#0D9488" }} />
-          Happening now
+        <span className="text-sm font-semibold text-foreground">
+          Day {dayNumber} of {totalDays}
         </span>
       );
     } else {
-      const daysToGo = differenceInCalendarDays(s, today);
-      if (daysToGo <= 7) {
+      const daysUntil = differenceInCalendarDays(s, today);
+      if (daysUntil <= 7) {
         content = (
-          <span className="text-sm font-medium text-foreground">
-            ✈️ In {daysToGo} day{daysToGo !== 1 ? "s" : ""}
+          <span className="text-sm font-medium" style={{ color: "#0D9488" }}>
+            In {daysUntil} day{daysUntil !== 1 ? "s" : ""} · {format(s, "MMM d")}
           </span>
         );
       } else {
         content = (
           <span className="text-sm text-muted-foreground">
-            {daysToGo} days to go
+            {daysUntil} days to go
           </span>
         );
       }
