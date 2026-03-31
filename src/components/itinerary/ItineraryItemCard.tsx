@@ -146,10 +146,17 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {overlapTitles?.length ? (
-            <TooltipProvider>
+            <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 cursor-help" />
+                  <button
+                    type="button"
+                    className="appearance-none"
+                    onClick={(e) => e.currentTarget.focus()}
+                    onTouchStart={(e) => e.currentTarget.focus()}
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500 cursor-help" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-[240px] text-xs">
                   Overlaps with {overlapTitles.join(", ")} — different people can join different activities
