@@ -495,6 +495,17 @@ export default function TripList() {
           <RegularCard key={trip.id} trip={trip} />
         ))}
 
+        {/* Join a trip row */}
+        <button
+          onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
+          className="flex items-center rounded-2xl border border-dashed px-4 py-3.5 bg-card transition-colors"
+          style={{ borderColor: "rgba(13,148,136,0.3)" }}
+        >
+          <Hash className="h-5 w-5 shrink-0" style={{ color: "#0D9488" }} />
+          <span className="ml-3 flex-1 text-left font-medium text-foreground text-sm">Join a trip</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+
         <Link to="/app/trips/new" className="block">
           <div
             className="flex h-[56px] items-center justify-center rounded-2xl transition-colors"
@@ -510,6 +521,17 @@ export default function TripList() {
           </div>
         </Link>
       </div>
+
+      {/* Join trip drawer */}
+      <JoinDrawer
+        open={joinOpen}
+        onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}
+        code={joinCode}
+        onCodeChange={(v) => { setJoinCode(v.toUpperCase()); setJoinError(""); }}
+        error={joinError}
+        loading={joinMutation.isPending}
+        onSubmit={() => joinMutation.mutate(joinCode)}
+      />
     </div>
   );
 }
