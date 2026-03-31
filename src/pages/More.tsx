@@ -212,7 +212,7 @@ const More = () => {
   // Crop state
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [showCropDrawer, setShowCropDrawer] = useState(false);
-
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   // Auth provider
   const [authProvider, setAuthProvider] = useState<string | null>(null);
 
