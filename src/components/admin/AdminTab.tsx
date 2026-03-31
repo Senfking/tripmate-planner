@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Copy, Loader2, Info, AlertTriangle } from "lucide-react";
+import { Copy, Loader2, Info, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
 
 import { Card } from "@/components/ui/card";
