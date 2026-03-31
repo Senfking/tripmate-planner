@@ -317,8 +317,9 @@ export default function TripHome() {
           My Trips
         </button>
 
-        <div className="absolute right-4" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
+        <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
           <LiveIndicator status={connectionStatus} />
+          <HeroAvatar />
         </div>
 
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
