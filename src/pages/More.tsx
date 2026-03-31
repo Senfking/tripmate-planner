@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CurrencyPicker } from "@/components/expenses/CurrencyPicker";
 import {
@@ -22,7 +23,6 @@ import {
   Camera,
   ChevronRight,
   Pencil,
-  Image as ImageIcon,
   Coins,
   KeyRound,
   Mail,
@@ -32,7 +32,10 @@ import {
   Trash2,
   Crown,
   Hash,
+  Star,
+  MessageSquare,
 } from "lucide-react";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
 import { toast } from "@/hooks/use-toast";
 
 /* ───────── helpers ───────── */
@@ -41,33 +44,6 @@ function getInitials(name: string | null | undefined, email: string | null | und
   if (name) return name.charAt(0).toUpperCase();
   if (email) return email.charAt(0).toUpperCase();
   return "?";
-}
-
-async function resizeImage(file: File, maxSize = 512): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      let w = img.width;
-      let h = img.height;
-      if (w > h) {
-        if (w > maxSize) { h = (h * maxSize) / w; w = maxSize; }
-      } else {
-        if (h > maxSize) { w = (w * maxSize) / h; h = maxSize; }
-      }
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-        "image/jpeg",
-        0.85
-      );
-    };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
-  });
 }
 
 /* ───────── chevron row ───────── */
@@ -82,6 +58,126 @@ function SettingRow({ icon: Icon, label, onClick }: { icon: any; label: string; 
       <span className="flex-1 text-foreground">{label}</span>
       <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
     </button>
+  );
+}
+
+/* ───────── Avatar Crop Drawer ───────── */
+
+function AvatarCropDrawer({
+  file,
+  open,
+  onClose,
+  onSave,
+}: {
+  file: File | null;
+  open: boolean;
+  onClose: () => void;
+  onSave: (blob: Blob) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const stateRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 });
+  const dragRef = useRef<{ startX: number; startY: number; startOX: number; startOY: number } | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!file || !open) { setLoaded(false); return; }
+    const img = new window.Image();
+    img.onload = () => {
+      imgRef.current = img;
+      const minDim = Math.min(img.width, img.height);
+      stateRef.current = {
+        offsetX: (img.width - minDim) / 2,
+        offsetY: (img.height - minDim) / 2,
+        scale: minDim / 280,
+      };
+      setLoaded(true);
+      draw();
+    };
+    img.src = URL.createObjectURL(file);
+    return () => URL.revokeObjectURL(img.src);
+  }, [file, open]);
+
+  const draw = () => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img) return;
+    const ctx = canvas.getContext("2d")!;
+    const s = stateRef.current;
+    ctx.clearRect(0, 0, 280, 280);
+    ctx.drawImage(img, s.offsetX, s.offsetY, 280 * s.scale, 280 * s.scale, 0, 0, 280, 280);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startOX: stateRef.current.offsetX, startOY: stateRef.current.offsetY };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current || !imgRef.current) return;
+    const d = dragRef.current;
+    const s = stateRef.current;
+    const dx = (e.clientX - d.startX) * s.scale;
+    const dy = (e.clientY - d.startY) * s.scale;
+    s.offsetX = Math.max(0, Math.min(imgRef.current.width - 280 * s.scale, d.startOX - dx));
+    s.offsetY = Math.max(0, Math.min(imgRef.current.height - 280 * s.scale, d.startOY - dy));
+    draw();
+  };
+
+  const handlePointerUp = () => { dragRef.current = null; };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!imgRef.current) return;
+    e.preventDefault();
+    const s = stateRef.current;
+    const minScale = Math.min(imgRef.current.width, imgRef.current.height) / 280;
+    const newScale = Math.max(0.5, Math.min(minScale, s.scale * (1 + e.deltaY * 0.001)));
+    s.scale = newScale;
+    s.offsetX = Math.max(0, Math.min(imgRef.current.width - 280 * s.scale, s.offsetX));
+    s.offsetY = Math.max(0, Math.min(imgRef.current.height - 280 * s.scale, s.offsetY));
+    draw();
+  };
+
+  const handleSave = () => {
+    const img = imgRef.current;
+    if (!img) return;
+    const s = stateRef.current;
+    const out = document.createElement("canvas");
+    out.width = 512;
+    out.height = 512;
+    const ctx = out.getContext("2d")!;
+    ctx.drawImage(img, s.offsetX, s.offsetY, 280 * s.scale, 280 * s.scale, 0, 0, 512, 512);
+    out.toBlob((blob) => { if (blob) onSave(blob); }, "image/jpeg", 0.85);
+  };
+
+  return (
+    <Drawer open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Crop your photo</DrawerTitle>
+        </DrawerHeader>
+        <div className="flex justify-center px-4 pb-2">
+          <canvas
+            ref={canvasRef}
+            width={280}
+            height={280}
+            className="rounded-full border-2 border-primary/30 touch-none cursor-grab active:cursor-grabbing"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onWheel={handleWheel}
+            style={{ width: 280, height: 280 }}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground text-center">Drag to reposition</p>
+        <DrawerFooter>
+          <Button onClick={handleSave} disabled={!loaded}>Save</Button>
+          <DrawerClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -113,12 +209,39 @@ const More = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Crop state
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [showCropDrawer, setShowCropDrawer] = useState(false);
+
+  // Auth provider
+  const [authProvider, setAuthProvider] = useState<string | null>(null);
+
+  // Stats
+  const [tripCount, setTripCount] = useState(0);
+  const [companionCount, setCompanionCount] = useState(0);
+
+  // Referral count
+  const [referralCount, setReferralCount] = useState(0);
+
+  // Feedback
+  const [showFeedbackDrawer, setShowFeedbackDrawer] = useState(false);
+  const [feedbackBody, setFeedbackBody] = useState("");
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
   /* ── sync notif prefs from profile ── */
   useEffect(() => {
     if (profile?.notification_preferences) {
       setNotifPrefs(profile.notification_preferences);
     }
   }, [profile?.notification_preferences]);
+
+  /* ── fetch auth provider ── */
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthProvider(data.user?.app_metadata?.provider || null);
+    });
+  }, []);
 
   /* ── fetch trips ── */
   useEffect(() => {
@@ -143,6 +266,44 @@ const More = () => {
       });
   }, [user]);
 
+  /* ── fetch stats ── */
+  useEffect(() => {
+    if (!user) return;
+    // Trip count
+    supabase
+      .from("trip_members")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .then(({ count }) => setTripCount(count || 0));
+
+    // Companion count
+    supabase
+      .from("trip_members")
+      .select("trip_id")
+      .eq("user_id", user.id)
+      .then(async ({ data: myTrips }) => {
+        if (!myTrips || myTrips.length === 0) { setCompanionCount(0); return; }
+        const tripIds = myTrips.map((t) => t.trip_id);
+        const { data: allMembers } = await supabase
+          .from("trip_members")
+          .select("user_id")
+          .in("trip_id", tripIds);
+        if (!allMembers) { setCompanionCount(0); return; }
+        const uniqueOthers = new Set(allMembers.map((m) => m.user_id).filter((id) => id !== user.id));
+        setCompanionCount(uniqueOthers.size);
+      });
+  }, [user]);
+
+  /* ── fetch referral count ── */
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("referred_by", user.id)
+      .then(({ count }) => setReferralCount(count || 0));
+  }, [user]);
+
   /* ── handlers ── */
 
   const handleSaveName = async () => {
@@ -155,11 +316,20 @@ const More = () => {
     toast({ title: "Display name updated" });
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
+    setCropFile(file);
+    setShowCropDrawer(true);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleCroppedUpload = async (blob: Blob) => {
+    if (!user) return;
+    setShowCropDrawer(false);
+    setCropFile(null);
     try {
-      const blob = await resizeImage(file);
       const path = `${user.id}/avatar.jpg`;
       const { error } = await supabase.storage.from("avatars").upload(path, blob, {
         upsert: true,
@@ -253,7 +423,6 @@ const More = () => {
     setDeleteEmail("");
     setSoleOwnedTrips(null);
     setShowDeleteDrawer(true);
-    // Pre-check sole ownership
     if (!user) return;
     const { data } = await supabase
       .from("trip_members")
@@ -282,6 +451,39 @@ const More = () => {
     }
   }, [profile?.referral_code]);
 
+  const handleCopyReferralLink = useCallback(() => {
+    if (profile?.referral_code) {
+      navigator.clipboard.writeText(`https://juntotravel.app/join?ref=${profile.referral_code}`);
+      toast({ title: "Copied!" });
+    }
+  }, [profile?.referral_code]);
+
+  const handleShareWhatsApp = useCallback(() => {
+    if (!profile?.referral_code) return;
+    const text = `Join me on Junto — the app for planning group trips! Use my invite code ${profile.referral_code} at juntotravel.app`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }, [profile?.referral_code]);
+
+  const handleSubmitFeedback = async () => {
+    if (!user || feedbackRating === 0) return;
+    setSubmittingFeedback(true);
+    const { error } = await supabase.from("feedback" as any).insert({
+      user_id: user.id,
+      body: feedbackBody.trim() || null,
+      rating: feedbackRating,
+    } as any);
+    setSubmittingFeedback(false);
+    if (error) {
+      toast({ title: "Failed to send feedback", variant: "destructive" });
+    } else {
+      toast({ title: "Thanks for your feedback! 💛" });
+      setShowFeedbackDrawer(false);
+      setFeedbackBody("");
+      setFeedbackRating(0);
+    }
+  };
+
+  const isGoogleUser = authProvider === "google";
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
 
   return (
@@ -309,7 +511,7 @@ const More = () => {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={handlePhotoUpload}
+            onChange={handlePhotoSelect}
           />
         </div>
 
@@ -329,12 +531,32 @@ const More = () => {
         </div>
 
         {user?.email && (
-          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Mail className="h-3.5 w-3.5" />
-            {user.email}
-          </p>
+          <div className="flex flex-col items-center">
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Mail className="h-3.5 w-3.5" />
+              {user.email}
+            </p>
+            {isGoogleUser && (
+              <p className="text-xs text-muted-foreground mt-1">Signed in with Google</p>
+            )}
+          </div>
         )}
       </div>
+
+      {/* ── Stats Card ── */}
+      <Card>
+        <CardContent className="p-4 flex items-center justify-around">
+          <div className="text-center">
+            <p className="text-lg font-bold text-foreground">{tripCount}</p>
+            <p className="text-xs text-muted-foreground">✈️ Trips</p>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="text-center">
+            <p className="text-lg font-bold text-foreground">{companionCount}</p>
+            <p className="text-xs text-muted-foreground">👥 Travelled with</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ── SECTION 2: Account Settings ── */}
       <Card>
@@ -367,8 +589,6 @@ const More = () => {
             />
           )}
 
-          <SettingRow icon={ImageIcon} label="Change profile photo" onClick={() => fileInputRef.current?.click()} />
-
           {/* Default currency */}
           {showCurrency ? (
             <div className="px-4 py-3">
@@ -390,8 +610,12 @@ const More = () => {
             <SettingRow icon={Coins} label={`Default currency: ${profile?.default_currency || "EUR"}`} onClick={() => setShowCurrency(true)} />
           )}
 
-          <SettingRow icon={KeyRound} label="Change password" onClick={handleResetPassword} />
-          <SettingRow icon={Mail} label="Change email" onClick={() => setShowEmailDrawer(true)} />
+          {!isGoogleUser && (
+            <>
+              <SettingRow icon={KeyRound} label="Change password" onClick={handleResetPassword} />
+              <SettingRow icon={Mail} label="Change email" onClick={() => setShowEmailDrawer(true)} />
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -477,23 +701,48 @@ const More = () => {
         </CardContent>
       </Card>
 
-      {/* ── SECTION 6: Referral ── */}
+      {/* ── SECTION 6: Invite friends ── */}
       <Card>
-        <CardContent className="p-4 space-y-2">
+        <CardContent className="p-4 space-y-3">
           <p className="text-sm font-medium text-foreground">Invite friends to Junto</p>
           {profile?.referral_code && (
-            <div className="flex items-center gap-2">
-              <div className="flex-1 rounded-lg bg-muted px-3 py-2 font-mono text-sm tracking-widest text-foreground">
-                {profile.referral_code}
+            <>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 rounded-lg bg-muted px-3 py-2 font-mono text-sm tracking-widest text-foreground">
+                  {profile.referral_code}
+                </div>
+                <Button size="icon" variant="outline" onClick={handleCopyReferral} className="shrink-0">
+                  <Copy className="h-4 w-4" />
+                </Button>
               </div>
-              <Button size="icon" variant="outline" onClick={handleCopyReferral} className="shrink-0">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
+
+              <p className="text-xs text-muted-foreground">
+                {referralCount > 0
+                  ? `🎉 ${referralCount} friend${referralCount > 1 ? "s" : ""} joined using your code`
+                  : "No friends joined yet"}
+              </p>
+
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="flex-1 gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white"
+                  onClick={handleShareWhatsApp}
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  WhatsApp
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={handleCopyReferralLink}
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy link
+                </Button>
+              </div>
+            </>
           )}
-          <p className="text-xs text-muted-foreground">
-            Share your code — referral rewards coming soon
-          </p>
         </CardContent>
       </Card>
 
@@ -512,13 +761,6 @@ const More = () => {
               >
                 <LogOut className="h-4 w-4 text-muted-foreground" />
                 Sign out all devices
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-accent/50 transition-colors"
-              >
-                <LogOut className="h-4 w-4 text-muted-foreground" />
-                Sign out
               </button>
               <button
                 onClick={openDeleteDrawer}
@@ -542,6 +784,35 @@ const More = () => {
         </Button>
       </div>
 
+      {/* ── Sign Out button ── */}
+      <Button
+        variant="outline"
+        className="w-full text-destructive border-destructive/30"
+        onClick={handleSignOut}
+      >
+        <LogOut className="h-4 w-4 mr-2" />
+        Sign out
+      </Button>
+
+      {/* ── App version + feedback footer ── */}
+      <p className="text-center text-xs text-muted-foreground pb-4">
+        Junto · v0.1 ·{" "}
+        <button
+          onClick={() => setShowFeedbackDrawer(true)}
+          className="underline underline-offset-2 hover:text-foreground transition-colors"
+        >
+          Send feedback →
+        </button>
+      </p>
+
+      {/* ── CROP DRAWER ── */}
+      <AvatarCropDrawer
+        file={cropFile}
+        open={showCropDrawer}
+        onClose={() => { setShowCropDrawer(false); setCropFile(null); }}
+        onSave={handleCroppedUpload}
+      />
+
       {/* ── EMAIL DRAWER ── */}
       <Drawer open={showEmailDrawer} onOpenChange={setShowEmailDrawer}>
         <DrawerContent>
@@ -559,6 +830,57 @@ const More = () => {
           <DrawerFooter>
             <Button onClick={handleChangeEmail} disabled={!newEmail.trim()}>
               Send confirmation
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {/* ── FEEDBACK DRAWER ── */}
+      <Drawer open={showFeedbackDrawer} onOpenChange={setShowFeedbackDrawer}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Send feedback
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 space-y-4">
+            <Textarea
+              placeholder="What's on your mind?"
+              value={feedbackBody}
+              onChange={(e) => setFeedbackBody(e.target.value)}
+              rows={3}
+            />
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">How's your experience?</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setFeedbackRating(n)}
+                    className="p-1 transition-colors"
+                  >
+                    <Star
+                      className={`h-7 w-7 ${
+                        n <= feedbackRating
+                          ? "fill-primary text-primary"
+                          : "text-muted-foreground/40"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DrawerFooter>
+            <Button
+              onClick={handleSubmitFeedback}
+              disabled={feedbackRating === 0 || submittingFeedback}
+            >
+              {submittingFeedback ? "Sending…" : "Submit"}
             </Button>
             <DrawerClose asChild>
               <Button variant="outline">Cancel</Button>
