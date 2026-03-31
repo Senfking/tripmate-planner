@@ -81,6 +81,7 @@ export function AttendanceInviteOverlay({
 }: AttendanceInviteOverlayProps) {
   const [successState, setSuccessState] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   // Rotating messages
   const [messageIndex, setMessageIndex] = useState(() => Math.floor(Math.random() * PEEKING_MESSAGES.length));
@@ -103,10 +104,11 @@ export function AttendanceInviteOverlay({
     if (open) {
       setSuccessState(false);
       setShowConfetti(false);
+      setClosing(false);
     }
   }, [open]);
 
-  const isVisible = open || peeking;
+  const isVisible = open || peeking || closing;
   if (!isVisible) return null;
 
   const otherMembers = members
@@ -121,17 +123,35 @@ export function AttendanceInviteOverlay({
 
   const handleRespond = (status: string) => {
     onRespond(status);
+
     if (status === "going") {
+      // Step 1: Show confetti, keep member list visible
       setShowConfetti(true);
-      setSuccessState(true);
-      setTimeout(() => onDismiss(), 1500);
+
+      // Step 2: Fade into success state after 400ms
+      setTimeout(() => {
+        setSuccessState(true);
+      }, 400);
+
+      // Step 3: Slide overlay down after success visible 1.5s
+      setTimeout(() => {
+        setClosing(true);
+      }, 1900);
+
+      // Step 4: Clean up after slide-down completes
+      setTimeout(() => {
+        setClosing(false);
+        setSuccessState(false);
+        setShowConfetti(false);
+        onDismiss();
+      }, 2350);
     } else {
-      onDismiss();
+      handleDismiss();
     }
   };
 
   // ─── SINGLE CONTAINER: full or peeking ───
-  const isFull = open;
+  const isFull = open || closing;
 
   return (
     <>
@@ -139,21 +159,24 @@ export function AttendanceInviteOverlay({
       <div
         className="fixed inset-0 z-[59] bg-black/50"
         style={{
-          opacity: isFull ? 1 : 0,
-          pointerEvents: isFull ? "auto" : "none",
-          transition: "opacity 0.4s ease",
+          opacity: isFull && !closing ? 1 : 0,
+          pointerEvents: isFull && !closing ? "auto" : "none",
+          transition: "opacity 0.45s ease",
         }}
-        onClick={isFull ? handleDismiss : undefined}
+        onClick={isFull && !closing ? handleDismiss : undefined}
       />
 
       {/* The sheet itself */}
       <div
-        className={cn("fixed left-0 right-0 z-[60] flex flex-col", !isFull && "animate-peek-bounce")}
+        className={cn(
+          "fixed left-0 right-0 z-[60] flex flex-col",
+          !isFull && "animate-peek-bounce",
+          closing && "animate-sheet-down"
+        )}
         style={{
           top: isFull ? 0 : undefined,
           bottom: isFull ? 0 : "calc(env(safe-area-inset-bottom, 0px) + 1rem + 56px)",
           height: isFull ? "100%" : undefined,
-          transition: isFull ? "none" : undefined,
         }}
         onClick={!isFull ? onPeekTap : undefined}
       >
@@ -222,8 +245,14 @@ export function AttendanceInviteOverlay({
               {/* Content */}
               <div className="flex-1 rounded-t-3xl -mt-4 relative bg-card px-5 pt-5 pb-8 overflow-y-auto">
                 {successState ? (
-                  <div className="flex flex-col items-center justify-center py-16">
-                    {showConfetti && <div className="confetti-burst" />}
+                  <div className="flex flex-col items-center justify-center py-16 animate-success-fade-in">
+                    {showConfetti && (
+                      <div className="confetti-burst">
+                        {[...Array(8)].map((_, i) => (
+                          <span key={i} className={`confetti-dot confetti-dot-${i}`} />
+                        ))}
+                      </div>
+                    )}
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0D9488]/10">
                       <Check className="h-8 w-8 text-[#0D9488]" />
                     </div>

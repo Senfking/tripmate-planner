@@ -191,11 +191,11 @@ html, body, #root {
   }
 
   /* Attendance overlay animations */
-  @keyframes overlay-in {
+  @keyframes overlay-fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  @keyframes overlay-out {
+  @keyframes overlay-fade-out {
     from { opacity: 1; }
     to { opacity: 0; }
   }
@@ -207,38 +207,54 @@ html, body, #root {
     from { transform: translateY(0); }
     to { transform: translateY(100%); }
   }
-  .animate-overlay-in { animation: overlay-in 0.3s ease-out forwards; }
-  .animate-overlay-out { animation: overlay-out 0.3s ease-in forwards; }
-  .animate-sheet-up { animation: sheet-up 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
-  .animate-sheet-down { animation: sheet-down 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+  .animate-overlay-in { animation: overlay-fade-in 0.5s ease forwards; }
+  .animate-overlay-out { animation: overlay-fade-out 0.45s ease forwards; }
+  .animate-sheet-up { animation: sheet-up 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+  .animate-sheet-down { animation: sheet-down 0.45s cubic-bezier(0.32, 0, 0.67, 0) forwards; }
 
-  /* Confetti burst */
+  /* Success fade-in */
+  @keyframes success-fade-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-success-fade-in {
+    animation: success-fade-in 0.4s ease forwards;
+  }
+
+  /* Confetti dots */
   .confetti-burst {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     pointer-events: none;
+    overflow: hidden;
   }
-  .confetti-burst::before,
-  .confetti-burst::after {
-    content: "🎉✨🎊";
+
+  .confetti-dot {
     position: absolute;
-    font-size: 24px;
-    animation: confetti-pop 1s ease-out forwards;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    opacity: 0;
+    animation: confetti-rise 2.5s ease-out forwards;
   }
-  .confetti-burst::before {
-    transform: translate(-50%, -50%) rotate(-15deg);
-  }
-  .confetti-burst::after {
-    transform: translate(-50%, -50%) rotate(15deg);
-    animation-delay: 0.1s;
-  }
-  @keyframes confetti-pop {
-    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
-    50% { opacity: 1; transform: translate(-50%, -120%) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, -180%) scale(0.8); }
+
+  .confetti-dot-0 { left: 15%; top: 60%; background: #0D9488; animation-delay: 0ms; }
+  .confetti-dot-1 { left: 30%; top: 70%; background: #F59E0B; animation-delay: 100ms; }
+  .confetti-dot-2 { left: 50%; top: 65%; background: #3B82F6; animation-delay: 50ms; }
+  .confetti-dot-3 { left: 65%; top: 70%; background: #0D9488; animation-delay: 150ms; }
+  .confetti-dot-4 { left: 80%; top: 60%; background: #F59E0B; animation-delay: 80ms; }
+  .confetti-dot-5 { left: 20%; top: 50%; background: #EC4899; animation-delay: 200ms; }
+  .confetti-dot-6 { left: 45%; top: 75%; background: #8B5CF6; animation-delay: 120ms; }
+  .confetti-dot-7 { left: 70%; top: 55%; background: #3B82F6; animation-delay: 60ms; }
+
+  @keyframes confetti-rise {
+    0% { transform: translateY(0) scale(0); opacity: 0; }
+    15% { opacity: 1; transform: translateY(-20px) scale(1); }
+    85% { opacity: 0.6; transform: translateY(-120px) scale(0.8); }
+    100% { opacity: 0; transform: translateY(-160px) scale(0.4); }
   }
 
   /* Peeking tab bounce */
