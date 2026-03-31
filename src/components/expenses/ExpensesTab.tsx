@@ -85,7 +85,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       setScanning(false);
     }
   };
-  const [expensesOpen, setExpensesOpen] = useState(true);
 
   const profileMap = useMemo(
     () => Object.fromEntries(members.map((m) => [m.userId, m.displayName])),
