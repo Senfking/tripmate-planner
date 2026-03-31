@@ -192,7 +192,11 @@ export function useExpenses(tripId: string) {
 
       return { rates: {}, fetchedAt, source: "none" };
     },
-    staleTime: 1000 * 60 * 60,
+    // No staleTime here — the expensive DB call is already cached for 1hr by
+    // the inner qc.fetchQuery(["exchange-rates", "EUR"]).  The outer query is
+    // just a trivial cross-calculation wrapper; caching it independently means
+    // it can stay stale with empty rates for an hour while the inner cache has
+    // been updated, causing multi-currency expenses to be silently excluded.
     retry: 1,
   });
 
