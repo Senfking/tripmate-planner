@@ -1,7 +1,6 @@
 import { useGlobalExpenses } from "@/hooks/useGlobalExpenses";
 import { Link } from "react-router-dom";
 import { Wallet, ArrowRight, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
@@ -31,51 +30,30 @@ const Expenses = () => {
     );
   }
 
-  // Balance display in header — bank-style
+  // Centered balance display
   const balanceDisplay = (
-    <div className="mt-4 flex items-end justify-between">
-      <div>
-        {hasExpenses ? (
-          <>
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1">
-              {Math.abs(overallNet) < 0.01 ? "Net balance" : overallNet > 0 ? "You're owed" : "You owe"}
-            </p>
-            <p className="text-[36px] font-extrabold text-white tracking-tight leading-none">
-              {Math.abs(overallNet) < 0.01 ? "€0" : formatCurrency(Math.abs(overallNet), currency)}
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1">
-              Net balance
-            </p>
-            <p className="text-[36px] font-extrabold text-white tracking-tight leading-none">
-              €0
-            </p>
-          </>
+    <div className="mt-4 flex flex-col items-center">
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-white/50 mb-1.5">
+        {!hasExpenses || Math.abs(overallNet) < 0.01
+          ? "Net balance"
+          : overallNet > 0
+          ? "You're owed"
+          : "You owe"}
+      </p>
+      <div className="flex items-center gap-2.5">
+        {hasExpenses && Math.abs(overallNet) >= 0.01 && (
+          overallNet > 0
+            ? <TrendingUp className="h-5 w-5 text-emerald-300" />
+            : <TrendingDown className="h-5 w-5 text-orange-300" />
         )}
-      </div>
-      {/* Status indicator */}
-      <div className="mb-1">
-        {Math.abs(overallNet) < 0.01 ? (
-          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
-            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
-            <span className="text-[11px] font-semibold text-white/80">Settled</span>
-          </div>
-        ) : overallNet > 0 ? (
-          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
-            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
-            <span className="text-[11px] font-semibold text-white/80">{trips.length} trip{trips.length !== 1 ? "s" : ""}</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
-            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
-            <TrendingDown className="h-3.5 w-3.5 text-orange-300" />
-            <span className="text-[11px] font-semibold text-white/80">{trips.length} trip{trips.length !== 1 ? "s" : ""}</span>
-          </div>
+        {hasExpenses && Math.abs(overallNet) < 0.01 && (
+          <CheckCircle2 className="h-5 w-5 text-emerald-300" />
         )}
+        <p className="text-[36px] font-extrabold text-white tracking-tight leading-none">
+          {!hasExpenses || Math.abs(overallNet) < 0.01
+            ? "€0"
+            : formatCurrency(Math.abs(overallNet), currency)}
+        </p>
       </div>
     </div>
   );

@@ -73,18 +73,19 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
       {/* Avatar — top right */}
       <HeaderAvatar />
 
-      {/* Content */}
+      {/* Content — fixed minimum height for consistency */}
       <div
-        className="relative z-10 flex flex-col"
+        className="relative z-10 flex flex-col justify-end"
         style={{
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
           paddingLeft: 22,
           paddingRight: 22,
           paddingBottom: 20,
+          minHeight: 200,
         }}
       >
         {/* JUNTO — centered, prominent */}
-        <div className="flex justify-center w-full mb-4">
+        <div className="flex justify-center w-full mb-auto pb-2">
           <span className="text-[13px] font-extrabold tracking-[0.3em] uppercase text-white/70">
             JUNTO
           </span>
