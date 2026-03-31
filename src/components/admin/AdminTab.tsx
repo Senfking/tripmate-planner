@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Copy, Loader2, Info, AlertTriangle } from "lucide-react";
+import { Copy, Loader2, Info, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
 
 import { Card } from "@/components/ui/card";
@@ -115,6 +115,25 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
   });
 
   const sharePermission = (trip as any)?.share_permission ?? "all";
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+
+  const updateTripName = useMutation({
+    mutationFn: async (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error("Trip name cannot be empty");
+      const { error } = await supabase.from("trips").update({ name: trimmed }).eq("id", tripId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trips"] });
+      toast.success("Trip name updated");
+      setEditingName(false);
+    },
+    onError: (e) => toast.error(e.message || "Failed to update name"),
+  });
 
   const updateSharePerm = useMutation({
     mutationFn: async (value: string) => {
@@ -227,7 +246,56 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       {isAdmin && (
         <section>
           <h2 className="text-sm font-semibold text-foreground mb-2">Trip Settings</h2>
-          <Card className="p-4 space-y-3">
+          <Card className="p-4 space-y-4">
+            {/* Trip Name */}
+            <div>
+              <p className="text-sm font-medium mb-1">Trip name</p>
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    autoFocus
+                    value={nameValue}
+                    onChange={(e) => setNameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") updateTripName.mutate(nameValue);
+                      if (e.key === "Escape") setEditingName(false);
+                    }}
+                    className="flex-1 h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-[#0D9488]"
+                    onClick={() => updateTripName.mutate(nameValue)}
+                    disabled={updateTripName.isPending}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground"
+                    onClick={() => setEditingName(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-foreground flex-1">{tripName}</p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground"
+                    onClick={() => { setNameValue(tripName); setEditingName(true); }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Share permission */}
             <div>
               <p className="text-sm font-medium">Who can generate share links?</p>
               <p className="text-xs text-muted-foreground mt-0.5">
