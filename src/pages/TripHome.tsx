@@ -87,11 +87,11 @@ function StatusRow({
   }
 
   return (
-    <div className="flex items-center justify-between px-4 pt-3 pb-1">
+    <div className="flex items-center justify-between">
       {content}
       <button
         onClick={onShare}
-        className="flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-colors"
+        className="flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-colors shrink-0"
         style={{ color: "#0D9488", border: "1px solid rgba(13, 148, 136, 0.4)" }}
       >
         <Share2 className="h-3 w-3" />
