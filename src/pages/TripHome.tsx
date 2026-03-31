@@ -254,10 +254,19 @@ export default function TripHome() {
 
   // Attendance overlay state
   const sessionKey = `junto_invite_dismissed_${tripId}`;
-  const [overlayDismissed, setOverlayDismissed] = useState(() =>
-    !!sessionStorage.getItem(sessionKey)
-  );
+  const [overlayDismissed, setOverlayDismissed] = useState(false);
   const [overlayForcedOpen, setOverlayForcedOpen] = useState(false);
+
+  // When membership loads, decide overlay state based on attendance_status
+  useEffect(() => {
+    if (!myMembership) return;
+    if (myMembership.attendance_status === "pending") {
+      sessionStorage.removeItem(sessionKey);
+      setOverlayDismissed(false);
+    } else {
+      setOverlayDismissed(!!sessionStorage.getItem(sessionKey));
+    }
+  }, [myMembership?.attendance_status, sessionKey]);
 
   const isPending = myAttendanceStatus === "pending";
   const hasLoaded = myMembership !== undefined;
