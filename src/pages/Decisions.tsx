@@ -1,14 +1,102 @@
-import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
+import { useGlobalDecisions, type PendingItem } from "@/hooks/useGlobalDecisions";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { CircleCheck, Vote, MapPin, CalendarDays, MessageSquare, ArrowRight } from "lucide-react";
+import { CircleCheck, Vote, MapPin, CalendarDays, MessageSquare, ArrowRight, Plane } from "lucide-react";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
 
 const typeConfig = {
   vibe: { label: "Vibe Board", icon: MessageSquare },
   destination: { label: "Destination vote", icon: MapPin },
   date: { label: "Date vote", icon: CalendarDays },
   poll: { label: "Preference poll", icon: Vote },
+  attendance: { label: "RSVP", icon: Plane },
 } as const;
+
+function AttendanceCard({ item }: { item: PendingItem }) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const updateAttendance = useMutation({
+    mutationFn: async (status: string) => {
+      const { error } = await supabase
+        .from("trip_members")
+        .update({ attendance_status: status } as any)
+        .eq("trip_id", item.tripId)
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: (_, status) => {
+      qc.invalidateQueries({ queryKey: ["global-decisions"] });
+      qc.invalidateQueries({ queryKey: ["my-trip-membership", item.tripId] });
+      qc.invalidateQueries({ queryKey: ["trip-members-full", item.tripId] });
+      if (status === "going") toast.success("You're in! 🎉");
+      else toast.success("Marked as maybe");
+    },
+    onError: () => toast.error("Failed to update"),
+  });
+
+  const goingAvatars = item.goingAvatars ?? [];
+
+  return (
+    <div className="bg-white rounded-2xl border-l-4 border-[#0D9488] shadow-sm p-4">
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+        <span>{item.tripEmoji ?? "✈️"}</span>
+        <span className="truncate">{item.tripName}</span>
+      </div>
+      <p className="text-[16px] font-bold text-foreground">Are you going?</p>
+      <p className="text-[13px] text-muted-foreground mt-0.5">
+        {item.respondedCount
+          ? `${item.respondedCount} member${item.respondedCount !== 1 ? "s" : ""} already responded`
+          : "Be the first to respond"}
+      </p>
+
+      {goingAvatars.length > 0 && (
+        <div className="flex items-center gap-1.5 mt-2">
+          <div className="flex -space-x-1.5">
+            {goingAvatars.map((a, i) => (
+              <Avatar key={i} className="h-6 w-6 ring-2 ring-white">
+                {a.avatar_url && <AvatarImage src={a.avatar_url} />}
+                <AvatarFallback className="bg-primary text-primary-foreground text-[9px]">
+                  {(a.display_name || "?").charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
+          <span className="text-[11px] text-muted-foreground">going</span>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 mt-3">
+        <button
+          onClick={() => updateAttendance.mutate("going")}
+          disabled={updateAttendance.isPending}
+          className="h-8 px-4 rounded-lg text-[13px] font-semibold text-white"
+          style={{ background: "#0D9488" }}
+        >
+          Going ✓
+        </button>
+        <button
+          onClick={() => updateAttendance.mutate("maybe")}
+          disabled={updateAttendance.isPending}
+          className="h-8 px-4 rounded-lg text-[13px] font-semibold border-2"
+          style={{ borderColor: "#0D9488", color: "#0D9488" }}
+        >
+          Maybe
+        </button>
+        <Link
+          to={`/app/trips/${item.tripId}`}
+          className="ml-auto text-[12px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1"
+        >
+          See trip <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 const Decisions = () => {
   const { data, isLoading } = useGlobalDecisions();
@@ -61,6 +149,11 @@ const Decisions = () => {
       ) : (
         <div className="space-y-2.5 px-4 mt-4 pb-32">
           {items.map((item) => {
+            // Attendance cards get special rendering
+            if (item.type === "attendance") {
+              return <AttendanceCard key={item.id} item={item} />;
+            }
+
             const cfg = typeConfig[item.type];
             const Icon = cfg.icon;
             return (
