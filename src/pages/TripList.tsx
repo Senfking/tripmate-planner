@@ -403,8 +403,9 @@ export default function TripList() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen pb-[120px]" style={{ backgroundColor: "#F1F5F9", marginTop: "-52px", paddingTop: "52px" }}>
-        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-4">
+      <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+        <TabHeroHeader title="Your trips" subtitle="Loading…" />
+        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-3">
           <div className="h-[320px] rounded-3xl skeleton-shimmer" style={{ opacity: 0.1 }} />
           <div className="h-[160px] rounded-2xl skeleton-shimmer" style={{ opacity: 0.1, animationDelay: "150ms" }} />
         </div>
@@ -412,34 +413,17 @@ export default function TripList() {
     );
   }
 
+  const greeting = getGreeting(profile?.display_name);
+  const subtitle = getTripsSubtitle(trips);
+
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
-      <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9", marginTop: "-52px" }}>
-        {/* Hero image */}
-        <div className="relative h-[320px] w-full overflow-hidden">
-          <img
-            src={DEFAULT_TRIP_PHOTO}
-            alt="Travel"
-            className="h-full w-full object-cover"
-            onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background: "linear-gradient(to bottom, transparent 40%, #F1F5F9 100%)",
-            }}
-          />
-        </div>
+      <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
+        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" />
 
-        <div className="flex flex-1 flex-col items-center px-6 -mt-8">
-          <h1 className="text-2xl font-bold text-white">
-            Where to next?
-          </h1>
-          <p className="mt-2 max-w-[280px] text-center text-sm text-white/50">
-            Plan your first group trip — vote on destinations, split costs, and keep everyone in sync.
-          </p>
-          <Button asChild className="mt-6 w-full max-w-[260px]">
+        <div className="flex flex-1 flex-col items-center px-6 pt-8">
+          <Button asChild className="w-full max-w-[260px]">
             <Link to="/app/trips/new">Start a trip</Link>
           </Button>
           <Link
@@ -459,17 +443,10 @@ export default function TripList() {
   const otherTrips = trips.filter((t) => t !== liveTrip);
 
   return (
-    <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9", marginTop: "-52px" }}>
-      {/* Top scrim for header readability */}
-      <div
-        className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
-        style={{
-          height: 80,
-          background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 100%)",
-        }}
-      />
+    <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+      <TabHeroHeader title={greeting} subtitle={subtitle} />
 
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pb-[100px]" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
+      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-3 pb-[100px]">
         {/* Hero card for live trip */}
         {liveTrip && <HeroCard trip={liveTrip} />}
 
@@ -483,11 +460,11 @@ export default function TripList() {
           <div
             className="flex h-[56px] items-center justify-center rounded-2xl transition-colors"
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px dashed rgba(255,255,255,0.2)",
+              background: "rgba(0,0,0,0.04)",
+              border: "1px dashed rgba(0,0,0,0.15)",
             }}
           >
-            <span className="flex items-center gap-1.5 text-sm text-white/60">
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Plus className="h-4 w-4" />
               Plan a new trip
             </span>
