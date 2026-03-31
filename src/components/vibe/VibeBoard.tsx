@@ -63,6 +63,7 @@ export function VibeBoard({
   isActive,
   isLocked,
   memberCount,
+  myAttendanceStatus,
 }: Props) {
   const {
     myResponses,
