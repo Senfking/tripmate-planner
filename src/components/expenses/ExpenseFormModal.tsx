@@ -13,7 +13,7 @@ import { CurrencyPicker } from "./CurrencyPicker";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Lightbulb, Camera, Image, Loader2, Sparkles } from "lucide-react";
+import { CalendarIcon, Lightbulb, Camera, Upload, Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -269,7 +269,7 @@ export function ExpenseFormModal({
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*"
+        accept=".jpg,.jpeg,.png,.webp,.pdf"
         className="hidden"
         onChange={handleScanReceipt}
       />
@@ -303,8 +303,8 @@ export function ExpenseFormModal({
                   onClick={() => galleryInputRef.current?.click()}
                   className="flex items-center justify-center gap-2 rounded-lg bg-white border border-[#E5E7EB] py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
                 >
-                  <Image className="h-4 w-4 text-[#0D9488]" />
-                  Choose photo
+                  <Upload className="h-4 w-4 text-[#0D9488]" />
+                  Upload file
                 </button>
               </div>
             )}

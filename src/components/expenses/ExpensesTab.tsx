@@ -245,36 +245,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       </div>
 
-      {/* AI receipt scan */}
-      <input ref={receiptCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptScan} />
-      <input ref={receiptFileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={handleReceiptScan} />
-
-      <div className="rounded-xl border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/[0.03] p-4 space-y-3">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
-          <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Scan a receipt — we'll extract the amount and details automatically
-        </p>
-        {scanning ? (
-          <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Processing…
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => receiptCameraRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
-              <Camera className="h-4 w-4 text-[#0D9488]" />
-              Take photo
-            </button>
-            <button type="button" onClick={() => receiptFileRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
-              <Upload className="h-4 w-4 text-[#0D9488]" />
-              Upload file
-            </button>
-          </div>
-        )}
-      </div>
 
       {canShowBalances && expenses.length > 0 && (
         <div className="rounded-xl border bg-card p-5 text-center">
