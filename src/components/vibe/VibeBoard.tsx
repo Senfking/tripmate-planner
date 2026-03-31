@@ -151,8 +151,16 @@ export function VibeBoard({
     (q) => (draft[q.key]?.length || 0) < 1
   ).map((q) => q.key);
   const allAnswered = unansweredKeys.length === 0;
+  const [showMissing, setShowMissing] = useState(false);
 
   const handleSubmit = () => {
+    if (!allAnswered) {
+      setShowMissing(true);
+      const count = unansweredKeys.length;
+      toast.error(`Please answer ${count} more question${count !== 1 ? "s" : ""} before submitting`);
+      return;
+    }
+    setShowMissing(false);
     const answers: { questionKey: string; answerValue: string }[] = [];
     for (const q of QUESTIONS) {
       for (const val of draft[q.key] || []) {
@@ -161,7 +169,7 @@ export function VibeBoard({
     }
     submitAnswers.mutate(answers, {
       onSuccess: () => {
-        toast({ title: "Your vibe is in! 🎉" });
+        toast.success("Your vibe is in! 🎉");
       },
     });
   };
