@@ -63,22 +63,10 @@ export default function TripNew() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-card border-b px-4 py-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => navigate("/app/trips")}
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm">My Trips</span>
-          </button>
-        </div>
-        <h1 className="text-lg font-bold text-foreground mt-1">New Trip</h1>
-      </header>
+    <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+      <TabHeroHeader title="New Trip" subtitle="Plan your next adventure" />
 
-      <div className="flex-1 px-4 py-5 pb-32 max-w-lg mx-auto w-full">
+      <div className="px-4 mt-4 pb-32 max-w-lg mx-auto w-full">
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Name */}
           <div className="space-y-2">
