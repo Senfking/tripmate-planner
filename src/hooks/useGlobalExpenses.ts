@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calcNetBalances } from "@/lib/settlementCalc";
+import { resolvePhoto } from "@/lib/tripPhoto";
 
 export interface TripBalance {
   tripId: string;
