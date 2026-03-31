@@ -256,6 +256,7 @@ export default function TripHome() {
   const sessionKey = `junto_invite_dismissed_${tripId}`;
   const [overlayDismissed, setOverlayDismissed] = useState(false);
   const [overlayForcedOpen, setOverlayForcedOpen] = useState(false);
+  const [overlayAnimating, setOverlayAnimating] = useState(false);
 
   // When membership loads, decide overlay state based on attendance_status
   useEffect(() => {
@@ -270,7 +271,7 @@ export default function TripHome() {
 
   const isPending = myAttendanceStatus === "pending";
   const hasLoaded = myMembership !== undefined;
-  const showOverlay = hasLoaded && ((isPending && !overlayDismissed) || overlayForcedOpen);
+  const showOverlay = hasLoaded && ((isPending && !overlayDismissed) || overlayForcedOpen || overlayAnimating);
   const showPeekingTab = hasLoaded && isPending && overlayDismissed && !overlayForcedOpen;
 
   const handleOverlayDismiss = useCallback(() => {
@@ -283,12 +284,17 @@ export default function TripHome() {
     (status: string) => {
       updateAttendance.mutate(status);
 
-      const delay = status === "going" ? 5800 : 400;
+      if (status === "going") {
+        setOverlayAnimating(true);
+      }
+
+      const delay = status === "going" ? 5500 : 400;
 
       setTimeout(() => {
         sessionStorage.removeItem(sessionKey);
         setOverlayDismissed(true);
         setOverlayForcedOpen(false);
+        setOverlayAnimating(false);
       }, delay);
     },
     [updateAttendance, sessionKey]
