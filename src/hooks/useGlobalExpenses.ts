@@ -9,6 +9,7 @@ export interface TripBalance {
   tripEmoji: string | null;
   currency: string;
   net: number;
+  photoUrl: string;
 }
 
 export interface GlobalExpensesResult {
