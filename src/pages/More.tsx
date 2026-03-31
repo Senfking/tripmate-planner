@@ -635,7 +635,7 @@ const More = () => {
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
 
   return (
-    <div className="min-h-[calc(100vh-10rem)] bg-muted/40 px-4 pb-32 pt-6 space-y-4">
+    <div className="min-h-screen bg-muted/40 px-4 pb-32 pt-6 space-y-4">
       {/* ── SECTION 1: Profile Header ── */}
       <div className="flex flex-col items-center gap-3 pt-4 text-center">
         <div className="relative">

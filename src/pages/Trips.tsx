@@ -2,7 +2,7 @@ import { Plane } from "lucide-react";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
 
 const Trips = () => (
-  <div className="min-h-[calc(100dvh-10rem)]" style={{ backgroundColor: "#F1F5F9" }}>
+  <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
     <TabHeroHeader title="Trips" subtitle="Your group trips will appear here" />
     <div className="flex flex-col items-center justify-center pt-20 text-center px-4">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10">
