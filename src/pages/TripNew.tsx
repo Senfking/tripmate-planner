@@ -7,9 +7,10 @@ import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
+import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
 
 const TRAVEL_EMOJIS = [
   "✈️", "🏖️", "🏔️", "🌍", "🗺️", "🚗", "🚂", "⛷️",
