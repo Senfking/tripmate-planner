@@ -185,15 +185,10 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   const handleWhatsAppInvite = () => {
     if (!inviteUrl) return;
     const msg = filterLines([
-      `Hey! Come plan ${tripName} with us on Junto ✈️`,
-      dateStr,
-      routeLine,
-      membersLine,
+      `Join me on ${tripName} on Junto! ✈️`,
       "",
-      `Join the trip here:`,
+      tripCode ? `Use code ${tripCode} or tap:` : `Tap to join:`,
       inviteUrl,
-      "",
-      tripCode ? `Or open Junto and enter code: ${tripCode}` : "",
     ]);
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };
