@@ -50,13 +50,13 @@ export function VibeQuestion({
               disabled={disabled}
               onClick={() => onSelect(opt.label)}
               className={cn(
-                "rounded-xl text-left transition-all",
+                "rounded-xl text-left transition-all min-h-[44px] px-4 py-2",
                 "disabled:opacity-60 disabled:cursor-not-allowed",
-                opt.sub ? "px-4 py-2" : "h-10 px-5",
                 isSelected
-                  ? "bg-[#0D9488] text-white border border-transparent shadow-md scale-[1.02]"
+                  ? "text-white border border-transparent shadow-md"
                   : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#0D9488]/40 hover:shadow-sm active:scale-[0.97]"
               )}
+              style={isSelected ? { background: "linear-gradient(135deg, #0D9488, #0369a1)" } : undefined}
             >
               <span className="text-[14px] font-medium leading-tight">{opt.label}</span>
               {opt.sub && (
