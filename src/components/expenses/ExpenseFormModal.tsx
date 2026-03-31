@@ -239,7 +239,7 @@ export function ExpenseFormModal({
 
   const formContent = (
     <div className="space-y-4 p-4 overflow-y-auto max-h-[70vh]">
-      {/* Hidden file input for receipt scanning */}
+      {/* Hidden file inputs for receipt scanning */}
       <input
         ref={fileInputRef}
         type="file"
@@ -248,27 +248,57 @@ export function ExpenseFormModal({
         className="hidden"
         onChange={handleScanReceipt}
       />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleScanReceipt}
+      />
 
-      {/* Scan receipt button */}
+      {/* AI Scan section */}
       {!editingExpense && (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={scanning}
-          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-[#0D9488]/30 bg-[#0D9488]/5 hover:bg-[#0D9488]/10 py-3 text-[13px] font-medium text-[#0D9488] transition-colors disabled:opacity-60"
-        >
-          {scanning ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Scanning receipt…
-            </>
-          ) : (
-            <>
-              <Camera className="h-4 w-4" />
-              Scan a receipt
-            </>
-          )}
-        </button>
+        <>
+          <div className="rounded-xl border border-[#0D9488]/20 bg-[#0D9488]/[0.03] p-4 space-y-3">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
+              <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
+            </div>
+
+            {scanning ? (
+              <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Scanning receipt…
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white border border-[#E5E7EB] py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
+                >
+                  <Camera className="h-4 w-4 text-[#0D9488]" />
+                  Take photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white border border-[#E5E7EB] py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
+                >
+                  <Image className="h-4 w-4 text-[#0D9488]" />
+                  Choose photo
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[11px] text-muted-foreground">or add manually</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+        </>
       )}
 
       <div className="space-y-1.5">
