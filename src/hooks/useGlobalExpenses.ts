@@ -42,11 +42,13 @@ async function fetchEurRates(): Promise<Record<string, number>> {
 
 export function useGlobalExpenses() {
   const { user } = useAuth();
+  const qc = useQueryClient();
 
   return useQuery({
     queryKey: ["global-expenses", user?.id],
     enabled: !!user,
     refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 5,
     queryFn: async (): Promise<GlobalExpensesResult> => {
       const userId = user!.id;
 
