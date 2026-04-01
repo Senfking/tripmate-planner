@@ -270,6 +270,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
     setPrefTitle("");
     setPrefOptions(["", ""]);
     setNewOptionText("");
+    setPrefMultiSelect(false);
   };
 
   const handleCreatePref = () => {
