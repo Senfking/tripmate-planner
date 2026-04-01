@@ -72,15 +72,30 @@ const PHOTO_DB: [string[], string][] = [
   [["los angeles", "hollywood", "beverly hills"], "https://images.unsplash.com/photo-1534190760961-74e8c1c5c3da?w=800&q=80"],
   [["san francisco", "california", "napa"], "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&q=80"],
   [["las vegas", "nevada"], "https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?w=800&q=80"],
-  [["miami", "florida", "orlando", "key west"], "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80"],
-  [["new orleans", "louisiana"], "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=800&q=80"],
+  [["miami", "florida", "orlando", "key west", "fort lauderdale"], "https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=800&q=80"],
+  [["new orleans", "louisiana"], "https://images.unsplash.com/photo-1568515387631-8b650bbcdb90?w=800&q=80"],
   [["chicago", "illinois"], "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80"],
   [["canada", "toronto", "vancouver", "montreal", "banff", "alberta", "quebec"], "https://images.unsplash.com/photo-1517935706615-2717063c2225?w=800&q=80"],
   [["mexico", "cancun", "mexico city", "tulum", "playa del carmen", "oaxaca", "guadalajara"], "https://images.unsplash.com/photo-1585464231875-d9ef1f5ad396?w=800&q=80"],
   [["cuba", "havana"], "https://images.unsplash.com/photo-1500759285222-a95626359a97?w=800&q=80"],
+  [["hawaii", "honolulu", "maui", "waikiki", "oahu", "kauai", "big island"], "https://images.unsplash.com/photo-1507876466758-bc54f384809c?w=800&q=80"],
+  [["costa rica", "san jose", "monteverde", "arenal", "manuel antonio"], "https://images.unsplash.com/photo-1519999482648-25049ddd37b1?w=800&q=80"],
+  [["jamaica", "montego bay", "kingston", "negril"], "https://images.unsplash.com/photo-1580237072617-771c3ecc4a24?w=800&q=80"],
+  [["dominican republic", "punta cana", "santo domingo"], "https://images.unsplash.com/photo-1580237072617-771c3ecc4a24?w=800&q=80"],
+  [["puerto rico", "san juan"], "https://images.unsplash.com/photo-1579687196544-08ae57ab5960?w=800&q=80"],
+  [["bahamas", "nassau", "freeport"], "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800&q=80"],
+  [["panama", "panama city", "bocas del toro"], "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80"],
+  [["guatemala", "antigua", "tikal"], "https://images.unsplash.com/photo-1558028979-40f44975ca15?w=800&q=80"],
+  [["washington", "seattle", "washington dc", "dc"], "https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=800&q=80"],
+  [["boston", "massachusetts"], "https://images.unsplash.com/photo-1501979376754-2ff867a4f659?w=800&q=80"],
+  [["nashville", "tennessee", "memphis"], "https://images.unsplash.com/photo-1545419913-775e2e285af3?w=800&q=80"],
+  // CARIBBEAN & CENTRAL AMERICA (additional)
+  [["barbados", "trinidad", "aruba", "curacao", "caribbean", "st lucia", "antigua", "grenada", "turks"], "https://images.unsplash.com/photo-1580237072617-771c3ecc4a24?w=800&q=80"],
   // OCEANIA
   [["sydney", "australia", "melbourne", "brisbane", "cairns", "great barrier reef", "uluru"], "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800&q=80"],
   [["new zealand", "auckland", "queenstown", "rotorua", "milford sound"], "https://images.unsplash.com/photo-1507699622108-4be3abd695ad?w=800&q=80"],
+  [["fiji", "suva", "nadi"], "https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80"],
+  [["tahiti", "bora bora", "french polynesia", "moorea"], "https://images.unsplash.com/photo-1589979481223-deb893043163?w=800&q=80"],
   // INDIAN OCEAN & ISLANDS
   [["maldives"], "https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=800&q=80"],
   [["mauritius", "seychelles", "reunion"], "https://images.unsplash.com/photo-1589979481223-deb893043163?w=800&q=80"],
@@ -91,6 +106,14 @@ const PHOTO_DB: [string[], string][] = [
   [["wedding", "bride", "married"], "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80"],
   [["festival", "carnival", "party"], "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&q=80"],
   [["road trip", "campervan", "road"], "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80"],
+  [["cruise", "ship", "sailing", "boat", "yacht", "catamaran"], "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800&q=80"],
+  [["city break", "urban", "citytrip", "sightseeing"], "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80"],
+  [["camping", "tent", "outdoors", "nature", "backpacking", "camp"], "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80"],
+  [["wine", "vineyard", "winery", "tasting"], "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800&q=80"],
+  [["spa", "wellness", "retreat", "relax", "yoga"], "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&q=80"],
+  [["bachelor", "bachelorette", "stag", "hen"], "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&q=80"],
+  [["honeymoon", "romantic", "anniversary", "couple"], "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80"],
+  [["diving", "scuba", "snorkel", "reef", "underwater"], "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80"],
 ];
 
 export const DEFAULT_TRIP_PHOTO = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80";
@@ -105,13 +128,6 @@ export function resolvePhoto(tripName: string, routeStopDests: string[]): string
     for (const [keywords, url] of PHOTO_DB) {
       if (keywords.some((kw) => destLower.includes(kw))) return url;
     }
-  }
-  const searchTerm = routeStopDests[0] || tripName
-    .replace(/\d{4}/g, "")
-    .replace(/trip|holiday|vacation|tour/gi, "")
-    .trim();
-  if (searchTerm) {
-    return `https://source.unsplash.com/800x500/?${encodeURIComponent(searchTerm)}+travel`;
   }
   return DEFAULT_TRIP_PHOTO;
 }
