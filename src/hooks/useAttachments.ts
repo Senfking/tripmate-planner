@@ -158,7 +158,7 @@ export function useAttachments(tripId: string) {
   const getSignedUrl = async (filePath: string) => {
     const { data, error } = await supabase.storage
       .from("trip-attachments")
-      .createSignedUrl(filePath, 3600);
+      .createSignedUrl(filePath, 60);
     if (error) throw error;
     return data.signedUrl;
   };

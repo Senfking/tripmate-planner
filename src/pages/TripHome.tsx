@@ -276,12 +276,12 @@ export default function TripHome() {
     queryFn: async () => {
       const { data, error } = await supabase.storage
         .from("trip-attachments")
-        .createSignedUrl(coverImagePath!, 60 * 60);
+        .createSignedUrl(coverImagePath!, 5 * 60);
       if (error) throw error;
       return data.signedUrl;
     },
     enabled: !!coverImagePath,
-    staleTime: 50 * 60 * 1000,
+    staleTime: 4 * 60 * 1000,
   });
 
   const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {

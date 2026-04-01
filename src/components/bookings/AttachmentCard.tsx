@@ -62,7 +62,6 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [noteDraft, setNoteDraft] = useState(attachment.notes || "");
   const isMobile = useIsMobile();
@@ -92,12 +91,6 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
     }
   }, [attachment.og_image_url, isImageFile, attachment.file_path, getSignedUrl]);
 
-  // Fetch signed URL for file when expanded
-  useEffect(() => {
-    if (expanded && hasFile && attachment.file_path && getSignedUrl && !fileUrl) {
-      getSignedUrl(attachment.file_path).then(setFileUrl).catch(() => {});
-    }
-  }, [expanded, hasFile, attachment.file_path, getSignedUrl, fileUrl]);
 
   const handleConfirmDelete = () => {
     setConfirmOpen(false);
@@ -108,12 +101,9 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
     e?.stopPropagation();
     if (hasUrl) {
       window.open(attachment.url!, "_blank", "noopener");
-    } else if (fileUrl) {
-      window.open(fileUrl, "_blank", "noopener");
     } else if (hasFile && attachment.file_path && getSignedUrl) {
       try {
         const url = await getSignedUrl(attachment.file_path);
-        setFileUrl(url);
         window.open(url, "_blank", "noopener");
       } catch {
         // error handled by caller
@@ -123,11 +113,10 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    let url = fileUrl;
-    if (!url && attachment.file_path && getSignedUrl) {
+    let url: string | null = null;
+    if (attachment.file_path && getSignedUrl) {
       try {
         url = await getSignedUrl(attachment.file_path);
-        setFileUrl(url);
       } catch { return; }
     }
     if (!url && attachment.url) url = attachment.url;

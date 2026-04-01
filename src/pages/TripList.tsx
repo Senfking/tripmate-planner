@@ -476,7 +476,7 @@ export default function TripList() {
           tripsWithCovers.map(async (t: any) => {
             const { data: urlData } = await supabase.storage
               .from("trip-attachments")
-              .createSignedUrl(t.cover_image_path, 60 * 60);
+              .createSignedUrl(t.cover_image_path, 5 * 60);
             if (urlData?.signedUrl) signedUrlMap[t.id] = urlData.signedUrl;
           })
         );
