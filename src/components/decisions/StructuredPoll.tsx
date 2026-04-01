@@ -58,6 +58,7 @@ export function StructuredPoll({
   onLock,
   onDelete,
   onUpdateTitle,
+  onToggleMultiSelect,
   isAddingOption,
   isLocking,
   isHighlighted,
