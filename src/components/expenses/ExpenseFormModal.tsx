@@ -360,10 +360,10 @@ export function ExpenseFormModal({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className={cn("h-10 w-full justify-start text-left font-normal", !incurredOn && "text-muted-foreground")}
+                className={cn("h-10 w-full justify-start text-left font-normal overflow-hidden", !incurredOn && "text-muted-foreground")}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {incurredOn ? format(parse(incurredOn, "yyyy-MM-dd", new Date()), "PPP") : "Pick a date"}
+                <CalendarIcon className="mr-1.5 h-4 w-4 shrink-0" />
+                <span className="truncate">{incurredOn ? format(parse(incurredOn, "yyyy-MM-dd", new Date()), "PPP") : "Pick a date"}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
