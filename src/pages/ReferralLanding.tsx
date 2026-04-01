@@ -157,12 +157,12 @@ export default function ReferralLanding() {
             Ditch the group chat chaos. Plan, split & decide — all in one place.
           </p>
 
-          {/* Feature pills — 3x2 grid */}
-          <div className="grid grid-cols-3 gap-1.5 mt-4">
+          {/* Feature pills — 2x3 grid */}
+          <div className="grid grid-cols-2 gap-1.5 mt-4">
             {FEATURES.map(({ icon: Icon, text }) => (
               <div
                 key={text}
-                className="flex items-center gap-1 rounded-full px-2 py-1 backdrop-blur-sm"
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-sm"
                 style={{
                   background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.08)",
