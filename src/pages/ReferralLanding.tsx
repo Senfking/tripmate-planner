@@ -175,22 +175,35 @@ export default function ReferralLanding() {
 
           {/* Rotating statement panel */}
           <div
-            className="mt-5 flex flex-col justify-center backdrop-blur-xl"
+            className="relative mt-5 backdrop-blur-xl"
             style={{
               background: "rgba(0,0,0,0.35)",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 16,
-              padding: "20px 20px",
-              minHeight: 120,
             }}
           >
-            <div style={{ opacity: statementVisible ? 1 : 0, transition: "opacity 0.4s ease-in-out" }}>
-              <p className="text-white font-bold" style={{ fontSize: 16, lineHeight: 1.3 }}>
-                {STATEMENTS[statementIndex].problem}
-              </p>
-              <p className="mt-2 font-medium" style={{ fontSize: 14, color: "#0D9488" }}>
-                {STATEMENTS[statementIndex].solution}
-              </p>
+            <div aria-hidden="true" className="pointer-events-none invisible grid px-5 py-5">
+              {STATEMENTS.map((statement) => (
+                <div key={statement.problem} className="[grid-area:1/1]">
+                  <p className="text-white font-bold" style={{ fontSize: 16, lineHeight: 1.3 }}>
+                    {statement.problem}
+                  </p>
+                  <p className="mt-2 font-medium" style={{ fontSize: 14, color: "#0D9488" }}>
+                    {statement.solution}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="absolute inset-0 flex flex-col justify-center px-5 py-5">
+              <div style={{ opacity: statementVisible ? 1 : 0, transition: "opacity 0.4s ease-in-out" }}>
+                <p className="text-white font-bold" style={{ fontSize: 16, lineHeight: 1.3 }}>
+                  {STATEMENTS[statementIndex].problem}
+                </p>
+                <p className="mt-2 font-medium" style={{ fontSize: 14, color: "#0D9488" }}>
+                  {STATEMENTS[statementIndex].solution}
+                </p>
+              </div>
             </div>
           </div>
 
