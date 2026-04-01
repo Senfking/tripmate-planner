@@ -3,7 +3,7 @@ import { UniverseWheel } from "./UniverseWheel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Plus, ThumbsUp, ThumbsDown, Check, HelpCircle, X, Trash2, Pencil, MoreVertical } from "lucide-react";
+import { Lock, Plus, ThumbsUp, ThumbsDown, Check, HelpCircle, X, Trash2, Pencil, MoreVertical, ListChecks } from "lucide-react";
 import { format } from "date-fns";
 import {
   DropdownMenu,
