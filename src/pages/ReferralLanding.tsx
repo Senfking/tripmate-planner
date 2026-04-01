@@ -145,21 +145,18 @@ export default function ReferralLanding() {
           </p>
 
           {/* Feature list */}
-          <div
-            className="mt-5 rounded-2xl backdrop-blur-md overflow-hidden"
-            style={{
-              background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
+          <div className="flex flex-wrap gap-2 mt-5">
             {FEATURES.map(({ icon: Icon, text }) => (
               <div
                 key={text}
-                className="flex items-center gap-3 px-4 py-3"
-                style={{ borderColor: "rgba(255,255,255,0.06)" }}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 backdrop-blur-md"
+                style={{
+                  background: "rgba(255,255,255,0.07)",
+                  border: "1px solid rgba(255,255,255,0.09)",
+                }}
               >
-                <Icon className="h-4 w-4 text-[#5eead4] shrink-0" />
-                <span className="text-[13px] text-white/70">{text}</span>
+                <Icon className="h-3.5 w-3.5 text-[#5eead4] shrink-0" />
+                <span className="text-[11.5px] font-medium text-white/60">{text}</span>
               </div>
             ))}
           </div>
