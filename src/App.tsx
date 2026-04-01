@@ -22,6 +22,7 @@ import InviteRedeem from "./pages/InviteRedeem";
 import JoinByCode from "./pages/JoinByCode";
 import ShareView from "./pages/ShareView";
 import AuthCallback from "./pages/AuthCallback";
+import ReferralLanding from "./pages/ReferralLanding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
