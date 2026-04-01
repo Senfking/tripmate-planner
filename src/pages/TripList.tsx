@@ -351,6 +351,27 @@ export default function TripList() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [referralDismissed, setReferralDismissed] = useState(
+    () => localStorage.getItem("junto_referral_card_dismissed") === "true"
+  );
+
+  const handleDismissReferral = useCallback(() => {
+    setReferralDismissed(true);
+    localStorage.setItem("junto_referral_card_dismissed", "true");
+  }, []);
+
+  const handleReferralWhatsApp = useCallback(() => {
+    const displayName = profile?.display_name || "Someone";
+    const refCode = (profile as any)?.referral_code || "";
+    const text = `✈️ ${displayName} thinks you'd love Junto.\n\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://juntotravel.lovable.app/ref?ref=${refCode}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }, [profile]);
+
+  const handleCopyReferralLink = useCallback(() => {
+    const refCode = (profile as any)?.referral_code || "";
+    navigator.clipboard.writeText(`https://juntotravel.lovable.app/ref?ref=${refCode}`);
+    toast.success("Link copied!");
+  }, [profile]);
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
