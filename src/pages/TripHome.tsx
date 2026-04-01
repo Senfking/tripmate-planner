@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload, X, Check } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { Button } from "@/components/ui/button";
 import {
