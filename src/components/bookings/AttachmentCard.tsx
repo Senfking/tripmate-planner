@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X } from "lucide-react";
+import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -449,6 +449,7 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
     }
     if (data.booking_reference) items.push({ icon: Hash, text: `Ref: ${data.booking_reference}` });
   } else if (type === "activity") {
+    if (data.provider) items.push({ icon: MapPin, text: String(data.provider) });
     if (data.check_in) {
       const text = data.departure_time ? `${fmtDate(data.check_in)} at ${data.departure_time}` : (fmtDate(data.check_in) || String(data.check_in));
       items.push({ icon: Calendar, text });
@@ -456,7 +457,12 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
     if (data.booking_reference) items.push({ icon: Hash, text: `Ref: ${data.booking_reference}` });
   }
 
+  // Common fields across all types
+  if (data.total_price) items.push({ icon: CreditCard, text: String(data.total_price) });
+
   if (items.length === 0) return null;
+
+  const notesText = data.notes ? String(data.notes) : null;
 
   return (
     <div className="space-y-1">
@@ -469,6 +475,12 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
           </div>
         );
       })}
+      {notesText && (
+        <div className="flex gap-1.5 text-[12px] text-muted-foreground/80 pt-0.5">
+          <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <span className="line-clamp-3 whitespace-pre-wrap">{notesText}</span>
+        </div>
+      )}
     </div>
   );
 }
