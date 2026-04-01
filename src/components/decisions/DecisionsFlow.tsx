@@ -257,13 +257,14 @@ import { toast } from "@/hooks/use-toast";
 function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: string; myRole: string | undefined; highlightedPollId?: string }) {
   const canManage = myRole === "owner" || myRole === "admin";
   const isMobile = useIsMobile();
-  const { prefPolls, voteCounts, myVotes, createPoll, addOption, deleteOption, vote, lockPoll, deletePoll, updatePollTitle } =
+  const { prefPolls, voteCounts, myVotes, createPoll, addOption, deleteOption, vote, lockPoll, deletePoll, updatePollTitle, toggleMultiSelect } =
     useDecisionPolls(tripId);
 
   const [prefOpen, setPrefOpen] = useState(false);
   const [prefTitle, setPrefTitle] = useState("");
   const [prefOptions, setPrefOptions] = useState<string[]>(["", ""]);
   const [newOptionText, setNewOptionText] = useState("");
+  const [prefMultiSelect, setPrefMultiSelect] = useState(false);
 
   const resetForm = () => {
     setPrefTitle("");
