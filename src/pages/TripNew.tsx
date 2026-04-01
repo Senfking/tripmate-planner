@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 import type { DateRange } from "react-day-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { friendlyError } from "@/lib/friendlyError";
@@ -16,7 +17,9 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
+  DrawerDescription,
 } from "@/components/ui/drawer";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useMutation } from "@tanstack/react-query";
 
 const TRAVEL_EMOJIS = [
@@ -27,6 +30,7 @@ const TRAVEL_EMOJIS = [
 
 export default function TripNew() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("✈️");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -35,6 +39,26 @@ export default function TripNew() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [createdTripId, setCreatedTripId] = useState<string | null>(null);
+
+  const navigateToTrip = useCallback((tripId: string) => {
+    navigate(`/app/trips/${tripId}`);
+  }, [navigate]);
+
+  const handleShareWhatsApp = useCallback(() => {
+    if (!createdTripId) return;
+    const displayName = profile?.display_name || "Someone";
+    const refCode = profile?.referral_code || "";
+    const text = `✈️ ${displayName} is planning a trip on Junto — the app that replaces group chat chaos.\n\nItineraries, expenses, bookings & decisions all in one place.\n\nTry it free → https://juntotravel.lovable.app/ref?ref=${refCode}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    setTimeout(() => navigateToTrip(createdTripId), 1000);
+  }, [createdTripId, profile, navigateToTrip]);
+
+  const handleSkipShare = useCallback(() => {
+    setShareOpen(false);
+    if (createdTripId) navigateToTrip(createdTripId);
+  }, [createdTripId, navigateToTrip]);
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
@@ -82,7 +106,15 @@ export default function TripNew() {
 
       if (dbError) throw dbError;
       toast.success("Trip created!");
-      navigate(`/app/trips/${data.id}`);
+
+      const alreadyShown = localStorage.getItem("junto_post_create_share_shown");
+      if (alreadyShown) {
+        navigate(`/app/trips/${data.id}`);
+      } else {
+        localStorage.setItem("junto_post_create_share_shown", "true");
+        setCreatedTripId(data.id);
+        setShareOpen(true);
+      }
     } catch (err: any) {
       setError(friendlyError(err.message));
     } finally {
@@ -200,6 +232,35 @@ export default function TripNew() {
                 onClick={() => joinMutation.mutate(joinCode)}
               >
                 {joinMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Join trip"}
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
+
+        {/* Post-create share sheet */}
+        <Drawer open={shareOpen} onOpenChange={(v) => { if (!v) handleSkipShare(); }}>
+          <DrawerContent>
+            <DrawerHeader className="text-center">
+              <DrawerTitle className="text-lg">Now invite your crew 🎉</DrawerTitle>
+              <DrawerDescription className="text-sm text-muted-foreground mt-1">
+                Share Junto so everyone can join the trip — and plan together from day one.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-6 space-y-3">
+              <Button
+                className="w-full h-12 rounded-xl text-[15px] font-semibold text-white gap-2"
+                style={{ background: "#25D366" }}
+                onClick={handleShareWhatsApp}
+              >
+                <WhatsAppIcon className="h-5 w-5" />
+                Share Junto with friends
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full h-12 rounded-xl text-[15px] text-muted-foreground"
+                onClick={handleSkipShare}
+              >
+                Skip for now
               </Button>
             </div>
           </DrawerContent>
