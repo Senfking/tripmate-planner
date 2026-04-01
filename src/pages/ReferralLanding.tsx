@@ -1,6 +1,45 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+
+const VIDEOS = [
+  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",
+  "https://videos.pexels.com/video-files/2169880/2169880-hd_1920_1080_24fps.mp4",
+  "https://videos.pexels.com/video-files/1437396/1437396-hd_1920_1080_30fps.mp4",
+  "https://videos.pexels.com/video-files/3113851/3113851-hd_1920_1080_25fps.mp4",
+  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
+];
+
+function VideoSlideshow() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % VIDEOS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <>
+      {VIDEOS.map((src, i) => (
+        <video
+          key={i}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover object-center z-0"
+          style={{
+            opacity: i === activeIndex ? 1 : 0,
+            transition: "opacity 1.5s ease-in-out",
+          }}
+          src={src}
+        />
+      ))}
+    </>
+  );
+}
 
 export default function ReferralLanding() {
   const [params] = useSearchParams();
