@@ -56,6 +56,7 @@ export default function TripNew() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [showAllEmojis, setShowAllEmojis] = useState(false);
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
