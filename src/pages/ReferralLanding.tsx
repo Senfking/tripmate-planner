@@ -93,12 +93,16 @@ export default function ReferralLanding() {
 
       {/* Content */}
       <div className="relative z-[2] flex flex-col h-full">
-        {/* Wordmark */}
+        {/* Wordmark with gradient backing */}
         <div
-          className="text-center shrink-0"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)" }}
+          className="text-center shrink-0 relative z-[1]"
+          style={{
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
+            paddingBottom: 24,
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 100%)",
+          }}
         >
-          <span className="text-[14px] font-extrabold tracking-[0.35em] uppercase text-white/50">
+          <span className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80">
             Junto
           </span>
         </div>
