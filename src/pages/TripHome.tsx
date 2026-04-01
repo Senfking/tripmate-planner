@@ -165,7 +165,7 @@ function StatusRow({
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { connectionStatus } = useTripRealtime(tripId);
