@@ -154,6 +154,47 @@ export default function TripNew() {
             />
           </div>
 
+          {/* Cover image */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-semibold text-foreground">Cover Photo</Label>
+            {coverPreview ? (
+              <div className="relative rounded-xl overflow-hidden h-[120px] bg-white border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => { setCoverFile(null); setCoverPreview(null); }}
+                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 flex items-center justify-center"
+                >
+                  <X className="h-3.5 w-3.5 text-white" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="w-full h-[80px] rounded-xl border-2 border-dashed border-muted-foreground/20 bg-white flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-muted-foreground/40 transition-colors"
+              >
+                <Camera className="h-5 w-5" />
+                <span className="text-xs font-medium">Add cover photo</span>
+              </button>
+            )}
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (!file.type.startsWith("image/")) { toast.error("Please select an image"); return; }
+                if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
+                setCoverFile(file);
+                setCoverPreview(URL.createObjectURL(file));
+                e.target.value = "";
+              }}
+            />
+          </div>
+
           {/* Emoji picker */}
           <div className="space-y-2">
             <Label className="text-[13px] font-semibold text-foreground">Trip Emoji</Label>
