@@ -34,6 +34,8 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
           style={{
             opacity: i === activeIndex ? 1 : 0,
             transition: "opacity 1.5s ease-in-out",
+            WebkitTransform: 'translateZ(0)',
+            transform: 'translateZ(0)',
           }}
           src={src}
           onError={(e) => {
