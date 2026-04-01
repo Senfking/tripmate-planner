@@ -80,7 +80,7 @@ export default function ReferralLanding() {
         setStatementIndex((i) => (i + 1) % STATEMENTS.length);
         setStatementVisible(true);
       }, 400);
-    }, 3500);
+    }, 4500);
     return () => clearInterval(interval);
   }, []);
 
