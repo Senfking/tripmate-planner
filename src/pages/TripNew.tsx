@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -7,7 +7,7 @@ import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Hash } from "lucide-react";
+import { Loader2, Hash, Camera, X } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
@@ -46,6 +46,9 @@ export default function TripNew() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
@@ -92,8 +95,20 @@ export default function TripNew() {
         .single();
 
       if (dbError) throw dbError;
-      toast.success("Trip created!");
 
+      // Upload cover image if selected
+      if (coverFile && data.id) {
+        const ext = coverFile.name.split(".").pop() || "jpg";
+        const path = `covers/${data.id}/cover.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("trip-attachments")
+          .upload(path, coverFile, { upsert: true });
+        if (!upErr) {
+          await supabase.from("trips").update({ cover_image_path: path } as any).eq("id", data.id);
+        }
+      }
+
+      toast.success("Trip created!");
       localStorage.setItem(`junto_just_created_trip_${data.id}`, "true");
       navigate(`/app/trips/${data.id}`);
     } catch (err: any) {
@@ -136,6 +151,47 @@ export default function TripNew() {
               value={dateRange}
               onChange={setDateRange}
               className="w-full"
+            />
+          </div>
+
+          {/* Cover image */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-semibold text-foreground">Cover Photo</Label>
+            {coverPreview ? (
+              <div className="relative rounded-xl overflow-hidden h-[120px] bg-white border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => { setCoverFile(null); setCoverPreview(null); }}
+                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 flex items-center justify-center"
+                >
+                  <X className="h-3.5 w-3.5 text-white" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="w-full h-[80px] rounded-xl border-2 border-dashed border-muted-foreground/20 bg-white flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-muted-foreground/40 transition-colors"
+              >
+                <Camera className="h-5 w-5" />
+                <span className="text-xs font-medium">Add cover photo</span>
+              </button>
+            )}
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (!file.type.startsWith("image/")) { toast.error("Please select an image"); return; }
+                if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
+                setCoverFile(file);
+                setCoverPreview(URL.createObjectURL(file));
+                e.target.value = "";
+              }}
             />
           </div>
 
