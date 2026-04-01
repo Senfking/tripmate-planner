@@ -51,6 +51,8 @@ export default function ReferralLanding() {
   const code = params.get("code");
   const [referrer, setReferrer] = useState<{ display_name: string | null } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [statementIndex, setStatementIndex] = useState(0);
+  const [statementVisible, setStatementVisible] = useState(true);
 
   useEffect(() => {
     if (!code) return;
