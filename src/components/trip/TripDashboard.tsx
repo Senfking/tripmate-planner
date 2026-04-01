@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInCalendarDays, isWithinInterval, parseISO } from "date-fns";
 import { Compass, CalendarDays, Plane, Wallet, Users } from "lucide-react";
 import { SectionCard } from "./SectionCard";
+import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
 
 type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
@@ -27,7 +28,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const endedBadge: BadgeState = { label: "Trip ended", color: "grey" };
 
   // Route stops
-  const { data: stops } = useQuery({
+  const { data: stops, isLoading: stopsLoading } = useQuery({
     queryKey: ["trip-route-stops", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -41,7 +42,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   // --- DECISIONS data ---
-  const { data: proposals } = useQuery({
+  const { data: proposals, isLoading: proposalsLoading } = useQuery({
     queryKey: ["trip-proposals", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -97,7 +98,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     enabled: !!userId && !!dateOptions?.length,
   });
 
-  const { data: polls } = useQuery({
+  const { data: polls, isLoading: pollsLoading } = useQuery({
     queryKey: ["trip-polls", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -196,7 +197,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   }
 
   // --- ITINERARY data ---
-  const { data: itineraryItems } = useQuery({
+  const { data: itineraryItems, isLoading: itineraryLoading } = useQuery({
     queryKey: ["itinerary-items-summary", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -266,7 +267,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   }
 
   // --- BOOKINGS data ---
-  const { data: attachments } = useQuery({
+  const { data: attachments, isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments-summary", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -307,7 +308,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   }
 
   // --- EXPENSES data ---
-  const { data: expenses } = useQuery({
+  const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ["expenses-summary", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -363,7 +364,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   }
 
   // --- ADMIN data ---
-  const { data: memberCount } = useQuery({
+  const { data: memberCount, isLoading: memberCountLoading } = useQuery({
     queryKey: ["trip-members-count", tripId],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -379,8 +380,17 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const adminSummary = roleLabel;
   const adminBadge: BadgeState = { label: `${memberCount ?? 0} members`, color: "grey" };
 
+  // Wait for all primary queries before rendering to prevent flicker
+  const isLoading =
+    stopsLoading || proposalsLoading || pollsLoading ||
+    itineraryLoading || attachmentsLoading || expensesLoading || memberCountLoading;
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
   return (
-    <div className="flex flex-col gap-2.5 px-4 pb-12">
+    <div className="flex flex-col gap-2.5 px-4 pb-12 animate-fade-in-card">
       <SectionCard
         icon={Compass}
         title="Decisions"
