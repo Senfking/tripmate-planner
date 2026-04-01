@@ -19,22 +19,29 @@ import {
 } from "@/components/ui/drawer";
 import { useMutation } from "@tanstack/react-query";
 
-const TRAVEL_EMOJIS = [
+const EMOJI_GROUPS = [
+  // Popular / quick picks (always visible)
+  ["✈️", "🏖️", "🏔️", "🌍", "🚗", "🌴", "❄️", "☀️", "🎒", "🥳"],
   // Transport
-  "✈️", "🚗", "🚂", "🚢", "🛳️", "🚌", "🏍️", "🛩️", "🚁", "⛵",
-  // Destinations & nature
-  "🏖️", "🏔️", "🌍", "🌎", "🌏", "🗺️", "🏝️", "🌴", "🌋", "🏜️",
-  // Activities
-  "⛷️", "🏕️", "🏄", "🤿", "🎿", "🧗", "🚴", "🏊", "🎣", "⛺",
-  // Landmarks & culture
-  "🏛️", "🗼", "🗽", "🎡", "🎢", "🕌", "⛩️", "🏰", "🎭", "🎪",
-  // Food & vibes
-  "🍕", "🍷", "🍹", "☕", "🍜", "🥘", "🍣", "🌮", "🥐", "🍺",
-  // Nature & seasons
-  "🌸", "🌺", "🌊", "☀️", "🌙", "❄️", "🌈", "🔥", "⭐", "💫",
-  // Travel gear & misc
-  "🎒", "🧳", "📸", "🗿", "💎", "🎯", "🎶", "❤️", "🥳", "🦋",
+  ["🚂", "🚢", "🛳️", "🚌", "🏍️", "🛩️", "🚁", "⛵", "🚲", "🛺", "🚀", "🛶"],
+  // Beach & tropical
+  ["🏝️", "🤿", "🏄", "🐚", "🦀", "🐠", "🧜", "🌺", "🥥", "🍹"],
+  // Mountains & outdoors
+  ["⛷️", "🏕️", "🧗", "🚴", "🎿", "⛺", "🦌", "🏊", "🎣", "🛷", "🌲", "🏞️"],
+  // Cities & landmarks
+  ["🏛️", "🗼", "🗽", "🎡", "🎢", "🕌", "⛩️", "🏰", "🗿", "🎭", "🎪", "🏟️"],
+  // Food & drink
+  ["🍕", "🍷", "☕", "🍜", "🥘", "🍣", "🌮", "🥐", "🍺", "🧁", "🍝", "🫕", "🥂", "🍦"],
+  // Nature & weather
+  ["🌸", "🌊", "🌙", "🌈", "🔥", "⭐", "💫", "🌋", "🏜️", "🌻", "🦋", "🐬"],
+  // Activities & vibes
+  ["📸", "💎", "🎯", "🎶", "❤️", "🧳", "🗺️", "🎨", "🛍️", "💃", "🎵", "🧘", "🎤", "🎮"],
+  // Flags & symbols
+  ["🇪🇺", "🇺🇸", "🇬🇧", "🇫🇷", "🇪🇸", "🇮🇹", "🇩🇪", "🇯🇵", "🇹🇭", "🇧🇷", "🇦🇺", "🇲🇽", "🇬🇷", "🇵🇹", "🇭🇷", "🇮🇩"],
 ];
+
+const QUICK_EMOJIS = EMOJI_GROUPS[0];
+const ALL_EMOJIS = EMOJI_GROUPS;
 
 export default function TripNew() {
   const navigate = useNavigate();
