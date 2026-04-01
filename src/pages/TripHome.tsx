@@ -46,7 +46,7 @@ function HeroAvatar() {
   return (
     <Link
       to="/app/more"
-      className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden"
+      className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full overflow-hidden"
       style={{
         background: "rgba(0,0,0,0.3)",
         backdropFilter: "blur(8px)",
