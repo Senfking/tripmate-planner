@@ -85,7 +85,7 @@ export default function ReferralLanding() {
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)" }}
         >
           <span
-            className="text-[13px] font-extrabold tracking-[0.3em] uppercase text-white/70"
+            className="text-[18px] font-extrabold tracking-[0.3em] uppercase text-white/70"
           >
             Junto
           </span>
