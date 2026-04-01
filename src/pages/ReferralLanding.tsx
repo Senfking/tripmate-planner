@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Receipt, Vote, Calendar, Sparkles } from "lucide-react";
+import { MapPin, Receipt, Vote, Calendar, Sparkles, Globe } from "lucide-react";
 
 /* ── Verified working video sources (diverse scenery) ── */
 const VIDEOS = [
@@ -14,10 +14,11 @@ const VIDEOS = [
 
 const FEATURES = [
   { icon: MapPin, text: "Itineraries" },
-  { icon: Receipt, text: "Expense splitting" },
-  { icon: Vote, text: "Group decisions" },
-  { icon: Calendar, text: "Shared schedules" },
+  { icon: Receipt, text: "Expenses" },
+  { icon: Vote, text: "Group polls" },
   { icon: Sparkles, text: "AI scanning" },
+  { icon: Calendar, text: "Schedules" },
+  { icon: Globe, text: "Currencies" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
@@ -149,22 +150,22 @@ export default function ReferralLanding() {
               textShadow: "0 1px 8px rgba(0,0,0,0.5)",
             }}
           >
-            One shared space for your whole group.
+            Ditch the group chat chaos. Plan, split & decide — all in one place.
           </p>
 
-          {/* Feature pills — compact 2-col grid */}
-          <div className="grid grid-cols-2 gap-1.5 mt-4">
+          {/* Feature pills — 3x2 grid */}
+          <div className="grid grid-cols-3 gap-1.5 mt-4">
             {FEATURES.map(({ icon: Icon, text }) => (
               <div
                 key={text}
-                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-sm"
+                className="flex items-center gap-1 rounded-full px-2 py-1 backdrop-blur-sm"
                 style={{
                   background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
                 <Icon className="h-3 w-3 text-[#5eead4] shrink-0" />
-                <span className="text-[10.5px] font-medium text-white/55 truncate">{text}</span>
+                <span className="text-[10px] font-medium text-white/55 truncate">{text}</span>
               </div>
             ))}
           </div>
