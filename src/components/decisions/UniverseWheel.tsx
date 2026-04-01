@@ -88,16 +88,20 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
     ctx.stroke();
   }, [options, segAngle]);
 
+  // Draw when canvas mounts or options change
   useEffect(() => {
-    drawWheel();
-  }, [drawWheel]);
+    if (open) {
+      // Small delay to ensure canvas is in DOM after drawer/dialog animation
+      const t = setTimeout(() => drawWheel(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [open, drawWheel]);
 
   // Reset on open
   useEffect(() => {
     if (open) {
       setPhase("idle");
       setRotation(0);
-      // Pre-select winner
       const idx = Math.floor(Math.random() * options.length);
       setWinnerIdx(idx);
     }
