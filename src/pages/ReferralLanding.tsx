@@ -146,11 +146,10 @@ export default function ReferralLanding() {
 
           {/* Feature list */}
           <div
-            className="mt-5 rounded-2xl backdrop-blur-md overflow-hidden divide-y"
+            className="mt-5 rounded-2xl backdrop-blur-md overflow-hidden"
             style={{
               background: "rgba(255,255,255,0.07)",
               border: "1px solid rgba(255,255,255,0.1)",
-              divideColor: "rgba(255,255,255,0.06)",
             }}
           >
             {FEATURES.map(({ icon: Icon, text }) => (
