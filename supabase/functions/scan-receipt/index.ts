@@ -11,18 +11,18 @@ Deno.serve(async (req) => {
   try {
     const { image } = await req.json();
     if (!image || typeof image !== "string") {
-      return new Response(
-        JSON.stringify({ error: true, message: "Missing image" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: true, message: "Missing image" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: true, message: "API key not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: true, message: "API key not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Detect media type from base64 header or default to jpeg
@@ -56,14 +56,13 @@ Deno.serve(async (req) => {
               {
                 type: "text",
                 text: `Extract from this receipt and return ONLY valid JSON:
-{ "title": "", "amount": 0, "currency": "", "date": "", "category": "", "notes": "" }
+{ "title": "", "amount": 0, "currency": "", "date": "", "category": "" }
 
 - title: merchant name or description
 - amount: total as number, no currency symbol
 - currency: 3-letter ISO code or null
 - date: YYYY-MM-DD or null
 - category: food | transport | accommodation | activities | shopping | other
-- notes: a SHORT summary (max 2 lines) of the most important extra details visible on the receipt — e.g. key line items, tax, tip, payment method, number of guests. Omit anything already captured above. null if nothing noteworthy.
 
 Return null for any field you cannot determine.
 Return ONLY the JSON object, no other text.`,
@@ -77,10 +76,10 @@ Return ONLY the JSON object, no other text.`,
     if (!response.ok) {
       const errText = await response.text();
       console.error("Anthropic error:", response.status, errText);
-      return new Response(
-        JSON.stringify({ error: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const result = await response.json();
@@ -89,23 +88,23 @@ Return ONLY the JSON object, no other text.`,
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return new Response(
-        JSON.stringify({ error: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
 
-    return new Response(
-      JSON.stringify(parsed),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify(parsed), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("scan-receipt error:", err);
-    return new Response(
-      JSON.stringify({ error: true }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
