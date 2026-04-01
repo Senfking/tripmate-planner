@@ -4,21 +4,46 @@ import { supabase } from "@/integrations/supabase/client";
 
 const VIDEOS = [
   "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",
-  "https://videos.pexels.com/video-files/2169880/2169880-hd_1920_1080_24fps.mp4",
-  "https://videos.pexels.com/video-files/1437396/1437396-hd_1920_1080_30fps.mp4",
-  "https://videos.pexels.com/video-files/3113851/3113851-hd_1920_1080_25fps.mp4",
-  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
+  "https://videos.pexels.com/video-files/2169880/2169880-hd_1920_1080_25fps.mp4",
+  "https://videos.pexels.com/video-files/2772930/2772930-hd_1920_1080_25fps.mp4",
+  "https://videos.pexels.com/video-files/4227028/4227028-hd_1920_1080_25fps.mp4",
+  "https://videos.pexels.com/video-files/5904958/5904958-hd_1920_1080_25fps.mp4",
 ];
 
 function VideoSlideshow() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [failedSet, setFailedSet] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % VIDEOS.length);
+      setActiveIndex((prev) => {
+        let next = (prev + 1) % VIDEOS.length;
+        // Skip failed videos
+        let attempts = 0;
+        while (failedSet.has(next) && attempts < VIDEOS.length) {
+          next = (next + 1) % VIDEOS.length;
+          attempts++;
+        }
+        return next;
+      });
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [failedSet]);
+
+  // If active video fails, advance immediately
+  useEffect(() => {
+    if (failedSet.has(activeIndex)) {
+      setActiveIndex((prev) => {
+        let next = (prev + 1) % VIDEOS.length;
+        let attempts = 0;
+        while (failedSet.has(next) && attempts < VIDEOS.length) {
+          next = (next + 1) % VIDEOS.length;
+          attempts++;
+        }
+        return next;
+      });
+    }
+  }, [activeIndex, failedSet]);
 
   return (
     <>
@@ -33,8 +58,12 @@ function VideoSlideshow() {
           style={{
             opacity: i === activeIndex ? 1 : 0,
             transition: "opacity 1.5s ease-in-out",
+            display: failedSet.has(i) ? "none" : undefined,
           }}
           src={src}
+          onError={() => {
+            setFailedSet((prev) => new Set(prev).add(i));
+          }}
         />
       ))}
     </>
