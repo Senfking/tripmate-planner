@@ -49,7 +49,7 @@ export function InstallPrompt() {
     localStorage.setItem("junto_ios_tip_dismissed", "true");
   };
 
-  /* ── Android / Chrome banner ── */
+  /* ── Android / Chrome native prompt banner ── */
   if (deferredPrompt && !dismissed) {
     return (
       <div className="fixed bottom-20 left-4 right-4 z-50 flex items-center gap-3 rounded-xl border bg-card p-4 shadow-lg md:bottom-4 md:left-auto md:right-4 md:max-w-sm">
@@ -66,31 +66,66 @@ export function InstallPrompt() {
     );
   }
 
-  /* ── iOS Safari tip ── */
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  /* ── Manual install tip (browser-aware) ── */
   const isInStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
-  const isSafari = /safari/i.test(navigator.userAgent) && !/chrome/i.test(navigator.userAgent);
+  if (isInStandaloneMode || iosDismissed) return null;
 
-  if (isIOS && isSafari && !isInStandaloneMode && !iosDismissed) {
-    return (
-      <div className="fixed bottom-24 left-4 right-4 z-50 rounded-xl border bg-card p-4 shadow-lg md:bottom-4 md:left-auto md:right-4 md:max-w-sm">
-        <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">Get the full app experience</p>
-            <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">
-              Open your <span className="font-medium text-foreground">browser menu</span> (tap <IOSShareIcon className="inline h-3.5 w-3.5 align-text-bottom text-foreground" /> at the bottom of Safari) then choose <span className="font-medium text-foreground">"Add to Home Screen"</span>.
-            </p>
-            <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-              This is a Safari setting — not a button inside the app.
-            </p>
-          </div>
-          <button onClick={handleIOSDismiss} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+  const ua = navigator.userAgent;
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isAndroid = /android/i.test(ua);
+  const isChrome = /chrome/i.test(ua) && !/edg/i.test(ua);
+  const isSafari = /safari/i.test(ua) && !/chrome/i.test(ua);
+  const isFirefox = /firefox/i.test(ua);
+  const isSamsungBrowser = /samsungbrowser/i.test(ua);
+
+  let instruction: React.ReactNode;
+
+  if (isIOS && isSafari) {
+    instruction = (
+      <>Tap the share icon (<IOSShareIcon className="inline h-3.5 w-3.5 align-text-bottom text-foreground" />) at the bottom of Safari, then tap <span className="font-medium text-foreground">"Add to Home Screen"</span>.</>
     );
+  } else if (isIOS && isChrome) {
+    instruction = (
+      <>Tap the share icon (<IOSShareIcon className="inline h-3.5 w-3.5 align-text-bottom text-foreground" />) at the top right, then tap <span className="font-medium text-foreground">"Add to Home Screen"</span>.</>
+    );
+  } else if (isAndroid && isSamsungBrowser) {
+    instruction = (
+      <>Tap the menu icon at the bottom, then tap <span className="font-medium text-foreground">"Add page to"</span> → <span className="font-medium text-foreground">"Home screen"</span>.</>
+    );
+  } else if (isAndroid && isChrome) {
+    instruction = (
+      <>Tap the three-dot menu (<span className="font-medium text-foreground">⋮</span>) at the top right, then tap <span className="font-medium text-foreground">"Add to Home screen"</span>.</>
+    );
+  } else if (isAndroid && isFirefox) {
+    instruction = (
+      <>Tap the three-dot menu, then tap <span className="font-medium text-foreground">"Install"</span> or <span className="font-medium text-foreground">"Add to Home screen"</span>.</>
+    );
+  } else if (isIOS) {
+    // iOS but unknown browser
+    instruction = (
+      <>Open your browser menu and look for <span className="font-medium text-foreground">"Add to Home Screen"</span> or <span className="font-medium text-foreground">"Install app"</span>.</>
+    );
+  } else {
+    // Don't show manual tip on desktop or unknown non-mobile browsers
+    return null;
   }
 
-  return null;
+  return (
+    <div className="fixed bottom-24 left-4 right-4 z-50 rounded-xl border bg-card p-4 shadow-lg md:bottom-4 md:left-auto md:right-4 md:max-w-sm">
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">Get the full app experience</p>
+          <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">
+            {instruction}
+          </p>
+          <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+            This is a browser setting — not a button inside the app.
+          </p>
+        </div>
+        <button onClick={handleIOSDismiss} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
 }
