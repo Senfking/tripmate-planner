@@ -22,6 +22,7 @@ type Props = {
   myVotes: Record<string, string>;
   canManage: boolean;
   onAddOption: (input: { label: string; startDate?: string; endDate?: string }) => void;
+  onDeleteOption?: (optionId: string) => void;
   onVote: (optionId: string, value: string) => void;
   onLock: () => void;
   onDelete?: () => void;
@@ -51,6 +52,7 @@ export function StructuredPoll({
   myVotes,
   canManage,
   onAddOption,
+  onDeleteOption,
   onVote,
   onLock,
   onDelete,
@@ -165,23 +167,33 @@ export function StructuredPoll({
           const isPicked = myVote === "yes";
           const isUniversePick = universeHighlight === opt.id;
           return (
-            <button
-              key={opt.id}
-              onClick={() => { setUniverseHighlight(null); onVote(opt.id, "yes"); }}
-              disabled={isLocked}
-              className={`flex items-center justify-between w-full rounded-lg px-3 py-2.5 text-sm border transition-colors ${
-                isPicked || isUniversePick
-                  ? "bg-primary/10 border-primary text-primary font-medium"
-                  : "bg-muted/30 border-border text-foreground hover:bg-muted/50"
-              } ${isUniversePick ? "ring-2 ring-primary/30 ring-offset-1" : ""} ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
-            >
-              <span className="min-w-0 break-words text-left">{displayLabel}</span>
-              {pickCount > 0 && (
-                <span className="text-xs text-muted-foreground font-medium shrink-0">
-                  {pickCount} vote{pickCount !== 1 ? "s" : ""}
-                </span>
+            <div key={opt.id} className="flex items-center gap-1.5">
+              <button
+                onClick={() => { setUniverseHighlight(null); onVote(opt.id, "yes"); }}
+                disabled={isLocked}
+                className={`flex items-center justify-between flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm border transition-colors ${
+                  isPicked || isUniversePick
+                    ? "bg-primary/10 border-primary text-primary font-medium"
+                    : "bg-muted/30 border-border text-foreground hover:bg-muted/50"
+                } ${isUniversePick ? "ring-2 ring-primary/30 ring-offset-1" : ""} ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                <span className="min-w-0 break-words text-left">{displayLabel}</span>
+                {pickCount > 0 && (
+                  <span className="text-xs text-muted-foreground font-medium shrink-0">
+                    {pickCount} vote{pickCount !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </button>
+              {canManage && !isLocked && onDeleteOption && (
+                <button
+                  onClick={() => onDeleteOption(opt.id)}
+                  className="shrink-0 p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title="Remove option"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
-            </button>
+            </div>
           );
         }
 
@@ -210,6 +222,15 @@ export function StructuredPoll({
                   </button>
                 );
               })}
+              {canManage && !isLocked && onDeleteOption && (
+                <button
+                  onClick={() => onDeleteOption(opt.id)}
+                  className="shrink-0 p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title="Remove option"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
         );
