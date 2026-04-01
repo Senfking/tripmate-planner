@@ -610,7 +610,7 @@ const More = () => {
 
   const handleShareWhatsApp = useCallback(() => {
     if (!profile?.referral_code) return;
-    const text = `Join me on Junto — the app for planning group trips! Use my invite code ${profile.referral_code} at juntotravel.app`;
+    const text = `Join me on Junto — the app for planning group trips! Use my invite code ${profile.referral_code} at juntotravel.lovable.app`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }, [profile?.referral_code]);
 
