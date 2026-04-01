@@ -13,11 +13,11 @@ const VIDEOS = [
 ];
 
 const FEATURES = [
-  { icon: MapPin, text: "Collaborative itineraries" },
-  { icon: Receipt, text: "Multi-currency expense splitting" },
-  { icon: Vote, text: "Group polls & decisions" },
-  { icon: Calendar, text: "Shared schedules & attendance" },
-  { icon: Sparkles, text: "AI receipt & booking scanning" },
+  { icon: MapPin, text: "Itineraries" },
+  { icon: Receipt, text: "Expense splitting" },
+  { icon: Vote, text: "Group decisions" },
+  { icon: Calendar, text: "Shared schedules" },
+  { icon: Sparkles, text: "AI scanning" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
@@ -140,38 +140,46 @@ export default function ReferralLanding() {
           </h1>
 
           {/* Subline */}
-          <p className="mt-2" style={{ fontSize: 15, lineHeight: 1.5, color: "rgba(255,255,255,0.5)" }}>
+          <p
+            className="mt-2"
+            style={{
+              fontSize: 15,
+              lineHeight: 1.5,
+              color: "rgba(255,255,255,0.75)",
+              textShadow: "0 1px 8px rgba(0,0,0,0.5)",
+            }}
+          >
             One shared space for your whole group.
           </p>
 
-          {/* Feature list */}
-          <div className="flex flex-wrap gap-2 mt-5">
+          {/* Feature pills — compact 2-col grid */}
+          <div className="grid grid-cols-2 gap-1.5 mt-4">
             {FEATURES.map(({ icon: Icon, text }) => (
               <div
                 key={text}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 backdrop-blur-md"
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-sm"
                 style={{
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.09)",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
-                <Icon className="h-3.5 w-3.5 text-[#5eead4] shrink-0" />
-                <span className="text-[11.5px] font-medium text-white/60">{text}</span>
+                <Icon className="h-3 w-3 text-[#5eead4] shrink-0" />
+                <span className="text-[10.5px] font-medium text-white/55 truncate">{text}</span>
               </div>
             ))}
           </div>
 
           {/* Scene dots */}
-          <div className="flex items-center justify-center gap-1.5 mt-6">
+          <div className="flex items-center justify-center gap-1.5 mt-4">
             {VIDEOS.map((_, i) => (
               <span
                 key={i}
                 className="rounded-full transition-all duration-500"
                 style={{
-                  width: i === activeIndex ? 18 : 5,
-                  height: 5,
+                  width: i === activeIndex ? 16 : 4,
+                  height: 4,
                   background:
-                    i === activeIndex ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.25)",
+                    i === activeIndex ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.25)",
                 }}
               />
             ))}
