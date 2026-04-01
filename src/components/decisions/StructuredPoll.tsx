@@ -68,6 +68,8 @@ export function StructuredPoll({
   const [newLabel, setNewLabel] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+  const [showWheel, setShowWheel] = useState(false);
+  const [universeHighlight, setUniverseHighlight] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(poll.title);
