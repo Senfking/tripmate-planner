@@ -413,9 +413,14 @@ function buildCompactSummary(type: string, data: Record<string, unknown> | null)
     if (data.check_in) parts.push(`In: ${fmtDate(data.check_in)}`);
     if (data.check_out) parts.push(`Out: ${fmtDate(data.check_out)}`);
   } else if (type === "activity") {
-    if (data.check_in) parts.push(fmtDate(data.check_in) || String(data.check_in));
+    if (data.check_in && data.check_out) {
+      parts.push(`${fmtDate(data.check_in)} – ${fmtDate(data.check_out)}`);
+    } else if (data.check_in) {
+      parts.push(fmtDate(data.check_in) || String(data.check_in));
+    }
     if (data.booking_reference) parts.push(`Ref: ${data.booking_reference}`);
   }
+  if (data.total_price) parts.push(String(data.total_price));
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
@@ -450,11 +455,18 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
     if (data.booking_reference) items.push({ icon: Hash, text: `Ref: ${data.booking_reference}` });
   } else if (type === "activity") {
     if (data.provider) items.push({ icon: MapPin, text: String(data.provider) });
-    if (data.check_in) {
+    if (data.destination && !data.provider) items.push({ icon: MapPin, text: String(data.destination) });
+    if (data.check_in && data.check_out) {
+      const text = `${fmtDate(data.check_in)} – ${fmtDate(data.check_out)}`;
+      items.push({ icon: Calendar, text });
+    } else if (data.check_in) {
       const text = data.departure_time ? `${fmtDate(data.check_in)} at ${data.departure_time}` : (fmtDate(data.check_in) || String(data.check_in));
       items.push({ icon: Calendar, text });
     }
     if (data.booking_reference) items.push({ icon: Hash, text: `Ref: ${data.booking_reference}` });
+    if (Array.isArray(data.passenger_names) && data.passenger_names.length > 0) {
+      items.push({ icon: Users, text: data.passenger_names.join(", ") });
+    }
   }
 
   // Common fields across all types

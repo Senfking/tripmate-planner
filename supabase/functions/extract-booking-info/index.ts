@@ -18,9 +18,12 @@ function buildSummary(d: Record<string, unknown>): string {
     if (d.check_in && d.check_out) parts.push(`${d.check_in}–${d.check_out}`);
     else if (d.check_in) parts.push(`From ${d.check_in}`);
   } else {
-    if (d.check_in) parts.push(String(d.check_in));
+    if (d.check_in && d.check_out) parts.push(`${d.check_in}–${d.check_out}`);
+    else if (d.check_in) parts.push(String(d.check_in));
     if (d.departure_time) parts.push(String(d.departure_time));
   }
+
+  if (d.total_price) parts.push(String(d.total_price));
 
   return parts.join(" · ") || null as unknown as string;
 }
