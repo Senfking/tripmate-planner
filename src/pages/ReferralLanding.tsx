@@ -99,7 +99,7 @@ export default function ReferralLanding() {
           style={{
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
             paddingBottom: 24,
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
           }}
         >
           <span className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80">
