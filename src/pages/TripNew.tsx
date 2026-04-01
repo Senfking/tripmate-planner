@@ -175,8 +175,7 @@ export default function TripNew() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (cropSource) setCropSource(cropSource); // re-open cropper with original
-                      else coverInputRef.current?.click(); // fallback
+                      if (originalCoverUrl) setCropSource(originalCoverUrl);
                     }}
                     className="h-7 w-7 rounded-full bg-black/50 flex items-center justify-center"
                   >
@@ -184,7 +183,7 @@ export default function TripNew() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setCoverFile(null); setCoverPreview(null); setCropSource(null); }}
+                    onClick={() => { setCoverFile(null); setCoverPreview(null); setCropSource(null); setOriginalCoverUrl(null); }}
                     className="h-7 w-7 rounded-full bg-black/50 flex items-center justify-center"
                   >
                     <X className="h-3.5 w-3.5 text-white" />
