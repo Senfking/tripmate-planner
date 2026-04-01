@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Receipt, Vote, Calendar, Sparkles, Globe } from "lucide-react";
+import { MapPin, Receipt, Users, Sparkles, MessageSquare, Zap } from "lucide-react";
 
 /* ── Verified working video sources (diverse scenery) ── */
 const VIDEOS = [
@@ -13,12 +13,12 @@ const VIDEOS = [
 ];
 
 const FEATURES = [
-  { icon: MapPin, text: "Itineraries" },
-  { icon: Receipt, text: "Expenses" },
-  { icon: Vote, text: "Group polls" },
-  { icon: Sparkles, text: "AI scanning" },
-  { icon: Calendar, text: "Schedules" },
-  { icon: Globe, text: "Currencies" },
+  { icon: MapPin, text: "One itinerary, everyone's on it" },
+  { icon: Receipt, text: "Split costs without the drama" },
+  { icon: Users, text: "Decisions made together" },
+  { icon: Sparkles, text: "AI scans your receipts" },
+  { icon: MessageSquare, text: "No more chaotic group chats" },
+  { icon: Zap, text: "Real-time for the whole group" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
