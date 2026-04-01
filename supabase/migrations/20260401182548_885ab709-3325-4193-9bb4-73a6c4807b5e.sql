@@ -1,0 +1,1 @@
+ALTER TABLE public.polls ADD COLUMN multi_select boolean NOT NULL DEFAULT false;

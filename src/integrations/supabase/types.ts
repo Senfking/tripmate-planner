@@ -500,6 +500,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          multi_select: boolean
           status: string
           title: string
           trip_id: string
@@ -509,6 +510,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          multi_select?: boolean
           status?: string
           title: string
           trip_id: string
@@ -518,6 +520,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          multi_select?: boolean
           status?: string
           title?: string
           trip_id?: string
