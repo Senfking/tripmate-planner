@@ -94,7 +94,7 @@ export default function ReferralLanding() {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-black">
+    <div className="bg-black" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', WebkitOverflowScrolling: 'touch' }}>
       {/* All 5 videos stacked */}
       <VideoSlideshow activeIndex={activeIndex} />
 
