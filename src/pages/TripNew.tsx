@@ -30,6 +30,7 @@ const TRAVEL_EMOJIS = [
 
 export default function TripNew() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("✈️");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -38,6 +39,26 @@ export default function TripNew() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [createdTripId, setCreatedTripId] = useState<string | null>(null);
+
+  const navigateToTrip = useCallback((tripId: string) => {
+    navigate(`/app/trips/${tripId}`);
+  }, [navigate]);
+
+  const handleShareWhatsApp = useCallback(() => {
+    if (!createdTripId) return;
+    const displayName = profile?.display_name || "Someone";
+    const refCode = profile?.referral_code || "";
+    const text = `✈️ ${displayName} is planning a trip on Junto — the app that replaces group chat chaos.\n\nItineraries, expenses, bookings & decisions all in one place.\n\nTry it free → https://juntotravel.lovable.app/ref?ref=${refCode}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    setTimeout(() => navigateToTrip(createdTripId), 1000);
+  }, [createdTripId, profile, navigateToTrip]);
+
+  const handleSkipShare = useCallback(() => {
+    setShareOpen(false);
+    if (createdTripId) navigateToTrip(createdTripId);
+  }, [createdTripId, navigateToTrip]);
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
