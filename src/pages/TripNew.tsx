@@ -56,6 +56,7 @@ export default function TripNew() {
   const [joinError, setJoinError] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [showAllEmojis, setShowAllEmojis] = useState(false);
 
