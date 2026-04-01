@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload, X, Check } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload } from "lucide-react";
+import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
@@ -263,14 +264,13 @@ export default function TripHome() {
   const [postCreateShareOpen, setPostCreateShareOpen] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [coverMenuOpen, setCoverMenuOpen] = useState(false);
-  const [adjustingFocalPoint, setAdjustingFocalPoint] = useState(false);
-  const [focalPoint, setFocalPoint] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
+  const [croppingCover, setCroppingCover] = useState(false);
+  const [savingCrop, setSavingCrop] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cover image signed URL
   const coverImagePath = (trip as any)?.cover_image_path as string | null;
-  const coverFocalPoint = (trip as any)?.cover_focal_point as string | null;
   const { data: coverSignedUrl } = useQuery({
     queryKey: ["trip-cover-url", tripId, coverImagePath],
     queryFn: async () => {
@@ -283,16 +283,6 @@ export default function TripHome() {
     enabled: !!coverImagePath,
     staleTime: 50 * 60 * 1000,
   });
-
-  // Parse focal point from DB
-  useEffect(() => {
-    if (coverFocalPoint) {
-      const parts = coverFocalPoint.split(" ").map((p) => parseFloat(p));
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        setFocalPoint({ x: parts[0], y: parts[1] });
-      }
-    }
-  }, [coverFocalPoint]);
 
   const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -316,10 +306,9 @@ export default function TripHome() {
       if (upErr) throw upErr;
       const { error: dbErr } = await supabase
         .from("trips")
-        .update({ cover_image_path: path, cover_focal_point: "50% 50%" } as any)
+        .update({ cover_image_path: path } as any)
         .eq("id", tripId);
       if (dbErr) throw dbErr;
-      setFocalPoint({ x: 50, y: 50 });
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
       toast.success("Cover photo updated!");
@@ -337,10 +326,9 @@ export default function TripHome() {
     try {
       const { error } = await supabase
         .from("trips")
-        .update({ cover_image_path: null, cover_focal_point: "50% 50%" } as any)
+        .update({ cover_image_path: null } as any)
         .eq("id", tripId);
       if (error) throw error;
-      setFocalPoint({ x: 50, y: 50 });
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
       toast.success("Cover photo reset to default");
@@ -349,41 +337,34 @@ export default function TripHome() {
     }
   }, [tripId, qc]);
 
-  const handleFocalPointTap = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    if (!adjustingFocalPoint || !heroRef.current) return;
-    const rect = heroRef.current.getBoundingClientRect();
-    let clientX: number, clientY: number;
-    if ("touches" in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    const x = Math.round(((clientX - rect.left) / rect.width) * 100);
-    const y = Math.round(((clientY - rect.top) / rect.height) * 100);
-    setFocalPoint({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
-  }, [adjustingFocalPoint]);
-
-  const handleSaveFocalPoint = useCallback(async () => {
+  const handleCropSave = useCallback(async (blob: Blob) => {
     if (!tripId) return;
+    setSavingCrop(true);
     try {
-      const { error } = await supabase
+      const path = `covers/${tripId}/cover.jpg`;
+      const { error: upErr } = await supabase.storage
+        .from("trip-attachments")
+        .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase
         .from("trips")
-        .update({ cover_focal_point: `${focalPoint.x}% ${focalPoint.y}%` } as any)
+        .update({ cover_image_path: path } as any)
         .eq("id", tripId);
-      if (error) throw error;
+      if (dbErr) throw dbErr;
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
-      setAdjustingFocalPoint(false);
-      toast.success("Focal point saved!");
+      qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
+      setCroppingCover(false);
+      toast.success("Cover photo adjusted!");
     } catch (err: any) {
-      toast.error(err?.message || "Failed to save focal point");
+      toast.error(err?.message || "Failed to save crop");
+    } finally {
+      setSavingCrop(false);
     }
-  }, [tripId, focalPoint, qc]);
+  }, [tripId, qc]);
 
   const handleStartAdjust = useCallback(() => {
     setCoverMenuOpen(false);
-    setAdjustingFocalPoint(true);
+    setCroppingCover(true);
   }, []);
 
   // Post-create share sheet — show once when landing on a freshly created trip
@@ -487,106 +468,73 @@ export default function TripHome() {
   return (
     <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
       {/* ─── HERO SECTION ─── */}
+      {/* Crop overlay */}
+      {croppingCover && coverSignedUrl && (
+        <CoverCropOverlay
+          imageSrc={coverSignedUrl}
+          onSave={handleCropSave}
+          onCancel={() => setCroppingCover(false)}
+          saving={savingCrop}
+        />
+      )}
+
+      {/* ─── HERO SECTION ─── */}
       <div
         ref={heroRef}
         className="relative w-full overflow-hidden"
         style={{ height: 220 }}
-        onClick={handleFocalPointTap}
-        onTouchStart={adjustingFocalPoint ? handleFocalPointTap : undefined}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
           src={coverPhoto}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: `${focalPoint.x}% ${focalPoint.y}%` }}
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
-        {/* Focal point indicator */}
-        {adjustingFocalPoint && (
-          <div
-            className="absolute w-6 h-6 rounded-full border-2 border-white shadow-lg pointer-events-none z-30"
-            style={{
-              left: `${focalPoint.x}%`,
-              top: `${focalPoint.y}%`,
-              transform: "translate(-50%, -50%)",
-              background: "rgba(255,255,255,0.3)",
-            }}
-          />
-        )}
         <div
           className="absolute inset-0"
           style={{
-            background: adjustingFocalPoint
-              ? "rgba(0,0,0,0.2)"
-              : "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.9) 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.9) 100%)",
           }}
         />
 
-        {adjustingFocalPoint ? (
-          <>
-            <div className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}>
-              <Move className="h-3.5 w-3.5" />
-              Tap to set focal point
-            </div>
-            <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setAdjustingFocalPoint(false); }}
-                className="flex h-9 w-9 items-center justify-center rounded-full"
-                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}
-              >
-                <X className="h-4 w-4 text-white" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleSaveFocalPoint(); }}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary"
-              >
-                <Check className="h-4 w-4 text-white" />
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => navigate("/app/trips")}
-              className="absolute left-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              My Trips
-            </button>
+        <button
+          onClick={() => navigate("/app/trips")}
+          className="absolute left-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          My Trips
+        </button>
 
-            <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
-              <LiveIndicator status={connectionStatus} />
-              <button
-                onClick={() => setCoverMenuOpen(true)}
-                className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full"
-                style={{
-                  background: "rgba(0,0,0,0.3)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                }}
-              >
-                {uploadingCover ? (
-                  <Loader2 className="h-4 w-4 text-white animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4 text-white" />
-                )}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleCoverUpload}
-                disabled={uploadingCover}
-              />
-              <HeroAvatar />
-            </div>
-          </>
-        )}
+        <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
+          <LiveIndicator status={connectionStatus} />
+          <button
+            onClick={() => setCoverMenuOpen(true)}
+            className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full"
+            style={{
+              background: "rgba(0,0,0,0.3)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {uploadingCover ? (
+              <Loader2 className="h-4 w-4 text-white animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4 text-white" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverUpload}
+            disabled={uploadingCover}
+          />
+          <HeroAvatar />
+        </div>
 
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
           <div className="min-w-0 flex-1">
