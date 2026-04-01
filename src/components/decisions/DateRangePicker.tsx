@@ -70,6 +70,7 @@ export function DateRangePicker({
       />
       <div className="flex items-center justify-between px-3 pb-3">
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={handleClear}
@@ -79,6 +80,7 @@ export function DateRangePicker({
           Clear
         </Button>
         <Button
+          type="button"
           size="sm"
           onClick={handleApply}
           disabled={!draft?.from || !draft?.to}
@@ -91,6 +93,7 @@ export function DateRangePicker({
 
   const trigger = (
     <Button
+      type="button"
       variant="outline"
       className={cn(
         "justify-start text-left font-normal min-h-[44px]",

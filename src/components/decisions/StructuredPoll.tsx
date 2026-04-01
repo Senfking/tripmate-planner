@@ -175,9 +175,9 @@ export function StructuredPoll({
                   : "bg-muted/30 border-border text-foreground hover:bg-muted/50"
               } ${isUniversePick ? "ring-2 ring-primary/30 ring-offset-1" : ""} ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
             >
-              <span>{displayLabel}</span>
+              <span className="min-w-0 break-words text-left">{displayLabel}</span>
               {pickCount > 0 && (
-                <span className="text-xs text-muted-foreground font-medium">
+                <span className="text-xs text-muted-foreground font-medium shrink-0">
                   {pickCount} vote{pickCount !== 1 ? "s" : ""}
                 </span>
               )}
