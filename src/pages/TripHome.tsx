@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Share2 } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Share2, Camera } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
@@ -261,6 +261,57 @@ export default function TripHome() {
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
   const [postCreateShareOpen, setPostCreateShareOpen] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  // Cover image signed URL
+  const coverImagePath = (trip as any)?.cover_image_path as string | null;
+  const { data: coverSignedUrl } = useQuery({
+    queryKey: ["trip-cover-url", tripId, coverImagePath],
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("trip-attachments")
+        .createSignedUrl(coverImagePath!, 60 * 60); // 1 hour
+      if (error) throw error;
+      return data.signedUrl;
+    },
+    enabled: !!coverImagePath,
+    staleTime: 50 * 60 * 1000, // refresh 10 min before expiry
+  });
+
+  const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !tripId) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5 MB");
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${tripId}/cover.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("trip-attachments")
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase
+        .from("trips")
+        .update({ cover_image_path: path } as any)
+        .eq("id", tripId);
+      if (dbErr) throw dbErr;
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
+      toast.success("Cover photo updated!");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to upload image");
+    } finally {
+      setUploadingCover(false);
+      e.target.value = "";
+    }
+  }, [tripId, qc]);
 
   // Post-create share sheet — show once when landing on a freshly created trip
   useEffect(() => {
@@ -358,7 +409,7 @@ export default function TripHome() {
 
   const visibleMembers = members?.slice(0, 4) ?? [];
   const memberCount = members?.length ?? 0;
-  const coverPhoto = resolvePhoto(trip.name, routeStops ?? []);
+  const coverPhoto = coverSignedUrl || resolvePhoto(trip.name, routeStops ?? []);
 
   return (
     <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
@@ -389,6 +440,29 @@ export default function TripHome() {
 
         <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
           <LiveIndicator status={connectionStatus} />
+          {/* Cover photo upload */}
+          <label
+            className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full cursor-pointer"
+            style={{
+              background: "rgba(0,0,0,0.3)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {uploadingCover ? (
+              <Loader2 className="h-4 w-4 text-white animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4 text-white" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverUpload}
+              disabled={uploadingCover}
+            />
+          </label>
           <HeroAvatar />
         </div>
 

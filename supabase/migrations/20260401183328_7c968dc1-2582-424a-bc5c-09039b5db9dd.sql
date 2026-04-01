@@ -1,0 +1,1 @@
+ALTER TABLE public.trips ADD COLUMN cover_image_path text;
