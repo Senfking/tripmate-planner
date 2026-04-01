@@ -292,7 +292,7 @@ export default function TripHome() {
     setUploadingCover(true);
     try {
       const ext = file.name.split(".").pop() || "jpg";
-      const path = `${tripId}/cover.${ext}`;
+      const path = `covers/${tripId}/cover.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("trip-attachments")
         .upload(path, file, { upsert: true });
