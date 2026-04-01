@@ -168,20 +168,40 @@ export default function ReferralLanding() {
             Ditch the group chat chaos. Plan, split & decide — all in one place.
           </p>
 
-          {/* Feature pills — 2x3 grid */}
-          <div className="grid grid-cols-2 gap-1.5 mt-4">
-            {FEATURES.map(({ icon: Icon, text }) => (
-              <div
-                key={text}
-                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-sm"
+          {/* Rotating statement panel */}
+          <div
+            className="mt-5 flex flex-col justify-center backdrop-blur-xl"
+            style={{
+              background: "rgba(0,0,0,0.35)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 16,
+              padding: "20px 20px",
+              minHeight: 88,
+            }}
+          >
+            <div style={{ opacity: statementVisible ? 1 : 0, transition: "opacity 0.4s ease-in-out" }}>
+              <p className="text-white font-bold" style={{ fontSize: 16, lineHeight: 1.3 }}>
+                {STATEMENTS[statementIndex].problem}
+              </p>
+              <p className="mt-2 font-medium" style={{ fontSize: 14, color: "#0D9488" }}>
+                {STATEMENTS[statementIndex].solution}
+              </p>
+            </div>
+          </div>
+
+          {/* Statement dots */}
+          <div className="flex items-center justify-center mt-3" style={{ gap: 6 }}>
+            {STATEMENTS.map((_, i) => (
+              <span
+                key={i}
+                className="transition-all duration-300"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  width: i === statementIndex ? 20 : 4,
+                  height: 4,
+                  borderRadius: i === statementIndex ? 2 : "50%",
+                  background: i === statementIndex ? "white" : "rgba(255,255,255,0.3)",
                 }}
-              >
-                <Icon className="h-3 w-3 text-[#5eead4] shrink-0" />
-                <span className="text-[10px] font-medium text-white/55 truncate">{text}</span>
-              </div>
+              />
             ))}
           </div>
 
