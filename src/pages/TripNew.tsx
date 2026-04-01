@@ -344,13 +344,10 @@ export default function TripNew() {
           onSave={(blob) => {
             setCoverFile(new File([blob], "cover.jpg", { type: "image/jpeg" }));
             setCoverPreview(URL.createObjectURL(blob));
-            // Keep cropSource for re-cropping
-          }}
-          onCancel={() => {
-            if (!coverPreview) setCropSource(null);
-            // If we already have a preview, just close the cropper (keep existing crop)
+            // Don't clear cropSource — store original for re-crop via state
             setCropSource(null);
           }}
+          onCancel={() => setCropSource(null)}
         />
       )}
     </div>
