@@ -17,9 +17,7 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerDescription,
 } from "@/components/ui/drawer";
-import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useMutation } from "@tanstack/react-query";
 
 const TRAVEL_EMOJIS = [
