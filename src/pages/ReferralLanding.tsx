@@ -14,11 +14,11 @@ const VIDEOS = [
 
 const FEATURES = [
   { icon: MapPin, text: "Itineraries" },
-  { icon: Receipt, text: "Expense splitting" },
+  { icon: Receipt, text: "Expenses" },
   { icon: Vote, text: "Group polls" },
   { icon: Sparkles, text: "AI scanning" },
   { icon: Calendar, text: "Schedules" },
-  { icon: Globe, text: "Multi-currency" },
+  { icon: Globe, text: "Currencies" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
