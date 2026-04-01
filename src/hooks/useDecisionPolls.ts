@@ -185,7 +185,38 @@ export function useDecisionPolls(tripId: string | undefined) {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onMutate: async ({ optionId, value }) => {
+      // Cancel outgoing refetches
+      await qc.cancelQueries({ queryKey: ["my-poll-votes", tripId, user?.id] });
+      await qc.cancelQueries({ queryKey: ["poll-vote-counts", tripId] });
+
+      // Snapshot previous values
+      const prevMyVotes = qc.getQueryData<Record<string, string>>(["my-poll-votes", tripId, user?.id]);
+      const prevCounts = qc.getQueryData<Record<string, VoteTally>>(["poll-vote-counts", tripId]);
+
+      // Optimistically update myVotes
+      qc.setQueryData<Record<string, string>>(["my-poll-votes", tripId, user?.id], (old) => {
+        const next = { ...(old || {}) };
+        if (next[optionId] === value) {
+          delete next[optionId]; // toggle off
+        } else {
+          next[optionId] = value;
+        }
+        return next;
+      });
+
+      return { prevMyVotes, prevCounts };
+    },
+    onError: (_err, _vars, context) => {
+      // Rollback on error
+      if (context?.prevMyVotes !== undefined) {
+        qc.setQueryData(["my-poll-votes", tripId, user?.id], context.prevMyVotes);
+      }
+      if (context?.prevCounts !== undefined) {
+        qc.setQueryData(["poll-vote-counts", tripId], context.prevCounts);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["poll-vote-counts", tripId] });
       qc.invalidateQueries({ queryKey: ["my-poll-votes", tripId, user?.id] });
     },
