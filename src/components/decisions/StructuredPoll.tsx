@@ -163,16 +163,17 @@ export function StructuredPoll({
         if (isPref) {
           const pickCount = tally["yes"] || 0;
           const isPicked = myVote === "yes";
+          const isUniversePick = universeHighlight === opt.id;
           return (
             <button
               key={opt.id}
-              onClick={() => onVote(opt.id, "yes")}
+              onClick={() => { setUniverseHighlight(null); onVote(opt.id, "yes"); }}
               disabled={isLocked}
               className={`flex items-center justify-between w-full rounded-lg px-3 py-2.5 text-sm border transition-colors ${
-                isPicked
+                isPicked || isUniversePick
                   ? "bg-primary/10 border-primary text-primary font-medium"
                   : "bg-muted/30 border-border text-foreground hover:bg-muted/50"
-              } ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
+              } ${isUniversePick ? "ring-2 ring-primary/30 ring-offset-1" : ""} ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
             >
               <span>{displayLabel}</span>
               {pickCount > 0 && (
