@@ -177,11 +177,16 @@ export default function ReferralLanding() {
 
           {/* Rotating statement panel */}
           <div
-            className="relative mt-5 backdrop-blur-xl"
+            className="relative mt-5"
             style={{
               background: "rgba(0,0,0,0.35)",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 16,
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              WebkitTransform: 'translateZ(0)',
+              transform: 'translateZ(0)',
+              isolation: 'isolate',
             }}
           >
             <div aria-hidden="true" className="pointer-events-none invisible grid px-5 py-5">
@@ -198,7 +203,7 @@ export default function ReferralLanding() {
             </div>
 
             <div className="absolute inset-0 flex flex-col justify-center px-5 py-5">
-              <div style={{ opacity: statementVisible ? 1 : 0, transition: "opacity 0.4s ease-in-out" }}>
+              <div style={{ position: 'relative', zIndex: 1, WebkitTransform: 'translateZ(0)', opacity: statementVisible ? 1 : 0, transition: "opacity 0.4s ease-in-out" }}>
                 <p className="text-white font-bold" style={{ fontSize: 16, lineHeight: 1.3 }}>
                   {STATEMENTS[statementIndex].problem}
                 </p>
