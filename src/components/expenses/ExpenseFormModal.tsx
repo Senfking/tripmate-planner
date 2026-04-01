@@ -221,6 +221,7 @@ export function ExpenseFormModal({
       if (data.category && CATEGORIES.some(c => c.value === data.category)) {
         setCategory(data.category);
       }
+      if (data.notes) setNotes(data.notes);
       toast.success("Receipt scanned ✓");
     } catch {
       toast.error("Couldn't read receipt — fill in manually");

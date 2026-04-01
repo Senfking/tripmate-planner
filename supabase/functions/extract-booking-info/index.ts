@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
   "arrival_time": "time string or null",
   "passenger_names": ["name1"] or null,
   "total_price": "price with currency or null",
-  "notes": "any other relevant info or null"
+  "notes": "SHORT summary (max 2-3 lines) of other important details — e.g. baggage allowance, room type, cancellation policy, meal plan, special instructions, total price breakdown. Only the most useful info. null if nothing noteworthy."
 }
 Return only valid JSON, no other text.`;
 

@@ -56,13 +56,14 @@ Deno.serve(async (req) => {
               {
                 type: "text",
                 text: `Extract from this receipt and return ONLY valid JSON:
-{ "title": "", "amount": 0, "currency": "", "date": "", "category": "" }
+{ "title": "", "amount": 0, "currency": "", "date": "", "category": "", "notes": "" }
 
 - title: merchant name or description
 - amount: total as number, no currency symbol
 - currency: 3-letter ISO code or null
 - date: YYYY-MM-DD or null
 - category: food | transport | accommodation | activities | shopping | other
+- notes: a SHORT summary (max 2 lines) of the most important extra details visible on the receipt — e.g. key line items, tax, tip, payment method, number of guests. Omit anything already captured above. null if nothing noteworthy.
 
 Return null for any field you cannot determine.
 Return ONLY the JSON object, no other text.`,
