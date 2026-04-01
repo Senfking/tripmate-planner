@@ -58,15 +58,12 @@ export default function Signup() {
       setError(friendlyError(err.message));
     } else {
       if (referralCode.current && data?.user?.id) {
-        const { data: referrer } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("referral_code", referralCode.current)
-          .maybeSingle();
-        if (referrer) {
+        const { data: referrerId } = await supabase
+          .rpc("resolve_referral_code", { _code: referralCode.current });
+        if (referrerId) {
           await supabase
             .from("profiles")
-            .update({ referred_by: referrer.id })
+            .update({ referred_by: referrerId })
             .eq("id", data.user.id);
         }
       }

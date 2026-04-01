@@ -18,19 +18,14 @@ export default function AuthCallback() {
     const referral = localStorage.getItem("junto_referral_code");
     if (referral) {
       supabase
-        .from("profiles")
-        .select("id")
-        .eq("referral_code", referral)
-        .maybeSingle()
-        .then(({ data: referrer }) => {
-          if (referrer) {
+        .rpc("resolve_referral_code", { _code: referral })
+        .then(({ data: referrerId }) => {
+          localStorage.removeItem("junto_referral_code");
+          if (referrerId) {
             supabase
               .from("profiles")
-              .update({ referred_by: referrer.id })
-              .eq("id", user.id)
-              .then(() => localStorage.removeItem("junto_referral_code"));
-          } else {
-            localStorage.removeItem("junto_referral_code");
+              .update({ referred_by: referrerId })
+              .eq("id", user.id);
           }
         });
     }
