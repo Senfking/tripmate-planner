@@ -73,6 +73,17 @@ export default function ReferralLanding() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatementVisible(false);
+      setTimeout(() => {
+        setStatementIndex((i) => (i + 1) % STATEMENTS.length);
+        setStatementVisible(true);
+      }, 400);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleCta = () => {
     navigate(code ? `/signup?ref=${code}` : "/signup");
   };
