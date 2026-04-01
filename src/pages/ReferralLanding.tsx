@@ -13,12 +13,12 @@ const VIDEOS = [
 ];
 
 const FEATURES = [
-  { icon: MapPin, text: "One itinerary, everyone's on it" },
-  { icon: Receipt, text: "Split costs without the drama" },
-  { icon: Users, text: "Decisions made together" },
-  { icon: Sparkles, text: "AI scans your receipts" },
-  { icon: MessageSquare, text: "No more chaotic group chats" },
-  { icon: Zap, text: "Real-time for the whole group" },
+  { icon: MapPin, text: "Shared itinerary" },
+  { icon: Receipt, text: "Split costs fairly" },
+  { icon: Users, text: "Decide together" },
+  { icon: Sparkles, text: "AI receipt scan" },
+  { icon: MessageSquare, text: "Replace group chats" },
+  { icon: Zap, text: "Real-time sync" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
