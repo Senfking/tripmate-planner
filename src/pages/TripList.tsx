@@ -482,6 +482,8 @@ export default function TripList() {
           created_at: t.created_at,
           memberCount: countMap[t.id] || 0,
           photoUrl,
+          coverImagePath: (t as any).cover_image_path ?? null,
+          coverFocalPoint: (t as any).cover_focal_point ?? null,
           statusInfo,
           members: tripMembers,
           nextActivity: nextActivityMap[t.id] ?? null,
