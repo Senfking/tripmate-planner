@@ -4,8 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, Share2 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
+import { Button } from "@/components/ui/button";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { MemberListSheet } from "@/components/trip/MemberListSheet";
 import { AttendanceInviteOverlay } from "@/components/trip/AttendanceInviteOverlay";
@@ -156,7 +165,7 @@ function StatusRow({
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { connectionStatus } = useTripRealtime(tripId);
@@ -251,6 +260,20 @@ export default function TripHome() {
 
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
+  const [postCreateShareOpen, setPostCreateShareOpen] = useState(false);
+
+  // Post-create share sheet — show once when landing on a freshly created trip
+  useEffect(() => {
+    if (!tripId) return;
+    const justCreated = localStorage.getItem(`junto_just_created_trip_${tripId}`);
+    if (!justCreated) return;
+    localStorage.removeItem(`junto_just_created_trip_${tripId}`);
+    const alreadyShown = localStorage.getItem("junto_post_create_share_shown");
+    if (!alreadyShown) {
+      localStorage.setItem("junto_post_create_share_shown", "true");
+      setPostCreateShareOpen(true);
+    }
+  }, [tripId]);
 
   // Attendance overlay state
   const sessionKey = `junto_invite_dismissed_${tripId}`;
@@ -461,6 +484,41 @@ export default function TripHome() {
           trip={trip}
         />
       )}
+
+      {/* Post-create share sheet */}
+      <Drawer open={postCreateShareOpen} onOpenChange={(v) => { if (!v) setPostCreateShareOpen(false); }}>
+        <DrawerContent>
+          <DrawerHeader className="text-center">
+            <DrawerTitle className="text-lg">Now invite your crew 🎉</DrawerTitle>
+            <DrawerDescription className="text-sm text-muted-foreground mt-1">
+              Share Junto so everyone can join the trip — and plan together from day one.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-6 space-y-3">
+            <Button
+              className="w-full h-12 rounded-xl text-[15px] font-semibold text-white gap-2"
+              style={{ background: "#25D366" }}
+              onClick={() => {
+                const displayName = profile?.display_name || "Someone";
+                const refCode = (profile as any)?.referral_code || "";
+                const text = `✈️ ${displayName} is planning a trip on Junto — the app that replaces group chat chaos.\n\nItineraries, expenses, bookings & decisions all in one place.\n\nTry it free → https://juntotravel.lovable.app/ref?ref=${refCode}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                setPostCreateShareOpen(false);
+              }}
+            >
+              <WhatsAppIcon className="h-5 w-5" />
+              Share Junto with friends
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full h-12 rounded-xl text-[15px] text-muted-foreground"
+              onClick={() => setPostCreateShareOpen(false)}
+            >
+              Skip for now
+            </Button>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
