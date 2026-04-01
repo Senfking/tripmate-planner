@@ -6,18 +6,20 @@ import { cn } from "@/lib/utils";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
 
 const Expenses = () => {
-  const { data, isLoading } = useGlobalExpenses();
+  const { data, isLoading, isFetching } = useGlobalExpenses();
+  // Show skeleton on initial load OR when refetching without any cached data
+  const showSkeleton = isLoading || (!data && isFetching);
   const { overallNet = 0, currency = "EUR", trips = [] } = data ?? {};
   const hasExpenses = trips.length > 0;
 
   const subtitle = (() => {
-    if (isLoading) return "Loading…";
+    if (showSkeleton) return "Loading…";
     if (!hasExpenses) return "Track shared costs across all your trips";
     if (Math.abs(overallNet) < 0.01) return "All settled up across your trips";
     return `${trips.length} trip${trips.length !== 1 ? "s" : ""} with open balances`;
   })();
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Expenses" subtitle="Loading…" />
@@ -36,12 +38,18 @@ const Expenses = () => {
     ? "You're owed"
     : "You owe";
 
+  // When we have cached data but are refetching, dim the numbers slightly
+  const isRefreshing = isFetching && !isLoading;
+
   const balanceDisplay = (
     <div className="mt-3 flex flex-col items-center">
       <p className="text-[10px] uppercase tracking-[0.15em] font-semibold text-white/40 mb-2">
         Total balance
       </p>
-      <p className="text-[34px] font-extrabold text-white tracking-tight leading-none">
+      <p className={cn(
+        "text-[34px] font-extrabold text-white tracking-tight leading-none transition-opacity duration-300",
+        isRefreshing && "opacity-50"
+      )}>
         {!hasExpenses || Math.abs(overallNet) < 0.01
           ? "€0.00"
           : formatCurrency(Math.abs(overallNet), currency)}
@@ -131,7 +139,8 @@ const Expenses = () => {
                     </span>
                   </div>
                   <span className={cn(
-                    "text-[17px] font-bold tabular-nums",
+                    "text-[17px] font-bold tabular-nums transition-opacity duration-300",
+                    isRefreshing && "opacity-50",
                     isSettled
                       ? "text-muted-foreground/50"
                       : isPositive

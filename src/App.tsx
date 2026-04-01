@@ -30,22 +30,21 @@ function AppInner() {
   const qc = useQueryClient();
 
   useEffect(() => {
+    // Pre-warm the EUR exchange rate cache on app startup.
+    // Must return Record<string, number> to match the shape expected by
+    // useExpenses and useGlobalExpenses via qc.fetchQuery(["exchange-rates", "EUR"]).
     qc.prefetchQuery({
       queryKey: ["exchange-rates", "EUR"],
-      queryFn: async () => {
+      queryFn: async (): Promise<Record<string, number>> => {
         const { data } = await supabase
           .from("exchange_rate_cache")
-          .select("rates, fetched_at")
+          .select("rates")
           .eq("base_currency", "EUR")
           .maybeSingle();
-        if (data?.rates) {
-          return {
-            rates: data.rates,
-            fetchedAt: new Date(data.fetched_at),
-            source: "cache" as const,
-          };
+        if (data?.rates && typeof data.rates === "object") {
+          return data.rates as Record<string, number>;
         }
-        return { rates: {}, fetchedAt: null, source: "none" as const };
+        return {};
       },
       staleTime: 1000 * 60 * 60,
     });

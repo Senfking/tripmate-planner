@@ -2,6 +2,7 @@ import { Map, Vote, CalendarDays, DollarSign, Plus, type LucideIcon } from "luci
 import { NavLink as RouterNavLink, useLocation, Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
+import { useGlobalExpenses } from "@/hooks/useGlobalExpenses";
 
 const leftTabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/app/trips", label: "Trips", icon: Map },
@@ -64,6 +65,9 @@ function NavTab({ to, label, icon: Icon, badge }: { to: string; label: string; i
 export function BottomNav() {
   const { data } = useGlobalDecisions();
   const pendingCount = data?.pendingCount ?? 0;
+
+  // Prefetch global expenses so the data is ready when the user taps the Expenses tab
+  useGlobalExpenses();
 
   return (
     <nav className="fixed inset-x-4 z-50 bg-transparent md:hidden" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}>

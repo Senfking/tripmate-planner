@@ -66,6 +66,8 @@ export function useGlobalExpenses() {
     queryKey: ["global-expenses", user?.id],
     enabled: !!user,
     refetchOnWindowFocus: true,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async (): Promise<GlobalExpensesResult> => {
       const userId = user!.id;
 

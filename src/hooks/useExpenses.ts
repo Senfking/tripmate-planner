@@ -53,6 +53,8 @@ export function useExpenses(tripId: string) {
       return data as ExpenseRow[];
     },
     enabled: !!tripId && !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   // Fetch all splits for this trip's expenses
@@ -69,6 +71,8 @@ export function useExpenses(tripId: string) {
       return data as SplitRow[];
     },
     enabled: !!expensesQuery.data,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   // Fetch trip members with profiles
@@ -314,6 +318,7 @@ export function useExpenses(tripId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense added");
     },
     onError: (e) => toast.error(e.message || "Failed to add expense"),
@@ -355,6 +360,7 @@ export function useExpenses(tripId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense updated");
     },
     onError: (e) => toast.error(e.message || "Failed to update expense"),
@@ -371,6 +377,7 @@ export function useExpenses(tripId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense deleted");
     },
     onError: () => toast.error("Failed to delete expense"),
