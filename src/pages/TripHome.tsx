@@ -409,7 +409,7 @@ export default function TripHome() {
 
   const visibleMembers = members?.slice(0, 4) ?? [];
   const memberCount = members?.length ?? 0;
-  const coverPhoto = resolvePhoto(trip.name, routeStops ?? []);
+  const coverPhoto = coverSignedUrl || resolvePhoto(trip.name, routeStops ?? []);
 
   return (
     <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
