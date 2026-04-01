@@ -83,14 +83,8 @@ export default function TripNew() {
       if (dbError) throw dbError;
       toast.success("Trip created!");
 
-      const alreadyShown = localStorage.getItem("junto_post_create_share_shown");
-      if (alreadyShown) {
-        navigate(`/app/trips/${data.id}`);
-      } else {
-        localStorage.setItem("junto_post_create_share_shown", "true");
-        setCreatedTripId(data.id);
-        setShareOpen(true);
-      }
+      localStorage.setItem(`junto_just_created_trip_${data.id}`, "true");
+      navigate(`/app/trips/${data.id}`);
     } catch (err: any) {
       setError(friendlyError(err.message));
     } finally {
