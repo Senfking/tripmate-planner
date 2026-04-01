@@ -58,10 +58,17 @@ export default function Signup() {
       setError(friendlyError(err.message));
     } else {
       if (referralCode.current && data?.user?.id) {
-        await supabase
+        const { data: referrer } = await supabase
           .from("profiles")
-          .update({ referred_by: referralCode.current } as any)
-          .eq("id", data.user.id);
+          .select("id")
+          .eq("referral_code", referralCode.current)
+          .maybeSingle();
+        if (referrer) {
+          await supabase
+            .from("profiles")
+            .update({ referred_by: referrer.id })
+            .eq("id", data.user.id);
+        }
       }
       navigate(redirectTo || "/app/trips", { replace: true });
     }

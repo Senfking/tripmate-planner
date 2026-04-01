@@ -19,9 +19,20 @@ export default function AuthCallback() {
     if (referral) {
       supabase
         .from("profiles")
-        .update({ referred_by: referral } as any)
-        .eq("id", user.id)
-        .then(() => localStorage.removeItem("junto_referral_code"));
+        .select("id")
+        .eq("referral_code", referral)
+        .maybeSingle()
+        .then(({ data: referrer }) => {
+          if (referrer) {
+            supabase
+              .from("profiles")
+              .update({ referred_by: referrer.id })
+              .eq("id", user.id)
+              .then(() => localStorage.removeItem("junto_referral_code"));
+          } else {
+            localStorage.removeItem("junto_referral_code");
+          }
+        });
     }
 
     navigate(redirectTo || "/app/trips", { replace: true });
