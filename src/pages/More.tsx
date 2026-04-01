@@ -876,11 +876,30 @@ const More = () => {
                 </Button>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                {referralCount > 0
-                  ? `🎉 ${referralCount} friend${referralCount > 1 ? "s" : ""} joined using your code`
-                  : "No friends joined yet"}
-              </p>
+              <div className="rounded-2xl border border-[#0D9488]/20 bg-white p-4 shadow-sm dark:bg-card">
+                <div className="flex items-center justify-center gap-6">
+                  <div className="text-center">
+                    <p className="text-[28px] font-bold text-[#0D9488]">{referralCount}</p>
+                    <p className="text-xs text-muted-foreground mt-1">friends invited</p>
+                  </div>
+                  <div className="h-8 w-px bg-border" />
+                  <div className="text-center">
+                    {referralCount > 0 ? (
+                      <p className="text-[28px] font-bold text-[#0D9488]">{referralCount}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Coming soon</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {referralCount > 0
+                        ? `month${referralCount > 1 ? "s" : ""} free Pro`
+                        : "rewards earned"}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  Invite friends — earn free Pro when we launch.
+                </p>
+              </div>
 
               <div className="flex gap-2">
                 <Button
