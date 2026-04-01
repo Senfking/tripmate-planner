@@ -24,6 +24,7 @@ import { format, parseISO, isWithinInterval, differenceInCalendarDays, differenc
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
 import { toast } from "sonner";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
+import { useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { cn } from "@/lib/utils";
 
 function getInitial(name: string | null | undefined) {
@@ -269,20 +270,9 @@ export default function TripHome() {
   const heroRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cover image signed URL
+  // Cover image signed URL (shared cache with trip list)
   const coverImagePath = (trip as any)?.cover_image_path as string | null;
-  const { data: coverSignedUrl } = useQuery({
-    queryKey: ["trip-cover-url", tripId, coverImagePath],
-    queryFn: async () => {
-      const { data, error } = await supabase.storage
-        .from("trip-attachments")
-        .createSignedUrl(coverImagePath!, 7 * 24 * 60 * 60);
-      if (error) throw error;
-      return data.signedUrl;
-    },
-    enabled: !!coverImagePath,
-    staleTime: 6 * 24 * 60 * 60 * 1000,
-  });
+  const { data: coverSignedUrl } = useTripCoverUrl(tripId, coverImagePath);
 
   const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useCallback, useRef } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO, isToday, isTomorrow } from "date-fns";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
+import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 
 /* ─── Status logic ─── */
@@ -352,6 +353,7 @@ function JoinDrawer({
 export default function TripList() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
@@ -376,6 +378,12 @@ export default function TripList() {
     navigator.clipboard.writeText(`https://juntotravel.lovable.app/ref?ref=${refCode}`);
     toast.success("Link copied!");
   }, [profile]);
+
+  const seedCoverUrls = useSeedTripCoverUrls();
+  const coverUrlSeederRef = useRef(seedCoverUrls);
+  coverUrlSeederRef.current = seedCoverUrls;
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
@@ -468,19 +476,43 @@ export default function TripList() {
         }
       });
 
-      // Fetch signed URLs for trips with custom covers
+      // Fetch signed URLs for trips with custom covers, reusing cached URLs
       const tripsWithCovers = data.filter((t: any) => t.cover_image_path);
       const signedUrlMap: Record<string, string> = {};
       if (tripsWithCovers.length > 0) {
-        await Promise.all(
-          tripsWithCovers.map(async (t: any) => {
-            const { data: urlData } = await supabase.storage
-              .from("trip-attachments")
-              .createSignedUrl(t.cover_image_path, 7 * 24 * 60 * 60);
-            if (urlData?.signedUrl) signedUrlMap[t.id] = urlData.signedUrl;
-          })
-        );
+        const needsFetch: typeof tripsWithCovers = [];
+        for (const t of tripsWithCovers) {
+          const cached = queryClientRef.current.getQueryData<string>(
+            ["trip-cover-url", t.id, t.cover_image_path]
+          );
+          if (cached) {
+            signedUrlMap[t.id] = cached;
+          } else {
+            needsFetch.push(t);
+          }
+        }
+        if (needsFetch.length > 0) {
+          await Promise.all(
+            needsFetch.map(async (t: any) => {
+              const { data: urlData } = await supabase.storage
+                .from("trip-attachments")
+                .createSignedUrl(t.cover_image_path, 7 * 24 * 60 * 60);
+              if (urlData?.signedUrl) signedUrlMap[t.id] = urlData.signedUrl;
+            })
+          );
+        }
       }
+
+      // Seed the shared cover-url cache so TripHome reuses the same signed URLs
+      coverUrlSeederRef.current(
+        tripsWithCovers
+          .filter((t: any) => signedUrlMap[t.id])
+          .map((t: any) => ({
+            tripId: t.id,
+            coverImagePath: t.cover_image_path,
+            signedUrl: signedUrlMap[t.id],
+          }))
+      );
 
       const enriched: EnrichedTrip[] = data.map((t) => {
         const statusInfo = getTripStatus(t.tentative_start_date, t.tentative_end_date);
