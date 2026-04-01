@@ -440,6 +440,29 @@ export default function TripHome() {
 
         <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
           <LiveIndicator status={connectionStatus} />
+          {/* Cover photo upload */}
+          <label
+            className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full cursor-pointer"
+            style={{
+              background: "rgba(0,0,0,0.3)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {uploadingCover ? (
+              <Loader2 className="h-4 w-4 text-white animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4 text-white" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverUpload}
+              disabled={uploadingCover}
+            />
+          </label>
           <HeroAvatar />
         </div>
 
