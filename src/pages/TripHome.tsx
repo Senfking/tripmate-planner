@@ -262,21 +262,37 @@ export default function TripHome() {
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
   const [postCreateShareOpen, setPostCreateShareOpen] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [coverMenuOpen, setCoverMenuOpen] = useState(false);
+  const [adjustingFocalPoint, setAdjustingFocalPoint] = useState(false);
+  const [focalPoint, setFocalPoint] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
+  const heroRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cover image signed URL
   const coverImagePath = (trip as any)?.cover_image_path as string | null;
+  const coverFocalPoint = (trip as any)?.cover_focal_point as string | null;
   const { data: coverSignedUrl } = useQuery({
     queryKey: ["trip-cover-url", tripId, coverImagePath],
     queryFn: async () => {
       const { data, error } = await supabase.storage
         .from("trip-attachments")
-        .createSignedUrl(coverImagePath!, 60 * 60); // 1 hour
+        .createSignedUrl(coverImagePath!, 60 * 60);
       if (error) throw error;
       return data.signedUrl;
     },
     enabled: !!coverImagePath,
-    staleTime: 50 * 60 * 1000, // refresh 10 min before expiry
+    staleTime: 50 * 60 * 1000,
   });
+
+  // Parse focal point from DB
+  useEffect(() => {
+    if (coverFocalPoint) {
+      const parts = coverFocalPoint.split(" ").map((p) => parseFloat(p));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        setFocalPoint({ x: parts[0], y: parts[1] });
+      }
+    }
+  }, [coverFocalPoint]);
 
   const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -290,6 +306,7 @@ export default function TripHome() {
       return;
     }
     setUploadingCover(true);
+    setCoverMenuOpen(false);
     try {
       const ext = file.name.split(".").pop() || "jpg";
       const path = `covers/${tripId}/cover.${ext}`;
@@ -299,9 +316,10 @@ export default function TripHome() {
       if (upErr) throw upErr;
       const { error: dbErr } = await supabase
         .from("trips")
-        .update({ cover_image_path: path } as any)
+        .update({ cover_image_path: path, cover_focal_point: "50% 50%" } as any)
         .eq("id", tripId);
       if (dbErr) throw dbErr;
+      setFocalPoint({ x: 50, y: 50 });
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
       toast.success("Cover photo updated!");
@@ -312,6 +330,61 @@ export default function TripHome() {
       e.target.value = "";
     }
   }, [tripId, qc]);
+
+  const handleResetCover = useCallback(async () => {
+    if (!tripId) return;
+    setCoverMenuOpen(false);
+    try {
+      const { error } = await supabase
+        .from("trips")
+        .update({ cover_image_path: null, cover_focal_point: "50% 50%" } as any)
+        .eq("id", tripId);
+      if (error) throw error;
+      setFocalPoint({ x: 50, y: 50 });
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
+      toast.success("Cover photo reset to default");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to reset cover");
+    }
+  }, [tripId, qc]);
+
+  const handleFocalPointTap = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    if (!adjustingFocalPoint || !heroRef.current) return;
+    const rect = heroRef.current.getBoundingClientRect();
+    let clientX: number, clientY: number;
+    if ("touches" in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    const x = Math.round(((clientX - rect.left) / rect.width) * 100);
+    const y = Math.round(((clientY - rect.top) / rect.height) * 100);
+    setFocalPoint({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
+  }, [adjustingFocalPoint]);
+
+  const handleSaveFocalPoint = useCallback(async () => {
+    if (!tripId) return;
+    try {
+      const { error } = await supabase
+        .from("trips")
+        .update({ cover_focal_point: `${focalPoint.x}% ${focalPoint.y}%` } as any)
+        .eq("id", tripId);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      setAdjustingFocalPoint(false);
+      toast.success("Focal point saved!");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save focal point");
+    }
+  }, [tripId, focalPoint, qc]);
+
+  const handleStartAdjust = useCallback(() => {
+    setCoverMenuOpen(false);
+    setAdjustingFocalPoint(true);
+  }, []);
 
   // Post-create share sheet — show once when landing on a freshly created trip
   useEffect(() => {
