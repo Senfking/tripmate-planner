@@ -7,7 +7,8 @@ import { friendlyError } from "@/lib/friendlyError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Hash, Camera, X } from "lucide-react";
+import { Loader2, Hash, Camera, X, Crop } from "lucide-react";
+import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
@@ -55,6 +56,8 @@ export default function TripNew() {
   const [joinError, setJoinError] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const [originalCoverUrl, setOriginalCoverUrl] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [showAllEmojis, setShowAllEmojis] = useState(false);
 
@@ -168,13 +171,24 @@ export default function TripNew() {
             {coverPreview ? (
               <div className="relative rounded-xl overflow-hidden h-[120px] bg-white border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                 <img src={coverPreview} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => { setCoverFile(null); setCoverPreview(null); }}
-                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 flex items-center justify-center"
-                >
-                  <X className="h-3.5 w-3.5 text-white" />
-                </button>
+                <div className="absolute top-2 right-2 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (originalCoverUrl) setCropSource(originalCoverUrl);
+                    }}
+                    className="h-7 w-7 rounded-full bg-black/50 flex items-center justify-center"
+                  >
+                    <Crop className="h-3.5 w-3.5 text-white" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setCoverFile(null); setCoverPreview(null); setCropSource(null); setOriginalCoverUrl(null); }}
+                    className="h-7 w-7 rounded-full bg-black/50 flex items-center justify-center"
+                  >
+                    <X className="h-3.5 w-3.5 text-white" />
+                  </button>
+                </div>
               </div>
             ) : (
               <button
@@ -196,8 +210,9 @@ export default function TripNew() {
                 if (!file) return;
                 if (!file.type.startsWith("image/")) { toast.error("Please select an image"); return; }
                 if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
-                setCoverFile(file);
-                setCoverPreview(URL.createObjectURL(file));
+                const objectUrl = URL.createObjectURL(file);
+                setOriginalCoverUrl(objectUrl);
+                setCropSource(objectUrl);
                 e.target.value = "";
               }}
             />
@@ -322,6 +337,20 @@ export default function TripNew() {
           </DrawerContent>
         </Drawer>
       </div>
+
+      {/* Crop overlay */}
+      {cropSource && (
+        <CoverCropOverlay
+          imageSrc={cropSource}
+          onSave={(blob) => {
+            setCoverFile(new File([blob], "cover.jpg", { type: "image/jpeg" }));
+            setCoverPreview(URL.createObjectURL(blob));
+            // Don't clear cropSource — store original for re-crop via state
+            setCropSource(null);
+          }}
+          onCancel={() => setCropSource(null)}
+        />
+      )}
     </div>
   );
 }
