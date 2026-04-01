@@ -92,14 +92,15 @@ export function useDecisionPolls(tripId: string | undefined) {
   });
 
   const createPoll = useMutation({
-    mutationFn: async (input: { type: string; title: string; options?: string[] }) => {
+    mutationFn: async (input: { type: string; title: string; options?: string[]; multiSelect?: boolean }) => {
       const { data, error } = await supabase
         .from("polls")
         .insert({
           trip_id: tripId!,
           type: input.type,
           title: input.title,
-        })
+          multi_select: input.multiSelect ?? false,
+        } as any)
         .select("id")
         .single();
       if (error) throw error;
