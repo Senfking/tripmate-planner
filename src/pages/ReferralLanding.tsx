@@ -13,11 +13,11 @@ const VIDEOS = [
 ];
 
 const FEATURES = [
-  { icon: MapPin, text: "Collaborative itineraries" },
-  { icon: Receipt, text: "Multi-currency expense splitting" },
-  { icon: Vote, text: "Group polls & decisions" },
-  { icon: Calendar, text: "Shared schedules & attendance" },
-  { icon: Sparkles, text: "AI receipt & booking scanning" },
+  { icon: MapPin, text: "Itineraries" },
+  { icon: Receipt, text: "Expense splitting" },
+  { icon: Vote, text: "Group decisions" },
+  { icon: Calendar, text: "Shared schedules" },
+  { icon: Sparkles, text: "AI scanning" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
