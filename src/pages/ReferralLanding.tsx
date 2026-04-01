@@ -26,15 +26,8 @@ export default function ReferralLanding() {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-black">
-      {/* LAYER 1 — Video */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover z-0"
-        src="https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4"
-      />
+      {/* LAYER 1 — Video slideshow */}
+      <VideoSlideshow />
 
       {/* LAYER 2 — Gradient overlay */}
       <div
