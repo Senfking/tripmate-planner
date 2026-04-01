@@ -212,6 +212,7 @@ export default function TripNew() {
                 if (!file.type.startsWith("image/")) { toast.error("Please select an image"); return; }
                 if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
                 const objectUrl = URL.createObjectURL(file);
+                setOriginalCoverUrl(objectUrl);
                 setCropSource(objectUrl);
                 e.target.value = "";
               }}
