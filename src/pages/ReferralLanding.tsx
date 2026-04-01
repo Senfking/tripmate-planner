@@ -15,9 +15,10 @@ const VIDEOS = [
 const FEATURES = [
   { icon: MapPin, text: "Itineraries" },
   { icon: Receipt, text: "Expense splitting" },
-  { icon: Vote, text: "Group decisions" },
-  { icon: Calendar, text: "Shared schedules" },
+  { icon: Vote, text: "Group polls" },
   { icon: Sparkles, text: "AI scanning" },
+  { icon: Calendar, text: "Schedules" },
+  { icon: Globe, text: "Multi-currency" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
