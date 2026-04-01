@@ -182,7 +182,11 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   if (routeLocked && stops && stops.length > 0) {
     const first = stops[0];
     const last = stops[stops.length - 1];
-    decisionsSummary = `✅ ${stops.length}-stop route confirmed · ${format(new Date(first.start_date), "MMM d")} – ${format(new Date(last.end_date), "MMM d")}`;
+    const startValid = first.start_date && !isNaN(new Date(first.start_date).getTime());
+    const endValid = last.end_date && !isNaN(new Date(last.end_date).getTime());
+    decisionsSummary = startValid && endValid
+      ? `✅ ${stops.length}-stop route confirmed · ${format(new Date(first.start_date), "MMM d")} – ${format(new Date(last.end_date), "MMM d")}`
+      : `✅ ${stops.length}-stop route confirmed`;
   } else if (totalVoteActivity > 0 || (proposals?.length ?? 0) > 0) {
     decisionsSummary = pendingVoteCount > 0
       ? `⏳ ${pendingVoteCount} vote${pendingVoteCount > 1 ? "s" : ""} pending · Route not confirmed`
