@@ -95,8 +95,20 @@ export default function TripNew() {
         .single();
 
       if (dbError) throw dbError;
-      toast.success("Trip created!");
 
+      // Upload cover image if selected
+      if (coverFile && data.id) {
+        const ext = coverFile.name.split(".").pop() || "jpg";
+        const path = `covers/${data.id}/cover.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("trip-attachments")
+          .upload(path, coverFile, { upsert: true });
+        if (!upErr) {
+          await supabase.from("trips").update({ cover_image_path: path } as any).eq("id", data.id);
+        }
+      }
+
+      toast.success("Trip created!");
       localStorage.setItem(`junto_just_created_trip_${data.id}`, "true");
       navigate(`/app/trips/${data.id}`);
     } catch (err: any) {
