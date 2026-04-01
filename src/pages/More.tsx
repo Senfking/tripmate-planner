@@ -603,7 +603,7 @@ const More = () => {
 
   const handleCopyReferralLink = useCallback(() => {
     if (profile?.referral_code) {
-      navigator.clipboard.writeText(`https://juntotravel.lovable.app/join?ref=${profile.referral_code}`);
+      navigator.clipboard.writeText(`https://juntotravel.lovable.app/ref?ref=${profile.referral_code}`);
       toast({ title: "Copied!" });
     }
   }, [profile?.referral_code]);
