@@ -236,6 +236,35 @@ export default function TripNew() {
             </div>
           </DrawerContent>
         </Drawer>
+
+        {/* Post-create share sheet */}
+        <Drawer open={shareOpen} onOpenChange={(v) => { if (!v) handleSkipShare(); }}>
+          <DrawerContent>
+            <DrawerHeader className="text-center">
+              <DrawerTitle className="text-lg">Now invite your crew 🎉</DrawerTitle>
+              <DrawerDescription className="text-sm text-muted-foreground mt-1">
+                Share Junto so everyone can join the trip — and plan together from day one.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-6 space-y-3">
+              <Button
+                className="w-full h-12 rounded-xl text-[15px] font-semibold text-white gap-2"
+                style={{ background: "#25D366" }}
+                onClick={handleShareWhatsApp}
+              >
+                <WhatsAppIcon className="h-5 w-5" />
+                Share Junto with friends
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full h-12 rounded-xl text-[15px] text-muted-foreground"
+                onClick={handleSkipShare}
+              >
+                Skip for now
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
       </div>
     </div>
   );
