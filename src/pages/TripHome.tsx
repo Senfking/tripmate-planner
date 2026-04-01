@@ -711,6 +711,46 @@ export default function TripHome() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* Cover image menu drawer */}
+      <Drawer open={coverMenuOpen} onOpenChange={setCoverMenuOpen}>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Cover Photo</DrawerTitle>
+            <DrawerDescription className="sr-only">Change trip cover image</DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-6 space-y-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              Upload new photo
+            </Button>
+            {coverImagePath && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3 h-12"
+                onClick={handleStartAdjust}
+              >
+                <Move className="h-4 w-4" />
+                Adjust position
+              </Button>
+            )}
+            {coverImagePath && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive"
+                onClick={handleResetCover}
+              >
+                <ImageOff className="h-4 w-4" />
+                Reset to default
+              </Button>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
