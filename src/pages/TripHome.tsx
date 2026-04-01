@@ -261,6 +261,57 @@ export default function TripHome() {
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
   const [postCreateShareOpen, setPostCreateShareOpen] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  // Cover image signed URL
+  const coverImagePath = (trip as any)?.cover_image_path as string | null;
+  const { data: coverSignedUrl } = useQuery({
+    queryKey: ["trip-cover-url", tripId, coverImagePath],
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("trip-attachments")
+        .createSignedUrl(coverImagePath!, 60 * 60); // 1 hour
+      if (error) throw error;
+      return data.signedUrl;
+    },
+    enabled: !!coverImagePath,
+    staleTime: 50 * 60 * 1000, // refresh 10 min before expiry
+  });
+
+  const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !tripId) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5 MB");
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${tripId}/cover.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("trip-attachments")
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase
+        .from("trips")
+        .update({ cover_image_path: path } as any)
+        .eq("id", tripId);
+      if (dbErr) throw dbErr;
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
+      toast.success("Cover photo updated!");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to upload image");
+    } finally {
+      setUploadingCover(false);
+      e.target.value = "";
+    }
+  }, [tripId, qc]);
 
   // Post-create share sheet — show once when landing on a freshly created trip
   useEffect(() => {
