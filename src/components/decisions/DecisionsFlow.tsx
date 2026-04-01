@@ -358,6 +358,19 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => setPrefMultiSelect((v) => !v)}
+        className={`flex items-center gap-2 w-full rounded-lg px-3 py-2.5 text-sm border transition-colors ${
+          prefMultiSelect
+            ? "bg-primary/10 border-primary text-primary"
+            : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/50"
+        }`}
+      >
+        <ListChecks className="h-4 w-4" />
+        <span className="font-medium">Allow multiple answers</span>
+      </button>
+
       <Button
         className="w-full"
         onClick={handleCreatePref}
