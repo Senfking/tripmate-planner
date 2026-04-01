@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Users, Plus, Plane, Calendar, Radio, Hash, ChevronRight } from "lucide-react";
+import { Loader2, Users, Plus, Plane, Calendar, Radio, Hash, ChevronRight, X, Copy } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -350,6 +351,27 @@ export default function TripList() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [referralDismissed, setReferralDismissed] = useState(
+    () => localStorage.getItem("junto_referral_card_dismissed") === "true"
+  );
+
+  const handleDismissReferral = useCallback(() => {
+    setReferralDismissed(true);
+    localStorage.setItem("junto_referral_card_dismissed", "true");
+  }, []);
+
+  const handleReferralWhatsApp = useCallback(() => {
+    const displayName = profile?.display_name || "Someone";
+    const refCode = (profile as any)?.referral_code || "";
+    const text = `✈️ ${displayName} thinks you'd love Junto.\n\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://juntotravel.lovable.app/ref?ref=${refCode}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }, [profile]);
+
+  const handleCopyReferralLink = useCallback(() => {
+    const refCode = (profile as any)?.referral_code || "";
+    navigator.clipboard.writeText(`https://juntotravel.lovable.app/ref?ref=${refCode}`);
+    toast.success("Link copied!");
+  }, [profile]);
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
@@ -565,6 +587,51 @@ export default function TripList() {
           <span className="ml-3 flex-1 text-left font-medium text-foreground text-sm">Join a trip</span>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
+
+        {/* Referral card — show when < 2 trips and not dismissed */}
+        {tripCount < 2 && !referralDismissed && (profile as any)?.referral_code && (
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: "linear-gradient(135deg, rgba(13,148,136,0.12), rgba(13,148,136,0.05))",
+              border: "1px solid rgba(13,148,136,0.25)",
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <span className="text-2xl">✈️</span>
+              <button onClick={handleDismissReferral} className="text-muted-foreground hover:text-foreground -mt-0.5 -mr-0.5">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mt-2 font-bold text-foreground" style={{ fontSize: 15 }}>
+              Junto is better with your people
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Invite friends to plan trips together — or just share the app.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                className="flex-1 gap-2 text-white"
+                style={{ background: "#25D366" }}
+                onClick={handleReferralWhatsApp}
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                WhatsApp
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 gap-2"
+                style={{ borderColor: "rgba(13,148,136,0.4)", color: "#0D9488" }}
+                onClick={handleCopyReferralLink}
+              >
+                <Copy className="h-4 w-4" />
+                Copy link
+              </Button>
+            </div>
+          </div>
+        )}
 
         <Link to="/app/trips/new" className="block">
           <div
