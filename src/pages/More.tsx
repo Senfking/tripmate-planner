@@ -35,6 +35,7 @@ import {
   Hash,
   Star,
   MessageSquare,
+  ArrowLeft,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "@/hooks/use-toast";
@@ -636,6 +637,15 @@ const More = () => {
 
   return (
     <div className="min-h-screen bg-muted/40 px-4 pb-32 pt-6 space-y-4">
+      {/* ── Back button ── */}
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors -mb-2"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </button>
+
       {/* ── SECTION 1: Profile Header ── */}
       <div className="flex flex-col items-center gap-3 pt-4 text-center">
         <div className="relative">
