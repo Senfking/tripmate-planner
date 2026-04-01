@@ -468,106 +468,73 @@ export default function TripHome() {
   return (
     <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
       {/* ─── HERO SECTION ─── */}
+      {/* Crop overlay */}
+      {croppingCover && coverSignedUrl && (
+        <CoverCropOverlay
+          imageSrc={coverSignedUrl}
+          onSave={handleCropSave}
+          onCancel={() => setCroppingCover(false)}
+          saving={savingCrop}
+        />
+      )}
+
+      {/* ─── HERO SECTION ─── */}
       <div
         ref={heroRef}
         className="relative w-full overflow-hidden"
         style={{ height: 220 }}
-        onClick={handleFocalPointTap}
-        onTouchStart={adjustingFocalPoint ? handleFocalPointTap : undefined}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
           src={coverPhoto}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: `${focalPoint.x}% ${focalPoint.y}%` }}
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
-        {/* Focal point indicator */}
-        {adjustingFocalPoint && (
-          <div
-            className="absolute w-6 h-6 rounded-full border-2 border-white shadow-lg pointer-events-none z-30"
-            style={{
-              left: `${focalPoint.x}%`,
-              top: `${focalPoint.y}%`,
-              transform: "translate(-50%, -50%)",
-              background: "rgba(255,255,255,0.3)",
-            }}
-          />
-        )}
         <div
           className="absolute inset-0"
           style={{
-            background: adjustingFocalPoint
-              ? "rgba(0,0,0,0.2)"
-              : "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.9) 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.9) 100%)",
           }}
         />
 
-        {adjustingFocalPoint ? (
-          <>
-            <div className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}>
-              <Move className="h-3.5 w-3.5" />
-              Tap to set focal point
-            </div>
-            <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setAdjustingFocalPoint(false); }}
-                className="flex h-9 w-9 items-center justify-center rounded-full"
-                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}
-              >
-                <X className="h-4 w-4 text-white" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleSaveFocalPoint(); }}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary"
-              >
-                <Check className="h-4 w-4 text-white" />
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => navigate("/app/trips")}
-              className="absolute left-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              My Trips
-            </button>
+        <button
+          onClick={() => navigate("/app/trips")}
+          className="absolute left-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          My Trips
+        </button>
 
-            <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
-              <LiveIndicator status={connectionStatus} />
-              <button
-                onClick={() => setCoverMenuOpen(true)}
-                className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full"
-                style={{
-                  background: "rgba(0,0,0,0.3)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                }}
-              >
-                {uploadingCover ? (
-                  <Loader2 className="h-4 w-4 text-white animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4 text-white" />
-                )}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleCoverUpload}
-                disabled={uploadingCover}
-              />
-              <HeroAvatar />
-            </div>
-          </>
-        )}
+        <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
+          <LiveIndicator status={connectionStatus} />
+          <button
+            onClick={() => setCoverMenuOpen(true)}
+            className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full"
+            style={{
+              background: "rgba(0,0,0,0.3)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {uploadingCover ? (
+              <Loader2 className="h-4 w-4 text-white animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4 text-white" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverUpload}
+            disabled={uploadingCover}
+          />
+          <HeroAvatar />
+        </div>
 
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
           <div className="min-w-0 flex-1">
