@@ -63,7 +63,11 @@ Deno.serve(async (req) => {
 - currency: 3-letter ISO code or null
 - date: YYYY-MM-DD or null
 - category: food | transport | accommodation | activities | shopping | other
-- notes: a SHORT summary (max 2 lines) of the most important extra details visible on the receipt — e.g. key line items, tax, tip, payment method, number of guests. Omit anything already captured above. null if nothing noteworthy.
+- notes: A concise, useful summary using bullet points (one per line, starting with "\u2022 "). Focus on WHAT was purchased/booked — not fees or totals. Examples:
+  For a restaurant receipt: "\u2022 2x Pad Thai\n\u2022 1x Green Curry\n\u2022 3x Chang Beer"
+  For a ticket: "\u2022 2x 5-Day Full Pass\n\u2022 Dec 3\u20137, 2026\n\u2022 Siam Country Club, Chonburi"
+  For shopping: "\u2022 Sunscreen SPF50\n\u2022 Mosquito repellent\n\u2022 2x Water bottle"
+  Only include the most important 2-5 items. null if nothing noteworthy beyond what title/amount already say.
 
 Return null for any field you cannot determine.
 Return ONLY the JSON object, no other text.`,

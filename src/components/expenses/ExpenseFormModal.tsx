@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { MemberProfile, ExpenseRow } from "@/hooks/useExpenses";
@@ -76,6 +76,20 @@ export function ExpenseFormModal({
   const [scanning, setScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow the notes textarea
+  const autoGrowNotes = useCallback(() => {
+    const el = notesRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, []);
+
+  useEffect(() => {
+    autoGrowNotes();
+  }, [notes, autoGrowNotes]);
 
   useEffect(() => {
     if (open) {
@@ -186,7 +200,7 @@ export function ExpenseFormModal({
   const handleAcceptSettlement = () => {
     setCategory("settlement");
     if (!titleManuallySet || !title.trim()) {
-      setTitle(`${payerName} → ${soleRecipientName}`);
+      setTitle(`${payerName} \u2192 ${soleRecipientName}`);
     }
   };
 
@@ -210,7 +224,7 @@ export function ExpenseFormModal({
       });
 
       if (error || data?.error) {
-        toast.error("Couldn't read receipt — fill in manually");
+        toast.error("Couldn\u2019t read receipt \u2014 fill in manually");
         return;
       }
 
@@ -222,9 +236,9 @@ export function ExpenseFormModal({
         setCategory(data.category);
       }
       if (data.notes) setNotes(data.notes);
-      toast.success("Receipt scanned ✓");
+      toast.success("Receipt scanned \u2713");
     } catch {
-      toast.error("Couldn't read receipt — fill in manually");
+      toast.error("Couldn\u2019t read receipt \u2014 fill in manually");
     } finally {
       setScanning(false);
     }
@@ -284,13 +298,13 @@ export function ExpenseFormModal({
               <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Scan a receipt — we'll extract the amount and details automatically
+              Scan a receipt \u2014 we'll extract the amount and details automatically
             </p>
 
             {scanning ? (
               <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Scanning receipt…
+                Scanning receipt\u2026
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -457,7 +471,7 @@ export function ExpenseFormModal({
         )}
         {splitMode === "percent" && !customValid && (
           <p className="text-xs text-destructive">
-            Percentages sum to {customSum.toFixed(0)}% — should be 100%
+            Percentages sum to {customSum.toFixed(0)}% \u2014 should be 100%
           </p>
         )}
       </div>
@@ -508,7 +522,7 @@ export function ExpenseFormModal({
               {Object.entries(groupedItems).map(([date, items]) => (
                 items.map((item) => (
                   <SelectItem key={item.id} value={item.id}>
-                    {format(new Date(date), "MMM d")} · {item.title}
+                    {format(new Date(date), "MMM d")} \u00b7 {item.title}
                   </SelectItem>
                 ))
               ))}
@@ -519,7 +533,14 @@ export function ExpenseFormModal({
 
       <div className="space-y-1.5">
         <Label className="text-xs">Notes (optional)</Label>
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="text-sm" />
+        <Textarea
+          ref={notesRef}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          className="text-sm resize-none overflow-hidden"
+          style={{ minHeight: "2.5rem" }}
+        />
       </div>
 
       <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full">
