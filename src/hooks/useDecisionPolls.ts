@@ -8,6 +8,7 @@ export type PollWithOptions = {
   type: string;
   title: string;
   status: string;
+  multi_select: boolean;
   options: {
     id: string;
     label: string;
