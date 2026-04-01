@@ -409,6 +409,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
           onLock={() => lockPoll.mutate(poll.id)}
           onDelete={() => deletePoll.mutate(poll.id)}
           onUpdateTitle={(title) => updatePollTitle.mutate({ pollId: poll.id, title })}
+          onToggleMultiSelect={(ms) => toggleMultiSelect.mutate({ pollId: poll.id, multiSelect: ms })}
           isAddingOption={addOption.isPending}
           isLocking={lockPoll.isPending}
           isHighlighted={poll.id === highlightedPollId}
