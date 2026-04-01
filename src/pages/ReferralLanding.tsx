@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Receipt, Vote, Calendar, Globe } from "lucide-react";
+import { MapPin, Receipt, Vote, Calendar, Sparkles } from "lucide-react";
 
 /* ── Verified working video sources (diverse scenery) ── */
 const VIDEOS = [
@@ -17,7 +17,7 @@ const FEATURES = [
   { icon: Receipt, text: "Multi-currency expense splitting" },
   { icon: Vote, text: "Group polls & decisions" },
   { icon: Calendar, text: "Shared schedules & attendance" },
-  { icon: Globe, text: "Invite anyone with a link" },
+  { icon: Sparkles, text: "AI receipt & booking scanning" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
