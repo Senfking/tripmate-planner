@@ -484,6 +484,41 @@ export default function TripHome() {
           trip={trip}
         />
       )}
+
+      {/* Post-create share sheet */}
+      <Drawer open={postCreateShareOpen} onOpenChange={(v) => { if (!v) setPostCreateShareOpen(false); }}>
+        <DrawerContent>
+          <DrawerHeader className="text-center">
+            <DrawerTitle className="text-lg">Now invite your crew 🎉</DrawerTitle>
+            <DrawerDescription className="text-sm text-muted-foreground mt-1">
+              Share Junto so everyone can join the trip — and plan together from day one.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-6 space-y-3">
+            <Button
+              className="w-full h-12 rounded-xl text-[15px] font-semibold text-white gap-2"
+              style={{ background: "#25D366" }}
+              onClick={() => {
+                const displayName = profile?.display_name || "Someone";
+                const refCode = (profile as any)?.referral_code || "";
+                const text = `✈️ ${displayName} is planning a trip on Junto — the app that replaces group chat chaos.\n\nItineraries, expenses, bookings & decisions all in one place.\n\nTry it free → https://juntotravel.lovable.app/ref?ref=${refCode}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                setPostCreateShareOpen(false);
+              }}
+            >
+              <WhatsAppIcon className="h-5 w-5" />
+              Share Junto with friends
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full h-12 rounded-xl text-[15px] text-muted-foreground"
+              onClick={() => setPostCreateShareOpen(false)}
+            >
+              Skip for now
+            </Button>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
