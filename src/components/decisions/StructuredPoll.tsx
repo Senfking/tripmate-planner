@@ -163,6 +163,12 @@ export function StructuredPoll({
                 <Pencil className="h-3.5 w-3.5 mr-2" />
                 Edit title
               </DropdownMenuItem>
+              {!isLocked && onToggleMultiSelect && (
+                <DropdownMenuItem onClick={() => onToggleMultiSelect(!poll.multi_select)}>
+                  <ListChecks className="h-3.5 w-3.5 mr-2" />
+                  {poll.multi_select ? "Single select" : "Multi-select"}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete?.()}
