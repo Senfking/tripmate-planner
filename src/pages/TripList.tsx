@@ -588,6 +588,51 @@ export default function TripList() {
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
 
+        {/* Referral card — show when < 2 trips and not dismissed */}
+        {tripCount < 2 && !referralDismissed && (profile as any)?.referral_code && (
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: "linear-gradient(135deg, rgba(13,148,136,0.12), rgba(13,148,136,0.05))",
+              border: "1px solid rgba(13,148,136,0.25)",
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <span className="text-2xl">✈️</span>
+              <button onClick={handleDismissReferral} className="text-muted-foreground hover:text-foreground -mt-0.5 -mr-0.5">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mt-2 font-bold text-foreground" style={{ fontSize: 15 }}>
+              Junto is better with your people
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Invite friends to plan trips together — or just share the app.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                className="flex-1 gap-2 text-white"
+                style={{ background: "#25D366" }}
+                onClick={handleReferralWhatsApp}
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                WhatsApp
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 gap-2"
+                style={{ borderColor: "rgba(13,148,136,0.4)", color: "#0D9488" }}
+                onClick={handleCopyReferralLink}
+              >
+                <Copy className="h-4 w-4" />
+                Copy link
+              </Button>
+            </div>
+          </div>
+        )}
+
         <Link to="/app/trips/new" className="block">
           <div
             className="flex h-[56px] items-center justify-center rounded-2xl transition-colors"
