@@ -50,6 +50,8 @@ type EnrichedTrip = {
   created_at: string;
   memberCount: number;
   photoUrl: string;
+  coverImagePath: string | null;
+  coverFocalPoint: string | null;
   statusInfo: ReturnType<typeof getTripStatus>;
   members?: { user_id: string; profile?: { display_name: string | null; avatar_url?: string | null } }[];
   nextActivity?: { title: string; day_date: string; start_time: string | null } | null;
