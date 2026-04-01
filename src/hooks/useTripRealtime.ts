@@ -39,8 +39,8 @@ const TABLE_QUERY_KEYS: Record<string, (tripId: string) => string[][]> = {
   vibe_responses: (t) => [["my-vibe-responses-count", t], ["vibe-responses", t], ["vibe-aggregates", t]],
   comments: () => [["item-comments"]],
   attachments: (t) => [["attachments", t], ["attachments-summary", t]],
-  expenses: (t) => [["expenses", t], ["expenses-summary", t]],
-  expense_splits: (t) => [["expense-splits", t], ["expenses-summary", t]],
+  expenses: (t) => [["expenses", t], ["expenses-summary", t], ["global-expenses"]],
+  expense_splits: (t) => [["expense-splits", t], ["expenses-summary", t], ["global-expenses"]],
   trip_route_stops: (t) => [["route-stops", t], ["trip-route-stops", t]],
   trip_members: (t) => [["trip-members-count", t], ["trip-members-profiles", t], ["trip_members_profiles", t]],
 };
