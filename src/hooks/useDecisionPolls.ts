@@ -285,6 +285,19 @@ export function useDecisionPolls(tripId: string | undefined) {
     },
   });
 
+  const toggleMultiSelect = useMutation({
+    mutationFn: async ({ pollId, multiSelect }: { pollId: string; multiSelect: boolean }) => {
+      const { error } = await supabase
+        .from("polls")
+        .update({ multi_select: multiSelect } as any)
+        .eq("id", pollId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
+    },
+  });
+
   const prefPolls = (polls.data || []).filter((p) => p.type === "preference");
 
   return {
