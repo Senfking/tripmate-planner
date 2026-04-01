@@ -877,23 +877,19 @@ const More = () => {
               </div>
 
               <div className="rounded-2xl border border-[#0D9488]/20 bg-white p-4 shadow-sm dark:bg-card">
-                <div className="flex items-center justify-center gap-6">
-                  <div className="text-center">
-                    <p className="text-[28px] font-bold text-[#0D9488]">{referralCount}</p>
-                    <p className="text-xs text-muted-foreground mt-1">friends invited</p>
+                <div className="flex items-center justify-center">
+                  <div className="flex-1 text-center py-1">
+                    <p className="text-[28px] font-bold leading-none text-[#0D9488]">{referralCount}</p>
+                    <p className="text-xs text-muted-foreground mt-1.5">friends invited</p>
                   </div>
-                  <div className="h-8 w-px bg-border" />
-                  <div className="text-center">
+                  <div className="h-10 w-px bg-border shrink-0" />
+                  <div className="flex-1 text-center py-1">
                     {referralCount > 0 ? (
-                      <p className="text-[28px] font-bold text-[#0D9488]">{referralCount}</p>
+                      <p className="text-[28px] font-bold leading-none text-[#0D9488]">{referralCount}</p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">Coming soon</p>
+                      <p className="text-sm font-medium text-muted-foreground leading-none">Coming soon</p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {referralCount > 0
-                        ? `month${referralCount > 1 ? "s" : ""} free Pro`
-                        : "rewards earned"}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1.5">rewards earned</p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground text-center mt-3">
