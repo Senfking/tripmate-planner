@@ -245,7 +245,8 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
         <img
           src={trip.photoUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: trip.coverFocalPoint || "center" }}
           loading="lazy"
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
