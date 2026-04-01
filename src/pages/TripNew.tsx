@@ -336,6 +336,23 @@ export default function TripNew() {
           </DrawerContent>
         </Drawer>
       </div>
+
+      {/* Crop overlay */}
+      {cropSource && (
+        <CoverCropOverlay
+          imageSrc={cropSource}
+          onSave={(blob) => {
+            setCoverFile(new File([blob], "cover.jpg", { type: "image/jpeg" }));
+            setCoverPreview(URL.createObjectURL(blob));
+            // Keep cropSource for re-cropping
+          }}
+          onCancel={() => {
+            if (!coverPreview) setCropSource(null);
+            // If we already have a preview, just close the cropper (keep existing crop)
+            setCropSource(null);
+          }}
+        />
+      )}
     </div>
   );
 }
