@@ -1,0 +1,1 @@
+ALTER TABLE public.trips ADD COLUMN cover_focal_point text DEFAULT '50% 50%';
