@@ -33,7 +33,7 @@ export default function ReferralLanding() {
         muted
         playsInline
         className="absolute inset-0 w-full h-full object-cover z-0"
-        src="https://videos.pexels.com/video-files/1851190/1851190-hd_1920_1080_25fps.mp4"
+        src="https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4"
       />
 
       {/* LAYER 2 — Gradient overlay */}
