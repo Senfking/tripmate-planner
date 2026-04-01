@@ -7,6 +7,14 @@ import { ArrowLeft, Loader2, MapPin, Share2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
+import { Button } from "@/components/ui/button";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { MemberListSheet } from "@/components/trip/MemberListSheet";
 import { AttendanceInviteOverlay } from "@/components/trip/AttendanceInviteOverlay";
