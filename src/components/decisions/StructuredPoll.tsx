@@ -189,33 +189,48 @@ export function StructuredPoll({
           const pickCount = tally["yes"] || 0;
           const isPicked = myVote === "yes";
           const isUniversePick = universeHighlight === opt.id;
+          const isConfirming = confirmingDeleteId === opt.id;
           return (
-            <div key={opt.id} className="flex items-center gap-1.5">
-              <button
-                onClick={() => { setUniverseHighlight(null); onVote(opt.id, "yes"); }}
-                disabled={isLocked}
-                className={`flex items-center justify-between flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm border transition-colors ${
-                  isPicked || isUniversePick
-                    ? "bg-primary/10 border-primary text-primary font-medium"
-                    : "bg-muted/30 border-border text-foreground hover:bg-muted/50"
-                } ${isUniversePick ? "ring-2 ring-primary/30 ring-offset-1" : ""} ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
-              >
-                <span className="min-w-0 break-words text-left">{displayLabel}</span>
-                {pickCount > 0 && (
-                  <span className="text-xs text-muted-foreground font-medium shrink-0">
-                    {pickCount} vote{pickCount !== 1 ? "s" : ""}
+            <div key={opt.id} className="relative">
+              {isConfirming && (
+                <div className="absolute inset-0 z-10 flex items-center justify-between rounded-lg bg-destructive/5 border border-destructive/20 px-3 py-2 animate-in fade-in-0 zoom-in-95 duration-150">
+                  <span className="text-xs text-destructive font-medium">
+                    Remove "{displayLabel}"? ({pickCount} vote{pickCount !== 1 ? "s" : ""} will be lost)
                   </span>
-                )}
-              </button>
-              {canManage && !isLocked && onDeleteOption && (
-                confirmingDeleteId === opt.id ? (
-                  <button
-                    onClick={() => handleDeleteOption(opt.id)}
-                    className="shrink-0 px-2 py-1 rounded-md text-xs font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 transition-colors"
-                  >
-                    Remove? ({pickCount} vote{pickCount !== 1 ? "s" : ""})
-                  </button>
-                ) : (
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <button
+                      onClick={() => handleDeleteOption(opt.id)}
+                      className="px-2.5 py-1 rounded-md text-xs font-semibold text-white bg-destructive hover:bg-destructive/90 transition-colors"
+                    >
+                      Remove
+                    </button>
+                    <button
+                      onClick={() => setConfirmingDeleteId(null)}
+                      className="px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      Keep
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => { setUniverseHighlight(null); onVote(opt.id, "yes"); }}
+                  disabled={isLocked}
+                  className={`flex items-center justify-between flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm border transition-colors ${
+                    isPicked || isUniversePick
+                      ? "bg-primary/10 border-primary text-primary font-medium"
+                      : "bg-muted/30 border-border text-foreground hover:bg-muted/50"
+                  } ${isUniversePick ? "ring-2 ring-primary/30 ring-offset-1" : ""} ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
+                >
+                  <span className="min-w-0 break-words text-left">{displayLabel}</span>
+                  {pickCount > 0 && (
+                    <span className="text-xs text-muted-foreground font-medium shrink-0">
+                      {pickCount} vote{pickCount !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </button>
+                {canManage && !isLocked && onDeleteOption && (
                   <button
                     onClick={() => handleDeleteOption(opt.id)}
                     className="shrink-0 p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
@@ -223,8 +238,8 @@ export function StructuredPoll({
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
-                )
-              )}
+                )}
+              </div>
             </div>
           );
         }
