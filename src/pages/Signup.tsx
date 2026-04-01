@@ -52,11 +52,17 @@ export default function Signup() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error: err } = await signUp(email, password, displayName);
+    const { error: err, data } = await signUp(email, password, displayName);
     setLoading(false);
     if (err) {
       setError(friendlyError(err.message));
     } else {
+      if (referralCode.current && data?.user?.id) {
+        await supabase
+          .from("profiles")
+          .update({ referred_by: referralCode.current } as any)
+          .eq("id", data.user.id);
+      }
       navigate(redirectTo || "/app/trips", { replace: true });
     }
   };
