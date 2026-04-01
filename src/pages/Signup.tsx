@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
 import { useInviteInfo } from "@/hooks/useInviteInfo";
 import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
+  const referralCode = useRef(searchParams.get("ref") || "");
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -50,11 +52,21 @@ export default function Signup() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error: err } = await signUp(email, password, displayName);
+    const { error: err, data } = await signUp(email, password, displayName);
     setLoading(false);
     if (err) {
       setError(friendlyError(err.message));
     } else {
+      if (referralCode.current && data?.user?.id) {
+        const { data: referrerId } = await supabase
+          .rpc("resolve_referral_code", { _code: referralCode.current });
+        if (referrerId) {
+          await supabase
+            .from("profiles")
+            .update({ referred_by: referrerId })
+            .eq("id", data.user.id);
+        }
+      }
       navigate(redirectTo || "/app/trips", { replace: true });
     }
   };

@@ -85,7 +85,12 @@ export default function ReferralLanding() {
   }, []);
 
   const handleCta = () => {
-    navigate(code ? `/signup?ref=${code}` : "/signup");
+    if (code) {
+      localStorage.setItem("junto_referral_code", code);
+      navigate(`/signup?ref=${code}`);
+    } else {
+      navigate("/signup");
+    }
   };
 
   return (
