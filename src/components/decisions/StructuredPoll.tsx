@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { UniverseWheel } from "./UniverseWheel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +75,29 @@ export function StructuredPoll({
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(poll.title);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  const handleDeleteOption = (optionId: string) => {
+    const tally = voteTally[optionId] || {};
+    const totalVotes = Object.values(tally).reduce((sum: number, c) => sum + (c as number), 0);
+    if (totalVotes > 0) {
+      if (confirmingDeleteId === optionId) {
+        onDeleteOption?.(optionId);
+        setConfirmingDeleteId(null);
+      } else {
+        setConfirmingDeleteId(optionId);
+      }
+    } else {
+      onDeleteOption?.(optionId);
+    }
+  };
+
+  // Auto-clear confirmation after 3 seconds
+  useEffect(() => {
+    if (!confirmingDeleteId) return;
+    const t = setTimeout(() => setConfirmingDeleteId(null), 3000);
+    return () => clearTimeout(t);
+  }, [confirmingDeleteId]);
 
   const handleAdd = () => {
     if (!newLabel.trim() && !isDate) return;
@@ -185,13 +208,22 @@ export function StructuredPoll({
                 )}
               </button>
               {canManage && !isLocked && onDeleteOption && (
-                <button
-                  onClick={() => onDeleteOption(opt.id)}
-                  className="shrink-0 p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  title="Remove option"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                confirmingDeleteId === opt.id ? (
+                  <button
+                    onClick={() => handleDeleteOption(opt.id)}
+                    className="shrink-0 px-2 py-1 rounded-md text-xs font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 transition-colors"
+                  >
+                    Remove? ({pickCount} vote{pickCount !== 1 ? "s" : ""})
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleDeleteOption(opt.id)}
+                    className="shrink-0 p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Remove option"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )
               )}
             </div>
           );
@@ -222,15 +254,25 @@ export function StructuredPoll({
                   </button>
                 );
               })}
-              {canManage && !isLocked && onDeleteOption && (
-                <button
-                  onClick={() => onDeleteOption(opt.id)}
-                  className="shrink-0 p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  title="Remove option"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+              {canManage && !isLocked && onDeleteOption && (() => {
+                const totalVotes = Object.values(tally).reduce((sum: number, c) => sum + (c as number), 0);
+                return confirmingDeleteId === opt.id ? (
+                  <button
+                    onClick={() => handleDeleteOption(opt.id)}
+                    className="shrink-0 px-2 py-1 rounded-md text-xs font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 transition-colors"
+                  >
+                    Remove? ({totalVotes} vote{totalVotes !== 1 ? "s" : ""})
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleDeleteOption(opt.id)}
+                    className="shrink-0 p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Remove option"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                );
+              })()}
             </div>
           </div>
         );
