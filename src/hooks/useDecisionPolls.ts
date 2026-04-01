@@ -313,5 +313,6 @@ export function useDecisionPolls(tripId: string | undefined) {
     lockPoll,
     deletePoll,
     updatePollTitle,
+    toggleMultiSelect,
   };
 }
