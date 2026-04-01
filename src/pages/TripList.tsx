@@ -50,6 +50,8 @@ type EnrichedTrip = {
   created_at: string;
   memberCount: number;
   photoUrl: string;
+  coverImagePath: string | null;
+  coverFocalPoint: string | null;
   statusInfo: ReturnType<typeof getTripStatus>;
   members?: { user_id: string; profile?: { display_name: string | null; avatar_url?: string | null } }[];
   nextActivity?: { title: string; day_date: string; start_time: string | null } | null;
@@ -159,7 +161,8 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
         <img
           src={trip.photoUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: trip.coverFocalPoint || "center" }}
           loading="eager"
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
@@ -242,7 +245,8 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
         <img
           src={trip.photoUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: trip.coverFocalPoint || "center" }}
           loading="lazy"
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
@@ -464,9 +468,23 @@ export default function TripList() {
         }
       });
 
+      // Fetch signed URLs for trips with custom covers
+      const tripsWithCovers = data.filter((t: any) => t.cover_image_path);
+      const signedUrlMap: Record<string, string> = {};
+      if (tripsWithCovers.length > 0) {
+        await Promise.all(
+          tripsWithCovers.map(async (t: any) => {
+            const { data: urlData } = await supabase.storage
+              .from("trip-attachments")
+              .createSignedUrl(t.cover_image_path, 60 * 60);
+            if (urlData?.signedUrl) signedUrlMap[t.id] = urlData.signedUrl;
+          })
+        );
+      }
+
       const enriched: EnrichedTrip[] = data.map((t) => {
         const statusInfo = getTripStatus(t.tentative_start_date, t.tentative_end_date);
-        const photoUrl = resolvePhoto(t.name, stopDestsMap[t.id] ?? []);
+        const photoUrl = signedUrlMap[t.id] || resolvePhoto(t.name, stopDestsMap[t.id] ?? []);
         const tripMembers = (membersByTrip[t.id] ?? []).map((m) => ({
           ...m,
           profile: profileMap.get(m.user_id),
@@ -480,6 +498,8 @@ export default function TripList() {
           created_at: t.created_at,
           memberCount: countMap[t.id] || 0,
           photoUrl,
+          coverImagePath: (t as any).cover_image_path ?? null,
+          coverFocalPoint: (t as any).cover_focal_point ?? null,
           statusInfo,
           members: tripMembers,
           nextActivity: nextActivityMap[t.id] ?? null,
