@@ -466,9 +466,23 @@ export default function TripList() {
         }
       });
 
+      // Fetch signed URLs for trips with custom covers
+      const tripsWithCovers = data.filter((t: any) => t.cover_image_path);
+      const signedUrlMap: Record<string, string> = {};
+      if (tripsWithCovers.length > 0) {
+        await Promise.all(
+          tripsWithCovers.map(async (t: any) => {
+            const { data: urlData } = await supabase.storage
+              .from("trip-attachments")
+              .createSignedUrl(t.cover_image_path, 60 * 60);
+            if (urlData?.signedUrl) signedUrlMap[t.id] = urlData.signedUrl;
+          })
+        );
+      }
+
       const enriched: EnrichedTrip[] = data.map((t) => {
         const statusInfo = getTripStatus(t.tentative_start_date, t.tentative_end_date);
-        const photoUrl = resolvePhoto(t.name, stopDestsMap[t.id] ?? []);
+        const photoUrl = signedUrlMap[t.id] || resolvePhoto(t.name, stopDestsMap[t.id] ?? []);
         const tripMembers = (membersByTrip[t.id] ?? []).map((m) => ({
           ...m,
           profile: profileMap.get(m.user_id),
