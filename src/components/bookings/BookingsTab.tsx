@@ -51,7 +51,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addManual, deleteAttachment, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
+  const { query, uploadFile, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
   const isMobile = useIsMobile();
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
@@ -159,6 +159,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
       onUploadPrompt={() => galleryInputRef.current?.click()}
+      onUpdateNotes={(id, notes) => updateNotes.mutate({ id, notes })}
       getSignedUrl={getSignedUrl}
     />
   );

@@ -181,5 +181,20 @@ export function useAttachments(tripId: string) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  return { query, uploadFile, addLink, addManual, deleteAttachment, getSignedUrl, extractingIds, fetchingIds };
+  const updateNotes = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { error } = await supabase
+        .from("attachments")
+        .update({ notes: notes || null })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Notes saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return { query, uploadFile, addLink, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds };
 }

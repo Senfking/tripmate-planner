@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles } from "lucide-react";
+import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -31,6 +32,7 @@ const TYPE_ICON_COLORS: Record<string, string> = {
 };
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif)$/i;
+const PDF_EXTENSION = /\.pdf$/i;
 
 function cleanTitle(title: string): string {
   return title.replace(/^[a-f0-9-]{36,}-/, "");
@@ -52,13 +54,17 @@ interface Props {
   onOpen: () => void;
   onDelete: () => void;
   onUploadPrompt?: () => void;
+  onUpdateNotes?: (id: string, notes: string) => void;
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
-export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, isFetching, isNew, onOpen, onDelete, onUploadPrompt, getSignedUrl }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, isFetching, isNew, onOpen, onDelete, onUploadPrompt, onUpdateNotes, getSignedUrl }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(attachment.notes || "");
   const isMobile = useIsMobile();
   const Icon = TYPE_ICONS[attachment.type] || File;
   const iconColor = TYPE_ICON_COLORS[attachment.type] || TYPE_ICON_COLORS.other;
@@ -73,17 +79,80 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   const isLinkWithNoData = attachment.type === "link" && !booking && !attachment.og_image_url && !isExtracting;
 
   const isImageFile = attachment.file_path && IMAGE_EXTENSIONS.test(attachment.file_path);
+  const isPdfFile = attachment.file_path && PDF_EXTENSION.test(attachment.file_path);
+  const hasFile = !!attachment.file_path;
+  const hasUrl = !!attachment.url;
+  const canOpen = hasFile || hasUrl;
   const bannerSrc = attachment.og_image_url || imageUrl;
 
+  // Fetch signed URL for image preview
   useEffect(() => {
     if (!attachment.og_image_url && isImageFile && attachment.file_path && getSignedUrl) {
       getSignedUrl(attachment.file_path).then(setImageUrl).catch(() => {});
     }
   }, [attachment.og_image_url, isImageFile, attachment.file_path, getSignedUrl]);
 
+  // Fetch signed URL for file when expanded
+  useEffect(() => {
+    if (expanded && hasFile && attachment.file_path && getSignedUrl && !fileUrl) {
+      getSignedUrl(attachment.file_path).then(setFileUrl).catch(() => {});
+    }
+  }, [expanded, hasFile, attachment.file_path, getSignedUrl, fileUrl]);
+
   const handleConfirmDelete = () => {
     setConfirmOpen(false);
     onDelete();
+  };
+
+  const handleOpen = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (hasUrl) {
+      window.open(attachment.url!, "_blank", "noopener");
+    } else if (fileUrl) {
+      window.open(fileUrl, "_blank", "noopener");
+    } else if (hasFile && attachment.file_path && getSignedUrl) {
+      try {
+        const url = await getSignedUrl(attachment.file_path);
+        setFileUrl(url);
+        window.open(url, "_blank", "noopener");
+      } catch {
+        // error handled by caller
+      }
+    }
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    let url = fileUrl;
+    if (!url && attachment.file_path && getSignedUrl) {
+      try {
+        url = await getSignedUrl(attachment.file_path);
+        setFileUrl(url);
+      } catch { return; }
+    }
+    if (!url && attachment.url) url = attachment.url;
+    if (url) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = cleanTitle(attachment.title);
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  const handleSaveNotes = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdateNotes?.(attachment.id, noteDraft.trim());
+    setEditingNotes(false);
+  };
+
+  const handleCancelNotes = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNoteDraft(attachment.notes || "");
+    setEditingNotes(false);
   };
 
   const compactBookingSummary = buildCompactSummary(attachment.type, booking);
@@ -123,9 +192,9 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
         onClick={() => setExpanded((p) => !p)}
       >
         {/* Compact row — always visible */}
-        <div className="flex items-start gap-3 p-3">
-          {/* Type icon */}
-          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconColor}`}>
+        <div className="flex items-center gap-3 p-3">
+          {/* Type icon — centered vertically */}
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconColor}`}>
             <Icon className="h-[18px] w-[18px]" />
           </div>
 
@@ -173,11 +242,13 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Actions — compact */}
           <div className="flex flex-col gap-0.5 shrink-0 -mr-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
-              <ExternalLink className="h-3.5 w-3.5" />
-            </Button>
+            {canOpen && (
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleOpen}>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {canDelete && (
               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }}>
                 <Trash2 className="h-3.5 w-3.5" />
@@ -188,14 +259,50 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
 
         {/* Expanded details */}
         {expanded && (
-          <div className="border-t px-3 pb-3 pt-2 space-y-2 animate-fade-in">
+          <div className="border-t px-3 pb-3 pt-2 space-y-3 animate-fade-in">
+            {/* Image / file preview */}
             {bannerSrc && (
               <div
-                className="relative h-[100px] overflow-hidden rounded-lg cursor-pointer"
-                onClick={(e) => { e.stopPropagation(); onOpen(); }}
+                className="relative h-[140px] overflow-hidden rounded-lg cursor-pointer group"
+                onClick={handleOpen}
               >
                 <img src={bannerSrc} alt="" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <Maximize2 className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
               </div>
+            )}
+
+            {/* PDF indicator */}
+            {isPdfFile && !bannerSrc && (
+              <button
+                type="button"
+                className="w-full flex items-center gap-3 rounded-lg bg-muted/50 border border-border p-3 hover:bg-muted transition-colors"
+                onClick={handleOpen}
+              >
+                <File className="h-8 w-8 text-red-500 shrink-0" />
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium truncate">{cleanTitle(attachment.title)}</p>
+                  <p className="text-xs text-muted-foreground">PDF document — tap to view</p>
+                </div>
+                <Maximize2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            )}
+
+            {/* Non-image file indicator */}
+            {hasFile && !isImageFile && !isPdfFile && (
+              <button
+                type="button"
+                className="w-full flex items-center gap-3 rounded-lg bg-muted/50 border border-border p-3 hover:bg-muted transition-colors"
+                onClick={handleOpen}
+              >
+                <File className="h-8 w-8 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium truncate">{cleanTitle(attachment.title)}</p>
+                  <p className="text-xs text-muted-foreground">Tap to open file</p>
+                </div>
+                <Maximize2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
             )}
 
             {displayDesc && !booking && (
@@ -203,6 +310,67 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
             )}
 
             {booking && <BookingDetails type={attachment.type} data={booking} />}
+
+            {/* Notes section */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <StickyNote className="h-3 w-3" />
+                  Notes
+                </div>
+                {!editingNotes && (isMine || canDelete) && (
+                  <button
+                    type="button"
+                    className="text-[11px] text-primary flex items-center gap-1 hover:underline"
+                    onClick={(e) => { e.stopPropagation(); setEditingNotes(true); setNoteDraft(attachment.notes || ""); }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                    {attachment.notes ? "Edit" : "Add"}
+                  </button>
+                )}
+              </div>
+
+              {editingNotes ? (
+                <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                  <Textarea
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    rows={3}
+                    placeholder="Add notes, confirmation numbers, details…"
+                    className="text-sm"
+                    autoFocus
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelNotes}>
+                      <X className="h-3 w-3 mr-1" /> Cancel
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={handleSaveNotes}>
+                      <Check className="h-3 w-3 mr-1" /> Save
+                    </Button>
+                  </div>
+                </div>
+              ) : attachment.notes ? (
+                <p className="text-[13px] text-foreground/80 whitespace-pre-wrap">{attachment.notes}</p>
+              ) : (
+                <p className="text-[12px] text-muted-foreground/60 italic">No notes yet</p>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 pt-1">
+              {canOpen && (
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleOpen}>
+                  <Maximize2 className="h-3.5 w-3.5" />
+                  Open
+                </Button>
+              )}
+              {(hasFile || hasUrl) && (
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleDownload}>
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -267,7 +435,6 @@ function BookingDetails({ type, data }: { type: string; data: Record<string, unk
       items.push({ icon: Users, text: data.passenger_names.join(", ") });
     }
   } else if (type === "hotel") {
-    // Show destination/city, or non-platform provider name
     if (data.destination) {
       items.push({ icon: MapPin, text: String(data.destination) });
     } else {
