@@ -17,7 +17,7 @@ const FEATURES = [
   { icon: Receipt, text: "Multi-currency expense splitting" },
   { icon: Vote, text: "Group polls & decisions" },
   { icon: Calendar, text: "Shared schedules & attendance" },
-  { icon: Globe, text: "Invite anyone with a link" },
+  { icon: Sparkles, text: "AI receipt & booking scanning" },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
