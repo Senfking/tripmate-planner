@@ -277,7 +277,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
     if (!prefTitle.trim()) return;
     const validOptions = prefOptions.filter((o) => o.trim());
     createPoll.mutate(
-      { type: "preference", title: prefTitle.trim(), options: validOptions },
+      { type: "preference", title: prefTitle.trim(), options: validOptions, multiSelect: prefMultiSelect },
       {
         onSuccess: () => {
           resetForm();
