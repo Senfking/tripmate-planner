@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 import type { DateRange } from "react-day-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { friendlyError } from "@/lib/friendlyError";
