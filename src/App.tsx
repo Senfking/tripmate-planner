@@ -67,6 +67,7 @@ function AppInner() {
             <Route path="/join" element={<JoinByCode />} />
             <Route path="/join/:code" element={<JoinByCode />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/ref" element={<ReferralLanding />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
