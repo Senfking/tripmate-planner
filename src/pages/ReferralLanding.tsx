@@ -1,22 +1,57 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Receipt, Vote } from "lucide-react";
+import { MapPin, Receipt, Vote, Calendar, Globe } from "lucide-react";
 
-const VIDEO_SRC =
-  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4";
+/* ── Verified working video sources (diverse scenery) ── */
+const VIDEOS = [
+  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",   // Beach resort aerial
+  "https://videos.pexels.com/video-files/3571264/3571264-hd_1920_1080_30fps.mp4",   // Ocean waves drone
+  "https://videos.pexels.com/video-files/3015488/3015488-hd_1920_1080_24fps.mp4",   // Mountain landscape
+  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",   // City skyline
+  "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",   // Tropical nature
+];
 
-const USPS = [
-  { icon: MapPin, label: "Plan together" },
-  { icon: Receipt, label: "Split costs" },
-  { icon: Vote, label: "Decide as one" },
-] as const;
+const FEATURES = [
+  { icon: MapPin, text: "Collaborative itineraries" },
+  { icon: Receipt, text: "Multi-currency expense splitting" },
+  { icon: Vote, text: "Group polls & decisions" },
+  { icon: Calendar, text: "Shared schedules & attendance" },
+  { icon: Globe, text: "Invite anyone with a link" },
+];
+
+/* ── Video slideshow — all stacked, opacity crossfade ── */
+function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
+  return (
+    <>
+      {VIDEOS.map((src, i) => (
+        <video
+          key={src}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            opacity: i === activeIndex ? 1 : 0,
+            transition: "opacity 1.5s ease-in-out",
+          }}
+          src={src}
+          onError={(e) => {
+            (e.currentTarget as HTMLVideoElement).style.display = "none";
+          }}
+        />
+      ))}
+    </>
+  );
+}
 
 export default function ReferralLanding() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const code = params.get("code");
   const [referrer, setReferrer] = useState<{ display_name: string | null } | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     if (!code) return;
@@ -30,28 +65,28 @@ export default function ReferralLanding() {
     })();
   }, [code]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % VIDEOS.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleCta = () => {
     navigate(code ? `/signup?ref=${code}` : "/signup");
   };
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-black">
-      {/* Background video */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover"
-        src={VIDEO_SRC}
-      />
+      {/* All 5 videos stacked */}
+      <VideoSlideshow activeIndex={activeIndex} />
 
       {/* Gradient overlay */}
       <div
         className="absolute inset-0 z-[1]"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.88) 85%, rgba(0,0,0,0.95) 100%)",
+            "linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.85) 78%, rgba(0,0,0,0.96) 100%)",
         }}
       />
 
@@ -67,13 +102,13 @@ export default function ReferralLanding() {
           </span>
         </div>
 
-        {/* Video breathes */}
+        {/* Let the video breathe */}
         <div className="flex-1" />
 
         {/* Bottom content */}
         <div
           className="px-6 shrink-0"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)" }}
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
         >
           {/* Referrer pill */}
           {referrer?.display_name && (
@@ -97,7 +132,7 @@ export default function ReferralLanding() {
           {/* Headline */}
           <h1
             className="text-white font-bold"
-            style={{ fontSize: 36, lineHeight: 1.05, letterSpacing: "-0.02em" }}
+            style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}
           >
             Plan trips
             <br />
@@ -106,30 +141,39 @@ export default function ReferralLanding() {
 
           {/* Subline */}
           <p className="mt-2" style={{ fontSize: 15, lineHeight: 1.5, color: "rgba(255,255,255,0.5)" }}>
-            One shared space for itineraries, expenses & group decisions.
+            One shared space for your whole group.
           </p>
 
-          {/* Feature pills */}
-          <div className="flex items-center gap-2 mt-5">
-            {USPS.map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 backdrop-blur-md"
-                style={{
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
-              >
-                <Icon className="h-3.5 w-3.5 text-[#5eead4]" />
-                <span className="text-[12px] font-medium text-white/75">{label}</span>
+          {/* Feature list */}
+          <div className="mt-4 space-y-2.5">
+            {FEATURES.map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-2.5">
+                <Icon className="h-4 w-4 text-[#5eead4] shrink-0" />
+                <span className="text-[13px] text-white/65">{text}</span>
               </div>
+            ))}
+          </div>
+
+          {/* Scene dots */}
+          <div className="flex items-center justify-center gap-1.5 mt-6">
+            {VIDEOS.map((_, i) => (
+              <span
+                key={i}
+                className="rounded-full transition-all duration-500"
+                style={{
+                  width: i === activeIndex ? 18 : 5,
+                  height: 5,
+                  background:
+                    i === activeIndex ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.25)",
+                }}
+              />
             ))}
           </div>
 
           {/* CTA */}
           <button
             onClick={handleCta}
-            className="w-full mt-6 text-white font-semibold rounded-2xl active:scale-[0.97] transition-transform"
+            className="w-full mt-5 text-white font-semibold rounded-2xl active:scale-[0.97] transition-transform"
             style={{
               height: 52,
               fontSize: 16,
@@ -141,7 +185,7 @@ export default function ReferralLanding() {
           </button>
 
           {/* Login */}
-          <p className="text-center mt-3.5 text-[13px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <p className="text-center mt-3 text-[13px]" style={{ color: "rgba(255,255,255,0.35)" }}>
             Already have an account?{" "}
             <button
               onClick={() => navigate("/login")}
