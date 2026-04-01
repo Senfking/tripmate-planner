@@ -205,21 +205,7 @@ export default function ReferralLanding() {
             ))}
           </div>
 
-          {/* Scene dots */}
-          <div className="flex items-center justify-center gap-1.5 mt-4">
-            {VIDEOS.map((_, i) => (
-              <span
-                key={i}
-                className="rounded-full transition-all duration-500"
-                style={{
-                  width: i === activeIndex ? 16 : 4,
-                  height: 4,
-                  background:
-                    i === activeIndex ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.25)",
-                }}
-              />
-            ))}
-          </div>
+
 
           {/* CTA */}
           <button
