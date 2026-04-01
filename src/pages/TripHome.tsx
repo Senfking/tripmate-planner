@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Share2 } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Share2, Camera } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
