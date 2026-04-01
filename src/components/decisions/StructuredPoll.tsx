@@ -278,24 +278,6 @@ export function StructuredPoll({
         );
       })}
 
-      {/* Universe easter egg */}
-      {!isLocked && !disabled && poll.options.length >= 2 && (
-        <>
-          <button
-            onClick={() => setShowWheel(true)}
-            className="w-full text-center text-xs text-muted-foreground underline decoration-dotted underline-offset-4 mt-3 hover:text-foreground/70 transition-colors"
-          >
-            ✨ Let the universe decide
-          </button>
-          <UniverseWheel
-            open={showWheel}
-            onOpenChange={setShowWheel}
-            options={poll.options.map((o) => ({ id: o.id, label: o.label }))}
-            onAccept={(optionId) => setUniverseHighlight(optionId)}
-          />
-        </>
-      )}
-
       {/* Add option form */}
       {!isLocked && !disabled && (
         <>
@@ -317,9 +299,10 @@ export function StructuredPoll({
                   placeholder={isPref ? "Answer option" : "e.g. Barcelona"}
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
                 />
               )}
-              <div className="flex gap-2 justify-end md:justify-start">
+              <div className="flex gap-2 justify-center">
                 <Button size="sm" onClick={handleAdd} disabled={isAddingOption || (isDate ? !newStart || !newEnd : !newLabel.trim())}>
                   Add
                 </Button>
@@ -336,6 +319,24 @@ export function StructuredPoll({
               </Button>
             </div>
           )}
+        </>
+      )}
+
+      {/* Universe easter egg */}
+      {!isLocked && !disabled && poll.options.length >= 2 && (
+        <>
+          <button
+            onClick={() => setShowWheel(true)}
+            className="w-full text-center text-xs text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground/70 transition-colors"
+          >
+            ✨ Let the universe decide
+          </button>
+          <UniverseWheel
+            open={showWheel}
+            onOpenChange={setShowWheel}
+            options={poll.options.map((o) => ({ id: o.id, label: o.label }))}
+            onAccept={(optionId) => setUniverseHighlight(optionId)}
+          />
         </>
       )}
 
