@@ -176,7 +176,7 @@ export default function ReferralLanding() {
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 16,
               padding: "20px 20px",
-              minHeight: 88,
+              minHeight: 100,
             }}
           >
             <div style={{ opacity: statementVisible ? 1 : 0, transition: "opacity 0.4s ease-in-out" }}>
