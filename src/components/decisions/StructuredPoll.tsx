@@ -3,7 +3,7 @@ import { UniverseWheel } from "./UniverseWheel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Plus, ThumbsUp, ThumbsDown, Check, HelpCircle, X, Trash2, Pencil, MoreVertical } from "lucide-react";
+import { Lock, Plus, ThumbsUp, ThumbsDown, Check, HelpCircle, X, Trash2, Pencil, MoreVertical, ListChecks } from "lucide-react";
 import { format } from "date-fns";
 import {
   DropdownMenu,
@@ -27,6 +27,7 @@ type Props = {
   onLock: () => void;
   onDelete?: () => void;
   onUpdateTitle?: (title: string) => void;
+  onToggleMultiSelect?: (multiSelect: boolean) => void;
   isAddingOption: boolean;
   isLocking: boolean;
   isHighlighted?: boolean;
@@ -57,6 +58,7 @@ export function StructuredPoll({
   onLock,
   onDelete,
   onUpdateTitle,
+  onToggleMultiSelect,
   isAddingOption,
   isLocking,
   isHighlighted,
@@ -146,7 +148,12 @@ export function StructuredPoll({
             </Button>
           </div>
         ) : (
-          <h4 className="font-semibold text-foreground text-sm flex-1">{poll.title}</h4>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-foreground text-sm">{poll.title}</h4>
+            {poll.multi_select && (
+              <p className="text-[11px] text-muted-foreground mt-0.5">Pick multiple</p>
+            )}
+          </div>
         )}
         {isLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
         {canManage && !isEditing && (
@@ -161,6 +168,12 @@ export function StructuredPoll({
                 <Pencil className="h-3.5 w-3.5 mr-2" />
                 Edit title
               </DropdownMenuItem>
+              {!isLocked && onToggleMultiSelect && (
+                <DropdownMenuItem onClick={() => onToggleMultiSelect(!poll.multi_select)}>
+                  <ListChecks className="h-3.5 w-3.5 mr-2" />
+                  {poll.multi_select ? "Single select" : "Multi-select"}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete?.()}
@@ -219,7 +232,15 @@ export function StructuredPoll({
           return (
             <div key={opt.id} className="flex items-center gap-1.5">
               <button
-                onClick={() => { setUniverseHighlight(null); onVote(opt.id, "yes"); }}
+                onClick={() => {
+                  setUniverseHighlight(null);
+                  // For single-select: deselect current pick first
+                  if (!poll.multi_select && !isPicked) {
+                    const currentPick = poll.options.find((o) => myVotes[o.id] === "yes");
+                    if (currentPick) onVote(currentPick.id, "yes"); // toggle off
+                  }
+                  onVote(opt.id, "yes");
+                }}
                 disabled={isLocked}
                 className={`flex items-center justify-between flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm border transition-colors ${
                   isPicked || isUniversePick

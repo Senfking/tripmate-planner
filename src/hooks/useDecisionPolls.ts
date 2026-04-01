@@ -8,6 +8,7 @@ export type PollWithOptions = {
   type: string;
   title: string;
   status: string;
+  multi_select: boolean;
   options: {
     id: string;
     label: string;
@@ -91,14 +92,15 @@ export function useDecisionPolls(tripId: string | undefined) {
   });
 
   const createPoll = useMutation({
-    mutationFn: async (input: { type: string; title: string; options?: string[] }) => {
+    mutationFn: async (input: { type: string; title: string; options?: string[]; multiSelect?: boolean }) => {
       const { data, error } = await supabase
         .from("polls")
         .insert({
           trip_id: tripId!,
           type: input.type,
           title: input.title,
-        })
+          multi_select: input.multiSelect ?? false,
+        } as any)
         .select("id")
         .single();
       if (error) throw error;
@@ -283,6 +285,19 @@ export function useDecisionPolls(tripId: string | undefined) {
     },
   });
 
+  const toggleMultiSelect = useMutation({
+    mutationFn: async ({ pollId, multiSelect }: { pollId: string; multiSelect: boolean }) => {
+      const { error } = await supabase
+        .from("polls")
+        .update({ multi_select: multiSelect } as any)
+        .eq("id", pollId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
+    },
+  });
+
   const prefPolls = (polls.data || []).filter((p) => p.type === "preference");
 
   return {
@@ -298,5 +313,6 @@ export function useDecisionPolls(tripId: string | undefined) {
     lockPoll,
     deletePoll,
     updatePollTitle,
+    toggleMultiSelect,
   };
 }

@@ -248,7 +248,7 @@ import { StructuredPoll } from "./StructuredPoll";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ListChecks } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -257,25 +257,27 @@ import { toast } from "@/hooks/use-toast";
 function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: string; myRole: string | undefined; highlightedPollId?: string }) {
   const canManage = myRole === "owner" || myRole === "admin";
   const isMobile = useIsMobile();
-  const { prefPolls, voteCounts, myVotes, createPoll, addOption, deleteOption, vote, lockPoll, deletePoll, updatePollTitle } =
+  const { prefPolls, voteCounts, myVotes, createPoll, addOption, deleteOption, vote, lockPoll, deletePoll, updatePollTitle, toggleMultiSelect } =
     useDecisionPolls(tripId);
 
   const [prefOpen, setPrefOpen] = useState(false);
   const [prefTitle, setPrefTitle] = useState("");
   const [prefOptions, setPrefOptions] = useState<string[]>(["", ""]);
   const [newOptionText, setNewOptionText] = useState("");
+  const [prefMultiSelect, setPrefMultiSelect] = useState(false);
 
   const resetForm = () => {
     setPrefTitle("");
     setPrefOptions(["", ""]);
     setNewOptionText("");
+    setPrefMultiSelect(false);
   };
 
   const handleCreatePref = () => {
     if (!prefTitle.trim()) return;
     const validOptions = prefOptions.filter((o) => o.trim());
     createPoll.mutate(
-      { type: "preference", title: prefTitle.trim(), options: validOptions },
+      { type: "preference", title: prefTitle.trim(), options: validOptions, multiSelect: prefMultiSelect },
       {
         onSuccess: () => {
           resetForm();
@@ -356,6 +358,19 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => setPrefMultiSelect((v) => !v)}
+        className={`flex items-center gap-2 w-full rounded-lg px-3 py-2.5 text-sm border transition-colors ${
+          prefMultiSelect
+            ? "bg-primary/10 border-primary text-primary"
+            : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/50"
+        }`}
+      >
+        <ListChecks className="h-4 w-4" />
+        <span className="font-medium">Allow multiple answers</span>
+      </button>
+
       <Button
         className="w-full"
         onClick={handleCreatePref}
@@ -394,6 +409,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
           onLock={() => lockPoll.mutate(poll.id)}
           onDelete={() => deletePoll.mutate(poll.id)}
           onUpdateTitle={(title) => updatePollTitle.mutate({ pollId: poll.id, title })}
+          onToggleMultiSelect={(ms) => toggleMultiSelect.mutate({ pollId: poll.id, multiSelect: ms })}
           isAddingOption={addOption.isPending}
           isLocking={lockPoll.isPending}
           isHighlighted={poll.id === highlightedPollId}
