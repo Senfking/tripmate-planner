@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { UniverseWheel } from "./UniverseWheel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,6 +68,8 @@ export function StructuredPoll({
   const [newLabel, setNewLabel] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+  const [showWheel, setShowWheel] = useState(false);
+  const [universeHighlight, setUniverseHighlight] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(poll.title);
@@ -160,16 +163,17 @@ export function StructuredPoll({
         if (isPref) {
           const pickCount = tally["yes"] || 0;
           const isPicked = myVote === "yes";
+          const isUniversePick = universeHighlight === opt.id;
           return (
             <button
               key={opt.id}
-              onClick={() => onVote(opt.id, "yes")}
+              onClick={() => { setUniverseHighlight(null); onVote(opt.id, "yes"); }}
               disabled={isLocked}
               className={`flex items-center justify-between w-full rounded-lg px-3 py-2.5 text-sm border transition-colors ${
-                isPicked
+                isPicked || isUniversePick
                   ? "bg-primary/10 border-primary text-primary font-medium"
                   : "bg-muted/30 border-border text-foreground hover:bg-muted/50"
-              } ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
+              } ${isUniversePick ? "ring-2 ring-primary/30 ring-offset-1" : ""} ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
             >
               <span>{displayLabel}</span>
               {pickCount > 0 && (
@@ -210,6 +214,24 @@ export function StructuredPoll({
           </div>
         );
       })}
+
+      {/* Universe easter egg */}
+      {!isLocked && !disabled && poll.options.length >= 2 && (
+        <>
+          <button
+            onClick={() => setShowWheel(true)}
+            className="w-full text-center text-xs text-muted-foreground underline decoration-dotted underline-offset-4 mt-3 hover:text-foreground/70 transition-colors"
+          >
+            ✨ Let the universe decide
+          </button>
+          <UniverseWheel
+            open={showWheel}
+            onOpenChange={setShowWheel}
+            options={poll.options.map((o) => ({ id: o.id, label: o.label }))}
+            onAccept={(optionId) => setUniverseHighlight(optionId)}
+          />
+        </>
+      )}
 
       {/* Add option form */}
       {!isLocked && !disabled && (
