@@ -1,24 +1,22 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Receipt, Users, Sparkles, MessageSquare, Zap } from "lucide-react";
+
 
 /* ── Verified working video sources (diverse scenery) ── */
 const VIDEOS = [
-  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",   // Beach resort aerial
-  "https://videos.pexels.com/video-files/3571264/3571264-hd_1920_1080_30fps.mp4",   // Ocean waves drone
-  "https://videos.pexels.com/video-files/3015488/3015488-hd_1920_1080_24fps.mp4",   // Mountain landscape
-  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",   // City skyline
-  "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",   // Tropical nature
+  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",
+  "https://videos.pexels.com/video-files/3571264/3571264-hd_1920_1080_30fps.mp4",
+  "https://videos.pexels.com/video-files/3015488/3015488-hd_1920_1080_24fps.mp4",
+  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
+  "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",
 ];
 
-const FEATURES = [
-  { icon: MapPin, text: "Shared itinerary" },
-  { icon: Receipt, text: "Split costs fairly" },
-  { icon: Users, text: "Decide together" },
-  { icon: Sparkles, text: "AI receipt scan" },
-  { icon: MessageSquare, text: "Replace group chats" },
-  { icon: Zap, text: "Real-time sync" },
+const STATEMENTS = [
+  { problem: "The group chat is a disaster zone.", solution: "Junto keeps the whole trip in one place." },
+  { problem: "Someone always gets stuck chasing money.", solution: "Split costs, track debts, settle up — done." },
+  { problem: "Receipts, docs, bookings — all over the place.", solution: "Scan receipts with AI. Store everything in one trip." },
+  { problem: "Nobody can agree on anything.", solution: "Vote, decide, and move on. Together." },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
@@ -53,6 +51,8 @@ export default function ReferralLanding() {
   const code = params.get("code");
   const [referrer, setReferrer] = useState<{ display_name: string | null } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [statementIndex, setStatementIndex] = useState(0);
+  const [statementVisible, setStatementVisible] = useState(true);
 
   useEffect(() => {
     if (!code) return;
@@ -70,6 +70,17 @@ export default function ReferralLanding() {
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % VIDEOS.length);
     }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatementVisible(false);
+      setTimeout(() => {
+        setStatementIndex((i) => (i + 1) % STATEMENTS.length);
+        setStatementVisible(true);
+      }, 400);
+    }, 3500);
     return () => clearInterval(interval);
   }, []);
 
@@ -157,20 +168,40 @@ export default function ReferralLanding() {
             Ditch the group chat chaos. Plan, split & decide — all in one place.
           </p>
 
-          {/* Feature pills — 2x3 grid */}
-          <div className="grid grid-cols-2 gap-1.5 mt-4">
-            {FEATURES.map(({ icon: Icon, text }) => (
-              <div
-                key={text}
-                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-sm"
+          {/* Rotating statement panel */}
+          <div
+            className="mt-5 flex flex-col justify-center backdrop-blur-xl"
+            style={{
+              background: "rgba(0,0,0,0.35)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 16,
+              padding: "20px 20px",
+              minHeight: 88,
+            }}
+          >
+            <div style={{ opacity: statementVisible ? 1 : 0, transition: "opacity 0.4s ease-in-out" }}>
+              <p className="text-white font-bold" style={{ fontSize: 16, lineHeight: 1.3 }}>
+                {STATEMENTS[statementIndex].problem}
+              </p>
+              <p className="mt-2 font-medium" style={{ fontSize: 14, color: "#0D9488" }}>
+                {STATEMENTS[statementIndex].solution}
+              </p>
+            </div>
+          </div>
+
+          {/* Statement dots */}
+          <div className="flex items-center justify-center mt-3" style={{ gap: 6 }}>
+            {STATEMENTS.map((_, i) => (
+              <span
+                key={i}
+                className="transition-all duration-300"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  width: i === statementIndex ? 20 : 4,
+                  height: 4,
+                  borderRadius: i === statementIndex ? 2 : "50%",
+                  background: i === statementIndex ? "white" : "rgba(255,255,255,0.3)",
                 }}
-              >
-                <Icon className="h-3 w-3 text-[#5eead4] shrink-0" />
-                <span className="text-[10px] font-medium text-white/55 truncate">{text}</span>
-              </div>
+              />
             ))}
           </div>
 
