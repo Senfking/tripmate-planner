@@ -260,6 +260,20 @@ export default function TripHome() {
 
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
+  const [postCreateShareOpen, setPostCreateShareOpen] = useState(false);
+
+  // Post-create share sheet — show once when landing on a freshly created trip
+  useEffect(() => {
+    if (!tripId) return;
+    const justCreated = localStorage.getItem(`junto_just_created_trip_${tripId}`);
+    if (!justCreated) return;
+    localStorage.removeItem(`junto_just_created_trip_${tripId}`);
+    const alreadyShown = localStorage.getItem("junto_post_create_share_shown");
+    if (!alreadyShown) {
+      localStorage.setItem("junto_post_create_share_shown", "true");
+      setPostCreateShareOpen(true);
+    }
+  }, [tripId]);
 
   // Attendance overlay state
   const sessionKey = `junto_invite_dismissed_${tripId}`;
