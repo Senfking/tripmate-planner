@@ -257,7 +257,7 @@ import { toast } from "@/hooks/use-toast";
 function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: string; myRole: string | undefined; highlightedPollId?: string }) {
   const canManage = myRole === "owner" || myRole === "admin";
   const isMobile = useIsMobile();
-  const { prefPolls, voteCounts, myVotes, createPoll, addOption, vote, lockPoll, deletePoll, updatePollTitle } =
+  const { prefPolls, voteCounts, myVotes, createPoll, addOption, deleteOption, vote, lockPoll, deletePoll, updatePollTitle } =
     useDecisionPolls(tripId);
 
   const [prefOpen, setPrefOpen] = useState(false);
@@ -389,6 +389,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
           onAddOption={(input) =>
             addOption.mutate({ pollId: poll.id, label: input.label })
           }
+          onDeleteOption={(optionId) => deleteOption.mutate(optionId)}
           onVote={(optionId, value) => vote.mutate({ optionId, value })}
           onLock={() => lockPoll.mutate(poll.id)}
           onDelete={() => deletePoll.mutate(poll.id)}

@@ -121,6 +121,19 @@ export function useDecisionPolls(tripId: string | undefined) {
     },
   });
 
+  const deleteOption = useMutation({
+    mutationFn: async (optionId: string) => {
+      await supabase.from("votes").delete().eq("poll_option_id", optionId);
+      const { error } = await supabase.from("poll_options").delete().eq("id", optionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
+      qc.invalidateQueries({ queryKey: ["poll-vote-counts", tripId] });
+      qc.invalidateQueries({ queryKey: ["my-poll-votes", tripId, user?.id] });
+    },
+  });
+
   const addOption = useMutation({
     mutationFn: async (input: {
       pollId: string;
@@ -280,6 +293,7 @@ export function useDecisionPolls(tripId: string | undefined) {
     isLoading: polls.isLoading,
     createPoll,
     addOption,
+    deleteOption,
     vote,
     lockPoll,
     deletePoll,
