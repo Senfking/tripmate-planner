@@ -877,6 +877,7 @@ export type Database = {
       }
       trips: {
         Row: {
+          cover_image_path: string | null
           created_at: string
           emoji: string | null
           id: string
@@ -892,6 +893,7 @@ export type Database = {
           vibe_board_locked: boolean
         }
         Insert: {
+          cover_image_path?: string | null
           created_at?: string
           emoji?: string | null
           id?: string
@@ -907,6 +909,7 @@ export type Database = {
           vibe_board_locked?: boolean
         }
         Update: {
+          cover_image_path?: string | null
           created_at?: string
           emoji?: string | null
           id?: string
