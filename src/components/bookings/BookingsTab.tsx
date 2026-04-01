@@ -159,6 +159,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       onOpen={() => handleOpen(a)}
       onDelete={() => deleteAttachment.mutate(a)}
       onUploadPrompt={() => galleryInputRef.current?.click()}
+      onUpdateNotes={(id, notes) => updateNotes.mutate({ id, notes })}
       getSignedUrl={getSignedUrl}
     />
   );
