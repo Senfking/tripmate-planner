@@ -148,7 +148,12 @@ export function StructuredPoll({
             </Button>
           </div>
         ) : (
-          <h4 className="font-semibold text-foreground text-sm flex-1">{poll.title}</h4>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-foreground text-sm">{poll.title}</h4>
+            {poll.multi_select && (
+              <p className="text-[11px] text-muted-foreground mt-0.5">Pick multiple</p>
+            )}
+          </div>
         )}
         {isLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
         {canManage && !isEditing && (
