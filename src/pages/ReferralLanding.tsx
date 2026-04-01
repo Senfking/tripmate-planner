@@ -1,24 +1,22 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Receipt, Users, Sparkles, MessageSquare, Zap } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 /* ── Verified working video sources (diverse scenery) ── */
 const VIDEOS = [
-  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",   // Beach resort aerial
-  "https://videos.pexels.com/video-files/3571264/3571264-hd_1920_1080_30fps.mp4",   // Ocean waves drone
-  "https://videos.pexels.com/video-files/3015488/3015488-hd_1920_1080_24fps.mp4",   // Mountain landscape
-  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",   // City skyline
-  "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",   // Tropical nature
+  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",
+  "https://videos.pexels.com/video-files/3571264/3571264-hd_1920_1080_30fps.mp4",
+  "https://videos.pexels.com/video-files/3015488/3015488-hd_1920_1080_24fps.mp4",
+  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
+  "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",
 ];
 
-const FEATURES = [
-  { icon: MapPin, text: "Shared itinerary" },
-  { icon: Receipt, text: "Split costs fairly" },
-  { icon: Users, text: "Decide together" },
-  { icon: Sparkles, text: "AI receipt scan" },
-  { icon: MessageSquare, text: "Replace group chats" },
-  { icon: Zap, text: "Real-time sync" },
+const STATEMENTS = [
+  { problem: "The group chat is a disaster zone.", solution: "Junto keeps the whole trip in one place." },
+  { problem: "Someone always gets stuck chasing money.", solution: "Split costs, track debts, settle up — done." },
+  { problem: "Receipts, docs, bookings — all over the place.", solution: "Scan receipts with AI. Store everything in one trip." },
+  { problem: "Nobody can agree on anything.", solution: "Vote, decide, and move on. Together." },
 ];
 
 /* ── Video slideshow — all stacked, opacity crossfade ── */
