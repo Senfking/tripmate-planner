@@ -26,7 +26,7 @@ function VideoSlideshow() {
         }
         return next;
       });
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [failedSet]);
 
