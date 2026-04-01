@@ -27,6 +27,7 @@ type Props = {
   onLock: () => void;
   onDelete?: () => void;
   onUpdateTitle?: (title: string) => void;
+  onToggleMultiSelect?: (multiSelect: boolean) => void;
   isAddingOption: boolean;
   isLocking: boolean;
   isHighlighted?: boolean;
