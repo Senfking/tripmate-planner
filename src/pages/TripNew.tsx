@@ -19,22 +19,29 @@ import {
 } from "@/components/ui/drawer";
 import { useMutation } from "@tanstack/react-query";
 
-const TRAVEL_EMOJIS = [
+const EMOJI_GROUPS = [
+  // Popular / quick picks (always visible)
+  ["✈️", "🏖️", "🏔️", "🌍", "🚗", "🌴", "❄️", "☀️", "🎒", "🥳"],
   // Transport
-  "✈️", "🚗", "🚂", "🚢", "🛳️", "🚌", "🏍️", "🛩️", "🚁", "⛵",
-  // Destinations & nature
-  "🏖️", "🏔️", "🌍", "🌎", "🌏", "🗺️", "🏝️", "🌴", "🌋", "🏜️",
-  // Activities
-  "⛷️", "🏕️", "🏄", "🤿", "🎿", "🧗", "🚴", "🏊", "🎣", "⛺",
-  // Landmarks & culture
-  "🏛️", "🗼", "🗽", "🎡", "🎢", "🕌", "⛩️", "🏰", "🎭", "🎪",
-  // Food & vibes
-  "🍕", "🍷", "🍹", "☕", "🍜", "🥘", "🍣", "🌮", "🥐", "🍺",
-  // Nature & seasons
-  "🌸", "🌺", "🌊", "☀️", "🌙", "❄️", "🌈", "🔥", "⭐", "💫",
-  // Travel gear & misc
-  "🎒", "🧳", "📸", "🗿", "💎", "🎯", "🎶", "❤️", "🥳", "🦋",
+  ["🚂", "🚢", "🛳️", "🚌", "🏍️", "🛩️", "🚁", "⛵", "🚲", "🛺", "🚀", "🛶"],
+  // Beach & tropical
+  ["🏝️", "🤿", "🏄", "🐚", "🦀", "🐠", "🧜", "🌺", "🥥", "🍹"],
+  // Mountains & outdoors
+  ["⛷️", "🏕️", "🧗", "🚴", "🎿", "⛺", "🦌", "🏊", "🎣", "🛷", "🌲", "🏞️"],
+  // Cities & landmarks
+  ["🏛️", "🗼", "🗽", "🎡", "🎢", "🕌", "⛩️", "🏰", "🗿", "🎭", "🎪", "🏟️"],
+  // Food & drink
+  ["🍕", "🍷", "☕", "🍜", "🥘", "🍣", "🌮", "🥐", "🍺", "🧁", "🍝", "🫕", "🥂", "🍦"],
+  // Nature & weather
+  ["🌸", "🌊", "🌙", "🌈", "🔥", "⭐", "💫", "🌋", "🏜️", "🌻", "🦋", "🐬"],
+  // Activities & vibes
+  ["📸", "💎", "🎯", "🎶", "❤️", "🧳", "🗺️", "🎨", "🛍️", "💃", "🎵", "🧘", "🎤", "🎮"],
+  // Flags & symbols
+  ["🇪🇺", "🇺🇸", "🇬🇧", "🇫🇷", "🇪🇸", "🇮🇹", "🇩🇪", "🇯🇵", "🇹🇭", "🇧🇷", "🇦🇺", "🇲🇽", "🇬🇷", "🇵🇹", "🇭🇷", "🇮🇩"],
 ];
+
+const QUICK_EMOJIS = EMOJI_GROUPS[0];
+const ALL_EMOJIS = EMOJI_GROUPS;
 
 export default function TripNew() {
   const navigate = useNavigate();
@@ -49,6 +56,7 @@ export default function TripNew() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [showAllEmojis, setShowAllEmojis] = useState(false);
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
@@ -198,21 +206,61 @@ export default function TripNew() {
           {/* Emoji picker */}
           <div className="space-y-2">
             <Label className="text-[13px] font-semibold text-foreground">Trip Emoji</Label>
-            <div className="flex flex-wrap gap-1.5 bg-white rounded-xl p-3 border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-              {TRAVEL_EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => setEmoji(e)}
-                  className={`flex items-center justify-center h-11 w-11 text-2xl rounded-xl transition-all ${
-                    emoji === e
-                      ? "bg-[#0D9488]/15 ring-2 ring-[#0D9488] scale-110"
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  {e}
-                </button>
-              ))}
+            <div className="bg-white rounded-xl p-3 border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              {/* Quick picks */}
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setEmoji(e)}
+                    className={`flex items-center justify-center h-11 w-11 text-2xl rounded-xl transition-all ${
+                      emoji === e
+                        ? "bg-[#0D9488]/15 ring-2 ring-[#0D9488] scale-110"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+
+              {/* Expanded categories */}
+              {showAllEmojis && (
+                <div className="mt-2 space-y-1.5 max-h-[260px] overflow-y-auto">
+                  {ALL_EMOJIS.slice(1).map((group, gi) => (
+                    <div key={gi}>
+                      {gi > 0 && <div className="h-px bg-muted my-1.5" />}
+                      <div className="flex flex-wrap gap-1.5">
+                        {group.map((e) => (
+                          <button
+                            key={e}
+                            type="button"
+                            onClick={() => setEmoji(e)}
+                            className={`flex items-center justify-center h-11 w-11 text-2xl rounded-xl transition-all ${
+                              emoji === e
+                                ? "bg-[#0D9488]/15 ring-2 ring-[#0D9488] scale-110"
+                                : "hover:bg-muted"
+                            }`}
+                          >
+                            {e}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowAllEmojis(!showAllEmojis)}
+                className="w-full mt-2 text-xs font-medium py-1.5 rounded-lg hover:bg-muted transition-colors"
+                style={{ color: "#0D9488" }}
+              >
+                {showAllEmojis ? "Show less" : "Show more emojis"}
+              </button>
             </div>
           </div>
 
