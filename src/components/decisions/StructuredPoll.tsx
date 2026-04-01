@@ -232,7 +232,15 @@ export function StructuredPoll({
           return (
             <div key={opt.id} className="flex items-center gap-1.5">
               <button
-                onClick={() => { setUniverseHighlight(null); onVote(opt.id, "yes"); }}
+                onClick={() => {
+                  setUniverseHighlight(null);
+                  // For single-select: deselect current pick first
+                  if (!poll.multi_select && !isPicked) {
+                    const currentPick = poll.options.find((o) => myVotes[o.id] === "yes");
+                    if (currentPick) onVote(currentPick.id, "yes"); // toggle off
+                  }
+                  onVote(opt.id, "yes");
+                }}
                 disabled={isLocked}
                 className={`flex items-center justify-between flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm border transition-colors ${
                   isPicked || isUniversePick
