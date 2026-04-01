@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { MapPin, Receipt, Vote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const VIDEOS = [
@@ -26,7 +27,7 @@ function VideoSlideshow() {
         }
         return next;
       });
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [failedSet]);
 
@@ -118,6 +119,35 @@ export default function ReferralLanding() {
           >
             Junto
           </span>
+        </div>
+
+        {/* MIDDLE — Feature rows */}
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="max-w-[260px] w-full">
+            {[
+              { icon: MapPin, title: "Plan together", desc: "Collaborative itineraries" },
+              { icon: Receipt, title: "Split expenses", desc: "Multi-currency tracking" },
+              { icon: Vote, title: "Decide as a group", desc: "Polls & real-time votes" },
+            ].map(({ icon: Icon, title, desc }, i) => (
+              <div key={i} className={`flex items-center gap-3 ${i < 2 ? "mb-4" : ""}`}>
+                <div
+                  className="flex items-center justify-center rounded-full shrink-0 backdrop-blur-md"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    background: "rgba(255,255,255,0.12)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                  }}
+                >
+                  <Icon className="h-[18px] w-[18px] text-white/80" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-semibold text-white leading-tight">{title}</p>
+                  <p className="text-[12px] text-white/55 leading-tight mt-0.5">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* BOTTOM — CTA block */}
