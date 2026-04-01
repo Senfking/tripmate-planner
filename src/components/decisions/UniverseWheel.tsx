@@ -23,6 +23,9 @@ const CONFETTI_COLORS = [
   "hsl(174 30% 55%)",
 ];
 
+const SPIN_DURATION_MS = 4500;
+const SPIN_EASING = "cubic-bezier(0.25, 0.1, 0.1, 1.0)";
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,8 +37,8 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [phase, setPhase] = useState<"idle" | "spinning" | "done">("idle");
   const [winnerIdx, setWinnerIdx] = useState(0);
-  const [rotation, setRotation] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wheelRef = useRef<HTMLDivElement>(null);
   const confettiRef = useRef<HTMLDivElement>(null);
 
   const segAngle = 360 / options.length;
@@ -101,9 +104,13 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
   useEffect(() => {
     if (open) {
       setPhase("idle");
-      setRotation(0);
-      const idx = Math.floor(Math.random() * options.length);
-      setWinnerIdx(idx);
+      setWinnerIdx(Math.floor(Math.random() * options.length));
+      // Reset wheel rotation without transition
+      const el = wheelRef.current;
+      if (el) {
+        el.style.transition = "none";
+        el.style.transform = "rotate(0deg)";
+      }
     }
   }, [open, options.length]);
 
@@ -111,20 +118,37 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
     if (phase !== "idle" || options.length === 0) return;
     setPhase("spinning");
 
-    // Calculate target rotation so pointer (top) lands on winner segment
-    // Pointer is at top (0°/360°). Segment i occupies [i*segAngle, (i+1)*segAngle] from -90° offset
-    // We rotate clockwise. To land on segment winnerIdx, the middle of that segment needs to be at top.
-    const segMiddle = winnerIdx * segAngle + segAngle / 2;
-    // We want (rotation mod 360) such that the segment is at top (0° = top)
-    // Since CSS rotates the wheel and pointer is at top, we need rotation = -(segMiddle) + full spins
-    const fullSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full spins
-    const targetRotation = fullSpins * 360 + (360 - segMiddle);
-    setRotation(targetRotation);
+    // Random position within the winning segment (10%-90% through it)
+    const segmentOffset = segAngle * (0.1 + Math.random() * 0.8);
+    const targetAngleInSegment = winnerIdx * segAngle + segmentOffset;
 
-    setTimeout(() => {
-      setPhase("done");
-    }, 3200);
+    // 8-10 full spins ensure ~2.5s+ at full speed before the easing decelerates
+    const fullSpins = 8 + Math.floor(Math.random() * 3);
+    const targetRotation = fullSpins * 360 + (360 - targetAngleInSegment);
+
+    // Apply rotation directly on the DOM element — no React re-render
+    const el = wheelRef.current;
+    if (el) {
+      el.style.transition = `transform ${SPIN_DURATION_MS}ms ${SPIN_EASING}`;
+      // Force reflow so the transition starts from the current (0) position
+      el.getBoundingClientRect();
+      el.style.transform = `rotate(${targetRotation}deg)`;
+    }
   };
+
+  // Listen for the CSS transition to end, then flip to "done"
+  useEffect(() => {
+    const el = wheelRef.current;
+    if (!el) return;
+
+    const onEnd = (e: TransitionEvent) => {
+      if (e.propertyName === "transform" && phase === "spinning") {
+        setPhase("done");
+      }
+    };
+    el.addEventListener("transitionend", onEnd);
+    return () => el.removeEventListener("transitionend", onEnd);
+  }, [phase]);
 
   const handleAccept = () => {
     onAccept(options[winnerIdx].id);
@@ -143,15 +167,7 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10 text-[#0D9488] text-xl">
           ▼
         </div>
-        <div
-          className="w-full h-full"
-          style={{
-            transform: `rotate(${rotation}deg)`,
-            transition: phase === "spinning"
-              ? "transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)"
-              : "none",
-          }}
-        >
+        <div ref={wheelRef} className="w-full h-full">
           <canvas
             ref={canvasRef}
             width={260}
@@ -161,50 +177,62 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
         </div>
       </div>
 
-      {phase === "idle" && (
-        <button
-          onClick={spin}
-          className="mt-4 text-sm font-medium text-[#0D9488] underline decoration-dotted underline-offset-4 hover:text-[#0D9488]/80 transition-colors"
-        >
-          Tap to spin ✨
-        </button>
-      )}
-
-      {phase === "done" && (
-        <div className="relative mt-4 text-center w-full">
-          {/* Confetti */}
-          <div ref={confettiRef} className="absolute inset-0 pointer-events-none overflow-hidden">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <span
-                key={i}
-                className="absolute rounded-full animate-confetti-burst"
-                style={{
-                  width: `${6 + Math.random() * 4}px`,
-                  height: `${6 + Math.random() * 4}px`,
-                  backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-                  left: `${50 + (Math.random() - 0.5) * 60}%`,
-                  top: "50%",
-                  animationDelay: `${Math.random() * 0.3}s`,
-                  animationDuration: `${0.8 + Math.random() * 0.6}s`,
-                }}
-              />
-            ))}
-          </div>
-
-          <p className="text-sm text-muted-foreground">The universe chose:</p>
-          <p className="text-[20px] font-bold text-[#0D9488] mt-1">
-            {options[winnerIdx]?.label}
-          </p>
-
-          <Button
-            onClick={handleAccept}
-            className="w-full mt-4 bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
-            style={{ background: "var(--gradient-primary, #0D9488)" }}
+      {/* Fixed-height result area — prevents layout shift */}
+      <div style={{ minHeight: 130 }} className="w-full flex flex-col items-center justify-start mt-4">
+        {phase === "idle" && (
+          <button
+            onClick={spin}
+            className="text-sm font-medium text-[#0D9488] underline decoration-dotted underline-offset-4 hover:text-[#0D9488]/80 transition-colors"
           >
-            Accept the universe's wisdom 🙏
-          </Button>
-        </div>
-      )}
+            Tap to spin ✨
+          </button>
+        )}
+
+        {/* Reserve space during spin so container stays stable */}
+        {phase === "spinning" && (
+          <div style={{ visibility: "hidden" }} aria-hidden="true" className="text-center w-full">
+            <p className="text-sm text-muted-foreground">The universe chose:</p>
+            <p className="text-[20px] font-bold mt-1">&nbsp;</p>
+            <div className="h-10 mt-4" />
+          </div>
+        )}
+
+        {phase === "done" && (
+          <div className="relative text-center w-full animate-fade-in-card">
+            {/* Confetti */}
+            <div ref={confettiRef} className="absolute inset-0 pointer-events-none overflow-hidden">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="absolute rounded-full animate-confetti-burst"
+                  style={{
+                    width: `${6 + Math.random() * 4}px`,
+                    height: `${6 + Math.random() * 4}px`,
+                    backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+                    left: `${50 + (Math.random() - 0.5) * 60}%`,
+                    top: "50%",
+                    animationDelay: `${Math.random() * 0.3}s`,
+                    animationDuration: `${0.8 + Math.random() * 0.6}s`,
+                  }}
+                />
+              ))}
+            </div>
+
+            <p className="text-sm text-muted-foreground">The universe chose:</p>
+            <p className="text-[20px] font-bold text-[#0D9488] mt-1">
+              {options[winnerIdx]?.label}
+            </p>
+
+            <Button
+              onClick={handleAccept}
+              className="w-full mt-4 bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
+              style={{ background: "var(--gradient-primary, #0D9488)" }}
+            >
+              Accept the universe's wisdom 🙏
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 
