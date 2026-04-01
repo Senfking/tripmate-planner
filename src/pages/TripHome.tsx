@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload, X, Check } from "lucide-react";
+import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
