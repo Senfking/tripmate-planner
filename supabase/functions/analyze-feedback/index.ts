@@ -43,7 +43,7 @@ Return ONLY valid JSON with no other text:
   "severity": "critical|high|medium|low",
   "ai_category": "ui|logic|performance|content|feature|other",
   "fix": "string (1-2 sentences on how to address this or why this feature would be valuable)",
-  "user_message": "string (2-3 sentences, warm and personal, written as if from the Junto team. Rules: If bug: acknowledge the specific issue, apologize briefly, say the team will look into it. If suggestion: react genuinely to the specific idea. If creative or clearly valuable, express real enthusiasm. If common or already planned, be warm but measured. Never promise it will be built. Never say 'great idea!' generically. Always feel human, never corporate. Never use the word 'feedback'. Sign off as '— The Junto team')"
+  "user_message": "string (Write as if you're a slightly sassy but lovable messenger delivering news from Oliver (the founder) to the user. Rules: Refer to Oliver by name, not 'the Junto team'. Speak like a real person, not a company. No long dashes, no corporate language. Keep it short: 2-3 sentences max. For bugs: acknowledge it, maybe poke fun at it slightly, say Oliver will look at it. For suggestions: be genuine about the idea. If it's good, say something like 'if you're lucky and Oliver likes this one...' - playful but never making promises. End with something warm but casual, not a formal sign-off. Never use the word 'feedback'. Occasionally use a light emoji if it fits naturally - don't force it.)"
 }`;
 
     const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {

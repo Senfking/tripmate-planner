@@ -242,27 +242,26 @@ export function FeedbackWidget() {
 
       {step === "success" && (
         <div className="text-center">
-          <p className="text-4xl">✅</p>
-          <p className="font-bold text-[18px] mt-4">Thanks for sharing ✨</p>
+          <p className="text-5xl">🚀</p>
+          <p className="font-bold text-[22px] mt-3">Got it.</p>
 
           <div
-            className="mt-3 text-left text-sm leading-relaxed"
+            className="mt-3 text-left"
             style={{
               background: "rgba(13,148,136,0.06)",
               border: "1px solid rgba(13,148,136,0.15)",
               borderRadius: 12,
               padding: 14,
-              lineHeight: 1.6,
+              fontSize: 14,
+              lineHeight: 1.7,
             }}
           >
             {aiLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-4/5" />
-                <Skeleton className="h-3 w-3/5" />
-              </div>
+              <p className="text-sm text-muted-foreground italic animate-pulse">
+                Oliver is reading this...
+              </p>
             ) : (
-              <p className="whitespace-pre-line">{aiMessage}</p>
+              <p className="whitespace-pre-line text-foreground">{aiMessage}</p>
             )}
           </div>
 
