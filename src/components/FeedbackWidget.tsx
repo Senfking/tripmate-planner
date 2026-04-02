@@ -627,11 +627,11 @@ export function FeedbackWidget() {
 
       {isMobile ? (
         <Drawer open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true); }} repositionInputs={false}>
-          <DrawerContent style={{ maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - 20px)" }}>
-            <DrawerHeader>
+          <DrawerContent className="flex flex-col" style={{ maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - 20px)" }}>
+            <DrawerHeader className="shrink-0">
               <DrawerTitle>{title || "Feedback"}</DrawerTitle>
             </DrawerHeader>
-            <div className="px-4 pb-6">{content}</div>
+            <div className="px-4 pb-6 overflow-y-auto flex-1 min-h-0">{content}</div>
           </DrawerContent>
         </Drawer>
       ) : (
