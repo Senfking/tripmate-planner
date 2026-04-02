@@ -29,18 +29,21 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const adminUserId = Deno.env.get("ADMIN_USER_ID")!;
 
-  // Verify JWT to get caller identity
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
+  // Decode JWT to get caller identity (no SDK dependency)
   const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claimsData?.claims) {
-    console.error("Auth failed:", claimsErr?.message || "no claims");
-    return err("Unauthorized", 401);
+  let callerId: string;
+  try {
+    const payloadB64 = token.split(".")[1];
+    const payload = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
+    callerId = payload.sub;
+    // Check expiry
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      return err("Token expired", 401);
+    }
+  } catch {
+    return err("Invalid token", 401);
   }
-  const callerId = claimsData.claims.sub;
-  if (callerId !== adminUserId) {
+  if (!callerId || callerId !== adminUserId) {
     console.error("Not admin:", callerId, "expected:", adminUserId);
     return err("Forbidden", 403);
   }
