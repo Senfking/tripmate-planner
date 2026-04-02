@@ -2,28 +2,26 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
 import { convertAmount, formatCurrency, Rates } from "@/lib/settlementCalc";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
-  ArrowLeftRight, Pencil, Trash2, MapPin,
+  ArrowLeftRight, Pencil, Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 
 const CATEGORY_CONFIG: Record<string, {
   icon: typeof Utensils;
   label: string;
-  bg: string;
-  color: string;
-  border: string;
+  iconColor: string;
+  bgColor: string;
 }> = {
-  food: { icon: Utensils, label: "Food & Drink", bg: "#FFF3E0", color: "#F57C00", border: "#F57C00" },
-  transport: { icon: Car, label: "Transport", bg: "#E3F2FD", color: "#1565C0", border: "#1565C0" },
-  accommodation: { icon: Hotel, label: "Accommodation", bg: "#F3E5F5", color: "#6A1B9A", border: "#6A1B9A" },
-  activities: { icon: Ticket, label: "Activities", bg: "#E8F5E9", color: "#2E7D32", border: "#2E7D32" },
-  shopping: { icon: ShoppingBag, label: "Shopping", bg: "#FCE4EC", color: "#C62828", border: "#C62828" },
-  settlement: { icon: ArrowLeftRight, label: "Settlement", bg: "#E0F2F1", color: "#00695C", border: "#00695C" },
-  other: { icon: MoreHorizontal, label: "Other", bg: "#F5F5F5", color: "#757575", border: "#757575" },
+  food:          { icon: Utensils,       label: "Food & Drink",  iconColor: "#D97706", bgColor: "rgba(217,119,6,0.08)" },
+  transport:     { icon: Car,            label: "Transport",     iconColor: "#2563EB", bgColor: "rgba(37,99,235,0.08)" },
+  accommodation: { icon: Hotel,          label: "Accommodation", iconColor: "#7C3AED", bgColor: "rgba(124,58,237,0.08)" },
+  activities:    { icon: Ticket,         label: "Activities",    iconColor: "#059669", bgColor: "rgba(5,150,105,0.08)" },
+  shopping:      { icon: ShoppingBag,    label: "Shopping",      iconColor: "#DC2626", bgColor: "rgba(220,38,38,0.08)" },
+  settlement:    { icon: ArrowLeftRight, label: "Settlement",    iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  other:         { icon: MoreHorizontal, label: "Other",         iconColor: "#6B7280", bgColor: "rgba(107,114,128,0.08)" },
 };
 
 interface Props {
@@ -55,10 +53,6 @@ export function ExpenseCard({
     ? convertAmount(expense.amount, expense.currency, settlementCurrency, baseCurrency, rates)
     : expense.amount;
 
-  const linkedItem = expense.itinerary_item_id
-    ? itineraryItems.find((it) => it.id === expense.itinerary_item_id)
-    : null;
-
   const isSettlement = expense.category === "settlement";
   const isPayer = expense.payer_id === user?.id;
   const mySplit = user ? splits.find((s) => s.user_id === user.id) : null;
@@ -72,23 +66,26 @@ export function ExpenseCard({
 
   return (
     <div
-      className={`rounded-2xl bg-card overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.07)] ${isNew ? "animate-realtime-flash" : ""}`}
-      style={{ borderLeft: `3px solid ${cat.border}` }}
+      className={`overflow-hidden ${isNew ? "animate-realtime-flash" : ""}`}
     >
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left p-3 flex items-center gap-3"
+        className="w-full text-left py-3 flex items-center gap-3"
       >
         <div
-          className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
-          style={{ backgroundColor: cat.bg }}
+          className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+          style={{ backgroundColor: cat.bgColor }}
         >
-          <Icon className="h-5 w-5" style={{ color: cat.color }} />
+          <Icon className="h-4 w-4" style={{ color: cat.iconColor }} />
         </div>
         <div className="flex-1 min-w-0">
-          {/* Row 1: Title + Amount */}
           <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold text-[15px] leading-snug line-clamp-2">{expense.title}</p>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-[15px] leading-snug truncate text-foreground">{expense.title}</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">
+                {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
+              </p>
+            </div>
             <div className="text-right shrink-0">
               {!isSettlement && isPayer && youLentAmount > 0 ? (
                 <>
@@ -117,23 +114,11 @@ export function ExpenseCard({
               )}
             </div>
           </div>
-          {/* Row 2: Payer · Date · optional itinerary link */}
-          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-            <span className="text-xs text-muted-foreground">
-              {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
-            </span>
-            {linkedItem && (
-              <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 gap-0.5 font-normal">
-                <MapPin className="h-2.5 w-2.5" />
-                {linkedItem.title}
-              </Badge>
-            )}
-          </div>
         </div>
       </button>
 
       {expanded && (
-        <div className="border-t border-muted/60 mx-3 px-0 py-2.5 space-y-2">
+        <div className="border-t border-border/40 py-2.5 space-y-2">
           <div className="space-y-1">
             {splits.map((s) => {
               const member = members.find((m) => m.userId === s.user_id);
