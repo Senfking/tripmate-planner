@@ -25,6 +25,8 @@ import ShareView from "./pages/ShareView";
 import AuthCallback from "./pages/AuthCallback";
 import ReferralLanding from "./pages/ReferralLanding";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
