@@ -5,9 +5,16 @@ import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  showMonthYearDropdowns?: boolean;
+};
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = true, showMonthYearDropdowns, ...props }: CalendarProps) {
+  const currentYear = new Date().getFullYear();
+  const dropdownProps = showMonthYearDropdowns
+    ? { captionLayout: "dropdown-buttons" as const, fromYear: currentYear - 1, toYear: currentYear + 5 }
+    : {};
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -16,7 +23,11 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
+        caption_label: cn("text-sm font-medium", showMonthYearDropdowns && "hidden"),
+        caption_dropdowns: "flex items-center gap-1.5",
+        dropdown_month: "[&>select]:h-8 [&>select]:rounded-md [&>select]:border [&>select]:border-input [&>select]:bg-background [&>select]:px-2 [&>select]:text-sm [&>select]:font-medium",
+        dropdown_year: "[&>select]:h-8 [&>select]:rounded-md [&>select]:border [&>select]:border-input [&>select]:bg-background [&>select]:px-2 [&>select]:text-sm [&>select]:font-medium",
+        dropdown: "appearance-none cursor-pointer",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -45,6 +56,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
       }}
+      {...dropdownProps}
       {...props}
     />
   );

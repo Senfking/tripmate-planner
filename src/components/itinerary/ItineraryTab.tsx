@@ -216,7 +216,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 pointer-events-auto" align="center">
-          <Calendar mode="single" onSelect={handleAddDay} />
+          <Calendar mode="single" onSelect={handleAddDay} showMonthYearDropdowns />
         </PopoverContent>
       </Popover>
 
