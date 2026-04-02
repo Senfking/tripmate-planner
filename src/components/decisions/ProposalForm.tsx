@@ -7,8 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { DateRangePicker } from "./DateRangePicker";
 
 type Props = {
@@ -83,30 +88,22 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
     </form>
   );
 
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={handleOpenChange}>
-        <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-        <DrawerContent className="px-4 pb-6 max-h-[85dvh]">
-          <DrawerHeader className="text-left px-0">
-            <DrawerTitle>Suggest a destination</DrawerTitle>
-          </DrawerHeader>
-          <div className="overflow-y-auto -mx-4 px-4" data-vaul-no-drag>
-            {formContent}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
+      <DialogContent
+        className={
+          isMobile
+            ? "fixed bottom-0 top-auto left-0 right-0 translate-x-0 translate-y-0 max-w-full rounded-t-[10px] rounded-b-none p-4 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-left-0 data-[state=closed]:slide-out-to-left-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
+            : "max-w-sm"
+        }
+      >
+        <DialogHeader className={isMobile ? "text-left" : undefined}>
           <DialogTitle>Suggest a destination</DialogTitle>
         </DialogHeader>
-        {formContent}
+        <div className={isMobile ? "overflow-y-auto max-h-[60dvh]" : undefined}>
+          {formContent}
+        </div>
       </DialogContent>
     </Dialog>
   );
