@@ -242,7 +242,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-xl bg-white dark:bg-card px-3 py-2.5 overflow-hidden transition-all duration-200",
+            "rounded-xl bg-white dark:bg-card px-3 py-2.5 overflow-hidden w-full max-w-full transition-all duration-200",
             isDragging && "opacity-50 ring-2 ring-primary/30",
             !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400/60",
             animPhase === "fadein" && "animate-fade-in-card",

@@ -34,7 +34,7 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
           )}
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pt-2 mt-2 border-t border-border/40 space-y-2 w-full overflow-hidden">
+      <CollapsibleContent className="pt-2 mt-2 border-t border-border/40 space-y-2 w-full max-w-full overflow-hidden">
         {comments.length === 0 && (
           <p className="text-[11px] text-muted-foreground/60">No comments yet.</p>
         )}
@@ -59,7 +59,7 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
             <p className="text-muted-foreground text-[11px] break-words whitespace-pre-wrap leading-relaxed">{c.body}</p>
           </div>
         ))}
-        <div className="flex gap-2 w-full">
+        <div className="flex gap-2 w-full max-w-full">
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
