@@ -448,13 +448,30 @@ Deno.serve(async (req) => {
           referrerName = ref?.display_name;
         }
 
+        // Find the most recent trip the user owns/created
+        const ownedTrips = (trips.data || []).filter((t: any) => t.role === "owner");
+        const lastTripCreated = ownedTrips.length > 0
+          ? ownedTrips.reduce((latest: any, t: any) => {
+              const tripInfo = tripMap[t.trip_id];
+              if (!tripInfo?.created_at) return latest;
+              return !latest || tripInfo.created_at > latest ? tripInfo.created_at : latest;
+            }, null)
+          : null;
+
+        const au = authUser?.data?.user;
+
         return json({
           profile: profile.data,
+          email: au?.email || null,
+          last_sign_in_at: au?.last_sign_in_at || null,
+          email_confirmed_at: au?.email_confirmed_at || null,
+          last_trip_created_at: lastTripCreated,
           referrer_name: referrerName,
           referral_count: referrals.count || 0,
           trips: (trips.data || []).map((t: any) => ({
             ...t,
-            trip_name: tripMap[t.trip_id] || "Unknown",
+            trip_name: tripMap[t.trip_id]?.name || "Unknown",
+            trip_created_at: tripMap[t.trip_id]?.created_at || null,
             member_count: memberCounts[t.trip_id] || 0,
           })),
           ai_usage: aiCounts,
