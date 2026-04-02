@@ -418,7 +418,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   )}
                   {/* Third-party settlements (de-emphasised) */}
                   {otherSettlements.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-border/40">
+                    <div className="mt-3 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] mb-1.5">
                         Between others
                       </p>
