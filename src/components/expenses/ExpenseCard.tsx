@@ -15,13 +15,13 @@ const CATEGORY_CONFIG: Record<string, {
   iconColor: string;
   bgColor: string;
 }> = {
-  food:          { icon: Utensils,       label: "Food & Drink",  iconColor: "#D97706", bgColor: "rgba(217,119,6,0.08)" },
-  transport:     { icon: Car,            label: "Transport",     iconColor: "#2563EB", bgColor: "rgba(37,99,235,0.08)" },
-  accommodation: { icon: Hotel,          label: "Accommodation", iconColor: "#7C3AED", bgColor: "rgba(124,58,237,0.08)" },
-  activities:    { icon: Ticket,         label: "Activities",    iconColor: "#059669", bgColor: "rgba(5,150,105,0.08)" },
-  shopping:      { icon: ShoppingBag,    label: "Shopping",      iconColor: "#DC2626", bgColor: "rgba(220,38,38,0.08)" },
+  food:          { icon: Utensils,       label: "Food & Drink",  iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  transport:     { icon: Car,            label: "Transport",     iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  accommodation: { icon: Hotel,          label: "Accommodation", iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  activities:    { icon: Ticket,         label: "Activities",    iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  shopping:      { icon: ShoppingBag,    label: "Shopping",      iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
   settlement:    { icon: ArrowLeftRight, label: "Settlement",    iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
-  other:         { icon: MoreHorizontal, label: "Other",         iconColor: "#6B7280", bgColor: "rgba(107,114,128,0.08)" },
+  other:         { icon: MoreHorizontal, label: "Other",         iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
 };
 
 interface Props {
@@ -66,15 +66,17 @@ export function ExpenseCard({
 
   return (
     <div
-      className={`overflow-hidden ${isNew ? "animate-realtime-flash" : ""}`}
+      className={`overflow-hidden transition-colors duration-150 ${isNew ? "animate-realtime-flash" : ""}`}
+      style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}
     >
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left py-3 flex items-center gap-3"
+        className="w-full text-left flex items-center gap-3 hover:bg-[rgba(13,148,136,0.03)] transition-colors"
+        style={{ padding: "14px 16px" }}
       >
         <div
           className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
-          style={{ backgroundColor: cat.bgColor }}
+          style={{ backgroundColor: "rgba(13,148,136,0.08)", border: "1px solid rgba(13,148,136,0.12)" }}
         >
           <Icon className="h-4 w-4" style={{ color: cat.iconColor }} />
         </div>
@@ -118,7 +120,7 @@ export function ExpenseCard({
       </button>
 
       {expanded && (
-        <div className="border-t border-border/40 py-2.5 space-y-2">
+        <div className="py-2.5 space-y-2" style={{ padding: "10px 16px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
           <div className="space-y-1">
             {splits.map((s) => {
               const member = members.find((m) => m.userId === s.user_id);

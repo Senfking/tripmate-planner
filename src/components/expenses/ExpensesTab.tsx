@@ -229,9 +229,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="space-y-5">
+      {/* Toolbar — frosted glass pill */}
+      <div
+        className="flex items-center justify-between gap-2 mx-0 px-4 py-2.5"
+        style={{
+          background: "rgba(255,255,255,0.6)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: "1px solid rgba(255,255,255,0.8)",
+          borderRadius: 14,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        }}
+      >
         <SettlementCurrencyPicker
           value={settlementCurrency}
           onChange={(c) => updateSettlementCurrency.mutate(c)}
@@ -242,9 +252,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </Button>
       </div>
 
-
+      {/* Balance hero — frosted glass card */}
       {canShowBalances && expenses.length > 0 && (
-        <div className="py-6 text-center">
+        <div
+          className="py-6 text-center mx-0"
+          style={{
+            background: "rgba(255,255,255,0.6)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.8)",
+            borderRadius: 20,
+            boxShadow: "0 4px 24px rgba(13,148,136,0.08)",
+          }}
+        >
           {heroData.type === "settled" ? (
             <div className="flex flex-col items-center gap-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">All settled</p>
@@ -277,9 +297,20 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Balances & Settle Up — wait for rates */}
+      {/* Balances / Settle Up / Expenses — frosted glass card */}
+      <div
+        className="mx-0 overflow-hidden"
+        style={{
+          background: "rgba(255,255,255,0.7)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          border: "1px solid rgba(255,255,255,0.8)",
+          borderRadius: 20,
+          boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+        }}
+      >
       {!canShowBalances ? (
-        <div className="space-y-2">
+        <div className="space-y-2 px-4 py-3">
           <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Balances</span>
           <div className="flex items-center gap-2 py-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
@@ -288,10 +319,10 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       ) : (
         <>
-          {/* Balances section — collapsed by default */}
+          {/* Balances section */}
           {balances.length > 0 && (
             <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
-              <div className="space-y-2 relative">
+              <div className="space-y-2 relative px-4 py-3">
                 <CollapsibleTrigger asChild>
                   <button className="flex w-full flex-col gap-0.5 text-left">
                     <div className="flex w-full items-center justify-between">
@@ -326,7 +357,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   </Button>
                 )}
                 <CollapsibleContent>
-                  <div className="mt-2 border-t border-border/40 pt-2">
+                  <div className="mt-2 border-t pt-2" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
                   <BalancesSummary
                     balances={balances}
                     currency={settlementCurrency}
@@ -342,9 +373,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </Collapsible>
           )}
 
-          {/* Settle Up section — collapsed by default */}
+          {/* Divider between balances and settle up */}
+          <div className="mx-4" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }} />
+
+          {/* Settle Up section */}
           {settlements.length === 0 ? (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Settle Up</span>
               <span className="flex items-center gap-1.5 text-[12px] font-medium" style={{ color: "#0D9488" }}>
                 <CheckCircle2 className="h-3 w-3" />
@@ -353,7 +387,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </div>
           ) : (
             <Collapsible open={settleOpen} onOpenChange={setSettleOpen}>
-              <div className="space-y-2">
+              <div className="space-y-2 px-4 py-3">
                 <CollapsibleTrigger asChild>
                   <button className="flex w-full flex-col gap-0.5 text-left">
                     <div className="flex w-full items-center justify-between">
@@ -369,7 +403,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                     )}
                   </button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 border-t border-border/40 pt-2">
+                <CollapsibleContent className="mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
                   {/* My settlements (prominent) */}
                   {mySettlements.length > 0 && (
                     <SettleUpSection
@@ -384,7 +418,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   )}
                   {/* Third-party settlements (de-emphasised) */}
                   {otherSettlements.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-border/40">
+                    <div className="mt-3 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] mb-1.5">
                         Between others
                       </p>
@@ -412,9 +446,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </>
       )}
 
-      {/* Expenses section — open by default */}
+      {/* Divider before expenses */}
+      <div className="mx-4" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }} />
+
+      {/* Expenses section */}
       <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
-        <div className="space-y-2">
+        <div className="space-y-2 px-4 py-3">
           <CollapsibleTrigger asChild>
             <button className="flex w-full flex-col gap-0.5 text-left">
               <div className="flex w-full items-center justify-between">
@@ -433,7 +470,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               )}
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 border-t border-border/40 pt-1">
+          <CollapsibleContent className="mt-2 pt-1" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
             {expenses.length === 0 ? (
               <div className="text-center py-8 space-y-1">
                 <p className="text-muted-foreground text-[14px]">No expenses yet</p>
@@ -445,10 +482,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               <div>
                 {groupedExpenses.map(({ date, items }) => (
                   <div key={date}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/60 py-2 mt-2 first:mt-0">
-                      {format(parseISO(date), "EEE d MMM")}
-                    </p>
-                    <div className="divide-y divide-border/40">
+                    <div
+                      className="mt-2 first:mt-0"
+                      style={{
+                        background: "rgba(0,0,0,0.02)",
+                        padding: "6px 16px",
+                        borderBottom: "1px solid rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(0,0,0,0.35)" }}>
+                        {format(parseISO(date), "EEE d MMM")}
+                      </p>
+                    </div>
+                    <div>
                       {items.map((exp) => (
                         <ExpenseCard
                           key={exp.id}
@@ -484,6 +530,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </CollapsibleContent>
         </div>
       </Collapsible>
+
+      </div>{/* end frosted glass wrapper */}
 
       <ExpenseFormModal
         open={formOpen}
