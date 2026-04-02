@@ -82,7 +82,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
         }}
       >
         {/* JUNTO — centered */}
-        <div className="flex justify-center w-full mb-3">
+        <div className="flex justify-center w-full mb-3 md:hidden">
           <span className="text-[13px] font-extrabold tracking-[0.3em] uppercase text-white/70">
             JUNTO
           </span>
