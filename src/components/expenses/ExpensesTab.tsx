@@ -57,6 +57,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         reader.onload = () => resolve((reader.result as string).split(",")[1]);
         reader.readAsDataURL(file);
       });
+      trackEvent("ai_receipt_scan", { source: "expenses_tab" }, user?.id);
       const { data, error } = await supabase.functions.invoke("scan-receipt", {
         body: { image: base64 },
       });

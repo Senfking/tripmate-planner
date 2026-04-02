@@ -329,6 +329,7 @@ export function FeedbackWidget() {
           });
           if (aiData?.user_message) {
             setAiMessage(aiData.user_message);
+            trackEvent("ai_feedback_hint", { type: "post_submit_summary" }, user?.id);
           } else {
             setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
           }

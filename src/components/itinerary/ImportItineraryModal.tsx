@@ -130,6 +130,7 @@ export function ImportItineraryModal({
     setParsedItems(items);
     setStep("preview");
     setErrorMsg(null);
+    trackEvent("ai_itinerary_import_success", { items_parsed: items.length, trip_id: tripId }, user?.id);
   };
 
   const handleError = () => {

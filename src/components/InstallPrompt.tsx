@@ -83,6 +83,13 @@ export function InstallPrompt() {
 
   let instruction: React.ReactNode;
 
+  // Track iOS/mobile manual install tip render
+  useEffect(() => {
+    if (!isInStandaloneMode && !iosDismissed && (isIOS || isAndroid)) {
+      trackEvent("pwa_install_prompted", { platform: isIOS ? "ios" : "android_manual" });
+    }
+  }, []);
+
   if (isIOS && isSafari) {
     instruction = (
       <>Tap the share icon (<IOSShareIcon className="inline h-3.5 w-3.5 align-text-bottom text-foreground" />) at the bottom of Safari, then tap <span className="font-medium text-foreground">"Add to Home Screen"</span>.</>

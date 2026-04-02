@@ -287,6 +287,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                 onClick={() => {
                   navigator.clipboard.writeText(tripCode);
                   toast.success("Code copied!");
+                  trackEvent("join_code_copied", {}, user?.id);
                 }}
               >
                 <span className="text-[28px] font-bold font-mono tracking-[0.15em] text-foreground">

@@ -59,6 +59,13 @@ export default function ReferralLanding() {
 
   useEffect(() => {
     if (!code) return;
+    const sp = new URLSearchParams(window.location.search);
+    trackEvent("landing_page_view", {
+      referral_code: code || null,
+      utm_source: sp.get("utm_source"),
+      utm_medium: sp.get("utm_medium"),
+      utm_campaign: sp.get("utm_campaign"),
+    });
     (async () => {
       const { data } = await supabase
         .from("profiles")

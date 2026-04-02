@@ -75,11 +75,13 @@ export default function TripOnboarding() {
   const copyCode = () => {
     navigator.clipboard.writeText(joinUrl);
     toast.success("Code copied!");
+    trackEvent("trip_invite_sent", { method: "copy_link", source: "onboarding" }, user?.id);
   };
 
   const shareWhatsApp = () => {
     const text = `Hey! I created a trip on Junto 🌍\nJoin with code ${trip?.trip_code} or tap here:\n${joinUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    trackEvent("trip_invite_sent", { method: "whatsapp", source: "onboarding" }, user?.id);
   };
 
   if (isLoading || !trip) {

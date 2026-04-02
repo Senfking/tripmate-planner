@@ -223,6 +223,7 @@ export function ExpenseFormModal({
         reader.readAsDataURL(file);
       });
 
+      trackEvent("ai_receipt_scan", { source: "expense_form" }, user?.id);
       const { data, error } = await supabase.functions.invoke("scan-receipt", {
         body: { image: base64 },
       });
