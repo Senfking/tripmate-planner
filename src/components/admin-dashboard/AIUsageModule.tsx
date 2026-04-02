@@ -9,7 +9,7 @@ export function AIUsageModule() {
   const { data: daily, isLoading: dl } = useAdminData("ai_usage_daily", { period });
   const { data: power, isLoading: pl } = useAdminData("ai_power_users", { period });
 
-  const TOKEN_COSTS: Record<string, number> = { receipt_scan: 300, feedback_hint: 400, itinerary_import: 1500 };
+  const TOKEN_COSTS: Record<string, number> = { receipt_scan: 300, feedback_hint: 400, itinerary_import: 1500, booking_extract: 1200 };
 
   const totalCalls = (summary || []).reduce((a: number, r: any) => a + r.period_calls, 0);
   const totalTokens = (summary || []).reduce((a: number, r: any) => a + r.period_calls * (TOKEN_COSTS[r.feature] || 500), 0);
