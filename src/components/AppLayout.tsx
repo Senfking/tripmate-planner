@@ -76,7 +76,7 @@ export function AppLayout() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden md:bg-muted/30">
+        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden md:bg-[#F8FAFC]">
           {!hideHeader && (
             <header
               className="sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden border-b bg-gradient-primary"
@@ -107,7 +107,7 @@ export function AppLayout() {
 
           <OfflineBanner />
 
-          <main className="flex-1 pb-24 md:pb-6 md:px-6">
+          <main className="flex-1 pb-24 md:pb-6 md:px-6 md:pt-4">
             <PullToRefresh>
               <div className="animate-fade-in w-full max-w-[860px] mx-auto">
                 <Outlet />

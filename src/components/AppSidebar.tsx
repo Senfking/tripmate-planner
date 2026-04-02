@@ -30,15 +30,20 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="hidden md:flex border-r border-sidebar-border">
-      <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary">
-          <Map className="h-4 w-4 text-white" />
-        </div>
-        {!collapsed && (
-          <span className="text-[15px] font-bold tracking-tight text-foreground">Junto</span>
+      {/* Wordmark */}
+      <div className="px-5 pt-6 pb-4">
+        {!collapsed ? (
+          <span className="text-[13px] font-extrabold tracking-[0.25em] uppercase text-primary">
+            JUNTO
+          </span>
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary">
+            <Map className="h-4 w-4 text-white" />
+          </div>
         )}
       </div>
-      <SidebarContent className="pt-2">
+
+      <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -50,16 +55,16 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end
-                        className={`relative rounded-md px-3 py-2 text-[14px] transition-colors ${
+                        className={`relative flex items-center gap-2.5 rounded-none px-5 py-2.5 text-[14px] font-medium transition-colors ${
                           isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
-                            : "text-sidebar-foreground hover:bg-muted/60"
+                            ? "text-primary bg-sidebar-accent border-l-2 border-primary"
+                            : "text-sidebar-foreground hover:bg-muted/40 border-l-2 border-transparent"
                         }`}
                         activeClassName=""
                       >
-                        <item.icon className="mr-2.5 h-[18px] w-[18px]" />
+                        <item.icon className="h-[18px] w-[18px] shrink-0" />
                         {!collapsed && <span>{item.title}</span>}
-                        {item.url === "/app/decisions" && pendingCount > 0 && (
+                        {item.url === "/app/decisions" && pendingCount > 0 && !collapsed && (
                           <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
                             {pendingCount > 99 ? "99+" : pendingCount}
                           </span>

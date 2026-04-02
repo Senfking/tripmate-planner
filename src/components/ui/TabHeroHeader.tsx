@@ -47,7 +47,7 @@ interface TabHeroHeaderProps {
 export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeaderProps) {
   return (
     <div
-      className="relative w-full overflow-hidden rounded-b-[20px] md:rounded-2xl md:mt-2"
+      className="relative w-full overflow-hidden rounded-b-[20px] md:rounded-xl"
       style={{
         boxShadow: "0 6px 20px rgba(13, 148, 136, 0.20)",
       }}
@@ -81,7 +81,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
           paddingBottom: 18,
         }}
       >
-        {/* JUNTO — centered */}
+        {/* JUNTO — mobile only */}
         <div className="flex justify-center w-full mb-3 md:hidden">
           <span className="text-[13px] font-extrabold tracking-[0.3em] uppercase text-white/70">
             JUNTO
