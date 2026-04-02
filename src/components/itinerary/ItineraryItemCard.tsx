@@ -99,80 +99,87 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
 
   const cardContent = (
     <div className="w-full overflow-hidden">
-      {/* Row 1: Title + Status */}
-      <div className="flex items-start gap-1.5">
+      <div className="flex items-start gap-2">
         {isDraggable && (
           <button
-            className="touch-none cursor-grab active:cursor-grabbing mt-0.5 shrink-0 text-muted-foreground/20 hover:text-muted-foreground/60 transition-colors"
+            className="mt-0.5 shrink-0 touch-none text-muted-foreground/25 transition-colors hover:text-muted-foreground/70 cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
         )}
-        <div className="flex-1 min-w-0">
-          {/* Title line */}
-          <div className="flex items-center gap-2">
-            <p className="text-[13px] font-semibold text-foreground leading-tight truncate flex-1 min-w-0">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <p className="min-w-0 flex-1 truncate pr-1 text-[14px] font-semibold leading-tight text-foreground">
               {item.title}
             </p>
-            {overlapTitles?.length ? (
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="shrink-0"><AlertTriangle className="h-3 w-3 text-amber-500" /></span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[240px] text-xs">
-                    Overlaps with {overlapTitles.join(", ")}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : null}
-            <span className={cn(
-              "shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-[1px] rounded-md",
-              status.bg, status.text
-            )}>
-              {status.label}
-            </span>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+              {overlapTitles?.length ? (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-background/80 text-amber-500 shadow-sm">
+                        <AlertTriangle className="h-3 w-3" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[240px] text-xs">
+                      Overlaps with {overlapTitles.join(", ")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
+              {showNewPill && (
+                <span className="inline-flex shrink-0 rounded-full border border-primary/15 bg-primary/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-primary">
+                  New
+                </span>
+              )}
+              <span className={cn(
+                "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                status.bg,
+                status.text,
+              )}>
+                {status.label}
+              </span>
+            </div>
           </div>
 
-          {/* Row 2: Meta + Actions */}
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-muted-foreground">
-              <Clock className="h-3 w-3 shrink-0 text-muted-foreground/40" />
-              <span className="shrink-0">{timeDisplay || "tbc"}</span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Clock className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+              <span className="shrink-0 font-medium">{timeDisplay || "tbc"}</span>
               {item.location_text && (
                 <>
                   <span className="text-muted-foreground/30">·</span>
-                  <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+                  <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                   <span className="truncate">{item.location_text}</span>
                 </>
               )}
             </div>
-            <div className="flex items-center shrink-0 ml-2">
+            <div className="ml-2 flex shrink-0 items-center gap-0.5">
               <button
                 onClick={onEdit}
-                className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground/30 hover:text-foreground/70 transition-colors"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground/45 transition-colors hover:border-border/60 hover:bg-muted/50 hover:text-foreground/75"
               >
                 <Pencil className="h-3 w-3" />
               </button>
               {canDelete && (
                 <button
                   onClick={() => setConfirmOpen(true)}
-                  className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground/30 hover:text-destructive/70 transition-colors"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground/45 transition-colors hover:border-border/60 hover:bg-muted/50 hover:text-destructive/70"
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
               )}
-              <ItemComments tripId={tripId} itemId={item.id} />
             </div>
           </div>
+
+          <ItemComments tripId={tripId} itemId={item.id} />
         </div>
       </div>
 
-      {/* Attendance */}
       {user && members.length > 0 && (
-        <div className="mt-1.5">
+        <div className="mt-2 border-t border-border/50 pt-2">
           <AttendanceRow
             members={members}
             attendance={attendance}
@@ -216,20 +223,6 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
 
   return (
     <div ref={setNodeRef} style={style} className={cn("relative", isDragging && "z-10")}>
-      {/* "New" pill */}
-      {showNewPill && (
-        <span
-          className={cn(
-            "absolute -top-2 left-3 z-30 text-[9px] font-bold uppercase tracking-wider text-white px-2 py-[2px] rounded-full shadow-sm",
-            pillVisible && animPhase === "done" && !isNewSinceLastVisit && "animate-pill-fade-out",
-          )}
-          style={{ backgroundColor: "#0D9488" }}
-        >
-          New
-        </span>
-      )}
-
-      {/* Skeleton */}
       {showSkeleton && (
         <div
           aria-hidden
@@ -238,11 +231,10 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
         />
       )}
 
-      {/* Card */}
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-xl bg-white dark:bg-card px-3 py-2.5 overflow-hidden w-full max-w-full transition-all duration-200",
+            "w-full max-w-full overflow-hidden rounded-2xl bg-white/95 px-3.5 py-3 transition-all duration-200 dark:bg-card/95",
             isDragging && "opacity-50 ring-2 ring-primary/30",
             !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400/60",
             animPhase === "fadein" && "animate-fade-in-card",
