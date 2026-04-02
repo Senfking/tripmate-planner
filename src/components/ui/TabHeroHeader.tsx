@@ -14,7 +14,7 @@ function HeaderAvatar() {
   return (
     <Link
       to="/app/more"
-      className="absolute z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 ring-[1.5px] ring-white/30 overflow-hidden"
+      className="absolute z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 ring-[1.5px] ring-white/30 overflow-hidden md:hidden"
       style={{
         top: "calc(env(safe-area-inset-top, 0px) + 14px)",
         right: 18,
