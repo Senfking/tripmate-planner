@@ -117,6 +117,7 @@ function AppInner() {
 
             {/* Redirects */}
             <Route path="/" element={<Navigate to="/app/trips" replace />} />
+            <Route path="/app" element={<Navigate to="/app/trips" replace />} />
             <Route path="/trips" element={<Navigate to="/app/trips" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
