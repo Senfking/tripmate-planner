@@ -79,7 +79,7 @@ const Expenses = () => {
   );
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title="Expenses" subtitle={subtitle}>
         {balanceDisplay}
       </TabHeroHeader>
