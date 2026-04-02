@@ -161,6 +161,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     return { type: "settled" as const, amount: 0, subline: "" };
   }, [settlements, user?.id]);
 
+  // "You paid" and "Your share" stats for the hero card
+  const myStats = useMemo(() => {
+    const nonSettlement = expenses.filter((e) => e.category !== "settlement");
+    const totalPaid = nonSettlement
+      .filter((e) => e.payer_id === user?.id)
+      .reduce((sum, e) => sum + e.amount, 0);
+    const myShare = nonSettlement.reduce((sum, e) => {
+      const mySplit = splits.find((s) => s.expense_id === e.id && s.user_id === user?.id);
+      return sum + (mySplit?.share_amount ?? 0);
+    }, 0);
+    return { totalPaid, myShare };
+  }, [expenses, splits, user?.id]);
+
   // Settle up: separate mine vs others
   const { mySettlements, otherSettlements } = useMemo(() => {
     const mine = settlements.filter((s) => s.from === user?.id || s.to === user?.id);
@@ -310,6 +323,24 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
                 {heroData.subline}
               </span>
+            </div>
+          )}
+
+          {/* Stat chips: You paid / Your share */}
+          {(myStats.totalPaid > 0.005 || myStats.myShare > 0.005) && (
+            <div className="relative flex justify-center gap-3 mt-5 px-4">
+              <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">You paid</p>
+                <p className="text-[15px] font-bold text-white tabular-nums">
+                  {formatCurrency(myStats.totalPaid, settlementCurrency)}
+                </p>
+              </div>
+              <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">Your share</p>
+                <p className="text-[15px] font-bold text-white tabular-nums">
+                  {formatCurrency(myStats.myShare, settlementCurrency)}
+                </p>
+              </div>
             </div>
           )}
         </div>
