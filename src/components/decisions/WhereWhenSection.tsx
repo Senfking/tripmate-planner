@@ -82,10 +82,14 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
         {proposals.length > 0 && !isRouteLocked && (
           <ProposalForm
-            onSubmit={(data) => {
-              createProposal.mutate(data, {
-                onSuccess: () => toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" }),
-              });
+            onSubmit={async (data) => {
+              try {
+                await createProposal.mutateAsync(data);
+                toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" });
+              } catch {
+                toast({ title: "Failed to add destination", variant: "destructive" });
+                throw new Error("failed");
+              }
             }}
             isPending={createProposal.isPending}
           />
@@ -107,10 +111,14 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
           </p>
           <div className="flex justify-center">
             <ProposalForm
-              onSubmit={(data) => {
-                createProposal.mutate(data, {
-                  onSuccess: () => toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" }),
-                });
+              onSubmit={async (data) => {
+                try {
+                  await createProposal.mutateAsync(data);
+                  toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" });
+                } catch {
+                  toast({ title: "Failed to add destination", variant: "destructive" });
+                  throw new Error("failed");
+                }
               }}
               isPending={createProposal.isPending}
             />
