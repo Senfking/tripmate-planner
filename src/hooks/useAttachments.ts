@@ -84,8 +84,11 @@ export function useAttachments(tripId: string) {
           })
           .then(() => {
             qc.invalidateQueries({ queryKey: key });
+            trackEvent("ai_booking_extract", { success: true }, user?.id);
           })
-          .catch(() => {})
+          .catch(() => {
+            trackEvent("ai_booking_extract", { success: false }, user?.id);
+          })
           .finally(() => {
             setExtractingIds((prev) => {
               const next = new Set(prev);

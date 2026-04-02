@@ -243,7 +243,8 @@ export function ExpenseFormModal({
       toast.success("Receipt scanned ✓");
       trackEvent("ai_receipt_scan", { success: true });
     } catch {
-      toast.error("Couldn\u2019t read receipt \u2014 fill in manually");
+      toast.error("Couldn't read receipt — fill in manually");
+      trackEvent("ai_receipt_scan", { success: false });
     } finally {
       setScanning(false);
     }

@@ -61,6 +61,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         body: { image: base64 },
       });
       if (error || data?.error) throw new Error(data?.message || "Scan failed");
+      trackEvent("ai_receipt_scan", { success: true });
       // Pre-fill the expense form with scanned data
       const scanned = data?.result || data;
       setEditingExpense({

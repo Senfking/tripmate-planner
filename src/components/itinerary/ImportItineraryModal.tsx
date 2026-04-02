@@ -137,6 +137,7 @@ export function ImportItineraryModal({
     setErrorMsg(
       "We couldn't read this itinerary. Try a clearer photo or paste the text instead."
     );
+    trackEvent("ai_itinerary_import", { success: false });
   };
 
   const handleFile = async (file: File) => {
