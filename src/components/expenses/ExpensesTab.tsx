@@ -470,7 +470,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               )}
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 border-t border-border/40 pt-1">
+          <CollapsibleContent className="mt-2 pt-1" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
             {expenses.length === 0 ? (
               <div className="text-center py-8 space-y-1">
                 <p className="text-muted-foreground text-[14px]">No expenses yet</p>
