@@ -412,12 +412,13 @@ Deno.serve(async (req) => {
         const { user_id } = params;
         if (!user_id) return err("user_id required");
 
-        const [profile, trips, aiEvents, feedbackData, referrals] = await Promise.all([
+        const [profile, trips, aiEvents, feedbackData, referrals, authUser] = await Promise.all([
           db.from("profiles").select("*").eq("id", user_id).single(),
           db.from("trip_members").select("trip_id, role, joined_at").eq("user_id", user_id),
           db.from("analytics_events").select("event_name").like("event_name", "ai_%").eq("user_id", user_id),
           db.from("feedback").select("id", { count: "exact", head: true }).eq("user_id", user_id),
           db.from("profiles").select("id, display_name", { count: "exact" }).eq("referred_by", user_id),
+          db.auth.admin.getUserById(user_id),
         ]);
 
         // Get trip details
