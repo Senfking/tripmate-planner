@@ -14,7 +14,7 @@ import { SystemStatus } from "@/components/admin-dashboard/SystemStatus";
 import { WeeklyDigest } from "@/components/admin-dashboard/WeeklyDigest";
 import { C } from "@/components/admin-dashboard/shared";
 
-const ADMIN_USER_ID = import.meta.env.VITE_ADMIN_USER_ID;
+const ADMIN_USER_ID = "1d5b21fe-f74c-429b-8d9d-938a4f295013";
 
 const MODULE_MAP: Record<AdminModule, React.FC> = {
   dashboard: DashboardOverview,
