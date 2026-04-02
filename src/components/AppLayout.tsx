@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { DesktopHeader } from "@/components/DesktopHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PullToRefresh } from "@/components/PullToRefresh";
@@ -68,7 +69,7 @@ function HeaderAvatar() {
 export function AppLayout() {
   const location = useLocation();
 
-  // Global tabs use their own TabHeroHeader — hide the app header
+  // Global tabs use their own TabHeroHeader — hide the app header on mobile
   const globalTabPaths = ["/app/trips", "/app/trips/new", "/app/decisions", "/app/itinerary", "/app/expenses"];
   const hideHeader = globalTabPaths.includes(location.pathname) || location.pathname === "/app/more";
 
@@ -76,10 +77,14 @@ export function AppLayout() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden md:bg-[#F8FAFC]">
+        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
+          {/* Desktop top header */}
+          <DesktopHeader />
+
+          {/* Mobile header — only on non-global-tab pages */}
           {!hideHeader && (
             <header
-              className="sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden border-b bg-gradient-primary"
+              className="sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden border-b bg-gradient-primary md:hidden"
               style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
             >
               <div
@@ -90,9 +95,7 @@ export function AppLayout() {
                 }}
               />
 
-              <SidebarTrigger className="hidden md:inline-flex text-white relative z-10" />
-
-              <div className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center pointer-events-none md:hidden">
+              <div className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center pointer-events-none">
                 <span
                   className="text-white font-bold"
                   style={{ fontSize: 18, letterSpacing: "0.18em" }}
@@ -107,9 +110,9 @@ export function AppLayout() {
 
           <OfflineBanner />
 
-          <main className="flex-1 pb-24 md:pb-6 md:pt-4">
+          <main className="flex-1 pb-24 md:pb-8">
             <PullToRefresh>
-              <div className="animate-fade-in w-full max-w-[860px] mx-auto md:px-6">
+              <div className="animate-fade-in w-full max-w-[960px] mx-auto md:px-6">
                 <Outlet />
               </div>
             </PullToRefresh>

@@ -47,7 +47,7 @@ interface TabHeroHeaderProps {
 export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeaderProps) {
   return (
     <div
-      className="relative w-full overflow-hidden rounded-b-[20px] md:rounded-none md:-mx-6"
+      className="relative w-full overflow-hidden rounded-b-[20px] md:hidden"
       style={{
         boxShadow: "0 6px 20px rgba(13, 148, 136, 0.20)",
       }}
