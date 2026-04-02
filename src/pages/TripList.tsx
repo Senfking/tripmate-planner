@@ -626,7 +626,7 @@ export default function TripList() {
   const otherTrips = trips.filter((t) => t !== liveTrip);
 
   return (
-    <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
       {/* Desktop compact greeting — replaces hero */}
