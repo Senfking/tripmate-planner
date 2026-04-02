@@ -68,9 +68,12 @@ Deno.serve(async (req) => {
       }
 
       const arrayBuf = await fileData.arrayBuffer();
-      // Encode to base64 using the standard library for better performance
-      const { encode: b64encode } = await import("https://deno.land/std@0.224.0/encoding/base64.ts");
-      const base64Data = b64encode(arrayBuf);
+      const bytes = new Uint8Array(arrayBuf);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64Data = btoa(binary);
 
       const isPdf = file_type === "application/pdf";
       contentBlocks.push(
