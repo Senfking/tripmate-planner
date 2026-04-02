@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CurrencyPicker } from "@/components/expenses/CurrencyPicker";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
-import { ChevronLeft, CheckSquare, Map, Receipt, FileText, Copy, Loader2 } from "lucide-react";
+import { ChevronLeft, CheckSquare, Map, Receipt, FileText, Copy, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 const TOTAL_STEPS = 4;
