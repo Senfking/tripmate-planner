@@ -163,10 +163,10 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                   onCycle();
                 }}
                 className={cn(
-                  "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold border-2 border-white dark:border-card transition-colors",
-                  status === "out"
+                  "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold border-2 border-white dark:border-card transition-colors overflow-hidden",
+                  !member.avatar_url && (status === "out"
                     ? "bg-muted/60 text-muted-foreground/40"
-                    : "bg-secondary text-secondary-foreground",
+                    : "bg-secondary text-secondary-foreground"),
                   isMe && "ring-2 ring-primary/20 z-10 cursor-pointer",
                   !isMe && "cursor-default",
                 )}
@@ -176,7 +176,15 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                     : `${member.display_name || "?"}: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"}`
                 }
               >
-                {getInitials(member.display_name)}
+                {member.avatar_url ? (
+                  <img
+                    src={member.avatar_url}
+                    alt={member.display_name || ""}
+                    className={cn("h-full w-full object-cover", status === "out" && "opacity-40 grayscale")}
+                  />
+                ) : (
+                  getInitials(member.display_name)
+                )}
                 <span
                   className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border-[1.5px] border-white dark:border-card"
                   style={{ backgroundColor: dotColor }}
