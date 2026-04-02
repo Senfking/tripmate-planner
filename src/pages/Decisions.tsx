@@ -134,7 +134,7 @@ const Decisions = () => {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title="Decisions" subtitle={subtitle} pills={pills} />
 
       {items.length === 0 ? (
