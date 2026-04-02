@@ -427,7 +427,7 @@ Deno.serve(async (req) => {
         let memberCounts: Record<string, number> = {};
         if (tripIds.length > 0) {
           const [td, mc] = await Promise.all([
-            db.from("trips").select("id, name").in("id", tripIds),
+            db.from("trips").select("id, name, created_at").in("id", tripIds),
             db.from("trip_members").select("trip_id").in("trip_id", tripIds),
           ]);
           tripDetails = td.data || [];
