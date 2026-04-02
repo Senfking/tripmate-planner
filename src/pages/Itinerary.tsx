@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isToday, isTomorrow, differenceInDays, addDays, isBefore, isEqual } from "date-fns";
 import { cn } from "@/lib/utils";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
+import { TripStartBanner, TripEndBanner } from "@/components/itinerary/TripBannerDivider";
+import { format, parseISO, isToday, isTomorrow, differenceInDays, addDays, isBefore, isEqual } from "date-fns";
+import { cn } from "@/lib/utils";
+import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 
 type FilterType = "all" | "mine";
 
