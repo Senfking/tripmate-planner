@@ -39,10 +39,13 @@ export function DesktopHeader() {
 
   return (
     <header
-      className="hidden md:block sticky top-0 z-50 mx-4 mt-2 rounded-2xl overflow-hidden"
+      className="hidden md:block sticky top-0 left-0 right-0 z-50 overflow-hidden"
       style={{
         background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
-        boxShadow: "0 6px 20px rgba(13, 148, 136, 0.20)",
+        borderRadius: "0 0 16px 16px",
+        margin: 0,
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        width: "100%",
       }}
     >
       {/* Glass shine */}
@@ -58,8 +61,15 @@ export function DesktopHeader() {
       <div className="relative z-10 flex items-center justify-between h-[44px] px-6 max-w-[1200px] mx-auto">
         <div className="w-9" /> {/* spacer to center wordmark */}
         <span
-          className="text-white font-bold"
-          style={{ fontSize: 18, letterSpacing: "0.18em" }}
+          className="font-bold"
+          style={{
+            fontSize: 18,
+            letterSpacing: "0.18em",
+            background: "linear-gradient(135deg, #ffffff 0%, #5eead4 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
         >
           JUNTO
         </span>
