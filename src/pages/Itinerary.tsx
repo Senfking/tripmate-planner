@@ -86,7 +86,7 @@ const Itinerary = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Itinerary" subtitle="Loading…" />
         <div className="px-4 mt-4 space-y-2">
           {[1, 2, 3, 4].map((i) => (
