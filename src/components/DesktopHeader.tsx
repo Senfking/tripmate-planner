@@ -55,7 +55,7 @@ export function DesktopHeader() {
 
       {/* Row 1 — Brand + Avatar */}
       <div className="relative z-10 flex items-center justify-between h-[44px] px-6 max-w-[1200px] mx-auto">
-        <div className="w-7" /> {/* spacer to center wordmark */}
+        <div className="w-9" /> {/* spacer to center wordmark */}
         <span
           className="text-white font-bold"
           style={{ fontSize: 18, letterSpacing: "0.18em" }}
