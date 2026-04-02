@@ -33,6 +33,7 @@ const ReferralLanding = lazy(() => import("./pages/ReferralLanding"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
+const Admin = lazy(() => import("./pages/Admin"));
 
 function PageLoader() {
   return (
@@ -98,7 +99,9 @@ function AppInner() {
             <Route path="/ref" element={<ReferralLanding />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
-
+            <Route path="/admin" element={<ProtectedRoute />}>
+              <Route index element={<Admin />} />
+            </Route>
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>

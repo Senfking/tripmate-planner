@@ -1,0 +1,83 @@
+import React, { useState } from "react";
+import { useAdminData } from "@/hooks/useAdminQuery";
+import { StatCard, DateRangeFilter, Period, SectionHeader, Card, AdminSkeleton, EmptyState, C, mono, sans } from "./shared";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+export function DashboardOverview() {
+  const [period, setPeriod] = useState<Period>("30d");
+  const { data: kpis, isLoading: kpiLoading } = useAdminData("dashboard_kpis", { period });
+  const { data: growth, isLoading: growthLoading } = useAdminData("user_growth_chart", { period });
+  const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
+
+  const trend = (current: number, prior: number) => prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h1 style={{ fontFamily: mono, fontSize: 18, color: C.text, fontWeight: 600 }}>Dashboard</h1>
+        <DateRangeFilter value={period} onChange={setPeriod} />
+      </div>
+
+      {kpiLoading ? <AdminSkeleton rows={4} /> : kpis ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+          <StatCard label="Total Users" value={kpis.total_users} />
+          <StatCard label={`New Users (${period})`} value={kpis.new_users} trend={trend(kpis.new_users, kpis.new_users_prior)} />
+          <StatCard label="Total Trips" value={kpis.total_trips} />
+          <StatCard label={`Active Trips (${period})`} value={kpis.active_trips} />
+          <StatCard label="Total Expenses" value={kpis.total_expenses} />
+          <StatCard label="Open Feedback" value={kpis.open_feedback} />
+          <StatCard label={`AI Calls (${period})`} value={kpis.ai_calls} trend={trend(kpis.ai_calls, kpis.ai_calls_prior)} />
+          <StatCard label={`Referral Shares (${period})`} value={kpis.referral_shares} trend={trend(kpis.referral_shares, kpis.referral_shares_prior)} />
+        </div>
+      ) : null}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <Card>
+          <SectionHeader>User Growth</SectionHeader>
+          {growthLoading ? <AdminSkeleton /> : !growth?.length ? <EmptyState /> : (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={growth}>
+                <XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 10, fontFamily: mono }} tickFormatter={(v) => v.slice(5)} />
+                <YAxis tick={{ fill: C.muted, fontSize: 10, fontFamily: mono }} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: C.elevated, border: `1px solid ${C.border}`, fontFamily: mono, fontSize: 12, color: C.text }} />
+                <Line type="monotone" dataKey="count" stroke={C.tealLight} strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+
+        <Card>
+          <SectionHeader>Recent Activity</SectionHeader>
+          {actLoading ? <AdminSkeleton rows={8} /> : !activity?.length ? <EmptyState /> : (
+            <div style={{ maxHeight: 280, overflowY: "auto" }}>
+              {activity.map((item: any, i: number) => {
+                const typeColor = item.type === "signup" ? C.green : item.type === "trip_created" ? C.blue : item.type === "ai_usage" ? C.tealLight : C.amber;
+                const ago = timeAgo(item.time);
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+                    <span style={{ fontFamily: mono, fontSize: 10, padding: "2px 6px", borderRadius: 3, background: `${typeColor}1f`, color: typeColor, border: `1px solid ${typeColor}33`, whiteSpace: "nowrap" }}>
+                      {item.type}
+                    </span>
+                    <span style={{ fontFamily: sans, fontSize: 13, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {item.description}
+                    </span>
+                    <span style={{ fontFamily: mono, fontSize: 11, color: C.muted, whiteSpace: "nowrap" }}>{ago}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
