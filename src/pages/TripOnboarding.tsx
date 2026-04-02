@@ -118,7 +118,7 @@ export default function TripOnboarding() {
         {step === 3 && <Step3 modules={modules} setModules={setModules} />}
         {step === 4 && <Step4 trip={trip} />}
 
-        <div className="mt-auto pt-6">
+        <div className={step === 1 ? "pt-8" : "mt-auto pt-6"}>
           {step === 1 && (
             <>
               <Button
