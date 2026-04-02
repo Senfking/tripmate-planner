@@ -403,7 +403,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                     )}
                   </button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 border-t border-border/40 pt-2">
+                <CollapsibleContent className="mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
                   {/* My settlements (prominent) */}
                   {mySettlements.length > 0 && (
                     <SettleUpSection
