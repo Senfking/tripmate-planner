@@ -414,7 +414,7 @@ const More = () => {
         const uniqueOthers = new Set(allMembers.map((m) => m.user_id).filter((id) => id !== user.id));
         setCompanionCount(uniqueOthers.size);
       })
-      .catch(() => {});
+      .then(null, () => {});
   }, [user]);
 
   /* ── fetch referral count ── */
