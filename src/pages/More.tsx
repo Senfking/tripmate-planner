@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CurrencyPicker } from "@/components/expenses/CurrencyPicker";
 import {
@@ -34,8 +33,6 @@ import {
   Trash2,
   Crown,
   Hash,
-  Star,
-  MessageSquare,
   ArrowLeft,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
@@ -348,11 +345,6 @@ const More = () => {
   // Referral count
   const [referralCount, setReferralCount] = useState(0);
 
-  // Feedback
-  const [showFeedbackDrawer, setShowFeedbackDrawer] = useState(false);
-  const [feedbackBody, setFeedbackBody] = useState("");
-  const [feedbackRating, setFeedbackRating] = useState(0);
-  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   /* ── sync notif prefs from profile ── */
   useEffect(() => {
@@ -615,24 +607,6 @@ const More = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }, [profile?.referral_code]);
 
-  const handleSubmitFeedback = async () => {
-    if (!user || feedbackRating === 0) return;
-    setSubmittingFeedback(true);
-    const { error } = await supabase.from("feedback" as any).insert({
-      user_id: user.id,
-      body: feedbackBody.trim() || null,
-      rating: feedbackRating,
-    } as any);
-    setSubmittingFeedback(false);
-    if (error) {
-      toast({ title: "Failed to send feedback", variant: "destructive" });
-    } else {
-      toast({ title: "Thanks for your feedback! 💛" });
-      setShowFeedbackDrawer(false);
-      setFeedbackBody("");
-      setFeedbackRating(0);
-    }
-  };
 
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
 
@@ -960,15 +934,9 @@ const More = () => {
         Sign out
       </Button>
 
-      {/* ── App version + feedback footer ── */}
+      {/* ── App version footer ── */}
       <p className="text-center text-xs text-muted-foreground pb-4">
-        Junto · v0.1 ·{" "}
-        <button
-          onClick={() => setShowFeedbackDrawer(true)}
-          className="underline underline-offset-2 hover:text-foreground transition-colors"
-        >
-          Send feedback →
-        </button>
+        Junto · v0.1
       </p>
 
       {/* ── PHOTO OPTIONS DRAWER ── */}
@@ -1038,56 +1006,6 @@ const More = () => {
         </DrawerContent>
       </Drawer>
 
-      {/* ── FEEDBACK DRAWER ── */}
-      <Drawer open={showFeedbackDrawer} onOpenChange={setShowFeedbackDrawer}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Send feedback
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 space-y-4">
-            <Textarea
-              placeholder="What's on your mind?"
-              value={feedbackBody}
-              onChange={(e) => setFeedbackBody(e.target.value)}
-              rows={3}
-            />
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">How's your experience?</p>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setFeedbackRating(n)}
-                    className="p-1 transition-colors"
-                  >
-                    <Star
-                      className={`h-7 w-7 ${
-                        n <= feedbackRating
-                          ? "fill-primary text-primary"
-                          : "text-muted-foreground/40"
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DrawerFooter>
-            <Button
-              onClick={handleSubmitFeedback}
-              disabled={feedbackRating === 0 || submittingFeedback}
-            >
-              {submittingFeedback ? "Sending…" : "Submit"}
-            </Button>
-            <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
 
       {/* ── DELETE ACCOUNT DRAWER ── */}
       <Drawer open={showDeleteDrawer} onOpenChange={setShowDeleteDrawer}>
