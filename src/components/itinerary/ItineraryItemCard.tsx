@@ -116,13 +116,13 @@ export function ItineraryItemCard({
       <div
         className={cn(
           "w-full overflow-hidden rounded-xl transition-all duration-200",
-          "bg-card/90 dark:bg-card/80 backdrop-blur-sm",
-          "border border-border/80 dark:border-border/60",
-          "shadow-[0_1px_4px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.03)]",
+          "bg-card dark:bg-card/95",
+          "border border-border dark:border-border/70",
+          "shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.06)]",
           isDragging && "opacity-50 ring-2 ring-primary/30",
           animPhase === "fadein" && "animate-fade-in-card",
         )}
-        style={{ background: `linear-gradient(180deg, ${s.tint} 0%, hsl(var(--card) / 0.92) 50%)` }}
+        style={{ borderLeftWidth: 3, borderLeftColor: s.fg }}
       >
         {/* ━━ COLLAPSED: Rows 1–4 ━━ */}
         <div className="cursor-pointer" onClick={handleCardClick}>
