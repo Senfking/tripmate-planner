@@ -346,7 +346,7 @@ export function useExpenses(tripId: string) {
       if (error) throw error;
 
       // Atomically replace splits in a single DB transaction
-      const { error: sErr } = await supabase.rpc("replace_expense_splits", {
+      const { error: sErr } = await (supabase.rpc as any)("replace_expense_splits", {
         _expense_id: id,
         _splits: splits.map((s) => ({ user_id: s.user_id, share_amount: s.share_amount })),
       });
