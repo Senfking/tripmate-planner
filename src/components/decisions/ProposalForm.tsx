@@ -87,11 +87,13 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
     return (
       <Drawer open={open} onOpenChange={handleOpenChange}>
         <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-        <DrawerContent className="px-4 pb-6">
+        <DrawerContent className="px-4 pb-6 max-h-[85dvh]">
           <DrawerHeader className="text-left px-0">
             <DrawerTitle>Suggest a destination</DrawerTitle>
           </DrawerHeader>
-          {formContent}
+          <div className="overflow-y-auto -mx-4 px-4" data-vaul-no-drag>
+            {formContent}
+          </div>
         </DrawerContent>
       </Drawer>
     );
