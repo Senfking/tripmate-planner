@@ -33,9 +33,16 @@ Deno.serve(async (req) => {
   const anonClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
-  const { data: claimsData, error: claimsErr } = await anonClient.auth.getUser();
-  if (claimsErr || !claimsData?.user) return err("Unauthorized", 401);
-  if (claimsData.user.id !== adminUserId) return err("Forbidden", 403);
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsErr } = await anonClient.auth.getUser(token);
+  if (claimsErr || !claimsData?.user) {
+    console.error("Auth failed:", claimsErr?.message);
+    return err("Unauthorized", 401);
+  }
+  if (claimsData.user.id !== adminUserId) {
+    console.error("Not admin:", claimsData.user.id, "expected:", adminUserId);
+    return err("Forbidden", 403);
+  }
 
   // Service role client for unrestricted access
   const db = createClient(supabaseUrl, serviceKey);
