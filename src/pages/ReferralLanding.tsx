@@ -130,7 +130,7 @@ export default function ReferralLanding() {
 
         {/* Bottom content */}
         <div
-          className="px-6 shrink-0 max-w-[480px] mx-auto w-full"
+          className="px-6 shrink-0 max-w-[480px] mx-auto w-full text-center"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
         >
           {/* Referrer pill */}
