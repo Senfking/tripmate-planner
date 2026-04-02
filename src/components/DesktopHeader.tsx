@@ -21,12 +21,12 @@ function HeaderAvatar() {
   return (
     <Link
       to="/app/more"
-      className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 overflow-hidden transition-colors hover:bg-white/30"
+      className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 overflow-hidden transition-colors hover:bg-white/30"
     >
       {profile?.avatar_url ? (
         <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
       ) : (
-        <span className="text-white text-[11px] font-semibold">{initials}</span>
+        <span className="text-white text-sm font-semibold">{initials}</span>
       )}
     </Link>
   );
