@@ -319,10 +319,10 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       ) : (
         <>
-          {/* Balances section — collapsed by default */}
+          {/* Balances section */}
           {balances.length > 0 && (
             <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
-              <div className="space-y-2 relative">
+              <div className="space-y-2 relative px-4 py-3">
                 <CollapsibleTrigger asChild>
                   <button className="flex w-full flex-col gap-0.5 text-left">
                     <div className="flex w-full items-center justify-between">
