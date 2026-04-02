@@ -32,6 +32,7 @@ interface TripBoundary {
   tripCoverImagePath: string | null;
   routeStopDests: string[];
 }
+interface DestBoundary { destination: string; tripName: string; tripEmoji: string | null; tripId: string }
 
 const Itinerary = () => {
   const { data: groups, isLoading } = useGlobalItinerary();
