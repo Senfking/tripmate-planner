@@ -118,11 +118,11 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
   const showSkeleton = isNew && animPhase === "skeleton";
 
   const cardContent = (
-    <>
+    <div className="overflow-hidden w-full">
       <div className="flex items-start gap-1.5">
         {isDraggable ? (
           <button
-            className="touch-none cursor-grab active:cursor-grabbing mt-0.5 shrink-0 text-muted-foreground/30 hover:text-muted-foreground"
+            className="touch-none cursor-grab active:cursor-grabbing mt-0.5 shrink-0 text-muted-foreground/20 hover:text-muted-foreground"
             {...attributes}
             {...listeners}
           >
@@ -152,24 +152,29 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
               {status.label}
             </Badge>
           </div>
-          <div className="flex items-center gap-2 mt-px">
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <Clock className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
-              {timeDisplay || "tbc"}
-            </span>
-            {item.location_text && (
-              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                <MapPin className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
-                <span className="truncate max-w-[120px]">{item.location_text}</span>
+          <div className="flex items-center gap-0 mt-px">
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
+                <Clock className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
+                {timeDisplay || "tbc"}
               </span>
-            )}
-            <div className="flex items-center gap-0 ml-auto shrink-0">
-              <button onClick={onEdit} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors">
-                <Pencil className="h-3 w-3" />
+              {item.location_text && (
+                <>
+                  <span className="text-muted-foreground/30 text-[10px]">·</span>
+                  <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground min-w-0">
+                    <MapPin className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
+                    <span className="truncate">{item.location_text}</span>
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-0 shrink-0 opacity-40 hover:opacity-100 transition-opacity">
+              <button onClick={onEdit} className="h-5 w-5 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors">
+                <Pencil className="h-2.5 w-2.5" />
               </button>
               {canDelete && (
-                <button onClick={() => setConfirmOpen(true)} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive transition-colors">
-                  <Trash2 className="h-3 w-3" />
+                <button onClick={() => setConfirmOpen(true)} className="h-5 w-5 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive transition-colors">
+                  <Trash2 className="h-2.5 w-2.5" />
                 </button>
               )}
               <ItemComments tripId={tripId} itemId={item.id} />
