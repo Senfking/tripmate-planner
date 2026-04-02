@@ -61,7 +61,7 @@ export function useGlobalItinerary() {
         { data: attendance },
         { data: routeStops },
       ] = await Promise.all([
-        supabase.from("trips").select("id, name, emoji, tentative_start_date, tentative_end_date").in("id", tripIds),
+        supabase.from("trips").select("id, name, emoji, tentative_start_date, tentative_end_date, destination, cover_image_path").in("id", tripIds),
         supabase
           .from("itinerary_items")
           .select("id, trip_id, title, day_date, start_time, end_time, location_text, status")
