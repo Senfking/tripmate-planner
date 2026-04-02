@@ -35,6 +35,7 @@ export function FeedbackWidget() {
   const [aiLoading, setAiLoading] = useState(false);
   const [analyzingScreenshot, setAnalyzingScreenshot] = useState(false);
   const [screenshotHint, setScreenshotHint] = useState<string | null>(null);
+  const [screenshotAnalysisFailed, setScreenshotAnalysisFailed] = useState(false);
   const [isAppScreenshot, setIsAppScreenshot] = useState(true);
   const [screenshotHintRating, setScreenshotHintRating] = useState<'up' | 'down' | null>(null);
   const [pwaHintOpen, setPwaHintOpen] = useState(false);
@@ -111,6 +112,7 @@ export function FeedbackWidget() {
     setSubmitting(false);
     setAnalyzingScreenshot(false);
     setScreenshotHint(null);
+    setScreenshotAnalysisFailed(false);
     setIsAppScreenshot(true);
     setScreenshotHintRating(null);
     setPwaHintOpen(false);
@@ -146,6 +148,7 @@ export function FeedbackWidget() {
 
     setScreenshotFile(file);
     setScreenshotHint(null);
+    setScreenshotAnalysisFailed(false);
     setIsAppScreenshot(true);
     setScreenshotHintRating(null);
     const url = URL.createObjectURL(file);
@@ -156,7 +159,7 @@ export function FeedbackWidget() {
       const base64 = await fileToBase64(file);
       const mediaType = file.type || "image/jpeg";
 
-      const { data } = await supabase.functions.invoke("analyze-feedback", {
+      const { data, error } = await supabase.functions.invoke("analyze-feedback", {
         body: {
           action: "describe_screenshot",
           image_base64: base64,
@@ -165,18 +168,30 @@ export function FeedbackWidget() {
         },
       });
 
-      if (data?.hint) {
-        setScreenshotHint(data.hint);
+      if (error) {
+        console.error("Screenshot analysis error:", error);
+        setScreenshotAnalysisFailed(true);
+        return;
+      }
+
+      // Handle data being a string (some Supabase client versions don't auto-parse)
+      const parsed = typeof data === "string" ? JSON.parse(data) : data;
+
+      if (parsed?.hint) {
+        setScreenshotHint(parsed.hint);
         // Scroll the hint into view after a short delay for render
         setTimeout(() => {
           hintRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }, 100);
+      } else {
+        setScreenshotAnalysisFailed(true);
       }
-      if (data?.is_app_screenshot === false) {
+      if (parsed?.is_app_screenshot === false) {
         setIsAppScreenshot(false);
       }
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error("Screenshot analysis failed:", err);
+      setScreenshotAnalysisFailed(true);
     } finally {
       setAnalyzingScreenshot(false);
     }
@@ -187,6 +202,7 @@ export function FeedbackWidget() {
     if (screenshotPreview) URL.revokeObjectURL(screenshotPreview);
     setScreenshotPreview(null);
     setScreenshotHint(null);
+    setScreenshotAnalysisFailed(false);
     setIsAppScreenshot(true);
     setScreenshotHintRating(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -428,6 +444,11 @@ export function FeedbackWidget() {
                   {analyzingScreenshot && (
                     <p className="text-xs animate-pulse mt-2" style={{ color: "#0D9488" }}>
                       AI is squinting at your screenshot...
+                    </p>
+                  )}
+                  {screenshotAnalysisFailed && !analyzingScreenshot && (
+                    <p className="text-xs text-muted-foreground italic mt-2">
+                      AI couldn't analyze the screenshot — no worries, just describe the issue below.
                     </p>
                   )}
                   {screenshotHint && !analyzingScreenshot && (
