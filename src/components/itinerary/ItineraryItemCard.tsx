@@ -99,29 +99,28 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
 
   const cardContent = (
     <div className="w-full overflow-hidden">
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-1.5">
         {isDraggable && (
           <button
-            className="mt-0.5 shrink-0 touch-none text-muted-foreground/25 transition-colors hover:text-muted-foreground/70 cursor-grab active:cursor-grabbing"
+            className="mt-[3px] shrink-0 touch-none text-muted-foreground/20 transition-colors hover:text-muted-foreground/60 cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
-            <GripVertical className="h-3.5 w-3.5" />
+            <GripVertical className="h-3 w-3" />
           </button>
         )}
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <p className="min-w-0 flex-1 truncate pr-1 text-[14px] font-semibold leading-tight text-foreground">
+        <div className="min-w-0 flex-1 space-y-1">
+          {/* Title + status */}
+          <div className="flex items-center justify-between gap-1.5">
+            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug text-foreground">
               {item.title}
             </p>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               {overlapTitles?.length ? (
                 <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-background/80 text-amber-500 shadow-sm">
-                        <AlertTriangle className="h-3 w-3" />
-                      </span>
+                      <AlertTriangle className="h-3 w-3 shrink-0 text-amber-500" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[240px] text-xs">
                       Overlaps with {overlapTitles.join(", ")}
@@ -130,12 +129,12 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
                 </TooltipProvider>
               ) : null}
               {showNewPill && (
-                <span className="inline-flex shrink-0 rounded-full border border-primary/15 bg-primary/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-primary">
+                <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-px text-[8px] font-bold uppercase tracking-wider text-primary">
                   New
                 </span>
               )}
               <span className={cn(
-                "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                "shrink-0 rounded px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide",
                 status.bg,
                 status.text,
               )}>
@@ -144,42 +143,42 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Clock className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-              <span className="shrink-0 font-medium">{timeDisplay || "tbc"}</span>
+          {/* Meta + actions */}
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex items-center gap-1 text-[11px] text-muted-foreground/70">
+              <Clock className="h-2.5 w-2.5 shrink-0" />
+              <span className="shrink-0">{timeDisplay || "tbc"}</span>
               {item.location_text && (
                 <>
-                  <span className="text-muted-foreground/30">·</span>
-                  <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                  <span className="text-muted-foreground/25">·</span>
+                  <MapPin className="h-2.5 w-2.5 shrink-0" />
                   <span className="truncate">{item.location_text}</span>
                 </>
               )}
             </div>
-            <div className="ml-2 flex shrink-0 items-center gap-0.5">
+            <div className="ml-1 flex shrink-0 items-center">
               <button
                 onClick={onEdit}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground/45 transition-colors hover:border-border/60 hover:bg-muted/50 hover:text-foreground/75"
+                className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/30 transition-colors hover:text-foreground/70"
               >
-                <Pencil className="h-3 w-3" />
+                <Pencil className="h-2.5 w-2.5" />
               </button>
               {canDelete && (
                 <button
                   onClick={() => setConfirmOpen(true)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground/45 transition-colors hover:border-border/60 hover:bg-muted/50 hover:text-destructive/70"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/30 transition-colors hover:text-destructive/70"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-2.5 w-2.5" />
                 </button>
               )}
+              <ItemComments tripId={tripId} itemId={item.id} />
             </div>
           </div>
-
-          <ItemComments tripId={tripId} itemId={item.id} />
         </div>
       </div>
 
       {user && members.length > 0 && (
-        <div className="mt-2 border-t border-border/50 pt-2">
+        <div className="mt-1.5">
           <AttendanceRow
             members={members}
             attendance={attendance}
@@ -234,7 +233,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "w-full max-w-full overflow-hidden rounded-2xl bg-white/95 px-3.5 py-3 transition-all duration-200 dark:bg-card/95",
+            "w-full max-w-full overflow-hidden rounded-xl bg-white dark:bg-card px-3 py-2 transition-all duration-200",
             isDragging && "opacity-50 ring-2 ring-primary/30",
             !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400/60",
             animPhase === "fadein" && "animate-fade-in-card",
