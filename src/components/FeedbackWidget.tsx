@@ -35,6 +35,7 @@ export function FeedbackWidget() {
   const [aiLoading, setAiLoading] = useState(false);
   const [analyzingScreenshot, setAnalyzingScreenshot] = useState(false);
   const [screenshotHint, setScreenshotHint] = useState<string | null>(null);
+  const [screenshotAnalysisFailed, setScreenshotAnalysisFailed] = useState(false);
   const [isAppScreenshot, setIsAppScreenshot] = useState(true);
   const [screenshotHintRating, setScreenshotHintRating] = useState<'up' | 'down' | null>(null);
   const [pwaHintOpen, setPwaHintOpen] = useState(false);
@@ -67,7 +68,10 @@ export function FeedbackWidget() {
       });
     };
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
   }, [getDefaultY]);
 
   const clampY = (y: number) =>
@@ -98,6 +102,8 @@ export function FeedbackWidget() {
     }
   };
 
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   if (!user) return null;
 
   const reset = () => {
@@ -111,13 +117,38 @@ export function FeedbackWidget() {
     setSubmitting(false);
     setAnalyzingScreenshot(false);
     setScreenshotHint(null);
+    setScreenshotAnalysisFailed(false);
     setIsAppScreenshot(true);
     setScreenshotHintRating(null);
     setPwaHintOpen(false);
   };
 
-  const handleOpen = () => { reset(); setOpen(true); };
-  const handleClose = () => { setOpen(false); };
+  const clearResetTimer = () => {
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+  };
+
+  const handleOpen = () => {
+    clearResetTimer();
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    // After successful submission, reset immediately
+    if (step === "success") {
+      reset();
+    } else {
+      // Keep state for 5 minutes so user can resume
+      clearResetTimer();
+      resetTimerRef.current = setTimeout(() => {
+        reset();
+        resetTimerRef.current = null;
+      }, 5 * 60 * 1000);
+    }
+  };
 
   const selectCategory = (cat: Category) => {
     setCategory(cat);
@@ -130,6 +161,35 @@ export function FeedbackWidget() {
       reader.onload = () => resolve((reader.result as string).split(",")[1]);
       reader.onerror = reject;
       reader.readAsDataURL(file);
+    });
+
+  /** Resize image to max 1024px on longest side and return { base64, mediaType } */
+  const compressImage = (file: File): Promise<{ base64: string; mediaType: string }> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1024;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          const scale = MAX / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        resolve({
+          base64: dataUrl.split(",")[1],
+          mediaType: "image/jpeg",
+        });
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = URL.createObjectURL(file);
     });
 
   const hintRef = useRef<HTMLDivElement>(null);
@@ -146,6 +206,7 @@ export function FeedbackWidget() {
 
     setScreenshotFile(file);
     setScreenshotHint(null);
+    setScreenshotAnalysisFailed(false);
     setIsAppScreenshot(true);
     setScreenshotHintRating(null);
     const url = URL.createObjectURL(file);
@@ -153,10 +214,10 @@ export function FeedbackWidget() {
 
     setAnalyzingScreenshot(true);
     try {
-      const base64 = await fileToBase64(file);
-      const mediaType = file.type || "image/jpeg";
+      // Compress to ~1024px JPEG to stay within edge function body limits
+      const { base64, mediaType } = await compressImage(file);
 
-      const { data } = await supabase.functions.invoke("analyze-feedback", {
+      const { data, error } = await supabase.functions.invoke("analyze-feedback", {
         body: {
           action: "describe_screenshot",
           image_base64: base64,
@@ -165,18 +226,30 @@ export function FeedbackWidget() {
         },
       });
 
-      if (data?.hint) {
-        setScreenshotHint(data.hint);
+      if (error) {
+        console.error("Screenshot analysis error:", error);
+        setScreenshotAnalysisFailed(true);
+        return;
+      }
+
+      // Handle data being a string (some Supabase client versions don't auto-parse)
+      const parsed = typeof data === "string" ? JSON.parse(data) : data;
+
+      if (parsed?.hint) {
+        setScreenshotHint(parsed.hint);
         // Scroll the hint into view after a short delay for render
         setTimeout(() => {
           hintRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }, 100);
+      } else {
+        setScreenshotAnalysisFailed(true);
       }
-      if (data?.is_app_screenshot === false) {
+      if (parsed?.is_app_screenshot === false) {
         setIsAppScreenshot(false);
       }
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error("Screenshot analysis failed:", err);
+      setScreenshotAnalysisFailed(true);
     } finally {
       setAnalyzingScreenshot(false);
     }
@@ -187,6 +260,7 @@ export function FeedbackWidget() {
     if (screenshotPreview) URL.revokeObjectURL(screenshotPreview);
     setScreenshotPreview(null);
     setScreenshotHint(null);
+    setScreenshotAnalysisFailed(false);
     setIsAppScreenshot(true);
     setScreenshotHintRating(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -425,6 +499,11 @@ export function FeedbackWidget() {
                   {analyzingScreenshot && (
                     <p className="text-xs animate-pulse mt-2" style={{ color: "#0D9488" }}>
                       AI is squinting at your screenshot...
+                    </p>
+                  )}
+                  {screenshotAnalysisFailed && !analyzingScreenshot && (
+                    <p className="text-xs text-muted-foreground italic mt-2">
+                      AI couldn't analyze the screenshot — no worries, just describe the issue below.
                     </p>
                   )}
                   {screenshotHint && !analyzingScreenshot && (
