@@ -163,7 +163,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                   onCycle();
                 }}
                 className={cn(
-                  "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold border-2 border-white dark:border-card transition-colors overflow-hidden",
+                  "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold border-2 border-white dark:border-card transition-colors",
                   !member.avatar_url && (status === "out"
                     ? "bg-muted/60 text-muted-foreground/40"
                     : "bg-secondary text-secondary-foreground"),
@@ -180,7 +180,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                   <img
                     src={member.avatar_url}
                     alt={member.display_name || ""}
-                    className={cn("h-full w-full object-cover", status === "out" && "opacity-40 grayscale")}
+                    className={cn("h-full w-full rounded-full object-cover", status === "out" && "opacity-40 grayscale")}
                   />
                 ) : (
                   getInitials(member.display_name)
