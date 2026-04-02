@@ -15,13 +15,13 @@ const CATEGORY_CONFIG: Record<string, {
   iconColor: string;
   bgColor: string;
 }> = {
-  food:          { icon: Utensils,       label: "Food & Drink",  iconColor: "#D97706", bgColor: "rgba(217,119,6,0.08)" },
-  transport:     { icon: Car,            label: "Transport",     iconColor: "#2563EB", bgColor: "rgba(37,99,235,0.08)" },
-  accommodation: { icon: Hotel,          label: "Accommodation", iconColor: "#7C3AED", bgColor: "rgba(124,58,237,0.08)" },
-  activities:    { icon: Ticket,         label: "Activities",    iconColor: "#059669", bgColor: "rgba(5,150,105,0.08)" },
-  shopping:      { icon: ShoppingBag,    label: "Shopping",      iconColor: "#DC2626", bgColor: "rgba(220,38,38,0.08)" },
+  food:          { icon: Utensils,       label: "Food & Drink",  iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  transport:     { icon: Car,            label: "Transport",     iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  accommodation: { icon: Hotel,          label: "Accommodation", iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  activities:    { icon: Ticket,         label: "Activities",    iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
+  shopping:      { icon: ShoppingBag,    label: "Shopping",      iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
   settlement:    { icon: ArrowLeftRight, label: "Settlement",    iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
-  other:         { icon: MoreHorizontal, label: "Other",         iconColor: "#6B7280", bgColor: "rgba(107,114,128,0.08)" },
+  other:         { icon: MoreHorizontal, label: "Other",         iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
 };
 
 interface Props {
