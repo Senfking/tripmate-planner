@@ -24,26 +24,28 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
     postComment.mutate(body.trim(), { onSuccess: () => setBody("") });
   };
 
+  const count = comments.length;
+
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
-        <button className="inline-flex h-6 w-6 items-center justify-center gap-0.5 rounded text-muted-foreground/30 transition-colors hover:text-foreground/70">
-          <MessageCircle className="h-2.5 w-2.5" />
-          {comments.length > 0 && (
-            <span className="text-[9px] font-medium">{comments.length}</span>
-          )}
+        <button className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground/60 hover:text-foreground/70 hover:bg-muted/40 transition-colors">
+          <MessageCircle className="h-3 w-3" />
+          {count > 0 && <span className="font-medium">{count}</span>}
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="mt-1.5 w-full max-w-full space-y-1.5 overflow-hidden border-t border-border/30 pt-1.5">
-        {comments.length === 0 && (
-          <p className="text-[10px] text-muted-foreground/50">No comments yet.</p>
+
+      <CollapsibleContent className="col-span-full mt-2 space-y-2 border-t border-border/30 pt-2 px-3 pb-2 w-full overflow-hidden">
+        {count === 0 && (
+          <p className="text-[11px] text-muted-foreground/50">No comments yet.</p>
         )}
+
         {comments.map((c) => (
-          <div key={c.id} className={`w-full overflow-hidden ${newCommentIds?.has(c.id) ? "animate-realtime-flash" : ""}`}>
-            <div className="flex items-center justify-between gap-1">
-              <span className="font-medium text-[11px] text-foreground/80 truncate">{c.display_name || "Member"}</span>
+          <div key={c.id} className={`${newCommentIds?.has(c.id) ? "animate-realtime-flash" : ""}`}>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[12px] font-medium text-foreground/80 truncate">{c.display_name || "Member"}</span>
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] text-muted-foreground/50">
+                <span className="text-[10px] text-muted-foreground/40">
                   {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
                 </span>
                 {c.user_id === user?.id && (
@@ -56,22 +58,23 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
                 )}
               </div>
             </div>
-            <p className="text-muted-foreground text-[11px] break-words whitespace-pre-wrap leading-relaxed">{c.body}</p>
+            <p className="text-[12px] text-muted-foreground leading-relaxed break-words whitespace-pre-wrap">{c.body}</p>
           </div>
         ))}
-        <div className="flex w-full max-w-full gap-1.5">
+
+        <div className="flex gap-2">
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Add a comment…"
+            placeholder="Write a comment…"
             rows={1}
-            className="min-h-[28px] min-w-0 flex-1 resize-none py-1 px-2 text-[11px]"
+            className="min-h-[32px] min-w-0 flex-1 resize-none rounded-lg border-border/50 bg-muted/30 px-2.5 py-1.5 text-[12px] placeholder:text-muted-foreground/40"
           />
           <Button
             size="sm"
             onClick={handlePost}
             disabled={!body.trim() || postComment.isPending}
-            className="h-[28px] shrink-0 self-end px-2.5 text-[10px]"
+            className="h-[32px] shrink-0 self-end rounded-lg px-3 text-[11px]"
           >
             Post
           </Button>
