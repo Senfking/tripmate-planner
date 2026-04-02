@@ -175,9 +175,9 @@ export function AttendanceInviteOverlay({
         onClick={isFull && !closing ? handleDismiss : undefined}
       />
 
-      {/* Single full-height sheet — translated when peeking */}
+      {/* Single full-height sheet — translated when peeking; centered modal on desktop */}
       <div
-        className="fixed inset-0 z-[60]"
+        className="fixed inset-0 z-[60] md:flex md:items-center md:justify-center"
         style={{
           transform: isFull ? "translateY(0)" : `translateY(${peekTranslate})`,
           transition: "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)",
