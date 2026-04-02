@@ -302,7 +302,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           id?: string
-          rating: number
+          rating?: number
           route?: string | null
           screenshot_url?: string | null
           status?: string | null
