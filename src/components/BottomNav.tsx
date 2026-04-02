@@ -43,6 +43,7 @@ function NavTab({ to, label, icon: Icon, badge }: { to: string; label: string; i
             "transition-all duration-300",
             isActive ? "h-[22px] w-[22px] text-primary" : "h-5 w-5 text-muted-foreground/60"
           )}
+          strokeWidth={1.5}
         />
         {badge != null && badge > 0 && (
           <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0D9488] px-1 text-[10px] font-bold text-white">
@@ -75,10 +76,15 @@ export function BottomNav() {
         className="relative overflow-hidden rounded-[28px]"
         style={{
           background: "rgba(255, 255, 255, 0.85)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
           borderTop: "1px solid rgba(255, 255, 255, 0.3)",
           boxShadow: "0 -4px 24px rgba(0, 0, 0, 0.06)",
+          WebkitTransform: "translateZ(0)",
+          transform: "translateZ(0)",
+          WebkitBackfaceVisibility: "hidden",
+          backfaceVisibility: "hidden",
+          willChange: "transform",
         }}
       >
 
