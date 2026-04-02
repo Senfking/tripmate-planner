@@ -99,11 +99,9 @@ function AppInner() {
             <Route path="/ref" element={<ReferralLanding />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="/app/admin" element={<ProtectedRoute />}>
-              <Route index element={<Admin />} />
-            </Route>
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
+              <Route path="/app/admin" element={<Admin />} />
               <Route element={<AppLayout />}>
                 <Route path="/app/trips" element={<TripList />} />
                 <Route path="/app/trips/new" element={<TripNew />} />
