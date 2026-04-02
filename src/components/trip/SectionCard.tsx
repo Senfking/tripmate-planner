@@ -18,9 +18,10 @@ interface SectionCardProps {
   to: string;
   badge?: { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
   imageUrl: string;
+  className?: string;
 }
 
-export function SectionCard({ icon: Icon, title, summary, summaryColor, subline, to, badge, imageUrl }: SectionCardProps) {
+export function SectionCard({ icon: Icon, title, summary, summaryColor, subline, to, badge, imageUrl, className }: SectionCardProps) {
   const navigate = useNavigate();
 
   return (
