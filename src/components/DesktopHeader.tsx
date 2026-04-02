@@ -56,7 +56,10 @@ export function DesktopHeader() {
       {/* Row 1 — Brand + Avatar */}
       <div className="relative z-10 flex items-center justify-between h-[44px] px-6 max-w-[1200px] mx-auto">
         <div className="w-7" /> {/* spacer to center wordmark */}
-        <span className="text-[13px] font-extrabold tracking-[0.25em] uppercase text-white">
+        <span
+          className="text-white font-bold"
+          style={{ fontSize: 18, letterSpacing: "0.18em" }}
+        >
           JUNTO
         </span>
         <HeaderAvatar />
