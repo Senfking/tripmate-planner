@@ -172,7 +172,7 @@ export default function ReferralLanding() {
               textShadow: "0 1px 8px rgba(0,0,0,0.5)",
             }}
           >
-            Ditch the group chat chaos. Plan, split & decide — all in one place.
+            Ditch the group chat chaos. Plan, split & decide, all in one place.
           </p>
 
           {/* Rotating statement panel */}
