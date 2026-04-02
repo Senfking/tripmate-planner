@@ -129,11 +129,13 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="px-4 pb-6">
+        <DrawerContent className="px-4 pb-6 max-h-[85dvh]">
           <DrawerHeader className="px-0">
             <DrawerTitle>{heading}</DrawerTitle>
           </DrawerHeader>
-          {formContent}
+          <div className="overflow-y-auto flex-1 min-h-0">
+            {formContent}
+          </div>
         </DrawerContent>
       </Drawer>
     );
