@@ -101,6 +101,7 @@ export function ImportItineraryModal({
     const token = sessionData?.session?.access_token;
     if (!token) throw new Error("Not authenticated");
 
+    trackEvent("ai_itinerary_import", { input_type: body.type as string, trip_id: tripId }, user?.id);
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     const res = await fetch(
       `https://${projectId}.supabase.co/functions/v1/parse-itinerary`,
