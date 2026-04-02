@@ -38,84 +38,59 @@ export function FeedbackWidget() {
   const [pwaHintOpen, setPwaHintOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Draggable FAB state
-  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null);
+  // Draggable vertical tab state — vertical drag only
+  const [tabY, setTabY] = useState<number | null>(null);
   const dragRef = useRef<{
     dragging: boolean;
     moved: boolean;
-    startX: number;
     startY: number;
-    startPosX: number;
     startPosY: number;
-    holdTimer: ReturnType<typeof setTimeout> | null;
-  }>({ dragging: false, moved: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0, holdTimer: null });
+  }>({ dragging: false, moved: false, startY: 0, startPosY: 0 });
   const fabRef = useRef<HTMLButtonElement>(null);
 
-  const getDefaultPos = useCallback(() => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    return { x: w - 68, y: h - (isMobile ? 160 : 100) };
-  }, [isMobile]);
+  const TAB_HEIGHT = 90;
+
+  const getDefaultY = useCallback(() => {
+    return Math.round(window.innerHeight * 0.45);
+  }, []);
 
   useEffect(() => {
-    setFabPos(getDefaultPos());
+    setTabY(getDefaultY());
     const onResize = () => {
-      setFabPos((prev) => {
-        if (!prev) return getDefaultPos();
-        return {
-          x: Math.min(prev.x, window.innerWidth - 56),
-          y: Math.min(prev.y, window.innerHeight - 56),
-        };
+      setTabY((prev) => {
+        if (prev == null) return getDefaultY();
+        return Math.min(prev, window.innerHeight - TAB_HEIGHT);
       });
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [getDefaultPos]);
+  }, [getDefaultY]);
 
-  const clampPos = (x: number, y: number) => ({
-    x: Math.max(8, Math.min(x, window.innerWidth - 56)),
-    y: Math.max(8, Math.min(y, window.innerHeight - 56)),
-  });
+  const clampY = (y: number) =>
+    Math.max(60, Math.min(y, window.innerHeight - TAB_HEIGHT - 20));
 
   const handlePointerDown = (e: React.PointerEvent) => {
     const d = dragRef.current;
     d.moved = false;
-    d.startX = e.clientX;
     d.startY = e.clientY;
-    d.startPosX = fabPos?.x ?? 0;
-    d.startPosY = fabPos?.y ?? 0;
-    d.holdTimer = setTimeout(() => {
-      d.dragging = true;
-      fabRef.current?.setPointerCapture(e.pointerId);
-      if (fabRef.current) fabRef.current.style.cursor = "grabbing";
-    }, 300);
+    d.startPosY = tabY ?? 0;
+    d.dragging = true;
+    fabRef.current?.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     const d = dragRef.current;
-    const dx = e.clientX - d.startX;
+    if (!d.dragging) return;
     const dy = e.clientY - d.startY;
-    if (!d.dragging && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
-      if (d.holdTimer) { clearTimeout(d.holdTimer); d.holdTimer = null; }
-    }
-    if (d.dragging) {
-      d.moved = true;
-      setFabPos(clampPos(d.startPosX + dx, d.startPosY + dy));
-    }
+    if (Math.abs(dy) > 4) d.moved = true;
+    setTabY(clampY(d.startPosY + dy));
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     const d = dragRef.current;
-    if (d.holdTimer) { clearTimeout(d.holdTimer); d.holdTimer = null; }
     if (d.dragging) {
       d.dragging = false;
       fabRef.current?.releasePointerCapture(e.pointerId);
-      if (fabRef.current) fabRef.current.style.cursor = "";
-      setFabPos((prev) => {
-        if (!prev) return prev;
-        const midX = window.innerWidth / 2;
-        return { x: prev.x < midX ? 16 : window.innerWidth - 64, y: prev.y };
-      });
     }
   };
 
