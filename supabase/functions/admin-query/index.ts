@@ -350,6 +350,7 @@ Deno.serve(async (req) => {
             receipt_scans: counts["ai_receipt_scan"] || 0,
             feedback_hints: counts["ai_feedback_hint"] || 0,
             itinerary_imports: counts["ai_itinerary_import"] || 0,
+            booking_extracts: counts["ai_booking_extract"] || 0,
             total: Object.values(counts).reduce((a, b) => a + b, 0),
           }))
           .sort((a, b) => b.total - a.total)
