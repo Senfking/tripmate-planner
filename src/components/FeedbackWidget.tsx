@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { MessageSquare, ChevronLeft, X, Loader2, Sparkles, Upload, Info } from "lucide-react";
+import { ChevronLeft, X, Loader2, Sparkles, Upload, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
