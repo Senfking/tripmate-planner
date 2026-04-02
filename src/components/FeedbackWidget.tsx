@@ -445,7 +445,7 @@ export function FeedbackWidget() {
             right: 0,
             top: tabY,
             writingMode: "vertical-rl",
-            textOrientation: "mixed",
+            transform: "rotate(180deg)",
             background: "linear-gradient(180deg, #0D9488 0%, #0F766E 100%)",
             color: "#fff",
             fontSize: 13,
