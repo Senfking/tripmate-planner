@@ -22,7 +22,7 @@ const Expenses = () => {
 
   if (showSkeleton) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Expenses" subtitle="Loading…" />
         <div className="px-4 mt-4 space-y-2">
           {[1, 2].map((i) => (
