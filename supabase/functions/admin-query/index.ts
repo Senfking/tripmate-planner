@@ -805,7 +805,7 @@ Deno.serve(async (req) => {
         let query = db.from("feedback").select("*").order("created_at", { ascending: false }).limit(200);
 
         if (statusFilter === "unresolved") {
-          query = query.or("status.is.null,status.neq.resolved");
+          query = query.or("status.is.null,status.neq.done");
         } else if (statusFilter === "critical") {
           query = query.eq("ai_severity", "critical");
         } else if (statusFilter === "high") {
@@ -851,8 +851,8 @@ Deno.serve(async (req) => {
       case "system_status": {
         const [exchangeRate, unresolvedFb, criticalFb, recentSignups, priorSignups, aiToday, aiWeekly] = await Promise.all([
           db.from("exchange_rate_cache").select("fetched_at").eq("base_currency", "EUR").maybeSingle(),
-          db.from("feedback").select("id", { count: "exact", head: true }).or("status.is.null,status.neq.resolved"),
-          db.from("feedback").select("id, body, ai_summary, created_at").eq("ai_severity", "critical").or("status.is.null,status.neq.resolved"),
+          db.from("feedback").select("id", { count: "exact", head: true }).or("status.is.null,status.neq.done"),
+          db.from("feedback").select("id, body, ai_summary, created_at").eq("ai_severity", "critical").or("status.is.null,status.neq.done"),
           db.from("profiles").select("id", { count: "exact", head: true }).filter("created_at", "gt", new Date(Date.now() - 7 * 86400000).toISOString()),
           db.from("profiles").select("id", { count: "exact", head: true })
             .filter("created_at", "gt", new Date(Date.now() - 14 * 86400000).toISOString())
