@@ -118,6 +118,50 @@ export function useItinerary(tripId: string) {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const batchAddItems = useMutation({
+    mutationFn: async (
+      batch: {
+        day_date: string;
+        title: string;
+        start_time?: string | null;
+        end_time?: string | null;
+        location_text?: string | null;
+        notes?: string | null;
+        status?: string;
+      }[]
+    ) => {
+      // Pre-compute sort_order per day
+      const maxByDay: Record<string, number> = {};
+      for (const item of items) {
+        maxByDay[item.day_date] = Math.max(maxByDay[item.day_date] ?? -1, item.sort_order);
+      }
+
+      const rows = batch.map((item) => {
+        const current = (maxByDay[item.day_date] ?? -1) + 1;
+        maxByDay[item.day_date] = current;
+        return {
+          trip_id: tripId,
+          day_date: item.day_date,
+          title: item.title,
+          start_time: item.start_time || null,
+          end_time: item.end_time || null,
+          location_text: item.location_text || null,
+          notes: item.notes || null,
+          status: item.status || "idea",
+          sort_order: current,
+          created_by: user!.id,
+        };
+      });
+
+      const { error } = await supabase.from("itinerary_items").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const reorderItems = useMutation({
     mutationFn: async (reordered: { id: string; sort_order: number }[]) => {
       const promises = reordered.map((r) =>
@@ -147,5 +191,5 @@ export function useItinerary(tripId: string) {
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
 
-  return { items, isLoading, addItem, updateItem, deleteItem, reorderItems };
+  return { items, isLoading, addItem, batchAddItems, updateItem, deleteItem, reorderItems };
 }

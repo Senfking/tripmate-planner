@@ -29,7 +29,7 @@ interface Props {
 
 export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItinerary(tripId);
+  const { items, isLoading, addItem, batchAddItems, updateItem, deleteItem, reorderItems } = useItinerary(tripId);
   const { stops } = useRouteStops(tripId);
   const { attendance, members, cycleStatus } = useItineraryAttendance(tripId);
   const [addDayOpen, setAddDayOpen] = useState(false);
@@ -226,6 +226,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
         tripId={tripId}
         tripStartDate={tripStartDate ?? null}
         onAddItem={(data) => addItem.mutate(data)}
+        onBatchAddItems={(items) => batchAddItems.mutateAsync(items)}
       />
 
       {newDayDate && (
