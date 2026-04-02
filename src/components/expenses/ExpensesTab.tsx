@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
-import { calcNetBalances, calcSettlements, formatCurrency } from "@/lib/settlementCalc";
+import { calcNetBalances, calcSettlements, convertAmount, formatCurrency } from "@/lib/settlementCalc";
 import { SettlementCurrencyPicker } from "./SettlementCurrencyPicker";
 import { BalancesSummary } from "./BalancesSummary";
 import { SettleUpSection, SettlementProgress } from "./SettleUpSection";
@@ -161,13 +161,23 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     return { type: "settled" as const, amount: 0, subline: "" };
   }, [settlements, user?.id]);
 
-  // "Total expenses" and "Contributors" stats for the hero card
-  const heroStats = useMemo(() => {
+  // "You paid" and "Your share" stats for the hero card
+  const myStats = useMemo(() => {
     const nonSettlement = expenses.filter((e) => e.category !== "settlement");
-    const totalExpenses = nonSettlement.reduce((sum, e) => sum + e.amount, 0);
-    const contributors = new Set(nonSettlement.map((e) => e.payer_id)).size;
-    return { totalExpenses, contributors };
-  }, [expenses]);
+    const totalPaid = nonSettlement
+      .filter((e) => e.payer_id === user?.id)
+      .reduce((sum, e) => {
+        const converted = convertAmount(e.amount, e.currency, settlementCurrency, settlementCurrency, rates);
+        return sum + (converted ?? 0);
+      }, 0);
+    const myShare = nonSettlement.reduce((sum, e) => {
+      const mySplit = splits.find((s) => s.expense_id === e.id && s.user_id === user?.id);
+      if (!mySplit) return sum;
+      const converted = convertAmount(mySplit.share_amount, e.currency, settlementCurrency, settlementCurrency, rates);
+      return sum + (converted ?? 0);
+    }, 0);
+    return { totalPaid, myShare };
+  }, [expenses, splits, user?.id, settlementCurrency, rates]);
 
   // Settle up: separate mine vs others
   const { mySettlements, otherSettlements } = useMemo(() => {
@@ -321,19 +331,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </div>
           )}
 
-          {/* Stat chips: Total expenses / Contributors */}
-          {(heroStats.totalExpenses > 0.005 || heroStats.contributors > 0) && (
+          {/* Stat chips: You paid / Your share */}
+          {(myStats.totalPaid > 0.005 || myStats.myShare > 0.005) && (
             <div className="relative flex justify-center gap-3 mt-5 px-4">
               <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
-                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">Total expenses</p>
+                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">You paid</p>
                 <p className="text-[15px] font-bold text-white tabular-nums">
-                  {formatCurrency(heroStats.totalExpenses, settlementCurrency)}
+                  {formatCurrency(myStats.totalPaid, settlementCurrency)}
                 </p>
               </div>
               <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
-                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">Contributors</p>
+                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">Your share</p>
                 <p className="text-[15px] font-bold text-white tabular-nums">
-                  {heroStats.contributors}
+                  {formatCurrency(myStats.myShare, settlementCurrency)}
                 </p>
               </div>
             </div>
