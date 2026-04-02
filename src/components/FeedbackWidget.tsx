@@ -260,19 +260,30 @@ export function FeedbackWidget() {
           </div>
 
           {/* PWA install hint */}
-          <div className="mt-5">
+          <div className="mt-6 rounded-xl border border-border/60 overflow-hidden">
             <button
               type="button"
               onClick={() => setPwaHintOpen((v) => !v)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground w-full"
+              className="flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground w-full px-3.5 py-3"
             >
-              <Info className="h-3 w-3 shrink-0" />
-              <span>Junto works best added to your home screen</span>
+              <Smartphone className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1 text-left">Junto works best added to your home screen</span>
+              <ChevronDown className={`h-3 w-3 shrink-0 transition-transform duration-200 ${pwaHintOpen ? "rotate-180" : ""}`} />
             </button>
             {pwaHintOpen && (
-              <p className="text-xs text-muted-foreground mt-1 pl-[18px]">
-                Junto isn't a native app yet. For the best experience, add it to your home screen: tap Share → Add to Home Screen in Safari, or the menu in Chrome.
-              </p>
+              <div className="px-3.5 pb-3 -mt-0.5 space-y-2">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Junto isn't a native app yet. For the best experience, add it to your home screen:
+                </p>
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <Share className="h-3 w-3 shrink-0 mt-0.5" />
+                  <span>Tap <strong>Share</strong> → <strong>Add to Home Screen</strong> in Safari</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <span className="shrink-0 mt-0.5 text-[10px] leading-none">⋮</span>
+                  <span>Or tap the <strong>menu</strong> in Chrome</span>
+                </div>
+              </div>
             )}
           </div>
         </div>
