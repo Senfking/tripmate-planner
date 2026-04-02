@@ -166,11 +166,14 @@ export function AttendanceInviteOverlay({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[59] bg-black/50"
+        className="fixed inset-0 z-[59]"
         style={{
+          backgroundColor: "rgba(0,0,0,0.5)",
+          backdropFilter: isFull && !closing ? "blur(4px)" : "none",
+          WebkitBackdropFilter: isFull && !closing ? "blur(4px)" : "none",
           opacity: isFull && !closing ? 1 : 0,
           pointerEvents: isFull && !closing ? "auto" : "none",
-          transition: "opacity 0.45s ease",
+          transition: "opacity 0.45s ease, backdrop-filter 0.45s ease",
         }}
         onClick={isFull && !closing ? handleDismiss : undefined}
       />

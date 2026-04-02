@@ -292,4 +292,20 @@ html, body, #root {
   .animate-confetti-burst {
     animation: confetti-burst 1s ease-out forwards;
   }
+
+  /* Desktop: subtle background texture */
+  @media (min-width: 768px) {
+    .desktop-bg-texture {
+      background: linear-gradient(180deg, hsl(166 76% 97%) 0%, hsl(166 40% 95%) 100%);
+    }
+  }
+
+  /* Fade-in for cards */
+  @keyframes fade-in-card {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-card {
+    animation: fade-in-card 0.35s ease-out;
+  }
 }
