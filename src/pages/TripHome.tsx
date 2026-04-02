@@ -262,7 +262,7 @@ export default function TripHome() {
 
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
-  const [postCreateShareOpen, setPostCreateShareOpen] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [coverMenuOpen, setCoverMenuOpen] = useState(false);
   const [croppingCover, setCroppingCover] = useState(false);
