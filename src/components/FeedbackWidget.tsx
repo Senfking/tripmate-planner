@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ChevronLeft, X, Loader2, Sparkles, Upload, Info, Share, Smartphone, ChevronDown } from "lucide-react";
+import { ChevronLeft, X, Loader2, Sparkles, Upload, Share, Smartphone, ChevronDown, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,8 +35,12 @@ export function FeedbackWidget() {
   const [aiLoading, setAiLoading] = useState(false);
   const [analyzingScreenshot, setAnalyzingScreenshot] = useState(false);
   const [screenshotHint, setScreenshotHint] = useState<string | null>(null);
+  const [isAppScreenshot, setIsAppScreenshot] = useState(true);
+  const [screenshotHintRating, setScreenshotHintRating] = useState<'up' | 'down' | null>(null);
   const [pwaHintOpen, setPwaHintOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Draggable vertical tab state — vertical drag only
   const [tabY, setTabY] = useState<number | null>(null);
@@ -107,6 +111,8 @@ export function FeedbackWidget() {
     setSubmitting(false);
     setAnalyzingScreenshot(false);
     setScreenshotHint(null);
+    setIsAppScreenshot(true);
+    setScreenshotHintRating(null);
     setPwaHintOpen(false);
   };
 
@@ -131,6 +137,8 @@ export function FeedbackWidget() {
     if (!file) return;
     setScreenshotFile(file);
     setScreenshotHint(null);
+    setIsAppScreenshot(true);
+    setScreenshotHintRating(null);
     const url = URL.createObjectURL(file);
     setScreenshotPreview(url);
 
@@ -151,6 +159,9 @@ export function FeedbackWidget() {
       if (data?.hint) {
         setScreenshotHint(data.hint);
       }
+      if (data?.is_app_screenshot === false) {
+        setIsAppScreenshot(false);
+      }
     } catch {
       // Silently fail
     } finally {
@@ -163,7 +174,18 @@ export function FeedbackWidget() {
     if (screenshotPreview) URL.revokeObjectURL(screenshotPreview);
     setScreenshotPreview(null);
     setScreenshotHint(null);
+    setIsAppScreenshot(true);
+    setScreenshotHintRating(null);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleTextareaFocus = () => {
+    setTimeout(() => {
+      textareaRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 300);
   };
 
   const handleSubmit = async () => {
@@ -198,6 +220,7 @@ export function FeedbackWidget() {
           screenshot_url: screenshotUrl,
           status: "new",
           rating: 0,
+          hint_rating: screenshotHintRating,
         })
         .select("id")
         .single();
@@ -236,8 +259,25 @@ export function FeedbackWidget() {
     }
   };
 
+  const textareaPlaceholder = (() => {
+    if (!isAppScreenshot && screenshotFile) {
+      return "Maybe describe the actual Junto issue this time? 😅";
+    }
+    return category === "bug"
+      ? "Describe what you expected vs what actually happened..."
+      : "Describe your idea and why it would help...";
+  })();
+
   const content = (
-    <div className="px-1">
+    <div
+      ref={scrollRef}
+      className="px-1"
+      style={{
+        overflowY: "auto",
+        maxHeight: "calc(100vh - env(safe-area-inset-top, 0px) - 140px)",
+        WebkitOverflowScrolling: "touch",
+      }}
+    >
       {step === "type" && (
         <div>
           <p className="text-sm text-muted-foreground mb-5 text-center">Junto is in early development. Things can go wrong and we fix them fast. Your input shapes what we build next.</p>
@@ -304,13 +344,11 @@ export function FeedbackWidget() {
           </label>
 
           <Textarea
+            ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder={
-              category === "bug"
-                ? "Describe what you expected vs what actually happened..."
-                : "Describe your idea and why it would help..."
-            }
+            onFocus={handleTextareaFocus}
+            placeholder={textareaPlaceholder}
             className="min-h-[100px] text-[15px]"
             style={{ borderRadius: 10, padding: 12, borderColor: "#E5E7EB" }}
           />
@@ -378,9 +416,31 @@ export function FeedbackWidget() {
                     </p>
                   )}
                   {screenshotHint && !analyzingScreenshot && (
-                    <p className="text-xs text-muted-foreground italic mt-2">
-                      💡 AI spotted: {screenshotHint}
-                    </p>
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground italic">
+                        💡 AI spotted: {screenshotHint}
+                      </p>
+                      {/* Thumbs up/down — only for app screenshots */}
+                      {isAppScreenshot && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-muted-foreground">Was this helpful?</span>
+                          <button
+                            type="button"
+                            onClick={() => setScreenshotHintRating((v) => v === "up" ? null : "up")}
+                            className={`p-1 rounded transition-colors ${screenshotHintRating === "up" ? "text-teal-600 bg-teal-500/10" : "text-muted-foreground hover:text-foreground"}`}
+                          >
+                            <ThumbsUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setScreenshotHintRating((v) => v === "down" ? null : "down")}
+                            className={`p-1 rounded transition-colors ${screenshotHintRating === "down" ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-foreground"}`}
+                          >
+                            <ThumbsDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -476,7 +536,7 @@ export function FeedbackWidget() {
 
       {isMobile ? (
         <Drawer open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true); }}>
-          <DrawerContent>
+          <DrawerContent style={{ maxHeight: "calc(100vh - env(safe-area-inset-top, 0px) - 20px)" }}>
             <DrawerHeader>
               <DrawerTitle>{title || "Feedback"}</DrawerTitle>
             </DrawerHeader>
