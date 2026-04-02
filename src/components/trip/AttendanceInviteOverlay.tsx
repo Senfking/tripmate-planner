@@ -166,18 +166,21 @@ export function AttendanceInviteOverlay({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[59] bg-black/50"
+        className="fixed inset-0 z-[59]"
         style={{
+          backgroundColor: "rgba(0,0,0,0.5)",
+          backdropFilter: isFull && !closing ? "blur(4px)" : "none",
+          WebkitBackdropFilter: isFull && !closing ? "blur(4px)" : "none",
           opacity: isFull && !closing ? 1 : 0,
           pointerEvents: isFull && !closing ? "auto" : "none",
-          transition: "opacity 0.45s ease",
+          transition: "opacity 0.45s ease, backdrop-filter 0.45s ease",
         }}
         onClick={isFull && !closing ? handleDismiss : undefined}
       />
 
-      {/* Single full-height sheet — translated when peeking */}
+      {/* Single full-height sheet — translated when peeking; centered modal on desktop */}
       <div
-        className="fixed inset-0 z-[60]"
+        className="fixed inset-0 z-[60] md:flex md:items-center md:justify-center"
         style={{
           transform: isFull ? "translateY(0)" : `translateY(${peekTranslate})`,
           transition: "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)",
@@ -187,7 +190,7 @@ export function AttendanceInviteOverlay({
         {/* Bounce wrapper — animates the entire visible slider, not just the teal strip */}
         <div
           className={cn(
-            "flex flex-col h-full",
+            "flex flex-col h-full md:h-auto md:max-w-[560px] md:w-full md:rounded-2xl md:overflow-hidden md:max-h-[90vh] md:shadow-2xl",
             !isFull && "animate-peek-bounce cursor-pointer"
           )}
           style={{ pointerEvents: !isFull ? "auto" : undefined }}

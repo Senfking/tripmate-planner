@@ -112,7 +112,7 @@ export function AppLayout() {
 
           <main className="flex-1 pb-24 md:pb-8">
             <PullToRefresh>
-              <div className="animate-fade-in w-full max-w-[960px] mx-auto md:px-6">
+              <div className="animate-fade-in w-full">
                 <Outlet />
               </div>
             </PullToRefresh>

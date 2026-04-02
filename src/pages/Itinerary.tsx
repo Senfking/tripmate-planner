@@ -217,7 +217,10 @@ const Itinerary = () => {
         )}
       </TabHeroHeader>
 
-      <div className="px-4 mt-4 pb-32">
+      {/* Desktop: subtle teal gradient strip */}
+      <div className="hidden md:block h-1" style={{ background: "linear-gradient(90deg, #0D9488, #0891b2, transparent)" }} />
+
+      <div className="px-4 mt-4 pb-32 md:max-w-[900px] md:mx-auto md:px-8">
         {/* Filter toggle */}
         <div className="mb-4 flex gap-1 rounded-xl bg-white p-1 border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {(["all", "mine"] as const).map((f) => (

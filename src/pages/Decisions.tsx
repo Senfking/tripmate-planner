@@ -136,8 +136,11 @@ const Decisions = () => {
     <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title="Decisions" subtitle={subtitle} pills={pills} />
 
+      {/* Desktop: subtle teal gradient strip */}
+      <div className="hidden md:block h-1" style={{ background: "linear-gradient(90deg, #0D9488, #0891b2, transparent)" }} />
+
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center pt-24 text-center px-4 mt-4">
+        <div className="flex flex-col items-center justify-center pt-24 text-center px-4 mt-4 md:max-w-[900px] md:mx-auto md:px-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10">
             <CircleCheck className="h-8 w-8 text-[#0D9488]" />
           </div>
@@ -147,7 +150,7 @@ const Decisions = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-2.5 px-4 mt-4 pb-32">
+        <div className="space-y-2.5 px-4 mt-4 pb-32 md:max-w-[900px] md:mx-auto md:px-8">
           {items.map((item) => {
             // Attendance cards get special rendering
             if (item.type === "attendance") {

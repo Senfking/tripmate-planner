@@ -133,7 +133,8 @@ export default function TripSection() {
 
   return (
     <div className="flex flex-col min-h-screen animate-slide-in">
-      <header className="sticky top-0 z-40 bg-card border-b px-4 py-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}>
+      {/* Mobile section header — hidden on desktop where the root DesktopHeader is visible */}
+      <header className="sticky top-0 z-40 bg-card border-b px-4 py-3 md:hidden" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}>
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigate(`/app/trips/${tripId}`)}
@@ -146,7 +147,25 @@ export default function TripSection() {
         </div>
         <h1 className="text-lg font-bold text-foreground mt-1">{SECTION_TITLES[section]}</h1>
       </header>
-      <div className="flex-1 px-4 py-4">{renderContent()}</div>
+
+      {/* Desktop: subtle teal gradient strip below header */}
+      <div className="hidden md:block h-1" style={{ background: "linear-gradient(90deg, #0D9488, #0891b2, transparent)" }} />
+
+      {/* Desktop: breadcrumb row */}
+      <div className="hidden md:flex items-center gap-2 px-8 pt-4 pb-2 max-w-[900px] mx-auto w-full">
+        <button
+          onClick={() => navigate(`/app/trips/${tripId}`)}
+          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span className="truncate max-w-[200px]">{trip.name}</span>
+        </button>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="text-sm font-semibold text-foreground">{SECTION_TITLES[section]}</span>
+        <LiveIndicator status={connectionStatus} />
+      </div>
+
+      <div className="flex-1 px-4 py-4 md:px-8 md:max-w-[900px] md:mx-auto md:w-full">{renderContent()}</div>
     </div>
   );
 }

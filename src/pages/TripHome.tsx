@@ -463,7 +463,7 @@ export default function TripHome() {
       {/* ─── HERO SECTION ─── */}
       <div
         ref={heroRef}
-        className="relative w-full overflow-hidden"
+        className="relative w-full overflow-hidden md:h-[320px]"
         style={{ height: 220 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
@@ -482,7 +482,7 @@ export default function TripHome() {
 
         <button
           onClick={() => navigate("/app/trips")}
-          className="absolute left-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
+          className="absolute left-4 md:left-8 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -552,7 +552,7 @@ export default function TripHome() {
 
       {/* ─── CONTENT SHEET ─── */}
       <div className="flex-1 rounded-t-3xl -mt-6 relative z-10" style={{ background: "#F1F5F9" }}>
-        <div className="px-4 pt-4 pb-2">
+        <div className="px-4 pt-4 pb-2 md:max-w-[900px] md:mx-auto md:px-8">
           <StatusRow
             startDate={trip.tentative_start_date}
             endDate={trip.tentative_end_date}
