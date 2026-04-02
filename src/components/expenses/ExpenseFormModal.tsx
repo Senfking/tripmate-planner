@@ -298,7 +298,7 @@ export function ExpenseFormModal({
               <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Scan a receipt \u2014 we'll extract the amount and details automatically
+              Scan a receipt — we'll extract the amount and details automatically
             </p>
 
             {scanning ? (
@@ -471,7 +471,7 @@ export function ExpenseFormModal({
         )}
         {splitMode === "percent" && !customValid && (
           <p className="text-xs text-destructive">
-            Percentages sum to {customSum.toFixed(0)}% \u2014 should be 100%
+            Percentages sum to {customSum.toFixed(0)}% — should be 100%
           </p>
         )}
       </div>
