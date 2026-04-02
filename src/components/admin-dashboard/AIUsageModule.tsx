@@ -82,7 +82,7 @@ export function AIUsageModule() {
             <Card>
               <table style={{ width: "100%", fontFamily: sans, fontSize: 12, borderCollapse: "collapse" }}>
                 <thead><tr style={{ color: C.muted, fontFamily: mono, fontSize: 10, textTransform: "uppercase" as const }}>
-                  {["User", "Scans", "Hints", "Imports", "Total"].map(h => (
+                  {["User", "Scans", "Hints", "Imports", "Docs", "Total"].map(h => (
                     <th key={h} style={{ textAlign: h === "User" ? "left" : "right", padding: 6 }}>{h}</th>
                   ))}
                 </tr></thead>
