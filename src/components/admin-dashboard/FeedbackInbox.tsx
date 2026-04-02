@@ -102,8 +102,9 @@ function FeedbackDetail({ item }: { item: any }) {
           <select value={status} onChange={(e) => updateStatus(e.target.value)}
             style={{ padding: "4px 8px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, fontFamily: mono, fontSize: 11 }}>
             <option value="new">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
+            <option value="reviewing">Reviewing</option>
+            <option value="done">Done</option>
+            <option value="dismissed">Dismissed</option>
           </select>
           <button onClick={copyPrompt} style={{ padding: "4px 10px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: C.tealLight, fontFamily: mono, fontSize: 11, cursor: "pointer" }}>
             Copy as Lovable prompt
