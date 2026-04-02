@@ -1,11 +1,10 @@
 import { useState, useRef } from "react";
-import { MessageSquare, ChevronLeft, X, Loader2 } from "lucide-react";
+import { MessageSquare, ChevronLeft, X, Loader2, Sparkles, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Drawer,
   DrawerContent,
@@ -34,6 +33,7 @@ export function FeedbackWidget() {
   const [submitting, setSubmitting] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [analyzingScreenshot, setAnalyzingScreenshot] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!user) return null;
@@ -47,6 +47,7 @@ export function FeedbackWidget() {
     setAiMessage(null);
     setAiLoading(false);
     setSubmitting(false);
+    setAnalyzingScreenshot(false);
   };
 
   const handleOpen = () => {
@@ -63,12 +64,43 @@ export function FeedbackWidget() {
     setStep("describe");
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setScreenshotFile(file);
     const url = URL.createObjectURL(file);
     setScreenshotPreview(url);
+
+    // Upload and analyze screenshot
+    setAnalyzingScreenshot(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const mediaType = file.type || "image/jpeg";
+
+      const { data } = await supabase.functions.invoke("analyze-feedback", {
+        body: {
+          action: "describe_screenshot",
+          image_base64: base64,
+          media_type: mediaType,
+        },
+      });
+
+      if (data?.screenshot_description) {
+        setMessage((prev) => prev || data.screenshot_description);
+      }
+    } catch {
+      // Silently fail — user can still type manually
+    } finally {
+      setAnalyzingScreenshot(false);
+    }
   };
 
   const removeScreenshot = () => {
@@ -206,27 +238,60 @@ export function FeedbackWidget() {
             onChange={handleFileChange}
           />
 
-          {!screenshotFile ? (
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="mt-3 text-sm flex items-center gap-1"
-              style={{ color: "#0D9488" }}
-            >
-              📎 Attach screenshot (optional)
-            </button>
-          ) : (
-            <div className="mt-3 flex items-center gap-2">
-              {screenshotPreview && (
-                <img
-                  src={screenshotPreview}
-                  alt="Screenshot"
-                  className="w-[60px] h-[60px] rounded-lg object-cover border"
-                />
+          {/* Screenshot card — bugs only */}
+          {category === "bug" && (
+            <>
+              {!screenshotFile ? (
+                <div
+                  className="mt-3"
+                  style={{
+                    background: "rgba(13,148,136,0.06)",
+                    border: "1px solid rgba(13,148,136,0.2)",
+                    borderRadius: 12,
+                    padding: 14,
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" style={{ color: "#0D9488" }} />
+                    <span className="text-xs font-semibold" style={{ color: "#0D9488" }}>AI-powered</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Upload a screenshot and AI will help describe the issue automatically.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors"
+                    style={{
+                      border: "1px solid #0D9488",
+                      color: "#0D9488",
+                    }}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload screenshot
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-3 flex items-center gap-3">
+                  {screenshotPreview && (
+                    <img
+                      src={screenshotPreview}
+                      alt="Screenshot"
+                      className="w-[60px] h-[60px] rounded-lg object-cover border"
+                    />
+                  )}
+                  {analyzingScreenshot ? (
+                    <p className="text-sm animate-pulse" style={{ color: "#0D9488" }}>
+                      Analysing screenshot...
+                    </p>
+                  ) : (
+                    <button onClick={removeScreenshot} className="text-muted-foreground hover:text-foreground">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               )}
-              <button onClick={removeScreenshot} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+            </>
           )}
 
           <Button

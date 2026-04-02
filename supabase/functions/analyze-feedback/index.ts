@@ -13,7 +13,75 @@ serve(async (req) => {
   }
 
   try {
-    const { feedbackId, category, message, route } = await req.json();
+    const body = await req.json();
+
+    // --- Screenshot description action ---
+    if (body.action === "describe_screenshot") {
+      const { image_base64, media_type } = body;
+      if (!image_base64) {
+        return new Response(JSON.stringify({ error: "Missing image" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!ANTHROPIC_API_KEY) {
+        return new Response(JSON.stringify({ screenshot_description: null }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const imgResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 256,
+          system: "You help users describe bugs in a travel planning app called Junto.",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: media_type || "image/jpeg",
+                    data: image_base64,
+                  },
+                },
+                {
+                  type: "text",
+                  text: "Look at this screenshot from the Junto app. Write 2-3 sentences describing what you see on screen and what might be wrong or what the user is trying to show. Write it in first person as if the user is describing it. Be specific about UI elements visible. Keep it concise.",
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      if (!imgResponse.ok) {
+        console.error("Screenshot analysis error:", imgResponse.status, await imgResponse.text());
+        return new Response(JSON.stringify({ screenshot_description: null }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const imgBody = await imgResponse.json();
+      const description = imgBody.content?.[0]?.text ?? null;
+
+      return new Response(JSON.stringify({ screenshot_description: description }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // --- Main feedback analysis action ---
+    const { feedbackId, category, message, route } = body;
 
     if (!feedbackId || !message) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {
