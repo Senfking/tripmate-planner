@@ -32,11 +32,11 @@ import type { ItineraryItem } from "@/hooks/useItinerary";
 import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 import { useAuth } from "@/contexts/AuthContext";
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  idea: { label: "Idea", className: "bg-muted text-muted-foreground" },
-  planned: { label: "Planned", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
-  booked: { label: "Booked", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
-  confirmed: { label: "Confirmed", className: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" },
+const statusConfig: Record<string, { label: string; className: string; borderColor: string }> = {
+  idea: { label: "Idea", className: "bg-muted text-muted-foreground", borderColor: "rgba(0,0,0,0.08)" },
+  planned: { label: "Planned", className: "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300", borderColor: "#3b82f6" },
+  booked: { label: "Booked", className: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300", borderColor: "#10b981" },
+  confirmed: { label: "Confirmed", className: "bg-teal-50 text-teal-600 dark:bg-teal-900/40 dark:text-teal-300", borderColor: "#0D9488" },
 };
 
 interface Props {
@@ -118,11 +118,11 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
   const showSkeleton = isNew && animPhase === "skeleton";
 
   const cardContent = (
-    <>
+    <div className="overflow-hidden w-full">
       <div className="flex items-start gap-1.5">
         {isDraggable ? (
           <button
-            className="touch-none cursor-grab active:cursor-grabbing mt-0.5 shrink-0 text-muted-foreground/30 hover:text-muted-foreground"
+            className="touch-none cursor-grab active:cursor-grabbing mt-0.5 shrink-0 text-muted-foreground/20 hover:text-muted-foreground"
             {...attributes}
             {...listeners}
           >
@@ -152,24 +152,29 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
               {status.label}
             </Badge>
           </div>
-          <div className="flex items-center gap-2 mt-px">
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <Clock className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
-              {timeDisplay || "tbc"}
-            </span>
-            {item.location_text && (
-              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                <MapPin className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
-                <span className="truncate max-w-[120px]">{item.location_text}</span>
+          <div className="flex items-center gap-0 mt-px">
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
+                <Clock className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
+                {timeDisplay || "tbc"}
               </span>
-            )}
-            <div className="flex items-center gap-0 ml-auto shrink-0">
-              <button onClick={onEdit} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors">
-                <Pencil className="h-3 w-3" />
+              {item.location_text && (
+                <>
+                  <span className="text-muted-foreground/30 text-[10px]">·</span>
+                  <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground min-w-0">
+                    <MapPin className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
+                    <span className="truncate">{item.location_text}</span>
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-0 shrink-0 opacity-40 hover:opacity-100 transition-opacity">
+              <button onClick={onEdit} className="h-5 w-5 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors">
+                <Pencil className="h-2.5 w-2.5" />
               </button>
               {canDelete && (
-                <button onClick={() => setConfirmOpen(true)} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive transition-colors">
-                  <Trash2 className="h-3 w-3" />
+                <button onClick={() => setConfirmOpen(true)} className="h-5 w-5 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive transition-colors">
+                  <Trash2 className="h-2.5 w-2.5" />
                 </button>
               )}
               <ItemComments tripId={tripId} itemId={item.id} />
@@ -231,7 +236,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </>
+    </div>
   );
 
   return (
@@ -275,7 +280,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-xl bg-white dark:bg-card p-2 space-y-1",
+            "rounded-xl bg-white dark:bg-card p-2 space-y-1 overflow-hidden md:hover:shadow-md md:transition-shadow",
             isDragging && "opacity-50 ring-2 ring-primary/30",
             !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400/60",
             animPhase === "fadein" && "animate-fade-in-card",
@@ -284,19 +289,17 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
             ...(showNewBorder
               ? {
                   border: "1px solid rgba(13,148,136,0.15)",
-                  borderLeft: "3px solid #0D9488",
+                  borderLeft: `3px solid ${status.borderColor}`,
                   boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                  transition: "border-color 1s ease-out, box-shadow 1s ease-out",
-                }
-              : !newBorderVisible && isNewSinceLastVisit
-              ? {
-                  border: "1px solid rgba(241,245,249,1)",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                  transition: "border-color 1s ease-out, box-shadow 1s ease-out",
+                  transition: "border-color 1s ease-out, box-shadow 0.2s ease",
                 }
               : {
                   border: "1px solid rgba(241,245,249,1)",
+                  borderLeft: `3px solid ${status.borderColor}`,
                   boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  ...((!newBorderVisible && isNewSinceLastVisit)
+                    ? { transition: "border-color 1s ease-out, box-shadow 0.2s ease" }
+                    : { transition: "box-shadow 0.2s ease" }),
                 }),
           }}
         >

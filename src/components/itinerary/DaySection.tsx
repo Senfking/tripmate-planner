@@ -215,9 +215,9 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
         {items.length > 0 && (
           <button
             onClick={() => { setEditItem(null); setFormOpen(true); }}
-            className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/50 hover:text-[#0D9488] transition-colors pl-1 pt-0.5"
+            className="flex items-center gap-1.5 text-[12px] font-medium text-[#0D9488]/60 hover:text-[#0D9488] transition-colors pl-1 pt-1 pb-1 -ml-0.5 rounded-lg hover:bg-[#0D9488]/5 px-2"
           >
-            <Plus className="h-3 w-3" /> Add activity
+            <Plus className="h-3.5 w-3.5" /> Add activity
           </button>
         )}
       </div>
