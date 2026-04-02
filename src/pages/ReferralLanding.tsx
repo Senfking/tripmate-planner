@@ -13,9 +13,9 @@ const VIDEOS = [
 ];
 
 const STATEMENTS = [
-  { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip — itinerary, decisions, everything." },
+  { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip. Itinerary, decisions, everything." },
   { problem: "Splitting costs always gets awkward.", solution: "Log expenses, scan receipts with AI, and settle up in any currency." },
-  { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas — all in one place." },
+  { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas, all in one place." },
   { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
 ];
 
