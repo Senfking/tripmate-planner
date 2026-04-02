@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { CircleCheck, Vote, MapPin, CalendarDays, MessageSquare, ArrowRight, Plane } from "lucide-react";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
+import { DesktopFooter } from "@/components/DesktopFooter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
