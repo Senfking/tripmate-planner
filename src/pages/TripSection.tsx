@@ -119,7 +119,7 @@ export default function TripSection() {
           />
         );
       case "itinerary":
-        return <ItineraryTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
+        return <ItineraryTab tripId={trip.id} tripStartDate={trip.tentative_start_date} myRole={myRole} newItemIds={newItemIds} />;
       case "bookings":
         return <BookingsTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
       case "expenses":
