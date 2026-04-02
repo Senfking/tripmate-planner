@@ -154,8 +154,8 @@ export function AttendanceInviteOverlay({
   // When "open", translateY(0) shows the full sheet.
   const isFull = open || closing;
 
-  // Peeking shows: message banner (44px) + avatar row (52px) = 96px visible above bottom nav
-  const peekHeight = 120;
+  // Peeking shows: message banner (44px) + avatar row (52px) + partial hero visible
+  const peekHeight = 168;
   const peekTranslate = `calc(100% - ${peekHeight}px)`;
 
   const goingMembers = members.filter(
@@ -177,18 +177,25 @@ export function AttendanceInviteOverlay({
 
       {/* Single full-height sheet — translated when peeking */}
       <div
-        className="fixed inset-0 z-[60] flex flex-col"
+        className="fixed inset-0 z-[60]"
         style={{
           transform: isFull ? "translateY(0)" : `translateY(${peekTranslate})`,
           transition: "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)",
           pointerEvents: isFull ? "auto" : "none",
         }}
       >
+        {/* Bounce wrapper — animates the entire visible slider, not just the teal strip */}
+        <div
+          className={cn(
+            "flex flex-col h-full",
+            !isFull && "animate-peek-bounce"
+          )}
+        >
         {/* Peeking top strip — message + avatars */}
         <div
           className={cn(
             "shrink-0 rounded-t-2xl overflow-hidden",
-            !isFull && "animate-peek-bounce cursor-pointer"
+            !isFull && "cursor-pointer"
           )}
           style={{
             background: "linear-gradient(135deg, #0D9488, #0369a1)",
@@ -378,6 +385,7 @@ export function AttendanceInviteOverlay({
               </>
             )}
           </div>
+        </div>
         </div>
       </div>
     </>,
