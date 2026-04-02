@@ -12,7 +12,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from 
 import { DateRangePicker } from "./DateRangePicker";
 
 type Props = {
-  onSubmit: (data: { destination: string; note?: string; startDate?: string; endDate?: string }) => void;
+  onSubmit: (data: { destination: string; note?: string; startDate?: string; endDate?: string }) => Promise<void>;
   isPending: boolean;
 };
 
@@ -23,19 +23,23 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const isMobile = useIsMobile();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!destination.trim()) return;
-    onSubmit({
-      destination: destination.trim(),
-      note: note.trim() || undefined,
-      startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-      endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-    });
-    setDestination("");
-    setNote("");
-    setDateRange(undefined);
-    setOpen(false);
+    try {
+      await onSubmit({
+        destination: destination.trim(),
+        note: note.trim() || undefined,
+        startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+        endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+      });
+      setDestination("");
+      setNote("");
+      setDateRange(undefined);
+      setOpen(false);
+    } catch {
+      // Error handled by parent via toast
+    }
   };
 
   const handleOpenChange = (isOpen: boolean) => {

@@ -66,6 +66,7 @@ export function DateRangePicker({
         onSelect={setDraft}
         numberOfMonths={isMobile ? 1 : 2}
         defaultMonth={draft?.from ?? new Date()}
+        fixedWeeks
         className={cn("p-3 pointer-events-auto")}
       />
       <div className="flex items-center justify-between px-3 pb-3">
