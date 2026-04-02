@@ -107,7 +107,7 @@ export function AppLayout() {
 
           <OfflineBanner />
 
-          <main className="flex-1 pb-24 md:pb-0">
+          <main className="flex-1 pb-24 md:pb-6 md:px-6">
             <PullToRefresh>
               <div className="animate-fade-in w-full max-w-[860px] mx-auto">
                 <Outlet />
