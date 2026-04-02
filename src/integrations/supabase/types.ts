@@ -309,6 +309,7 @@ export type Database = {
       }
       feedback: {
         Row: {
+          admin_notes: string | null
           ai_category: string | null
           ai_fix: string | null
           ai_severity: string | null
@@ -326,6 +327,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_notes?: string | null
           ai_category?: string | null
           ai_fix?: string | null
           ai_severity?: string | null
@@ -343,6 +345,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_notes?: string | null
           ai_category?: string | null
           ai_fix?: string | null
           ai_severity?: string | null
@@ -601,6 +604,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_notes: string | null
           avatar_url: string | null
           created_at: string
           default_currency: string | null
@@ -617,6 +621,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_notes?: string | null
           avatar_url?: string | null
           created_at?: string
           default_currency?: string | null
@@ -633,6 +638,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_notes?: string | null
           avatar_url?: string | null
           created_at?: string
           default_currency?: string | null
