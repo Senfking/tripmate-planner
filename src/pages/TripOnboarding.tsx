@@ -91,7 +91,7 @@ export default function TripOnboarding() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Top bar */}
       <div className="flex items-center px-4 pt-4 pb-2">
-        {step > 1 ? (
+        {step > 1 && step < 4 ? (
           <button onClick={goBack} className="p-1 -ml-1">
             <ChevronLeft className="h-5 w-5 text-foreground" />
           </button>
