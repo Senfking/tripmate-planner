@@ -83,8 +83,6 @@ const Expenses = () => {
         {balanceDisplay}
       </TabHeroHeader>
 
-      {/* Desktop: subtle teal gradient strip */}
-      <div className="hidden md:block h-1" style={{ background: "linear-gradient(90deg, #0D9488, #0891b2, transparent)" }} />
 
       {!hasExpenses ? (
         <div className="flex flex-col items-center justify-center pt-20 text-center px-4 mt-4 md:max-w-[900px] md:mx-auto md:px-8">
@@ -98,8 +96,75 @@ const Expenses = () => {
         </div>
       ) : (
         <div className="space-y-3 px-4 mt-4 pb-24 md:max-w-[900px] md:mx-auto md:px-8">
-          {/* Net balance summary */}
-          <div className="text-center py-4 border-b border-border">
+          {/* Premium balance hero card — desktop only */}
+          <div
+            className="hidden md:block rounded-2xl overflow-hidden mx-2 mb-2"
+            style={{
+              background: "linear-gradient(145deg, #0f1f1e 0%, #0D9488 60%, #0369a1 100%)",
+              padding: "32px 24px",
+            }}
+          >
+            <p className="text-center text-[10px] uppercase tracking-[0.2em] font-semibold text-white/50 mb-3">
+              Net balance across all trips
+            </p>
+            <p className={cn(
+              "text-center text-[46px] font-bold text-white tracking-tight leading-none transition-opacity duration-300",
+              isRefreshing && "opacity-50"
+            )}>
+              {Math.abs(overallNet) < 0.01
+                ? "€0.00"
+                : `${overallNet > 0 ? "+" : "−"}${formatCurrency(Math.abs(overallNet), currency)}`}
+            </p>
+            <div className="flex justify-center mt-3">
+              <span className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold",
+                Math.abs(overallNet) < 0.01
+                  ? "bg-white/10 text-white/60"
+                  : overallNet > 0
+                  ? "bg-emerald-400/20 text-emerald-300"
+                  : "bg-orange-400/20 text-orange-300"
+              )}>
+                <span className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  Math.abs(overallNet) < 0.01
+                    ? "bg-white/40"
+                    : overallNet > 0
+                    ? "bg-emerald-400"
+                    : "bg-orange-400"
+                )} />
+                {Math.abs(overallNet) < 0.01
+                  ? "All settled up"
+                  : overallNet > 0
+                  ? "You're owed"
+                  : "You owe"}
+              </span>
+            </div>
+            {/* Stat chips */}
+            {(() => {
+              const totalOwed = trips.reduce((s, t) => s + (t.net > 0 ? t.net : 0), 0);
+              const totalOwe = trips.reduce((s, t) => s + (t.net < 0 ? Math.abs(t.net) : 0), 0);
+              if (totalOwed < 0.01 && totalOwe < 0.01) return null;
+              return (
+                <div className="flex justify-center gap-3 mt-5">
+                  <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                    <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">Owed to you</p>
+                    <p className="text-[15px] font-bold text-emerald-300 tabular-nums">
+                      +{formatCurrency(totalOwed, currency)}
+                    </p>
+                  </div>
+                  <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                    <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">You owe</p>
+                    <p className="text-[15px] font-bold text-orange-300 tabular-nums">
+                      −{formatCurrency(totalOwe, currency)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Mobile: simple text summary */}
+          <div className="md:hidden text-center py-4 border-b border-border">
             <p className={cn(
               "text-[15px] font-semibold",
               Math.abs(overallNet) < 0.01
