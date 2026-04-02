@@ -1148,6 +1148,7 @@ const More = () => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+      <DesktopFooter />
     </div>
   );
 };
