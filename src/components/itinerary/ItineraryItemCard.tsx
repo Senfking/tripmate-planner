@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock, MessageCircle } from "lucide-react";
+import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Button } from "@/components/ui/button";
 import { ItemComments } from "./ItemComments";
 import { AttendanceRow } from "./AttendanceRow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,12 +20,12 @@ import type { ItineraryItem } from "@/hooks/useItinerary";
 import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 import { useAuth } from "@/contexts/AuthContext";
 
-/* ── status colour map ── */
-const STATUS: Record<string, { label: string; color: string }> = {
-  idea:      { label: "Idea",      color: "#94a3b8" },
-  planned:   { label: "Planned",   color: "#3b82f6" },
-  booked:    { label: "Booked",    color: "#10b981" },
-  confirmed: { label: "Confirmed", color: "#0d9488" },
+/* ── status config ── */
+const STATUS: Record<string, { label: string; fg: string; bg: string; tint: string }> = {
+  idea:      { label: "Idea",      fg: "hsl(220 9% 46%)",  bg: "hsl(220 9% 46% / 0.08)",  tint: "hsl(220 9% 46% / 0.03)" },
+  planned:   { label: "Planned",   fg: "hsl(221 83% 53%)", bg: "hsl(221 83% 53% / 0.08)",  tint: "hsl(221 83% 53% / 0.03)" },
+  booked:    { label: "Booked",    fg: "hsl(160 84% 39%)", bg: "hsl(160 84% 39% / 0.08)",  tint: "hsl(160 84% 39% / 0.03)" },
+  confirmed: { label: "Confirmed", fg: "hsl(175 84% 32%)", bg: "hsl(175 84% 32% / 0.10)",  tint: "hsl(175 84% 32% / 0.04)" },
 };
 
 interface Props {
@@ -91,8 +91,8 @@ export function ItineraryItemCard({
       <div ref={setNodeRef} style={dndStyle} className="relative">
         <div
           aria-hidden
-          className="rounded-xl animate-calm-pulse"
-          style={{ height: 72, background: "rgba(13,148,136,0.05)", border: "1px solid rgba(13,148,136,0.12)", borderRadius: 12 }}
+          className="rounded-2xl animate-calm-pulse"
+          style={{ height: 100, background: "hsl(175 84% 32% / 0.05)", border: "1px solid hsl(175 84% 32% / 0.12)", borderRadius: 16 }}
         />
       </div>
     );
@@ -102,89 +102,92 @@ export function ItineraryItemCard({
     <div ref={setNodeRef} style={dndStyle} className={cn("relative", isDragging && "z-10")}>
       <div
         className={cn(
-          "w-full overflow-hidden rounded-xl transition-all duration-200",
-          "bg-white dark:bg-card",
+          "w-full overflow-hidden rounded-2xl transition-all duration-200",
+          "bg-card dark:bg-card",
           "border border-border/60",
+          "shadow-[0_1px_3px_rgba(0,0,0,0.04)]",
           isDragging && "opacity-50 ring-2 ring-primary/30",
           animPhase === "fadein" && "animate-fade-in-card",
-          "md:hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+          "md:hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]",
         )}
+        style={{ background: `linear-gradient(180deg, ${s.tint} 0%, transparent 60%)` }}
       >
-        {/* ━━ ROW 1: Title bar ━━ */}
-        <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-          {isDraggable && (
-            <button
-              className="shrink-0 touch-none text-muted-foreground/20 hover:text-muted-foreground/50 cursor-grab active:cursor-grabbing"
-              {...attributes}
-              {...listeners}
-            >
-              <GripVertical className="h-3.5 w-3.5" />
-            </button>
-          )}
+        {/* ━━ HEADER ZONE ━━ */}
+        <div className="px-4 pt-4 pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                {isDraggable && (
+                  <button
+                    className="shrink-0 touch-none text-muted-foreground/25 hover:text-muted-foreground/50 cursor-grab active:cursor-grabbing -ml-1"
+                    {...attributes}
+                    {...listeners}
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </button>
+                )}
+                <h3 className="text-[15px] font-bold leading-tight text-foreground truncate">
+                  {item.title}
+                </h3>
+                {overlapTitles?.length ? (
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[220px] text-xs">
+                        Overlaps with {overlapTitles.join(", ")}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : null}
+                {showNewPill && (
+                  <span
+                    className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
+                    style={{ color: "hsl(175 84% 32%)", backgroundColor: "hsl(175 84% 32% / 0.10)" }}
+                  >
+                    New
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3 text-[12px] text-muted-foreground/70">
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3 opacity-60" />
+                  {timeDisplay || "TBC"}
+                </span>
+                {item.location_text && (
+                  <span className="inline-flex items-center gap-1 truncate">
+                    <MapPin className="h-3 w-3 opacity-60" />
+                    <span className="truncate">{item.location_text}</span>
+                  </span>
+                )}
+              </div>
+            </div>
 
-          <p className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-snug text-foreground">
-            {item.title}
-          </p>
-
-          {overlapTitles?.length ? (
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[220px] text-xs">
-                  Overlaps with {overlapTitles.join(", ")}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : null}
-
-          {showNewPill && (
-            <span
-              className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
-              style={{ color: "#0d9488", backgroundColor: "rgba(13,148,136,0.1)" }}
-            >
-              New
-            </span>
-          )}
-
-          <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-            style={{ color: s.color, backgroundColor: `${s.color}12` }}
-          >
-            {s.label}
-          </span>
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <span
+                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                style={{ color: s.fg, backgroundColor: s.bg }}
+              >
+                {s.label}
+              </span>
+              <div className="flex items-center gap-0.5">
+                <button onClick={onEdit} className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-foreground/70 hover:bg-muted/40 transition-colors">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                {canDelete && (
+                  <button onClick={() => setConfirmOpen(true)} className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-destructive/70 hover:bg-muted/40 transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* ━━ ROW 2: Meta ━━ */}
-        <div className="flex items-center justify-between px-3 pb-2">
-          <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
-            <Clock className="h-3 w-3 shrink-0 opacity-50" />
-            <span>{timeDisplay || "tbc"}</span>
-            {item.location_text && (
-              <>
-                <span className="opacity-30">·</span>
-                <MapPin className="h-3 w-3 shrink-0 opacity-50" />
-                <span className="truncate">{item.location_text}</span>
-              </>
-            )}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-0.5 ml-2">
-            <button onClick={onEdit} className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground/40 hover:text-foreground/70 hover:bg-muted/40 transition-colors">
-              <Pencil className="h-3 w-3" />
-            </button>
-            {canDelete && (
-              <button onClick={() => setConfirmOpen(true)} className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground/40 hover:text-destructive/70 hover:bg-muted/40 transition-colors">
-                <Trash2 className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ━━ ROW 3: Attendance + Comments (side by side) ━━ */}
-        {user && (members.length > 0) && (
-          <div className="flex items-center justify-between gap-2 border-t border-border/40 px-3 py-2">
+        {/* ━━ BODY ZONE — Attendance ━━ */}
+        {user && members.length > 0 && (
+          <div className="px-4 pb-3">
             <AttendanceRow
               members={members}
               attendance={attendance}
@@ -192,13 +195,12 @@ export function ItineraryItemCard({
               currentUserId={user.id}
               onCycle={onCycleAttendance}
             />
-            <ItemComments tripId={tripId} itemId={item.id} />
           </div>
         )}
 
-        {/* No members but still show comments */}
-        {user && members.length === 0 && (
-          <div className="border-t border-border/40 px-3 py-2 flex justify-end">
+        {/* ━━ COMMENT ZONE ━━ */}
+        {user && (
+          <div className="border-t border-border/40 px-4 py-3">
             <ItemComments tripId={tripId} itemId={item.id} />
           </div>
         )}
