@@ -86,7 +86,7 @@ const Expenses = () => {
 
 
       {!hasExpenses ? (
-        <div className="flex flex-col items-center justify-center pt-20 text-center px-4 mt-4 md:max-w-[900px] md:mx-auto md:px-8">
+        <div className="flex flex-col items-center justify-center pt-20 text-center px-4 mt-4 md:max-w-[900px] md:mx-auto md:px-6 w-full">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10">
             <Wallet className="h-8 w-8 text-[#0D9488]" />
           </div>
@@ -96,7 +96,7 @@ const Expenses = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-3 px-4 mt-4 pb-24 md:max-w-[900px] md:mx-auto md:px-8">
+        <div className="space-y-3 px-4 mt-4 pb-24 md:max-w-[900px] md:mx-auto md:px-6 w-full">
           {/* Premium balance hero card — desktop only */}
           <div
             className="hidden md:block rounded-2xl overflow-hidden mb-2"

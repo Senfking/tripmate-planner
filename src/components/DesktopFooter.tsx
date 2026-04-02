@@ -12,7 +12,7 @@ export function DesktopFooter() {
   };
 
   return (
-    <footer className="hidden md:flex items-center justify-between w-full h-12 px-8 mt-auto border-t border-[#E5E7EB] bg-white shrink-0">
+    <footer className="hidden md:flex items-center justify-between w-full h-12 px-8 mt-auto border-t border-[#E5E7EB] bg-white shrink-0 flex-none">
       {/* Left */}
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span>© 2026 Junto</span>
