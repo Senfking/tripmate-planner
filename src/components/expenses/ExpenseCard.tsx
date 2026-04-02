@@ -92,7 +92,7 @@ export function ExpenseCard({
               {!isSettlement && isPayer && youLentAmount > 0 ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
-                  <p className="text-[17px] font-bold" style={{ color: "#0D9488" }}>
+                  <p className="text-[17px] font-bold text-foreground">
                     {formatCurrency(youLentAmount, expense.currency)}
                   </p>
                   {youLentAmount !== expense.amount && (
