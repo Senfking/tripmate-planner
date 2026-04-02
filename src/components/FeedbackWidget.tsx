@@ -240,7 +240,7 @@ export function FeedbackWidget() {
     <div className="px-1">
       {step === "type" && (
         <div>
-          <p className="text-sm text-muted-foreground mb-5 text-center">Junto is in early development — things can go wrong and we fix them fast. Your input shapes what we build next.</p>
+          <p className="text-sm text-muted-foreground mb-5 text-center">Junto is in early development. Things can go wrong and we fix them fast. Your input shapes what we build next.</p>
           <div className="grid grid-cols-2 gap-3">
             {([
               { cat: "bug" as Category, icon: "🐛", title: "Report a bug", sub: "Something isn't working" },
