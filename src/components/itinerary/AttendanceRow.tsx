@@ -1,5 +1,3 @@
-// TODO Phase 2: use attendance to generate personal itinerary view in global tab
-
 import { useState } from "react";
 import { Check, HelpCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,10 +6,7 @@ import { AttendanceSheet } from "./AttendanceSheet";
 
 type MemberStatus = "in" | "maybe" | "out";
 
-function getStatus(
-  member: TripMember,
-  attendance: AttendanceRecord[]
-): MemberStatus {
+function getStatus(member: TripMember, attendance: AttendanceRecord[]): MemberStatus {
   const rec = attendance.find((a) => a.user_id === member.user_id);
   if (!rec) return "in";
   return rec.status as MemberStatus;
@@ -19,12 +14,7 @@ function getStatus(
 
 function getInitials(name: string | null): string {
   if (!name) return "?";
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
 const dotColors: Record<MemberStatus, string> = {
@@ -41,33 +31,24 @@ interface Props {
   onCycle: () => void;
 }
 
-export function AttendanceRow({
-  members,
-  attendance,
-  itemId,
-  currentUserId,
-  onCycle,
-}: Props) {
+export function AttendanceRow({ members, attendance, itemId, currentUserId, onCycle }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const itemAttendance = attendance.filter(
-    (a) => a.itinerary_item_id === itemId
-  );
+  const itemAttendance = attendance.filter((a) => a.itinerary_item_id === itemId);
 
-  // Sort: current user first, then alphabetical
   const sorted = [...members].sort((a, b) => {
     if (a.user_id === currentUserId) return -1;
     if (b.user_id === currentUserId) return 1;
     return (a.display_name || "").localeCompare(b.display_name || "");
   });
 
-  const showCount = members.length <= 3 ? members.length : 3;
+  const showCount = members.length <= 4 ? members.length : 3;
   const visible = sorted.slice(0, showCount);
   const remaining = members.length - showCount;
 
   return (
     <>
       <div
-        className="flex items-center gap-1.5 py-1 cursor-pointer"
+        className="flex items-center gap-1 py-0.5 cursor-pointer"
         onClick={() => setSheetOpen(true)}
         role="button"
         tabIndex={0}
@@ -87,11 +68,11 @@ export function AttendanceRow({
                 onCycle();
               }}
               className={cn(
-                "relative h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border transition-colors",
+                "relative h-6 w-6 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 border transition-colors",
                 status === "out"
-                  ? "bg-muted text-muted-foreground/50 border-muted"
-                  : "bg-secondary text-secondary-foreground border-border",
-                isMe && "ring-1 ring-primary/40 cursor-pointer",
+                  ? "bg-muted text-muted-foreground/40 border-muted"
+                  : "bg-secondary text-secondary-foreground border-border/50",
+                isMe && "ring-1 ring-primary/30 cursor-pointer",
                 !isMe && "cursor-default"
               )}
               title={
@@ -101,29 +82,22 @@ export function AttendanceRow({
               }
             >
               {getInitials(member.display_name)}
-              {/* Status dot */}
               <span
                 className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card flex items-center justify-center",
+                  "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-[1.5px] border-white dark:border-card flex items-center justify-center",
                   dotColors[status]
                 )}
               >
-                {status === "in" && (
-                  <Check className="h-2 w-2 text-white" strokeWidth={3} />
-                )}
-                {status === "maybe" && (
-                  <HelpCircle className="h-2 w-2 text-white" strokeWidth={3} />
-                )}
-                {status === "out" && (
-                  <X className="h-2 w-2 text-white" strokeWidth={3} />
-                )}
+                {status === "in" && <Check className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                {status === "maybe" && <HelpCircle className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                {status === "out" && <X className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
               </span>
             </button>
           );
         })}
 
         {remaining > 0 && (
-          <span className="text-[10px] text-muted-foreground bg-muted rounded-full px-1.5 py-0.5 font-medium">
+          <span className="text-[9px] text-muted-foreground/60 bg-muted/50 rounded-full px-1.5 py-0.5 font-medium">
             +{remaining}
           </span>
         )}

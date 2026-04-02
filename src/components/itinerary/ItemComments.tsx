@@ -27,34 +27,36 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
-        <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors pt-2">
-          <MessageCircle className="h-3.5 w-3.5" />
-          <span>{comments.length}</span>
+        <button className="h-6 w-6 inline-flex items-center justify-center gap-0.5 rounded text-muted-foreground/30 hover:text-foreground/70 transition-colors">
+          <MessageCircle className="h-3 w-3" />
+          {comments.length > 0 && (
+            <span className="text-[10px] font-medium">{comments.length}</span>
+          )}
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pt-3 space-y-3 w-full overflow-hidden">
+      <CollapsibleContent className="pt-2 mt-2 border-t border-border/40 space-y-2 w-full overflow-hidden">
         {comments.length === 0 && (
-          <p className="text-xs text-muted-foreground">No comments yet.</p>
+          <p className="text-[11px] text-muted-foreground/60">No comments yet.</p>
         )}
         {comments.map((c) => (
-          <div key={c.id} className={`text-sm space-y-0.5 w-full overflow-hidden ${newCommentIds?.has(c.id) ? "animate-realtime-flash" : ""}`}>
+          <div key={c.id} className={`w-full overflow-hidden ${newCommentIds?.has(c.id) ? "animate-realtime-flash" : ""}`}>
             <div className="flex items-center justify-between gap-1">
-              <span className="font-medium text-xs truncate">{c.display_name || "Member"}</span>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[11px] text-muted-foreground">
+              <span className="font-medium text-[11px] text-foreground/80 truncate">{c.display_name || "Member"}</span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] text-muted-foreground/50">
                   {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
                 </span>
                 {c.user_id === user?.id && (
                   <button
                     onClick={() => deleteComment.mutate(c.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    className="text-muted-foreground/30 hover:text-destructive transition-colors"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-2.5 w-2.5" />
                   </button>
                 )}
               </div>
             </div>
-            <p className="text-muted-foreground text-xs break-words whitespace-pre-wrap">{c.body}</p>
+            <p className="text-muted-foreground text-[11px] break-words whitespace-pre-wrap leading-relaxed">{c.body}</p>
           </div>
         ))}
         <div className="flex gap-2 w-full">
@@ -62,14 +64,14 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Add a comment…"
-            rows={2}
-            className="text-sm min-w-0 flex-1"
+            rows={1}
+            className="text-[12px] min-w-0 flex-1 min-h-[32px] py-1.5 resize-none"
           />
           <Button
             size="sm"
             onClick={handlePost}
             disabled={!body.trim() || postComment.isPending}
-            className="shrink-0 self-end"
+            className="shrink-0 self-end h-[32px] text-xs px-3"
           >
             Post
           </Button>
