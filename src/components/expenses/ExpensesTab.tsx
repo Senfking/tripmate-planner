@@ -82,6 +82,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       toast.success("Receipt scanned — review the details");
     } catch (err: any) {
       toast.error(err.message || "Failed to scan receipt");
+      trackEvent("ai_receipt_scan", { success: false });
     } finally {
       setScanning(false);
     }
