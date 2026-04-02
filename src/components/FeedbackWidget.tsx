@@ -439,20 +439,33 @@ export function FeedbackWidget() {
 
   const title = step === "type" ? "Share feedback" : step === "describe" ? (category === "bug" ? "Report a bug" : "Suggest a feature") : "";
 
+  const fabClick = () => {
+    if (!dragRef.current.moved) handleOpen();
+    dragRef.current.moved = false;
+  };
+
   return (
     <>
-      {/* Floating trigger */}
-      <button
-        onClick={handleOpen}
-        className="fixed z-40 bottom-24 right-4 md:bottom-16 md:right-6 flex items-center justify-center w-11 h-11 rounded-full bg-white transition-colors hover:bg-teal-50 hover:border-teal-500"
-        style={{
-          border: "1px solid #E5E7EB",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
-        }}
-        aria-label="Send feedback"
-      >
-        <MessageSquare className="h-[18px] w-[18px]" style={{ color: "#0D9488" }} />
-      </button>
+      {/* Draggable floating trigger */}
+      {fabPos && (
+        <button
+          ref={fabRef}
+          onClick={fabClick}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          className="fixed z-40 flex items-center justify-center w-14 h-14 rounded-full bg-white transition-shadow hover:shadow-lg select-none touch-none"
+          style={{
+            left: fabPos.x,
+            top: fabPos.y,
+            border: "1px solid hsl(var(--border))",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+          }}
+          aria-label="Send feedback"
+        >
+          <MessageSquare className="h-5 w-5" style={{ color: "#0D9488" }} />
+        </button>
+      )}
 
       {/* Modal */}
       {isMobile ? (
