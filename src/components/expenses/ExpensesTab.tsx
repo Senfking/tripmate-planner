@@ -482,10 +482,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               <div>
                 {groupedExpenses.map(({ date, items }) => (
                   <div key={date}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/60 py-2 mt-2 first:mt-0">
-                      {format(parseISO(date), "EEE d MMM")}
-                    </p>
-                    <div className="divide-y divide-border/40">
+                    <div
+                      className="mt-2 first:mt-0"
+                      style={{
+                        background: "rgba(0,0,0,0.02)",
+                        padding: "6px 16px",
+                        borderBottom: "1px solid rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(0,0,0,0.35)" }}>
+                        {format(parseISO(date), "EEE d MMM")}
+                      </p>
+                    </div>
+                    <div>
                       {items.map((exp) => (
                         <ExpenseCard
                           key={exp.id}
