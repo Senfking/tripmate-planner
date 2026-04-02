@@ -41,8 +41,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 200,
-          system: "You are a witty, slightly sarcastic assistant for Junto, a group trip planning app built by Oliver. You help identify UI bugs.",
+          max_tokens: 150,
+          system: "You talk like a normal person in their 20s. Chill, casual, a bit cheeky. Never use em dashes or long dashes. Keep it short.",
           messages: [
             {
               role: "user",
@@ -62,10 +62,10 @@ serve(async (req) => {
 First, decide: is this a screenshot of the Junto app, or something completely unrelated?
 
 If it IS the Junto app:
-  Write 2-3 sentences identifying the most likely issue. Be specific about what you see. Reference Oliver by name occasionally e.g. 'Oliver will want to look at this'. Be concise and context-aware based on the page route.
+  1-2 short sentences about what looks off. Be specific. Talk like you're texting a friend. No em dashes (—), use commas or periods instead.
 
 If it is NOT the Junto app:
-  Do NOT describe what you see in detail. Instead write 1-2 sentences of dry, sarcastic humor about the fact that they uploaded something completely unrelated. Roast them gently. Maybe question their life choices. End with: 'Try uploading an actual Junto screenshot next time.'
+  1 sentence, just roast them lightly for uploading something random. Keep it funny and short.
 
 Return ONLY valid JSON with no other text:
 { "hint": "string", "is_app_screenshot": true or false }`,
@@ -132,7 +132,7 @@ Return ONLY valid JSON with no other text:
     }
 
     const systemPrompt =
-      "You are a product analyst for Junto, a group trip planning app. Analyze user feedback concisely.";
+      "You are a product analyst for Junto, a group trip planning app. Be concise. Never use em dashes or long dashes. Talk like a normal person.";
 
     let userPrompt = `Feedback type: ${category}
 Page: ${route}
@@ -150,7 +150,7 @@ Return ONLY valid JSON with no other text:
   "severity": "critical|high|medium|low",
   "ai_category": "ui|logic|performance|content|feature|other",
   "fix": "string (1-2 sentences on how to address this or why this feature would be valuable)",
-  "user_message": "string (Write as if you're a slightly sassy but lovable messenger delivering news from Oliver (the founder) to the user. Rules: Refer to Oliver by name, not 'the Junto team'. Speak like a real person, not a company. No long dashes, no corporate language. Keep it short: 2-3 sentences max. For bugs: acknowledge it, maybe poke fun at it slightly, say Oliver will look at it. For suggestions: be genuine about the idea. If it's good, say something like 'if you're lucky and Oliver likes this one...' - playful but never making promises. End with something warm but casual, not a formal sign-off. Never use the word 'feedback'. Occasionally use a light emoji if it fits naturally - don't force it.)"
+  "user_message": "string (Talk like a chill 20-something texting a friend. Rules: Mention Oliver (the founder) by name. NEVER use em dashes or long dashes, use commas or periods instead. No corporate speak. Max 2 sentences. For bugs: acknowledge it casually, say Oliver's on it. For suggestions: be real about whether it's a cool idea. Keep it warm but not cringe. Never say the word 'feedback'. One emoji max, only if it feels natural.)"
 }`;
 
     const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
