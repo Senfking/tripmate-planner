@@ -130,7 +130,7 @@ export function ImportItineraryModal({
     try {
       // Upload to storage
       const ext = file.name.split(".").pop() || "jpg";
-      const path = `${tripId}/${crypto.randomUUID()}.${ext}`;
+      const path = `imports/${tripId}/${crypto.randomUUID()}.${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from("trip-attachments")
         .upload(path, file);
