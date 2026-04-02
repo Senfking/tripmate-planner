@@ -73,6 +73,7 @@ export default function ReferralLanding() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [statementIndex, setStatementIndex] = useState(0);
   const [statementVisible, setStatementVisible] = useState(true);
+  const [formOpen, setFormOpen] = useState(!!code);
 
   // Auth state
   const { signIn, signUp, user, loading: authLoading } = useAuth();
@@ -315,97 +316,13 @@ export default function ReferralLanding() {
             ))}
           </div>
 
-          {/* ── Inline auth section ── */}
-          <div className="mt-6 space-y-4">
-            {/* Error message */}
-            {error && (
-              <p
-                className="rounded-xl px-3 py-2 text-sm text-left"
-                style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5" }}
-              >
-                {error}
-              </p>
-            )}
-
-            {/* Google OAuth */}
-            <button
-              type="button"
-              disabled={googleLoading}
-              onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:scale-[0.97] transition-transform"
-              style={{
-                height: 52,
-                fontSize: 15,
-                background: "rgba(255,255,255,0.95)",
-                color: "#1f1f1f",
-              }}
-            >
-              {googleLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <GoogleIcon />
-              )}
-              Continue with Google
-            </button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.15)" }} />
-              <span className="text-[12px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>or</span>
-              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.15)" }} />
-            </div>
-
-            {/* Email/password form */}
-            <form onSubmit={handleSubmit} className="space-y-3">
-              {mode === "signup" && (
-                <input
-                  type="text"
-                  required
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Display name"
-                  className="w-full rounded-xl px-4 text-white placeholder:text-white/40 outline-none focus:ring-1 focus:ring-white/30"
-                  style={{
-                    height: 48,
-                    fontSize: 15,
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                  }}
-                />
-              )}
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full rounded-xl px-4 text-white placeholder:text-white/40 outline-none focus:ring-1 focus:ring-white/30"
-                style={{
-                  height: 48,
-                  fontSize: 15,
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                }}
-              />
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full rounded-xl px-4 text-white placeholder:text-white/40 outline-none focus:ring-1 focus:ring-white/30"
-                style={{
-                  height: 48,
-                  fontSize: 15,
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                }}
-              />
+          {/* ── CTA / Auth section ── */}
+          {!formOpen && (
+            <div className="mt-6">
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-2xl active:scale-[0.97] transition-transform"
+                type="button"
+                onClick={() => setFormOpen(true)}
+                className="w-full flex items-center justify-center text-white font-semibold rounded-2xl active:scale-[0.97] transition-transform"
                 style={{
                   height: 52,
                   fontSize: 16,
@@ -413,39 +330,152 @@ export default function ReferralLanding() {
                   boxShadow: "0 4px 24px rgba(13,148,136,0.35)",
                 }}
               >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {mode === "signup" ? "Create account" : "Sign in"}
+                Get Started
               </button>
-            </form>
+            </div>
+          )}
 
-            {/* Toggle mode */}
-            <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-              {mode === "signup" ? (
-                <>
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => { setMode("signin"); setError(null); }}
-                    className="underline underline-offset-2"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateRows: formOpen ? "1fr" : "0fr",
+              opacity: formOpen ? 1 : 0,
+              transition: "grid-template-rows 0.4s ease-out, opacity 0.35s ease-out",
+            }}
+          >
+            <div style={{ overflow: "hidden" }}>
+              <div className="mt-6 space-y-4">
+                {/* Error message */}
+                {error && (
+                  <p
+                    className="rounded-xl px-3 py-2 text-sm text-left"
+                    style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5" }}
                   >
-                    Sign in
-                  </button>
-                </>
-              ) : (
-                <>
-                  Don't have an account?{" "}
+                    {error}
+                  </p>
+                )}
+
+                {/* Google OAuth */}
+                <button
+                  type="button"
+                  disabled={googleLoading}
+                  onClick={handleGoogleSignIn}
+                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:scale-[0.97] transition-transform"
+                  style={{
+                    height: 52,
+                    fontSize: 15,
+                    background: "rgba(255,255,255,0.95)",
+                    color: "#1f1f1f",
+                  }}
+                >
+                  {googleLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <GoogleIcon />
+                  )}
+                  Continue with Google
+                </button>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.15)" }} />
+                  <span className="text-[12px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>or</span>
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.15)" }} />
+                </div>
+
+                {/* Email/password form */}
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  {mode === "signup" && (
+                    <input
+                      type="text"
+                      required
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="Display name"
+                      className="w-full rounded-xl px-4 text-white placeholder:text-white/40 outline-none focus:ring-1 focus:ring-white/30"
+                      style={{
+                        height: 48,
+                        fontSize: 15,
+                        background: "rgba(255,255,255,0.08)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                      }}
+                    />
+                  )}
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
+                    className="w-full rounded-xl px-4 text-white placeholder:text-white/40 outline-none focus:ring-1 focus:ring-white/30"
+                    style={{
+                      height: 48,
+                      fontSize: 15,
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                    }}
+                  />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    className="w-full rounded-xl px-4 text-white placeholder:text-white/40 outline-none focus:ring-1 focus:ring-white/30"
+                    style={{
+                      height: 48,
+                      fontSize: 15,
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                    }}
+                  />
                   <button
-                    type="button"
-                    onClick={() => { setMode("signup"); setError(null); }}
-                    className="underline underline-offset-2"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
+                    type="submit"
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-2xl active:scale-[0.97] transition-transform"
+                    style={{
+                      height: 52,
+                      fontSize: 16,
+                      background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
+                      boxShadow: "0 4px 24px rgba(13,148,136,0.35)",
+                    }}
                   >
-                    Create account
+                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {mode === "signup" ? "Create account" : "Sign in"}
                   </button>
-                </>
-              )}
-            </p>
+                </form>
+
+                {/* Toggle mode */}
+                <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  {mode === "signup" ? (
+                    <>
+                      Already have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => { setMode("signin"); setError(null); }}
+                        className="underline underline-offset-2"
+                        style={{ color: "rgba(255,255,255,0.55)" }}
+                      >
+                        Sign in
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      Don't have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => { setMode("signup"); setError(null); }}
+                        className="underline underline-offset-2"
+                        style={{ color: "rgba(255,255,255,0.55)" }}
+                      >
+                        Create account
+                      </button>
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
