@@ -245,9 +245,9 @@ Deno.serve(async (req) => {
             (daily[day] as any)[key]++;
           });
         };
-        addToDay(landingData.data, "landing");
-        addToDay(referralData.data, "referral");
-        addToDay(inviteData.data, "invite");
+        addToDay(landingData.data || [], "landing");
+        addToDay(referralData.data || [], "referral");
+        addToDay(inviteData.data || [], "invite");
 
         return json(Object.entries(daily).sort().map(([date, d]) => ({ date, ...d })));
       }
