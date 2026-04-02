@@ -22,6 +22,7 @@ function timeToMinutes(t: string): number {
 
 interface Props {
   tripId: string;
+  tripStartDate?: string | null;
   myRole?: string;
   newItemIds?: Set<string>;
 }
