@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, X } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -27,6 +28,7 @@ export function InstallPrompt() {
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      trackEvent("pwa_install_prompted", { platform: "android" });
     };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -34,6 +36,7 @@ export function InstallPrompt() {
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
+    trackEvent("pwa_install_triggered", { platform: "android" });
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") setDeferredPrompt(null);
@@ -79,6 +82,13 @@ export function InstallPrompt() {
   const isSamsungBrowser = /samsungbrowser/i.test(ua);
 
   let instruction: React.ReactNode;
+
+  // Track iOS/mobile manual install tip render
+  useEffect(() => {
+    if (!isInStandaloneMode && !iosDismissed && (isIOS || isAndroid)) {
+      trackEvent("pwa_install_prompted", { platform: isIOS ? "ios" : "android_manual" });
+    }
+  }, []);
 
   if (isIOS && isSafari) {
     instruction = (

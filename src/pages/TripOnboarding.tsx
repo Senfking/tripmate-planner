@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +19,7 @@ const TOTAL_STEPS = 4;
 export default function TripOnboarding() {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
 
   const { data: trip, isLoading } = useQuery({
@@ -72,11 +75,13 @@ export default function TripOnboarding() {
   const copyCode = () => {
     navigator.clipboard.writeText(joinUrl);
     toast.success("Code copied!");
+    trackEvent("trip_invite_sent", { method: "copy_link", source: "onboarding" }, user?.id);
   };
 
   const shareWhatsApp = () => {
     const text = `Hey! I created a trip on Junto 🌍\nJoin with code ${trip?.trip_code} or tap here:\n${joinUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    trackEvent("trip_invite_sent", { method: "whatsapp", source: "onboarding" }, user?.id);
   };
 
   if (isLoading || !trip) {

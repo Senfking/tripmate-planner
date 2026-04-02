@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getShareableAppOrigin } from "@/lib/appUrl";
+import { trackEvent } from "@/lib/analytics";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -192,6 +193,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       inviteUrl,
     ]);
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    trackEvent("trip_invite_sent", { method: "whatsapp", type: "invite" }, user?.id);
   };
 
   const handleWhatsAppShare = () => {
@@ -212,6 +214,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       `Planned with Junto 🗺️ juntotravel.lovable.app`,
     ]);
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    trackEvent("trip_invite_sent", { method: "whatsapp", type: "full_plan" }, user?.id);
   };
 
   /* ── copy helper ───────────────────────────────────── */
@@ -219,6 +222,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Link copied to clipboard");
+      trackEvent("trip_invite_sent", { method: "copy_link" }, user?.id);
     } catch {
       toast.error("Failed to copy");
     }
@@ -283,6 +287,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                 onClick={() => {
                   navigator.clipboard.writeText(tripCode);
                   toast.success("Code copied!");
+                  trackEvent("join_code_copied", {}, user?.id);
                 }}
               >
                 <span className="text-[28px] font-bold font-mono tracking-[0.15em] text-foreground">
