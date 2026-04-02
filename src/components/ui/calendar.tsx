@@ -1,19 +1,66 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { DayPicker, CaptionProps, useNavigation } from "react-day-picker";
+import { format, setMonth, setYear } from "date-fns";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+function DropdownCaption({ displayMonth }: CaptionProps) {
+  const { goToMonth } = useNavigation();
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 7 }, (_, i) => currentYear - 1 + i);
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 pt-1">
+      <div className="relative">
+        <select
+          value={displayMonth.getMonth()}
+          onChange={(e) => goToMonth(setMonth(displayMonth, parseInt(e.target.value)))}
+          className="appearance-none cursor-pointer h-8 rounded-lg bg-accent/60 pl-2.5 pr-6 text-sm font-medium text-foreground border-0 outline-none focus:ring-2 focus:ring-primary/30 hover:bg-accent transition-colors"
+        >
+          {MONTHS.map((m, i) => (
+            <option key={m} value={i}>{m}</option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+      </div>
+      <div className="relative">
+        <select
+          value={displayMonth.getFullYear()}
+          onChange={(e) => goToMonth(setYear(displayMonth, parseInt(e.target.value)))}
+          className="appearance-none cursor-pointer h-8 rounded-lg bg-accent/60 pl-2.5 pr-6 text-sm font-medium text-foreground border-0 outline-none focus:ring-2 focus:ring-primary/30 hover:bg-accent transition-colors"
+        >
+          {years.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   showMonthYearDropdowns?: boolean;
 };
 
 function Calendar({ className, classNames, showOutsideDays = true, showMonthYearDropdowns, ...props }: CalendarProps) {
-  const currentYear = new Date().getFullYear();
-  const dropdownProps = showMonthYearDropdowns
-    ? { captionLayout: "dropdown-buttons" as const, fromYear: currentYear - 1, toYear: currentYear + 5 }
-    : {};
+  const customComponents = showMonthYearDropdowns
+    ? {
+        Caption: DropdownCaption,
+        IconLeft: ({ ..._props }: any) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ..._props }: any) => <ChevronRight className="h-4 w-4" />,
+      }
+    : {
+        IconLeft: ({ ..._props }: any) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ..._props }: any) => <ChevronRight className="h-4 w-4" />,
+      };
 
   return (
     <DayPicker
@@ -23,11 +70,7 @@ function Calendar({ className, classNames, showOutsideDays = true, showMonthYear
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: cn("text-sm font-medium", showMonthYearDropdowns && "hidden"),
-        caption_dropdowns: "flex items-center gap-1.5",
-        dropdown_month: "[&>select]:h-8 [&>select]:rounded-md [&>select]:border [&>select]:border-input [&>select]:bg-background [&>select]:px-2 [&>select]:text-sm [&>select]:font-medium",
-        dropdown_year: "[&>select]:h-8 [&>select]:rounded-md [&>select]:border [&>select]:border-input [&>select]:bg-background [&>select]:px-2 [&>select]:text-sm [&>select]:font-medium",
-        dropdown: "appearance-none cursor-pointer",
+        caption_label: "text-sm font-medium",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -52,11 +95,7 @@ function Calendar({ className, classNames, showOutsideDays = true, showMonthYear
         day_hidden: "invisible",
         ...classNames,
       }}
-      components={{
-        IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
-      }}
-      {...dropdownProps}
+      components={customComponents}
       {...props}
     />
   );
