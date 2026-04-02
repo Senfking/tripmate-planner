@@ -110,6 +110,14 @@ html, body, #root {
   }
 }
 
+/* Hide sidebar on desktop — top header replaces it */
+@media (min-width: 768px) {
+  .group\/sidebar-wrapper {
+    --sidebar-width: 0px !important;
+    --sidebar-width-icon: 0px !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
