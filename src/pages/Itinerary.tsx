@@ -128,7 +128,17 @@ const Itinerary = () => {
   const allDatesSet = new Set<string>([...dateMap.keys()]);
 
   for (const g of filteredGroups) {
-    const b: TripBoundary = { tripName: g.tripName, tripEmoji: g.tripEmoji, tripId: g.tripId };
+    const routeStopDests = g.placeholders.map((p) => p.destination);
+    const b: TripBoundary = {
+      tripName: g.tripName,
+      tripEmoji: g.tripEmoji,
+      tripId: g.tripId,
+      tripStartDate: g.tripStartDate,
+      tripEndDate: g.tripEndDate,
+      tripDestination: g.tripDestination,
+      tripCoverImagePath: g.tripCoverImagePath,
+      routeStopDests,
+    };
 
     // Trip-level boundaries
     if (g.tripStartDate && g.tripEndDate) {
