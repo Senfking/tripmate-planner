@@ -293,7 +293,11 @@ export function FeedbackWidget() {
           .from("feedback-screenshots")
           .upload(path, screenshotFile);
         if (!uploadErr) {
-          screenshotUrl = path;
+          // Generate a signed URL (valid for 1 year) so the admin dashboard can display it
+          const { data: signedData } = await supabase.storage
+            .from("feedback-screenshots")
+            .createSignedUrl(path, 60 * 60 * 24 * 365);
+          screenshotUrl = signedData?.signedUrl ?? path;
         }
       }
 

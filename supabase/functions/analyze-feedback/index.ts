@@ -113,6 +113,47 @@ Return ONLY valid JSON with no other text:
       });
     }
 
+    // --- Backfill screenshot URLs action ---
+    if (body.action === "backfill_screenshot_urls") {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sb = createClient(supabaseUrl, serviceKey);
+
+      // Find feedback rows where screenshot_url is a raw path (not a full URL)
+      const { data: rows, error: fetchErr } = await sb
+        .from("feedback")
+        .select("id, screenshot_url")
+        .not("screenshot_url", "is", null)
+        .not("screenshot_url", "like", "https://%");
+
+      if (fetchErr) {
+        return new Response(JSON.stringify({ error: fetchErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let updated = 0;
+      for (const row of rows ?? []) {
+        const { data: signedData } = await sb.storage
+          .from("feedback-screenshots")
+          .createSignedUrl(row.screenshot_url, 60 * 60 * 24 * 365);
+
+        if (signedData?.signedUrl) {
+          await sb
+            .from("feedback")
+            .update({ screenshot_url: signedData.signedUrl })
+            .eq("id", row.id);
+          updated++;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ updated, total: rows?.length ?? 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // --- Main feedback analysis action ---
     const { feedbackId, category, message, route, screenshot_hint } = body;
 
