@@ -6,13 +6,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function csvEscape(value: string | null | undefined): string {
-  if (!value) return "";
+function csvEscape(value: string | number | null | undefined): string {
+  if (value == null) return "";
   const s = String(value);
-  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
+  // Prevent CSV formula injection: prefix cells starting with =, +, -, @ with a single quote
+  const needsPrefix = /^[=+\-@]/.test(s);
+  const escaped = s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r") || needsPrefix
+    ? `"${needsPrefix ? "'" : ""}${s.replace(/"/g, '""')}"`
+    : s;
+  return escaped;
 }
 
 Deno.serve(async (req) => {
@@ -113,7 +115,7 @@ Deno.serve(async (req) => {
       return [
         csvEscape(exp.incurred_on),
         csvEscape(exp.title),
-        exp.amount,
+        csvEscape(exp.amount),
         csvEscape(exp.currency),
         csvEscape(exp.category),
         csvEscape(payerName),

@@ -15,7 +15,13 @@ sw.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS))
   );
-  sw.skipWaiting();
+  // Don't skipWaiting here — let the client trigger it via message
+});
+
+sw.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    sw.skipWaiting();
+  }
 });
 
 sw.addEventListener('activate', (event) => {

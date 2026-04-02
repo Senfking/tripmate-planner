@@ -170,9 +170,12 @@ export function ExpenseFormModal({
         return totalPct;
       })()
     : parsedAmount;
-  const customValid = splitMode === "equal"
+  const hasNegativeSplit = computedSplits.some((s) => s.share_amount < 0);
+  const customValid = !hasNegativeSplit && (
+    splitMode === "equal"
     || (splitMode === "custom" && Math.abs(customSum - parsedAmount) < 0.01)
-    || (splitMode === "percent" && Math.abs(customSum - 100) < 0.1);
+    || (splitMode === "percent" && Math.abs(customSum - 100) < 0.01)
+  );
 
   const canSubmit = title.trim() && parsedAmount > 0 && selectedMembers.size > 0 && customValid;
 
@@ -244,8 +247,16 @@ export function ExpenseFormModal({
     }
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
+  // Reset submitting state when modal opens/closes
+  useEffect(() => {
+    if (!open) setSubmitting(false);
+  }, [open]);
+
   const handleSubmit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
     onSave({
       id: editingExpense?.id,
       title: title.trim(),
@@ -464,12 +475,17 @@ export function ExpenseFormModal({
             );
           })}
         </div>
-        {splitMode === "custom" && !customValid && (
+        {hasNegativeSplit && (
+          <p className="text-xs text-destructive">
+            Split amounts cannot be negative
+          </p>
+        )}
+        {splitMode === "custom" && !hasNegativeSplit && !customValid && (
           <p className="text-xs text-destructive">
             Amounts sum to {customSum.toFixed(2)} but total is {parsedAmount.toFixed(2)}
           </p>
         )}
-        {splitMode === "percent" && !customValid && (
+        {splitMode === "percent" && !hasNegativeSplit && !customValid && (
           <p className="text-xs text-destructive">
             Percentages sum to {customSum.toFixed(0)}% — should be 100%
           </p>
@@ -543,7 +559,7 @@ export function ExpenseFormModal({
         />
       </div>
 
-      <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full">
+      <Button onClick={handleSubmit} disabled={!canSubmit || submitting} className="w-full">
         {editingExpense ? "Update Expense" : "Add Expense"}
       </Button>
     </div>

@@ -32,7 +32,8 @@ export function useItinerary(tripId: string) {
         .select("*")
         .eq("trip_id", tripId)
         .order("day_date")
-        .order("sort_order");
+        .order("sort_order")
+        .limit(500);
       if (error) throw error;
       return data as ItineraryItem[];
     },

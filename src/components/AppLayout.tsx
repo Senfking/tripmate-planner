@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { ServiceWorkerUpdater } from "@/components/ServiceWorkerUpdater";
 import { useAuth } from "@/contexts/AuthContext";
 
 function OfflineBanner() {
@@ -126,6 +127,7 @@ export function AppLayout() {
         {!isTripPage && <BottomNav />}
         <FeedbackWidget />
         <InstallPrompt />
+        <ServiceWorkerUpdater />
       </div>
     </SidebarProvider>
   );

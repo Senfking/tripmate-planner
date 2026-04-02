@@ -46,7 +46,8 @@ export function useProposals(tripId: string | undefined) {
         .from("trip_proposals")
         .select("*")
         .eq("trip_id", tripId!)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
       if (error) throw error;
 
       const userIds = [...new Set((data || []).map((p: any) => p.created_by))];

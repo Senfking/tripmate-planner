@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,29 +6,53 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+
+// Eagerly loaded (critical path)
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import TripList from "./pages/TripList";
-import TripNew from "./pages/TripNew";
-import TripOnboarding from "./pages/TripOnboarding";
-import TripHome from "./pages/TripHome";
-import TripSection from "./pages/TripSection";
-import Decisions from "./pages/Decisions";
-import Itinerary from "./pages/Itinerary";
-import Expenses from "./pages/Expenses";
-import More from "./pages/More";
-import InviteRedeem from "./pages/InviteRedeem";
-import JoinByCode from "./pages/JoinByCode";
-import ShareView from "./pages/ShareView";
 import AuthCallback from "./pages/AuthCallback";
-import ReferralLanding from "./pages/ReferralLanding";
-import NotFound from "./pages/NotFound";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
 
-const queryClient = new QueryClient();
+// Lazy loaded routes
+const TripList = lazy(() => import("./pages/TripList"));
+const TripNew = lazy(() => import("./pages/TripNew"));
+const TripOnboarding = lazy(() => import("./pages/TripOnboarding"));
+const TripHome = lazy(() => import("./pages/TripHome"));
+const TripSection = lazy(() => import("./pages/TripSection"));
+const Decisions = lazy(() => import("./pages/Decisions"));
+const Itinerary = lazy(() => import("./pages/Itinerary"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const More = lazy(() => import("./pages/More"));
+const InviteRedeem = lazy(() => import("./pages/InviteRedeem"));
+const JoinByCode = lazy(() => import("./pages/JoinByCode"));
+const ShareView = lazy(() => import("./pages/ShareView"));
+const ReferralLanding = lazy(() => import("./pages/ReferralLanding"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+
+function PageLoader() {
+  return (
+    <div className="flex h-screen w-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 1000 * 60 * 2, // 2 min default
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 function AppInner() {
   const qc = useQueryClient();
@@ -60,6 +84,7 @@ function AppInner() {
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
@@ -94,6 +119,7 @@ function AppInner() {
             <Route path="/trips" element={<Navigate to="/app/trips" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
@@ -101,9 +127,11 @@ function AppInner() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AppInner />
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AppInner />
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

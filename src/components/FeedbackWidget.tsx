@@ -291,10 +291,7 @@ export function FeedbackWidget() {
           .from("feedback-screenshots")
           .upload(path, screenshotFile);
         if (!uploadErr) {
-          const { data: urlData } = supabase.storage
-            .from("feedback-screenshots")
-            .getPublicUrl(path);
-          screenshotUrl = urlData.publicUrl;
+          screenshotUrl = path;
         }
       }
 

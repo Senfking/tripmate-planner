@@ -89,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchProfile(existing.user.id);
       }
       setLoading(false);
+    }).catch(() => {
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();

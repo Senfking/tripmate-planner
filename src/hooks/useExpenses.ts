@@ -48,7 +48,8 @@ export function useExpenses(tripId: string) {
         .from("expenses")
         .select("*")
         .eq("trip_id", tripId)
-        .order("incurred_on", { ascending: false });
+        .order("incurred_on", { ascending: false })
+        .limit(500);
       if (error) throw error;
       return data as ExpenseRow[];
     },
@@ -243,14 +244,18 @@ export function useExpenses(tripId: string) {
   // Silent background refresh when rates are stale
   useEffect(() => {
     if (!ratesStale || ratesQuery.isError) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
     supabase.functions.invoke("refresh-exchange-rates")
-      .then(() => new Promise((r) => setTimeout(r, 2000)))
+      .then(() => new Promise<void>((r) => { timer = setTimeout(r, 2000); }))
       .then(() => {
+        if (cancelled) return;
         qc.invalidateQueries({ queryKey: ["exchange-rates"] });
         qc.invalidateQueries({ queryKey: ["exchange-rates-trip"] });
         qc.invalidateQueries({ queryKey: ["cached-currency-codes"] });
       })
-      .catch(() => {}); // silent failure — user never knows
+      .catch(() => {});
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [ratesStale, ratesQuery.isError, qc]);
 
   // Fetch itinerary items for linking
@@ -345,16 +350,11 @@ export function useExpenses(tripId: string) {
         .eq("id", id);
       if (error) throw error;
 
-      // Delete old splits and re-insert
-      const { error: dErr } = await supabase.from("expense_splits").delete().eq("expense_id", id);
-      if (dErr) throw dErr;
-
-      const splitRows = splits.map((s) => ({
-        expense_id: id,
-        user_id: s.user_id,
-        share_amount: s.share_amount,
-      }));
-      const { error: sErr } = await supabase.from("expense_splits").insert(splitRows);
+      // Atomically replace splits in a single DB transaction
+      const { error: sErr } = await (supabase.rpc as any)("replace_expense_splits", {
+        _expense_id: id,
+        _splits: splits.map((s) => ({ user_id: s.user_id, share_amount: s.share_amount })),
+      });
       if (sErr) throw sErr;
     },
     onSuccess: () => {

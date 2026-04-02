@@ -24,7 +24,22 @@ if ("serviceWorker" in navigator) {
     });
   } else {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+      navigator.serviceWorker.register("/service-worker.js").then((reg) => {
+        // Detect new waiting service worker
+        const emitWaiting = (sw: ServiceWorker) => {
+          window.dispatchEvent(new CustomEvent("sw-waiting", { detail: sw }));
+        };
+        if (reg.waiting) emitWaiting(reg.waiting);
+        reg.addEventListener("updatefound", () => {
+          const newSW = reg.installing;
+          if (!newSW) return;
+          newSW.addEventListener("statechange", () => {
+            if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+              emitWaiting(newSW);
+            }
+          });
+        });
+      }).catch(() => {});
     });
   }
 }
