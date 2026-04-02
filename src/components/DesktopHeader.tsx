@@ -41,7 +41,8 @@ export function DesktopHeader() {
     <header
       className="hidden md:block sticky top-0 z-50 mx-4 mt-2 rounded-2xl overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
+        background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
+        boxShadow: "0 6px 20px rgba(13, 148, 136, 0.20)",
       }}
     >
       {/* Glass shine */}
@@ -49,7 +50,7 @@ export function DesktopHeader() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.04) 100%)",
+            "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.0) 50%, rgba(255,255,255,0.05) 100%)",
         }}
       />
 
