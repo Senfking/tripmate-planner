@@ -32,15 +32,15 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
           <span>{comments.length}</span>
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pt-3 space-y-3">
+      <CollapsibleContent className="pt-3 space-y-3 w-full overflow-hidden">
         {comments.length === 0 && (
           <p className="text-xs text-muted-foreground">No comments yet.</p>
         )}
         {comments.map((c) => (
-          <div key={c.id} className={`text-sm space-y-0.5 ${newCommentIds?.has(c.id) ? "animate-realtime-flash" : ""}`}>
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-xs">{c.display_name || "Member"}</span>
-              <div className="flex items-center gap-2">
+          <div key={c.id} className={`text-sm space-y-0.5 w-full overflow-hidden ${newCommentIds?.has(c.id) ? "animate-realtime-flash" : ""}`}>
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-medium text-xs truncate">{c.display_name || "Member"}</span>
+              <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[11px] text-muted-foreground">
                   {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
                 </span>
@@ -54,16 +54,16 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
                 )}
               </div>
             </div>
-            <p className="text-muted-foreground text-xs">{c.body}</p>
+            <p className="text-muted-foreground text-xs break-words whitespace-pre-wrap">{c.body}</p>
           </div>
         ))}
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full">
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Add a comment…"
             rows={2}
-            className="text-sm"
+            className="text-sm min-w-0 flex-1"
           />
           <Button
             size="sm"

@@ -236,7 +236,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </>
+    </div>
   );
 
   return (
