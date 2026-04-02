@@ -109,11 +109,14 @@ Deno.serve(async (req) => {
     }
 
     // Build extraction prompt
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const dateContext = trip_start_date
       ? `The trip starts on ${trip_start_date}. Use this to resolve relative dates like "Day 1" = ${trip_start_date}, "Day 2" = the next day, etc.`
       : `No trip start date is known. If dates are relative (e.g. "Day 1"), you cannot resolve them — skip items with no determinable date.`;
 
-    const extractionPrompt = `Extract ALL itinerary items from this document/text. Return ONLY a valid JSON array with no preamble, markdown, code fences, or explanation.
+    const extractionPrompt = `Today's date is ${today}.
+
+Extract ALL itinerary items from this document/text. Return ONLY a valid JSON array with no preamble, markdown, code fences, or explanation.
 
 Each item in the array must have these fields:
 - "title": string (required — the activity or event name)
@@ -122,10 +125,11 @@ Each item in the array must have these fields:
 - "end_time": string | null (HH:MM 24h format, or null if unknown)
 - "location_text": string | null (venue, address, or place name, or null)
 - "status": string ("confirmed" if clearly booked/reserved, "idea" otherwise)
-- "notes": string | null (any extra details worth preserving, or null)
+- "notes": string | null (any extra details worth preserving such as flight/train numbers, confirmation/booking codes, duration, terminal/gate info, carrier/airline name, seat assignments, check-in/check-out times, contact numbers, or other practical info — or null if none)
 
 Rules:
 - ${dateContext}
+- If a date has no year, pick the year so the date is the nearest upcoming occurrence from today (${today}). For example, if today is 2026-04-02 and the text says "15 Jun", use 2026-06-15. If it says "10 Feb", use 2027-02-10 (since Feb 2026 already passed). If a trip_start_date is provided, prefer that year for all items in the trip.
 - If a field cannot be determined, use null. Do NOT guess.
 - If an item has no identifiable date, skip it entirely.
 - Parse ALL items found. Do not summarise, truncate, or omit any.
