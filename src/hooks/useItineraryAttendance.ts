@@ -51,10 +51,11 @@ export function useItineraryAttendance(tripId: string) {
       const { data: profiles } = await supabase
         .rpc("get_public_profiles", { _user_ids: userIds });
 
-      const nameMap = new Map((profiles || []).map((p) => [p.id, p.display_name]));
+      const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
       return userIds.map((uid) => ({
         user_id: uid,
-        display_name: nameMap.get(uid) || null,
+        display_name: profileMap.get(uid)?.display_name || null,
+        avatar_url: profileMap.get(uid)?.avatar_url || null,
       })) as TripMember[];
     },
     enabled: !!tripId && !!user,
