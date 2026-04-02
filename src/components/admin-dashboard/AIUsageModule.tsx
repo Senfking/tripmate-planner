@@ -69,6 +69,7 @@ export function AIUsageModule() {
               <Bar dataKey="receipt_scan" stackId="a" fill={C.tealLight} name="Receipt Scan" />
               <Bar dataKey="feedback_hint" stackId="a" fill={C.blue} name="Feedback Hint" />
               <Bar dataKey="itinerary_import" stackId="a" fill={C.amber} name="Itinerary Import" />
+              <Bar dataKey="booking_extract" stackId="a" fill="#a78bfa" name="Booking Extract" />
             </BarChart>
           </ResponsiveContainer>
         </Card>
