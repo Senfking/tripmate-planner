@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { DesktopFooter } from "@/components/DesktopFooter";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -636,7 +637,7 @@ const More = () => {
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
 
   return (
-    <div className="min-h-screen bg-muted/40 px-4 pb-32 space-y-4 md:max-w-[900px] md:mx-auto md:px-8" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.5rem)" }}>
+    <div className="min-h-screen flex flex-col bg-muted/40 px-4 pb-32 space-y-4 md:max-w-[900px] md:mx-auto md:px-8" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.5rem)" }}>
       {/* ── Back button ── */}
       <button
         onClick={() => navigate(-1)}
@@ -1148,6 +1149,7 @@ const More = () => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+      <DesktopFooter />
     </div>
   );
 };

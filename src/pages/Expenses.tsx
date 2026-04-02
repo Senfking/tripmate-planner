@@ -4,6 +4,7 @@ import { Wallet, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
+import { DesktopFooter } from "@/components/DesktopFooter";
 
 const Expenses = () => {
   const { data, isLoading, isFetching } = useGlobalExpenses();
@@ -21,7 +22,7 @@ const Expenses = () => {
 
   if (showSkeleton) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title="Expenses" subtitle="Loading…" />
         <div className="px-4 mt-4 space-y-2">
           {[1, 2].map((i) => (
@@ -78,7 +79,7 @@ const Expenses = () => {
   );
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title="Expenses" subtitle={subtitle}>
         {balanceDisplay}
       </TabHeroHeader>
@@ -242,6 +243,7 @@ const Expenses = () => {
           })}
         </div>
       )}
+      <DesktopFooter />
     </div>
   );
 };
