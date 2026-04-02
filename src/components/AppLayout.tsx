@@ -73,6 +73,9 @@ export function AppLayout() {
   const globalTabPaths = ["/app/trips", "/app/trips/new", "/app/decisions", "/app/itinerary", "/app/expenses"];
   const hideHeader = globalTabPaths.includes(location.pathname) || location.pathname === "/app/more";
 
+  // Hide mobile bottom nav on trip detail pages (was previously handled by routing outside AppLayout)
+  const isTripPage = /^\/app\/trips\/[^/]+/.test(location.pathname) && location.pathname !== "/app/trips/new";
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -119,7 +122,7 @@ export function AppLayout() {
           </main>
         </div>
 
-        <BottomNav />
+        {!isTripPage && <BottomNav />}
         <InstallPrompt />
       </div>
     </SidebarProvider>
