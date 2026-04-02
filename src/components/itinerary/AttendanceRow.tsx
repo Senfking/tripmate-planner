@@ -48,7 +48,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
   return (
     <>
       <div
-        className="flex items-center gap-1 py-0.5 cursor-pointer"
+        className="flex min-w-0 items-center gap-1.5 py-0.5 cursor-pointer"
         onClick={() => setSheetOpen(true)}
         role="button"
         tabIndex={0}
@@ -68,7 +68,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                 onCycle();
               }}
               className={cn(
-                "relative h-6 w-6 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 border transition-colors",
+                "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[9px] font-semibold transition-colors shadow-sm",
                 status === "out"
                   ? "bg-muted text-muted-foreground/40 border-muted"
                   : "bg-secondary text-secondary-foreground border-border/50",
@@ -84,20 +84,20 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
               {getInitials(member.display_name)}
               <span
                 className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-[1.5px] border-white dark:border-card flex items-center justify-center",
+                  "absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-background dark:border-card",
                   dotColors[status]
                 )}
               >
-                {status === "in" && <Check className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
-                {status === "maybe" && <HelpCircle className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
-                {status === "out" && <X className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                {status === "in" && <Check className="h-2 w-2 text-white" strokeWidth={3} />}
+                {status === "maybe" && <HelpCircle className="h-2 w-2 text-white" strokeWidth={3} />}
+                {status === "out" && <X className="h-2 w-2 text-white" strokeWidth={3} />}
               </span>
             </button>
           );
         })}
 
         {remaining > 0 && (
-          <span className="text-[9px] text-muted-foreground/60 bg-muted/50 rounded-full px-1.5 py-0.5 font-medium">
+          <span className="rounded-full bg-muted/60 px-2 py-1 text-[9px] font-medium text-muted-foreground/70">
             +{remaining}
           </span>
         )}
