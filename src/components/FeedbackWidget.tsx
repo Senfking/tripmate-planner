@@ -432,23 +432,33 @@ export function FeedbackWidget() {
 
   return (
     <>
-      {fabPos && (
+      {/* Vertical side tab — right edge, draggable vertically */}
+      {tabY != null && (
         <button
           ref={fabRef}
           onClick={fabClick}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className="fixed z-40 flex items-center justify-center w-14 h-14 rounded-full bg-white transition-shadow hover:shadow-lg select-none touch-none"
+          className="fixed z-40 select-none touch-none"
           style={{
-            left: fabPos.x,
-            top: fabPos.y,
-            border: "1px solid hsl(var(--border))",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            right: 0,
+            top: tabY,
+            writingMode: "vertical-rl",
+            textOrientation: "mixed",
+            background: "linear-gradient(180deg, #0D9488 0%, #0F766E 100%)",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            padding: "14px 7px",
+            borderRadius: "10px 0 0 10px",
+            boxShadow: "-2px 2px 12px rgba(0,0,0,0.12)",
+            cursor: "pointer",
           }}
           aria-label="Send feedback"
         >
-          <MessageSquare className="h-5 w-5" style={{ color: "#0D9488" }} />
+          Feedback
         </button>
       )}
 
