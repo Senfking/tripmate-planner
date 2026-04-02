@@ -284,6 +284,48 @@ function Step3({ modules, setModules }: {
           </div>
         ))}
       </div>
+
+      <p className="text-xs text-muted-foreground text-center mt-4">
+        You can always change these later in the trip's Admin tab.
+      </p>
+    </div>
+  );
+}
+
+function Confetti() {
+  const particles = Array.from({ length: 20 });
+  const colors = ["#0D9488", "#ffffff", "#f59e0b"];
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+      {particles.map((_, i) => {
+        const left = Math.random() * 100;
+        const delay = Math.random() * 0.5;
+        const size = 6 + Math.random() * 6;
+        const color = colors[i % colors.length];
+        const drift = (Math.random() - 0.5) * 60;
+        return (
+          <span
+            key={i}
+            className="absolute rounded-sm opacity-0"
+            style={{
+              left: `${left}%`,
+              top: -12,
+              width: size,
+              height: size,
+              backgroundColor: color,
+              animation: `confetti-fall 1.5s ${delay}s ease-out forwards`,
+              // @ts-ignore
+              "--drift": `${drift}px`,
+            } as React.CSSProperties}
+          />
+        );
+      })}
+      <style>{`
+        @keyframes confetti-fall {
+          0% { opacity: 1; transform: translateY(0) translateX(0) rotate(0deg); }
+          100% { opacity: 0; transform: translateY(100vh) translateX(var(--drift)) rotate(720deg); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -291,6 +333,7 @@ function Step3({ modules, setModules }: {
 function Step4({ trip }: { trip: { name: string; emoji: string | null; trip_code: string } }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center">
+      <Confetti />
       <p className="text-6xl">{trip.emoji || "✈️"}</p>
       <h2 className="text-[26px] font-bold mt-4">You're all set!</h2>
       <p className="text-lg mt-1" style={{ color: "#0D9488" }}>{trip.name}</p>
