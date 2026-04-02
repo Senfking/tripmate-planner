@@ -252,31 +252,41 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </Button>
       </div>
 
-      {/* Balance hero — frosted glass card */}
+      {/* Balance hero — premium glass card */}
       {canShowBalances && expenses.length > 0 && (
         <div
-          className="py-6 text-center mx-0"
+          className="relative overflow-hidden py-8 text-center mx-0"
           style={{
-            background: "rgba(255,255,255,0.6)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(255,255,255,0.8)",
-            borderRadius: 20,
-            boxShadow: "0 4px 24px rgba(13,148,136,0.08)",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(240,253,250,0.6) 100%)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255,255,255,0.9)",
+            borderRadius: 24,
+            boxShadow: "0 8px 32px rgba(13,148,136,0.1), 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)",
           }}
         >
+          {/* Decorative gradient orb */}
+          <div
+            className="absolute -top-12 -right-12 h-32 w-32 rounded-full opacity-30 pointer-events-none"
+            style={{ background: "radial-gradient(circle, rgba(13,148,136,0.4) 0%, transparent 70%)" }}
+          />
+          <div
+            className="absolute -bottom-8 -left-8 h-24 w-24 rounded-full opacity-20 pointer-events-none"
+            style={{ background: "radial-gradient(circle, rgba(14,165,233,0.4) 0%, transparent 70%)" }}
+          />
+
           {heroData.type === "settled" ? (
-            <div className="flex flex-col items-center gap-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">All settled</p>
+            <div className="relative flex flex-col items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">All settled</p>
               <CheckCircle2 className="h-10 w-10" style={{ color: "#0D9488" }} />
             </div>
           ) : heroData.type === "owe" ? (
-            <>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">You owe</p>
-              <p className="text-[42px] font-bold leading-none mt-1" style={{ color: "#EF4444" }}>
+            <div className="relative">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">You owe</p>
+              <p className="text-[44px] font-extrabold leading-none mt-2 text-foreground">
                 {formatCurrency(heroData.amount, settlementCurrency)}
               </p>
-              <p className="text-sm text-muted-foreground mt-2">{heroData.subline}</p>
+              <p className="text-[13px] text-muted-foreground mt-2.5">{heroData.subline}</p>
               <Button
                 size="sm"
                 className="mt-4 h-9 px-5 text-[13px]"
@@ -284,15 +294,15 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               >
                 Settle up
               </Button>
-            </>
+            </div>
           ) : (
-            <>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">You're owed</p>
-              <p className="text-[42px] font-bold leading-none mt-1" style={{ color: "#0D9488" }}>
+            <div className="relative">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">You're owed</p>
+              <p className="text-[44px] font-extrabold leading-none mt-2 text-foreground">
                 {formatCurrency(heroData.amount, settlementCurrency)}
               </p>
-              <p className="text-sm text-muted-foreground mt-2">{heroData.subline}</p>
-            </>
+              <p className="text-[13px] text-muted-foreground mt-2.5">{heroData.subline}</p>
+            </div>
           )}
         </div>
       )}
