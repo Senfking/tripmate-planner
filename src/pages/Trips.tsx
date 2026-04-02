@@ -1,5 +1,6 @@
 import { Plane } from "lucide-react";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
+import { DesktopFooter } from "@/components/DesktopFooter";
 
 const Trips = () => (
   <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
