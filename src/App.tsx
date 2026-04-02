@@ -75,15 +75,14 @@ function AppInner() {
               <Route element={<AppLayout />}>
                 <Route path="/app/trips" element={<TripList />} />
                 <Route path="/app/trips/new" element={<TripNew />} />
+                <Route path="/app/trips/:tripId" element={<TripHome />} />
+                <Route path="/app/trips/:tripId/onboarding" element={<TripOnboarding />} />
+                <Route path="/app/trips/:tripId/:section" element={<TripSection />} />
                 <Route path="/app/decisions" element={<Decisions />} />
                 <Route path="/app/itinerary" element={<Itinerary />} />
                 <Route path="/app/expenses" element={<Expenses />} />
                 <Route path="/app/more" element={<More />} />
               </Route>
-              {/* TripHome without AppLayout bottom nav */}
-              <Route path="/app/trips/:tripId" element={<TripHome />} />
-              <Route path="/app/trips/:tripId/onboarding" element={<TripOnboarding />} />
-              <Route path="/app/trips/:tripId/:section" element={<TripSection />} />
             </Route>
 
             {/* Redirects */}
