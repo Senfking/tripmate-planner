@@ -19,6 +19,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useMutation } from "@tanstack/react-query";
+import { trackEvent } from "@/lib/analytics";
 
 const EMOJI_GROUPS = [
   // Popular / quick picks (always visible)
@@ -72,6 +73,7 @@ export default function TripNew() {
     onSuccess: (data: any) => {
       setJoinOpen(false);
       toast.success(`Joined ${data.trip_name || "trip"}!`);
+      trackEvent("trip_joined_by_code", { trip_id: data.trip_id });
       navigate(`/app/trips/${data.trip_id}`);
     },
     onError: () => {
@@ -119,6 +121,7 @@ export default function TripNew() {
         }
       }
 
+      trackEvent("trip_created", { trip_id: data.id, has_dates: !!dateRange?.from, has_cover: !!coverFile });
       toast.success("Trip created!");
       navigate(`/app/trips/${data.id}/onboarding`);
     } catch (err: any) {

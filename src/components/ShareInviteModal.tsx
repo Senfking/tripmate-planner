@@ -109,6 +109,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       if (error) throw error;
     },
     onSuccess: () => {
+      trackEvent("trip_share_link_created", { trip_id: tripId }, user?.id);
       qc.invalidateQueries({ queryKey: ["share-token", tripId] });
       toast.success("Share link created");
     },
@@ -244,6 +245,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       });
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
+      trackEvent("export_downloaded", { trip_id: tripId, format: fn.includes("ics") ? "ics" : "csv" }, user?.id);
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = filename;

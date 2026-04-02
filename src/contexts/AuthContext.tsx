@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 
 type NotificationPreferences = {
   new_activity: boolean;
@@ -97,7 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error && data?.user) {
+      trackEvent("user_login", { method: "email" }, data.user.id);
+    }
     return { error: error as Error | null };
   };
 
@@ -107,11 +111,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: { data: { display_name: displayName } },
     });
+    if (!error && data?.user) {
+      trackEvent("user_signup", { method: "email" }, data.user.id);
+    }
     return { data, error: error as Error | null };
   };
 
   const signOut = async () => {
+    const userId = user?.id;
     await supabase.auth.signOut();
+    if (userId) trackEvent("user_logout", {}, userId);
     setUser(null);
     setSession(null);
     setProfile(null);
