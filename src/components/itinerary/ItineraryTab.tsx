@@ -8,9 +8,10 @@ import { DaySection } from "./DaySection";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarPlus, Loader2 } from "lucide-react";
+import { CalendarPlus, Loader2, Sparkles } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
+import { ImportItineraryModal } from "./ImportItineraryModal";
 import { toast } from "sonner";
 
 /** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
@@ -21,11 +22,12 @@ function timeToMinutes(t: string): number {
 
 interface Props {
   tripId: string;
+  tripStartDate?: string | null;
   myRole?: string;
   newItemIds?: Set<string>;
 }
 
-export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
+export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItinerary(tripId);
   const { stops } = useRouteStops(tripId);
@@ -33,6 +35,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
   const [addDayOpen, setAddDayOpen] = useState(false);
   const [newDayDate, setNewDayDate] = useState<string | null>(null);
   const [newDayFormOpen, setNewDayFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [lastVisitItemIds, setLastVisitItemIds] = useState<Set<string>>(new Set());
   const [prevLastSeen, setPrevLastSeen] = useState<string | undefined>(undefined);
 
@@ -207,6 +210,23 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
           <Calendar mode="single" onSelect={handleAddDay} />
         </PopoverContent>
       </Popover>
+
+      {/* Import with AI */}
+      <button
+        onClick={() => setImportOpen(true)}
+        className="w-full rounded-xl border border-dashed border-[#0D9488]/30 py-3 text-center text-[13px] font-medium text-[#0D9488]/70 hover:border-[#0D9488]/60 hover:text-[#0D9488] transition-colors flex items-center justify-center gap-1.5"
+      >
+        <Sparkles className="h-4 w-4" />
+        Import with AI
+      </button>
+
+      <ImportItineraryModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        tripId={tripId}
+        tripStartDate={tripStartDate ?? null}
+        onAddItem={(data) => addItem.mutate(data)}
+      />
 
       {newDayDate && (
         <ItemFormModal
