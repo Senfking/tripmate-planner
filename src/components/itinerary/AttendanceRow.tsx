@@ -47,59 +47,64 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
 
   return (
     <>
-      <div
-        className="flex min-w-0 items-center -space-x-1.5 cursor-pointer"
-        onClick={() => setSheetOpen(true)}
-        role="button"
-        tabIndex={0}
-      >
-        {visible.map((member) => {
-          const status = getStatus(member, itemAttendance);
-          const isMe = member.user_id === currentUserId;
-          const dotColor = DOT[status];
+      <div className="space-y-1">
+        <span className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+          Attending
+        </span>
+        <div
+          className="flex items-center -space-x-1.5 cursor-pointer"
+          onClick={() => setSheetOpen(true)}
+          role="button"
+          tabIndex={0}
+        >
+          {visible.map((member) => {
+            const status = getStatus(member, itemAttendance);
+            const isMe = member.user_id === currentUserId;
+            const dotColor = DOT[status];
 
-          return (
-            <button
-              key={member.user_id}
-              type="button"
-              disabled={!isMe}
-              onClick={(e) => {
-                if (!isMe) return;
-                e.stopPropagation();
-                onCycle();
-              }}
-              className={cn(
-                "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold border-2 border-white dark:border-card transition-colors",
-                status === "out"
-                  ? "bg-muted/60 text-muted-foreground/40"
-                  : "bg-secondary text-secondary-foreground",
-                isMe && "ring-2 ring-primary/20 z-10 cursor-pointer",
-                !isMe && "cursor-default",
-              )}
-              title={
-                isMe
-                  ? `You: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"} — tap to change`
-                  : `${member.display_name || "?"}: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"}`
-              }
-            >
-              {getInitials(member.display_name)}
-              <span
-                className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border-[1.5px] border-white dark:border-card"
-                style={{ backgroundColor: dotColor }}
+            return (
+              <button
+                key={member.user_id}
+                type="button"
+                disabled={!isMe}
+                onClick={(e) => {
+                  if (!isMe) return;
+                  e.stopPropagation();
+                  onCycle();
+                }}
+                className={cn(
+                  "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold border-2 border-white dark:border-card transition-colors",
+                  status === "out"
+                    ? "bg-muted/60 text-muted-foreground/40"
+                    : "bg-secondary text-secondary-foreground",
+                  isMe && "ring-2 ring-primary/20 z-10 cursor-pointer",
+                  !isMe && "cursor-default",
+                )}
+                title={
+                  isMe
+                    ? `You: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"} — tap to change`
+                    : `${member.display_name || "?"}: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"}`
+                }
               >
-                {status === "in" && <Check className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
-                {status === "maybe" && <HelpCircle className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
-                {status === "out" && <X className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
-              </span>
-            </button>
-          );
-        })}
+                {getInitials(member.display_name)}
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border-[1.5px] border-white dark:border-card"
+                  style={{ backgroundColor: dotColor }}
+                >
+                  {status === "in" && <Check className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                  {status === "maybe" && <HelpCircle className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                  {status === "out" && <X className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                </span>
+              </button>
+            );
+          })}
 
-        {remaining > 0 && (
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white dark:border-card bg-muted/50 text-[9px] font-medium text-muted-foreground/60">
-            +{remaining}
-          </span>
-        )}
+          {remaining > 0 && (
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white dark:border-card bg-muted/50 text-[9px] font-medium text-muted-foreground/60">
+              +{remaining}
+            </span>
+          )}
+        </div>
       </div>
 
       <AttendanceSheet
