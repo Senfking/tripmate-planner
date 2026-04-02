@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { DesktopFooter } from "@/components/DesktopFooter";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
