@@ -25,6 +25,8 @@ import ShareView from "./pages/ShareView";
 import AuthCallback from "./pages/AuthCallback";
 import ReferralLanding from "./pages/ReferralLanding";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,8 @@ function AppInner() {
             <Route path="/join/:code" element={<JoinByCode />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/ref" element={<ReferralLanding />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>

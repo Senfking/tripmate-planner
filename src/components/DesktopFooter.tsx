@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function DesktopFooter() {
@@ -17,9 +18,9 @@ export function DesktopFooter() {
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span>© 2026 Junto</span>
         <span>·</span>
-        <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
+        <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
         <span>·</span>
-        <a href="#" className="hover:text-foreground transition-colors">Terms</a>
+        <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
       </div>
 
       {/* Center */}
