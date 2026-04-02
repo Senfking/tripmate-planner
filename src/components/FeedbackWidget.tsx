@@ -36,6 +36,102 @@ export function FeedbackWidget() {
   const [analyzingScreenshot, setAnalyzingScreenshot] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Draggable FAB state
+  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null);
+  const dragRef = useRef<{
+    dragging: boolean;
+    moved: boolean;
+    startX: number;
+    startY: number;
+    startPosX: number;
+    startPosY: number;
+    holdTimer: ReturnType<typeof setTimeout> | null;
+  }>({ dragging: false, moved: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0, holdTimer: null });
+  const fabRef = useRef<HTMLButtonElement>(null);
+
+  // Default position: bottom-right, above bottom nav
+  const getDefaultPos = useCallback(() => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    return { x: w - 68, y: h - (isMobile ? 160 : 100) };
+  }, [isMobile]);
+
+  useEffect(() => {
+    setFabPos(getDefaultPos());
+    const onResize = () => {
+      setFabPos((prev) => {
+        if (!prev) return getDefaultPos();
+        return {
+          x: Math.min(prev.x, window.innerWidth - 56),
+          y: Math.min(prev.y, window.innerHeight - 56),
+        };
+      });
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [getDefaultPos]);
+
+  const clampPos = (x: number, y: number) => ({
+    x: Math.max(8, Math.min(x, window.innerWidth - 56)),
+    y: Math.max(8, Math.min(y, window.innerHeight - 56)),
+  });
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    d.moved = false;
+    d.startX = e.clientX;
+    d.startY = e.clientY;
+    d.startPosX = fabPos?.x ?? 0;
+    d.startPosY = fabPos?.y ?? 0;
+
+    // Long-press to start drag
+    d.holdTimer = setTimeout(() => {
+      d.dragging = true;
+      fabRef.current?.setPointerCapture(e.pointerId);
+      if (fabRef.current) fabRef.current.style.cursor = "grabbing";
+    }, 300);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+
+    if (!d.dragging && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+      if (d.holdTimer) { clearTimeout(d.holdTimer); d.holdTimer = null; }
+    }
+
+    if (d.dragging) {
+      d.moved = true;
+      setFabPos(clampPos(d.startPosX + dx, d.startPosY + dy));
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (d.holdTimer) { clearTimeout(d.holdTimer); d.holdTimer = null; }
+
+    if (d.dragging) {
+      d.dragging = false;
+      fabRef.current?.releasePointerCapture(e.pointerId);
+      if (fabRef.current) fabRef.current.style.cursor = "";
+
+      // Snap to nearest horizontal edge
+      setFabPos((prev) => {
+        if (!prev) return prev;
+        const midX = window.innerWidth / 2;
+        return {
+          x: prev.x < midX ? 16 : window.innerWidth - 64,
+          y: prev.y,
+        };
+      });
+    }
+
+    if (!d.moved && !d.dragging) {
+      // Normal tap → open feedback
+    }
+  };
+
   if (!user) return null;
 
   const reset = () => {
