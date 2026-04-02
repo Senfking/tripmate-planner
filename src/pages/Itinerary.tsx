@@ -25,8 +25,16 @@ function enumerateDays(start: string, end: string): string[] {
   return dates;
 }
 
-interface TripBoundary { tripName: string; tripEmoji: string | null; tripId: string }
-interface DestBoundary { destination: string; tripName: string; tripEmoji: string | null; tripId: string }
+interface TripBoundary {
+  tripName: string;
+  tripEmoji: string | null;
+  tripId: string;
+  tripStartDate: string | null;
+  tripEndDate: string | null;
+  tripDestination: string | null;
+  tripCoverImagePath: string | null;
+  routeStopDests: string[];
+}
 
 const Itinerary = () => {
   const { data: groups, isLoading } = useGlobalItinerary();
