@@ -880,7 +880,9 @@ export type Database = {
           cover_focal_point: string | null
           cover_image_path: string | null
           created_at: string
+          destination: string | null
           emoji: string | null
+          enabled_modules: Json
           id: string
           name: string
           route_locked: boolean
@@ -897,7 +899,9 @@ export type Database = {
           cover_focal_point?: string | null
           cover_image_path?: string | null
           created_at?: string
+          destination?: string | null
           emoji?: string | null
+          enabled_modules?: Json
           id?: string
           name: string
           route_locked?: boolean
@@ -914,7 +918,9 @@ export type Database = {
           cover_focal_point?: string | null
           cover_image_path?: string | null
           created_at?: string
+          destination?: string | null
           emoji?: string | null
+          enabled_modules?: Json
           id?: string
           name?: string
           route_locked?: boolean

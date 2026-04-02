@@ -120,8 +120,7 @@ export default function TripNew() {
       }
 
       toast.success("Trip created!");
-      localStorage.setItem(`junto_just_created_trip_${data.id}`, "true");
-      navigate(`/app/trips/${data.id}`);
+      navigate(`/app/trips/${data.id}/onboarding`);
     } catch (err: any) {
       setError(friendlyError(err.message));
     } finally {
