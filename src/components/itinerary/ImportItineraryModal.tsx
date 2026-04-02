@@ -131,7 +131,6 @@ export function ImportItineraryModal({
     setErrorMsg(null);
     trackEvent("ai_itinerary_import", { success: true, item_count: items.length });
   };
-  };
 
   const handleError = () => {
     setErrorMsg(
