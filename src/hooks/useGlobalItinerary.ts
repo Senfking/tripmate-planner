@@ -29,6 +29,8 @@ export interface TripItineraryGroup {
   tripEmoji: string | null;
   tripStartDate: string | null;
   tripEndDate: string | null;
+  tripDestination: string | null;
+  tripCoverImagePath: string | null;
   items: ItineraryItemGlobal[];
   placeholders: RouteStopPlaceholder[];
 }
