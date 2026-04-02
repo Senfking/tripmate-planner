@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
+import { trackEvent } from "@/lib/analytics";
 import { calcNetBalances, calcSettlements, convertAmount, formatCurrency } from "@/lib/settlementCalc";
 import { SettlementCurrencyPicker } from "./SettlementCurrencyPicker";
 import { BalancesSummary } from "./BalancesSummary";
