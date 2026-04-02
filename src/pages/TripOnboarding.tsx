@@ -88,9 +88,14 @@ export default function TripOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div
+      className="min-h-screen bg-white flex flex-col"
+      style={{
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)",
+      }}
+    >
       {/* Top bar */}
-      <div className="flex items-center px-4 pt-4 pb-2">
+      <div className="flex items-center px-4 pb-2 relative">
         {step > 1 && step < 4 ? (
           <button onClick={goBack} className="p-1 -ml-1">
             <ChevronLeft className="h-5 w-5 text-foreground" />
@@ -108,59 +113,74 @@ export default function TripOnboarding() {
             />
           ))}
         </div>
-        <div className="w-7" />
+        {step === 1 ? (
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}`)}
+            className="p-1 -mr-1 text-muted-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        ) : (
+          <div className="w-7" />
+        )}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col px-5 pb-6 max-w-lg mx-auto w-full">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-5 max-w-lg mx-auto w-full">
         {step === 1 && <Step1 trip={trip} copyCode={copyCode} shareWhatsApp={shareWhatsApp} joinUrl={joinUrl} />}
         {step === 2 && <Step2 currency={currency} setCurrency={setCurrency} destination={destination} setDestination={setDestination} />}
         {step === 3 && <Step3 modules={modules} setModules={setModules} />}
         {step === 4 && <Step4 trip={trip} />}
+      </div>
 
-        <div className={step === 1 ? "pt-8" : "mt-auto pt-6"}>
-          {step === 1 && (
-            <>
-              <Button
-                className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
-                style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
-                onClick={goNext}
-              >
-                Next →
-              </Button>
-              <button onClick={goNext} className="w-full text-center text-sm text-muted-foreground mt-3 bg-transparent border-none cursor-pointer">
-                I'll invite them later
-              </button>
-            </>
-          )}
-          {step === 2 && (
+      {/* Sticky bottom CTA */}
+      <div
+        className="sticky bottom-0 bg-white px-5 pt-4 max-w-lg mx-auto w-full"
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+        }}
+      >
+        {step === 1 && (
+          <>
             <Button
               className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
               style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
-              onClick={saveStep2}
+              onClick={goNext}
             >
               Next →
             </Button>
-          )}
-          {step === 3 && (
-            <Button
-              className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
-              onClick={saveStep3}
-            >
-              Next →
-            </Button>
-          )}
-          {step === 4 && (
-            <Button
-              className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
-              onClick={() => navigate(`/app/trips/${tripId}`)}
-            >
-              Let's go →
-            </Button>
-          )}
-        </div>
+            <button onClick={goNext} className="w-full text-center text-sm text-muted-foreground mt-3 bg-transparent border-none cursor-pointer">
+              I'll invite them later
+            </button>
+          </>
+        )}
+        {step === 2 && (
+          <Button
+            className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
+            style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+            onClick={saveStep2}
+          >
+            Next →
+          </Button>
+        )}
+        {step === 3 && (
+          <Button
+            className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
+            style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+            onClick={saveStep3}
+          >
+            Next →
+          </Button>
+        )}
+        {step === 4 && (
+          <Button
+            className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
+            style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+            onClick={() => navigate(`/app/trips/${tripId}`)}
+          >
+            Let's go →
+          </Button>
+        )}
       </div>
     </div>
   );
