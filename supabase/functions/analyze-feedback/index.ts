@@ -15,9 +15,9 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
-    // --- Screenshot description action ---
+    // --- Screenshot hint action ---
     if (body.action === "describe_screenshot") {
-      const { image_base64, media_type } = body;
+      const { image_base64, media_type, route } = body;
       if (!image_base64) {
         return new Response(JSON.stringify({ error: "Missing image" }), {
           status: 400,
@@ -27,7 +27,7 @@ serve(async (req) => {
 
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
       if (!ANTHROPIC_API_KEY) {
-        return new Response(JSON.stringify({ screenshot_description: null }), {
+        return new Response(JSON.stringify({ hint: null }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -41,8 +41,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 256,
-          system: "You help users describe bugs in a travel planning app called Junto.",
+          max_tokens: 100,
+          system: "You're a witty but helpful assistant for Junto, a group trip planning app.",
           messages: [
             {
               role: "user",
@@ -57,7 +57,7 @@ serve(async (req) => {
                 },
                 {
                   type: "text",
-                  text: "Look at this screenshot from the Junto app. Write 2-3 sentences describing what you see on screen and what might be wrong or what the user is trying to show. Write it in first person as if the user is describing it. Be specific about UI elements visible. Keep it concise.",
+                  text: `The user is on this page: ${route || "unknown"}\n\nLook at this screenshot. In ONE short sentence (max 15 words), name the most likely thing they want to report. Be specific about what you see. Slightly dry humor is welcome. Don't list everything - just the most obvious issue or element. Don't start with 'The user' - make it punchy and direct.`,
                 },
               ],
             },
@@ -66,22 +66,22 @@ serve(async (req) => {
       });
 
       if (!imgResponse.ok) {
-        console.error("Screenshot analysis error:", imgResponse.status, await imgResponse.text());
-        return new Response(JSON.stringify({ screenshot_description: null }), {
+        console.error("Screenshot hint error:", imgResponse.status, await imgResponse.text());
+        return new Response(JSON.stringify({ hint: null }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const imgBody = await imgResponse.json();
-      const description = imgBody.content?.[0]?.text ?? null;
+      const hint = imgBody.content?.[0]?.text ?? null;
 
-      return new Response(JSON.stringify({ screenshot_description: description }), {
+      return new Response(JSON.stringify({ hint }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // --- Main feedback analysis action ---
-    const { feedbackId, category, message, route } = body;
+    const { feedbackId, category, message, route, screenshot_hint } = body;
 
     if (!feedbackId || !message) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {
@@ -101,9 +101,15 @@ serve(async (req) => {
     const systemPrompt =
       "You are a product analyst for Junto, a group trip planning app. Analyze user feedback concisely.";
 
-    const userPrompt = `Feedback type: ${category}
+    let userPrompt = `Feedback type: ${category}
 Page: ${route}
-Message: ${message}
+Message: ${message}`;
+
+    if (screenshot_hint) {
+      userPrompt += `\nScreenshot hint: ${screenshot_hint}`;
+    }
+
+    userPrompt += `
 
 Return ONLY valid JSON with no other text:
 {
@@ -155,7 +161,6 @@ Return ONLY valid JSON with no other text:
       }
     }
 
-    // Update feedback row with AI analysis
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, serviceKey);
