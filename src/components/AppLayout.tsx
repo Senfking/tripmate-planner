@@ -76,7 +76,7 @@ export function AppLayout() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden" style={{ backgroundColor: undefined }} className="flex flex-1 flex-col min-w-0 overflow-x-hidden md:bg-[hsl(210_40%_98%)]">
+        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden md:bg-[#F8FAFC]">
           {!hideHeader && (
             <header
               className="sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden border-b bg-gradient-primary"
