@@ -303,7 +303,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
   };
 
   const content = (
-    <div className="space-y-4">
+    <div className="space-y-4" data-vaul-no-drag>
       <div className="space-y-1.5">
         <Label>Question</Label>
         <Input
@@ -427,9 +427,9 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
         );
         if (isMobile) {
           return (
-            <Drawer open={prefOpen} onOpenChange={setPrefOpen}>
+            <Drawer open={prefOpen} onOpenChange={setPrefOpen} shouldScaleBackground={false}>
               <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-              <DrawerContent className="px-4 pb-6">
+              <DrawerContent className="px-4 pb-6 max-h-[85dvh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
                 <DrawerHeader className="text-left px-0">
                   <DrawerTitle>New poll</DrawerTitle>
                 </DrawerHeader>
