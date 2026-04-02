@@ -424,19 +424,19 @@ const Itinerary = () => {
                     </div>
                   ))}
 
-                  {/* Trip end — full-width banner after the day */}
+                  {/* Trip end — photo banner */}
                   {tripEnds.map((trip, i) => (
-                    <div
+                    <TripEndBanner
                       key={`trip-end-${trip.tripId}-${i}`}
-                      className="flex items-center gap-2.5 py-3 px-1"
-                    >
-                      <div className="flex-1 h-px bg-muted-foreground/10" />
-                      <Plane className="h-3.5 w-3.5 text-muted-foreground/35 rotate-[135deg] shrink-0" />
-                      <span className="text-[11px] font-semibold text-muted-foreground/45 whitespace-nowrap">
-                        {trip.tripEmoji ?? "✈️"} {trip.tripName} ends
-                      </span>
-                      <div className="flex-1 h-px bg-muted-foreground/10" />
-                    </div>
+                      tripId={trip.tripId}
+                      tripName={trip.tripName}
+                      tripEmoji={trip.tripEmoji}
+                      tripStartDate={trip.tripStartDate}
+                      tripEndDate={trip.tripEndDate}
+                      tripDestination={trip.tripDestination}
+                      tripCoverImagePath={trip.tripCoverImagePath}
+                      routeStopDests={trip.routeStopDests}
+                    />
                   ))}
                 </div>
               );
