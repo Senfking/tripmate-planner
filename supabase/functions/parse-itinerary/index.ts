@@ -119,7 +119,7 @@ Each item in the array must have these fields:
 - "end_time": string | null (HH:MM 24h format, or null if unknown)
 - "location_text": string | null (venue, address, or place name, or null)
 - "status": string ("confirmed" if clearly booked/reserved, "idea" otherwise)
-- "notes": string | null (any extra details worth preserving, or null)
+- "notes": string | null (any extra details worth preserving such as flight/train numbers, confirmation/booking codes, duration, terminal/gate info, carrier/airline name, seat assignments, check-in/check-out times, contact numbers, or other practical info — or null if none)
 
 Rules:
 - ${dateContext}

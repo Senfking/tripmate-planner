@@ -62,12 +62,17 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
     });
   };
 
-  // Generate time slots every 15 minutes
-  const timeSlots = Array.from({ length: 96 }, (_, i) => {
+  // Generate time slots every 15 minutes, plus any custom times from the item
+  const baseSlots = Array.from({ length: 96 }, (_, i) => {
     const h = String(Math.floor(i / 4)).padStart(2, "0");
     const m = String((i % 4) * 15).padStart(2, "0");
     return `${h}:${m}`;
   });
+  const baseSet = new Set(baseSlots);
+  const extras: string[] = [];
+  if (startTime && !baseSet.has(startTime)) extras.push(startTime);
+  if (endTime && !baseSet.has(endTime)) extras.push(endTime);
+  const timeSlots = [...baseSlots, ...extras].sort();
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
