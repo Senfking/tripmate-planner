@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { MessageSquare, ChevronLeft, X, Loader2, Sparkles, Upload } from "lucide-react";
+import { MessageSquare, ChevronLeft, X, Loader2, Sparkles, Upload, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,8 @@ export function FeedbackWidget() {
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [analyzingScreenshot, setAnalyzingScreenshot] = useState(false);
+  const [screenshotHint, setScreenshotHint] = useState<string | null>(null);
+  const [pwaHintOpen, setPwaHintOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Draggable FAB state
@@ -49,7 +51,6 @@ export function FeedbackWidget() {
   }>({ dragging: false, moved: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0, holdTimer: null });
   const fabRef = useRef<HTMLButtonElement>(null);
 
-  // Default position: bottom-right, above bottom nav
   const getDefaultPos = useCallback(() => {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -83,8 +84,6 @@ export function FeedbackWidget() {
     d.startY = e.clientY;
     d.startPosX = fabPos?.x ?? 0;
     d.startPosY = fabPos?.y ?? 0;
-
-    // Long-press to start drag
     d.holdTimer = setTimeout(() => {
       d.dragging = true;
       fabRef.current?.setPointerCapture(e.pointerId);
@@ -96,11 +95,9 @@ export function FeedbackWidget() {
     const d = dragRef.current;
     const dx = e.clientX - d.startX;
     const dy = e.clientY - d.startY;
-
     if (!d.dragging && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
       if (d.holdTimer) { clearTimeout(d.holdTimer); d.holdTimer = null; }
     }
-
     if (d.dragging) {
       d.moved = true;
       setFabPos(clampPos(d.startPosX + dx, d.startPosY + dy));
@@ -110,25 +107,15 @@ export function FeedbackWidget() {
   const handlePointerUp = (e: React.PointerEvent) => {
     const d = dragRef.current;
     if (d.holdTimer) { clearTimeout(d.holdTimer); d.holdTimer = null; }
-
     if (d.dragging) {
       d.dragging = false;
       fabRef.current?.releasePointerCapture(e.pointerId);
       if (fabRef.current) fabRef.current.style.cursor = "";
-
-      // Snap to nearest horizontal edge
       setFabPos((prev) => {
         if (!prev) return prev;
         const midX = window.innerWidth / 2;
-        return {
-          x: prev.x < midX ? 16 : window.innerWidth - 64,
-          y: prev.y,
-        };
+        return { x: prev.x < midX ? 16 : window.innerWidth - 64, y: prev.y };
       });
-    }
-
-    if (!d.moved && !d.dragging) {
-      // Normal tap → open feedback
     }
   };
 
@@ -144,16 +131,12 @@ export function FeedbackWidget() {
     setAiLoading(false);
     setSubmitting(false);
     setAnalyzingScreenshot(false);
+    setScreenshotHint(null);
+    setPwaHintOpen(false);
   };
 
-  const handleOpen = () => {
-    reset();
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
+  const handleOpen = () => { reset(); setOpen(true); };
+  const handleClose = () => { setOpen(false); };
 
   const selectCategory = (cat: Category) => {
     setCategory(cat);
@@ -172,10 +155,10 @@ export function FeedbackWidget() {
     const file = e.target.files?.[0];
     if (!file) return;
     setScreenshotFile(file);
+    setScreenshotHint(null);
     const url = URL.createObjectURL(file);
     setScreenshotPreview(url);
 
-    // Upload and analyze screenshot
     setAnalyzingScreenshot(true);
     try {
       const base64 = await fileToBase64(file);
@@ -186,14 +169,15 @@ export function FeedbackWidget() {
           action: "describe_screenshot",
           image_base64: base64,
           media_type: mediaType,
+          route: window.location.pathname,
         },
       });
 
-      if (data?.screenshot_description) {
-        setMessage((prev) => prev || data.screenshot_description);
+      if (data?.hint) {
+        setScreenshotHint(data.hint);
       }
     } catch {
-      // Silently fail — user can still type manually
+      // Silently fail
     } finally {
       setAnalyzingScreenshot(false);
     }
@@ -203,6 +187,7 @@ export function FeedbackWidget() {
     setScreenshotFile(null);
     if (screenshotPreview) URL.revokeObjectURL(screenshotPreview);
     setScreenshotPreview(null);
+    setScreenshotHint(null);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -253,6 +238,7 @@ export function FeedbackWidget() {
               category,
               message: message.trim(),
               route: window.location.pathname,
+              screenshot_hint: screenshotHint,
             },
           });
           if (aiData?.user_message) {
@@ -296,6 +282,23 @@ export function FeedbackWidget() {
                 <span className="text-xs text-muted-foreground">{item.sub}</span>
               </button>
             ))}
+          </div>
+
+          {/* PWA install hint */}
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={() => setPwaHintOpen((v) => !v)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground w-full"
+            >
+              <Info className="h-3 w-3 shrink-0" />
+              <span>Junto works best added to your home screen</span>
+            </button>
+            {pwaHintOpen && (
+              <p className="text-xs text-muted-foreground mt-1 pl-[18px]">
+                Junto isn't a native app yet. For the best experience, add it to your home screen: tap Share → Add to Home Screen in Safari, or the menu in Chrome.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -352,7 +355,7 @@ export function FeedbackWidget() {
                     <span className="text-xs font-semibold" style={{ color: "#0D9488" }}>AI-powered</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Upload a screenshot and AI will help describe the issue automatically.
+                    Upload a screenshot — AI will take a look and offer a hint. You still write the real story.
                   </p>
                   <button
                     type="button"
@@ -368,22 +371,30 @@ export function FeedbackWidget() {
                   </button>
                 </div>
               ) : (
-                <div className="mt-3 flex items-center gap-3">
-                  {screenshotPreview && (
-                    <img
-                      src={screenshotPreview}
-                      alt="Screenshot"
-                      className="w-[60px] h-[60px] rounded-lg object-cover border"
-                    />
-                  )}
-                  {analyzingScreenshot ? (
-                    <p className="text-sm animate-pulse" style={{ color: "#0D9488" }}>
-                      Analysing screenshot...
+                <div className="mt-3">
+                  <div className="flex items-center gap-3">
+                    {screenshotPreview && (
+                      <img
+                        src={screenshotPreview}
+                        alt="Screenshot"
+                        className="w-[60px] h-[60px] rounded-lg object-cover border shrink-0"
+                      />
+                    )}
+                    {!analyzingScreenshot && (
+                      <button onClick={removeScreenshot} className="text-muted-foreground hover:text-foreground">
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  {analyzingScreenshot && (
+                    <p className="text-xs animate-pulse mt-2" style={{ color: "#0D9488" }}>
+                      AI is squinting at your screenshot...
                     </p>
-                  ) : (
-                    <button onClick={removeScreenshot} className="text-muted-foreground hover:text-foreground">
-                      <X className="h-4 w-4" />
-                    </button>
+                  )}
+                  {screenshotHint && !analyzingScreenshot && (
+                    <p className="text-xs text-muted-foreground italic mt-2">
+                      💡 AI spotted: {screenshotHint}
+                    </p>
                   )}
                 </div>
               )}
@@ -446,7 +457,6 @@ export function FeedbackWidget() {
 
   return (
     <>
-      {/* Draggable floating trigger */}
       {fabPos && (
         <button
           ref={fabRef}
@@ -467,7 +477,6 @@ export function FeedbackWidget() {
         </button>
       )}
 
-      {/* Modal */}
       {isMobile ? (
         <Drawer open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true); }}>
           <DrawerContent>
