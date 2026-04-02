@@ -129,6 +129,8 @@ export function ImportItineraryModal({
     setParsedItems(items);
     setStep("preview");
     setErrorMsg(null);
+    trackEvent("ai_itinerary_import", { success: true, item_count: items.length });
+  };
   };
 
   const handleError = () => {
