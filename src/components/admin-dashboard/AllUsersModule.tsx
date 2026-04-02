@@ -107,7 +107,10 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
         </div>
       </div>
 
+      <Detail label="Email" value={data.email || "—"} />
       <Detail label="Joined" value={p.created_at?.slice(0, 10)} />
+      <Detail label="Last login" value={data.last_sign_in_at ? timeAgo(data.last_sign_in_at) : "Never"} />
+      <Detail label="Last trip created" value={data.last_trip_created_at ? timeAgo(data.last_trip_created_at) : "—"} />
       <Detail label="Currency" value={p.default_currency} />
 
       <SectionHeader>Subscription</SectionHeader>
