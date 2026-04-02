@@ -257,8 +257,8 @@ const MODULE_DEFS = [
 ];
 
 function Step3({ modules, setModules }: {
-  modules: Record<string, boolean>;
-  setModules: (m: Record<string, boolean>) => void;
+  modules: { decisions: boolean; itinerary: boolean; expenses: boolean; bookings: boolean };
+  setModules: (m: { decisions: boolean; itinerary: boolean; expenses: boolean; bookings: boolean }) => void;
 }) {
   return (
     <div>
