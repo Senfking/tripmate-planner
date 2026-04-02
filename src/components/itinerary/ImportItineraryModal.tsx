@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Sparkles,
@@ -14,6 +15,9 @@ import {
   MapPin,
   Clock,
   AlertCircle,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -69,6 +73,8 @@ export function ImportItineraryModal({
   const [saving, setSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<ParsedItem | null>(null);
 
   const reset = () => {
     setStep("input");
@@ -78,6 +84,8 @@ export function ImportItineraryModal({
     setSaving(false);
     setSaveProgress(0);
     setErrorMsg(null);
+    setEditingIdx(null);
+    setEditDraft(null);
   };
 
   const handleClose = (val: boolean) => {
@@ -132,7 +140,6 @@ export function ImportItineraryModal({
     setParsing(true);
     setErrorMsg(null);
     try {
-      // Upload to storage
       const ext = file.name.split(".").pop() || "jpg";
       const path = `imports/${tripId}/${crypto.randomUUID()}.${ext}`;
       const { error: uploadErr } = await supabase.storage
@@ -178,6 +185,29 @@ export function ImportItineraryModal({
 
   const removeItem = (idx: number) => {
     setParsedItems((prev) => prev.filter((_, i) => i !== idx));
+    if (editingIdx === idx) {
+      setEditingIdx(null);
+      setEditDraft(null);
+    }
+  };
+
+  const startEdit = (idx: number) => {
+    setEditingIdx(idx);
+    setEditDraft({ ...parsedItems[idx] });
+  };
+
+  const cancelEdit = () => {
+    setEditingIdx(null);
+    setEditDraft(null);
+  };
+
+  const saveEdit = () => {
+    if (editingIdx === null || !editDraft) return;
+    setParsedItems((prev) =>
+      prev.map((item, i) => (i === editingIdx ? { ...editDraft } : item))
+    );
+    setEditingIdx(null);
+    setEditDraft(null);
   };
 
   const handleConfirm = async () => {
@@ -199,7 +229,6 @@ export function ImportItineraryModal({
       if (onBatchAddItems) {
         await onBatchAddItems(itemsToAdd);
       } else {
-        // Fallback to one-by-one if batch not available
         for (const item of itemsToAdd) {
           onAddItem(item);
         }
@@ -228,6 +257,8 @@ export function ImportItineraryModal({
     }
   };
 
+  const statusOptions = ["idea", "confirmed"] as const;
+
   return (
     <ResponsiveModal
       open={open}
@@ -242,7 +273,6 @@ export function ImportItineraryModal({
     >
       {step === "input" && (
         <div className="space-y-4">
-          {/* Hidden file inputs */}
           <input
             ref={cameraInputRef}
             type="file"
@@ -259,7 +289,6 @@ export function ImportItineraryModal({
             onChange={handleFileInput}
           />
 
-          {/* AI section */}
           <div className="rounded-xl border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/[0.03] p-4 space-y-3">
             <div className="flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
@@ -298,7 +327,6 @@ export function ImportItineraryModal({
             )}
           </div>
 
-          {/* Divider */}
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-border" />
             <span className="text-[11px] text-muted-foreground">
@@ -307,7 +335,6 @@ export function ImportItineraryModal({
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* Text paste */}
           <Textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
@@ -332,7 +359,6 @@ export function ImportItineraryModal({
             )}
           </Button>
 
-          {/* Error message */}
           {errorMsg && (
             <div className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-[13px] text-destructive">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -360,7 +386,7 @@ export function ImportItineraryModal({
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                We found {parsedItems.length} activit{parsedItems.length === 1 ? "y" : "ies"} — review and remove any you don't need
+                We found {parsedItems.length} activit{parsedItems.length === 1 ? "y" : "ies"} — review and edit before importing
               </p>
 
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
@@ -369,58 +395,180 @@ export function ImportItineraryModal({
                     key={idx}
                     className="rounded-lg border border-border bg-card p-3 space-y-1.5"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {item.title}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
-                          <span>{formatDate(item.day_date)}</span>
-                          {item.start_time && (
-                            <span className="flex items-center gap-0.5">
-                              <Clock className="h-3 w-3" />
-                              {formatTime(item.start_time)}
-                              {item.end_time && `–${formatTime(item.end_time)}`}
-                            </span>
-                          )}
+                    {editingIdx === idx && editDraft ? (
+                      /* ── Inline edit form ── */
+                      <div className="space-y-2">
+                        <Input
+                          value={editDraft.title}
+                          onChange={(e) =>
+                            setEditDraft({ ...editDraft, title: e.target.value })
+                          }
+                          placeholder="Title"
+                          className="text-sm h-8"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            type="date"
+                            value={editDraft.day_date}
+                            onChange={(e) =>
+                              setEditDraft({ ...editDraft, day_date: e.target.value })
+                            }
+                            className="text-xs h-8"
+                          />
+                          <div className="flex gap-1">
+                            <Input
+                              type="time"
+                              value={editDraft.start_time || ""}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  start_time: e.target.value || null,
+                                })
+                              }
+                              placeholder="Start"
+                              className="text-xs h-8"
+                            />
+                            <Input
+                              type="time"
+                              value={editDraft.end_time || ""}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  end_time: e.target.value || null,
+                                })
+                              }
+                              placeholder="End"
+                              className="text-xs h-8"
+                            />
+                          </div>
                         </div>
-                        {item.location_text && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-0.5 mt-0.5">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{item.location_text}</span>
+                        <Input
+                          value={editDraft.location_text || ""}
+                          onChange={(e) =>
+                            setEditDraft({
+                              ...editDraft,
+                              location_text: e.target.value || null,
+                            })
+                          }
+                          placeholder="Location"
+                          className="text-xs h-8"
+                        />
+                        <Textarea
+                          value={editDraft.notes || ""}
+                          onChange={(e) =>
+                            setEditDraft({
+                              ...editDraft,
+                              notes: e.target.value || null,
+                            })
+                          }
+                          placeholder="Notes"
+                          rows={2}
+                          className="text-xs resize-none"
+                        />
+                        <div className="flex items-center justify-between">
+                          <div className="flex gap-1">
+                            {statusOptions.map((s) => (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() =>
+                                  setEditDraft({ ...editDraft, status: s })
+                                }
+                                className={cn(
+                                  "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
+                                  editDraft.status === s
+                                    ? s === "confirmed"
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "bg-secondary text-secondary-foreground border-secondary"
+                                    : "bg-background text-muted-foreground border-border"
+                                )}
+                              >
+                                {s === "confirmed" ? "Confirmed" : "Idea"}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              onClick={cancelEdit}
+                              className="p-1.5 rounded hover:bg-muted text-muted-foreground transition-colors"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={saveEdit}
+                              disabled={!editDraft.title.trim() || !editDraft.day_date}
+                              className="p-1.5 rounded hover:bg-primary/10 text-[#0D9488] transition-colors disabled:opacity-40"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ── Read-only view ── */
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {item.title}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                              <span>{formatDate(item.day_date)}</span>
+                              {item.start_time && (
+                                <span className="flex items-center gap-0.5">
+                                  <Clock className="h-3 w-3" />
+                                  {formatTime(item.start_time)}
+                                  {item.end_time && `–${formatTime(item.end_time)}`}
+                                </span>
+                              )}
+                            </div>
+                            {item.location_text && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-0.5 mt-0.5">
+                                <MapPin className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{item.location_text}</span>
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Badge
+                              variant={
+                                item.status === "confirmed"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {item.status === "confirmed" ? "Confirmed" : "Idea"}
+                            </Badge>
+                            <button
+                              type="button"
+                              onClick={() => startEdit(idx)}
+                              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(idx)}
+                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        {item.notes && (
+                          <p className="text-xs text-muted-foreground/80 line-clamp-2">
+                            {item.notes}
                           </p>
                         )}
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Badge
-                          variant={
-                            item.status === "confirmed"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className="text-[10px] px-1.5 py-0"
-                        >
-                          {item.status === "confirmed" ? "Confirmed" : item.status === "idea" ? "Idea" : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                        </Badge>
-                        <button
-                          type="button"
-                          onClick={() => removeItem(idx)}
-                          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    {item.notes && (
-                      <p className="text-xs text-muted-foreground/80 line-clamp-2">
-                        {item.notes}
-                      </p>
+                      </>
                     )}
                   </div>
                 ))}
               </div>
 
-              {/* Actions */}
               <div className="flex gap-2 pt-1">
                 <Button
                   variant="outline"
@@ -435,7 +583,7 @@ export function ImportItineraryModal({
                   size="sm"
                   className="flex-1"
                   onClick={handleConfirm}
-                  disabled={saving}
+                  disabled={saving || editingIdx !== null}
                 >
                   {saving ? (
                     <>
