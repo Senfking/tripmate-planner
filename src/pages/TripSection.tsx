@@ -148,9 +148,6 @@ export default function TripSection() {
         <h1 className="text-lg font-bold text-foreground mt-1">{SECTION_TITLES[section]}</h1>
       </header>
 
-      {/* Desktop: subtle teal gradient strip below header */}
-      <div className="hidden md:block h-1" style={{ background: "linear-gradient(90deg, #0D9488, #0891b2, transparent)" }} />
-
       {/* Desktop: breadcrumb row */}
       <div className="hidden md:flex items-center gap-2 px-8 pt-4 pb-2 max-w-[900px] mx-auto w-full">
         <button
