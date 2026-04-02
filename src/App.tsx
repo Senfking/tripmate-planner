@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import TripList from "./pages/TripList";
 import TripNew from "./pages/TripNew";
+import TripOnboarding from "./pages/TripOnboarding";
 import TripHome from "./pages/TripHome";
 import TripSection from "./pages/TripSection";
 import Decisions from "./pages/Decisions";
