@@ -130,13 +130,13 @@ export default function ReferralLanding() {
 
         {/* Bottom content */}
         <div
-          className="px-6 shrink-0 max-w-[480px] mx-auto w-full"
+          className="px-6 shrink-0 max-w-[480px] mx-auto w-full text-center"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
         >
           {/* Referrer pill */}
           {referrer?.display_name && (
             <div
-              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] text-white/80 backdrop-blur-md mb-4"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] text-white/80 backdrop-blur-md mb-4 mx-auto"
               style={{
                 background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(255,255,255,0.12)",
