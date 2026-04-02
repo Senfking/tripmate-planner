@@ -28,7 +28,7 @@ export default function AuthCallback() {
               .eq("id", user.id);
           }
         })
-        .catch(() => {
+        .then(null, () => {
           localStorage.removeItem("junto_referral_code");
         });
     }

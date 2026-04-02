@@ -52,8 +52,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
         setPrevLastSeen(
           row?.last_seen_at ?? new Date(0).toISOString()
         );
-      })
-      .catch(() => {
+      }, () => {
         setPrevLastSeen(new Date(0).toISOString());
       });
   }, [tripId, user?.id]);
