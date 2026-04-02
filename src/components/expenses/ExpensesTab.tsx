@@ -161,18 +161,13 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     return { type: "settled" as const, amount: 0, subline: "" };
   }, [settlements, user?.id]);
 
-  // "You paid" and "Your share" stats for the hero card
-  const myStats = useMemo(() => {
+  // "Total expenses" and "Contributors" stats for the hero card
+  const heroStats = useMemo(() => {
     const nonSettlement = expenses.filter((e) => e.category !== "settlement");
-    const totalPaid = nonSettlement
-      .filter((e) => e.payer_id === user?.id)
-      .reduce((sum, e) => sum + e.amount, 0);
-    const myShare = nonSettlement.reduce((sum, e) => {
-      const mySplit = splits.find((s) => s.expense_id === e.id && s.user_id === user?.id);
-      return sum + (mySplit?.share_amount ?? 0);
-    }, 0);
-    return { totalPaid, myShare };
-  }, [expenses, splits, user?.id]);
+    const totalExpenses = nonSettlement.reduce((sum, e) => sum + e.amount, 0);
+    const contributors = new Set(nonSettlement.map((e) => e.payer_id)).size;
+    return { totalExpenses, contributors };
+  }, [expenses]);
 
   // Settle up: separate mine vs others
   const { mySettlements, otherSettlements } = useMemo(() => {
