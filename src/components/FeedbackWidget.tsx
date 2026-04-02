@@ -132,9 +132,18 @@ export function FeedbackWidget() {
       reader.readAsDataURL(file);
     });
 
+  const hintRef = useRef<HTMLDivElement>(null);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Blur the file input immediately to dismiss the iOS keyboard/accessory bar
+    if (fileRef.current) fileRef.current.blur();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setScreenshotFile(file);
     setScreenshotHint(null);
     setIsAppScreenshot(true);
@@ -158,6 +167,10 @@ export function FeedbackWidget() {
 
       if (data?.hint) {
         setScreenshotHint(data.hint);
+        // Scroll the hint into view after a short delay for render
+        setTimeout(() => {
+          hintRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 100);
       }
       if (data?.is_app_screenshot === false) {
         setIsAppScreenshot(false);
@@ -418,7 +431,7 @@ export function FeedbackWidget() {
                     </p>
                   )}
                   {screenshotHint && !analyzingScreenshot && (
-                    <div className="mt-2">
+                    <div ref={hintRef} className="mt-2">
                       <p className="text-xs text-muted-foreground italic">
                         💡 AI spotted: {screenshotHint}
                       </p>
