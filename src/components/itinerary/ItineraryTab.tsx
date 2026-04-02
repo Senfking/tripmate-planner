@@ -211,6 +211,23 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
         </PopoverContent>
       </Popover>
 
+      {/* Import with AI */}
+      <button
+        onClick={() => setImportOpen(true)}
+        className="w-full rounded-xl border border-dashed border-[#0D9488]/30 py-3 text-center text-[13px] font-medium text-[#0D9488]/70 hover:border-[#0D9488]/60 hover:text-[#0D9488] transition-colors flex items-center justify-center gap-1.5"
+      >
+        <Sparkles className="h-4 w-4" />
+        Import with AI
+      </button>
+
+      <ImportItineraryModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        tripId={tripId}
+        tripStartDate={tripStartDate ?? null}
+        onAddItem={(data) => addItem.mutate(data)}
+      />
+
       {newDayDate && (
         <ItemFormModal
           open={newDayFormOpen}
