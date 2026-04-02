@@ -805,7 +805,7 @@ Deno.serve(async (req) => {
         let query = db.from("feedback").select("*").order("created_at", { ascending: false }).limit(200);
 
         if (statusFilter === "unresolved") {
-          query = query.or("status.is.null,status.neq.resolved");
+          query = query.or("status.is.null,status.neq.done");
         } else if (statusFilter === "critical") {
           query = query.eq("ai_severity", "critical");
         } else if (statusFilter === "high") {
