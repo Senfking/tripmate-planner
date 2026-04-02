@@ -132,7 +132,10 @@ export default function TripSection() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen animate-slide-in">
+    <div
+      className="flex flex-col min-h-screen animate-slide-in"
+      style={section === "expenses" ? { background: "linear-gradient(180deg, #EEF7F6 0%, #F1F5F9 40%)" } : undefined}
+    >
       {/* Mobile section header — hidden on desktop where the root DesktopHeader is visible */}
       <header className="sticky top-0 z-40 bg-card border-b px-4 py-3 md:hidden" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}>
         <div className="flex items-center gap-1">
