@@ -180,12 +180,14 @@ export function FeedbackWidget() {
   };
 
   const handleTextareaFocus = () => {
-    setTimeout(() => {
-      textareaRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }, 300);
+    if (!isMobile) {
+      setTimeout(() => {
+        textareaRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 300);
+    }
   };
 
   const handleSubmit = async () => {
@@ -274,7 +276,7 @@ export function FeedbackWidget() {
       className="px-1"
       style={{
         overflowY: "auto",
-        maxHeight: "calc(100vh - env(safe-area-inset-top, 0px) - 140px)",
+        maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - 140px)",
         WebkitOverflowScrolling: "touch",
       }}
     >
@@ -535,8 +537,8 @@ export function FeedbackWidget() {
       )}
 
       {isMobile ? (
-        <Drawer open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true); }}>
-          <DrawerContent style={{ maxHeight: "calc(100vh - env(safe-area-inset-top, 0px) - 20px)" }}>
+        <Drawer open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true); }} repositionInputs={false}>
+          <DrawerContent style={{ maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - 20px)" }}>
             <DrawerHeader>
               <DrawerTitle>{title || "Feedback"}</DrawerTitle>
             </DrawerHeader>
