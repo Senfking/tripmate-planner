@@ -341,7 +341,7 @@ export function FeedbackWidget() {
                     <span className="text-xs font-semibold" style={{ color: "#0D9488" }}>AI-powered</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Upload a screenshot — AI will take a look and offer a hint. You still write the real story.
+                    Upload a screenshot and AI will take a look. No promises.
                   </p>
                   <button
                     type="button"
