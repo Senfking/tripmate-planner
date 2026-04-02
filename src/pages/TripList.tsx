@@ -623,7 +623,13 @@ export default function TripList() {
     <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
-      <div className="mx-auto grid w-full max-w-md md:max-w-none grid-cols-1 md:grid-cols-2 gap-3 px-4 mt-4 pb-[100px]">
+      {/* Desktop compact greeting — replaces hero */}
+      <div className="hidden md:block pt-6 pb-4 px-4">
+        <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+      </div>
+
+      <div className="mx-auto grid w-full max-w-md md:max-w-none grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 mt-4 md:mt-0 pb-[100px] md:pb-8">
         {liveTrip && <div className="md:col-span-2"><HeroCard trip={liveTrip} /></div>}
         {otherTrips.map((trip, i) => (
           <div
