@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +23,7 @@ export function useItineraryAttendance(tripId: string) {
   const qc = useQueryClient();
   const attendanceKey = ["itinerary_attendance", tripId];
   const membersKey = ["trip_members_profiles", tripId];
+  const inflightRef = useRef(new Set<string>());
 
   const { data: attendance = [] } = useQuery({
     queryKey: attendanceKey,
@@ -64,33 +66,50 @@ export function useItineraryAttendance(tripId: string) {
   const cycleStatus = useMutation({
     mutationFn: async (itemId: string) => {
       if (!user) throw new Error("Not authenticated");
-      const existing = attendance.find(
-        (a) => a.itinerary_item_id === itemId && a.user_id === user.id
-      );
 
-      if (!existing) {
-        const { error } = await supabase.from("itinerary_attendance").insert({
-          trip_id: tripId,
-          itinerary_item_id: itemId,
-          user_id: user.id,
-          status: "maybe",
-        });
-        if (error) throw error;
-      } else if (existing.status === "maybe") {
-        const { error } = await supabase
-          .from("itinerary_attendance")
-          .update({ status: "out" })
-          .eq("id", existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("itinerary_attendance")
-          .delete()
-          .eq("id", existing.id);
-        if (error) throw error;
+      // Guard against concurrent mutations on the same item
+      if (inflightRef.current.has(itemId)) return;
+      inflightRef.current.add(itemId);
+
+      try {
+        // Read current state from the query cache (not the stale closure)
+        const cached = qc.getQueryData<AttendanceRecord[]>(attendanceKey) ?? [];
+        const existing = cached.find(
+          (a) =>
+            a.itinerary_item_id === itemId &&
+            a.user_id === user.id &&
+            !a.id.startsWith("optimistic-")
+        );
+
+        if (!existing) {
+          const { error } = await supabase.from("itinerary_attendance").insert({
+            trip_id: tripId,
+            itinerary_item_id: itemId,
+            user_id: user.id,
+            status: "maybe",
+          });
+          if (error) throw error;
+        } else if (existing.status === "maybe") {
+          const { error } = await supabase
+            .from("itinerary_attendance")
+            .update({ status: "out" })
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("itinerary_attendance")
+            .delete()
+            .eq("id", existing.id);
+          if (error) throw error;
+        }
+      } finally {
+        inflightRef.current.delete(itemId);
       }
     },
     onMutate: async (itemId: string) => {
+      // Skip optimistic update if a mutation is already in-flight for this item
+      if (inflightRef.current.has(itemId)) return {};
+
       await qc.cancelQueries({ queryKey: attendanceKey });
       const prev = qc.getQueryData<AttendanceRecord[]>(attendanceKey);
       if (!user) return { prev };
@@ -100,7 +119,7 @@ export function useItineraryAttendance(tripId: string) {
           (a) => a.itinerary_item_id === itemId && a.user_id === user.id
         );
         if (!existing) {
-          return [...old, { id: `optimistic-${Date.now()}`, trip_id: tripId, itinerary_item_id: itemId, user_id: user.id, status: "maybe" as const }];
+          return [...old, { id: `optimistic-${crypto.randomUUID()}`, trip_id: tripId, itinerary_item_id: itemId, user_id: user.id, status: "maybe" as const }];
         } else if (existing.status === "maybe") {
           return old.map((a) => a.id === existing.id ? { ...a, status: "out" as const } : a);
         } else {
@@ -111,7 +130,7 @@ export function useItineraryAttendance(tripId: string) {
     },
     onError: (e: any, _itemId, context) => {
       if (context?.prev) qc.setQueryData(attendanceKey, context.prev);
-      toast.error(e.message);
+      toast.error("Couldn't update your attendance. Please try again.");
     },
     onSettled: () => qc.invalidateQueries({ queryKey: attendanceKey }),
   });
