@@ -32,11 +32,11 @@ import type { ItineraryItem } from "@/hooks/useItinerary";
 import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 import { useAuth } from "@/contexts/AuthContext";
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  idea: { label: "Idea", className: "bg-muted text-muted-foreground" },
-  planned: { label: "Planned", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
-  booked: { label: "Booked", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
-  confirmed: { label: "Confirmed", className: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" },
+const statusConfig: Record<string, { label: string; className: string; borderColor: string }> = {
+  idea: { label: "Idea", className: "bg-muted text-muted-foreground", borderColor: "rgba(0,0,0,0.08)" },
+  planned: { label: "Planned", className: "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300", borderColor: "#3b82f6" },
+  booked: { label: "Booked", className: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300", borderColor: "#10b981" },
+  confirmed: { label: "Confirmed", className: "bg-teal-50 text-teal-600 dark:bg-teal-900/40 dark:text-teal-300", borderColor: "#0D9488" },
 };
 
 interface Props {
