@@ -623,8 +623,8 @@ export default function TripList() {
     <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 mt-4 pb-[100px]">
-        {liveTrip && <HeroCard trip={liveTrip} />}
+      <div className="mx-auto grid w-full max-w-md md:max-w-none grid-cols-1 md:grid-cols-2 gap-3 px-4 mt-4 pb-[100px]">
+        {liveTrip && <div className="md:col-span-2"><HeroCard trip={liveTrip} /></div>}
         {otherTrips.map((trip) => (
           <RegularCard key={trip.id} trip={trip} />
         ))}
@@ -632,7 +632,7 @@ export default function TripList() {
         {/* Join a trip row */}
         <button
           onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-          className="flex items-center rounded-2xl border border-dashed px-4 py-3.5 bg-card transition-colors"
+          className="md:col-span-2 flex items-center rounded-2xl border border-dashed px-4 py-3.5 bg-card transition-colors"
           style={{ borderColor: "rgba(13,148,136,0.3)" }}
         >
           <Hash className="h-5 w-5 shrink-0" style={{ color: "#0D9488" }} />
@@ -643,7 +643,7 @@ export default function TripList() {
         {/* Referral card — show when < 2 trips and not dismissed */}
         {tripCount < 2 && !referralDismissed && (profile as any)?.referral_code && (
           <div
-            className="rounded-2xl p-4"
+            className="md:col-span-2 rounded-2xl p-4"
             style={{
               background: "linear-gradient(135deg, rgba(13,148,136,0.12), rgba(13,148,136,0.05))",
               border: "1px solid rgba(13,148,136,0.25)",
@@ -685,7 +685,7 @@ export default function TripList() {
           </div>
         )}
 
-        <Link to="/app/trips/new" className="block">
+        <Link to="/app/trips/new" className="block md:col-span-2">
           <div
             className="flex h-[56px] items-center justify-center rounded-2xl transition-colors"
             style={{

@@ -63,7 +63,7 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-[420px] md:mt-20">
         <CardHeader className="items-center text-center">
           {isInviteFlow ? (
             <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-primary text-2xl">
