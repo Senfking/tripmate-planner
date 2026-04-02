@@ -9,12 +9,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -109,15 +103,14 @@ export function DateRangePicker({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={handleOpen}>
-        <div onClick={() => handleOpen(true)}>{trigger}</div>
-        <DrawerContent className="px-2 pb-6">
-          <DrawerHeader className="text-left px-2">
-            <DrawerTitle>Select dates</DrawerTitle>
-          </DrawerHeader>
-          {calendarContent}
-        </DrawerContent>
-      </Drawer>
+      <div className="space-y-2">
+        <div onClick={() => handleOpen(!open)}>{trigger}</div>
+        {open && (
+          <div className="rounded-md border bg-background">
+            {calendarContent}
+          </div>
+        )}
+      </div>
     );
   }
 
