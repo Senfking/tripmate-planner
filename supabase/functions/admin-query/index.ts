@@ -412,12 +412,13 @@ Deno.serve(async (req) => {
         const { user_id } = params;
         if (!user_id) return err("user_id required");
 
-        const [profile, trips, aiEvents, feedbackData, referrals] = await Promise.all([
+        const [profile, trips, aiEvents, feedbackData, referrals, authUser] = await Promise.all([
           db.from("profiles").select("*").eq("id", user_id).single(),
           db.from("trip_members").select("trip_id, role, joined_at").eq("user_id", user_id),
           db.from("analytics_events").select("event_name").like("event_name", "ai_%").eq("user_id", user_id),
           db.from("feedback").select("id", { count: "exact", head: true }).eq("user_id", user_id),
           db.from("profiles").select("id, display_name", { count: "exact" }).eq("referred_by", user_id),
+          db.auth.admin.getUserById(user_id),
         ]);
 
         // Get trip details
@@ -426,14 +427,14 @@ Deno.serve(async (req) => {
         let memberCounts: Record<string, number> = {};
         if (tripIds.length > 0) {
           const [td, mc] = await Promise.all([
-            db.from("trips").select("id, name").in("id", tripIds),
+            db.from("trips").select("id, name, created_at").in("id", tripIds),
             db.from("trip_members").select("trip_id").in("trip_id", tripIds),
           ]);
           tripDetails = td.data || [];
           (mc.data || []).forEach((r: any) => { memberCounts[r.trip_id] = (memberCounts[r.trip_id] || 0) + 1; });
         }
 
-        const tripMap = Object.fromEntries(tripDetails.map((t: any) => [t.id, t.name]));
+        const tripMap = Object.fromEntries(tripDetails.map((t: any) => [t.id, { name: t.name, created_at: t.created_at }]));
 
         const aiCounts: Record<string, number> = {};
         (aiEvents.data || []).forEach((r: any) => {
@@ -447,13 +448,30 @@ Deno.serve(async (req) => {
           referrerName = ref?.display_name;
         }
 
+        // Find the most recent trip the user owns/created
+        const ownedTrips = (trips.data || []).filter((t: any) => t.role === "owner");
+        const lastTripCreated = ownedTrips.length > 0
+          ? ownedTrips.reduce((latest: any, t: any) => {
+              const tripInfo = tripMap[t.trip_id];
+              if (!tripInfo?.created_at) return latest;
+              return !latest || tripInfo.created_at > latest ? tripInfo.created_at : latest;
+            }, null)
+          : null;
+
+        const au = authUser?.data?.user;
+
         return json({
           profile: profile.data,
+          email: au?.email || null,
+          last_sign_in_at: au?.last_sign_in_at || null,
+          email_confirmed_at: au?.email_confirmed_at || null,
+          last_trip_created_at: lastTripCreated,
           referrer_name: referrerName,
           referral_count: referrals.count || 0,
           trips: (trips.data || []).map((t: any) => ({
             ...t,
-            trip_name: tripMap[t.trip_id] || "Unknown",
+            trip_name: tripMap[t.trip_id]?.name || "Unknown",
+            trip_created_at: tripMap[t.trip_id]?.created_at || null,
             member_count: memberCounts[t.trip_id] || 0,
           })),
           ai_usage: aiCounts,

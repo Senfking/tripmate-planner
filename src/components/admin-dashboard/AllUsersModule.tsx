@@ -107,7 +107,10 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
         </div>
       </div>
 
+      <Detail label="Email" value={data.email || "—"} />
       <Detail label="Joined" value={p.created_at?.slice(0, 10)} />
+      <Detail label="Last login" value={data.last_sign_in_at ? timeAgo(data.last_sign_in_at) : "Never"} />
+      <Detail label="Last trip created" value={data.last_trip_created_at ? timeAgo(data.last_trip_created_at) : "—"} />
       <Detail label="Currency" value={p.default_currency} />
 
       <SectionHeader>Subscription</SectionHeader>
@@ -156,4 +159,15 @@ function Detail({ label, value }: { label: string; value: string | number }) {
       <span style={{ color: C.text, fontFamily: mono }}>{value}</span>
     </div>
   );
+}
+
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(ts).toISOString().slice(0, 10);
 }
