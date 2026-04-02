@@ -133,7 +133,7 @@ export function FeedbackWidget() {
             setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
           }
         } catch {
-          setAiMessage("We read every message and use it to shape what we build next.\n— The Junto team");
+          setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
         }
       } else {
         setAiMessage("We read every message and use it to shape what we build next.\n— The Junto team");
