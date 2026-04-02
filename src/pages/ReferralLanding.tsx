@@ -50,7 +50,7 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
 export default function ReferralLanding() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const code = params.get("code");
+  const code = params.get("ref");
   const [referrer, setReferrer] = useState<{ display_name: string | null } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [statementIndex, setStatementIndex] = useState(0);
