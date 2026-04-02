@@ -623,8 +623,8 @@ export default function TripList() {
     <div className="relative min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 mt-4 pb-[100px]">
-        {liveTrip && <HeroCard trip={liveTrip} />}
+      <div className="mx-auto grid w-full max-w-md md:max-w-none grid-cols-1 md:grid-cols-2 gap-3 px-4 mt-4 pb-[100px]">
+        {liveTrip && <div className="md:col-span-2"><HeroCard trip={liveTrip} /></div>}
         {otherTrips.map((trip) => (
           <RegularCard key={trip.id} trip={trip} />
         ))}
