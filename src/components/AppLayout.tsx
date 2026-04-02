@@ -6,6 +6,7 @@ import { DesktopHeader } from "@/components/DesktopHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { useAuth } from "@/contexts/AuthContext";
 
 function OfflineBanner() {
