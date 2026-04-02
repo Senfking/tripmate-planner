@@ -14,6 +14,7 @@ const Trips = () => (
         Start planning your next adventure!
       </p>
     </div>
+    <DesktopFooter />
   </div>
 );
 
