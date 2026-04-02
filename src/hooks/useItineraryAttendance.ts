@@ -14,6 +14,7 @@ export interface AttendanceRecord {
 export interface TripMember {
   user_id: string;
   display_name: string | null;
+  avatar_url: string | null;
 }
 
 export function useItineraryAttendance(tripId: string) {
