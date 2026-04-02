@@ -4,6 +4,7 @@ import { Wallet, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
 import { TabHeroHeader } from "@/components/ui/TabHeroHeader";
+import { DesktopFooter } from "@/components/DesktopFooter";
 
 const Expenses = () => {
   const { data, isLoading, isFetching } = useGlobalExpenses();
