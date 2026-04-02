@@ -193,6 +193,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       inviteUrl,
     ]);
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    trackEvent("trip_invite_sent", { method: "whatsapp", type: "invite" }, user?.id);
   };
 
   const handleWhatsAppShare = () => {
