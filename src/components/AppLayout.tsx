@@ -127,6 +127,7 @@ export function AppLayout() {
         {!isTripPage && <BottomNav />}
         <FeedbackWidget />
         <InstallPrompt />
+        <ServiceWorkerUpdater />
       </div>
     </SidebarProvider>
   );
