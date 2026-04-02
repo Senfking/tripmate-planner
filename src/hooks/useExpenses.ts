@@ -345,16 +345,11 @@ export function useExpenses(tripId: string) {
         .eq("id", id);
       if (error) throw error;
 
-      // Delete old splits and re-insert
-      const { error: dErr } = await supabase.from("expense_splits").delete().eq("expense_id", id);
-      if (dErr) throw dErr;
-
-      const splitRows = splits.map((s) => ({
-        expense_id: id,
-        user_id: s.user_id,
-        share_amount: s.share_amount,
-      }));
-      const { error: sErr } = await supabase.from("expense_splits").insert(splitRows);
+      // Atomically replace splits in a single DB transaction
+      const { error: sErr } = await supabase.rpc("replace_expense_splits", {
+        _expense_id: id,
+        _splits: splits.map((s) => ({ user_id: s.user_id, share_amount: s.share_amount })),
+      });
       if (sErr) throw sErr;
     },
     onSuccess: () => {

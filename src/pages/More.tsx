@@ -383,7 +383,8 @@ const More = () => {
           }));
         setHasMoreTrips(mapped.length > 5);
         setTrips(mapped.slice(0, 5));
-      });
+      })
+      .catch(() => {});
   }, [user]);
 
   /* ── fetch stats ── */
@@ -394,7 +395,8 @@ const More = () => {
       .from("trip_members")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
-      .then(({ count }) => setTripCount(count || 0));
+      .then(({ count }) => setTripCount(count || 0))
+      .catch(() => {});
 
     // Companion count
     supabase
@@ -411,7 +413,8 @@ const More = () => {
         if (!allMembers) { setCompanionCount(0); return; }
         const uniqueOthers = new Set(allMembers.map((m) => m.user_id).filter((id) => id !== user.id));
         setCompanionCount(uniqueOthers.size);
-      });
+      })
+      .catch(() => {});
   }, [user]);
 
   /* ── fetch referral count ── */
@@ -421,7 +424,8 @@ const More = () => {
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("referred_by", user.id)
-      .then(({ count }) => setReferralCount(count || 0));
+      .then(({ count }) => setReferralCount(count || 0))
+      .catch(() => {});
   }, [user]);
 
   /* ── handlers ── */
@@ -499,8 +503,12 @@ const More = () => {
 
   const handleResetPassword = async () => {
     if (!user?.email) return;
-    await supabase.auth.resetPasswordForEmail(user.email);
-    toast({ title: "Password reset email sent — check your inbox" });
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email);
+    if (error) {
+      toast({ title: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Password reset email sent — check your inbox" });
+    }
   };
 
   const handleChangeEmail = async () => {

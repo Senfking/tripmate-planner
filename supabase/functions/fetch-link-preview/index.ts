@@ -42,6 +42,34 @@ Deno.serve(async (req) => {
       });
     }
 
+    // SSRF protection: block private/internal IPs and metadata endpoints
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname.toLowerCase();
+      const blockedHosts = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"];
+      if (
+        blockedHosts.includes(hostname) ||
+        hostname.startsWith("10.") ||
+        hostname.startsWith("192.168.") ||
+        hostname.startsWith("169.254.") ||
+        hostname.endsWith(".internal") ||
+        hostname.endsWith(".local") ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+        parsed.protocol === "file:" ||
+        parsed.protocol === "ftp:"
+      ) {
+        return new Response(JSON.stringify({ error: "URL not allowed" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid URL" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let og_title: string | null = null;
     let og_description: string | null = null;
     let og_image_url: string | null = null;

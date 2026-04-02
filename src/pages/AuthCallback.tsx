@@ -27,6 +27,9 @@ export default function AuthCallback() {
               .update({ referred_by: referrerId })
               .eq("id", user.id);
           }
+        })
+        .catch(() => {
+          localStorage.removeItem("junto_referral_code");
         });
     }
 

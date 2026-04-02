@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import Login from "./pages/Login";
@@ -28,7 +29,17 @@ import NotFound from "./pages/NotFound";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 1000 * 60 * 2, // 2 min default
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 function AppInner() {
   const qc = useQueryClient();
@@ -101,9 +112,11 @@ function AppInner() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AppInner />
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AppInner />
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
