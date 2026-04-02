@@ -40,7 +40,7 @@ export function FeedbackInbox() {
                   {f.ai_severity && <StatusPill label={f.ai_severity} color={sevColor} />}
                   {f.ai_category && <StatusPill label={f.ai_category} color={C.blue} />}
                   <span style={{ fontFamily: mono, fontSize: 10, color: C.muted, marginLeft: "auto" }}>
-                    {f.status === "resolved" ? "●" : "○"}
+                    {f.status === "done" ? "●" : "○"}
                   </span>
                 </div>
                 <div style={{ fontFamily: sans, fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
