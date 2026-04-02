@@ -685,7 +685,7 @@ export default function TripList() {
           </div>
         )}
 
-        <Link to="/app/trips/new" className="block">
+        <Link to="/app/trips/new" className="block md:col-span-2">
           <div
             className="flex h-[56px] items-center justify-center rounded-2xl transition-colors"
             style={{
