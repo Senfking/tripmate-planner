@@ -23,15 +23,28 @@ const DOT: Record<MemberStatus, string> = {
   out: "#ef4444",
 };
 
+const RSVP_LABEL: Record<MemberStatus, string> = {
+  in: "Going",
+  maybe: "Maybe",
+  out: "Out",
+};
+
+const RSVP_STYLE: Record<MemberStatus, { color: string; bg: string }> = {
+  in:    { color: "hsl(175 84% 32%)", bg: "hsl(175 84% 32% / 0.12)" },
+  maybe: { color: "hsl(38 92% 50%)",  bg: "hsl(38 92% 50% / 0.12)" },
+  out:   { color: "hsl(0 84% 60%)",   bg: "hsl(0 84% 60% / 0.10)" },
+};
+
 interface Props {
   members: TripMember[];
   attendance: AttendanceRecord[];
   itemId: string;
   currentUserId: string;
   onCycle: () => void;
+  compact?: boolean;
 }
 
-export function AttendanceRow({ members, attendance, itemId, currentUserId, onCycle }: Props) {
+export function AttendanceRow({ members, attendance, itemId, currentUserId, onCycle, compact }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const itemAttendance = attendance.filter((a) => a.itinerary_item_id === itemId);
 
@@ -41,10 +54,79 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
     return (a.display_name || "").localeCompare(b.display_name || "");
   });
 
+  const me = members.find((m) => m.user_id === currentUserId);
+  const myStatus = me ? getStatus(me, itemAttendance) : "in";
+  const rsvpStyle = RSVP_STYLE[myStatus];
+
   const maxShow = members.length <= 5 ? members.length : 4;
   const visible = sorted.slice(0, maxShow);
   const remaining = members.length - maxShow;
 
+  if (compact) {
+    return (
+      <>
+        {/* Left: avatars */}
+        <div
+          className="flex items-center -space-x-1 cursor-pointer"
+          onClick={() => setSheetOpen(true)}
+          role="button"
+          tabIndex={0}
+        >
+          {visible.map((member) => {
+            const status = getStatus(member, itemAttendance);
+            return (
+              <div
+                key={member.user_id}
+                className={cn(
+                  "relative flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full text-[8px] font-semibold border-[1.5px] border-card",
+                  status === "out"
+                    ? "bg-muted/60 text-muted-foreground/40"
+                    : "bg-secondary text-secondary-foreground",
+                )}
+                style={{ height: 22, width: 22 }}
+                title={`${member.display_name || "?"}: ${RSVP_LABEL[status]}`}
+              >
+                {getInitials(member.display_name)}
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full border border-card"
+                  style={{ backgroundColor: DOT[status] }}
+                >
+                  {status === "in" && <Check className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                  {status === "maybe" && <HelpCircle className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                  {status === "out" && <X className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                </span>
+              </div>
+            );
+          })}
+          {remaining > 0 && (
+            <span className="flex items-center justify-center rounded-full border-[1.5px] border-card bg-muted/50 text-[8px] font-medium text-muted-foreground/60" style={{ height: 22, width: 22 }}>
+              +{remaining}
+            </span>
+          )}
+        </div>
+
+        {/* Right: RSVP toggle */}
+        <button
+          data-rsvp
+          onClick={(e) => { e.stopPropagation(); onCycle(); }}
+          className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-colors active:scale-95"
+          style={{ color: rsvpStyle.color, backgroundColor: rsvpStyle.bg }}
+        >
+          {RSVP_LABEL[myStatus]}
+        </button>
+
+        <AttendanceSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          members={members}
+          attendance={itemAttendance}
+          currentUserId={currentUserId}
+        />
+      </>
+    );
+  }
+
+  // Full (non-compact) layout — kept for other usages
   return (
     <>
       <div className="space-y-1">

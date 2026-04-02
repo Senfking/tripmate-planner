@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock } from "lucide-react";
+import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock, MessageCircle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortable } from "@dnd-kit/sortable";
@@ -19,13 +19,14 @@ import {
 import type { ItineraryItem } from "@/hooks/useItinerary";
 import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 import { useAuth } from "@/contexts/AuthContext";
+import { useItemComments } from "@/hooks/useItemComments";
 
 /* ── status config ── */
 const STATUS: Record<string, { label: string; fg: string; bg: string; tint: string }> = {
-  idea:      { label: "Idea",      fg: "hsl(220 9% 46%)",  bg: "hsl(220 9% 46% / 0.08)",  tint: "hsl(220 9% 46% / 0.03)" },
-  planned:   { label: "Planned",   fg: "hsl(221 83% 53%)", bg: "hsl(221 83% 53% / 0.08)",  tint: "hsl(221 83% 53% / 0.03)" },
-  booked:    { label: "Booked",    fg: "hsl(160 84% 39%)", bg: "hsl(160 84% 39% / 0.08)",  tint: "hsl(160 84% 39% / 0.03)" },
-  confirmed: { label: "Confirmed", fg: "hsl(175 84% 32%)", bg: "hsl(175 84% 32% / 0.10)",  tint: "hsl(175 84% 32% / 0.04)" },
+  idea:      { label: "Idea",      fg: "hsl(220 9% 46%)",  bg: "hsl(220 9% 46% / 0.12)",  tint: "hsl(220 9% 46% / 0.06)" },
+  planned:   { label: "Planned",   fg: "hsl(221 83% 53%)", bg: "hsl(221 83% 53% / 0.12)",  tint: "hsl(221 83% 53% / 0.06)" },
+  booked:    { label: "Booked",    fg: "hsl(160 84% 39%)", bg: "hsl(160 84% 39% / 0.12)",  tint: "hsl(160 84% 39% / 0.06)" },
+  confirmed: { label: "Confirmed", fg: "hsl(175 84% 32%)", bg: "hsl(175 84% 32% / 0.14)",  tint: "hsl(175 84% 32% / 0.07)" },
 };
 
 interface Props {
@@ -51,12 +52,17 @@ export function ItineraryItemCard({
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const s = STATUS[item.status] || STATUS.idea;
   const canDelete = item.created_by === user?.id || myRole === "owner" || myRole === "admin";
   const timeStr = item.start_time?.slice(0, 5) ?? null;
   const endStr = item.end_time?.slice(0, 5) ?? null;
   const timeDisplay = timeStr ? (endStr ? `${timeStr} – ${endStr}` : timeStr) : null;
+
+  // Get comment count for collapsed pill
+  const { comments } = useItemComments(tripId, item.id);
+  const commentCount = comments.length;
 
   /* ── new-item animation ── */
   const [animPhase, setAnimPhase] = useState<"skeleton" | "fadein" | "done">(isNew ? "skeleton" : "done");
@@ -91,116 +97,133 @@ export function ItineraryItemCard({
       <div ref={setNodeRef} style={dndStyle} className="relative">
         <div
           aria-hidden
-          className="rounded-2xl animate-calm-pulse"
-          style={{ height: 100, background: "hsl(175 84% 32% / 0.05)", border: "1px solid hsl(175 84% 32% / 0.12)", borderRadius: 16 }}
+          className="rounded-xl animate-calm-pulse"
+          style={{ height: 72, background: "hsl(175 84% 32% / 0.05)", border: "1px solid hsl(175 84% 32% / 0.12)", borderRadius: 12 }}
         />
       </div>
     );
   }
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't expand if clicking interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-rsvp]') || target.closest('[data-action]') || target.closest('button') || target.closest('textarea')) return;
+    setExpanded((v) => !v);
+  };
+
   return (
     <div ref={setNodeRef} style={dndStyle} className={cn("relative", isDragging && "z-10")}>
       <div
         className={cn(
-          "w-full overflow-hidden rounded-2xl transition-all duration-200",
-          "bg-card dark:bg-card",
-          "border border-border/60",
-          "shadow-[0_1px_3px_rgba(0,0,0,0.04)]",
+          "w-full overflow-hidden rounded-xl transition-all duration-200",
+          "bg-card/90 dark:bg-card/80 backdrop-blur-sm",
+          "border border-border/80 dark:border-border/60",
+          "shadow-[0_1px_4px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.03)]",
           isDragging && "opacity-50 ring-2 ring-primary/30",
           animPhase === "fadein" && "animate-fade-in-card",
-          "md:hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]",
         )}
-        style={{ background: `linear-gradient(180deg, ${s.tint} 0%, transparent 60%)` }}
+        style={{ background: `linear-gradient(180deg, ${s.tint} 0%, hsl(var(--card) / 0.92) 50%)` }}
       >
-        {/* ━━ HEADER ZONE ━━ */}
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1.5">
-                {isDraggable && (
-                  <button
-                    className="shrink-0 touch-none text-muted-foreground/25 hover:text-muted-foreground/50 cursor-grab active:cursor-grabbing -ml-1"
-                    {...attributes}
-                    {...listeners}
-                  >
-                    <GripVertical className="h-4 w-4" />
-                  </button>
-                )}
-                <h3 className="text-[15px] font-bold leading-tight text-foreground truncate">
-                  {item.title}
-                </h3>
-                {overlapTitles?.length ? (
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[220px] text-xs">
-                        Overlaps with {overlapTitles.join(", ")}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : null}
-                {showNewPill && (
-                  <span
-                    className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
-                    style={{ color: "hsl(175 84% 32%)", backgroundColor: "hsl(175 84% 32% / 0.10)" }}
-                  >
-                    New
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3 text-[12px] text-muted-foreground/70">
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="h-3 w-3 opacity-60" />
-                  {timeDisplay || "TBC"}
-                </span>
-                {item.location_text && (
-                  <span className="inline-flex items-center gap-1 truncate">
-                    <MapPin className="h-3 w-3 opacity-60" />
-                    <span className="truncate">{item.location_text}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end gap-2 shrink-0">
-              <span
-                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
-                style={{ color: s.fg, backgroundColor: s.bg }}
-              >
-                {s.label}
-              </span>
-              <div className="flex items-center gap-0.5">
-                <button onClick={onEdit} className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-foreground/70 hover:bg-muted/40 transition-colors">
-                  <Pencil className="h-3.5 w-3.5" />
+        {/* ━━ COLLAPSED: Rows 1–4 ━━ */}
+        <div className="cursor-pointer" onClick={handleCardClick}>
+          {/* Row 1: Title + Status pill */}
+          <div className="flex items-center justify-between gap-2 px-3 pt-2.5 pb-0.5">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              {isDraggable && (
+                <button
+                  className="shrink-0 touch-none text-muted-foreground/25 hover:text-muted-foreground/50 cursor-grab active:cursor-grabbing -ml-0.5"
+                  {...attributes}
+                  {...listeners}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <GripVertical className="h-3.5 w-3.5" />
                 </button>
-                {canDelete && (
-                  <button onClick={() => setConfirmOpen(true)} className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-destructive/70 hover:bg-muted/40 transition-colors">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
+              )}
+              <h3 className="text-[14px] font-bold leading-snug text-foreground truncate">
+                {item.title}
+              </h3>
+              {overlapTitles?.length ? (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="h-3 w-3 shrink-0 text-amber-500" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px] text-xs">
+                      Overlaps with {overlapTitles.join(", ")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
+              {showNewPill && (
+                <span
+                  className="shrink-0 rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider"
+                  style={{ color: "hsl(175 84% 32%)", backgroundColor: "hsl(175 84% 32% / 0.10)" }}
+                >
+                  New
+                </span>
+              )}
             </div>
+            <span
+              className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+              style={{ color: s.fg, backgroundColor: s.bg }}
+            >
+              {s.label}
+            </span>
+          </div>
+
+          {/* Row 2: Time + Location */}
+          <div className="flex items-center gap-3 px-3 pb-1.5 text-[11px] text-muted-foreground/60">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-2.5 w-2.5 opacity-50" />
+              {timeDisplay || "TBC"}
+            </span>
+            {item.location_text && (
+              <span className="inline-flex items-center gap-1 truncate">
+                <MapPin className="h-2.5 w-2.5 opacity-50" />
+                <span className="truncate">{item.location_text}</span>
+              </span>
+            )}
           </div>
         </div>
 
-        {/* ━━ BODY ZONE — Attendance ━━ */}
+        {/* Row 3: Avatars (left) + RSVP control (right) */}
         {user && members.length > 0 && (
-          <div className="px-4 pb-3">
+          <div className="flex items-center justify-between gap-2 px-3 pb-1.5">
             <AttendanceRow
               members={members}
               attendance={attendance}
               itemId={item.id}
               currentUserId={user.id}
               onCycle={onCycleAttendance}
+              compact
             />
           </div>
         )}
 
-        {/* ━━ COMMENT ZONE ━━ */}
-        {user && (
-          <div className="border-t border-border/40 px-4 py-3">
+        {/* Row 4: Comment count + actions — tappable to expand */}
+        <div className="flex items-center justify-between px-3 pb-2 cursor-pointer" onClick={handleCardClick}>
+          <div className="flex items-center gap-1.5 text-muted-foreground/50">
+            <MessageCircle className="h-3 w-3" />
+            <span className="text-[10px] font-medium">
+              {commentCount > 0 ? commentCount : 0}
+            </span>
+            <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", expanded && "rotate-180")} />
+          </div>
+          <div className="flex items-center gap-0.5" data-action>
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground/35 hover:text-foreground/70 hover:bg-muted/40 transition-colors">
+              <Pencil className="h-3 w-3" />
+            </button>
+            {canDelete && (
+              <button onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground/35 hover:text-destructive/70 hover:bg-muted/40 transition-colors">
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ━━ EXPANDED: Comments ━━ */}
+        {expanded && user && (
+          <div className="border-t border-border/40 px-3 py-2.5">
             <ItemComments tripId={tripId} itemId={item.id} />
           </div>
         )}
