@@ -1091,6 +1091,10 @@ export type Database = {
         Args: { _target_user_id: string; _trip_id: string }
         Returns: Json
       }
+      replace_expense_splits: {
+        Args: { _expense_id: string; _splits: Json }
+        Returns: undefined
+      }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
       update_member_role: {
         Args: { _new_role: string; _target_user_id: string; _trip_id: string }
