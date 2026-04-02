@@ -39,7 +39,7 @@ export function DesktopHeader() {
 
   return (
     <header
-      className="hidden md:block sticky top-0 z-50"
+      className="hidden md:block sticky top-0 z-50 mx-4 mt-2 rounded-2xl overflow-hidden"
       style={{
         background: "linear-gradient(135deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
       }}
