@@ -29,6 +29,8 @@ export interface TripItineraryGroup {
   tripEmoji: string | null;
   tripStartDate: string | null;
   tripEndDate: string | null;
+  tripDestination: string | null;
+  tripCoverImagePath: string | null;
   items: ItineraryItemGlobal[];
   placeholders: RouteStopPlaceholder[];
 }
@@ -59,7 +61,7 @@ export function useGlobalItinerary() {
         { data: attendance },
         { data: routeStops },
       ] = await Promise.all([
-        supabase.from("trips").select("id, name, emoji, tentative_start_date, tentative_end_date").in("id", tripIds),
+        supabase.from("trips").select("id, name, emoji, tentative_start_date, tentative_end_date, destination, cover_image_path").in("id", tripIds),
         supabase
           .from("itinerary_items")
           .select("id, trip_id, title, day_date, start_time, end_time, location_text, status")
@@ -98,6 +100,8 @@ export function useGlobalItinerary() {
           tripEmoji: trip.emoji,
           tripStartDate: trip.tentative_start_date,
           tripEndDate: trip.tentative_end_date,
+          tripDestination: trip.destination,
+          tripCoverImagePath: trip.cover_image_path,
           items: [],
           placeholders: [],
         });
@@ -114,6 +118,8 @@ export function useGlobalItinerary() {
             tripEmoji: trip.emoji,
             tripStartDate: trip.tentative_start_date,
             tripEndDate: trip.tentative_end_date,
+            tripDestination: trip.destination,
+            tripCoverImagePath: trip.cover_image_path,
             items: [],
             placeholders: [],
           });
@@ -144,6 +150,8 @@ export function useGlobalItinerary() {
             tripEmoji: trip.emoji,
             tripStartDate: trip.tentative_start_date,
             tripEndDate: trip.tentative_end_date,
+            tripDestination: trip.destination,
+            tripCoverImagePath: trip.cover_image_path,
             items: [],
             placeholders: [],
           });

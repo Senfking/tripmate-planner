@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isToday, isTomorrow, differenceInDays, addDays, isBefore, isEqual } from "date-fns";
 import { cn } from "@/lib/utils";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
+import { TripStartBanner, TripEndBanner } from "@/components/itinerary/TripBannerDivider";
 
 type FilterType = "all" | "mine";
 
@@ -21,7 +22,16 @@ function enumerateDays(start: string, end: string): string[] {
   return dates;
 }
 
-interface TripBoundary { tripName: string; tripEmoji: string | null; tripId: string }
+interface TripBoundary {
+  tripName: string;
+  tripEmoji: string | null;
+  tripId: string;
+  tripStartDate: string | null;
+  tripEndDate: string | null;
+  tripDestination: string | null;
+  tripCoverImagePath: string | null;
+  routeStopDests: string[];
+}
 interface DestBoundary { destination: string; tripName: string; tripEmoji: string | null; tripId: string }
 
 const Itinerary = () => {
@@ -118,7 +128,17 @@ const Itinerary = () => {
   const allDatesSet = new Set<string>([...dateMap.keys()]);
 
   for (const g of filteredGroups) {
-    const b: TripBoundary = { tripName: g.tripName, tripEmoji: g.tripEmoji, tripId: g.tripId };
+    const routeStopDests = g.placeholders.map((p) => p.destination);
+    const b: TripBoundary = {
+      tripName: g.tripName,
+      tripEmoji: g.tripEmoji,
+      tripId: g.tripId,
+      tripStartDate: g.tripStartDate,
+      tripEndDate: g.tripEndDate,
+      tripDestination: g.tripDestination,
+      tripCoverImagePath: g.tripCoverImagePath,
+      routeStopDests,
+    };
 
     // Trip-level boundaries
     if (g.tripStartDate && g.tripEndDate) {
@@ -268,19 +288,19 @@ const Itinerary = () => {
 
               return (
                 <div key={date} id={`day-${date}`} className="scroll-mt-4">
-                  {/* Trip start — full-width banner before the day */}
+                  {/* Trip start — photo banner */}
                   {tripStarts.map((trip, i) => (
-                    <div
+                    <TripStartBanner
                       key={`trip-start-${trip.tripId}-${i}`}
-                      className="flex items-center gap-2.5 py-3 px-1"
-                    >
-                      <div className="flex-1 h-px bg-[#0D9488]/20" />
-                      <Plane className="h-3.5 w-3.5 text-[#0D9488] -rotate-45 shrink-0" />
-                      <span className="text-[11px] font-semibold text-[#0D9488] whitespace-nowrap">
-                        {trip.tripEmoji ?? "✈️"} {trip.tripName} begins
-                      </span>
-                      <div className="flex-1 h-px bg-[#0D9488]/20" />
-                    </div>
+                      tripId={trip.tripId}
+                      tripName={trip.tripName}
+                      tripEmoji={trip.tripEmoji}
+                      tripStartDate={trip.tripStartDate}
+                      tripEndDate={trip.tripEndDate}
+                      tripDestination={trip.tripDestination}
+                      tripCoverImagePath={trip.tripCoverImagePath}
+                      routeStopDests={trip.routeStopDests}
+                    />
                   ))}
 
                   {/* Destination arrival — visible divider before the day */}
@@ -404,19 +424,19 @@ const Itinerary = () => {
                     </div>
                   ))}
 
-                  {/* Trip end — full-width banner after the day */}
+                  {/* Trip end — photo banner */}
                   {tripEnds.map((trip, i) => (
-                    <div
+                    <TripEndBanner
                       key={`trip-end-${trip.tripId}-${i}`}
-                      className="flex items-center gap-2.5 py-3 px-1"
-                    >
-                      <div className="flex-1 h-px bg-muted-foreground/10" />
-                      <Plane className="h-3.5 w-3.5 text-muted-foreground/35 rotate-[135deg] shrink-0" />
-                      <span className="text-[11px] font-semibold text-muted-foreground/45 whitespace-nowrap">
-                        {trip.tripEmoji ?? "✈️"} {trip.tripName} ends
-                      </span>
-                      <div className="flex-1 h-px bg-muted-foreground/10" />
-                    </div>
+                      tripId={trip.tripId}
+                      tripName={trip.tripName}
+                      tripEmoji={trip.tripEmoji}
+                      tripStartDate={trip.tripStartDate}
+                      tripEndDate={trip.tripEndDate}
+                      tripDestination={trip.tripDestination}
+                      tripCoverImagePath={trip.tripCoverImagePath}
+                      routeStopDests={trip.routeStopDests}
+                    />
                   ))}
                 </div>
               );
