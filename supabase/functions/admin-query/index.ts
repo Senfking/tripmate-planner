@@ -29,13 +29,24 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const adminUserId = Deno.env.get("ADMIN_USER_ID")!;
 
-  // Verify JWT to get caller identity
-  const anonClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: claimsData, error: claimsErr } = await anonClient.auth.getUser();
-  if (claimsErr || !claimsData?.user) return err("Unauthorized", 401);
-  if (claimsData.user.id !== adminUserId) return err("Forbidden", 403);
+  // Decode JWT to get caller identity (no SDK dependency)
+  const token = authHeader.replace("Bearer ", "");
+  let callerId: string;
+  try {
+    const payloadB64 = token.split(".")[1];
+    const payload = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
+    callerId = payload.sub;
+    // Check expiry
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      return err("Token expired", 401);
+    }
+  } catch {
+    return err("Invalid token", 401);
+  }
+  if (!callerId || callerId !== adminUserId) {
+    console.error("Not admin:", callerId, "expected:", adminUserId);
+    return err("Forbidden", 403);
+  }
 
   // Service role client for unrestricted access
   const db = createClient(supabaseUrl, serviceKey);
