@@ -373,9 +373,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </Collapsible>
           )}
 
-          {/* Settle Up section — collapsed by default */}
+          {/* Divider between balances and settle up */}
+          <div className="mx-4" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }} />
+
+          {/* Settle Up section */}
           {settlements.length === 0 ? (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Settle Up</span>
               <span className="flex items-center gap-1.5 text-[12px] font-medium" style={{ color: "#0D9488" }}>
                 <CheckCircle2 className="h-3 w-3" />
