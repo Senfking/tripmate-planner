@@ -98,6 +98,23 @@ const Expenses = () => {
         </div>
       ) : (
         <div className="space-y-3 px-4 mt-4 pb-24 md:max-w-[900px] md:mx-auto md:px-8">
+          {/* Net balance summary */}
+          <div className="text-center py-4 border-b border-border">
+            <p className={cn(
+              "text-[15px] font-semibold",
+              Math.abs(overallNet) < 0.01
+                ? "text-muted-foreground"
+                : overallNet > 0
+                ? "text-emerald-600"
+                : "text-orange-600"
+            )}>
+              {Math.abs(overallNet) < 0.01
+                ? "You're all settled up"
+                : overallNet > 0
+                ? `You're owed ${formatCurrency(Math.abs(overallNet), currency)} net across all trips`
+                : `You owe ${formatCurrency(Math.abs(overallNet), currency)} net across all trips`}
+            </p>
+          </div>
           {trips.map((trip) => {
             const isSettled = Math.abs(trip.net) < 0.01;
             const isPositive = trip.net > 0;
