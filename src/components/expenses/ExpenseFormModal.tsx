@@ -240,7 +240,8 @@ export function ExpenseFormModal({
         setCategory(data.category);
       }
       if (data.notes) setNotes(data.notes);
-      toast.success("Receipt scanned \u2713");
+      toast.success("Receipt scanned ✓");
+      trackEvent("ai_receipt_scan", { success: true });
     } catch {
       toast.error("Couldn\u2019t read receipt \u2014 fill in manually");
     } finally {
