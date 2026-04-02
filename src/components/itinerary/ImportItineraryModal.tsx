@@ -265,7 +265,7 @@ export function ImportItineraryModal({
             {parsing ? (
               <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Parsing itinerary…
+                Reading your itinerary…
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -316,10 +316,10 @@ export function ImportItineraryModal({
             {parsing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Parsing…
+                Reading…
               </>
             ) : (
-              "Parse"
+              "Extract activities"
             )}
           </Button>
 
@@ -351,7 +351,7 @@ export function ImportItineraryModal({
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                {parsedItems.length} activit{parsedItems.length === 1 ? "y" : "ies"} found — review before adding
+                We found {parsedItems.length} activit{parsedItems.length === 1 ? "y" : "ies"} — review and remove any you don't need
               </p>
 
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
@@ -391,7 +391,7 @@ export function ImportItineraryModal({
                           }
                           className="text-[10px] px-1.5 py-0"
                         >
-                          {item.status}
+                          {item.status === "confirmed" ? "Confirmed" : item.status === "idea" ? "Idea" : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                         </Badge>
                         <button
                           type="button"
