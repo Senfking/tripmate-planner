@@ -120,7 +120,7 @@ export function ExpenseCard({
       </button>
 
       {expanded && (
-        <div className="border-t border-border/40 py-2.5 space-y-2">
+        <div className="py-2.5 space-y-2" style={{ padding: "10px 16px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
           <div className="space-y-1">
             {splits.map((s) => {
               const member = members.find((m) => m.userId === s.user_id);

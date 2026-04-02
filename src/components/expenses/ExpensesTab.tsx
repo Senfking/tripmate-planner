@@ -531,6 +531,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       </Collapsible>
 
+      </div>{/* end frosted glass wrapper */}
+
       <ExpenseFormModal
         open={formOpen}
         onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingExpense(null); }}
