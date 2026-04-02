@@ -36,7 +36,8 @@ export function useAttachments(tripId: string) {
         .from("attachments")
         .select("*, profiles(display_name)")
         .eq("trip_id", tripId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
       return data as unknown as AttachmentRow[];
     },

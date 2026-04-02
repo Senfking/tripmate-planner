@@ -12,16 +12,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { Map, Loader2 } from "lucide-react";
 
+function safeRedirect(path: string | null): string {
+  if (path && path.startsWith("/") && !path.startsWith("//")) return path;
+  return "/app/trips";
+}
+
 export default function Signup() {
   const { signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get("redirect");
+  const redirectTo = safeRedirect(searchParams.get("redirect"));
   const referralCode = useRef(searchParams.get("ref") || "");
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate(redirectTo || "/app/trips", { replace: true });
+      navigate(redirectTo, { replace: true });
     }
   }, [authLoading, user, navigate, redirectTo]);
 
@@ -67,7 +72,7 @@ export default function Signup() {
             .eq("id", data.user.id);
         }
       }
-      navigate(redirectTo || "/app/trips", { replace: true });
+      navigate(redirectTo, { replace: true });
     }
   };
 

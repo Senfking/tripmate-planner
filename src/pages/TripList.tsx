@@ -423,7 +423,7 @@ export default function TripList() {
 
       const tripIds = data.map((t) => t.id);
 
-      const [membersRes, stopsRes, memberDetailsRes, activitiesRes] = await Promise.all([
+      const [membersResult, stopsResult, memberDetailsResult, activitiesResult] = await Promise.allSettled([
         supabase.from("trip_members").select("trip_id").in("trip_id", tripIds),
         supabase
           .from("trip_route_stops" as any)
@@ -434,15 +434,22 @@ export default function TripList() {
           .from("trip_members")
           .select("trip_id, user_id")
           .in("trip_id", tripIds)
-          .order("joined_at", { ascending: true }),
+          .order("joined_at", { ascending: true })
+          .limit(500),
         supabase
           .from("itinerary_items")
           .select("trip_id, title, day_date, start_time")
           .in("trip_id", tripIds)
           .gte("day_date", new Date().toISOString().split("T")[0])
           .order("day_date", { ascending: true })
-          .order("start_time", { ascending: true }),
+          .order("start_time", { ascending: true })
+          .limit(200),
       ]);
+
+      const membersRes = membersResult.status === "fulfilled" ? membersResult.value : { data: null };
+      const stopsRes = stopsResult.status === "fulfilled" ? stopsResult.value : { data: null };
+      const memberDetailsRes = memberDetailsResult.status === "fulfilled" ? memberDetailsResult.value : { data: null };
+      const activitiesRes = activitiesResult.status === "fulfilled" ? activitiesResult.value : { data: null };
 
       const countMap: Record<string, number> = {};
       membersRes.data?.forEach((m: any) => {
