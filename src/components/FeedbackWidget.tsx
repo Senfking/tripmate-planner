@@ -446,14 +446,15 @@ export function FeedbackWidget() {
             top: tabY,
             writingMode: "vertical-rl",
             transform: "rotate(180deg)",
+            transformOrigin: "center center",
             background: "linear-gradient(180deg, #0D9488 0%, #0F766E 100%)",
             color: "#fff",
             fontSize: 13,
             fontWeight: 600,
             letterSpacing: "0.06em",
             padding: "14px 7px",
-            borderRadius: "10px 0 0 10px",
-            boxShadow: "-2px 2px 12px rgba(0,0,0,0.12)",
+            borderRadius: "0 10px 10px 0",
+            boxShadow: "2px 2px 12px rgba(0,0,0,0.12)",
             cursor: "pointer",
           }}
           aria-label="Send feedback"
