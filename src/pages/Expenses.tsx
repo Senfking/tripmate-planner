@@ -243,6 +243,7 @@ const Expenses = () => {
           })}
         </div>
       )}
+      <DesktopFooter />
     </div>
   );
 };

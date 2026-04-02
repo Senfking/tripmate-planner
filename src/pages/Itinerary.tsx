@@ -442,6 +442,7 @@ const Itinerary = () => {
           </div>
         )}
       </div>
+      <DesktopFooter />
     </div>
   );
 };
