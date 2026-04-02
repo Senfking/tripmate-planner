@@ -288,19 +288,19 @@ const Itinerary = () => {
 
               return (
                 <div key={date} id={`day-${date}`} className="scroll-mt-4">
-                  {/* Trip start — full-width banner before the day */}
+                  {/* Trip start — photo banner */}
                   {tripStarts.map((trip, i) => (
-                    <div
+                    <TripStartBanner
                       key={`trip-start-${trip.tripId}-${i}`}
-                      className="flex items-center gap-2.5 py-3 px-1"
-                    >
-                      <div className="flex-1 h-px bg-[#0D9488]/20" />
-                      <Plane className="h-3.5 w-3.5 text-[#0D9488] -rotate-45 shrink-0" />
-                      <span className="text-[11px] font-semibold text-[#0D9488] whitespace-nowrap">
-                        {trip.tripEmoji ?? "✈️"} {trip.tripName} begins
-                      </span>
-                      <div className="flex-1 h-px bg-[#0D9488]/20" />
-                    </div>
+                      tripId={trip.tripId}
+                      tripName={trip.tripName}
+                      tripEmoji={trip.tripEmoji}
+                      tripStartDate={trip.tripStartDate}
+                      tripEndDate={trip.tripEndDate}
+                      tripDestination={trip.tripDestination}
+                      tripCoverImagePath={trip.tripCoverImagePath}
+                      routeStopDests={trip.routeStopDests}
+                    />
                   ))}
 
                   {/* Destination arrival — visible divider before the day */}
