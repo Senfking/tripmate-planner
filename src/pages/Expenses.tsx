@@ -98,7 +98,7 @@ const Expenses = () => {
         <div className="space-y-3 px-4 mt-4 pb-24 md:max-w-[900px] md:mx-auto md:px-8">
           {/* Premium balance hero card — desktop only */}
           <div
-            className="hidden md:block rounded-2xl overflow-hidden mx-2 mb-2"
+            className="hidden md:block rounded-2xl overflow-hidden mb-2"
             style={{
               background: "linear-gradient(145deg, #0f1f1e 0%, #0D9488 60%, #0369a1 100%)",
               padding: "32px 24px",
