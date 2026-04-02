@@ -73,6 +73,7 @@ export default function ReferralLanding() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [statementIndex, setStatementIndex] = useState(0);
   const [statementVisible, setStatementVisible] = useState(true);
+  const [formOpen, setFormOpen] = useState(!!code);
 
   // Auth state
   const { signIn, signUp, user, loading: authLoading } = useAuth();
