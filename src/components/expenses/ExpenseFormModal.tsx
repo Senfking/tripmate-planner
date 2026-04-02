@@ -247,8 +247,16 @@ export function ExpenseFormModal({
     }
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
+  // Reset submitting state when modal opens/closes
+  useEffect(() => {
+    if (!open) setSubmitting(false);
+  }, [open]);
+
   const handleSubmit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
     onSave({
       id: editingExpense?.id,
       title: title.trim(),
@@ -551,7 +559,7 @@ export function ExpenseFormModal({
         />
       </div>
 
-      <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full">
+      <Button onClick={handleSubmit} disabled={!canSubmit || submitting} className="w-full">
         {editingExpense ? "Update Expense" : "Add Expense"}
       </Button>
     </div>
