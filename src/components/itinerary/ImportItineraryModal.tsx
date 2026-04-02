@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/contexts/AuthContext";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { Button } from "@/components/ui/button";

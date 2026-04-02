@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { MemberProfile, ExpenseRow } from "@/hooks/useExpenses";

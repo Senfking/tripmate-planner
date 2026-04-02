@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
