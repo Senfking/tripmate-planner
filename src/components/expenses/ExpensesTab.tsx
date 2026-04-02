@@ -387,7 +387,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </div>
           ) : (
             <Collapsible open={settleOpen} onOpenChange={setSettleOpen}>
-              <div className="space-y-2">
+              <div className="space-y-2 px-4 py-3">
                 <CollapsibleTrigger asChild>
                   <button className="flex w-full flex-col gap-0.5 text-left">
                     <div className="flex w-full items-center justify-between">
