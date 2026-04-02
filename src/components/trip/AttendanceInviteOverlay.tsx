@@ -188,21 +188,18 @@ export function AttendanceInviteOverlay({
         <div
           className={cn(
             "flex flex-col h-full",
-            !isFull && "animate-peek-bounce"
+            !isFull && "animate-peek-bounce cursor-pointer"
           )}
+          style={{ pointerEvents: !isFull ? "auto" : undefined }}
+          onClick={!isFull ? (e) => { e.stopPropagation(); onPeekTap?.(); } : undefined}
         >
         {/* Peeking top strip — message + avatars */}
         <div
-          className={cn(
-            "shrink-0 rounded-t-2xl overflow-hidden",
-            !isFull && "cursor-pointer"
-          )}
+          className="shrink-0 rounded-t-2xl overflow-hidden"
           style={{
             background: "linear-gradient(135deg, #0D9488, #0369a1)",
             boxShadow: !isFull ? "0 -4px 20px rgba(13,148,136,0.3)" : "none",
-            pointerEvents: "auto",
           }}
-          onClick={!isFull ? (e) => { e.stopPropagation(); onPeekTap?.(); } : undefined}
         >
           {/* Message row — only visible when peeking */}
           <div
