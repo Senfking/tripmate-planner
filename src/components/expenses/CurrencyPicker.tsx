@@ -148,10 +148,10 @@ export function CurrencyPicker({ value, onChange, disabled, cachedCurrencyCodes 
   };
 
   const triggerButton = variant === "settlement" ? (
-          <Button variant="outline" size="sm" disabled={disabled} className="h-8 gap-1.5 text-xs font-medium">
+          <Button variant="ghost" size="sm" disabled={disabled} className="h-9 gap-1 text-[13px] font-medium text-muted-foreground hover:text-foreground px-2">
             <span>{selectedDef?.flag || "💱"}</span>
-            Settle in: {value}
-            <ChevronDown className="h-3 w-3 opacity-60" />
+            {value}
+            <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         ) : (
           <Button variant="outline" disabled={disabled} className="h-10 w-full justify-between font-normal">

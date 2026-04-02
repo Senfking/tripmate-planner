@@ -3,7 +3,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { BalanceEntry, formatCurrency, Rates } from "@/lib/settlementCalc";
 import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
 import { CheckCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { BalanceAuditSheet } from "./BalanceAuditSheet";
 
 interface Props {
@@ -34,37 +33,34 @@ export function BalancesSummary({ balances, currency, expenses, splits, members,
 
   return (
     <>
-      <div className="space-y-1.5">
+      <div className="divide-y divide-border/40">
         {sorted.map((b) => {
           const isMe = b.userId === user?.id;
           return (
-            <div key={b.userId} className="space-y-0.5">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate max-w-[140px]">{b.displayName}</span>
-                  {isMe && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">You</Badge>
-                  )}
+            <div key={b.userId} className="py-2.5 first:pt-0 last:pb-0">
+              <div className="flex items-center justify-between">
+                <span className="text-[14px] text-foreground truncate max-w-[160px]">
+                  {b.displayName}{isMe ? " (you)" : ""}
                 </span>
                 {b.balance > 0.005 ? (
-                  <span className="text-emerald-600 font-medium">
-                    is owed {formatCurrency(b.balance, currency)}
+                  <span className="text-[15px] font-semibold" style={{ color: "#0D9488" }}>
+                    +{formatCurrency(b.balance, currency)}
                   </span>
                 ) : b.balance < -0.005 ? (
-                  <span className="text-red-500 font-medium">
-                    owes {formatCurrency(Math.abs(b.balance), currency)}
+                  <span className="text-[15px] font-semibold" style={{ color: "#EF4444" }}>
+                    −{formatCurrency(Math.abs(b.balance), currency)}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> settled
+                  <span className="text-[14px] text-muted-foreground flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> settled
                   </span>
                 )}
               </div>
               <button
                 onClick={() => setAuditUserId(b.userId)}
-                className="text-[11px] text-primary/70 hover:text-primary transition-colors pl-0"
+                className="text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
               >
-                See breakdown →
+                View breakdown →
               </button>
             </div>
           );
