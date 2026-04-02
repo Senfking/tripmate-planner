@@ -7,6 +7,7 @@ import { format, parseISO, isToday, isTomorrow, differenceInDays, addDays, isBef
 import { cn } from "@/lib/utils";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 import { TripStartBanner, TripEndBanner } from "@/components/itinerary/TripBannerDivider";
+import { DesktopFooter } from "@/components/DesktopFooter";
 
 type FilterType = "all" | "mine";
 
