@@ -425,7 +425,7 @@ const More = () => {
       .select("id", { count: "exact", head: true })
       .eq("referred_by", user.id)
       .then(({ count }) => setReferralCount(count || 0))
-      .catch(() => {});
+      .then(null, () => {});
   }, [user]);
 
   /* ── handlers ── */
