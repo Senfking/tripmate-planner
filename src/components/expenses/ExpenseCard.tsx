@@ -66,15 +66,17 @@ export function ExpenseCard({
 
   return (
     <div
-      className={`overflow-hidden ${isNew ? "animate-realtime-flash" : ""}`}
+      className={`overflow-hidden transition-colors duration-150 ${isNew ? "animate-realtime-flash" : ""}`}
+      style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}
     >
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left py-3 flex items-center gap-3"
+        className="w-full text-left flex items-center gap-3 hover:bg-[rgba(13,148,136,0.03)] transition-colors"
+        style={{ padding: "14px 16px" }}
       >
         <div
           className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
-          style={{ backgroundColor: cat.bgColor }}
+          style={{ backgroundColor: "rgba(13,148,136,0.08)", border: "1px solid rgba(13,148,136,0.12)" }}
         >
           <Icon className="h-4 w-4" style={{ color: cat.iconColor }} />
         </div>
