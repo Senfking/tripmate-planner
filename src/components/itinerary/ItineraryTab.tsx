@@ -167,6 +167,15 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
 
   return (
     <div className="space-y-6">
+      {/* Import with AI */}
+      <button
+        onClick={() => setImportOpen(true)}
+        className="w-full rounded-xl border border-dashed border-[#0D9488]/30 py-3 text-center text-[13px] font-medium text-[#0D9488]/70 hover:border-[#0D9488]/60 hover:text-[#0D9488] transition-colors flex items-center justify-center gap-1.5"
+      >
+        <Sparkles className="h-4 w-4" />
+        Import with AI
+      </button>
+
       {allDays.length === 0 && (
         <div className="text-center py-12 space-y-3">
           <p className="text-muted-foreground">No itinerary days yet.</p>
@@ -210,15 +219,6 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           <Calendar mode="single" onSelect={handleAddDay} />
         </PopoverContent>
       </Popover>
-
-      {/* Import with AI */}
-      <button
-        onClick={() => setImportOpen(true)}
-        className="w-full rounded-xl border border-dashed border-[#0D9488]/30 py-3 text-center text-[13px] font-medium text-[#0D9488]/70 hover:border-[#0D9488]/60 hover:text-[#0D9488] transition-colors flex items-center justify-center gap-1.5"
-      >
-        <Sparkles className="h-4 w-4" />
-        Import with AI
-      </button>
 
       <ImportItineraryModal
         open={importOpen}
