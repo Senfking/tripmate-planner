@@ -163,6 +163,35 @@ export function FeedbackWidget() {
       reader.readAsDataURL(file);
     });
 
+  /** Resize image to max 1024px on longest side and return { base64, mediaType } */
+  const compressImage = (file: File): Promise<{ base64: string; mediaType: string }> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1024;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          const scale = MAX / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        resolve({
+          base64: dataUrl.split(",")[1],
+          mediaType: "image/jpeg",
+        });
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = URL.createObjectURL(file);
+    });
+
   const hintRef = useRef<HTMLDivElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,8 +214,8 @@ export function FeedbackWidget() {
 
     setAnalyzingScreenshot(true);
     try {
-      const base64 = await fileToBase64(file);
-      const mediaType = file.type || "image/jpeg";
+      // Compress to ~1024px JPEG to stay within edge function body limits
+      const { base64, mediaType } = await compressImage(file);
 
       const { data, error } = await supabase.functions.invoke("analyze-feedback", {
         body: {
