@@ -181,7 +181,7 @@ const Itinerary = () => {
   const isEmpty = sortedDates.length === 0;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
       <TabHeroHeader title="Itinerary" subtitle={subtitle} pills={pills}>
         {/* Mini calendar strip */}
         {sortedDates.length > 0 && (
