@@ -321,19 +321,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </div>
           )}
 
-          {/* Stat chips: You paid / Your share */}
-          {(myStats.totalPaid > 0.005 || myStats.myShare > 0.005) && (
+          {/* Stat chips: Total expenses / Contributors */}
+          {(heroStats.totalExpenses > 0.005 || heroStats.contributors > 0) && (
             <div className="relative flex justify-center gap-3 mt-5 px-4">
               <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
-                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">You paid</p>
+                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">Total expenses</p>
                 <p className="text-[15px] font-bold text-white tabular-nums">
-                  {formatCurrency(myStats.totalPaid, settlementCurrency)}
+                  {formatCurrency(heroStats.totalExpenses, settlementCurrency)}
                 </p>
               </div>
               <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
-                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">Your share</p>
+                <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">Contributors</p>
                 <p className="text-[15px] font-bold text-white tabular-nums">
-                  {formatCurrency(myStats.myShare, settlementCurrency)}
+                  {heroStats.contributors}
                 </p>
               </div>
             </div>
