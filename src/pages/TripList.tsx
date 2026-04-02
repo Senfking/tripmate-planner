@@ -583,7 +583,12 @@ export default function TripList() {
       <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
         <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={tripsPills} />
 
-        <div className="flex flex-1 flex-col items-center px-6 pt-12 mt-4">
+        <div className="hidden md:block pt-6 pb-4 px-4">
+          <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
+          <p className="text-sm text-muted-foreground mt-1">No trips yet — start planning!</p>
+        </div>
+
+        <div className="flex flex-1 flex-col items-center px-6 pt-12 md:pt-4 mt-4 md:mt-0">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10 mb-5">
             <Plane className="h-8 w-8 text-[#0D9488]" />
           </div>
