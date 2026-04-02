@@ -636,7 +636,7 @@ const More = () => {
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
 
   return (
-    <div className="min-h-screen bg-muted/40 px-4 pb-32 space-y-4 md:max-w-[900px] md:mx-auto md:px-8" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.5rem)" }}>
+    <div className="min-h-screen flex flex-col bg-muted/40 px-4 pb-32 space-y-4 md:max-w-[900px] md:mx-auto md:px-8" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.5rem)" }}>
       {/* ── Back button ── */}
       <button
         onClick={() => navigate(-1)}
