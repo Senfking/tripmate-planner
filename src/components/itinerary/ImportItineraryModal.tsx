@@ -31,20 +31,23 @@ interface ParsedItem {
   notes: string | null;
 }
 
+interface ItemData {
+  day_date: string;
+  title: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  location_text?: string | null;
+  notes?: string | null;
+  status?: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tripId: string;
   tripStartDate: string | null;
-  onAddItem: (data: {
-    day_date: string;
-    title: string;
-    start_time?: string | null;
-    end_time?: string | null;
-    location_text?: string | null;
-    notes?: string | null;
-    status?: string;
-  }) => void;
+  onAddItem: (data: ItemData) => void;
+  onBatchAddItems?: (items: ItemData[]) => Promise<void>;
 }
 
 export function ImportItineraryModal({
@@ -53,6 +56,7 @@ export function ImportItineraryModal({
   tripId,
   tripStartDate,
   onAddItem,
+  onBatchAddItems,
 }: Props) {
   const { user } = useAuth();
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -181,28 +185,33 @@ export function ImportItineraryModal({
     setSaving(true);
     setSaveProgress(0);
 
-    let added = 0;
-    for (const item of parsedItems) {
-      onAddItem({
-        day_date: item.day_date,
-        title: item.title,
-        start_time: item.start_time,
-        end_time: item.end_time,
-        location_text: item.location_text,
-        notes: item.notes,
-        status: item.status || "idea",
-      });
-      added++;
-      setSaveProgress(Math.round((added / parsedItems.length) * 100));
-      // Small delay between mutations to avoid overwhelming the server
-      if (added < parsedItems.length) {
-        await new Promise((r) => setTimeout(r, 150));
-      }
-    }
+    const itemsToAdd = parsedItems.map((item) => ({
+      day_date: item.day_date,
+      title: item.title,
+      start_time: item.start_time,
+      end_time: item.end_time,
+      location_text: item.location_text,
+      notes: item.notes,
+      status: item.status || "idea",
+    }));
 
-    toast.success(`${added} activities imported`);
-    setSaving(false);
-    handleClose(false);
+    try {
+      if (onBatchAddItems) {
+        await onBatchAddItems(itemsToAdd);
+      } else {
+        // Fallback to one-by-one if batch not available
+        for (const item of itemsToAdd) {
+          onAddItem(item);
+        }
+      }
+      setSaveProgress(100);
+      toast.success(`${parsedItems.length} activities imported`);
+    } catch {
+      toast.error("Failed to import activities");
+    } finally {
+      setSaving(false);
+      handleClose(false);
+    }
   };
 
   const formatTime = (t: string | null) => {
