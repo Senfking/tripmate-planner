@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,32 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   const [destination, setDestination] = useState("");
   const [note, setNote] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const isMobile = useIsMobile();
+
+  // Track virtual keyboard height via Visual Viewport API so the bottom sheet
+  // slides up when the keyboard appears (iOS doesn't resize the layout viewport).
+  useEffect(() => {
+    if (!isMobile || !open) {
+      setKeyboardOffset(0);
+      return;
+    }
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(offset);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      setKeyboardOffset(0);
+    };
+  }, [isMobile, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,14 +119,16 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
       <DialogContent
         className={
           isMobile
-            ? "fixed bottom-0 top-auto left-0 right-0 translate-x-0 translate-y-0 max-w-full rounded-t-[10px] rounded-b-none p-4 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-left-0 data-[state=closed]:slide-out-to-left-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
+            ? "fixed left-0 right-0 top-auto translate-x-0 translate-y-0 max-w-full rounded-t-[10px] rounded-b-none px-4 pt-4 pb-6 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-left-0 data-[state=closed]:slide-out-to-left-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
             : "max-w-sm"
         }
+        style={isMobile ? { bottom: keyboardOffset, transition: "bottom 0.2s ease-out" } : undefined}
       >
         <DialogHeader className={isMobile ? "text-left" : undefined}>
           <DialogTitle>Suggest a destination</DialogTitle>
         </DialogHeader>
-        <div className={isMobile ? "overflow-y-auto max-h-[60dvh]" : undefined}>
+        {/* px-1 -mx-1 gives focus rings room to render without being clipped */}
+        <div className={isMobile ? "overflow-y-auto max-h-[55dvh] px-1 -mx-1" : undefined}>
           {formContent}
         </div>
       </DialogContent>
