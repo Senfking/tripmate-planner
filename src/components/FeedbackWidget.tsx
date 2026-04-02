@@ -68,7 +68,10 @@ export function FeedbackWidget() {
       });
     };
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
   }, [getDefaultY]);
 
   const clampY = (y: number) =>
@@ -99,6 +102,8 @@ export function FeedbackWidget() {
     }
   };
 
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   if (!user) return null;
 
   const reset = () => {
@@ -118,8 +123,32 @@ export function FeedbackWidget() {
     setPwaHintOpen(false);
   };
 
-  const handleOpen = () => { reset(); setOpen(true); };
-  const handleClose = () => { setOpen(false); };
+  const clearResetTimer = () => {
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+  };
+
+  const handleOpen = () => {
+    clearResetTimer();
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    // After successful submission, reset immediately
+    if (step === "success") {
+      reset();
+    } else {
+      // Keep state for 5 minutes so user can resume
+      clearResetTimer();
+      resetTimerRef.current = setTimeout(() => {
+        reset();
+        resetTimerRef.current = null;
+      }, 5 * 60 * 1000);
+    }
+  };
 
   const selectCategory = (cat: Category) => {
     setCategory(cat);
