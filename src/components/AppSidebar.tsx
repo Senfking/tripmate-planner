@@ -29,7 +29,7 @@ export function AppSidebar() {
   const pendingCount = data?.pendingCount ?? 0;
 
   return (
-    <Sidebar collapsible="icon" className="hidden md:flex border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="hidden border-r border-sidebar-border md:!hidden">
       {/* Wordmark */}
       <div className="px-5 pt-6 pb-4">
         {!collapsed ? (
