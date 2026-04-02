@@ -74,11 +74,11 @@ export function BottomNav() {
       <div
         className="relative overflow-hidden rounded-[28px]"
         style={{
-          background: "rgba(255, 255, 255, 0.55)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255, 255, 255, 0.4)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
+          background: "rgba(255, 255, 255, 0.85)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.3)",
+          boxShadow: "0 -4px 24px rgba(0, 0, 0, 0.06)",
         }}
       >
 
