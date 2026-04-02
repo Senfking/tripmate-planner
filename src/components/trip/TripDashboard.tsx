@@ -433,6 +433,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         to={`/app/trips/${tripId}/admin`}
         badge={adminBadge}
         imageUrl="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
+        className="md:col-span-2"
       />
     </div>
   );

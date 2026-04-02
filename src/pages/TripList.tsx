@@ -632,7 +632,7 @@ export default function TripList() {
         {/* Join a trip row */}
         <button
           onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-          className="flex items-center rounded-2xl border border-dashed px-4 py-3.5 bg-card transition-colors"
+          className="md:col-span-2 flex items-center rounded-2xl border border-dashed px-4 py-3.5 bg-card transition-colors"
           style={{ borderColor: "rgba(13,148,136,0.3)" }}
         >
           <Hash className="h-5 w-5 shrink-0" style={{ color: "#0D9488" }} />
