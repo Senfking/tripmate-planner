@@ -13,9 +13,9 @@ const VIDEOS = [
 ];
 
 const STATEMENTS = [
-  { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip — itinerary, decisions, everything." },
+  { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip. Itinerary, decisions, everything." },
   { problem: "Splitting costs always gets awkward.", solution: "Log expenses, scan receipts with AI, and settle up in any currency." },
-  { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas — all in one place." },
+  { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas, all in one place." },
   { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
 ];
 
@@ -172,7 +172,7 @@ export default function ReferralLanding() {
               textShadow: "0 1px 8px rgba(0,0,0,0.5)",
             }}
           >
-            Ditch the group chat chaos. Plan, split & decide — all in one place.
+            Ditch the group chat chaos. Plan, split & decide, all in one place.
           </p>
 
           {/* Rotating statement panel */}
@@ -243,7 +243,7 @@ export default function ReferralLanding() {
               boxShadow: "0 4px 24px rgba(13,148,136,0.35)",
             }}
           >
-            Get started — it's free
+            Get started, it's free
           </button>
 
           {/* Login */}
