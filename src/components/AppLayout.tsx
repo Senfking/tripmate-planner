@@ -71,7 +71,7 @@ export function AppLayout() {
 
   // Global tabs use their own TabHeroHeader — hide the app header on mobile
   const globalTabPaths = ["/app/trips", "/app/trips/new", "/app/decisions", "/app/itinerary", "/app/expenses"];
-  const hideHeader = globalTabPaths.includes(location.pathname) || location.pathname === "/app/more";
+  const hideHeader = globalTabPaths.includes(location.pathname) || location.pathname === "/app/more" || isTripPage;
 
   // Hide mobile bottom nav on trip detail pages (was previously handled by routing outside AppLayout)
   const isTripPage = /^\/app\/trips\/[^/]+/.test(location.pathname) && location.pathname !== "/app/trips/new";
