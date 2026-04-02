@@ -320,9 +320,9 @@ export function StructuredPoll({
       {/* Add option form */}
       {!isLocked && !disabled && (
         <>
-          {showAddForm ? (
-            <div className="space-y-2 pt-1">
-              {isDate ? (
+          {isDate ? (
+            showAddForm ? (
+              <div className="space-y-2 pt-1">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-xs">Start</Label>
@@ -333,28 +333,40 @@ export function StructuredPoll({
                     <Input type="date" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} />
                   </div>
                 </div>
-              ) : (
-                <Input
-                  placeholder={isPref ? "Answer option" : "e.g. Barcelona"}
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-                />
-              )}
-              <div className="flex gap-2 justify-center">
-                <Button size="sm" onClick={handleAdd} disabled={isAddingOption || (isDate ? !newStart || !newEnd : !newLabel.trim())}>
-                  Add
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowAddForm(false)}>
-                  Cancel
+                <div className="flex gap-2 justify-center">
+                  <Button size="sm" onClick={handleAdd} disabled={isAddingOption || !newStart || !newEnd}>
+                    Add
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowAddForm(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-end md:justify-start">
+                <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setShowAddForm(true)}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Add option
                 </Button>
               </div>
-            </div>
+            )
           ) : (
-            <div className="flex justify-end md:justify-start">
-              <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setShowAddForm(true)}>
-                <Plus className="h-3.5 w-3.5" />
-                Add option
+            <div className="flex items-center gap-1.5">
+              <Input
+                placeholder={isPref ? "Add option…" : "e.g. Barcelona"}
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
+                className="h-9 text-sm"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 h-9 w-9 text-muted-foreground"
+                onClick={handleAdd}
+                disabled={isAddingOption || !newLabel.trim()}
+              >
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
           )}
