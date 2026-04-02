@@ -100,6 +100,8 @@ export function useGlobalItinerary() {
           tripEmoji: trip.emoji,
           tripStartDate: trip.tentative_start_date,
           tripEndDate: trip.tentative_end_date,
+          tripDestination: trip.destination,
+          tripCoverImagePath: trip.cover_image_path,
           items: [],
           placeholders: [],
         });
@@ -116,6 +118,8 @@ export function useGlobalItinerary() {
             tripEmoji: trip.emoji,
             tripStartDate: trip.tentative_start_date,
             tripEndDate: trip.tentative_end_date,
+            tripDestination: trip.destination,
+            tripCoverImagePath: trip.cover_image_path,
             items: [],
             placeholders: [],
           });
