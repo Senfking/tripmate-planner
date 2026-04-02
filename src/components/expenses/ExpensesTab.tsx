@@ -252,56 +252,64 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </Button>
       </div>
 
-      {/* Balance hero — premium glass card */}
+      {/* Balance hero — teal gradient card (matches global expenses header) */}
       {canShowBalances && expenses.length > 0 && (
         <div
-          className="relative overflow-hidden py-8 text-center mx-0"
+          className="relative overflow-hidden py-6 text-center mx-0"
           style={{
-            background: "linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(240,253,250,0.6) 100%)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            border: "1px solid rgba(255,255,255,0.9)",
-            borderRadius: 24,
-            boxShadow: "0 8px 32px rgba(13,148,136,0.1), 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)",
+            background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
+            borderRadius: 20,
+            boxShadow: "0 6px 20px rgba(13,148,136,0.20)",
           }}
         >
-          {/* Decorative gradient orb */}
+          {/* Glass shine overlay */}
           <div
-            className="absolute -top-12 -right-12 h-32 w-32 rounded-full opacity-30 pointer-events-none"
-            style={{ background: "radial-gradient(circle, rgba(13,148,136,0.4) 0%, transparent 70%)" }}
-          />
-          <div
-            className="absolute -bottom-8 -left-8 h-24 w-24 rounded-full opacity-20 pointer-events-none"
-            style={{ background: "radial-gradient(circle, rgba(14,165,233,0.4) 0%, transparent 70%)" }}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.0) 50%, rgba(255,255,255,0.05) 100%)",
+            }}
           />
 
           {heroData.type === "settled" ? (
             <div className="relative flex flex-col items-center gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">All settled</p>
-              <CheckCircle2 className="h-10 w-10" style={{ color: "#0D9488" }} />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Balance</p>
+              <CheckCircle2 className="h-10 w-10 text-white" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+                All settled
+              </span>
             </div>
           ) : heroData.type === "owe" ? (
             <div className="relative">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">You owe</p>
-              <p className="text-[44px] font-extrabold leading-none mt-2 text-foreground">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">You owe</p>
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1.5">
                 {formatCurrency(heroData.amount, settlementCurrency)}
               </p>
-              <p className="text-[13px] text-muted-foreground mt-2.5">{heroData.subline}</p>
-              <Button
-                size="sm"
-                className="mt-4 h-9 px-5 text-[13px]"
-                onClick={() => setSettleOpen(true)}
-              >
-                Settle up
-              </Button>
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-orange-400/15 px-2.5 py-1 text-[11px] font-semibold text-orange-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-orange-300" />
+                {heroData.subline}
+              </span>
+              <div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="mt-3 h-8 px-4 text-[12px] bg-white/15 hover:bg-white/25 text-white border-0"
+                  onClick={() => setSettleOpen(true)}
+                >
+                  Settle up
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="relative">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">You're owed</p>
-              <p className="text-[44px] font-extrabold leading-none mt-2 text-foreground">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">You're owed</p>
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1.5">
                 {formatCurrency(heroData.amount, settlementCurrency)}
               </p>
-              <p className="text-[13px] text-muted-foreground mt-2.5">{heroData.subline}</p>
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                {heroData.subline}
+              </span>
             </div>
           )}
         </div>
