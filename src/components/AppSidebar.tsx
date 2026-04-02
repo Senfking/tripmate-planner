@@ -29,35 +29,46 @@ export function AppSidebar() {
   const pendingCount = data?.pendingCount ?? 0;
 
   return (
-    <Sidebar collapsible="icon" className="hidden md:flex">
-      <div className="flex h-14 items-center gap-2 border-b bg-gradient-primary px-4 text-white">
-        <Map className="h-6 w-6" />
-        {!collapsed && <span className="text-lg font-bold">Junto</span>}
+    <Sidebar collapsible="icon" className="hidden md:flex border-r border-sidebar-border">
+      <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary">
+          <Map className="h-4 w-4 text-white" />
+        </div>
+        {!collapsed && (
+          <span className="text-[15px] font-bold tracking-tight text-foreground">Junto</span>
+        )}
       </div>
-      <SidebarContent>
+      <SidebarContent className="pt-2">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="hover:bg-accent/50 relative"
-                      activeClassName="bg-accent text-primary font-medium"
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                      {item.url === "/app/decisions" && pendingCount > 0 && (
-                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[#0D9488] px-1.5 text-[11px] font-bold text-white">
-                          {pendingCount > 99 ? "99+" : pendingCount}
-                        </span>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const isActive = pathname === item.url || pathname.startsWith(item.url + "/");
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end
+                        className={`relative rounded-md px-3 py-2 text-[14px] transition-colors ${
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                            : "text-sidebar-foreground hover:bg-muted/60"
+                        }`}
+                        activeClassName=""
+                      >
+                        <item.icon className="mr-2.5 h-[18px] w-[18px]" />
+                        {!collapsed && <span>{item.title}</span>}
+                        {item.url === "/app/decisions" && pendingCount > 0 && (
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
+                            {pendingCount > 99 ? "99+" : pendingCount}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

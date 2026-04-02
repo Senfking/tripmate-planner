@@ -14,7 +14,7 @@ function HeaderAvatar() {
   return (
     <Link
       to="/app/more"
-      className="absolute z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 ring-[1.5px] ring-white/30 overflow-hidden"
+      className="absolute z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 ring-[1.5px] ring-white/30 overflow-hidden md:hidden"
       style={{
         top: "calc(env(safe-area-inset-top, 0px) + 14px)",
         right: 18,
@@ -47,10 +47,8 @@ interface TabHeroHeaderProps {
 export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeaderProps) {
   return (
     <div
-      className="relative w-full overflow-hidden"
+      className="relative w-full overflow-hidden rounded-b-[20px] md:rounded-2xl md:mt-2"
       style={{
-        borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
         boxShadow: "0 6px 20px rgba(13, 148, 136, 0.20)",
       }}
     >
@@ -84,7 +82,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
         }}
       >
         {/* JUNTO — centered */}
-        <div className="flex justify-center w-full mb-3">
+        <div className="flex justify-center w-full mb-3 md:hidden">
           <span className="text-[13px] font-extrabold tracking-[0.3em] uppercase text-white/70">
             JUNTO
           </span>
