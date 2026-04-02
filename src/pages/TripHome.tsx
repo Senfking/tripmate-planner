@@ -356,14 +356,7 @@ export default function TripHome() {
     setCroppingCover(true);
   }, []);
 
-  // Post-create share sheet — show once when landing on a freshly created trip
-  useEffect(() => {
-    if (!tripId) return;
-    const justCreated = localStorage.getItem(`junto_just_created_trip_${tripId}`);
-    if (!justCreated) return;
-    localStorage.removeItem(`junto_just_created_trip_${tripId}`);
-    setPostCreateShareOpen(true);
-  }, [tripId]);
+
 
   // Attendance overlay state
   const sessionKey = `junto_invite_dismissed_${tripId}`;
