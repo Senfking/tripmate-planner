@@ -187,7 +187,7 @@ export function AttendanceInviteOverlay({
         {/* Bounce wrapper — animates the entire visible slider, not just the teal strip */}
         <div
           className={cn(
-            "flex flex-col h-full",
+            "flex flex-col h-full md:h-auto md:max-w-[560px] md:w-full md:rounded-2xl md:overflow-hidden md:max-h-[90vh] md:shadow-2xl",
             !isFull && "animate-peek-bounce cursor-pointer"
           )}
           style={{ pointerEvents: !isFull ? "auto" : undefined }}

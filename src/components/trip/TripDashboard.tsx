@@ -390,7 +390,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 px-4 pb-12 animate-fade-in-card">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 px-4 pb-12 animate-fade-in-card md:max-w-[900px] md:mx-auto md:px-8">
       <SectionCard
         icon={Compass}
         title="Decisions"
