@@ -27,7 +27,7 @@ interface Props {
   newItemIds?: Set<string>;
 }
 
-export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
+export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItinerary(tripId);
   const { stops } = useRouteStops(tripId);
@@ -35,6 +35,7 @@ export function ItineraryTab({ tripId, myRole, newItemIds }: Props) {
   const [addDayOpen, setAddDayOpen] = useState(false);
   const [newDayDate, setNewDayDate] = useState<string | null>(null);
   const [newDayFormOpen, setNewDayFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [lastVisitItemIds, setLastVisitItemIds] = useState<Set<string>>(new Set());
   const [prevLastSeen, setPrevLastSeen] = useState<string | undefined>(undefined);
 
