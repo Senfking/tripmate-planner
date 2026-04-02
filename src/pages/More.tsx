@@ -533,12 +533,12 @@ const More = () => {
 
   const handleSignOutAll = async () => {
     await supabase.auth.signOut({ scope: "global" });
-    navigate("/login", { replace: true });
+    navigate("/ref", { replace: true });
   };
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/login", { replace: true });
+    navigate("/ref", { replace: true });
   };
 
   const handleDeleteAccount = async () => {
@@ -564,7 +564,7 @@ const More = () => {
         return;
       }
       toast({ title: "Account deleted" });
-      navigate("/login", { replace: true });
+      navigate("/ref", { replace: true });
     } catch {
       toast({ title: "Something went wrong", variant: "destructive" });
       setDeleting(false);

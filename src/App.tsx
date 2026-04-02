@@ -12,8 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 // Eagerly loaded (critical path)
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
 import AuthCallback from "./pages/AuthCallback";
 
 // Lazy loaded routes
@@ -88,8 +86,8 @@ function AppInner() {
           <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<Navigate to="/ref" replace />} />
+            <Route path="/signup" element={<Navigate to="/ref" replace />} />
             <Route path="/share/:token" element={<ShareView />} />
             <Route path="/app/invite/:token" element={<InviteRedeem />} />
             <Route path="/i/:token" element={<InviteRedeem />} />
