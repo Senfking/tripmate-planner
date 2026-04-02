@@ -270,6 +270,7 @@ Deno.serve(async (req) => {
           { key: "receipt_scan", event: "ai_receipt_scan" },
           { key: "feedback_hint", event: "ai_feedback_hint" },
           { key: "itinerary_import", event: "ai_itinerary_import" },
+          { key: "booking_extract", event: "ai_booking_extract" },
         ];
 
         const results = await Promise.all(features.map(async (f) => {

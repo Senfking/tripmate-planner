@@ -93,6 +93,7 @@ export function AIUsageModule() {
                       <td style={{ padding: 6, color: C.text, textAlign: "right", fontFamily: mono }}>{r.receipt_scans}</td>
                       <td style={{ padding: 6, color: C.text, textAlign: "right", fontFamily: mono }}>{r.feedback_hints}</td>
                       <td style={{ padding: 6, color: C.text, textAlign: "right", fontFamily: mono }}>{r.itinerary_imports}</td>
+                      <td style={{ padding: 6, color: C.text, textAlign: "right", fontFamily: mono }}>{r.booking_extracts}</td>
                       <td style={{ padding: 6, color: C.tealLight, textAlign: "right", fontFamily: mono, fontWeight: 600 }}>{r.total}</td>
                     </tr>
                   ))}
