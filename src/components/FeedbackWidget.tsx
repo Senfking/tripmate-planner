@@ -218,6 +218,7 @@ export function FeedbackWidget() {
       // Compress to ~1024px JPEG to stay within edge function body limits
       const { base64, mediaType } = await compressImage(file);
 
+      trackEvent("ai_feedback_hint", { type: "screenshot_analysis" }, user?.id);
       const { data, error } = await supabase.functions.invoke("analyze-feedback", {
         body: {
           action: "describe_screenshot",
