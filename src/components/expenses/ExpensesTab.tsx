@@ -229,9 +229,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="space-y-5">
+      {/* Toolbar — frosted glass pill */}
+      <div
+        className="flex items-center justify-between gap-2 mx-0 px-4 py-2.5"
+        style={{
+          background: "rgba(255,255,255,0.6)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: "1px solid rgba(255,255,255,0.8)",
+          borderRadius: 14,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        }}
+      >
         <SettlementCurrencyPicker
           value={settlementCurrency}
           onChange={(c) => updateSettlementCurrency.mutate(c)}
@@ -242,9 +252,19 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </Button>
       </div>
 
-
+      {/* Balance hero — frosted glass card */}
       {canShowBalances && expenses.length > 0 && (
-        <div className="py-6 text-center">
+        <div
+          className="py-6 text-center mx-0"
+          style={{
+            background: "rgba(255,255,255,0.6)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.8)",
+            borderRadius: 20,
+            boxShadow: "0 4px 24px rgba(13,148,136,0.08)",
+          }}
+        >
           {heroData.type === "settled" ? (
             <div className="flex flex-col items-center gap-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">All settled</p>
