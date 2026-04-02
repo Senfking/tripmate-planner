@@ -83,8 +83,11 @@ const Expenses = () => {
         {balanceDisplay}
       </TabHeroHeader>
 
+      {/* Desktop: subtle teal gradient strip */}
+      <div className="hidden md:block h-1" style={{ background: "linear-gradient(90deg, #0D9488, #0891b2, transparent)" }} />
+
       {!hasExpenses ? (
-        <div className="flex flex-col items-center justify-center pt-20 text-center px-4 mt-4">
+        <div className="flex flex-col items-center justify-center pt-20 text-center px-4 mt-4 md:max-w-[900px] md:mx-auto md:px-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10">
             <Wallet className="h-8 w-8 text-[#0D9488]" />
           </div>
