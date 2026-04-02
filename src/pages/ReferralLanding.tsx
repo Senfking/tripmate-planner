@@ -243,7 +243,7 @@ export default function ReferralLanding() {
               boxShadow: "0 4px 24px rgba(13,148,136,0.35)",
             }}
           >
-            Get started — it's free
+            Get started, it's free
           </button>
 
           {/* Login */}
