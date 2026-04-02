@@ -33,7 +33,8 @@ export function AppSidebar() {
       {/* Wordmark */}
       <div className="px-5 pt-6 pb-4">
         {!collapsed ? (
-          <span className="text-[13px] font-extrabold tracking-[0.25em] uppercase text-primary">
+          <span className="flex items-center gap-2 text-[13px] font-extrabold tracking-[0.25em] uppercase text-primary">
+            <Map className="h-[18px] w-[18px] shrink-0" />
             JUNTO
           </span>
         ) : (
