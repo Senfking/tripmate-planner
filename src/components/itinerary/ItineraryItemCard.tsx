@@ -280,7 +280,7 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
       {!showSkeleton && (
         <div
           className={cn(
-            "rounded-xl bg-white dark:bg-card p-2 space-y-1",
+            "rounded-xl bg-white dark:bg-card p-2 space-y-1 overflow-hidden md:hover:shadow-md md:transition-shadow",
             isDragging && "opacity-50 ring-2 ring-primary/30",
             !showNewBorder && overlapTitles?.length && "border-l-[3px] border-l-amber-400/60",
             animPhase === "fadein" && "animate-fade-in-card",
@@ -289,19 +289,17 @@ export function ItineraryItemCard({ item, tripId, myRole, members, attendance, a
             ...(showNewBorder
               ? {
                   border: "1px solid rgba(13,148,136,0.15)",
-                  borderLeft: "3px solid #0D9488",
+                  borderLeft: `3px solid ${status.borderColor}`,
                   boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                  transition: "border-color 1s ease-out, box-shadow 1s ease-out",
-                }
-              : !newBorderVisible && isNewSinceLastVisit
-              ? {
-                  border: "1px solid rgba(241,245,249,1)",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                  transition: "border-color 1s ease-out, box-shadow 1s ease-out",
+                  transition: "border-color 1s ease-out, box-shadow 0.2s ease",
                 }
               : {
                   border: "1px solid rgba(241,245,249,1)",
+                  borderLeft: `3px solid ${status.borderColor}`,
                   boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  ...((!newBorderVisible && isNewSinceLastVisit)
+                    ? { transition: "border-color 1s ease-out, box-shadow 0.2s ease" }
+                    : { transition: "box-shadow 0.2s ease" }),
                 }),
           }}
         >
