@@ -150,7 +150,7 @@ const Decisions = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-2.5 px-4 mt-4 pb-32">
+        <div className="space-y-2.5 px-4 mt-4 pb-32 md:max-w-[900px] md:mx-auto md:px-8">
           {items.map((item) => {
             // Attendance cards get special rendering
             if (item.type === "attendance") {

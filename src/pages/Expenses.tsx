@@ -97,7 +97,7 @@ const Expenses = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-3 px-4 mt-4 pb-24">
+        <div className="space-y-3 px-4 mt-4 pb-24 md:max-w-[900px] md:mx-auto md:px-8">
           {trips.map((trip) => {
             const isSettled = Math.abs(trip.net) < 0.01;
             const isPositive = trip.net > 0;
