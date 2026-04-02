@@ -17,10 +17,10 @@ function getInitials(name: string | null): string {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-const dotColors: Record<MemberStatus, string> = {
-  in: "bg-teal-500",
-  maybe: "bg-amber-500",
-  out: "bg-red-500",
+const DOT: Record<MemberStatus, string> = {
+  in: "#0d9488",
+  maybe: "#d97706",
+  out: "#ef4444",
 };
 
 interface Props {
@@ -41,14 +41,14 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
     return (a.display_name || "").localeCompare(b.display_name || "");
   });
 
-  const showCount = members.length <= 4 ? members.length : 3;
-  const visible = sorted.slice(0, showCount);
-  const remaining = members.length - showCount;
+  const maxShow = members.length <= 5 ? members.length : 4;
+  const visible = sorted.slice(0, maxShow);
+  const remaining = members.length - maxShow;
 
   return (
     <>
       <div
-        className="flex min-w-0 items-center gap-1.5 py-0.5 cursor-pointer"
+        className="flex min-w-0 items-center -space-x-1.5 cursor-pointer"
         onClick={() => setSheetOpen(true)}
         role="button"
         tabIndex={0}
@@ -56,6 +56,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
         {visible.map((member) => {
           const status = getStatus(member, itemAttendance);
           const isMe = member.user_id === currentUserId;
+          const dotColor = DOT[status];
 
           return (
             <button
@@ -68,12 +69,12 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                 onCycle();
               }}
               className={cn(
-                "relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[8px] font-semibold transition-colors",
+                "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold border-2 border-white dark:border-card transition-colors",
                 status === "out"
-                  ? "bg-muted text-muted-foreground/40 border-muted"
-                  : "bg-secondary text-secondary-foreground border-border/50",
-                isMe && "ring-1 ring-primary/30 cursor-pointer",
-                !isMe && "cursor-default"
+                  ? "bg-muted/60 text-muted-foreground/40"
+                  : "bg-secondary text-secondary-foreground",
+                isMe && "ring-2 ring-primary/20 z-10 cursor-pointer",
+                !isMe && "cursor-default",
               )}
               title={
                 isMe
@@ -83,10 +84,8 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
             >
               {getInitials(member.display_name)}
               <span
-                className={cn(
-                  "absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full border-[1.5px] border-white dark:border-card",
-                  dotColors[status]
-                )}
+                className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border-[1.5px] border-white dark:border-card"
+                style={{ backgroundColor: dotColor }}
               >
                 {status === "in" && <Check className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
                 {status === "maybe" && <HelpCircle className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
@@ -97,7 +96,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
         })}
 
         {remaining > 0 && (
-          <span className="rounded-full bg-muted/50 px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground/60">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white dark:border-card bg-muted/50 text-[9px] font-medium text-muted-foreground/60">
             +{remaining}
           </span>
         )}
