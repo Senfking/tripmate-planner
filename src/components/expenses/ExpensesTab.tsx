@@ -446,9 +446,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </>
       )}
 
-      {/* Expenses section — open by default */}
+      {/* Divider before expenses */}
+      <div className="mx-4" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }} />
+
+      {/* Expenses section */}
       <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
-        <div className="space-y-2">
+        <div className="space-y-2 px-4 py-3">
           <CollapsibleTrigger asChild>
             <button className="flex w-full flex-col gap-0.5 text-left">
               <div className="flex w-full items-center justify-between">
