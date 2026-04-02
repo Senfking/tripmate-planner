@@ -92,7 +92,7 @@ export function ExpenseCard({
               {!isSettlement && isPayer && youLentAmount > 0 ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
-                  <p className="text-[17px] font-bold" style={{ color: "#0D9488" }}>
+                  <p className="text-[17px] font-bold text-foreground">
                     {formatCurrency(youLentAmount, expense.currency)}
                   </p>
                   {youLentAmount !== expense.amount && (
@@ -101,8 +101,8 @@ export function ExpenseCard({
                 </>
               ) : !isSettlement && !isPayer && mySplit ? (
                 <>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#D97706" }}>you owe</p>
-                  <p className="text-[17px] font-bold">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#EF4444" }}>you owe</p>
+                  <p className="text-[17px] font-bold text-foreground">
                     {formatCurrency(mySplit.share_amount, expense.currency)}
                   </p>
                   {mySplit.share_amount !== expense.amount && (

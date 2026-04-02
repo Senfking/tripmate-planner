@@ -277,24 +277,51 @@ export type Database = {
       }
       feedback: {
         Row: {
+          ai_category: string | null
+          ai_fix: string | null
+          ai_severity: string | null
+          ai_summary: string | null
+          app_version: string | null
           body: string | null
+          category: string | null
           created_at: string
           id: string
           rating: number
+          route: string | null
+          screenshot_url: string | null
+          status: string | null
           user_id: string
         }
         Insert: {
+          ai_category?: string | null
+          ai_fix?: string | null
+          ai_severity?: string | null
+          ai_summary?: string | null
+          app_version?: string | null
           body?: string | null
+          category?: string | null
           created_at?: string
           id?: string
           rating: number
+          route?: string | null
+          screenshot_url?: string | null
+          status?: string | null
           user_id: string
         }
         Update: {
+          ai_category?: string | null
+          ai_fix?: string | null
+          ai_severity?: string | null
+          ai_summary?: string | null
+          app_version?: string | null
           body?: string | null
+          category?: string | null
           created_at?: string
           id?: string
           rating?: number
+          route?: string | null
+          screenshot_url?: string | null
+          status?: string | null
           user_id?: string
         }
         Relationships: []
