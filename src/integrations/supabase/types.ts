@@ -285,6 +285,7 @@ export type Database = {
           body: string | null
           category: string | null
           created_at: string
+          hint_rating: string | null
           id: string
           rating: number
           route: string | null
@@ -301,6 +302,7 @@ export type Database = {
           body?: string | null
           category?: string | null
           created_at?: string
+          hint_rating?: string | null
           id?: string
           rating?: number
           route?: string | null
@@ -317,6 +319,7 @@ export type Database = {
           body?: string | null
           category?: string | null
           created_at?: string
+          hint_rating?: string | null
           id?: string
           rating?: number
           route?: string | null

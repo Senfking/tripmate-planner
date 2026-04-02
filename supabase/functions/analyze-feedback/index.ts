@@ -27,7 +27,7 @@ serve(async (req) => {
 
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
       if (!ANTHROPIC_API_KEY) {
-        return new Response(JSON.stringify({ hint: null }), {
+        return new Response(JSON.stringify({ hint: null, is_app_screenshot: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -41,8 +41,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 100,
-          system: "You're a witty but helpful assistant for Junto, a group trip planning app.",
+          max_tokens: 200,
+          system: "You are a witty, slightly sarcastic assistant for Junto, a group trip planning app built by Oliver. You help identify UI bugs.",
           messages: [
             {
               role: "user",
@@ -57,7 +57,18 @@ serve(async (req) => {
                 },
                 {
                   type: "text",
-                  text: `The user is on this page: ${route || "unknown"}\n\nLook at this screenshot. In ONE short sentence (max 15 words), name the most likely thing they want to report. Be specific about what you see. Slightly dry humor is welcome. Don't list everything - just the most obvious issue or element. Don't start with 'The user' - make it punchy and direct.`,
+                  text: `The user is on this page: ${route || "unknown"}
+
+First, decide: is this a screenshot of the Junto app, or something completely unrelated?
+
+If it IS the Junto app:
+  Write 2-3 sentences identifying the most likely issue. Be specific about what you see. Reference Oliver by name occasionally e.g. 'Oliver will want to look at this'. Be concise and context-aware based on the page route.
+
+If it is NOT the Junto app:
+  Do NOT describe what you see in detail. Instead write 1-2 sentences of dry, sarcastic humor about the fact that they uploaded something completely unrelated. Roast them gently. Maybe question their life choices. End with: 'Try uploading an actual Junto screenshot next time.'
+
+Return ONLY valid JSON with no other text:
+{ "hint": "string", "is_app_screenshot": true or false }`,
                 },
               ],
             },
@@ -67,15 +78,37 @@ serve(async (req) => {
 
       if (!imgResponse.ok) {
         console.error("Screenshot hint error:", imgResponse.status, await imgResponse.text());
-        return new Response(JSON.stringify({ hint: null }), {
+        return new Response(JSON.stringify({ hint: null, is_app_screenshot: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const imgBody = await imgResponse.json();
-      const hint = imgBody.content?.[0]?.text ?? null;
+      const rawText = imgBody.content?.[0]?.text ?? "";
 
-      return new Response(JSON.stringify({ hint }), {
+      let hint: string | null = null;
+      let is_app_screenshot = true;
+
+      try {
+        const parsed = JSON.parse(rawText);
+        hint = parsed.hint ?? null;
+        is_app_screenshot = parsed.is_app_screenshot ?? true;
+      } catch {
+        const match = rawText.match(/\{[\s\S]*\}/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[0]);
+            hint = parsed.hint ?? null;
+            is_app_screenshot = parsed.is_app_screenshot ?? true;
+          } catch {
+            hint = rawText || null;
+          }
+        } else {
+          hint = rawText || null;
+        }
+      }
+
+      return new Response(JSON.stringify({ hint, is_app_screenshot }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
