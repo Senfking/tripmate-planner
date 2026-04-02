@@ -732,6 +732,7 @@ export default function TripList() {
         loading={joinMutation.isPending}
         onSubmit={() => joinMutation.mutate(joinCode)}
       />
+      <DesktopFooter />
     </div>
   );
 }
