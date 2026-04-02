@@ -78,15 +78,23 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
               <div
                 key={member.user_id}
                 className={cn(
-                  "relative flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full text-[8px] font-semibold border-[1.5px] border-card",
-                  status === "out"
+                  "relative flex shrink-0 items-center justify-center rounded-full text-[8px] font-semibold border-[1.5px] border-card overflow-hidden",
+                  !member.avatar_url && (status === "out"
                     ? "bg-muted/60 text-muted-foreground/40"
-                    : "bg-secondary text-secondary-foreground",
+                    : "bg-secondary text-secondary-foreground"),
                 )}
                 style={{ height: 22, width: 22 }}
                 title={`${member.display_name || "?"}: ${RSVP_LABEL[status]}`}
               >
-                {getInitials(member.display_name)}
+                {member.avatar_url ? (
+                  <img
+                    src={member.avatar_url}
+                    alt={member.display_name || ""}
+                    className={cn("h-full w-full object-cover", status === "out" && "opacity-40 grayscale")}
+                  />
+                ) : (
+                  getInitials(member.display_name)
+                )}
                 <span
                   className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full border border-card"
                   style={{ backgroundColor: DOT[status] }}
