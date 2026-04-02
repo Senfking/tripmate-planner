@@ -263,13 +263,11 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
   const [prefOpen, setPrefOpen] = useState(false);
   const [prefTitle, setPrefTitle] = useState("");
   const [prefOptions, setPrefOptions] = useState<string[]>(["", ""]);
-  const [newOptionText, setNewOptionText] = useState("");
   const [prefMultiSelect, setPrefMultiSelect] = useState(false);
 
   const resetForm = () => {
     setPrefTitle("");
     setPrefOptions(["", ""]);
-    setNewOptionText("");
     setPrefMultiSelect(false);
   };
 
@@ -288,18 +286,25 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
   };
 
   const updateOption = (index: number, value: string) => {
-    setPrefOptions((prev) => prev.map((o, i) => (i === index ? value : o)));
+    setPrefOptions((prev) => {
+      const updated = prev.map((o, i) => (i === index ? value : o));
+      // Auto-add a new empty field when the last field gets content
+      if (index === prev.length - 1 && value.trim()) {
+        updated.push("");
+      }
+      return updated;
+    });
   };
 
   const removeOption = (index: number) => {
-    setPrefOptions((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const addNewOption = () => {
-    if (newOptionText.trim()) {
-      setPrefOptions((prev) => [...prev, newOptionText.trim()]);
-      setNewOptionText("");
-    }
+    setPrefOptions((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      // Always keep at least one empty field at the end
+      if (next.length === 0 || next[next.length - 1].trim()) {
+        next.push("");
+      }
+      return next.length < 2 ? [...next, ""] : next;
+    });
   };
 
   const content = (
@@ -315,47 +320,29 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
 
       <div className="space-y-2">
         <Label>Answer options</Label>
-        {prefOptions.map((opt, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Input
-              placeholder={`Option ${i + 1}`}
-              value={opt}
-              onChange={(e) => updateOption(i, e.target.value)}
-            />
-            {prefOptions.length > 2 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive"
-                onClick={() => removeOption(i)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        ))}
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Add another option…"
-            value={newOptionText}
-            onChange={(e) => setNewOptionText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addNewOption();
-              }
-            }}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0 h-9 w-9"
-            onClick={addNewOption}
-            disabled={!newOptionText.trim()}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        {prefOptions.map((opt, i) => {
+          const isLastEmpty = i === prefOptions.length - 1 && !opt.trim();
+          const filledCount = prefOptions.filter((o) => o.trim()).length;
+          return (
+            <div key={i} className="flex items-center gap-2">
+              <Input
+                placeholder={isLastEmpty ? "Add another option…" : `Option ${i + 1}`}
+                value={opt}
+                onChange={(e) => updateOption(i, e.target.value)}
+              />
+              {!isLastEmpty && filledCount > 2 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive"
+                  onClick={() => removeOption(i)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <button
