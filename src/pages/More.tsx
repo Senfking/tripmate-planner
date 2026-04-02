@@ -384,7 +384,7 @@ const More = () => {
         setHasMoreTrips(mapped.length > 5);
         setTrips(mapped.slice(0, 5));
       })
-      .catch(() => {});
+      .then(null, () => {});
   }, [user]);
 
   /* ── fetch stats ── */
