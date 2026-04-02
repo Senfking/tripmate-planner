@@ -214,6 +214,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       `Planned with Junto 🗺️ juntotravel.lovable.app`,
     ]);
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    trackEvent("trip_invite_sent", { method: "whatsapp", type: "full_plan" }, user?.id);
   };
 
   /* ── copy helper ───────────────────────────────────── */
@@ -221,6 +222,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Link copied to clipboard");
+      trackEvent("trip_invite_sent", { method: "copy_link" }, user?.id);
     } catch {
       toast.error("Failed to copy");
     }
