@@ -68,7 +68,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                 onCycle();
               }}
               className={cn(
-                "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[9px] font-semibold transition-colors shadow-sm",
+                "relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[8px] font-semibold transition-colors",
                 status === "out"
                   ? "bg-muted text-muted-foreground/40 border-muted"
                   : "bg-secondary text-secondary-foreground border-border/50",
@@ -84,20 +84,20 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
               {getInitials(member.display_name)}
               <span
                 className={cn(
-                  "absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-background dark:border-card",
+                  "absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full border-[1.5px] border-white dark:border-card",
                   dotColors[status]
                 )}
               >
-                {status === "in" && <Check className="h-2 w-2 text-white" strokeWidth={3} />}
-                {status === "maybe" && <HelpCircle className="h-2 w-2 text-white" strokeWidth={3} />}
-                {status === "out" && <X className="h-2 w-2 text-white" strokeWidth={3} />}
+                {status === "in" && <Check className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                {status === "maybe" && <HelpCircle className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
+                {status === "out" && <X className="h-1.5 w-1.5 text-white" strokeWidth={3} />}
               </span>
             </button>
           );
         })}
 
         {remaining > 0 && (
-          <span className="rounded-full bg-muted/60 px-2 py-1 text-[9px] font-medium text-muted-foreground/70">
+          <span className="rounded-full bg-muted/50 px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground/60">
             +{remaining}
           </span>
         )}
