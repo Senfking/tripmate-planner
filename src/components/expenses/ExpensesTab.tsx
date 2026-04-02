@@ -2,7 +2,6 @@ import { useState, useMemo, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
-import { trackEvent } from "@/lib/analytics";
 import { calcNetBalances, calcSettlements, convertAmount, formatCurrency } from "@/lib/settlementCalc";
 import { SettlementCurrencyPicker } from "./SettlementCurrencyPicker";
 import { BalancesSummary } from "./BalancesSummary";
@@ -57,7 +56,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         reader.onload = () => resolve((reader.result as string).split(",")[1]);
         reader.readAsDataURL(file);
       });
-      trackEvent("ai_receipt_scan", { source: "expenses_tab" }, user?.id);
       const { data, error } = await supabase.functions.invoke("scan-receipt", {
         body: { image: base64 },
       });

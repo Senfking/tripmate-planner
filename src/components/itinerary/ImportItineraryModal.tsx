@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { trackEvent } from "@/lib/analytics";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,7 +100,6 @@ export function ImportItineraryModal({
     const token = sessionData?.session?.access_token;
     if (!token) throw new Error("Not authenticated");
 
-    trackEvent("ai_itinerary_import", { input_type: body.type as string, trip_id: tripId }, user?.id);
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     const res = await fetch(
       `https://${projectId}.supabase.co/functions/v1/parse-itinerary`,
@@ -130,7 +128,6 @@ export function ImportItineraryModal({
     setParsedItems(items);
     setStep("preview");
     setErrorMsg(null);
-    trackEvent("ai_itinerary_import_success", { items_parsed: items.length, trip_id: tripId }, user?.id);
   };
 
   const handleError = () => {

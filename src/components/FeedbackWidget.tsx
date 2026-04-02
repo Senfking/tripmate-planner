@@ -3,7 +3,6 @@ import { ChevronLeft, X, Loader2, Sparkles, Upload, Share, Smartphone, ChevronDo
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -218,7 +217,6 @@ export function FeedbackWidget() {
       // Compress to ~1024px JPEG to stay within edge function body limits
       const { base64, mediaType } = await compressImage(file);
 
-      trackEvent("ai_feedback_hint", { type: "screenshot_analysis" }, user?.id);
       const { data, error } = await supabase.functions.invoke("analyze-feedback", {
         body: {
           action: "describe_screenshot",
@@ -333,7 +331,6 @@ export function FeedbackWidget() {
           });
           if (aiData?.user_message) {
             setAiMessage(aiData.user_message);
-            trackEvent("ai_feedback_hint", { type: "post_submit_summary" }, user?.id);
           } else {
             setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
           }
