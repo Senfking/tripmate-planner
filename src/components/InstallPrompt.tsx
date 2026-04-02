@@ -28,6 +28,7 @@ export function InstallPrompt() {
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      trackEvent("pwa_install_prompted", { platform: "android" });
     };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
