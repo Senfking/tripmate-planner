@@ -189,6 +189,7 @@ const Decisions = () => {
           })}
         </div>
       )}
+      <DesktopFooter />
     </div>
   );
 };
