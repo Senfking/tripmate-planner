@@ -33,7 +33,8 @@ export function AppSidebar() {
       {/* Wordmark */}
       <div className="px-5 pt-6 pb-4">
         {!collapsed ? (
-          <span className="text-[13px] font-extrabold tracking-[0.25em] uppercase text-primary">
+          <span className="flex items-center gap-2 text-[13px] font-extrabold tracking-[0.25em] uppercase text-primary">
+            <Map className="h-[18px] w-[18px] shrink-0" />
             JUNTO
           </span>
         ) : (
@@ -55,10 +56,10 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end
-                        className={`relative flex items-center gap-2.5 rounded-none px-5 py-2.5 text-[14px] font-medium transition-colors ${
+                        className={`relative flex items-center gap-2.5 rounded-none px-5 py-2.5 text-[14px] transition-colors ${
                           isActive
-                            ? "text-primary bg-sidebar-accent border-l-2 border-primary"
-                            : "text-sidebar-foreground hover:bg-muted/40 border-l-2 border-transparent"
+                            ? "text-primary bg-[rgba(13,148,136,0.08)] border-l-[3px] border-primary font-semibold"
+                            : "text-sidebar-foreground hover:bg-muted/40 border-l-[3px] border-transparent font-medium"
                         }`}
                         activeClassName=""
                       >
