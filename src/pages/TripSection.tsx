@@ -141,7 +141,7 @@ export default function TripSection() {
             className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm truncate max-w-[160px]">{trip.name}</span>
+            <span className="text-sm truncate max-w-[160px]">Trip Dashboard</span>
           </button>
           <LiveIndicator status={connectionStatus} />
         </div>
