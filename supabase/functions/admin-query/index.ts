@@ -434,7 +434,7 @@ Deno.serve(async (req) => {
           (mc.data || []).forEach((r: any) => { memberCounts[r.trip_id] = (memberCounts[r.trip_id] || 0) + 1; });
         }
 
-        const tripMap = Object.fromEntries(tripDetails.map((t: any) => [t.id, t.name]));
+        const tripMap = Object.fromEntries(tripDetails.map((t: any) => [t.id, { name: t.name, created_at: t.created_at }]));
 
         const aiCounts: Record<string, number> = {};
         (aiEvents.data || []).forEach((r: any) => {
