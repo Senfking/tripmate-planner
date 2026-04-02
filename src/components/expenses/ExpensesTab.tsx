@@ -357,7 +357,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   </Button>
                 )}
                 <CollapsibleContent>
-                  <div className="mt-2 border-t border-border/40 pt-2">
+                  <div className="mt-2 border-t pt-2" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
                   <BalancesSummary
                     balances={balances}
                     currency={settlementCurrency}
