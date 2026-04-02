@@ -546,7 +546,7 @@ export default function TripList() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+      <div className="min-h-dvh bg-background">
         <TabHeroHeader title="Your trips" subtitle="Loading…" />
         <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 pt-4 mt-4">
           <div className="h-[320px] rounded-3xl skeleton-shimmer" style={{ opacity: 0.1 }} />
@@ -581,7 +581,7 @@ export default function TripList() {
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
-      <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
+      <div className="relative min-h-dvh flex flex-col bg-background">
         <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={tripsPills} />
 
         <div className="hidden md:block pt-6 pb-4 px-4">
@@ -626,7 +626,7 @@ export default function TripList() {
   const otherTrips = trips.filter((t) => t !== liveTrip);
 
   return (
-    <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="relative min-h-dvh flex flex-col bg-background">
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
       {/* Desktop compact greeting — replaces hero */}

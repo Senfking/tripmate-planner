@@ -122,7 +122,7 @@ const Decisions = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
+      <div className="min-h-dvh flex flex-col bg-background">
         <TabHeroHeader title="Decisions" subtitle="Loading…" />
         <div className="px-4 mt-4 space-y-3">
           {[1, 2, 3].map((i) => (
@@ -134,7 +134,7 @@ const Decisions = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="min-h-dvh flex flex-col bg-background">
       <TabHeroHeader title="Decisions" subtitle={subtitle} pills={pills} />
 
       {items.length === 0 ? (

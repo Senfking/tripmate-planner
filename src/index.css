@@ -8,8 +8,12 @@ input[type="date"] {
 
 /* Background color fix — eliminate gap behind iOS home indicator */
 html, body, #root {
-  background-color: #F1F5F9;
-  min-height: 100%;
+  background-color: hsl(166 76% 97%);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+html.dark, html.dark body, html.dark #root {
+  background-color: hsl(176 30% 8%);
 }
 
 /* Prevent iOS auto-zoom on input focus */

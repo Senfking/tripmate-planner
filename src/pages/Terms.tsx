@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
 const Terms = () => (
-  <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+  <div className="min-h-dvh bg-background">
     <div className="max-w-[600px] mx-auto pt-16 px-8">
       <span
         className="font-bold"
