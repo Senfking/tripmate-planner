@@ -19,6 +19,7 @@ const TOTAL_STEPS = 4;
 export default function TripOnboarding() {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
 
   const { data: trip, isLoading } = useQuery({
