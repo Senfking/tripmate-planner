@@ -13,6 +13,7 @@ import { FeedbackInbox } from "@/components/admin-dashboard/FeedbackInbox";
 import { SystemStatus } from "@/components/admin-dashboard/SystemStatus";
 import { WeeklyDigest } from "@/components/admin-dashboard/WeeklyDigest";
 import { C } from "@/components/admin-dashboard/shared";
+import { Loader2 } from "lucide-react";
 
 const ADMIN_USER_ID = "1d5b21fe-f74c-429b-8d9d-938a4f295013";
 
@@ -34,8 +35,13 @@ export default function Admin() {
   const { user, loading } = useAuth();
   const [activeModule, setActiveModule] = useState<AdminModule>("dashboard");
 
-  // Blank page for non-admin
-  if (loading) return <div />;
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
   if (!user || user.id !== ADMIN_USER_ID) return <div />;
 
   const ActiveComponent = MODULE_MAP[activeModule];
