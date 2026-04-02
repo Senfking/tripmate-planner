@@ -69,7 +69,6 @@ export function useItineraryAttendance(tripId: string) {
       );
 
       if (!existing) {
-        // attending → maybe: INSERT
         const { error } = await supabase.from("itinerary_attendance").insert({
           trip_id: tripId,
           itinerary_item_id: itemId,
@@ -78,14 +77,12 @@ export function useItineraryAttendance(tripId: string) {
         });
         if (error) throw error;
       } else if (existing.status === "maybe") {
-        // maybe → out: UPDATE
         const { error } = await supabase
           .from("itinerary_attendance")
           .update({ status: "out" })
           .eq("id", existing.id);
         if (error) throw error;
       } else {
-        // out → attending: DELETE
         const { error } = await supabase
           .from("itinerary_attendance")
           .delete()
@@ -93,8 +90,30 @@ export function useItineraryAttendance(tripId: string) {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: attendanceKey }),
-    onError: (e: any) => toast.error(e.message),
+    onMutate: async (itemId: string) => {
+      await qc.cancelQueries({ queryKey: attendanceKey });
+      const prev = qc.getQueryData<AttendanceRecord[]>(attendanceKey);
+      if (!user) return { prev };
+
+      qc.setQueryData<AttendanceRecord[]>(attendanceKey, (old = []) => {
+        const existing = old.find(
+          (a) => a.itinerary_item_id === itemId && a.user_id === user.id
+        );
+        if (!existing) {
+          return [...old, { id: `optimistic-${Date.now()}`, trip_id: tripId, itinerary_item_id: itemId, user_id: user.id, status: "maybe" as const }];
+        } else if (existing.status === "maybe") {
+          return old.map((a) => a.id === existing.id ? { ...a, status: "out" as const } : a);
+        } else {
+          return old.filter((a) => a.id !== existing.id);
+        }
+      });
+      return { prev };
+    },
+    onError: (e: any, _itemId, context) => {
+      if (context?.prev) qc.setQueryData(attendanceKey, context.prev);
+      toast.error(e.message);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: attendanceKey }),
   });
 
   return { attendance, members, cycleStatus };
