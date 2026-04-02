@@ -122,7 +122,7 @@ export function AppLayout() {
           </main>
         </div>
 
-        <BottomNav />
+        {!isTripPage && <BottomNav />}
         <InstallPrompt />
       </div>
     </SidebarProvider>
