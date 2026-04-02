@@ -6,12 +6,15 @@ export async function trackEvent(
   userId?: string
 ): Promise<void> {
   try {
-    await supabase.from("analytics_events" as any).insert({
+    const { error } = await supabase.from("analytics_events").insert({
       event_name: eventName,
       properties: properties || {},
       user_id: userId || null,
     });
-  } catch {
-    // Silently swallow — tracking must never break the app
+    if (error) {
+      console.warn("[analytics] trackEvent failed:", eventName, error.message);
+    }
+  } catch (e) {
+    console.warn("[analytics] trackEvent exception:", eventName, e);
   }
 }

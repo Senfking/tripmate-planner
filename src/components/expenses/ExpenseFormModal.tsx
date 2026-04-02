@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
-import { trackEvent } from "@/lib/analytics";
 import { MemberProfile, ExpenseRow } from "@/hooks/useExpenses";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -223,7 +222,6 @@ export function ExpenseFormModal({
         reader.readAsDataURL(file);
       });
 
-      trackEvent("ai_receipt_scan", { source: "expense_form" }, user?.id);
       const { data, error } = await supabase.functions.invoke("scan-receipt", {
         body: { image: base64 },
       });

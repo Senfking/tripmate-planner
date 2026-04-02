@@ -124,6 +124,17 @@ Return ONLY the JSON object, no other text.`,
 
     const parsed = JSON.parse(jsonMatch[0]);
 
+    // Track AI usage server-side
+    const svcClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    await svcClient.from("analytics_events").insert({
+      event_name: "ai_receipt_scan",
+      user_id: user.id,
+      properties: { source: "edge_function" },
+    });
+
     return new Response(JSON.stringify(parsed), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

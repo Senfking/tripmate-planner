@@ -108,6 +108,28 @@ Return ONLY valid JSON with no other text:
         }
       }
 
+      // Track AI usage server-side
+      const svcHint = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader) {
+        const authCl = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+          { global: { headers: { Authorization: authHeader } } },
+        );
+        const { data: { user } } = await authCl.auth.getUser();
+        if (user) {
+          await svcHint.from("analytics_events").insert({
+            event_name: "ai_feedback_hint",
+            user_id: user.id,
+            properties: { type: "screenshot_analysis", source: "edge_function" },
+          });
+        }
+      }
+
       return new Response(JSON.stringify({ hint, is_app_screenshot }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -248,6 +270,24 @@ Return ONLY valid JSON with no other text:
         ai_fix: result.fix,
       })
       .eq("id", feedbackId);
+
+    // Track AI usage server-side
+    const authHeaderMain = req.headers.get("Authorization");
+    if (authHeaderMain) {
+      const authClMain = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeaderMain } } },
+      );
+      const { data: { user: mainUser } } = await authClMain.auth.getUser();
+      if (mainUser) {
+        await sb.from("analytics_events").insert({
+          event_name: "ai_feedback_hint",
+          user_id: mainUser.id,
+          properties: { type: "post_submit_summary", source: "edge_function" },
+        });
+      }
+    }
 
     return new Response(
       JSON.stringify({ user_message: result.user_message }),

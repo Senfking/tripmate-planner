@@ -171,6 +171,24 @@ Rules:
       return jsonResponse({ success: false, error: "Failed to parse AI response as JSON" }, 500);
     }
 
+    // Track AI usage server-side
+    const svcClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    await svcClient.from("analytics_events").insert({
+      event_name: "ai_itinerary_import",
+      user_id: user.id,
+      properties: { input_type: type, source: "edge_function" },
+    });
+    if (items.length > 0) {
+      await svcClient.from("analytics_events").insert({
+        event_name: "ai_itinerary_import_success",
+        user_id: user.id,
+        properties: { items_parsed: items.length, source: "edge_function" },
+      });
+    }
+
     return jsonResponse({ success: true, items });
   } catch (e) {
     console.error("parse-itinerary error:", e);
