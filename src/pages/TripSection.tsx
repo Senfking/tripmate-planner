@@ -133,7 +133,7 @@ export default function TripSection() {
 
   return (
     <div
-      className="flex flex-col min-h-screen animate-slide-in"
+      className="flex flex-col min-h-dvh animate-slide-in bg-background"
       style={section === "expenses" ? { background: "linear-gradient(180deg, #EEF7F6 0%, #F1F5F9 40%)" } : undefined}
     >
       {/* Mobile section header — hidden on desktop where the root DesktopHeader is visible */}

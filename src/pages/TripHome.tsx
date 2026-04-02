@@ -448,7 +448,7 @@ export default function TripHome() {
   const coverPhoto = coverSignedUrl || resolvePhoto(trip.name, routeStops ?? []);
 
   return (
-    <div className="flex flex-col min-h-screen animate-slide-in" style={{ background: "#F1F5F9" }}>
+    <div className="flex flex-col min-h-dvh animate-slide-in bg-background">
       {/* ─── HERO SECTION ─── */}
       {/* Crop overlay */}
       {croppingCover && coverSignedUrl && (
@@ -551,7 +551,7 @@ export default function TripHome() {
       </div>
 
       {/* ─── CONTENT SHEET ─── */}
-      <div className="flex-1 rounded-t-3xl -mt-6 relative z-10" style={{ background: "#F1F5F9" }}>
+      <div className="flex-1 rounded-t-3xl -mt-6 relative z-10 bg-background">
         <div className="px-4 pt-4 pb-2 md:max-w-[900px] md:mx-auto md:px-8">
           <StatusRow
             startDate={trip.tentative_start_date}

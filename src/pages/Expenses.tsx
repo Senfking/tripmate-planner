@@ -22,7 +22,7 @@ const Expenses = () => {
 
   if (showSkeleton) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
+      <div className="min-h-dvh flex flex-col bg-background">
         <TabHeroHeader title="Expenses" subtitle="Loading…" />
         <div className="px-4 mt-4 space-y-2">
           {[1, 2].map((i) => (
@@ -79,7 +79,7 @@ const Expenses = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="min-h-dvh flex flex-col bg-background">
       <TabHeroHeader title="Expenses" subtitle={subtitle}>
         {balanceDisplay}
       </TabHeroHeader>

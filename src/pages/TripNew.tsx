@@ -129,7 +129,7 @@ export default function TripNew() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F1F5F9" }}>
+    <div className="min-h-dvh bg-background">
       <TabHeroHeader title="New Trip" subtitle="Plan your next adventure" />
 
       <div className="px-4 mt-3 pb-32 max-w-lg mx-auto w-full">
