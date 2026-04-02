@@ -643,7 +643,7 @@ export default function TripList() {
         {/* Referral card — show when < 2 trips and not dismissed */}
         {tripCount < 2 && !referralDismissed && (profile as any)?.referral_code && (
           <div
-            className="rounded-2xl p-4"
+            className="md:col-span-2 rounded-2xl p-4"
             style={{
               background: "linear-gradient(135deg, rgba(13,148,136,0.12), rgba(13,148,136,0.05))",
               border: "1px solid rgba(13,148,136,0.25)",
