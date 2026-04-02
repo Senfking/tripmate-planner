@@ -3,6 +3,7 @@ import { ChevronLeft, X, Loader2, Sparkles, Upload, Share, Smartphone, ChevronDo
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
