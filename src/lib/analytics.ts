@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export async function trackEvent(
   eventName: string,
@@ -8,7 +9,7 @@ export async function trackEvent(
   try {
     const { error } = await supabase.from("analytics_events").insert([{
       event_name: eventName,
-      properties: (properties || {}) as Record<string, unknown>,
+      properties: (properties || {}) as Json,
       user_id: userId || null,
     }]);
     if (error) {
