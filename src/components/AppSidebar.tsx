@@ -56,10 +56,10 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end
-                        className={`relative flex items-center gap-2.5 rounded-none px-5 py-2.5 text-[14px] font-medium transition-colors ${
+                        className={`relative flex items-center gap-2.5 rounded-none px-5 py-2.5 text-[14px] transition-colors ${
                           isActive
-                            ? "text-primary bg-sidebar-accent border-l-2 border-primary"
-                            : "text-sidebar-foreground hover:bg-muted/40 border-l-2 border-transparent"
+                            ? "text-primary bg-[rgba(13,148,136,0.08)] border-l-[3px] border-primary font-semibold"
+                            : "text-sidebar-foreground hover:bg-muted/40 border-l-[3px] border-transparent font-medium"
                         }`}
                         activeClassName=""
                       >

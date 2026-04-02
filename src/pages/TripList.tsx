@@ -625,8 +625,17 @@ export default function TripList() {
 
       <div className="mx-auto grid w-full max-w-md md:max-w-none grid-cols-1 md:grid-cols-2 gap-3 px-4 mt-4 pb-[100px]">
         {liveTrip && <div className="md:col-span-2"><HeroCard trip={liveTrip} /></div>}
-        {otherTrips.map((trip) => (
-          <RegularCard key={trip.id} trip={trip} />
+        {otherTrips.map((trip, i) => (
+          <div
+            key={trip.id}
+            className={
+              otherTrips.length % 2 !== 0 && i === otherTrips.length - 1
+                ? "md:col-span-2"
+                : ""
+            }
+          >
+            <RegularCard trip={trip} />
+          </div>
         ))}
 
         {/* Join a trip row */}
