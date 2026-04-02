@@ -297,9 +297,20 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Balances & Settle Up — wait for rates */}
+      {/* Balances / Settle Up / Expenses — frosted glass card */}
+      <div
+        className="mx-0 overflow-hidden"
+        style={{
+          background: "rgba(255,255,255,0.7)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          border: "1px solid rgba(255,255,255,0.8)",
+          borderRadius: 20,
+          boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+        }}
+      >
       {!canShowBalances ? (
-        <div className="space-y-2">
+        <div className="space-y-2 px-4 py-3">
           <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Balances</span>
           <div className="flex items-center gap-2 py-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
