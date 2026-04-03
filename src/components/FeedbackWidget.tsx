@@ -319,6 +319,19 @@ export function FeedbackWidget() {
       setAiLoading(true);
 
       if (!insertErr && inserted) {
+        // Fire admin notification as a fallback in case the DB trigger is missing.
+        // The Edge Function deduplicates by feedback_id, so this is safe even if
+        // the trigger also fires.
+        supabase.functions.invoke("check-admin-alerts", {
+          body: {
+            trigger: "feedback",
+            feedback_id: inserted.id,
+            body: message.trim().substring(0, 200),
+            category,
+            severity: "medium",
+          },
+        }).catch(() => { /* best-effort */ });
+
         try {
           const { data: aiData } = await supabase.functions.invoke("analyze-feedback", {
             body: {
