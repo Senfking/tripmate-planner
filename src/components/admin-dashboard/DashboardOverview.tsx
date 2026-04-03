@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { useAdminData } from "@/hooks/useAdminQuery";
 import { StatCard, DateRangeFilter, Period, SectionHeader, Card, AdminSkeleton, EmptyState, C, mono, sans } from "./shared";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export function DashboardOverview() {
   const [period, setPeriod] = useState<Period>("30d");
   const { data: kpis, isLoading: kpiLoading } = useAdminData("dashboard_kpis", { period });
   const { data: growth, isLoading: growthLoading } = useAdminData("user_growth_chart", { period });
+  const { data: dauChart, isLoading: dauLoading } = useAdminData("dau_chart", { period });
   const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
 
   const trend = (current: number, prior: number) => prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
@@ -31,7 +32,7 @@ export function DashboardOverview() {
         </div>
       ) : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <Card>
           <SectionHeader>User Growth</SectionHeader>
           {growthLoading ? <AdminSkeleton /> : !growth?.length ? <EmptyState /> : (
@@ -46,6 +47,28 @@ export function DashboardOverview() {
           )}
         </Card>
 
+        <Card>
+          <SectionHeader>Daily Active Users</SectionHeader>
+          {dauLoading ? <AdminSkeleton /> : !dauChart?.length ? <EmptyState /> : (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={dauChart}>
+                <defs>
+                  <linearGradient id="dauGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={C.blue} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={C.blue} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 10, fontFamily: mono }} tickFormatter={(v) => v.slice(5)} />
+                <YAxis tick={{ fill: C.muted, fontSize: 10, fontFamily: mono }} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: C.elevated, border: `1px solid ${C.border}`, fontFamily: mono, fontSize: 12, color: C.text }} />
+                <Area type="monotone" dataKey="dau" stroke={C.blue} strokeWidth={2} fill="url(#dauGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <Card>
           <SectionHeader>Recent Activity</SectionHeader>
           {actLoading ? <AdminSkeleton rows={8} /> : !activity?.length ? <EmptyState /> : (
