@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { AdminSidebar, AdminModule } from "@/components/admin-dashboard/AdminSidebar";
+import { AdminSidebar } from "@/components/admin-dashboard/AdminSidebar";
 import { DashboardOverview } from "@/components/admin-dashboard/DashboardOverview";
 import { AcquisitionModule } from "@/components/admin-dashboard/AcquisitionModule";
 import { AIUsageModule } from "@/components/admin-dashboard/AIUsageModule";
@@ -12,7 +12,7 @@ import { FeatureAdoptionModule } from "@/components/admin-dashboard/FeatureAdopt
 import { FeedbackInbox } from "@/components/admin-dashboard/FeedbackInbox";
 import { SystemStatus } from "@/components/admin-dashboard/SystemStatus";
 import { WeeklyDigest } from "@/components/admin-dashboard/WeeklyDigest";
-import { C } from "@/components/admin-dashboard/shared";
+import { C, AdminModule, AdminNavContext } from "@/components/admin-dashboard/shared";
 import { Loader2 } from "lucide-react";
 
 const ADMIN_USER_ID = import.meta.env.VITE_ADMIN_USER_ID || "1d5b21fe-f74c-429b-8d9d-938a4f295013";
@@ -34,6 +34,20 @@ const MODULE_MAP: Record<AdminModule, React.FC> = {
 export default function Admin() {
   const { user, loading } = useAuth();
   const [activeModule, setActiveModule] = useState<AdminModule>("dashboard");
+  const [navParams, setNavParams] = useState<Record<string, string>>({});
+
+  const navigateTo = useCallback((module: AdminModule, params?: Record<string, string>) => {
+    setNavParams(params || {});
+    setActiveModule(module);
+  }, []);
+
+  const navCtx = useMemo(() => ({ navigateTo, navParams }), [navigateTo, navParams]);
+
+  // Clear params when navigating via sidebar
+  const handleSidebarNav = useCallback((module: AdminModule) => {
+    setNavParams({});
+    setActiveModule(module);
+  }, []);
 
   if (loading) {
     return (
@@ -47,15 +61,17 @@ export default function Admin() {
   const ActiveComponent = MODULE_MAP[activeModule];
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", color: C.text }}>
-      <AdminSidebar
-        active={activeModule}
-        onNavigate={setActiveModule}
-        userName={user.user_metadata?.display_name || user.email}
-      />
-      <main style={{ marginLeft: 220, padding: "24px 32px", minHeight: "100vh" }}>
-        <ActiveComponent />
-      </main>
-    </div>
+    <AdminNavContext.Provider value={navCtx}>
+      <div style={{ background: C.bg, minHeight: "100vh", color: C.text }}>
+        <AdminSidebar
+          active={activeModule}
+          onNavigate={handleSidebarNav}
+          userName={user.user_metadata?.display_name || user.email}
+        />
+        <main style={{ marginLeft: 220, padding: "24px 32px", minHeight: "100vh" }}>
+          <ActiveComponent />
+        </main>
+      </div>
+    </AdminNavContext.Provider>
   );
 }

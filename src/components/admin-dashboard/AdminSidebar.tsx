@@ -1,13 +1,7 @@
 import React from "react";
-import { C, mono, sans } from "./shared";
+import { C, mono, sans, AdminModule } from "./shared";
 
-export type AdminModule =
-  | "dashboard" | "acquisition" | "ai_usage"
-  | "all_users" | "retention" | "referrals"
-  | "engagement" | "feature_adoption"
-  | "feedback_inbox"
-  | "system_status"
-  | "weekly_digest";
+export type { AdminModule };
 
 const NAV: { section: string; items: { key: AdminModule; label: string }[] }[] = [
   { section: "OVERVIEW", items: [

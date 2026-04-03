@@ -1,11 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useAdminData, useAdminMutation } from "@/hooks/useAdminQuery";
-import { SectionHeader, Card, AdminSkeleton, EmptyState, StatusPill, C, mono, sans } from "./shared";
+import { SectionHeader, Card, AdminSkeleton, EmptyState, StatusPill, C, mono, sans, AdminNavContext } from "./shared";
 
 export function AllUsersModule() {
+  const { navParams } = useContext(AdminNavContext);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("created_at");
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string | null>(navParams.selectedUserId || null);
+
+  // Auto-select user when navigated from another module
+  useEffect(() => {
+    if (navParams.selectedUserId) {
+      setSelectedUser(navParams.selectedUserId);
+    }
+  }, [navParams.selectedUserId]);
 
   const { data, isLoading } = useAdminData("all_users", { search, sort });
   const users = data?.users || [];
