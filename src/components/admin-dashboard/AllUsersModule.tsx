@@ -56,6 +56,7 @@ export function AllUsersModule() {
                     {u.display_name || "—"}
                   </td>
                   <td style={{ padding: 8, color: C.muted, fontFamily: mono, fontSize: 11 }}>{u.created_at?.slice(0, 10)}</td>
+                  <td style={{ padding: 8, color: u.last_sign_in_at ? C.text : C.muted, fontFamily: mono, fontSize: 11 }}>{u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : "Never"}</td>
                   <td style={{ padding: 8 }}>{u.referred_by ? <StatusPill label="Referred" color={C.green} /> : <StatusPill label="Organic" color={C.muted} />}</td>
                   <td style={{ padding: 8, color: C.text, fontFamily: mono }}>{u.trips}</td>
                   <td style={{ padding: 8, color: C.text, fontFamily: mono }}>{u.ai_calls}</td>
