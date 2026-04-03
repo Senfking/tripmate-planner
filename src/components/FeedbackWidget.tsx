@@ -280,14 +280,12 @@ export function FeedbackWidget() {
   };
 
   const handleTextareaFocus = () => {
-    if (!isMobile) {
-      setTimeout(() => {
-        textareaRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }, 300);
-    }
+    setTimeout(() => {
+      textareaRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 350);
   };
 
   const handleSubmit = async () => {
