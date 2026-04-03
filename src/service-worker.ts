@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'junto-v1';
+const CACHE_NAME = `junto-${__BUILD_TS__}`;
 const SHELL_URLS = [
   '/',
   '/index.html',
