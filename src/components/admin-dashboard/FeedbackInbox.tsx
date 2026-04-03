@@ -30,35 +30,40 @@ const SEVERITY_FILTERS = [
   { key: "low", label: "Low" },
 ] as const;
 
+function FilterDropdown({ label, value, onChange, options }: {
+  label: string; value: string; onChange: (v: string) => void;
+  options: readonly { key: string; label: string }[];
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <label style={{ fontFamily: mono, fontSize: 10, color: C.muted, textTransform: "uppercase" }}>{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          background: C.elevated, color: C.text, border: `1px solid ${C.border}`,
+          borderRadius: 4, padding: "3px 8px", fontFamily: mono, fontSize: 12,
+          cursor: "pointer", outline: "none", appearance: "auto",
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.key} value={o.key}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function FilterBar({ statusFilter, setStatusFilter, categoryFilter, setCategoryFilter, severityFilter, setSeverityFilter }: {
   statusFilter: string; setStatusFilter: (v: string) => void;
   categoryFilter: string; setCategoryFilter: (v: string) => void;
   severityFilter: string; setSeverityFilter: (v: string) => void;
 }) {
-  const Chip = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
-    <button onClick={onClick} style={{
-      padding: "2px 7px", borderRadius: 3, border: "none",
-      background: active ? C.elevated : "transparent",
-      color: active ? C.tealLight : C.muted,
-      fontFamily: mono, fontSize: 10, cursor: "pointer", lineHeight: "16px",
-    }}>{children}</button>
-  );
-
-  const Separator = () => <span style={{ width: 1, height: 14, background: C.border, margin: "0 4px", flexShrink: 0 }} />;
-
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", marginBottom: 12, padding: "6px 0" }}>
-      {STATUS_FILTERS.map((o) => (
-        <Chip key={o.key} active={statusFilter === o.key} onClick={() => setStatusFilter(o.key)}>{o.label}</Chip>
-      ))}
-      <Separator />
-      {SEVERITY_FILTERS.map((o) => (
-        <Chip key={o.key} active={severityFilter === o.key} onClick={() => setSeverityFilter(o.key)}>{o.label}</Chip>
-      ))}
-      <Separator />
-      {CATEGORY_FILTERS.map((o) => (
-        <Chip key={o.key} active={categoryFilter === o.key} onClick={() => setCategoryFilter(o.key)}>{o.label}</Chip>
-      ))}
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, padding: "6px 0", flexWrap: "wrap" }}>
+      <FilterDropdown label="Status" value={statusFilter} onChange={setStatusFilter} options={STATUS_FILTERS} />
+      <FilterDropdown label="Severity" value={severityFilter} onChange={setSeverityFilter} options={SEVERITY_FILTERS} />
+      <FilterDropdown label="Category" value={categoryFilter} onChange={setCategoryFilter} options={CATEGORY_FILTERS} />
     </div>
   );
 }
