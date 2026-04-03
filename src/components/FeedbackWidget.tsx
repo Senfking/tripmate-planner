@@ -360,7 +360,11 @@ export function FeedbackWidget() {
 
       if (insertErr || !inserted) {
         console.error("Feedback insert failed after retries:", insertErr);
-        toast.error("Failed to send feedback. Please try again.");
+        toast.error(
+          insertErr?.message
+            ? `Failed to send feedback: ${insertErr.message}`
+            : "Failed to send feedback. Please try again.",
+        );
         setSubmitting(false);
         return;
       }
@@ -402,9 +406,13 @@ export function FeedbackWidget() {
       } catch {
         setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Feedback submission error:", err);
-      toast.error("Failed to send feedback. Please try again.");
+      toast.error(
+        err?.message
+          ? `Failed to send feedback: ${err.message}`
+          : "Failed to send feedback. Please try again.",
+      );
     } finally {
       setAiLoading(false);
       setSubmitting(false);
