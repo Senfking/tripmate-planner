@@ -104,8 +104,8 @@ Return ONLY the JSON object, no other text.`,
     if (!response.ok) {
       const errText = await response.text();
       console.error("Anthropic error:", response.status, errText);
-      return new Response(JSON.stringify({ error: true }), {
-        status: 200,
+      return new Response(JSON.stringify({ success: false, error: "AI extraction failed" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -116,8 +116,8 @@ Return ONLY the JSON object, no other text.`,
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return new Response(JSON.stringify({ error: true }), {
-        status: 200,
+      return new Response(JSON.stringify({ success: false, error: "Could not parse AI response" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -141,8 +141,8 @@ Return ONLY the JSON object, no other text.`,
     });
   } catch (err) {
     console.error("scan-receipt error:", err);
-    return new Response(JSON.stringify({ error: true }), {
-      status: 200,
+    return new Response(JSON.stringify({ success: false, error: err.message || "Internal error" }), {
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

@@ -1,14 +1,15 @@
 import { useEffect, lazy, Suspense } from "react";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
 
 // Eagerly loaded (critical path)
@@ -46,11 +47,34 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       staleTime: 1000 * 60 * 2, // 2 min default
+      throwOnError: false,
     },
     mutations: {
       retry: 0,
     },
   },
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      trackEvent("app_error", {
+        type: "query_error",
+        message: error.message,
+        query_key: JSON.stringify(query.queryKey).slice(0, 100),
+        route: window.location.pathname,
+        severity: "medium",
+      });
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      trackEvent("app_error", {
+        type: "mutation_error",
+        message: error.message,
+        mutation_key: JSON.stringify(mutation.options.mutationKey || "unknown").slice(0, 100),
+        route: window.location.pathname,
+        severity: "medium",
+      });
+    },
+  }),
 });
 
 function AppInner() {
@@ -83,6 +107,7 @@ function AppInner() {
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ErrorBoundaryWithUser>
           <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes */}
@@ -120,10 +145,16 @@ function AppInner() {
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </ErrorBoundaryWithUser>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   );
+}
+
+function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return <ErrorBoundary userId={user?.id}>{children}</ErrorBoundary>;
 }
 
 const App = () => (

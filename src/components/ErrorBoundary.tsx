@@ -1,7 +1,9 @@
 import { Component, type ReactNode } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   children: ReactNode;
+  userId?: string;
 }
 
 interface State {
@@ -20,6 +22,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("Uncaught error:", error, info.componentStack);
+    trackEvent("app_error", {
+      type: "react_crash",
+      message: error.message,
+      stack: error.stack?.slice(0, 500),
+      component: info.componentStack?.split("\n")[1]?.trim(),
+      route: window.location.pathname,
+      severity: "critical",
+    }, this.props.userId || undefined);
   }
 
   render() {

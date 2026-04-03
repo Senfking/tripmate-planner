@@ -188,8 +188,8 @@ Return only valid JSON, no other text.`;
   } catch (e) {
     console.error("extract-booking-info error:", e);
     return new Response(
-      JSON.stringify({}),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ success: false, error: e.message || "Internal error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
