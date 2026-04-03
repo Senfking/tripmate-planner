@@ -74,15 +74,20 @@ export function FeedbackWidget() {
     const vv = window.visualViewport;
     const updateKeyboard = () => {
       if (vv) {
-        const kbH = Math.max(0, window.innerHeight - vv.height);
+        // On iOS, vv.height shrinks when the keyboard opens.
+        // vv.offsetTop accounts for the viewport being scrolled up.
+        const kbH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
         setKeyboardHeight(kbH);
       }
     };
+    // iOS fires both "resize" and "scroll" on visualViewport when the keyboard opens
     vv?.addEventListener("resize", updateKeyboard);
+    vv?.addEventListener("scroll", updateKeyboard);
 
     return () => {
       window.removeEventListener("resize", onResize);
       vv?.removeEventListener("resize", updateKeyboard);
+      vv?.removeEventListener("scroll", updateKeyboard);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, [getDefaultY]);
@@ -280,11 +285,22 @@ export function FeedbackWidget() {
   };
 
   const handleTextareaFocus = () => {
+    // Wait for the keyboard to finish animating before scrolling
     setTimeout(() => {
-      textareaRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+      if (isMobile && scrollRef.current && textareaRef.current) {
+        // Inside the drawer, scroll the scrollable container so the textarea is visible
+        const container = scrollRef.current;
+        const textarea = textareaRef.current;
+        const containerRect = container.getBoundingClientRect();
+        const textareaRect = textarea.getBoundingClientRect();
+        const offset = textareaRect.top - containerRect.top - containerRect.height / 3;
+        container.scrollBy({ top: offset, behavior: "smooth" });
+      } else {
+        textareaRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
     }, 350);
   };
 
@@ -391,7 +407,7 @@ export function FeedbackWidget() {
       className="px-1"
       style={{
         overflowY: "auto",
-        maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - 140px)",
+        maxHeight: `calc(100dvh - env(safe-area-inset-top, 0px) - 140px - ${keyboardHeight}px)`,
         WebkitOverflowScrolling: "touch",
       }}
     >
