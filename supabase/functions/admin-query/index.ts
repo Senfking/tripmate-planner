@@ -1035,6 +1035,101 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "error_overview": {
+        const now24 = new Date(Date.now() - 24 * 3600000).toISOString();
+        const now48 = new Date(Date.now() - 48 * 3600000).toISOString();
+
+        const [total24, critical24, total_prior] = await Promise.all([
+          db.from("analytics_events").select("id", { count: "exact", head: true })
+            .eq("event_name", "app_error").filter("created_at", "gt", now24),
+          db.from("analytics_events").select("id", { count: "exact", head: true })
+            .eq("event_name", "app_error")
+            .filter("created_at", "gt", now24)
+            .eq("properties->>severity", "critical"),
+          db.from("analytics_events").select("id", { count: "exact", head: true })
+            .eq("event_name", "app_error")
+            .filter("created_at", "gt", now48)
+            .filter("created_at", "lte", now24),
+        ]);
+
+        const cur = total24.count || 0;
+        const prev = total_prior.count || 0;
+        const trendPct = prev > 0 ? (((cur - prev) / prev) * 100).toFixed(1) : cur > 0 ? "100" : "0";
+
+        return json({
+          errors_24h: cur,
+          critical_24h: critical24.count || 0,
+          prior_24h: prev,
+          trend_pct: trendPct,
+        });
+      }
+
+      case "error_chart": {
+        const chartPeriod = params.chart_period || "24h";
+        const since = chartPeriod === "24h"
+          ? new Date(Date.now() - 24 * 3600000).toISOString()
+          : new Date(Date.now() - 30 * 86400000).toISOString();
+
+        const { data } = await db.from("analytics_events")
+          .select("created_at, properties")
+          .eq("event_name", "app_error")
+          .filter("created_at", "gt", since)
+          .order("created_at", { ascending: true });
+
+        const buckets: Record<string, { count: number; breakdown: Record<string, number> }> = {};
+
+        (data || []).forEach((r: any) => {
+          const dt = new Date(r.created_at);
+          const label = chartPeriod === "24h"
+            ? dt.toISOString().substring(0, 13) + ":00"
+            : dt.toISOString().substring(0, 10);
+          if (!buckets[label]) buckets[label] = { count: 0, breakdown: {} };
+          buckets[label].count++;
+          const errType = (r.properties as any)?.type || "unknown";
+          buckets[label].breakdown[errType] = (buckets[label].breakdown[errType] || 0) + 1;
+        });
+
+        return json(Object.entries(buckets).sort().map(([label, v]) => ({ label, count: v.count, breakdown: v.breakdown })));
+      }
+
+      case "error_feed": {
+        const { error_filter } = params;
+        let query = db.from("analytics_events")
+          .select("id, created_at, user_id, properties")
+          .eq("event_name", "app_error")
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (error_filter === "critical") {
+          query = query.eq("properties->>severity", "critical");
+        } else if (error_filter === "high") {
+          query = query.eq("properties->>severity", "high");
+        } else if (error_filter === "medium") {
+          query = query.eq("properties->>severity", "medium");
+        } else if (error_filter === "react_crash") {
+          query = query.eq("properties->>type", "react_crash");
+        } else if (error_filter === "query_error") {
+          query = query.eq("properties->>type", "query_error");
+        }
+
+        const { data } = await query;
+
+        const userIds = [...new Set((data || []).map((r: any) => r.user_id).filter(Boolean))];
+        let userNames: Record<string, string> = {};
+        if (userIds.length > 0) {
+          const { data: profiles } = await db.from("profiles").select("id, display_name").in("id", userIds);
+          (profiles || []).forEach((p: any) => { userNames[p.id] = p.display_name; });
+        }
+
+        return json((data || []).map((r: any) => ({
+          id: r.id,
+          created_at: r.created_at,
+          user_id: r.user_id,
+          display_name: r.user_id ? (userNames[r.user_id] || "Unknown") : "Anonymous",
+          properties: r.properties,
+        })));
+      }
+
       default:
         return err(`Unknown query type: ${type}`);
     }
