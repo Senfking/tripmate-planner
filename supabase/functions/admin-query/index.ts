@@ -1289,7 +1289,7 @@ Deno.serve(async (req) => {
 });
 
 function periodDate(p: string): string {
-  const days = p === "7d" ? 7 : p === "30d" ? 30 : p === "90d" ? 90 : 0;
+  const days = p === "24h" ? 1 : p === "7d" ? 7 : p === "30d" ? 30 : p === "90d" ? 90 : 0;
   if (days === 0) return "1970-01-01T00:00:00Z";
   return new Date(Date.now() - days * 86400000).toISOString();
 }

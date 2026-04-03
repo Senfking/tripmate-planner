@@ -68,7 +68,7 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div>
         <Card>
           <SectionHeader>Recent Activity</SectionHeader>
           {actLoading ? <AdminSkeleton rows={8} /> : !activity?.length ? <EmptyState /> : (
