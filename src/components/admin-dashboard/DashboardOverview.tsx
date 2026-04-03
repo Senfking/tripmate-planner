@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAdminData } from "@/hooks/useAdminQuery";
 import { StatCard, DateRangeFilter, Period, SectionHeader, Card, AdminSkeleton, EmptyState, C, mono, sans } from "./shared";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export function DashboardOverview() {
   const [period, setPeriod] = useState<Period>("30d");
