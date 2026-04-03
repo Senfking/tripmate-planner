@@ -41,7 +41,7 @@ export function StatCard({ label, value, trend, trendLabel }: {
 }
 
 // ─── Date Range Filter ───
-const periods = ["7d", "30d", "90d", "all"] as const;
+const periods = ["24h", "7d", "30d", "90d", "all"] as const;
 export type Period = typeof periods[number];
 
 export function DateRangeFilter({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
