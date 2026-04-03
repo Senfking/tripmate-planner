@@ -144,15 +144,18 @@ export function FeedbackInbox() {
 
 function FeedbackDetail({ item }: { item: any }) {
   const updateMutation = useAdminMutation("feedback_update");
+  const deleteMutation = useAdminMutation("feedback_delete");
   const { navigateTo } = useContext(AdminNavContext);
   const [notes, setNotes] = useState(item.admin_notes || "");
   const [status, setStatus] = useState(item.status || "new");
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   React.useEffect(() => {
     setNotes(item.admin_notes || "");
     setStatus(item.status || "new");
+    setConfirmDelete(false);
   }, [item.id, item.status, item.admin_notes]);
 
   const saveNotes = () => {
@@ -164,6 +167,14 @@ function FeedbackDetail({ item }: { item: any }) {
   const updateStatus = (s: string) => {
     setStatus(s);
     updateMutation.mutate({ feedback_id: item.id, status: s });
+  };
+
+  const handleDelete = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    deleteMutation.mutate({ feedback_id: item.id });
   };
 
   const copyPrompt = () => {

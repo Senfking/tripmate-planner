@@ -882,6 +882,14 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      case "feedback_delete": {
+        const { feedback_id } = params;
+        if (!feedback_id) return err("feedback_id required");
+        const { error } = await db.from("feedback").delete().eq("id", feedback_id);
+        if (error) return err(error.message);
+        return json({ success: true });
+      }
+
       case "profile_update_notes": {
         const { user_id, admin_notes } = params;
         if (!user_id) return err("user_id required");
