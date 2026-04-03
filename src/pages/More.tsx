@@ -959,7 +959,7 @@ const More = () => {
 
       {/* ── App version footer ── */}
       <p className="text-center text-xs text-muted-foreground pb-4 mt-1">
-        Junto · build {__BUILD_TS__}
+        Junto · v{__BUILD_TS__}
       </p>
 
       {/* ── PHOTO OPTIONS DRAWER ── */}
