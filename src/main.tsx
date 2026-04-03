@@ -47,7 +47,7 @@ if ("serviceWorker" in navigator) {
     });
   } else {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/service-worker.js").then((reg) => {
+      navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" }).then((reg) => {
         // Detect new waiting service worker
         const emitWaiting = (sw: ServiceWorker) => {
           window.dispatchEvent(new CustomEvent("sw-waiting", { detail: sw }));
@@ -61,6 +61,13 @@ if ("serviceWorker" in navigator) {
               emitWaiting(newSW);
             }
           });
+        });
+
+        // Proactively check for updates when the user returns to the app
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") {
+            reg.update().catch(() => {});
+          }
         });
       }).catch(() => {});
     });
