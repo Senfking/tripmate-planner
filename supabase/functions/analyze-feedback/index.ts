@@ -273,7 +273,9 @@ Return ONLY valid JSON with no other text:
       })
       .eq("id", feedbackId);
 
-    // Create admin notification (with dedup by feedback_id)
+    // Enrich the existing admin notification (created by DB trigger or frontend
+    // fallback via check-admin-alerts) with AI analysis data.
+    // We no longer create notifications here to avoid race-condition duplicates.
     try {
       const { data: existing } = await sb
         .from("admin_notifications")
@@ -282,57 +284,30 @@ Return ONLY valid JSON with no other text:
         .contains("properties", { feedback_id: feedbackId })
         .limit(1);
 
-      if (!existing || existing.length === 0) {
+      if (existing && existing.length > 0) {
         const notifSeverity =
           result.severity === "critical" ? "critical"
           : result.severity === "high" ? "warning"
           : "info";
 
-        await sb.from("admin_notifications").insert({
-          type: "new_feedback",
-          title: "New feedback received",
-          body: `[${category}] ${message.substring(0, 200)}`,
-          severity: notifSeverity,
-          properties: {
-            feedback_id: feedbackId,
-            category,
-            ai_severity: result.severity,
-            ai_summary: result.summary,
-          },
-        });
+        await sb.from("admin_notifications")
+          .update({
+            severity: notifSeverity,
+            properties: {
+              feedback_id: feedbackId,
+              category,
+              ai_severity: result.severity,
+              ai_summary: result.summary,
+            },
+          })
+          .eq("id", existing[0].id);
 
-        // Send WhatsApp via Twilio (best-effort)
-        const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-        const twilioAuth = Deno.env.get("TWILIO_AUTH_TOKEN");
-        const twilioFrom = Deno.env.get("TWILIO_WHATSAPP_FROM");
-        const twilioTo = Deno.env.get("TWILIO_WHATSAPP_TO");
-
-        if (twilioSid && twilioAuth && twilioFrom && twilioTo) {
-          const waMsg = `🔔 New Junto feedback\nCategory: ${category}\nSeverity: ${result.severity}\n${message.substring(0, 200)}`;
-          const params = new URLSearchParams({
-            From: `whatsapp:${twilioFrom}`,
-            To: `whatsapp:${twilioTo}`,
-            Body: waMsg,
-          });
-          fetch(
-            `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: "Basic " + btoa(`${twilioSid}:${twilioAuth}`),
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: params.toString(),
-            }
-          ).catch((e) => console.error("WhatsApp send failed:", e));
-        }
-
-        console.log("Admin notification created for feedback:", feedbackId);
+        console.log("Admin notification enriched with AI data for feedback:", feedbackId);
       } else {
-        console.log("Admin notification already exists for feedback:", feedbackId);
+        console.log("No admin notification found to enrich for feedback:", feedbackId);
       }
     } catch (notifErr) {
-      console.error("Failed to create admin notification:", notifErr);
+      console.error("Failed to enrich admin notification:", notifErr);
     }
 
     // Track AI usage server-side
