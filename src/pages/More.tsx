@@ -946,8 +946,19 @@ const More = () => {
         Sign out
       </Button>
 
+      {/* ── Legal links ── */}
+      <div className="flex items-center justify-center gap-3 mt-4 text-xs text-muted-foreground">
+        <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">
+          Privacy Policy
+        </Link>
+        <span>·</span>
+        <Link to="/terms" className="underline underline-offset-2 hover:text-foreground transition-colors">
+          Terms & Conditions
+        </Link>
+      </div>
+
       {/* ── App version footer ── */}
-      <p className="text-center text-xs text-muted-foreground pb-4">
+      <p className="text-center text-xs text-muted-foreground pb-4 mt-1">
         Junto · v0.1
       </p>
 
