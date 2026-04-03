@@ -1,4 +1,5 @@
 import React, { useState, useContext } from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useAdminData, useAdminMutation } from "@/hooks/useAdminQuery";
 import { SectionHeader, Card, AdminSkeleton, EmptyState, StatusPill, C, mono, sans, AdminNavContext } from "./shared";
 
@@ -29,22 +30,34 @@ const SEVERITY_FILTERS = [
   { key: "low", label: "Low" },
 ] as const;
 
-function FilterRow({ label, options, value, onChange }: {
-  label: string;
-  options: readonly { key: string; label: string }[];
-  value: string;
-  onChange: (v: string) => void;
+function FilterBar({ statusFilter, setStatusFilter, categoryFilter, setCategoryFilter, severityFilter, setSeverityFilter }: {
+  statusFilter: string; setStatusFilter: (v: string) => void;
+  categoryFilter: string; setCategoryFilter: (v: string) => void;
+  severityFilter: string; setSeverityFilter: (v: string) => void;
 }) {
+  const Chip = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
+    <button onClick={onClick} style={{
+      padding: "2px 7px", borderRadius: 3, border: "none",
+      background: active ? C.elevated : "transparent",
+      color: active ? C.tealLight : C.muted,
+      fontFamily: mono, fontSize: 10, cursor: "pointer", lineHeight: "16px",
+    }}>{children}</button>
+  );
+
+  const Separator = () => <span style={{ width: 1, height: 14, background: C.border, margin: "0 4px", flexShrink: 0 }} />;
+
   return (
-    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span style={{ fontFamily: mono, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, minWidth: 56 }}>{label}</span>
-      {options.map((o) => (
-        <button key={o.key} onClick={() => onChange(o.key)} style={{
-          padding: "3px 8px", borderRadius: 4, border: `1px solid ${C.border}`,
-          background: value === o.key ? C.elevated : "transparent",
-          color: value === o.key ? C.tealLight : C.muted,
-          fontFamily: mono, fontSize: 10, cursor: "pointer",
-        }}>{o.label}</button>
+    <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", marginBottom: 12, padding: "6px 0" }}>
+      {STATUS_FILTERS.map((o) => (
+        <Chip key={o.key} active={statusFilter === o.key} onClick={() => setStatusFilter(o.key)}>{o.label}</Chip>
+      ))}
+      <Separator />
+      {SEVERITY_FILTERS.map((o) => (
+        <Chip key={o.key} active={severityFilter === o.key} onClick={() => setSeverityFilter(o.key)}>{o.label}</Chip>
+      ))}
+      <Separator />
+      {CATEGORY_FILTERS.map((o) => (
+        <Chip key={o.key} active={categoryFilter === o.key} onClick={() => setCategoryFilter(o.key)}>{o.label}</Chip>
       ))}
     </div>
   );
@@ -65,56 +78,62 @@ export function FeedbackInbox() {
   const selected = selectedId ? (items || []).find((f: any) => f.id === selectedId) : null;
 
   return (
-    <div style={{ display: "flex", gap: 0, height: "calc(100vh - 40px)" }}>
-      {/* Left: inbox list */}
-      <div style={{ width: 540, minWidth: 420, borderRight: `1px solid ${C.border}`, overflowY: "auto", paddingRight: 16 }}>
-        <h1 style={{ fontFamily: mono, fontSize: 18, color: C.text, fontWeight: 600, marginBottom: 16 }}>Feedback Inbox</h1>
+    <PanelGroup direction="horizontal" style={{ height: "calc(100vh - 40px)" }}>
+      <Panel defaultSize={42} minSize={28}>
+        <div style={{ height: "100%", overflowY: "auto", paddingRight: 12 }}>
+          <h1 style={{ fontFamily: mono, fontSize: 18, color: C.text, fontWeight: 600, marginBottom: 8 }}>Feedback Inbox</h1>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
-          <FilterRow label="Status" options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
-          <FilterRow label="Type" options={CATEGORY_FILTERS} value={categoryFilter} onChange={setCategoryFilter} />
-          <FilterRow label="Severity" options={SEVERITY_FILTERS} value={severityFilter} onChange={setSeverityFilter} />
+          <FilterBar
+            statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+            categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+            severityFilter={severityFilter} setSeverityFilter={setSeverityFilter}
+          />
+
+          {isLoading ? <AdminSkeleton rows={10} /> : !items?.length ? <EmptyState message="No feedback matches filter" /> : (
+            items.map((f: any) => {
+              const sevColor = f.ai_severity === "critical" ? C.red : f.ai_severity === "high" ? C.amber : C.muted;
+              const statusLabel = f.status === "done" ? "done" : f.status === "reviewing" ? "reviewing" : f.status === "dismissed" ? "dismissed" : "open";
+              const statusColor = f.status === "done" ? C.green : f.status === "reviewing" ? C.amber : f.status === "dismissed" ? C.muted : C.blue;
+              return (
+                <div key={f.id} onClick={() => setSelectedId(f.id)} style={{
+                  padding: "10px 12px", borderBottom: `1px solid ${C.border}`, cursor: "pointer",
+                  background: selectedId === f.id ? C.elevated : "transparent",
+                }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+                    {f.ai_severity && <StatusPill label={f.ai_severity} color={sevColor} />}
+                    {f.ai_category && <StatusPill label={f.ai_category} color={C.blue} />}
+                    <span style={{ marginLeft: "auto" }}>
+                      <StatusPill label={statusLabel} color={statusColor} />
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: sans, fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {(f.ai_summary || f.body || "").substring(0, 80) || `Rating: ${f.rating}`}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: C.muted, marginTop: 2 }}>
+                    <span>{f.route || "—"}</span>
+                    <span>{f.display_name || "Unknown"} · {timeAgo(f.created_at)}</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
+      </Panel>
 
-        {isLoading ? <AdminSkeleton rows={10} /> : !items?.length ? <EmptyState message="No feedback matches filter" /> : (
-          items.map((f: any) => {
-            const sevColor = f.ai_severity === "critical" ? C.red : f.ai_severity === "high" ? C.amber : C.muted;
-            const statusLabel = f.status === "done" ? "done" : f.status === "reviewing" ? "reviewing" : f.status === "dismissed" ? "dismissed" : "open";
-            const statusColor = f.status === "done" ? C.green : f.status === "reviewing" ? C.amber : f.status === "dismissed" ? C.muted : C.blue;
-            return (
-              <div key={f.id} onClick={() => setSelectedId(f.id)} style={{
-                padding: "10px 12px", borderBottom: `1px solid ${C.border}`, cursor: "pointer",
-                background: selectedId === f.id ? C.elevated : "transparent",
-              }}>
-                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-                  {f.ai_severity && <StatusPill label={f.ai_severity} color={sevColor} />}
-                  {f.ai_category && <StatusPill label={f.ai_category} color={C.blue} />}
-                  <span style={{ marginLeft: "auto" }}>
-                    <StatusPill label={statusLabel} color={statusColor} />
-                  </span>
-                </div>
-                <div style={{ fontFamily: sans, fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {(f.ai_summary || f.body || "").substring(0, 80) || `Rating: ${f.rating}`}
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: C.muted, marginTop: 2 }}>
-                  <span>{f.route || "—"}</span>
-                  <span>{f.display_name || "Unknown"} · {timeAgo(f.created_at)}</span>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+      <PanelResizeHandle style={{ width: 6, background: "transparent", cursor: "col-resize", position: "relative" }}>
+        <div style={{ position: "absolute", top: 0, bottom: 0, left: 2, width: 1, background: C.border }} />
+      </PanelResizeHandle>
 
-      {/* Right: detail */}
-      <div style={{ flex: 1, padding: "0 20px", overflowY: "auto" }}>
-        {selected ? <FeedbackDetail item={selected} /> : (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontFamily: sans }}>
-            Select an item
-          </div>
-        )}
-      </div>
-    </div>
+      <Panel defaultSize={58} minSize={30}>
+        <div style={{ height: "100%", padding: "0 20px", overflowY: "auto" }}>
+          {selected ? <FeedbackDetail item={selected} /> : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontFamily: sans }}>
+              Select an item
+            </div>
+          )}
+        </div>
+      </Panel>
+    </PanelGroup>
   );
 }
 
@@ -143,7 +162,6 @@ function FeedbackDetail({ item }: { item: any }) {
   };
 
   const copyPrompt = () => {
-    // Use ai_prompt if available (generated by Claude), otherwise build from AI fields
     let text: string;
     if (item.ai_prompt) {
       text = item.ai_prompt;
