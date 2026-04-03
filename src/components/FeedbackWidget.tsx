@@ -467,8 +467,8 @@ export function FeedbackWidget() {
             onChange={handleFileChange}
           />
 
-          {/* Screenshot card — bugs only */}
-          {category === "bug" && (
+          {/* Screenshot card — bugs & suggestions */}
+          {(category === "bug" || category === "suggestion") && (
             <>
               {!screenshotFile ? (
                 <div
