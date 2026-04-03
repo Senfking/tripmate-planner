@@ -321,16 +321,19 @@ export function FeedbackWidget() {
       if (!insertErr && inserted) {
         // Fire admin notification as a fallback in case the DB trigger is missing.
         // The Edge Function deduplicates by feedback_id, so this is safe even if
-        // the trigger also fires.
-        supabase.functions.invoke("check-admin-alerts", {
-          body: {
-            trigger: "feedback",
-            feedback_id: inserted.id,
-            body: message.trim().substring(0, 200),
-            category,
-            severity: "medium",
-          },
-        }).catch(() => { /* best-effort */ });
+        // the trigger also fires. Delay 3s so the DB trigger has time to insert
+        // first — prevents race-condition duplicates in the dedup check.
+        setTimeout(() => {
+          supabase.functions.invoke("check-admin-alerts", {
+            body: {
+              trigger: "feedback",
+              feedback_id: inserted.id,
+              body: message.trim().substring(0, 200),
+              category,
+              severity: "medium",
+            },
+          }).catch(() => { /* best-effort */ });
+        }, 3000);
 
         try {
           const { data: aiData } = await supabase.functions.invoke("analyze-feedback", {
