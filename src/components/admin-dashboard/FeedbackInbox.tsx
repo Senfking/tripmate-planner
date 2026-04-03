@@ -223,6 +223,13 @@ function FeedbackDetail({ item }: { item: any }) {
           <button onClick={copyPrompt} style={{ padding: "4px 10px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: copied ? C.green : C.tealLight, fontFamily: mono, fontSize: 11, cursor: "pointer" }}>
             {copied ? "Copied!" : "Copy as Lovable prompt"}
           </button>
+          <button onClick={handleDelete} onBlur={() => setConfirmDelete(false)} style={{
+            padding: "4px 10px", background: confirmDelete ? C.red : C.elevated,
+            border: `1px solid ${confirmDelete ? C.red : C.border}`, borderRadius: 4,
+            color: confirmDelete ? "#fff" : C.red, fontFamily: mono, fontSize: 11, cursor: "pointer",
+          }}>
+            {deleteMutation.isPending ? "Deleting…" : confirmDelete ? "Confirm delete" : "Delete"}
+          </button>
         </div>
       </div>
 
