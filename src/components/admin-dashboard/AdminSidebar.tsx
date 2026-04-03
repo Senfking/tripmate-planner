@@ -41,8 +41,7 @@ export function AdminSidebar({ active, onNavigate, userName }: {
 }) {
   const { data: feedbackData } = useAdminData("feedback_unread_count", {}, { refetchInterval: 60000 });
   const unreadCount = (feedbackData as any)?.count ?? 0;
-  const { data: feedbackData } = useAdminData("feedback_unread_count", {}, { refetchInterval: 60000 });
-  const feedbackUnread = (feedbackData as any)?.count ?? 0;
+  const feedbackUnread = unreadCount;
 
   return (
     <div style={{
