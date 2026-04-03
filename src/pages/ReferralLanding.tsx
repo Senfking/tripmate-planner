@@ -100,7 +100,6 @@ export default function ReferralLanding() {
   }, [code]);
 
   useEffect(() => {
-    if (!code) return;
     const sp = new URLSearchParams(window.location.search);
     trackEvent("landing_page_view", {
       referral_code: code || null,
@@ -108,6 +107,7 @@ export default function ReferralLanding() {
       utm_medium: sp.get("utm_medium"),
       utm_campaign: sp.get("utm_campaign"),
     });
+    if (!code) return;
     (async () => {
       const { data } = await supabase
         .from("profiles")
@@ -321,7 +321,10 @@ export default function ReferralLanding() {
             <div className="mt-6">
               <button
                 type="button"
-                onClick={() => setFormOpen(true)}
+                onClick={() => {
+                  trackEvent("get_started_click", { referral_code: code || null });
+                  setFormOpen(true);
+                }}
                 className="w-full flex items-center justify-center text-white font-semibold rounded-2xl active:scale-[0.97] transition-transform"
                 style={{
                   height: 52,
