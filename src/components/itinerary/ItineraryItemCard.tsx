@@ -214,7 +214,7 @@ export function ItineraryItemCard({
               <Pencil className="h-3 w-3" />
             </button>
             {canDelete && (
-              <button onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground/35 hover:text-destructive/70 hover:bg-muted/40 transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors ml-1">
                 <Trash2 className="h-3 w-3" />
               </button>
             )}
