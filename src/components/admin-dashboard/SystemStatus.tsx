@@ -341,8 +341,6 @@ export function SystemStatus() {
         </div>
       ) : null}
 
-      {/* Debug: test error button */}
-      <DebugTestErrorButton />
     </div>
   );
 }
