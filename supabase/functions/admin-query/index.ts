@@ -162,6 +162,23 @@ Deno.serve(async (req) => {
         return json(Object.entries(daily).map(([date, count]) => ({ date, count })));
       }
 
+      case "landing_views_chart": {
+        const p = period || "30d";
+        const { data } = await db.from("analytics_events")
+          .select("created_at")
+          .eq("event_name", "landing_page_view")
+          .filter("created_at", "gt", periodDate(p))
+          .order("created_at", { ascending: true });
+
+        const daily: Record<string, number> = {};
+        (data || []).forEach((r: any) => {
+          const day = r.created_at.substring(0, 10);
+          daily[day] = (daily[day] || 0) + 1;
+        });
+
+        return json(Object.entries(daily).map(([date, count]) => ({ date, count })));
+      }
+
       case "recent_activity": {
         const [profiles, trips, feedback, aiEvents] = await Promise.all([
           db.from("profiles").select("id, display_name, created_at").order("created_at", { ascending: false }).limit(5),
