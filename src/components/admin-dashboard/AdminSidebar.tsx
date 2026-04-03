@@ -73,9 +73,10 @@ export function AdminSidebar({ active, onNavigate, userName }: {
         {unreadCount > 0 && (
           <span style={{
             position: "absolute", top: 8, left: 28,
-            background: C.red, color: "#fff", fontFamily: mono,
+            background: ICE_BLUE, color: "#0b0e0e", fontFamily: mono,
             fontSize: 10, fontWeight: 700, borderRadius: "50%",
             width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: `0 0 8px ${ICE_BLUE}55`,
           }}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
