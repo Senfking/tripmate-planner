@@ -37,7 +37,7 @@ function timeAgo(d: string) {
 export function NotificationsModule() {
   const [filter, setFilter] = useState<Filter>("all");
   const [expanded, setExpanded] = useState<string | null>(null);
-  const { data, isLoading, refetch } = useAdminData("notifications_list", {}, { refetchInterval: 60000 });
+  const { data, isLoading, refetch } = useAdminData("notifications_list", {}, { refetchInterval: 10000 });
   const markRead = useAdminMutation("notifications_mark_read");
   const markAllRead = useAdminMutation("notifications_mark_all_read");
 

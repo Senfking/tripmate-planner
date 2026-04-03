@@ -78,7 +78,7 @@ export function FeedbackInbox() {
     status_filter: statusFilter,
     category_filter: categoryFilter,
     severity_filter: severityFilter,
-  });
+  }, { refetchInterval: 15000 });
 
   const selected = selectedId ? (items || []).find((f: any) => f.id === selectedId) : null;
 

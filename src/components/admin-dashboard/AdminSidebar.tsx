@@ -37,7 +37,7 @@ export function AdminSidebar({ active, onNavigate, userName }: {
   onNavigate: (m: AdminModule) => void;
   userName?: string;
 }) {
-  const { data: unreadData } = useAdminData("notifications_unread_count", {}, { refetchInterval: 60000 });
+  const { data: unreadData } = useAdminData("notifications_unread_count", {}, { refetchInterval: 10000 });
   const unreadCount = (unreadData as any)?.count ?? 0;
 
   return (
