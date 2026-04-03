@@ -947,7 +947,7 @@ const More = () => {
       </Button>
 
       {/* ── Legal links ── */}
-      <div className="flex items-center justify-center gap-3 mt-4 text-xs text-muted-foreground">
+      <div className="flex items-center justify-center gap-3 mt-4 text-xs text-muted-foreground md:hidden">
         <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">
           Privacy Policy
         </Link>
