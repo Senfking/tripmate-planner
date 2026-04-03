@@ -35,15 +35,15 @@ function FilterDropdown({ label, value, onChange, options }: {
   options: readonly { key: string; label: string }[];
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
       <label style={{ fontFamily: mono, fontSize: 10, color: C.muted, textTransform: "uppercase" }}>{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
           background: C.elevated, color: C.text, border: `1px solid ${C.border}`,
-          borderRadius: 4, padding: "3px 8px", fontFamily: mono, fontSize: 12,
-          cursor: "pointer", outline: "none", appearance: "auto",
+          borderRadius: 4, padding: "5px 8px", fontFamily: mono, fontSize: 12,
+          cursor: "pointer", outline: "none", appearance: "auto", width: "100%",
         }}
       >
         {options.map((o) => (
