@@ -128,7 +128,7 @@ export function Card({ children, style }: { children: React.ReactNode; style?: R
 
 // ─── Admin Navigation Context ───
 export type AdminModule =
-  | "dashboard" | "acquisition" | "ai_usage"
+  | "dashboard" | "notifications" | "acquisition" | "ai_usage"
   | "all_users" | "retention" | "referrals"
   | "engagement" | "feature_adoption"
   | "feedback_inbox"
