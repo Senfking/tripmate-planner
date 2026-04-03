@@ -122,7 +122,7 @@ export function FeedbackInbox() {
                   }} />
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4, flexWrap: "wrap" }}>
                       {f.ai_severity && <StatusPill label={f.ai_severity} color={sevColor} />}
                       {f.ai_category && <StatusPill label={f.ai_category} color={C.blue} />}
                       <span style={{ marginLeft: "auto" }}>
@@ -131,12 +131,20 @@ export function FeedbackInbox() {
                     </div>
                     <div style={{
                       fontFamily: sans, fontSize: 12, color: C.text,
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       fontWeight: isUnread ? 600 : 400,
                       opacity: isUnread ? 1 : 0.75,
+                      marginBottom: f.ai_fix ? 4 : 0,
                     }}>
-                      {(f.ai_summary || f.body || "").substring(0, 80) || `Rating: ${f.rating}`}
+                      {f.ai_summary || f.body || `Rating: ${f.rating}`}
                     </div>
+                    {f.ai_fix && (
+                      <div style={{
+                        fontFamily: sans, fontSize: 11, color: C.muted,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        💡 {f.ai_fix}
+                      </div>
+                    )}
                     <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: C.muted, marginTop: 2 }}>
                       <span>{f.route || "—"}</span>
                       <span>{f.display_name || "Unknown"} · {timeAgo(f.created_at)}</span>
