@@ -12,6 +12,7 @@ import { FeatureAdoptionModule } from "@/components/admin-dashboard/FeatureAdopt
 import { FeedbackInbox } from "@/components/admin-dashboard/FeedbackInbox";
 import { SystemStatus } from "@/components/admin-dashboard/SystemStatus";
 import { WeeklyDigest } from "@/components/admin-dashboard/WeeklyDigest";
+import { NotificationsModule } from "@/components/admin-dashboard/NotificationsModule";
 import { C, AdminModule, AdminNavContext } from "@/components/admin-dashboard/shared";
 import { Loader2 } from "lucide-react";
 
@@ -19,6 +20,7 @@ const ADMIN_USER_ID = import.meta.env.VITE_ADMIN_USER_ID || "1d5b21fe-f74c-429b-
 
 const MODULE_MAP: Record<AdminModule, React.FC> = {
   dashboard: DashboardOverview,
+  notifications: NotificationsModule,
   acquisition: AcquisitionModule,
   ai_usage: AIUsageModule,
   all_users: AllUsersModule,

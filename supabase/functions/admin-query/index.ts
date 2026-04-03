@@ -1130,6 +1130,39 @@ Deno.serve(async (req) => {
         })));
       }
 
+      case "notifications_list": {
+        const { data } = await db.from("admin_notifications")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        return json(data || []);
+      }
+
+      case "notifications_unread_count": {
+        const { count } = await db.from("admin_notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("read", false);
+        return json({ count: count || 0 });
+      }
+
+      case "notifications_mark_read": {
+        const { id } = params;
+        if (!id) return err("id required");
+        const { error: updateErr } = await db.from("admin_notifications")
+          .update({ read: true, read_at: new Date().toISOString() })
+          .eq("id", id);
+        if (updateErr) return err(updateErr.message);
+        return json({ success: true });
+      }
+
+      case "notifications_mark_all_read": {
+        const { error: updateErr } = await db.from("admin_notifications")
+          .update({ read: true, read_at: new Date().toISOString() })
+          .eq("read", false);
+        if (updateErr) return err(updateErr.message);
+        return json({ success: true });
+      }
+
       default:
         return err(`Unknown query type: ${type}`);
     }

@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          properties: Json | null
+          read: boolean
+          read_at: string | null
+          severity: string
+          title: string
+          type: string
+          whatsapp_sent: boolean
+          whatsapp_sent_at: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          properties?: Json | null
+          read?: boolean
+          read_at?: string | null
+          severity?: string
+          title: string
+          type: string
+          whatsapp_sent?: boolean
+          whatsapp_sent_at?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          properties?: Json | null
+          read?: boolean
+          read_at?: string | null
+          severity?: string
+          title?: string
+          type?: string
+          whatsapp_sent?: boolean
+          whatsapp_sent_at?: string | null
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string | null
