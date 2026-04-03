@@ -129,7 +129,6 @@ export function AdminSidebar({ active, onNavigate, userName }: {
                       position: "relative" as const,
                       top: -1,
                     }}>
-                    }}>
                       {feedbackUnread > 99 ? "99+" : feedbackUnread}
                     </span>
                   )}
