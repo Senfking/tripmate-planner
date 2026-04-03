@@ -285,7 +285,7 @@ export function ExpenseFormModal({
   }, [itineraryItems]);
 
   const formContent = (
-    <div className="space-y-4 p-4 overflow-y-auto max-h-[70vh]">
+    <div className="space-y-4 p-4 overflow-y-auto max-h-[70dvh]">
       {/* Hidden file inputs for receipt scanning */}
       <input
         ref={fileInputRef}
@@ -572,7 +572,7 @@ export function ExpenseFormModal({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>{modalTitle}</DrawerTitle>
