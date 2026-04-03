@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   Drawer,
   DrawerContent,
@@ -326,66 +327,84 @@ export function FeedbackWidget() {
         }
       }
 
-      const { data: inserted, error: insertErr } = await supabase
-        .from("feedback")
-        .insert({
-          user_id: user.id,
-          body: message.trim(),
-          category,
-          route: window.location.pathname,
-          app_version: (import.meta as any).env?.VITE_APP_VERSION ?? "1.0.0",
-          screenshot_url: screenshotUrl,
-          status: "new",
-          rating: 0,
-          hint_rating: screenshotHintRating,
-        })
-        .select("id")
-        .single();
+      // Retry insert up to 3 times with exponential backoff to handle transient failures
+      let inserted: { id: string } | null = null;
+      let insertErr: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const result = await supabase
+          .from("feedback")
+          .insert({
+            user_id: user.id,
+            body: message.trim(),
+            category,
+            route: window.location.pathname,
+            app_version: (import.meta as any).env?.VITE_APP_VERSION ?? "1.0.0",
+            screenshot_url: screenshotUrl,
+            status: "new",
+            rating: 0,
+            hint_rating: screenshotHintRating,
+          })
+          .select("id")
+          .single();
+
+        inserted = result.data;
+        insertErr = result.error;
+
+        if (!insertErr && inserted) break;
+
+        // Wait before retrying (500ms, 1500ms)
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        }
+      }
+
+      if (insertErr || !inserted) {
+        console.error("Feedback insert failed after retries:", insertErr);
+        toast.error("Failed to send feedback. Please try again.");
+        setSubmitting(false);
+        return;
+      }
 
       setStep("success");
       setAiLoading(true);
 
-      if (!insertErr && inserted) {
-        // Fire admin notification as a fallback in case the DB trigger is missing.
-        // The Edge Function deduplicates by feedback_id, so this is safe even if
-        // the trigger also fires. Delay 3s so the DB trigger has time to insert
-        // first — prevents race-condition duplicates in the dedup check.
-        setTimeout(() => {
-          supabase.functions.invoke("check-admin-alerts", {
-            body: {
-              trigger: "feedback",
-              feedback_id: inserted.id,
-              body: message.trim().substring(0, 200),
-              category,
-              severity: "medium",
-            },
-          }).catch(() => { /* best-effort */ });
-        }, 3000);
+      // Fire admin notification as a fallback in case the DB trigger is missing.
+      // The Edge Function deduplicates by feedback_id, so this is safe even if
+      // the trigger also fires. Delay 3s so the DB trigger has time to insert
+      // first — prevents race-condition duplicates in the dedup check.
+      setTimeout(() => {
+        supabase.functions.invoke("check-admin-alerts", {
+          body: {
+            trigger: "feedback",
+            feedback_id: inserted.id,
+            body: message.trim().substring(0, 200),
+            category,
+            severity: "medium",
+          },
+        }).catch(() => { /* best-effort */ });
+      }, 3000);
 
-        try {
-          const { data: aiData } = await supabase.functions.invoke("analyze-feedback", {
-            body: {
-              feedbackId: inserted.id,
-              category,
-              message: message.trim(),
-              route: window.location.pathname,
-              screenshot_hint: screenshotHint,
-            },
-          });
-          if (aiData?.user_message) {
-            setAiMessage(aiData.user_message);
-          } else {
-            setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
-          }
-        } catch {
+      try {
+        const { data: aiData } = await supabase.functions.invoke("analyze-feedback", {
+          body: {
+            feedbackId: inserted.id,
+            category,
+            message: message.trim(),
+            route: window.location.pathname,
+            screenshot_hint: screenshotHint,
+          },
+        });
+        if (aiData?.user_message) {
+          setAiMessage(aiData.user_message);
+        } else {
           setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
         }
-      } else {
+      } catch {
         setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
       }
-    } catch {
-      setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
-      setStep("success");
+    } catch (err) {
+      console.error("Feedback submission error:", err);
+      toast.error("Failed to send feedback. Please try again.");
     } finally {
       setAiLoading(false);
       setSubmitting(false);
