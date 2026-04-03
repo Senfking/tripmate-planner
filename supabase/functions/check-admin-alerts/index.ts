@@ -39,6 +39,24 @@ Deno.serve(async (req) => {
       const feedbackBody = body.body || "No message";
       const category = body.category || "general";
 
+      // Dedup: skip if a notification for this feedback_id was already created
+      // (prevents duplicates from both DB trigger and frontend fallback)
+      if (body.feedback_id) {
+        const { data: existing } = await db
+          .from("admin_notifications")
+          .select("id")
+          .eq("type", "new_feedback")
+          .contains("properties", { feedback_id: body.feedback_id })
+          .limit(1);
+        if (existing && existing.length > 0) {
+          console.log("Dedup: notification already exists for feedback_id", body.feedback_id);
+          return new Response(
+            JSON.stringify({ success: true, dedup: true }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
       notification = {
         type: "new_feedback",
         title: "New feedback received",
