@@ -1114,6 +1114,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_error_spike: { Args: never; Returns: undefined }
       generate_trip_code: { Args: never; Returns: string }
       get_date_option_vote_counts: {
         Args: { _trip_id: string }
@@ -1176,6 +1177,7 @@ export type Database = {
         Returns: undefined
       }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
+      send_daily_digest: { Args: never; Returns: undefined }
       update_member_role: {
         Args: { _new_role: string; _target_user_id: string; _trip_id: string }
         Returns: Json
