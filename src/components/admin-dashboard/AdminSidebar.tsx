@@ -108,6 +108,23 @@ export function AdminSidebar({ active, onNavigate, userName }: {
                   onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = C.muted; }}
                 >
                   {item.label}
+                  {item.key === "feedback_inbox" && feedbackUnread > 0 && (
+                    <span style={{
+                      marginLeft: 8,
+                      background: ICE_BLUE,
+                      color: "#0b0e0e",
+                      fontFamily: mono,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      borderRadius: 10,
+                      padding: "1px 6px",
+                      minWidth: 18,
+                      textAlign: "center" as const,
+                      display: "inline-block",
+                    }}>
+                      {feedbackUnread > 99 ? "99+" : feedbackUnread}
+                    </span>
+                  )}
                 </button>
               );
             })}
