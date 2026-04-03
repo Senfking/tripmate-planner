@@ -3,6 +3,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/lib/analytics";
 
 const SEGMENT_COLORS = [
   "hsl(174 40% 88%)",
@@ -116,6 +117,7 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
 
   const spin = () => {
     if (phase !== "idle" || options.length === 0) return;
+    trackEvent("fortune_wheel_spun", { option_count: options.length });
     setPhase("spinning");
 
     // Random position within the winning segment (10%-90% through it)
@@ -151,6 +153,7 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
   }, [phase]);
 
   const handleAccept = () => {
+    trackEvent("fortune_wheel_accepted", { winner: options[winnerIdx]?.label });
     onAccept(options[winnerIdx].id);
     onOpenChange(false);
   };

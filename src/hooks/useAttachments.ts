@@ -68,6 +68,7 @@ export function useAttachments(tripId: string) {
       return { id: attachmentId, filePath: storagePath, fileType: file.type };
     },
     onSuccess: (data) => {
+      trackEvent("attachment_uploaded", { trip_id: tripId, file_type: data?.fileType }, user?.id);
       qc.invalidateQueries({ queryKey: key });
       toast.success("File uploaded");
 
@@ -120,6 +121,7 @@ export function useAttachments(tripId: string) {
       return { id: data.id, url: params.url };
     },
     onSuccess: (data) => {
+      trackEvent("attachment_link_added", { trip_id: tripId }, user?.id);
       qc.invalidateQueries({ queryKey: key });
       toast.success("Link saved");
       if (data?.id && data?.url) {
@@ -153,7 +155,8 @@ export function useAttachments(tripId: string) {
         .eq("id", attachment.id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, attachment) => {
+      trackEvent("attachment_deleted", { trip_id: tripId, type: attachment.type }, user?.id);
       qc.invalidateQueries({ queryKey: key });
       toast.success("Deleted");
     },

@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ export default function JoinByCode() {
     onSuccess: (result) => {
       sessionStorage.removeItem("join_code");
       if (result.success) {
+        trackEvent("trip_member_joined", { trip_id: result.trip_id }, user?.id);
         toast.success(`You've joined ${result.trip_name}! 🎉`);
         navigate(`/app/trips/${result.trip_id}`, { replace: true });
       } else if (result.error === "already_member" && result.trip_id) {

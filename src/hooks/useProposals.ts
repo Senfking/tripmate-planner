@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { trackEvent } from "@/lib/analytics";
 
 export type Proposal = {
   id: string;
@@ -197,7 +198,10 @@ export function useProposals(tripId: string | undefined) {
         if (dateErr) throw dateErr;
       }
     },
-    onSuccess: invalidateAll,
+    onSuccess: (_data, input) => {
+      trackEvent("proposal_created", { trip_id: tripId, destination: input.destination, has_dates: !!(input.startDate && input.endDate) }, user?.id);
+      invalidateAll();
+    },
   });
 
   const reactDest = useMutation({
@@ -232,7 +236,10 @@ export function useProposals(tripId: string | undefined) {
         if (error) throw error;
       }
     },
-    onSuccess: invalidateAll,
+    onSuccess: (_data, vars) => {
+      trackEvent("proposal_voted", { trip_id: tripId, proposal_id: vars.proposalId, value: vars.value }, user?.id);
+      invalidateAll();
+    },
   });
 
   const addDateOption = useMutation({
@@ -245,7 +252,10 @@ export function useProposals(tripId: string | undefined) {
       } as any);
       if (error) throw error;
     },
-    onSuccess: invalidateAll,
+    onSuccess: () => {
+      trackEvent("date_option_added", { trip_id: tripId }, user?.id);
+      invalidateAll();
+    },
   });
 
   const voteDateOption = useMutation({
@@ -280,7 +290,10 @@ export function useProposals(tripId: string | undefined) {
         if (error) throw error;
       }
     },
-    onSuccess: invalidateAll,
+    onSuccess: (_data, vars) => {
+      trackEvent("date_option_voted", { trip_id: tripId, date_option_id: vars.dateOptionId, value: vars.value }, user?.id);
+      invalidateAll();
+    },
   });
 
   const deleteProposal = useMutation({
@@ -317,7 +330,10 @@ export function useProposals(tripId: string | undefined) {
         qc.setQueryData(["trip-proposals", tripId], context.prev);
       }
     },
-    onSettled: invalidateAll,
+    onSettled: (_data, _err, vars) => {
+      if (!_err) trackEvent("proposal_deleted", { trip_id: tripId, proposal_id: vars.proposalId }, user?.id);
+      invalidateAll();
+    },
   });
 
   // ─── Derived data ───

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 import { useState } from "react";
 import { Copy, Loader2, Info, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
@@ -194,6 +195,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       if (error) throw error;
     },
     onSuccess: () => {
+      trackEvent("trip_deleted", { trip_id: tripId }, user?.id);
       toast.success("Trip deleted");
       navigate("/app/trips");
     },

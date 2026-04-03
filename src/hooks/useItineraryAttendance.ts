@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 export interface AttendanceRecord {
   id: string;
@@ -132,7 +133,10 @@ export function useItineraryAttendance(tripId: string) {
       if (context?.prev) qc.setQueryData(attendanceKey, context.prev);
       toast.error("Couldn't update your attendance. Please try again.");
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: attendanceKey }),
+    onSettled: (_data, _err, itemId) => {
+      if (!_err) trackEvent("attendance_status_changed", { trip_id: tripId, item_id: itemId }, user?.id);
+      qc.invalidateQueries({ queryKey: attendanceKey });
+    },
   });
 
   return { attendance, members, cycleStatus };

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 export interface ExpenseRow {
   id: string;
@@ -283,7 +284,8 @@ export function useExpenses(tripId: string) {
         .eq("id", tripId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, currency) => {
+      trackEvent("settlement_currency_changed", { trip_id: tripId, currency }, user?.id);
       qc.invalidateQueries({ queryKey: ["settlement-currency", tripId] });
       qc.invalidateQueries({ queryKey: ["exchange-rates"] });
       toast.success("Settlement currency updated");
@@ -320,7 +322,8 @@ export function useExpenses(tripId: string) {
       const { error: sErr } = await supabase.from("expense_splits").insert(splitRows);
       if (sErr) throw sErr;
     },
-    onSuccess: () => {
+    onSuccess: (_data, params) => {
+      trackEvent("expense_created", { trip_id: tripId, currency: params.currency, category: params.category }, user?.id);
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
@@ -357,7 +360,8 @@ export function useExpenses(tripId: string) {
       });
       if (sErr) throw sErr;
     },
-    onSuccess: () => {
+    onSuccess: (_data, params) => {
+      trackEvent("expense_updated", { trip_id: tripId, expense_id: params.id }, user?.id);
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
@@ -374,7 +378,8 @@ export function useExpenses(tripId: string) {
       const { error } = await supabase.from("expenses").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      trackEvent("expense_deleted", { trip_id: tripId, expense_id: id }, user?.id);
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });

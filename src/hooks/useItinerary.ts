@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 export interface ItineraryItem {
   id: string;
@@ -68,7 +69,8 @@ export function useItinerary(tripId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, item) => {
+      trackEvent("itinerary_item_created", { trip_id: tripId, status: item.status || "idea" }, user?.id);
       qc.invalidateQueries({ queryKey: key });
       toast.success("Activity added");
     },
@@ -99,7 +101,8 @@ export function useItinerary(tripId: string) {
         .eq("id", item.id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, item) => {
+      trackEvent("itinerary_item_updated", { trip_id: tripId, item_id: item.id, status: item.status || "idea" }, user?.id);
       qc.invalidateQueries({ queryKey: key });
       toast.success("Activity updated");
     },
@@ -111,7 +114,8 @@ export function useItinerary(tripId: string) {
       const { error } = await supabase.from("itinerary_items").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      trackEvent("itinerary_item_deleted", { trip_id: tripId, item_id: id }, user?.id);
       qc.invalidateQueries({ queryKey: key });
       toast.success("Activity deleted");
     },

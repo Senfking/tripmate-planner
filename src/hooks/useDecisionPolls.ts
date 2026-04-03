@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { trackEvent } from "@/lib/analytics";
 
 export type PollWithOptions = {
   id: string;
@@ -118,7 +119,8 @@ export function useDecisionPolls(tripId: string | undefined) {
         if (optErr) throw optErr;
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, input) => {
+      trackEvent("poll_created", { trip_id: tripId, type: input.type, option_count: input.options?.length ?? 0 }, user?.id);
       qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
     },
   });
@@ -231,7 +233,8 @@ export function useDecisionPolls(tripId: string | undefined) {
         qc.setQueryData(["poll-vote-counts", tripId], context.prevCounts);
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
+      trackEvent("poll_voted", { trip_id: tripId, option_id: vars.optionId, value: vars.value }, user?.id);
       qc.invalidateQueries({ queryKey: ["poll-vote-counts", tripId] });
       qc.invalidateQueries({ queryKey: ["my-poll-votes", tripId, user?.id] });
     },
@@ -245,7 +248,8 @@ export function useDecisionPolls(tripId: string | undefined) {
         .eq("id", pollId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, pollId) => {
+      trackEvent("poll_locked", { trip_id: tripId, poll_id: pollId }, user?.id);
       qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
     },
   });
@@ -265,7 +269,8 @@ export function useDecisionPolls(tripId: string | undefined) {
       const { error } = await supabase.from("polls").delete().eq("id", pollId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, pollId) => {
+      trackEvent("poll_deleted", { trip_id: tripId, poll_id: pollId }, user?.id);
       qc.invalidateQueries({ queryKey: ["decision-polls", tripId] });
       qc.invalidateQueries({ queryKey: ["poll-vote-counts", tripId] });
       qc.invalidateQueries({ queryKey: ["my-poll-votes", tripId, user?.id] });
