@@ -175,49 +175,57 @@ Deno.serve(async (req) => {
       case "acquisition_stats": {
         const p = period || "30d";
         const pd = periodDate(p);
-        const [landing, signups, referralShared, referralCopied, invitesSent, joinCopied, pwaPrompted, pwaTriggered] = await Promise.all([
+        const [landing, getStarted, signups, tripMembers, expensePayers, referralShared, invitesSent] = await Promise.all([
           db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "landing_page_view").filter("created_at", "gt", pd),
+          db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "get_started_click").filter("created_at", "gt", pd),
           db.from("profiles").select("id", { count: "exact", head: true }).filter("created_at", "gt", pd),
+          db.from("trip_members").select("user_id").filter("joined_at", "gt", pd),
+          db.from("expenses").select("payer_id").filter("created_at", "gt", pd),
           db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "referral_link_shared").filter("created_at", "gt", pd),
-          db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "referral_code_copied").filter("created_at", "gt", pd),
           db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "trip_invite_sent").filter("created_at", "gt", pd),
-          db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "join_code_copied").filter("created_at", "gt", pd),
-          db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "pwa_install_prompted").filter("created_at", "gt", pd),
-          db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "pwa_install_triggered").filter("created_at", "gt", pd),
         ]);
 
+        const landingCount = landing.count || 0;
+        const getStartedCount = getStarted.count || 0;
+        const signupCount = signups.count || 0;
+        const activatedCount = new Set((tripMembers.data || []).map((r: any) => r.user_id)).size;
+        const expenseCount = new Set((expensePayers.data || []).map((r: any) => r.payer_id)).size;
+
         return json({
-          landing_views: landing.count || 0,
-          signups: signups.count || 0,
-          conversion_rate: (landing.count || 0) > 0 ? ((signups.count || 0) / (landing.count || 1) * 100).toFixed(1) : "0",
+          landing_views: landingCount,
+          get_started: getStartedCount,
+          signups: signupCount,
+          activated: activatedCount,
+          first_expense: expenseCount,
+          get_started_rate: landingCount > 0 ? (getStartedCount / landingCount * 100).toFixed(1) : "0",
+          signup_rate: getStartedCount > 0 ? (signupCount / getStartedCount * 100).toFixed(1) : "0",
+          activation_rate: signupCount > 0 ? (activatedCount / signupCount * 100).toFixed(1) : "0",
           referral_shared: referralShared.count || 0,
-          referral_copied: referralCopied.count || 0,
           invites_sent: invitesSent.count || 0,
-          join_copied: joinCopied.count || 0,
-          pwa_prompted: pwaPrompted.count || 0,
-          pwa_triggered: pwaTriggered.count || 0,
         });
       }
 
       case "acquisition_funnel": {
         const p = period || "30d";
         const pd = periodDate(p);
-        const [landing, signups, firstTrip, firstExpense] = await Promise.all([
+        const [landing, getStarted, signups, tripMembers, expensePayers] = await Promise.all([
           db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "landing_page_view").filter("created_at", "gt", pd),
+          db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "get_started_click").filter("created_at", "gt", pd),
           db.from("profiles").select("id", { count: "exact", head: true }).filter("created_at", "gt", pd),
           db.from("trip_members").select("user_id").filter("joined_at", "gt", pd),
           db.from("expenses").select("payer_id").filter("created_at", "gt", pd),
         ]);
 
-        const uniqueTripCreators = new Set((firstTrip.data || []).map((r: any) => r.user_id)).size;
-        const uniqueExpenseCreators = new Set((firstExpense.data || []).map((r: any) => r.payer_id)).size;
+        const activatedCount = new Set((tripMembers.data || []).map((r: any) => r.user_id)).size;
+        const expenseCount = new Set((expensePayers.data || []).map((r: any) => r.payer_id)).size;
 
         return json({
           stages: [
             { name: "Landing View", count: landing.count || 0 },
-            { name: "Signup", count: signups.count || 0 },
-            { name: "First Trip", count: uniqueTripCreators },
-            { name: "First Expense", count: uniqueExpenseCreators },
+            { name: "Get Started", count: getStarted.count || 0 },
+            { name: "Account Created", count: signups.count || 0 },
+            { name: "First Trip", count: activatedCount },
+            { name: "First Expense", count: expenseCount },
           ],
         });
       }
