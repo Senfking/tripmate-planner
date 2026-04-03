@@ -17,41 +17,73 @@ export function AcquisitionModule() {
         <DateRangeFilter value={period} onChange={setPeriod} />
       </div>
 
+      {/* KPI Cards */}
       {sl ? <AdminSkeleton rows={2} /> : stats ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
           <StatCard label="Landing Views" value={stats.landing_views} />
-          <StatCard label="Conversion %" value={`${stats.conversion_rate}%`} />
+          <StatCard label="Page → Intent" value={`${stats.get_started_rate}%`} />
+          <StatCard label="Intent → Signup" value={`${stats.signup_rate}%`} />
+          <StatCard label="Signup → Activated" value={`${stats.activation_rate}%`} />
           <StatCard label="Referral Shares" value={stats.referral_shared} />
-          <StatCard label="Codes Copied" value={stats.referral_copied} />
           <StatCard label="Invites Sent" value={stats.invites_sent} />
-          <StatCard label="Join Codes" value={stats.join_copied} />
-          <StatCard label="PWA Prompted" value={stats.pwa_prompted} />
-          <StatCard label="PWA Triggered" value={stats.pwa_triggered} />
         </div>
       ) : null}
 
+      {/* 5-Stage Funnel */}
       <SectionHeader>Conversion Funnel</SectionHeader>
       {fl ? <AdminSkeleton /> : funnel?.stages ? (
         <Card>
-          <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {funnel.stages.map((s: any, i: number) => {
-              const prev = i > 0 ? funnel.stages[i - 1].count : s.count;
-              const dropoff = prev > 0 ? ((1 - s.count / prev) * 100).toFixed(0) : "0";
+              const prev = i > 0 ? funnel.stages[i - 1].count : null;
+              const convPct = prev && prev > 0 ? ((s.count / prev) * 100).toFixed(1) : null;
+              const barWidth = funnel.stages[0].count > 0
+                ? Math.max(8, (s.count / funnel.stages[0].count) * 100)
+                : 100;
+
               return (
-                <React.Fragment key={s.name}>
-                  <div style={{ flex: 1, textAlign: "center", padding: 16, background: `${C.teal}${Math.max(10, 40 - i * 10).toString(16)}`, borderRadius: 6 }}>
-                    <div style={{ fontFamily: mono, fontSize: 22, color: C.text, fontWeight: 600 }}>{s.count}</div>
-                    <div style={{ fontFamily: sans, fontSize: 12, color: C.muted, marginTop: 4 }}>{s.name}</div>
-                    {i > 0 && <div style={{ fontFamily: mono, fontSize: 11, color: C.red, marginTop: 4 }}>-{dropoff}%</div>}
+                <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < funnel.stages.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                  {/* Stage number */}
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: `${C.teal}33`, color: C.tealLight,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: mono, fontSize: 13, fontWeight: 600, flexShrink: 0,
+                  }}>{i + 1}</div>
+
+                  {/* Bar + label */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+                      <span style={{ fontFamily: sans, fontSize: 13, color: C.text }}>{s.name}</span>
+                      <span style={{ fontFamily: mono, fontSize: 15, color: C.tealLight, fontWeight: 600 }}>{s.count}</span>
+                    </div>
+                    <div style={{ background: C.elevated, borderRadius: 3, height: 6, overflow: "hidden" }}>
+                      <div style={{
+                        width: `${barWidth}%`, height: "100%",
+                        background: `linear-gradient(90deg, ${C.teal}, ${C.tealLight})`,
+                        borderRadius: 3, transition: "width 0.4s ease",
+                      }} />
+                    </div>
                   </div>
-                  {i < funnel.stages.length - 1 && <div style={{ color: C.muted, padding: "0 8px", fontSize: 18 }}>→</div>}
-                </React.Fragment>
+
+                  {/* Conversion % from previous */}
+                  <div style={{ width: 64, textAlign: "right", flexShrink: 0 }}>
+                    {convPct !== null ? (
+                      <span style={{ fontFamily: mono, fontSize: 12, color: Number(convPct) >= 50 ? C.green : Number(convPct) >= 20 ? C.amber : C.red }}>
+                        {convPct}%
+                      </span>
+                    ) : (
+                      <span style={{ fontFamily: mono, fontSize: 11, color: C.muted }}>—</span>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
         </Card>
       ) : <EmptyState />}
 
+      {/* Traffic Sources */}
       <SectionHeader>Traffic Sources</SectionHeader>
       {ul ? <AdminSkeleton /> : !utm?.length ? (
         <Card><div style={{ color: C.muted, fontFamily: sans, fontSize: 13, padding: 16 }}>No UTM data yet — append ?utm_source=whatsapp to your referral links</div></Card>
@@ -74,6 +106,7 @@ export function AcquisitionModule() {
         </Card>
       )}
 
+      {/* Chart */}
       <SectionHeader>Acquisition Over Time</SectionHeader>
       {cl ? <AdminSkeleton /> : !chart?.length ? <EmptyState /> : (
         <Card>

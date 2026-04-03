@@ -208,22 +208,24 @@ Deno.serve(async (req) => {
       case "acquisition_funnel": {
         const p = period || "30d";
         const pd = periodDate(p);
-        const [landing, signups, firstTrip, firstExpense] = await Promise.all([
+        const [landing, getStarted, signups, tripMembers, expensePayers] = await Promise.all([
           db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "landing_page_view").filter("created_at", "gt", pd),
+          db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "get_started_click").filter("created_at", "gt", pd),
           db.from("profiles").select("id", { count: "exact", head: true }).filter("created_at", "gt", pd),
           db.from("trip_members").select("user_id").filter("joined_at", "gt", pd),
           db.from("expenses").select("payer_id").filter("created_at", "gt", pd),
         ]);
 
-        const uniqueTripCreators = new Set((firstTrip.data || []).map((r: any) => r.user_id)).size;
-        const uniqueExpenseCreators = new Set((firstExpense.data || []).map((r: any) => r.payer_id)).size;
+        const activatedCount = new Set((tripMembers.data || []).map((r: any) => r.user_id)).size;
+        const expenseCount = new Set((expensePayers.data || []).map((r: any) => r.payer_id)).size;
 
         return json({
           stages: [
             { name: "Landing View", count: landing.count || 0 },
-            { name: "Signup", count: signups.count || 0 },
-            { name: "First Trip", count: uniqueTripCreators },
-            { name: "First Expense", count: uniqueExpenseCreators },
+            { name: "Get Started", count: getStarted.count || 0 },
+            { name: "Account Created", count: signups.count || 0 },
+            { name: "First Trip", count: activatedCount },
+            { name: "First Expense", count: expenseCount },
           ],
         });
       }
