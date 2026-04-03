@@ -8,6 +8,7 @@ export function DashboardOverview() {
   const { data: kpis, isLoading: kpiLoading } = useAdminData("dashboard_kpis", { period });
   const { data: growth, isLoading: growthLoading } = useAdminData("user_growth_chart", { period });
   const { data: dauChart, isLoading: dauLoading } = useAdminData("dau_chart", { period });
+  const { data: landingChart, isLoading: landingLoading } = useAdminData("landing_views_chart", { period });
   const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
 
   const trend = (current: number, prior: number) => prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
@@ -28,6 +29,7 @@ export function DashboardOverview() {
           <StatCard label="Total Expenses" value={kpis.total_expenses} />
           <StatCard label="Open Feedback" value={kpis.open_feedback} />
           <StatCard label={`AI Calls (${period})`} value={kpis.ai_calls} trend={trend(kpis.ai_calls, kpis.ai_calls_prior)} />
+          <StatCard label={`Landing Views (${period})`} value={kpis.landing_views} trend={trend(kpis.landing_views, kpis.landing_views_prior)} />
           <StatCard label={`Referral Shares (${period})`} value={kpis.referral_shares} trend={trend(kpis.referral_shares, kpis.referral_shares_prior)} />
         </div>
       ) : null}
@@ -68,7 +70,27 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      <div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <Card>
+          <SectionHeader>Landing Page Visitors</SectionHeader>
+          {landingLoading ? <AdminSkeleton /> : !landingChart?.length ? <EmptyState /> : (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={landingChart}>
+                <defs>
+                  <linearGradient id="landingGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={C.amber} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={C.amber} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 10, fontFamily: mono }} tickFormatter={(v) => v.slice(5)} />
+                <YAxis tick={{ fill: C.muted, fontSize: 10, fontFamily: mono }} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: C.elevated, border: `1px solid ${C.border}`, fontFamily: mono, fontSize: 12, color: C.text }} />
+                <Area type="monotone" dataKey="count" stroke={C.amber} strokeWidth={2} fill="url(#landingGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+
         <Card>
           <SectionHeader>Recent Activity</SectionHeader>
           {actLoading ? <AdminSkeleton rows={8} /> : !activity?.length ? <EmptyState /> : (
