@@ -72,10 +72,12 @@ export function AdminSidebar({ active, onNavigate, userName }: {
         {unreadCount > 0 && (
           <span style={{
             position: "absolute", top: 4, left: 30,
-            background: ICE_BLUE, color: "#0b0e0e", fontFamily: mono,
-            fontSize: 9, fontWeight: 700, borderRadius: "50%",
-            width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: `0 0 6px rgba(96, 165, 250, 0.4)`,
+            background: "rgba(59, 130, 246, 0.15)", color: "rgba(96, 165, 250, 0.95)",
+            border: "1px solid rgba(59, 130, 246, 0.4)",
+            fontFamily: mono, fontSize: 9, fontWeight: 700,
+            borderRadius: "50%", width: 16, height: 16,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 8px rgba(59, 130, 246, 0.3)",
             lineHeight: 1,
           }}>
             {unreadCount > 99 ? "99+" : unreadCount}
