@@ -394,6 +394,15 @@ Deno.serve(async (req) => {
           (aiData.data || []).forEach((r: any) => { aiCounts[r.user_id] = (aiCounts[r.user_id] || 0) + 1; });
         }
 
+        // Get last_sign_in_at from auth for each user
+        let lastLogins: Record<string, string | null> = {};
+        if (userIds.length > 0) {
+          const authResults = await Promise.all(
+            userIds.map((uid: string) => db.auth.admin.getUserById(uid).then((r: any) => ({ uid, last: r.data?.user?.last_sign_in_at || null })).catch(() => ({ uid, last: null })))
+          );
+          authResults.forEach((r: any) => { lastLogins[r.uid] = r.last; });
+        }
+
         // Get referrer names
         const referrerIds = [...new Set((data || []).map((u: any) => u.referred_by).filter(Boolean))];
         let referrerNames: Record<string, string> = {};
@@ -406,12 +415,18 @@ Deno.serve(async (req) => {
           ...u,
           trips: tripCounts[u.id] || 0,
           ai_calls: aiCounts[u.id] || 0,
+          last_sign_in_at: lastLogins[u.id] || null,
           referrer_name: u.referred_by ? referrerNames[u.referred_by] || null : null,
         }));
 
         // Sort by trips or AI if requested
         if (sort === "trips") users.sort((a: any, b: any) => b.trips - a.trips);
         if (sort === "ai") users.sort((a: any, b: any) => b.ai_calls - a.ai_calls);
+        if (sort === "last_login") users.sort((a: any, b: any) => {
+          const aTime = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0;
+          const bTime = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0;
+          return bTime - aTime;
+        });
 
         return json({ users, total: count });
       }
