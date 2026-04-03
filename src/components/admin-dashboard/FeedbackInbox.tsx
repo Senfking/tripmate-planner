@@ -236,7 +236,7 @@ function FeedbackDetail({ item }: { item: any }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div style={{ fontFamily: sans, fontSize: 14, color: C.text, fontWeight: 600 }}>Feedback Detail</div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <select value={status} onChange={(e) => updateStatus(e.target.value)}
             style={{ padding: "4px 8px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: statusColor, fontFamily: mono, fontSize: 11 }}>
             <option value="new">Open</option>
@@ -244,15 +244,16 @@ function FeedbackDetail({ item }: { item: any }) {
             <option value="done">Done</option>
             <option value="dismissed">Dismissed</option>
           </select>
-          <button onClick={copyPrompt} style={{ padding: "4px 10px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: copied ? C.green : C.tealLight, fontFamily: mono, fontSize: 11, cursor: "pointer" }}>
+          <button onClick={copyPrompt} style={{ padding: "4px 10px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: copied ? C.green : C.tealLight, fontFamily: mono, fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
             {copied ? "Copied!" : "Copy as Lovable prompt"}
           </button>
           <button onClick={handleDelete} onBlur={() => setConfirmDelete(false)} style={{
             padding: "4px 10px", background: confirmDelete ? C.red : C.elevated,
             border: `1px solid ${confirmDelete ? C.red : C.border}`, borderRadius: 4,
             color: confirmDelete ? "#fff" : C.red, fontFamily: mono, fontSize: 11, cursor: "pointer",
+            whiteSpace: "nowrap", minWidth: 90,
           }}>
-            {deleteMutation.isPending ? "Deleting…" : confirmDelete ? "Confirm delete" : "Delete"}
+            {deleteMutation.isPending ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
           </button>
         </div>
       </div>
