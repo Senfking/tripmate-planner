@@ -16,6 +16,12 @@ export default function AuthCallback() {
   const redirectTo = safeRedirect(searchParams.get("redirect"));
   const handled = useRef(false);
 
+  // Reset scroll position immediately to prevent visual glitch when
+  // transitioning from ReferralLanding's fixed-position scroll container
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     if (loading || !user || handled.current) return;
     handled.current = true;
@@ -32,6 +38,7 @@ export default function AuthCallback() {
           localStorage.removeItem("junto_referral_code");
         }
       }
+      window.scrollTo(0, 0);
       navigate(redirectTo, { replace: true });
     };
 
@@ -39,7 +46,7 @@ export default function AuthCallback() {
   }, [user, loading, navigate, redirectTo]);
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center">
+    <div className="fixed inset-0 flex items-center justify-center bg-background">
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
