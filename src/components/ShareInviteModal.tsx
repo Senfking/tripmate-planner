@@ -247,10 +247,13 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       const blob = await res.blob();
       trackEvent("export_downloaded", { trip_id: tripId, format: fn.includes("ics") ? "ics" : "csv" }, user?.id);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
+      const objUrl = URL.createObjectURL(blob);
+      a.href = objUrl;
       a.download = filename;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(a.href);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objUrl), 60_000);
     } catch {
       toast.error("Export failed");
     } finally {
