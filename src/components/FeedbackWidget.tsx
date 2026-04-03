@@ -42,6 +42,7 @@ export function FeedbackWidget() {
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Draggable vertical tab state — vertical drag only
   const [tabY, setTabY] = useState<number | null>(null);
@@ -68,8 +69,20 @@ export function FeedbackWidget() {
       });
     };
     window.addEventListener("resize", onResize);
+
+    // Track mobile keyboard via visualViewport
+    const vv = window.visualViewport;
+    const updateKeyboard = () => {
+      if (vv) {
+        const kbH = Math.max(0, window.innerHeight - vv.height);
+        setKeyboardHeight(kbH);
+      }
+    };
+    vv?.addEventListener("resize", updateKeyboard);
+
     return () => {
       window.removeEventListener("resize", onResize);
+      vv?.removeEventListener("resize", updateKeyboard);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, [getDefaultY]);
@@ -267,14 +280,12 @@ export function FeedbackWidget() {
   };
 
   const handleTextareaFocus = () => {
-    if (!isMobile) {
-      setTimeout(() => {
-        textareaRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }, 300);
-    }
+    setTimeout(() => {
+      textareaRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 350);
   };
 
   const handleSubmit = async () => {
@@ -647,7 +658,7 @@ export function FeedbackWidget() {
 
       {isMobile ? (
         <Drawer open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true); }} repositionInputs={false}>
-          <DrawerContent className="flex flex-col" style={{ maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - 20px)" }}>
+          <DrawerContent className="flex flex-col" style={{ maxHeight: `calc(100dvh - env(safe-area-inset-top, 0px) - 20px - ${keyboardHeight}px)`, transition: "max-height 0.15s ease-out" }}>
             <DrawerHeader className="shrink-0">
               <DrawerTitle>{title || "Feedback"}</DrawerTitle>
             </DrawerHeader>
