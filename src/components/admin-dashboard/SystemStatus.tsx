@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
+import { useAuth } from "@/contexts/AuthContext";
 import { useAdminData } from "@/hooks/useAdminQuery";
 import { Card, AdminSkeleton, StatusPill, EmptyState, SectionHeader, C, mono, sans } from "./shared";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
