@@ -340,6 +340,45 @@ export function SystemStatus() {
           </Card>
         </div>
       ) : null}
+
+      {/* Debug: test error button */}
+      <DebugTestErrorButton />
+    </div>
+  );
+}
+
+function DebugTestErrorButton() {
+  const { user } = useAuth();
+  const [sent, setSent] = useState(false);
+
+  const handleClick = async () => {
+    await trackEvent("app_error", {
+      type: "test_error",
+      message: "Manual test error triggered from admin dashboard",
+      severity: "medium",
+      route: "/app/admin",
+    }, user?.id);
+    setSent(true);
+    setTimeout(() => setSent(false), 4000);
+  };
+
+  return (
+    <div style={{ marginTop: 32, textAlign: "right" }}>
+      <button
+        onClick={handleClick}
+        style={{
+          fontFamily: mono, fontSize: 10, color: C.muted, background: "transparent",
+          border: `1px solid ${C.border}`, borderRadius: 4, padding: "4px 10px", cursor: "pointer",
+          opacity: 0.6,
+        }}
+      >
+        Trigger test error
+      </button>
+      {sent && (
+        <div style={{ fontFamily: mono, fontSize: 10, color: C.green, marginTop: 4 }}>
+          Test error sent — check analytics_events table
+        </div>
+      )}
     </div>
   );
 }
