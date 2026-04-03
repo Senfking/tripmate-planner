@@ -658,7 +658,7 @@ export function FeedbackWidget() {
 
       {isMobile ? (
         <Drawer open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true); }} repositionInputs={false}>
-          <DrawerContent className="flex flex-col" style={{ maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - 20px)" }}>
+          <DrawerContent className="flex flex-col" style={{ maxHeight: `calc(100dvh - env(safe-area-inset-top, 0px) - 20px - ${keyboardHeight}px)`, transition: "max-height 0.15s ease-out" }}>
             <DrawerHeader className="shrink-0">
               <DrawerTitle>{title || "Feedback"}</DrawerTitle>
             </DrawerHeader>
