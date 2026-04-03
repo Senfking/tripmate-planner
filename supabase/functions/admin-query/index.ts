@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
           totalExpenses,
           openFeedback,
           aiCalls, aiCallsPrior,
-          referralShares, referralSharesPrior
+          referralShares, referralSharesPrior,
+          landingViews, landingViewsPrior
         ] = await Promise.all([
           db.from("profiles").select("id", { count: "exact", head: true }),
           db.from("profiles").select("id", { count: "exact", head: true })
@@ -116,6 +117,13 @@ Deno.serve(async (req) => {
             .eq("event_name", "referral_link_shared")
             .filter("created_at", "gt", priorPeriodDate(p))
             .filter("created_at", "lte", periodDate(p)),
+          db.from("analytics_events").select("id", { count: "exact", head: true })
+            .eq("event_name", "landing_page_view")
+            .filter("created_at", "gt", periodDate(p)),
+          db.from("analytics_events").select("id", { count: "exact", head: true })
+            .eq("event_name", "landing_page_view")
+            .filter("created_at", "gt", priorPeriodDate(p))
+            .filter("created_at", "lte", periodDate(p)),
         ]);
 
         // Count distinct active trip IDs
@@ -133,6 +141,8 @@ Deno.serve(async (req) => {
           ai_calls_prior: aiCallsPrior.count || 0,
           referral_shares: referralShares.count || 0,
           referral_shares_prior: referralSharesPrior.count || 0,
+          landing_views: landingViews.count || 0,
+          landing_views_prior: landingViewsPrior.count || 0,
         });
       }
 
@@ -140,6 +150,23 @@ Deno.serve(async (req) => {
         const p = period || "30d";
         const { data } = await db.from("profiles")
           .select("created_at")
+          .filter("created_at", "gt", periodDate(p))
+          .order("created_at", { ascending: true });
+
+        const daily: Record<string, number> = {};
+        (data || []).forEach((r: any) => {
+          const day = r.created_at.substring(0, 10);
+          daily[day] = (daily[day] || 0) + 1;
+        });
+
+        return json(Object.entries(daily).map(([date, count]) => ({ date, count })));
+      }
+
+      case "landing_views_chart": {
+        const p = period || "30d";
+        const { data } = await db.from("analytics_events")
+          .select("created_at")
+          .eq("event_name", "landing_page_view")
           .filter("created_at", "gt", periodDate(p))
           .order("created_at", { ascending: true });
 
