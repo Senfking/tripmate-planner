@@ -32,6 +32,8 @@ const NAV: { section: string; items: { key: AdminModule; label: string }[] }[] =
   ]},
 ];
 
+const ICE_BLUE = "#38bdf8";
+
 export function AdminSidebar({ active, onNavigate, userName }: {
   active: AdminModule;
   onNavigate: (m: AdminModule) => void;
@@ -39,6 +41,8 @@ export function AdminSidebar({ active, onNavigate, userName }: {
 }) {
   const { data: unreadData } = useAdminData("notifications_unread_count", {}, { refetchInterval: 10000 });
   const unreadCount = (unreadData as any)?.count ?? 0;
+  const { data: feedbackData } = useAdminData("feedback_unread_count", {}, { refetchInterval: 60000 });
+  const feedbackUnread = (feedbackData as any)?.count ?? 0;
 
   return (
     <div style={{

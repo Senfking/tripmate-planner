@@ -1155,6 +1155,13 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      case "feedback_unread_count": {
+        const { count } = await db.from("feedback")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["new", "reviewing"]);
+        return json({ count: count || 0 });
+      }
+
       case "notifications_mark_all_read": {
         const { error: updateErr } = await db.from("admin_notifications")
           .update({ read: true, read_at: new Date().toISOString() })
