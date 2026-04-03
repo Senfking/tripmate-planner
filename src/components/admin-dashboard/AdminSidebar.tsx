@@ -32,7 +32,7 @@ const NAV: { section: string; items: { key: AdminModule; label: string }[] }[] =
   ]},
 ];
 
-const ICE_BLUE = "rgba(59, 130, 246, 0.75)";
+const ICE_BLUE = "rgba(96, 165, 250, 0.85)";
 
 export function AdminSidebar({ active, onNavigate, userName }: {
   active: AdminModule;
