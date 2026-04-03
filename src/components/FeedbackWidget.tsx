@@ -69,8 +69,20 @@ export function FeedbackWidget() {
       });
     };
     window.addEventListener("resize", onResize);
+
+    // Track mobile keyboard via visualViewport
+    const vv = window.visualViewport;
+    const updateKeyboard = () => {
+      if (vv) {
+        const kbH = Math.max(0, window.innerHeight - vv.height);
+        setKeyboardHeight(kbH);
+      }
+    };
+    vv?.addEventListener("resize", updateKeyboard);
+
     return () => {
       window.removeEventListener("resize", onResize);
+      vv?.removeEventListener("resize", updateKeyboard);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, [getDefaultY]);
