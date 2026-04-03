@@ -32,6 +32,7 @@ export function AllUsersModule() {
           <select value={sort} onChange={(e) => setSort(e.target.value)}
             style={{ padding: "8px 12px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontFamily: mono, fontSize: 12 }}>
             <option value="created_at">Joined</option>
+            <option value="last_login">Last Login</option>
             <option value="trips">Trips</option>
             <option value="ai">AI Usage</option>
           </select>
