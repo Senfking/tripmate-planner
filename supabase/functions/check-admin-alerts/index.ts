@@ -27,70 +27,121 @@ Deno.serve(async (req) => {
       properties: Record<string, unknown>;
     } | null = null;
 
+    let whatsappMessage = "";
+
     if (trigger === "feedback") {
-      const severity = body.severity === "critical" ? "critical" : body.severity === "high" ? "warning" : "info";
+      const severity =
+        body.severity === "critical"
+          ? "critical"
+          : body.severity === "high"
+            ? "warning"
+            : "info";
+      const feedbackBody = body.body || "No message";
+      const category = body.category || "general";
+
       notification = {
         type: "new_feedback",
         title: "New feedback received",
-        body: body.body
-          ? `${body.category ? `[${body.category}] ` : ""}${body.body}`
-          : `New ${body.category || "general"} feedback submitted`,
+        body: feedbackBody
+          ? `${category ? `[${category}] ` : ""}${feedbackBody}`
+          : `New ${category} feedback submitted`,
         severity,
         properties: {
           feedback_id: body.feedback_id,
-          category: body.category,
+          category,
           ai_severity: body.severity,
         },
       };
+
+      whatsappMessage = `🔔 New Junto feedback\nCategory: ${category}\n${feedbackBody}`;
     } else if (trigger === "new_user") {
+      const displayName = body.display_name || "Unknown";
+      const referredSuffix = body.referred_by ? " (referred)" : "";
+
       notification = {
         type: "new_user",
         title: "New user signed up",
-        body: body.display_name
-          ? `${body.display_name} just joined`
-          : "A new user signed up",
+        body: `${displayName} just signed up`,
         severity: "info",
         properties: {
           user_id: body.user_id,
-          display_name: body.display_name,
+          display_name: displayName,
           referred_by: body.referred_by,
         },
       };
+
+      whatsappMessage = `👤 New Junto user\n${displayName} just signed up${referredSuffix}`;
+    } else if (trigger === "error_spike") {
+      const count = body.count ?? 0;
+
+      notification = {
+        type: "error_spike",
+        title: "Error spike detected",
+        body: `${count} errors in the last hour`,
+        severity: "critical",
+        properties: {
+          count,
+          window: body.window,
+        },
+      };
+
+      whatsappMessage = `🚨 Error spike detected on Junto\n${count} errors in the last hour`;
+    } else if (trigger === "daily_digest") {
+      const summary = body.summary || "No summary available";
+
+      notification = {
+        type: "daily_digest",
+        title: "Daily digest",
+        body: summary,
+        severity: "info",
+        properties: {
+          summary,
+          generated_at: body.generated_at,
+        },
+      };
+
+      whatsappMessage = `📊 Junto daily digest\n${summary}`;
     } else {
       return new Response(
         JSON.stringify({ error: `Unknown trigger: ${trigger}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    const { error } = await db.from("admin_notifications").insert(notification);
+    // Insert notification
+    const { data: inserted, error } = await db
+      .from("admin_notifications")
+      .insert(notification)
+      .select("id")
+      .single();
 
     if (error) {
       console.error("Insert error:", error);
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Send WhatsApp notification for critical/warning items
+    // Send WhatsApp via Twilio
     const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const twilioAuth = Deno.env.get("TWILIO_AUTH_TOKEN");
     const twilioFrom = Deno.env.get("TWILIO_WHATSAPP_FROM");
     const twilioTo = Deno.env.get("TWILIO_WHATSAPP_TO");
+    let whatsappSent = false;
 
-    if (
-      twilioSid && twilioAuth && twilioFrom && twilioTo &&
-      (notification.severity === "critical" || notification.severity === "warning")
-    ) {
+    if (twilioSid && twilioAuth && twilioFrom && twilioTo && whatsappMessage) {
       try {
-        const msg = `🚨 ${notification.title}\n${notification.body}`;
         const params = new URLSearchParams({
-          From: twilioFrom,
-          To: twilioTo,
-          Body: msg,
+          From: `whatsapp:${twilioFrom}`,
+          To: `whatsapp:${twilioTo}`,
+          Body: whatsappMessage,
         });
-        await fetch(
+
+        const res = await fetch(
           `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
           {
             method: "POST",
@@ -101,20 +152,43 @@ Deno.serve(async (req) => {
             body: params.toString(),
           }
         );
+
+        if (res.ok) {
+          whatsappSent = true;
+          console.log("WhatsApp sent for trigger:", trigger);
+        } else {
+          const errBody = await res.text();
+          console.error("Twilio error:", res.status, errBody);
+        }
       } catch (e) {
         console.error("WhatsApp send failed:", e);
       }
+    } else {
+      console.warn("Twilio secrets missing, skipping WhatsApp");
+    }
+
+    // Mark notification with WhatsApp status
+    if (whatsappSent && inserted?.id) {
+      await db
+        .from("admin_notifications")
+        .update({
+          whatsapp_sent: true,
+          whatsapp_sent_at: new Date().toISOString(),
+        })
+        .eq("id", inserted.id);
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: true, whatsapp_sent: whatsappSent }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   } catch (e) {
     console.error("check-admin-alerts error:", e);
-    return new Response(
-      JSON.stringify({ error: e.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
