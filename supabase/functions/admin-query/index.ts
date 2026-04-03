@@ -819,19 +819,35 @@ Deno.serve(async (req) => {
       }
 
       case "feedback_list": {
-        const { filter: statusFilter, sort: sortBy } = params;
+        const { status_filter, category_filter, severity_filter, filter: legacyFilter } = params;
         let query = db.from("feedback").select("*").order("created_at", { ascending: false }).limit(200);
 
-        if (statusFilter === "unresolved") {
+        // New multi-filter approach
+        const sf = status_filter || legacyFilter || "all";
+        if (sf === "unresolved") {
           query = query.or("status.is.null,status.neq.done");
-        } else if (statusFilter === "critical") {
+        } else if (sf === "new") {
+          query = query.or("status.is.null,status.eq.new");
+        } else if (sf === "reviewing") {
+          query = query.eq("status", "reviewing");
+        } else if (sf === "done") {
+          query = query.eq("status", "done");
+        } else if (sf === "dismissed") {
+          query = query.eq("status", "dismissed");
+        }
+        // Legacy filter compat
+        else if (sf === "critical") {
           query = query.eq("ai_severity", "critical");
-        } else if (statusFilter === "high") {
+        } else if (sf === "high") {
           query = query.eq("ai_severity", "high");
-        } else if (statusFilter === "bugs") {
-          query = query.eq("ai_category", "bug");
-        } else if (statusFilter === "suggestions") {
-          query = query.eq("ai_category", "suggestion");
+        }
+
+        if (category_filter && category_filter !== "all") {
+          query = query.eq("ai_category", category_filter);
+        }
+
+        if (severity_filter && severity_filter !== "all") {
+          query = query.eq("ai_severity", severity_filter);
         }
 
         const { data } = await query;

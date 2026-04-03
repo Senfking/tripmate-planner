@@ -125,3 +125,17 @@ export function Card({ children, style }: { children: React.ReactNode; style?: R
     </div>
   );
 }
+
+// ─── Admin Navigation Context ───
+export type AdminModule =
+  | "dashboard" | "acquisition" | "ai_usage"
+  | "all_users" | "retention" | "referrals"
+  | "engagement" | "feature_adoption"
+  | "feedback_inbox"
+  | "system_status"
+  | "weekly_digest";
+
+export const AdminNavContext = React.createContext<{
+  navigateTo: (module: AdminModule, params?: Record<string, string>) => void;
+  navParams: Record<string, string>;
+}>({ navigateTo: () => {}, navParams: {} });

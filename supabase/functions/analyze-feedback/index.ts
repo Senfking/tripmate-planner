@@ -213,6 +213,7 @@ Return ONLY valid JSON with no other text:
   "severity": "critical|high|medium|low",
   "ai_category": "ui|logic|performance|content|feature|other",
   "fix": "string (1-2 sentences on how to address this or why this feature would be valuable)",
+  "prompt": "string (A clean, concise Lovable-ready prompt that describes the fix needed. Write it as a direct instruction to a developer. Do not include the original user text. Use the analysis to write a clear, actionable prompt in 2-4 sentences. Include the route and what specifically needs to change.)",
   "user_message": "string (Talk like a chill 20-something texting a friend. Rules: Mention Oliver (the founder) by name. NEVER use em dashes or long dashes, use commas or periods instead. No corporate speak. Max 2 sentences. For bugs: acknowledge it casually, say Oliver's on it. For suggestions: be real about whether it's a cool idea. Keep it warm but not cringe. Never say the word 'feedback'. One emoji max, only if it feels natural.)"
 }`;
 
@@ -268,6 +269,7 @@ Return ONLY valid JSON with no other text:
         ai_severity: result.severity,
         ai_category: result.ai_category,
         ai_fix: result.fix,
+        ai_prompt: result.prompt || null,
       })
       .eq("id", feedbackId);
 
