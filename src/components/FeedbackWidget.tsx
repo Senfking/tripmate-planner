@@ -42,6 +42,7 @@ export function FeedbackWidget() {
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Draggable vertical tab state — vertical drag only
   const [tabY, setTabY] = useState<number | null>(null);
