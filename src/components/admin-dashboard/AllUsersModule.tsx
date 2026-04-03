@@ -32,6 +32,7 @@ export function AllUsersModule() {
           <select value={sort} onChange={(e) => setSort(e.target.value)}
             style={{ padding: "8px 12px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontFamily: mono, fontSize: 12 }}>
             <option value="created_at">Joined</option>
+            <option value="last_login">Last Login</option>
             <option value="trips">Trips</option>
             <option value="ai">AI Usage</option>
           </select>
@@ -40,7 +41,7 @@ export function AllUsersModule() {
         {isLoading ? <AdminSkeleton rows={10} /> : !users.length ? <EmptyState /> : (
           <table style={{ width: "100%", fontFamily: sans, fontSize: 13, borderCollapse: "collapse" }}>
             <thead><tr style={{ color: C.muted, fontFamily: mono, fontSize: 10, textTransform: "uppercase" as const }}>
-              {["User", "Joined", "Source", "Trips", "AI", "Tier", "Stripe"].map(h => (
+              {["User", "Joined", "Last Login", "Source", "Trips", "AI", "Tier", "Stripe"].map(h => (
                 <th key={h} style={{ textAlign: "left", padding: 8 }}>{h}</th>
               ))}
             </tr></thead>
@@ -55,6 +56,7 @@ export function AllUsersModule() {
                     {u.display_name || "—"}
                   </td>
                   <td style={{ padding: 8, color: C.muted, fontFamily: mono, fontSize: 11 }}>{u.created_at?.slice(0, 10)}</td>
+                  <td style={{ padding: 8, color: u.last_sign_in_at ? C.text : C.muted, fontFamily: mono, fontSize: 11 }}>{u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : "Never"}</td>
                   <td style={{ padding: 8 }}>{u.referred_by ? <StatusPill label="Referred" color={C.green} /> : <StatusPill label="Organic" color={C.muted} />}</td>
                   <td style={{ padding: 8, color: C.text, fontFamily: mono }}>{u.trips}</td>
                   <td style={{ padding: 8, color: C.text, fontFamily: mono }}>{u.ai_calls}</td>
