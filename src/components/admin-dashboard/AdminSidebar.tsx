@@ -32,7 +32,7 @@ const NAV: { section: string; items: { key: AdminModule; label: string }[] }[] =
   ]},
 ];
 
-const ICE_BLUE = "rgba(59, 130, 246, 0.75)";
+const ICE_BLUE = "rgba(96, 165, 250, 0.85)";
 
 export function AdminSidebar({ active, onNavigate, userName }: {
   active: AdminModule;
@@ -71,11 +71,12 @@ export function AdminSidebar({ active, onNavigate, userName }: {
         </span>
         {unreadCount > 0 && (
           <span style={{
-            position: "absolute", top: 8, left: 28,
+            position: "absolute", top: 4, left: 30,
             background: ICE_BLUE, color: "#0b0e0e", fontFamily: mono,
-            fontSize: 10, fontWeight: 700, borderRadius: "50%",
-            width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: `0 0 8px ${ICE_BLUE}55`,
+            fontSize: 9, fontWeight: 700, borderRadius: "50%",
+            width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: `0 0 6px rgba(96, 165, 250, 0.4)`,
+            lineHeight: 1,
           }}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
@@ -110,7 +111,7 @@ export function AdminSidebar({ active, onNavigate, userName }: {
                   {item.label}
                   {item.key === "feedback_inbox" && feedbackUnread > 0 && (
                     <span style={{
-                      marginLeft: 8,
+                      marginLeft: 6,
                       background: ICE_BLUE,
                       color: "#0b0e0e",
                       fontFamily: mono,
@@ -120,7 +121,13 @@ export function AdminSidebar({ active, onNavigate, userName }: {
                       padding: "1px 6px",
                       minWidth: 18,
                       textAlign: "center" as const,
-                      display: "inline-block",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      lineHeight: 1,
+                      verticalAlign: "middle",
+                      position: "relative" as const,
+                      top: -1,
                     }}>
                       {feedbackUnread > 99 ? "99+" : feedbackUnread}
                     </span>
