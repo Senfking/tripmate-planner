@@ -360,7 +360,9 @@ export function FeedbackWidget() {
 
       if (insertErr || !inserted) {
         console.error("Feedback insert failed after retries:", insertErr);
-        toast.error("Something went wrong. Please try again.");
+        toast.error(insertErr?.message?.includes("row-level security")
+          ? "Permission error — please log out and back in."
+          : "Something went wrong. Please try again.");
         setSubmitting(false);
         return;
       }
