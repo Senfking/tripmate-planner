@@ -363,6 +363,7 @@ export type Database = {
           hint_rating: string | null
           id: string
           rating: number
+          read_at: string | null
           route: string | null
           screenshot_url: string | null
           status: string | null
@@ -381,6 +382,7 @@ export type Database = {
           hint_rating?: string | null
           id?: string
           rating?: number
+          read_at?: string | null
           route?: string | null
           screenshot_url?: string | null
           status?: string | null
@@ -399,6 +401,7 @@ export type Database = {
           hint_rating?: string | null
           id?: string
           rating?: number
+          read_at?: string | null
           route?: string | null
           screenshot_url?: string | null
           status?: string | null
