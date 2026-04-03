@@ -168,6 +168,7 @@ export function FeedbackInbox() {
 
 function FeedbackDetail({ item }: { item: any }) {
   const updateMutation = useAdminMutation("feedback_update");
+  const reanalyzeMutation = useAdminMutation("feedback_reanalyze");
   const deleteMutation = useAdminMutation("feedback_delete");
   const { navigateTo } = useContext(AdminNavContext);
   const [notes, setNotes] = useState(item.admin_notes || "");
@@ -277,7 +278,23 @@ function FeedbackDetail({ item }: { item: any }) {
         </Card>
       )}
 
-      <SectionHeader>AI Analysis</SectionHeader>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <SectionHeader>AI Analysis</SectionHeader>
+        {!item.ai_summary && (
+          <button
+            onClick={() => reanalyzeMutation.mutate({ feedback_id: item.id })}
+            disabled={reanalyzeMutation.isPending}
+            style={{
+              padding: "4px 10px", background: C.elevated, border: `1px solid ${C.border}`,
+              borderRadius: 4, color: reanalyzeMutation.isPending ? C.muted : C.tealLight,
+              fontFamily: mono, fontSize: 11, cursor: reanalyzeMutation.isPending ? "default" : "pointer",
+              opacity: reanalyzeMutation.isPending ? 0.6 : 1,
+            }}
+          >
+            {reanalyzeMutation.isPending ? "Analyzing..." : "Run AI Analysis"}
+          </button>
+        )}
+      </div>
       <Card style={{ marginBottom: 16 }}>
         {[
           { label: "Summary", value: item.ai_summary },

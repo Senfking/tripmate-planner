@@ -262,7 +262,7 @@ Return ONLY valid JSON with no other text:
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, serviceKey);
 
-    await sb
+    const { error: updateError } = await sb
       .from("feedback")
       .update({
         ai_summary: result.summary,
@@ -272,6 +272,12 @@ Return ONLY valid JSON with no other text:
         ai_prompt: result.prompt || null,
       })
       .eq("id", feedbackId);
+
+    if (updateError) {
+      console.error("Failed to update feedback with AI analysis:", updateError);
+    } else {
+      console.log("AI analysis saved for feedback:", feedbackId);
+    }
 
     // Enrich the existing admin notification (created by DB trigger or frontend
     // fallback via check-admin-alerts) with AI analysis data.
