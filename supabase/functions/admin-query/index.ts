@@ -645,6 +645,38 @@ Deno.serve(async (req) => {
         return json(chain);
       }
 
+      case "dau_chart": {
+        const p = period || "30d";
+        const pd = periodDate(p);
+        const [expenses, items, fb, analytics] = await Promise.all([
+          db.from("expenses").select("payer_id, created_at").filter("created_at", "gt", pd),
+          db.from("itinerary_items").select("created_by, created_at").filter("created_at", "gt", pd),
+          db.from("feedback").select("user_id, created_at").filter("created_at", "gt", pd),
+          db.from("analytics_events").select("user_id, created_at").filter("created_at", "gt", pd),
+        ]);
+
+        const allData = [
+          ...(expenses.data || []).map((r: any) => ({ user: r.payer_id, created_at: r.created_at })),
+          ...(items.data || []).map((r: any) => ({ user: r.created_by, created_at: r.created_at })),
+          ...(fb.data || []).map((r: any) => ({ user: r.user_id, created_at: r.created_at })),
+          ...(analytics.data || []).map((r: any) => ({ user: r.user_id, created_at: r.created_at })),
+        ];
+
+        const daily: Record<string, Set<string>> = {};
+        allData.forEach((r) => {
+          if (!r.user || !r.created_at) return;
+          const day = r.created_at.substring(0, 10);
+          if (!daily[day]) daily[day] = new Set();
+          daily[day].add(r.user);
+        });
+
+        return json(
+          Object.entries(daily)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, users]) => ({ date, dau: users.size }))
+        );
+      }
+
       case "engagement_dau_wau_mau": {
         const now = new Date();
         const today = now.toISOString().substring(0, 10);

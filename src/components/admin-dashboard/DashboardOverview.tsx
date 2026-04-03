@@ -7,6 +7,7 @@ export function DashboardOverview() {
   const [period, setPeriod] = useState<Period>("30d");
   const { data: kpis, isLoading: kpiLoading } = useAdminData("dashboard_kpis", { period });
   const { data: growth, isLoading: growthLoading } = useAdminData("user_growth_chart", { period });
+  const { data: dauChart, isLoading: dauLoading } = useAdminData("dau_chart", { period });
   const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
 
   const trend = (current: number, prior: number) => prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
