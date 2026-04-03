@@ -141,6 +141,8 @@ Deno.serve(async (req) => {
           ai_calls_prior: aiCallsPrior.count || 0,
           referral_shares: referralShares.count || 0,
           referral_shares_prior: referralSharesPrior.count || 0,
+          landing_views: landingViews.count || 0,
+          landing_views_prior: landingViewsPrior.count || 0,
         });
       }
 
