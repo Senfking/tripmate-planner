@@ -114,22 +114,23 @@ export function AdminSidebar({ active, onNavigate, userName }: {
                   {item.key === "feedback_inbox" && feedbackUnread > 0 && (
                     <span style={{
                       marginLeft: 6,
-                      background: ICE_BLUE,
-                      color: "#0b0e0e",
+                      background: "rgba(59, 130, 246, 0.15)",
+                      color: "rgba(96, 165, 250, 0.95)",
+                      border: "1px solid rgba(59, 130, 246, 0.4)",
                       fontFamily: mono,
                       fontSize: 10,
                       fontWeight: 700,
-                      borderRadius: 10,
-                      padding: "1px 6px",
-                      minWidth: 18,
+                      borderRadius: 50,
+                      padding: "2px 7px",
+                      minWidth: 20,
+                      height: 20,
                       textAlign: "center" as const,
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
                       lineHeight: 1,
                       verticalAlign: "middle",
-                      position: "relative" as const,
-                      top: -1,
+                      boxShadow: "0 0 8px rgba(59, 130, 246, 0.3)",
                     }}>
                       {feedbackUnread > 99 ? "99+" : feedbackUnread}
                     </span>
