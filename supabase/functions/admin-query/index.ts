@@ -919,6 +919,14 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      case "feedback_delete": {
+        const { feedback_id } = params;
+        if (!feedback_id) return err("feedback_id required");
+        const { error } = await db.from("feedback").delete().eq("id", feedback_id);
+        if (error) return err(error.message);
+        return json({ success: true });
+      }
+
       case "profile_update_notes": {
         const { user_id, admin_notes } = params;
         if (!user_id) return err("user_id required");
@@ -1189,6 +1197,24 @@ Deno.serve(async (req) => {
           .update({ read: true, read_at: new Date().toISOString() })
           .eq("id", id);
         if (updateErr) return err(updateErr.message);
+        return json({ success: true });
+      }
+
+      case "feedback_unread_count": {
+        const { count } = await db.from("feedback")
+          .select("id", { count: "exact", head: true })
+          .is("read_at", null);
+        return json({ count: count || 0 });
+      }
+
+      case "feedback_mark_read": {
+        const { feedback_id } = params;
+        if (!feedback_id) return err("feedback_id required");
+        const { error } = await db.from("feedback")
+          .update({ read_at: new Date().toISOString() })
+          .eq("id", feedback_id)
+          .is("read_at", null);
+        if (error) return err(error.message);
         return json({ success: true });
       }
 

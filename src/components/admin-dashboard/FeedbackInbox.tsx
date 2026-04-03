@@ -73,6 +73,7 @@ export function FeedbackInbox() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const markReadMutation = useAdminMutation("feedback_mark_read");
 
   const { data: items, isLoading } = useAdminData("feedback_list", {
     status_filter: statusFilter,
@@ -81,6 +82,13 @@ export function FeedbackInbox() {
   }, { refetchInterval: 15000 });
 
   const selected = selectedId ? (items || []).find((f: any) => f.id === selectedId) : null;
+
+  const handleSelect = (f: any) => {
+    setSelectedId(f.id);
+    if (!f.read_at) {
+      markReadMutation.mutate({ feedback_id: f.id });
+    }
+  };
 
   return (
     <PanelGroup direction="horizontal" style={{ height: "calc(100vh - 40px)" }}>
@@ -96,27 +104,43 @@ export function FeedbackInbox() {
 
           {isLoading ? <AdminSkeleton rows={10} /> : !items?.length ? <EmptyState message="No feedback matches filter" /> : (
             items.map((f: any) => {
+              const isUnread = !f.read_at;
               const sevColor = f.ai_severity === "critical" ? C.red : f.ai_severity === "high" ? C.amber : C.muted;
               const statusLabel = f.status === "done" ? "done" : f.status === "reviewing" ? "reviewing" : f.status === "dismissed" ? "dismissed" : "open";
               const statusColor = f.status === "done" ? C.green : f.status === "reviewing" ? C.amber : f.status === "dismissed" ? C.muted : C.blue;
               return (
-                <div key={f.id} onClick={() => setSelectedId(f.id)} style={{
+                <div key={f.id} onClick={() => handleSelect(f)} style={{
                   padding: "10px 12px", borderBottom: `1px solid ${C.border}`, cursor: "pointer",
                   background: selectedId === f.id ? C.elevated : "transparent",
+                  display: "flex", gap: 10, alignItems: "flex-start",
                 }}>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-                    {f.ai_severity && <StatusPill label={f.ai_severity} color={sevColor} />}
-                    {f.ai_category && <StatusPill label={f.ai_category} color={C.blue} />}
-                    <span style={{ marginLeft: "auto" }}>
-                      <StatusPill label={statusLabel} color={statusColor} />
-                    </span>
-                  </div>
-                  <div style={{ fontFamily: sans, fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {(f.ai_summary || f.body || "").substring(0, 80) || `Rating: ${f.rating}`}
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: C.muted, marginTop: 2 }}>
-                    <span>{f.route || "—"}</span>
-                    <span>{f.display_name || "Unknown"} · {timeAgo(f.created_at)}</span>
+                  {/* Unread dot */}
+                  <div style={{
+                    width: 7, height: 7, borderRadius: "50%", flexShrink: 0, marginTop: 6,
+                    background: isUnread ? "rgba(96, 165, 250, 0.9)" : "transparent",
+                    boxShadow: isUnread ? "0 0 6px rgba(96, 165, 250, 0.4)" : "none",
+                  }} />
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+                      {f.ai_severity && <StatusPill label={f.ai_severity} color={sevColor} />}
+                      {f.ai_category && <StatusPill label={f.ai_category} color={C.blue} />}
+                      <span style={{ marginLeft: "auto" }}>
+                        <StatusPill label={statusLabel} color={statusColor} />
+                      </span>
+                    </div>
+                    <div style={{
+                      fontFamily: sans, fontSize: 12, color: C.text,
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      fontWeight: isUnread ? 600 : 400,
+                      opacity: isUnread ? 1 : 0.75,
+                    }}>
+                      {(f.ai_summary || f.body || "").substring(0, 80) || `Rating: ${f.rating}`}
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: C.muted, marginTop: 2 }}>
+                      <span>{f.route || "—"}</span>
+                      <span>{f.display_name || "Unknown"} · {timeAgo(f.created_at)}</span>
+                    </div>
                   </div>
                 </div>
               );
@@ -145,15 +169,18 @@ export function FeedbackInbox() {
 function FeedbackDetail({ item }: { item: any }) {
   const updateMutation = useAdminMutation("feedback_update");
   const reanalyzeMutation = useAdminMutation("feedback_reanalyze");
+  const deleteMutation = useAdminMutation("feedback_delete");
   const { navigateTo } = useContext(AdminNavContext);
   const [notes, setNotes] = useState(item.admin_notes || "");
   const [status, setStatus] = useState(item.status || "new");
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   React.useEffect(() => {
     setNotes(item.admin_notes || "");
     setStatus(item.status || "new");
+    setConfirmDelete(false);
   }, [item.id, item.status, item.admin_notes]);
 
   const saveNotes = () => {
@@ -165,6 +192,14 @@ function FeedbackDetail({ item }: { item: any }) {
   const updateStatus = (s: string) => {
     setStatus(s);
     updateMutation.mutate({ feedback_id: item.id, status: s });
+  };
+
+  const handleDelete = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    deleteMutation.mutate({ feedback_id: item.id });
   };
 
   const copyPrompt = () => {
@@ -202,7 +237,7 @@ function FeedbackDetail({ item }: { item: any }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div style={{ fontFamily: sans, fontSize: 14, color: C.text, fontWeight: 600 }}>Feedback Detail</div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <select value={status} onChange={(e) => updateStatus(e.target.value)}
             style={{ padding: "4px 8px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: statusColor, fontFamily: mono, fontSize: 11 }}>
             <option value="new">Open</option>
@@ -210,8 +245,16 @@ function FeedbackDetail({ item }: { item: any }) {
             <option value="done">Done</option>
             <option value="dismissed">Dismissed</option>
           </select>
-          <button onClick={copyPrompt} style={{ padding: "4px 10px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: copied ? C.green : C.tealLight, fontFamily: mono, fontSize: 11, cursor: "pointer" }}>
+          <button onClick={copyPrompt} style={{ padding: "4px 10px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 4, color: copied ? C.green : C.tealLight, fontFamily: mono, fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
             {copied ? "Copied!" : "Copy as Lovable prompt"}
+          </button>
+          <button onClick={handleDelete} onBlur={() => setConfirmDelete(false)} style={{
+            padding: "4px 10px", background: confirmDelete ? C.red : C.elevated,
+            border: `1px solid ${confirmDelete ? C.red : C.border}`, borderRadius: 4,
+            color: confirmDelete ? "#fff" : C.red, fontFamily: mono, fontSize: 11, cursor: "pointer",
+            whiteSpace: "nowrap", minWidth: 90,
+          }}>
+            {deleteMutation.isPending ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
           </button>
         </div>
       </div>

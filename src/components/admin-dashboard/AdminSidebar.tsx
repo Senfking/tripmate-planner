@@ -32,13 +32,16 @@ const NAV: { section: string; items: { key: AdminModule; label: string }[] }[] =
   ]},
 ];
 
+const ICE_BLUE = "rgba(96, 165, 250, 0.85)";
+
 export function AdminSidebar({ active, onNavigate, userName }: {
   active: AdminModule;
   onNavigate: (m: AdminModule) => void;
   userName?: string;
 }) {
-  const { data: unreadData } = useAdminData("notifications_unread_count", {}, { refetchInterval: 10000 });
-  const unreadCount = (unreadData as any)?.count ?? 0;
+  const { data: feedbackData } = useAdminData("feedback_unread_count", {}, { refetchInterval: 60000 });
+  const unreadCount = (feedbackData as any)?.count ?? 0;
+  const feedbackUnread = unreadCount;
 
   return (
     <div style={{
@@ -68,10 +71,14 @@ export function AdminSidebar({ active, onNavigate, userName }: {
         </span>
         {unreadCount > 0 && (
           <span style={{
-            position: "absolute", top: 8, left: 28,
-            background: C.red, color: "#fff", fontFamily: mono,
-            fontSize: 10, fontWeight: 700, borderRadius: "50%",
-            width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center",
+            position: "absolute", top: 4, left: 30,
+            background: "rgba(59, 130, 246, 0.15)", color: "rgba(96, 165, 250, 0.95)",
+            border: "1px solid rgba(59, 130, 246, 0.4)",
+            fontFamily: mono, fontSize: 9, fontWeight: 700,
+            borderRadius: "50%", width: 16, height: 16,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 8px rgba(59, 130, 246, 0.3)",
+            lineHeight: 1,
           }}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
@@ -104,6 +111,30 @@ export function AdminSidebar({ active, onNavigate, userName }: {
                   onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = C.muted; }}
                 >
                   {item.label}
+                  {item.key === "feedback_inbox" && feedbackUnread > 0 && (
+                    <span style={{
+                      marginLeft: 6,
+                      background: "rgba(59, 130, 246, 0.15)",
+                      color: "rgba(96, 165, 250, 0.95)",
+                      border: "1px solid rgba(59, 130, 246, 0.4)",
+                      fontFamily: mono,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      borderRadius: 50,
+                      padding: "2px 7px",
+                      minWidth: 20,
+                      height: 20,
+                      textAlign: "center" as const,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      lineHeight: 1,
+                      verticalAlign: "middle",
+                      boxShadow: "0 0 8px rgba(59, 130, 246, 0.3)",
+                    }}>
+                      {feedbackUnread > 99 ? "99+" : feedbackUnread}
+                    </span>
+                  )}
                 </button>
               );
             })}
