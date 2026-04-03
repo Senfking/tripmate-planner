@@ -41,7 +41,7 @@ export function AllUsersModule() {
         {isLoading ? <AdminSkeleton rows={10} /> : !users.length ? <EmptyState /> : (
           <table style={{ width: "100%", fontFamily: sans, fontSize: 13, borderCollapse: "collapse" }}>
             <thead><tr style={{ color: C.muted, fontFamily: mono, fontSize: 10, textTransform: "uppercase" as const }}>
-              {["User", "Joined", "Source", "Trips", "AI", "Tier", "Stripe"].map(h => (
+              {["User", "Joined", "Last Login", "Source", "Trips", "AI", "Tier", "Stripe"].map(h => (
                 <th key={h} style={{ textAlign: "left", padding: 8 }}>{h}</th>
               ))}
             </tr></thead>
