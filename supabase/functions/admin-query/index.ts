@@ -882,6 +882,43 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      case "feedback_reanalyze": {
+        const { feedback_id } = params;
+        if (!feedback_id) return err("feedback_id required");
+
+        const { data: fb, error: fbErr } = await db
+          .from("feedback")
+          .select("id, body, category, route")
+          .eq("id", feedback_id)
+          .single();
+        if (fbErr || !fb) return err("Feedback not found");
+
+        // Call analyze-feedback edge function with service role
+        const fnUrl = `${supabaseUrl}/functions/v1/analyze-feedback`;
+        const res = await fetch(fnUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
+            "Authorization": `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            feedbackId: fb.id,
+            category: fb.category || "general",
+            message: fb.body || "",
+            route: fb.route || "",
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("Re-analyze failed:", res.status, errText);
+          return err(`Re-analyze failed: ${res.status}`);
+        }
+
+        return json({ success: true });
+      }
+
       case "profile_update_notes": {
         const { user_id, admin_notes } = params;
         if (!user_id) return err("user_id required");
