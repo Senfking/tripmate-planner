@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
           totalExpenses,
           openFeedback,
           aiCalls, aiCallsPrior,
-          referralShares, referralSharesPrior
+          referralShares, referralSharesPrior,
+          landingViews, landingViewsPrior
         ] = await Promise.all([
           db.from("profiles").select("id", { count: "exact", head: true }),
           db.from("profiles").select("id", { count: "exact", head: true })
@@ -114,6 +115,13 @@ Deno.serve(async (req) => {
             .filter("created_at", "gt", periodDate(p)),
           db.from("analytics_events").select("id", { count: "exact", head: true })
             .eq("event_name", "referral_link_shared")
+            .filter("created_at", "gt", priorPeriodDate(p))
+            .filter("created_at", "lte", periodDate(p)),
+          db.from("analytics_events").select("id", { count: "exact", head: true })
+            .eq("event_name", "landing_page_view")
+            .filter("created_at", "gt", periodDate(p)),
+          db.from("analytics_events").select("id", { count: "exact", head: true })
+            .eq("event_name", "landing_page_view")
             .filter("created_at", "gt", priorPeriodDate(p))
             .filter("created_at", "lte", periodDate(p)),
         ]);
