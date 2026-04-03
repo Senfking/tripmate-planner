@@ -269,7 +269,6 @@ Return ONLY valid JSON with no other text:
         ai_severity: result.severity,
         ai_category: result.ai_category,
         ai_fix: result.fix,
-        ai_prompt: result.prompt || null,
       })
       .eq("id", feedbackId);
 
