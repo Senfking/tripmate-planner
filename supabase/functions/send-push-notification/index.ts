@@ -278,6 +278,9 @@ async function sendPush(
     body,
   });
 
+  const respBody = await resp.text();
+  console.log(`Push response: status=${resp.status}, body=${respBody}, endpoint=${endpoint.slice(0, 60)}`);
+
   return { status: resp.status };
 }
 
