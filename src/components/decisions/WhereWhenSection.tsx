@@ -103,16 +103,36 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     },
   });
 
-  // Fetch all proposal reactions with user profiles for avatars
-  const { data: reactionVoters = {} } = useQuery({
-    queryKey: ["proposal-reaction-voters", tripId],
+  // Fetch all trip members with profiles for avatar display
+  const { data: tripMemberProfiles = [] } = useQuery({
+    queryKey: ["trip-member-profiles", tripId],
+    queryFn: async () => {
+      const { data: members } = await supabase
+        .from("trip_members")
+        .select("user_id")
+        .eq("trip_id", tripId);
+      const userIds = (members || []).map((m) => m.user_id);
+      if (userIds.length === 0) return [];
+      const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
+      return (profiles || []).map((p: any) => ({
+        id: p.id,
+        display_name: p.display_name || null,
+        avatar_url: p.avatar_url || null,
+      }));
+    },
+    enabled: !!tripId && !!user,
+  });
+
+  // Fetch which users voted "up" per proposal
+  const { data: reactionVoterIds = {} } = useQuery({
+    queryKey: ["proposal-reaction-voter-ids", tripId],
     queryFn: async () => {
       const { data: props } = await supabase
         .from("trip_proposals")
         .select("id")
         .eq("trip_id", tripId);
       const propIds = (props || []).map((p: any) => p.id);
-      if (propIds.length === 0) return {} as Record<string, Array<{ id: string; display_name: string | null; avatar_url: string | null }>>;
+      if (propIds.length === 0) return {} as Record<string, Set<string>>;
 
       const { data: reactions } = await supabase
         .from("proposal_reactions")
@@ -120,21 +140,10 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         .in("proposal_id", propIds)
         .eq("value", "up");
 
-      const userIds = [...new Set((reactions || []).map((r) => r.user_id))];
-      if (userIds.length === 0) return {};
-
-      const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
-      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
-
-      const result: Record<string, Array<{ id: string; display_name: string | null; avatar_url: string | null }>> = {};
+      const result: Record<string, Set<string>> = {};
       for (const r of reactions || []) {
-        if (!result[r.proposal_id]) result[r.proposal_id] = [];
-        const profile = profileMap.get(r.user_id);
-        result[r.proposal_id].push({
-          id: r.user_id,
-          display_name: profile?.display_name || null,
-          avatar_url: profile?.avatar_url || null,
-        });
+        if (!result[r.proposal_id]) result[r.proposal_id] = new Set();
+        result[r.proposal_id].add(r.user_id);
       }
       return result;
     },
@@ -529,22 +538,26 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                   <div className="border-t border-border/50">
                     <div className="p-4 space-y-3">
                       <div className="flex items-center gap-3">
-                        {/* Voter avatars */}
+                        {/* All member avatars — "in" voters are highlighted */}
                         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                          {(reactionVoters[p.id] || []).length > 0 ? (
-                            <div className="flex -space-x-1.5">
-                              {(reactionVoters[p.id] || []).slice(0, 5).map((voter) => (
-                                <Avatar key={voter.id} className="h-6 w-6 border-2 border-background">
-                                  <AvatarImage src={voter.avatar_url || undefined} />
+                          <div className="flex -space-x-1.5">
+                            {tripMemberProfiles.map((member) => {
+                              const isIn = reactionVoterIds[p.id]?.has(member.id);
+                              return (
+                                <Avatar
+                                  key={member.id}
+                                  className={`h-6 w-6 border-2 border-background transition-opacity ${isIn ? "" : "opacity-30"}`}
+                                >
+                                  <AvatarImage src={member.avatar_url || undefined} />
                                   <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
-                                    {(voter.display_name || "?")[0].toUpperCase()}
+                                    {(member.display_name || "?")[0].toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
-                              ))}
-                            </div>
-                          ) : null}
+                              );
+                            })}
+                          </div>
                           <span className="text-xs text-muted-foreground">
-                            {inCount} of {memberCount} in
+                            {inCount}/{memberCount} in
                           </span>
                         </div>
                         {/* I'm in button — right-aligned for thumb reach */}
