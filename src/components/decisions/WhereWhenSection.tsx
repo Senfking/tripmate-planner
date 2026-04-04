@@ -161,6 +161,13 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
   const [lockConfirm, setLockConfirm] = useState(false);
   const [unlockConfirm, setUnlockConfirm] = useState(false);
 
+  // Proposal (suggestion) editing state
+  const [editingProposalId, setEditingProposalId] = useState<string | null>(null);
+  const [editProposalDest, setEditProposalDest] = useState("");
+  const [editProposalNote, setEditProposalNote] = useState("");
+  const [newDateRange, setNewDateRange] = useState<DateRange | undefined>();
+  const [showAddDate, setShowAddDate] = useState(false);
+
   const toggle = (id: string) =>
     setExpandedIds((prev) => {
       const next = new Set(prev);
