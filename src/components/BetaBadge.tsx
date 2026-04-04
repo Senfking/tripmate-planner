@@ -45,7 +45,7 @@ export function BetaBadge() {
               </p>
               <p>
                 Your feedback shapes what we build next. If something feels off or you have an idea, 
-                tap the feedback button — we read every single message.
+                tap the feedback button. We read every single message.
               </p>
             </div>
 
