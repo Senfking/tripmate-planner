@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { toast } from "sonner";
 
 interface Props {
