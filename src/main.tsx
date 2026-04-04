@@ -69,7 +69,9 @@ if ("serviceWorker" in navigator) {
             reg.update().catch(() => {});
           }
         });
-      }).catch(() => {});
+      }).catch((err) => {
+        console.error("[SW] Registration failed:", err);
+      });
     });
   }
 }
