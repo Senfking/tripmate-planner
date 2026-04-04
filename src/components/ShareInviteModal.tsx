@@ -364,21 +364,6 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
           )}
         </section>
 
-        {/* ── Section 3: Export ─────────────────────────── */}
-        <section className="space-y-2.5">
-          <h3 className="text-[12px] font-medium text-muted-foreground">Export</h3>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1 rounded-xl h-11 text-[14px] font-medium"
-              disabled={icsLoading}
-              onClick={() => downloadFile("export-trip-ics", "junto-itinerary.ics", setIcsLoading)}
-            >
-              {icsLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CalendarPlus className="h-4 w-4 mr-1.5" />}
-              Calendar
-            </Button>
-          </div>
-        </section>
       </div>
       )}
     </ResponsiveModal>
