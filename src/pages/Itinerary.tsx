@@ -85,6 +85,16 @@ const Itinerary = () => {
     }
   }
 
+  // Auto-scroll to today on first render when past days are visible
+  useEffect(() => {
+    if (isLoading || scrolledToToday.current) return;
+    scrolledToToday.current = true;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`day-${todayStr}`);
+      if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
+    });
+  }, [isLoading, todayStr]);
+
   if (isLoading) {
     return (
       <div className="min-h-dvh flex flex-col bg-background">
