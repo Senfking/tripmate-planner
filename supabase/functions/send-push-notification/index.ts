@@ -134,12 +134,12 @@ async function hkdf(
   // Actually do HKDF properly: extract then expand
   const prkKey = await crypto.subtle.importKey(
     "raw",
-    salt.length ? salt : new Uint8Array(32),
+    ((salt.length ? salt : new Uint8Array(32)) as Uint8Array).buffer,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
-  const prkBytes = new Uint8Array(await crypto.subtle.sign("HMAC", prkKey, ikm));
+  const prkBytes = new Uint8Array(await crypto.subtle.sign("HMAC", prkKey, (ikm as Uint8Array).buffer));
 
   const expandKey = await crypto.subtle.importKey(
     "raw",
