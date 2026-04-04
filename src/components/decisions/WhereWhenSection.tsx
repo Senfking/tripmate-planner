@@ -510,6 +510,8 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
             const imIn = myDestVotes[p.id] === "up";
             const isExpanded = expandedIds.has(`vote-${p.id}`);
             const pDateOptions = dateOptionsByProposal(p.id);
+            const isEditingThis = editingProposalId === p.id;
+            const canEditProposal = !isRouteLocked && (p.created_by === user?.id || canManage);
 
             return (
               <div
@@ -529,9 +531,18 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       suggested by {p.creator_name || "someone"}
-                      {p.start_date && ` · ${fmt(p.start_date)}`}
-                      {p.start_date && p.end_date && ` – ${fmt(p.end_date)}`}
                     </p>
+                    {p.note && (
+                      <p className="text-[11px] text-foreground/60 italic truncate mt-0.5">
+                        "{p.note}"
+                      </p>
+                    )}
+                    {pDateOptions.length > 0 && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3" />
+                        {pDateOptions.length} date {pDateOptions.length === 1 ? "option" : "options"}
+                      </p>
+                    )}
                   </div>
                   {inCount > 0 && (
                     <span className="text-[11px] text-muted-foreground shrink-0">
@@ -546,8 +557,8 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                 {isExpanded && (
                   <div className="border-t border-border/50">
                     <div className="p-4 space-y-3">
+                      {/* Avatars + I'm in */}
                       <div className="flex items-center gap-3">
-                        {/* All member avatars — "in" voters are highlighted */}
                         <div className="flex items-center gap-1.5 flex-1 min-w-0">
                           <div className="flex -space-x-1.5">
                             {tripMemberProfiles.map((member) => {
@@ -569,7 +580,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                             {inCount}/{memberCount} in
                           </span>
                         </div>
-                        {/* I'm in button — right-aligned for thumb reach */}
                         <Button
                           variant={imIn ? "default" : "outline"}
                           size="sm"
@@ -585,6 +595,150 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         </Button>
                       </div>
 
+                      {/* Inline edit form for proposal */}
+                      {isEditingThis ? (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Destination</label>
+                            <Input
+                              value={editProposalDest}
+                              onChange={(e) => setEditProposalDest(e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Note (optional)</label>
+                            <Textarea
+                              value={editProposalNote}
+                              onChange={(e) => setEditProposalNote(e.target.value)}
+                              className="text-sm min-h-[50px]"
+                              placeholder="e.g. Found cheap flights"
+                              rows={2}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 justify-end">
+                            <Button variant="ghost" size="sm" onClick={() => setEditingProposalId(null)}>Cancel</Button>
+                            <Button
+                              size="sm"
+                              disabled={!editProposalDest.trim() || updateProposal.isPending}
+                              onClick={() => {
+                                updateProposal.mutate(
+                                  { proposalId: p.id, destination: editProposalDest.trim(), note: editProposalNote.trim() || null },
+                                  { onSuccess: () => { toast({ title: "Suggestion updated" }); setEditingProposalId(null); } }
+                                );
+                              }}
+                            >
+                              {updateProposal.isPending ? "Saving..." : "Save"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Note display */}
+                          {p.note && (
+                            <p className="text-sm text-foreground/80 italic">"{p.note}"</p>
+                          )}
+
+                          {/* Edit button */}
+                          {canEditProposal && (
+                            <button
+                              onClick={() => {
+                                setEditingProposalId(p.id);
+                                setEditProposalDest(p.destination);
+                                setEditProposalNote(p.note || "");
+                              }}
+                              className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit suggestion
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {/* Date options with delete */}
+                      {pDateOptions.length > 0 && (
+                        <div className="space-y-2">
+                          {pDateOptions.map((d) => {
+                            const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
+                            const myVote = myDateVotes[d.id];
+                            const worksForMe = myVote === "yes";
+                            const canDeleteDate = !isRouteLocked && (d.created_by === user?.id || canManage);
+                            return (
+                              <div key={d.id} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground">
+                                    {fmt(d.start_date)} – {fmt(d.end_date)}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    {votes.yes} of {memberCount} available
+                                  </p>
+                                </div>
+                                <Button
+                                  variant={worksForMe ? "default" : "outline"}
+                                  size="sm"
+                                  className={`gap-1.5 shrink-0 ${worksForMe ? "" : "text-muted-foreground"}`}
+                                  onClick={() => voteDateOption.mutate({ dateOptionId: d.id, value: "yes" })}
+                                  disabled={isRouteLocked}
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                  {worksForMe ? "Works!" : "Works for me"}
+                                </Button>
+                                {canDeleteDate && (
+                                  <button
+                                    onClick={() => deleteDateOption.mutate({ dateOptionId: d.id })}
+                                    className="text-muted-foreground hover:text-destructive p-1"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Add date suggestion */}
+                      {!isRouteLocked && (
+                        showAddDate ? (
+                          <div className="space-y-2">
+                            <DateRangePicker
+                              value={newDateRange}
+                              onChange={setNewDateRange}
+                              className="w-full"
+                              placeholder="Pick date range"
+                            />
+                            <div className="flex items-center gap-2 justify-end">
+                              <Button variant="ghost" size="sm" onClick={() => { setShowAddDate(false); setNewDateRange(undefined); }}>Cancel</Button>
+                              <Button
+                                size="sm"
+                                disabled={!newDateRange?.from || !newDateRange?.to || addDateOption.isPending}
+                                onClick={() => {
+                                  if (!newDateRange?.from || !newDateRange?.to) return;
+                                  addDateOption.mutate(
+                                    { proposalId: p.id, startDate: format(newDateRange.from, "yyyy-MM-dd"), endDate: format(newDateRange.to, "yyyy-MM-dd") },
+                                    { onSuccess: () => { setShowAddDate(false); setNewDateRange(undefined); toast({ title: "Date option added" }); } }
+                                  );
+                                }}
+                              >
+                                {addDateOption.isPending ? "Adding..." : "Add dates"}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 text-xs text-muted-foreground"
+                            onClick={() => setShowAddDate(true)}
+                          >
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            Suggest dates
+                          </Button>
+                        )
+                      )}
+
+                      {/* Confirm destination & dates — only for admins */}
                       <ProposalCard
                         proposal={p}
                         destVotes={pDestVotes}
@@ -601,7 +755,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         onVoteDateOption={(dateOptionId, value) => voteDateOption.mutate({ dateOptionId, value })}
                         onAddToRoute={(input) => {
                           addStop.mutate(input, {
-                            onSuccess: () => toast({ title: `${p.destination} added to route! 📍` }),
+                            onSuccess: () => toast({ title: `${p.destination} added to route` }),
                           });
                         }}
                         isAddingToRoute={addStop.isPending}
@@ -611,13 +765,25 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         hideHeader
                         memberCount={memberCount}
                       />
+
+                      {/* Delete suggestion */}
+                      {canEditProposal && (
+                        <button
+                          onClick={() => {
+                            deleteProposal.mutate({ proposalId: p.id });
+                            toast({ title: "Suggestion removed" });
+                          }}
+                          className="flex items-center gap-1.5 text-xs text-destructive hover:underline"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Remove suggestion
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
             );
-          })}
-        </div>
       )}
 
 
