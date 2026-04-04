@@ -202,6 +202,7 @@ const Itinerary = () => {
   }
 
   const sortedDates = Array.from(allDatesSet).sort();
+  console.log("[Itinerary] activeGroups:", activeGroups.length, "dates:", sortedDates.slice(0, 5), "trips:", activeGroups.map(g => g.tripName));
   const isEmpty = sortedDates.length === 0;
 
   return (
