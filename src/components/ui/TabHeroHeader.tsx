@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { BetaBadge } from "@/components/BetaBadge";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -82,10 +83,11 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
         }}
       >
         {/* JUNTO — mobile only */}
-        <div className="flex justify-center w-full mb-3 md:hidden">
+        <div className="flex justify-center items-center gap-2 w-full mb-3 md:hidden">
           <span className="text-[13px] font-extrabold tracking-[0.3em] uppercase text-white/70">
             JUNTO
           </span>
+          <BetaBadge />
         </div>
 
         {/* Title — always at same vertical position */}
