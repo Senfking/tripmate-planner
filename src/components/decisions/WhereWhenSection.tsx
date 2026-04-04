@@ -611,41 +611,26 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         </Button>
                       </div>
 
-                      {/* Destination name — inline editable with pencil icon */}
-                      <div className="flex items-center gap-2">
-                        {isEditingThis ? (
+                      {/* Destination name — inline editable */}
+                      {isEditingThis ? (
+                        <div className="space-y-2">
                           <Input
                             value={editProposalDest}
                             onChange={(e) => setEditProposalDest(e.target.value)}
-                            className="h-7 text-sm font-semibold flex-1"
+                            className="h-8 text-sm font-semibold"
                             autoFocus
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                updateProposal.mutate(
-                                  { proposalId: p.id, destination: editProposalDest.trim(), note: editProposalNote.trim() || null },
-                                  { onSuccess: () => { toast({ title: "Updated" }); setEditingProposalId(null); } }
-                                );
-                              }
                               if (e.key === "Escape") setEditingProposalId(null);
                             }}
                           />
-                        ) : (
-                          <p className="text-sm font-semibold text-foreground flex-1">{p.destination}</p>
-                        )}
-                        {canEditProposal && !isEditingThis && (
-                          <button
-                            onClick={() => {
-                              setEditingProposalId(p.id);
-                              setEditProposalDest(p.destination);
-                              setEditProposalNote(p.note || "");
-                            }}
-                            className="text-muted-foreground hover:text-primary p-0.5"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                        )}
-                        {isEditingThis && (
-                          <div className="flex items-center gap-1">
+                          <Textarea
+                            value={editProposalNote}
+                            onChange={(e) => setEditProposalNote(e.target.value)}
+                            className="text-sm min-h-[40px]"
+                            placeholder="Add a note (optional)"
+                            rows={2}
+                          />
+                          <div className="flex items-center gap-1 justify-end">
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingProposalId(null)}>Cancel</Button>
                             <Button
                               size="sm"
@@ -658,6 +643,29 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                                 );
                               }}
                             >
+                              Save
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {p.note && (
+                            <p className="text-sm text-foreground/70 italic">"{p.note}"</p>
+                          )}
+                          {!p.note && canEditProposal && (
+                            <button
+                              onClick={() => {
+                                setEditingProposalId(p.id);
+                                setEditProposalDest(p.destination);
+                                setEditProposalNote("");
+                              }}
+                              className="text-xs text-muted-foreground hover:text-primary"
+                            >
+                              + Add a note
+                            </button>
+                          )}
+                        </>
+                      )}
                               Save
                             </Button>
                           </div>
