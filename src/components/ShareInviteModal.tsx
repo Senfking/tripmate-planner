@@ -406,15 +406,6 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
               {icsLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CalendarPlus className="h-4 w-4 mr-1.5" />}
               Calendar
             </Button>
-            <Button
-              variant="outline"
-              className="flex-1 rounded-xl h-11 text-[14px] font-medium"
-              disabled={csvLoading}
-              onClick={() => downloadFile("export-expenses-csv", "junto-expenses.csv", setCsvLoading)}
-            >
-              {csvLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
-              Expenses CSV
-            </Button>
           </div>
         </section>
       </div>
