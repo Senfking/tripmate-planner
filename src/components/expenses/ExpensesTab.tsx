@@ -295,7 +295,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       )}
 
       {/* Balance hero — teal gradient card (matches global expenses header) */}
-      {members.length > 1 && canShowBalances && expenses.length > 0 && (
+      {canShowBalances && expenses.length > 0 && (
         <div
           className="relative overflow-hidden py-6 text-center mx-0"
           style={{
