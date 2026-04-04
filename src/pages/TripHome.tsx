@@ -218,6 +218,9 @@ export default function TripHome() {
   const [croppingCover, setCroppingCover] = useState(false);
   const [savingCrop, setSavingCrop] = useState(false);
   const [dateEditorOpen, setDateEditorOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const updateTripDates = useMutation({
     mutationFn: async ({ start, end }: { start: string | null; end: string | null }) => {
