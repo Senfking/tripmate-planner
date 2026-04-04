@@ -49,7 +49,8 @@ const QUESTIONS = [
       { label: "4–5 days", sub: "sweet spot" },
       { label: "A full week", sub: "7 days" },
       { label: "1–2 weeks", sub: "proper trip" },
-      { label: "2+ weeks", sub: "go big" },
+      { label: "2–3 weeks", sub: "go big" },
+      { label: "4+ weeks", sub: "extended adventure" },
     ],
   },
   {
