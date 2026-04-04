@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload, CalendarDays } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload, CalendarDays, Pencil } from "lucide-react";
 import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -83,75 +83,18 @@ const ATTENDANCE_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 function StatusRow({
-  startDate,
-  endDate,
   onShare,
   attendanceStatus,
   onAttendanceTap,
-  onDateTap,
 }: {
-  startDate: string | null;
-  endDate: string | null;
   onShare: () => void;
   attendanceStatus?: string;
   onAttendanceTap?: () => void;
-  onDateTap?: () => void;
 }) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let content: React.ReactNode;
-
-  if (startDate && endDate) {
-    const s = parseISO(startDate);
-    const e = parseISO(endDate);
-    const totalDays = differenceInDays(e, s) + 1;
-
-    if (e < today) {
-      content = (
-        <span className="text-sm text-muted-foreground">
-          {format(s, "MMM yyyy")} · {totalDays} days
-        </span>
-      );
-    } else if (isWithinInterval(today, { start: s, end: e })) {
-      const dayNumber = differenceInDays(today, s) + 1;
-      content = (
-        <span className="text-sm font-semibold text-foreground">
-          Day {dayNumber} of {totalDays}
-        </span>
-      );
-    } else {
-      const daysUntil = differenceInCalendarDays(s, today);
-      if (daysUntil <= 7) {
-        content = (
-          <span className="text-sm font-medium" style={{ color: "#0D9488" }}>
-            In {daysUntil} day{daysUntil !== 1 ? "s" : ""} · {format(s, "MMM d")}
-          </span>
-        );
-      } else {
-        content = (
-          <span className="text-sm text-muted-foreground">
-            {daysUntil} days to go
-          </span>
-        );
-      }
-    }
-  } else {
-    content = (
-      <button onClick={onDateTap} className="text-sm text-primary font-medium flex items-center gap-1">
-        <CalendarDays className="h-3.5 w-3.5" />
-        Set dates
-      </button>
-    );
-  }
-
   const badge = attendanceStatus && attendanceStatus !== "pending" ? ATTENDANCE_BADGE[attendanceStatus] : null;
 
   return (
     <div className="flex items-center gap-2">
-      <button onClick={onDateTap} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-        {content}
-      </button>
       {badge && onAttendanceTap && (
         <button
           onClick={onAttendanceTap}
@@ -275,6 +218,9 @@ export default function TripHome() {
   const [croppingCover, setCroppingCover] = useState(false);
   const [savingCrop, setSavingCrop] = useState(false);
   const [dateEditorOpen, setDateEditorOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const updateTripDates = useMutation({
     mutationFn: async ({ start, end }: { start: string | null; end: string | null }) => {
@@ -547,10 +493,50 @@ export default function TripHome() {
 
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold text-white leading-tight truncate">{trip.name}</h1>
-            <p className="text-sm text-white/80 mt-0.5">
-              {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
-            </p>
+            {editingName ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const trimmed = nameDraft.trim();
+                  if (trimmed && trimmed !== trip.name) {
+                    supabase.from("trips").update({ name: trimmed }).eq("id", tripId!).then(({ error }) => {
+                      if (error) { toast.error("Failed to rename trip"); return; }
+                      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+                      qc.invalidateQueries({ queryKey: ["trips", user?.id] });
+                      toast.success("Trip renamed");
+                    });
+                  }
+                  setEditingName(false);
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  ref={nameInputRef}
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={() => setEditingName(false)}
+                  className="bg-transparent text-2xl font-bold text-white leading-tight border-b border-white/50 outline-none w-full"
+                  autoFocus
+                />
+              </form>
+            ) : (
+              <button
+                onClick={() => { if (isAdmin) { setNameDraft(trip.name); setEditingName(true); } }}
+                className="flex items-center gap-2 group text-left"
+              >
+                <h1 className="text-2xl font-bold text-white leading-tight truncate">{trip.name}</h1>
+                {isAdmin && <Pencil className="h-3.5 w-3.5 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
+              </button>
+            )}
+            <button
+              onClick={() => { if (isAdmin) setDateEditorOpen(true); }}
+              className="flex items-center gap-1.5 group mt-0.5"
+            >
+              <p className="text-sm text-white/80">
+                {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
+              </p>
+              {isAdmin && <Pencil className="h-3 w-3 text-white/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
+            </button>
           </div>
           <button
             onClick={() => setMemberSheetOpen(true)}
@@ -581,12 +567,9 @@ export default function TripHome() {
       <div className="flex-1 rounded-t-3xl -mt-6 relative z-10 bg-background">
         <div className="px-4 pt-4 pb-2 md:max-w-[900px] md:mx-auto md:px-8">
           <StatusRow
-            startDate={trip.tentative_start_date}
-            endDate={trip.tentative_end_date}
             onShare={() => setShareInviteOpen(true)}
             attendanceStatus={myAttendanceStatus}
             onAttendanceTap={handleOpenOverlay}
-            onDateTap={() => setDateEditorOpen(true)}
           />
         </div>
 
