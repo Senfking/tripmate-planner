@@ -382,6 +382,15 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
+      {/* Add expense — prominent CTA below hero */}
+      <Button
+        className="w-full h-12 gap-2 text-[15px] font-semibold rounded-2xl"
+        onClick={() => { setEditingExpense(null); setFormOpen(true); }}
+      >
+        <Plus className="h-4.5 w-4.5" />
+        Add Expense
+      </Button>
+
       {/* Balances / Settle Up / Expenses — frosted glass card */}
       <div
         className="mx-0 overflow-hidden"
