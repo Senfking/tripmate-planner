@@ -143,19 +143,20 @@ const Itinerary = () => {
 
     // Trip-level boundaries
     if (g.tripStartDate) {
-      const start = g.tripStartDate >= todayStr ? g.tripStartDate : todayStr;
-      const end = g.tripEndDate ?? g.tripStartDate;
-      if (start <= end) {
-        // Add every day of the trip
-        for (const d of enumerateDays(start, end)) {
+      const visibleStart = g.tripStartDate >= todayStr ? g.tripStartDate : todayStr;
+      const visibleEnd = g.tripEndDate ?? (g.tripStartDate <= todayStr ? todayStr : g.tripStartDate);
+
+      if (visibleStart <= visibleEnd) {
+        // Add every visible day of the trip
+        for (const d of enumerateDays(visibleStart, visibleEnd)) {
           allDatesSet.add(d);
         }
-        // Mark trip boundaries
-        if (g.tripStartDate >= todayStr) {
-          const arr = tripStartMap.get(g.tripStartDate) ?? [];
-          arr.push(b);
-          tripStartMap.set(g.tripStartDate, arr);
-        }
+
+        // Show a trip banner at the first visible day, including already-started trips
+        const startArr = tripStartMap.get(visibleStart) ?? [];
+        startArr.push(b);
+        tripStartMap.set(visibleStart, startArr);
+
         if (g.tripEndDate) {
           const endArr = tripEndMap.get(g.tripEndDate) ?? [];
           endArr.push(b);
