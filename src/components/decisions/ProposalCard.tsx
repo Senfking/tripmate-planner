@@ -259,7 +259,7 @@ export function ProposalCard({
       {confirmOpen && canManage && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
           <h5 className="font-semibold text-sm text-foreground">
-            Add "{proposal.destination}" to route
+            Confirm "{proposal.destination}"
           </h5>
 
           {dateOptions.length > 0 ? (
