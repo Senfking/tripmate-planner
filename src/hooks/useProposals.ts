@@ -258,6 +258,17 @@ export function useProposals(tripId: string | undefined) {
     },
   });
 
+  const updateDateOption = useMutation({
+    mutationFn: async (input: { dateOptionId: string; startDate: string; endDate: string }) => {
+      const { error } = await supabase
+        .from("proposal_date_options")
+        .update({ start_date: input.startDate, end_date: input.endDate } as any)
+        .eq("id", input.dateOptionId);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateAll(),
+  });
+
   const voteDateOption = useMutation({
     mutationFn: async ({ dateOptionId, value }: { dateOptionId: string; value: string }) => {
       const { data: existing } = await supabase
@@ -432,6 +443,7 @@ export function useProposals(tripId: string | undefined) {
     updateProposal,
     reactDest,
     addDateOption,
+    updateDateOption,
     deleteDateOption,
     voteDateOption,
     deleteProposal,

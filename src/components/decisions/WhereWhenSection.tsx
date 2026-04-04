@@ -78,6 +78,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     updateProposal,
     reactDest,
     addDateOption,
+    updateDateOption,
     deleteDateOption,
     voteDateOption,
     deleteProposal,
@@ -167,6 +168,8 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
   const [editProposalNote, setEditProposalNote] = useState("");
   const [newDateRange, setNewDateRange] = useState<DateRange | undefined>();
   const [showAddDate, setShowAddDate] = useState(false);
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [editDateOptionRange, setEditDateOptionRange] = useState<DateRange | undefined>();
 
   const toggle = (id: string) =>
     setExpandedIds((prev) => {
@@ -518,41 +521,57 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                 key={`vote-${p.id}`}
                 className="rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all"
               >
-                <button
-                  onClick={() => toggle(`vote-${p.id}`)}
-                  className="flex items-center gap-3 p-3 w-full text-left"
-                >
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-muted-foreground text-xs shrink-0">
-                    ?
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {p.destination}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      suggested by {p.creator_name || "someone"}
-                    </p>
-                    {p.note && (
-                      <p className="text-[11px] text-foreground/60 italic truncate mt-0.5">
-                        "{p.note}"
+                <div className="flex items-center gap-3 p-3 w-full text-left">
+                  <button
+                    onClick={() => toggle(`vote-${p.id}`)}
+                    className="flex items-center gap-3 flex-1 min-w-0"
+                  >
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-muted-foreground text-xs shrink-0">
+                      ?
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {p.destination}
                       </p>
-                    )}
-                    {pDateOptions.length > 0 && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                        <CalendarDays className="h-3 w-3" />
-                        {pDateOptions.length} date {pDateOptions.length === 1 ? "option" : "options"}
+                      <p className="text-[11px] text-muted-foreground">
+                        suggested by {p.creator_name || "someone"}
                       </p>
+                      {p.note && (
+                        <p className="text-[11px] text-foreground/60 italic truncate mt-0.5">
+                          "{p.note}"
+                        </p>
+                      )}
+                      {pDateOptions.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <CalendarDays className="h-3 w-3" />
+                          {pDateOptions.length} date {pDateOptions.length === 1 ? "option" : "options"}
+                        </p>
+                      )}
+                    </div>
+                    {inCount > 0 && (
+                      <span className="text-[11px] text-muted-foreground shrink-0">
+                        {inCount} in
+                      </span>
                     )}
-                  </div>
-                  {inCount > 0 && (
-                    <span className="text-[11px] text-muted-foreground shrink-0">
-                      {inCount} in
-                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {canEditProposal && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isExpanded) toggle(`vote-${p.id}`);
+                        setEditingProposalId(p.id);
+                        setEditProposalDest(p.destination);
+                        setEditProposalNote(p.note || "");
+                      }}
+                      className="text-muted-foreground hover:text-primary p-1 shrink-0"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                   )}
-                  <ChevronDown
-                    className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                  />
-                </button>
+                </div>
 
                 {isExpanded && (
                   <div className="border-t border-border/50">
@@ -595,41 +614,26 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         </Button>
                       </div>
 
-                      {/* Destination name — inline editable with pencil icon */}
-                      <div className="flex items-center gap-2">
-                        {isEditingThis ? (
+                      {/* Destination name — inline editable */}
+                      {isEditingThis ? (
+                        <div className="space-y-2">
                           <Input
                             value={editProposalDest}
                             onChange={(e) => setEditProposalDest(e.target.value)}
-                            className="h-7 text-sm font-semibold flex-1"
+                            className="h-8 text-sm font-semibold"
                             autoFocus
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                updateProposal.mutate(
-                                  { proposalId: p.id, destination: editProposalDest.trim(), note: editProposalNote.trim() || null },
-                                  { onSuccess: () => { toast({ title: "Updated" }); setEditingProposalId(null); } }
-                                );
-                              }
                               if (e.key === "Escape") setEditingProposalId(null);
                             }}
                           />
-                        ) : (
-                          <p className="text-sm font-semibold text-foreground flex-1">{p.destination}</p>
-                        )}
-                        {canEditProposal && !isEditingThis && (
-                          <button
-                            onClick={() => {
-                              setEditingProposalId(p.id);
-                              setEditProposalDest(p.destination);
-                              setEditProposalNote(p.note || "");
-                            }}
-                            className="text-muted-foreground hover:text-primary p-0.5"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                        )}
-                        {isEditingThis && (
-                          <div className="flex items-center gap-1">
+                          <Textarea
+                            value={editProposalNote}
+                            onChange={(e) => setEditProposalNote(e.target.value)}
+                            className="text-sm min-h-[40px]"
+                            placeholder="Add a note (optional)"
+                            rows={2}
+                          />
+                          <div className="flex items-center gap-1 justify-end">
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingProposalId(null)}>Cancel</Button>
                             <Button
                               size="sm"
@@ -645,46 +649,26 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                               Save
                             </Button>
                           </div>
-                        )}
-                      </div>
-
-                      {/* Note — inline editable with pencil icon */}
-                      {isEditingThis ? (
-                        <Textarea
-                          value={editProposalNote}
-                          onChange={(e) => setEditProposalNote(e.target.value)}
-                          className="text-sm min-h-[40px]"
-                          placeholder="Add a note (optional)"
-                          rows={2}
-                        />
-                      ) : p.note ? (
-                        <div className="flex items-start gap-1.5">
-                          <p className="text-sm text-foreground/70 italic flex-1">"{p.note}"</p>
-                          {canEditProposal && (
+                        </div>
+                      ) : (
+                        <>
+                          {p.note && (
+                            <p className="text-sm text-foreground/70 italic">"{p.note}"</p>
+                          )}
+                          {!p.note && canEditProposal && (
                             <button
                               onClick={() => {
                                 setEditingProposalId(p.id);
                                 setEditProposalDest(p.destination);
-                                setEditProposalNote(p.note || "");
+                                setEditProposalNote("");
                               }}
-                              className="text-muted-foreground hover:text-primary p-0.5 mt-0.5"
+                              className="text-xs text-muted-foreground hover:text-primary"
                             >
-                              <Pencil className="h-3 w-3" />
+                              + Add a note
                             </button>
                           )}
-                        </div>
-                      ) : canEditProposal ? (
-                        <button
-                          onClick={() => {
-                            setEditingProposalId(p.id);
-                            setEditProposalDest(p.destination);
-                            setEditProposalNote("");
-                          }}
-                          className="text-xs text-muted-foreground hover:text-primary"
-                        >
-                          + Add a note
-                        </button>
-                      ) : null}
+                        </>
+                      )}
 
                       {/* Date options with delete */}
                       {pDateOptions.length > 0 && (
@@ -693,7 +677,39 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                             const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
                             const myVote = myDateVotes[d.id];
                             const worksForMe = myVote === "yes";
-                            const canDeleteDate = !isRouteLocked && (d.created_by === user?.id || canManage);
+                            const canEditDate = !isRouteLocked && (d.created_by === user?.id || canManage);
+                            const isEditingDate = editingDateId === d.id;
+
+                            if (isEditingDate) {
+                              return (
+                                <div key={d.id} className="rounded-lg bg-muted/30 p-3 space-y-2">
+                                  <DateRangePicker
+                                    value={editDateOptionRange}
+                                    onChange={setEditDateOptionRange}
+                                    className="w-full"
+                                    placeholder="Select date range"
+                                  />
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingDateId(null)}>Cancel</Button>
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-2 text-xs"
+                                      disabled={!editDateOptionRange?.from || !editDateOptionRange?.to || updateDateOption.isPending}
+                                      onClick={() => {
+                                        if (!editDateOptionRange?.from || !editDateOptionRange?.to) return;
+                                        updateDateOption.mutate(
+                                          { dateOptionId: d.id, startDate: format(editDateOptionRange.from, "yyyy-MM-dd"), endDate: format(editDateOptionRange.to, "yyyy-MM-dd") },
+                                          { onSuccess: () => { toast({ title: "Dates updated" }); setEditingDateId(null); } }
+                                        );
+                                      }}
+                                    >
+                                      Save
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             return (
                               <div key={d.id} className="flex items-center gap-2 rounded-lg bg-muted/30 p-3">
                                 <div className="flex-1 min-w-0">
@@ -704,6 +720,17 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                                     {votes.yes} of {memberCount} available
                                   </p>
                                 </div>
+                                {canEditDate && (
+                                  <button
+                                    onClick={() => {
+                                      setEditingDateId(d.id);
+                                      setEditDateOptionRange({ from: parseISO(d.start_date), to: parseISO(d.end_date) });
+                                    }}
+                                    className="text-muted-foreground hover:text-primary p-1"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                )}
                                 <Button
                                   variant={worksForMe ? "default" : "outline"}
                                   size="sm"
@@ -714,7 +741,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                                   <Check className="h-3.5 w-3.5" />
                                   {worksForMe ? "Works!" : "Works for me"}
                                 </Button>
-                                {canDeleteDate && (
+                                {canEditDate && (
                                   <button
                                     onClick={() => deleteDateOption.mutate({ dateOptionId: d.id })}
                                     className="text-muted-foreground hover:text-destructive p-1"
