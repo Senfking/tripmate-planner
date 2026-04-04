@@ -103,6 +103,44 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     },
   });
 
+  // Fetch all proposal reactions with user profiles for avatars
+  const { data: reactionVoters = {} } = useQuery({
+    queryKey: ["proposal-reaction-voters", tripId],
+    queryFn: async () => {
+      const { data: props } = await supabase
+        .from("trip_proposals")
+        .select("id")
+        .eq("trip_id", tripId);
+      const propIds = (props || []).map((p: any) => p.id);
+      if (propIds.length === 0) return {} as Record<string, Array<{ id: string; display_name: string | null; avatar_url: string | null }>>;
+
+      const { data: reactions } = await supabase
+        .from("proposal_reactions")
+        .select("proposal_id, user_id")
+        .in("proposal_id", propIds)
+        .eq("value", "up");
+
+      const userIds = [...new Set((reactions || []).map((r) => r.user_id))];
+      if (userIds.length === 0) return {};
+
+      const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+      const result: Record<string, Array<{ id: string; display_name: string | null; avatar_url: string | null }>> = {};
+      for (const r of reactions || []) {
+        if (!result[r.proposal_id]) result[r.proposal_id] = [];
+        const profile = profileMap.get(r.user_id);
+        result[r.proposal_id].push({
+          id: r.user_id,
+          display_name: profile?.display_name || null,
+          avatar_url: profile?.avatar_url || null,
+        });
+      }
+      return result;
+    },
+    enabled: !!tripId && !!user,
+  });
+
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [editDest, setEditDest] = useState("");
