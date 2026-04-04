@@ -273,8 +273,29 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </Button>
       </div>
 
+      {/* Solo trip prompt */}
+      {members.length <= 1 && expenses.length > 0 && (
+        <div
+          className="mx-0 flex items-center gap-3 px-4 py-3.5"
+          style={{
+            background: "rgba(255,255,255,0.7)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.8)",
+            borderRadius: 14,
+          }}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <Users className="h-4 w-4 text-primary" />
+          </div>
+          <p className="text-[13px] text-muted-foreground leading-snug">
+            Invite friends to start splitting expenses.
+          </p>
+        </div>
+      )}
+
       {/* Balance hero — teal gradient card (matches global expenses header) */}
-      {canShowBalances && expenses.length > 0 && (
+      {members.length > 1 && canShowBalances && expenses.length > 0 && (
         <div
           className="relative overflow-hidden py-6 text-center mx-0"
           style={{
