@@ -8,6 +8,7 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { ServiceWorkerUpdater } from "@/components/ServiceWorkerUpdater";
+import { BetaBadge } from "@/components/BetaBadge";
 import { useAuth } from "@/contexts/AuthContext";
 
 function OfflineBanner() {
