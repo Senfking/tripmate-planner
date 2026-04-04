@@ -654,6 +654,17 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           }
         }}
       />
+
+      {trip && (
+        <ShareInviteModal
+          tripId={tripId}
+          tripName={trip.name}
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          isAdmin={myRole === "owner" || myRole === "admin"}
+          trip={trip}
+        />
+      )}
     </div>
   );
 }
