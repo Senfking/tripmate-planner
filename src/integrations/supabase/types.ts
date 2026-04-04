@@ -831,6 +831,7 @@ export type Database = {
           attendance_status: string
           id: string
           joined_at: string
+          mute_notifications: boolean
           role: string
           trip_id: string
           user_id: string
@@ -839,6 +840,7 @@ export type Database = {
           attendance_status?: string
           id?: string
           joined_at?: string
+          mute_notifications?: boolean
           role: string
           trip_id: string
           user_id: string
@@ -847,6 +849,7 @@ export type Database = {
           attendance_status?: string
           id?: string
           joined_at?: string
+          mute_notifications?: boolean
           role?: string
           trip_id?: string
           user_id?: string
