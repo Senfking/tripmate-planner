@@ -387,7 +387,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
         }}
       >
-      {!canShowBalances ? (
+      {members.length <= 1 ? null : !canShowBalances ? (
         <div className="space-y-2 px-4 py-3">
           <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Balances</span>
           <div className="flex items-center gap-2 py-2">
