@@ -784,6 +784,8 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                 )}
               </div>
             );
+          })}
+        </div>
       )}
 
 
