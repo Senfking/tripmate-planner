@@ -148,7 +148,9 @@ function StatusRow({
 
   return (
     <div className="flex items-center gap-2">
-      {content}
+      <button onClick={onDateTap} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+        {content}
+      </button>
       {badge && onAttendanceTap && (
         <button
           onClick={onAttendanceTap}
