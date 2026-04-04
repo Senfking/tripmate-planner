@@ -194,18 +194,6 @@ const Itinerary = () => {
   const sortedDates = Array.from(allDatesSet).sort();
   const isEmpty = sortedDates.length === 0;
 
-  // Auto-scroll to today on first load when there are past days visible
-  const hasPastDays = sortedDates.length > 0 && sortedDates[0] < todayStr;
-  useEffect(() => {
-    if (!hasPastDays || scrolledToToday.current) return;
-    scrolledToToday.current = true;
-    // Use requestAnimationFrame to ensure DOM is painted
-    requestAnimationFrame(() => {
-      const el = document.getElementById(`day-${todayStr}`);
-      if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
-    });
-  }, [hasPastDays, todayStr]);
-
   return (
     <div className="min-h-dvh flex flex-col bg-background">
       <TabHeroHeader title="Itinerary" subtitle={subtitle} pills={pills}>
