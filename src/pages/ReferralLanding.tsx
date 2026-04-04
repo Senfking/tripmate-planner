@@ -68,6 +68,7 @@ export default function ReferralLanding() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const code = params.get("ref");
+  const redirectAfterAuth = params.get("redirect");
   const referralCode = useRef(code || "");
   const [referrer, setReferrer] = useState<{ display_name: string | null } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -88,9 +89,9 @@ export default function ReferralLanding() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && user) {
-      navigate("/app/trips", { replace: true });
+      navigate(redirectAfterAuth || "/app/trips", { replace: true });
     }
-  }, [authLoading, user, navigate]);
+  }, [authLoading, user, navigate, redirectAfterAuth]);
 
   // Store referral code
   useEffect(() => {
@@ -139,7 +140,7 @@ export default function ReferralLanding() {
   const handleGoogleSignIn = async () => {
     setError(null);
     setGoogleLoading(true);
-    const callbackUrl = `${window.location.origin}/auth/callback`;
+    const callbackUrl = `${window.location.origin}/auth/callback${redirectAfterAuth ? `?redirect=${encodeURIComponent(redirectAfterAuth)}` : ""}`;
     const { error: err } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: callbackUrl,
     });
@@ -158,7 +159,7 @@ export default function ReferralLanding() {
       if (err) {
         setError(friendlyError(err.message));
       } else {
-        navigate("/app/trips", { replace: true });
+        navigate(redirectAfterAuth || "/app/trips", { replace: true });
       }
     } else {
       const { error: err, data } = await signUp(email, password, displayName);
@@ -176,7 +177,7 @@ export default function ReferralLanding() {
               .eq("id", data.user.id);
           }
         }
-        navigate("/app/trips", { replace: true });
+        navigate(redirectAfterAuth || "/app/trips", { replace: true });
       }
     }
   };

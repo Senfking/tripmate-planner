@@ -8,9 +8,29 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// In-memory fallback when localStorage is unavailable (e.g. WhatsApp WKWebView)
+function getStorage(): Storage {
+  try {
+    const key = "__storage_test__";
+    localStorage.setItem(key, "1");
+    localStorage.removeItem(key);
+    return localStorage;
+  } catch {
+    const store = new Map<string, string>();
+    return {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, v); },
+      removeItem: (k: string) => { store.delete(k); },
+      clear: () => { store.clear(); },
+      get length() { return store.size; },
+      key: (i: number) => [...store.keys()][i] ?? null,
+    } as Storage;
+  }
+}
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: getStorage(),
     persistSession: true,
     autoRefreshToken: true,
   }
