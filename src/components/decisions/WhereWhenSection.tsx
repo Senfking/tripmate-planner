@@ -538,22 +538,26 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                   <div className="border-t border-border/50">
                     <div className="p-4 space-y-3">
                       <div className="flex items-center gap-3">
-                        {/* Voter avatars */}
+                        {/* All member avatars — "in" voters are highlighted */}
                         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                          {(reactionVoters[p.id] || []).length > 0 ? (
-                            <div className="flex -space-x-1.5">
-                              {(reactionVoters[p.id] || []).slice(0, 5).map((voter) => (
-                                <Avatar key={voter.id} className="h-6 w-6 border-2 border-background">
-                                  <AvatarImage src={voter.avatar_url || undefined} />
+                          <div className="flex -space-x-1.5">
+                            {tripMemberProfiles.map((member) => {
+                              const isIn = reactionVoterIds[p.id]?.has(member.id);
+                              return (
+                                <Avatar
+                                  key={member.id}
+                                  className={`h-6 w-6 border-2 border-background transition-opacity ${isIn ? "" : "opacity-30"}`}
+                                >
+                                  <AvatarImage src={member.avatar_url || undefined} />
                                   <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
-                                    {(voter.display_name || "?")[0].toUpperCase()}
+                                    {(member.display_name || "?")[0].toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
-                              ))}
-                            </div>
-                          ) : null}
+                              );
+                            })}
+                          </div>
                           <span className="text-xs text-muted-foreground">
-                            {inCount} of {memberCount} in
+                            {inCount}/{memberCount} in
                           </span>
                         </div>
                         {/* I'm in button — right-aligned for thumb reach */}
