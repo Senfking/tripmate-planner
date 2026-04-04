@@ -323,40 +323,38 @@ export function TripRoute({
         );
       })}
 
-      {/* Lock / unlock actions */}
-      <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
-        {canManage && !isRouteLocked && sortedStops.length > 0 && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={() => setLockConfirm(true)}
-            >
-              <Lock className="h-3.5 w-3.5" />
-              Lock route
-            </Button>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[200px] text-xs">
-                Prevents new destination suggestions. You can unlock anytime.
-              </TooltipContent>
-            </Tooltip>
-          </>
-        )}
-      </div>
-
-      {/* Collapsible admin controls */}
+      {/* Admin actions row */}
       {canManage && !isRouteLocked && (
         <Collapsible open={adminOpen} onOpenChange={setAdminOpen}>
-          <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-end md:justify-start">
-            <Settings className="h-3.5 w-3.5" />
-            Manage route directly
-            <ChevronDown className={`h-3 w-3 transition-transform ${adminOpen ? "rotate-180" : ""}`} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
+            {sortedStops.length > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setLockConfirm(true)}
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  Lock route
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[200px] text-xs">
+                    Prevents new destination suggestions. You can unlock anytime.
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
+            <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto md:ml-0">
+              <Settings className="h-3.5 w-3.5" />
+              Manage route
+              <ChevronDown className={`h-3 w-3 transition-transform ${adminOpen ? "rotate-180" : ""}`} />
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="pt-3 space-y-2">
             <Button
               variant="outline"
               size="sm"
@@ -366,6 +364,30 @@ export function TripRoute({
               <Plus className="h-3.5 w-3.5" />
               Add stop
             </Button>
+            {sortedStops.length > 0 && (
+              <div className="space-y-1.5">
+                {sortedStops.map((stop) => (
+                  <div key={stop.id} className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{stop.destination}</p>
+                      <button
+                        onClick={() => editingStopId === stop.id ? setEditingStopId(null) : handleStartEdit(stop)}
+                        className="text-[11px] text-primary hover:underline flex items-center gap-1"
+                      >
+                        <CalendarDays className="h-2.5 w-2.5" />
+                        {fmt(stop.start_date)} – {fmt(stop.end_date)}
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setRemoveConfirm(stop)}
+                      className="p-1 text-muted-foreground hover:text-destructive shrink-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </CollapsibleContent>
         </Collapsible>
       )}
