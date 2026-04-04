@@ -627,6 +627,41 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
 
       </div>{/* end frosted glass wrapper */}
 
+      {/* Export CSV — bottom of page */}
+      {expenses.length > 0 && (
+        <Button
+          variant="ghost"
+          className="w-full h-11 gap-2 text-[13px] font-medium text-muted-foreground"
+          disabled={csvLoading}
+          onClick={async () => {
+            setCsvLoading(true);
+            try {
+              const session = (await supabase.auth.getSession()).data.session;
+              const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-expenses-csv?trip_id=${tripId}`,
+                { headers: { Authorization: `Bearer ${session?.access_token}` } }
+              );
+              if (!res.ok) throw new Error("Export failed");
+              const blob = await res.blob();
+              trackEvent("export_downloaded", { trip_id: tripId, format: "csv" }, user?.id);
+              const a = document.createElement("a");
+              const objUrl = URL.createObjectURL(blob);
+              a.href = objUrl;
+              a.download = "expenses.csv";
+              a.click();
+              URL.revokeObjectURL(objUrl);
+            } catch {
+              toast.error("Failed to export CSV");
+            } finally {
+              setCsvLoading(false);
+            }
+          }}
+        >
+          {csvLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Download Expenses CSV
+        </Button>
+      )}
+
       <ExpenseFormModal
         open={formOpen}
         onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingExpense(null); }}
