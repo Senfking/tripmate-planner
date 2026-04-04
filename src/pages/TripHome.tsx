@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload, CalendarDays } from "lucide-react";
 import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -19,6 +19,7 @@ import {
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { MemberListSheet } from "@/components/trip/MemberListSheet";
 import { AttendanceInviteOverlay } from "@/components/trip/AttendanceInviteOverlay";
+import { TripDateEditor } from "@/components/trip/TripDateEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, parseISO, isWithinInterval, differenceInCalendarDays, differenceInDays } from "date-fns";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
@@ -87,12 +88,14 @@ function StatusRow({
   onShare,
   attendanceStatus,
   onAttendanceTap,
+  onDateTap,
 }: {
   startDate: string | null;
   endDate: string | null;
   onShare: () => void;
   attendanceStatus?: string;
   onAttendanceTap?: () => void;
+  onDateTap?: () => void;
 }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -135,7 +138,10 @@ function StatusRow({
     }
   } else {
     content = (
-      <span className="text-sm text-muted-foreground">Dates TBD</span>
+      <button onClick={onDateTap} className="text-sm text-primary font-medium flex items-center gap-1">
+        <CalendarDays className="h-3.5 w-3.5" />
+        Set dates
+      </button>
     );
   }
 
@@ -143,7 +149,9 @@ function StatusRow({
 
   return (
     <div className="flex items-center gap-2">
-      {content}
+      <button onClick={onDateTap} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+        {content}
+      </button>
       {badge && onAttendanceTap && (
         <button
           onClick={onAttendanceTap}
@@ -266,6 +274,24 @@ export default function TripHome() {
   const [coverMenuOpen, setCoverMenuOpen] = useState(false);
   const [croppingCover, setCroppingCover] = useState(false);
   const [savingCrop, setSavingCrop] = useState(false);
+  const [dateEditorOpen, setDateEditorOpen] = useState(false);
+
+  const updateTripDates = useMutation({
+    mutationFn: async ({ start, end }: { start: string | null; end: string | null }) => {
+      const { error } = await supabase
+        .from("trips")
+        .update({ tentative_start_date: start, tentative_end_date: end })
+        .eq("id", tripId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trips", user?.id] });
+      setDateEditorOpen(false);
+      toast.success("Trip dates updated");
+    },
+    onError: () => toast.error("Failed to update dates"),
+  });
   const heroRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -559,6 +585,7 @@ export default function TripHome() {
             onShare={() => setShareInviteOpen(true)}
             attendanceStatus={myAttendanceStatus}
             onAttendanceTap={handleOpenOverlay}
+            onDateTap={() => setDateEditorOpen(true)}
           />
         </div>
 
@@ -607,7 +634,14 @@ export default function TripHome() {
         />
       )}
 
-
+      <TripDateEditor
+        open={dateEditorOpen}
+        onOpenChange={setDateEditorOpen}
+        startDate={trip.tentative_start_date}
+        endDate={trip.tentative_end_date}
+        onSave={(start, end) => updateTripDates.mutate({ start, end })}
+        saving={updateTripDates.isPending}
+      />
 
       {/* Cover image menu drawer */}
       <Drawer open={coverMenuOpen} onOpenChange={setCoverMenuOpen}>
