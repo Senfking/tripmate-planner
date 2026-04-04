@@ -638,18 +638,9 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         </Button>
                       </div>
 
-                      {/* Destination name — inline editable */}
+                      {/* Note area */}
                       {isEditingThis ? (
                         <div className="space-y-2">
-                          <Input
-                            value={editProposalDest}
-                            onChange={(e) => setEditProposalDest(e.target.value)}
-                            className="h-8 text-sm font-semibold"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Escape") setEditingProposalId(null);
-                            }}
-                          />
                           <Textarea
                             value={editProposalNote}
                             onChange={(e) => setEditProposalNote(e.target.value)}
@@ -678,18 +669,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         <>
                           {p.note && (
                             <p className="text-sm text-foreground/70 italic">"{p.note}"</p>
-                          )}
-                          {!p.note && canEditProposal && (
-                            <button
-                              onClick={() => {
-                                setEditingProposalId(p.id);
-                                setEditProposalDest(p.destination);
-                                setEditProposalNote("");
-                              }}
-                              className="text-xs text-muted-foreground hover:text-primary"
-                            >
-                              + Add a note
-                            </button>
                           )}
                         </>
                       )}
