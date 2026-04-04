@@ -233,11 +233,11 @@ async function encryptPayload(
   const padded = concat(payload, new Uint8Array([2]));
 
   // Encrypt with AES-128-GCM
-  const aesKey = await crypto.subtle.importKey("raw", cek, { name: "AES-GCM" }, false, [
+  const aesKey = await crypto.subtle.importKey("raw", (cek as Uint8Array).buffer, { name: "AES-GCM" }, false, [
     "encrypt",
   ]);
   const ciphertext = new Uint8Array(
-    await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, aesKey, padded),
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, aesKey, (padded as Uint8Array).buffer),
   );
 
   // Build aes128gcm body: salt (16) + rs (4) + idLen (1) + keyId (65) + ciphertext
