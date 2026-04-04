@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { subscribeToPush } from "@/lib/pushSubscription";
 import { DesktopFooter } from "@/components/DesktopFooter";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
