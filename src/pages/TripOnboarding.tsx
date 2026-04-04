@@ -56,6 +56,12 @@ export default function TripOnboarding() {
   const goNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   const goBack = () => setStep((s) => Math.max(s - 1, 1));
 
+  const navigateToTrip = useCallback(() => {
+    navigate(`/app/trips/${tripId}`);
+  }, [navigate, tripId]);
+
+  const { showOptIn, PushOptInDrawer } = usePushOptIn(navigateToTrip);
+
   const saveStep2 = async () => {
     const updates: Record<string, any> = { settlement_currency: currency };
     if (destination.trim()) updates.destination = destination.trim();
