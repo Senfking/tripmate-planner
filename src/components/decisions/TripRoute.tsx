@@ -10,7 +10,13 @@ import {
   CalendarDays,
   Settings,
   ChevronDown,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
