@@ -50,6 +50,8 @@ type Props = {
   canDelete?: boolean;
   onDeleteProposal?: (proposalId: string) => void;
   isDeleting?: boolean;
+  hideDestVoting?: boolean;
+  hideHeader?: boolean;
 };
 
 const DATE_VOTE_BUTTONS = [
