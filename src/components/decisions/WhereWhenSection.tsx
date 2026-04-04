@@ -727,11 +727,11 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                                   <Button
                                     variant={worksForMe ? "default" : "outline"}
                                     size="sm"
-                                    className={`gap-1.5 shrink-0 ${worksForMe ? "" : "text-muted-foreground"}`}
+                                    className={`gap-1 shrink-0 text-xs h-7 px-2 ${worksForMe ? "" : "text-muted-foreground"}`}
                                     onClick={() => voteDateOption.mutate({ dateOptionId: d.id, value: "yes" })}
                                     disabled={isRouteLocked}
                                   >
-                                    <Check className="h-3.5 w-3.5" />
+                                    <Check className="h-3 w-3" />
                                     {worksForMe ? "Works!" : "Works for me"}
                                   </Button>
                                   {canEditDate && (
