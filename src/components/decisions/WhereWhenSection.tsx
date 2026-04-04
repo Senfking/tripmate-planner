@@ -284,6 +284,13 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
       )}
 
+      {/* Route summary banner */}
+      <LeadingComboBanner
+        leadingCombo={leadingCombo}
+        routeStops={stops}
+        isRouteLocked={isRouteLocked}
+      />
+
       {/* Unified timeline */}
       {timeline.length > 0 && (
         <div className="space-y-2">
@@ -536,12 +543,8 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
       )}
 
-      {/* Leading combo banner */}
-      <LeadingComboBanner
-        leadingCombo={leadingCombo}
-        routeStops={stops}
-        isRouteLocked={isRouteLocked}
-      />
+
+
 
       {/* Suggest a destination — full width at the bottom */}
       {!isRouteLocked && totalItems > 0 && (
