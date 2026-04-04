@@ -240,7 +240,7 @@ export function ProposalCard({
         </div>
       )}
 
-      {/* Add to route button — owner/admin only */}
+      {/* Confirm destination button — owner/admin only */}
       {canManage && !isRouteLocked && !isInRoute && !confirmOpen && (
         <div className="flex justify-end md:justify-start">
           <Button
@@ -249,8 +249,8 @@ export function ProposalCard({
             className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
             onClick={handleOpenConfirm}
           >
-            <Route className="h-3.5 w-3.5" />
-            Add to route 🗺️
+            <Check className="h-3.5 w-3.5" />
+            Confirm destination & dates
           </Button>
         </div>
       )}
