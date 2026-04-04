@@ -8,6 +8,8 @@ import {
   Plus,
   Lock,
   CalendarDays,
+  Settings,
+  ChevronDown,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -24,6 +26,11 @@ import {
   DrawerTitle,
   DrawerFooter,
 } from "@/components/ui/drawer";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { AddToRouteDrawer } from "./AddToRouteDrawer";
 import { DateRangePicker } from "./DateRangePicker";
 import { validateRouteDate } from "./routeValidation";
@@ -43,6 +50,7 @@ type Props = {
   onLockRoute: () => void;
   onUnlockRoute: () => void;
   isLocking: boolean;
+  proposalReactions?: Record<string, { up: number; down: number }>;
 };
 
 export function TripRoute({
@@ -58,6 +66,7 @@ export function TripRoute({
   onLockRoute,
   onUnlockRoute,
   isLocking,
+  proposalReactions = {},
 }: Props) {
   const isMobile = useIsMobile();
   const [addOpen, setAddOpen] = useState(false);
@@ -66,6 +75,7 @@ export function TripRoute({
   const [unlockConfirm, setUnlockConfirm] = useState(false);
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [editDateRange, setEditDateRange] = useState<DateRange | undefined>();
+  const [adminOpen, setAdminOpen] = useState(false);
 
   const fmt = (d: string) => format(parseISO(d), "MMM d");
 
@@ -219,6 +229,7 @@ export function TripRoute({
       {sortedStops.map((stop, index) => {
         const isEditing = editingStopId === stop.id;
         const displayNumber = index + 1;
+        const reactions = stop.proposal_id ? proposalReactions[stop.proposal_id] : undefined;
 
         return (
           <div key={stop.id} className="space-y-2">
@@ -227,9 +238,16 @@ export function TripRoute({
                 {displayNumber}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {stop.destination}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {stop.destination}
+                  </p>
+                  {reactions && (
+                    <span className="text-[11px] text-muted-foreground shrink-0">
+                      👍 {reactions.up} 👎 {reactions.down}
+                    </span>
+                  )}
+                </div>
                 {canManage && !isRouteLocked ? (
                   <button
                     onClick={() => isEditing ? setEditingStopId(null) : handleStartEdit(stop)}
@@ -299,31 +317,49 @@ export function TripRoute({
         );
       })}
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
-        {canManage && !isRouteLocked && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add stop
-          </Button>
-        )}
+      {/* Lock / unlock actions */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
+          {canManage && !isRouteLocked && sortedStops.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setLockConfirm(true)}
+            >
+              <Lock className="h-3.5 w-3.5" />
+              Lock route
+            </Button>
+          )}
+        </div>
         {canManage && !isRouteLocked && sortedStops.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={() => setLockConfirm(true)}
-          >
-            <Lock className="h-3.5 w-3.5" />
-            Lock route
-          </Button>
+          <p className="text-[11px] text-muted-foreground text-right md:text-left">
+            Prevents new destination suggestions. You can unlock anytime.
+          </p>
         )}
       </div>
+
+      {/* Collapsible admin controls */}
+      {canManage && !isRouteLocked && (
+        <Collapsible open={adminOpen} onOpenChange={setAdminOpen}>
+          <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-end md:justify-start">
+            <Settings className="h-3.5 w-3.5" />
+            Manage route directly
+            <ChevronDown className={`h-3 w-3 transition-transform ${adminOpen ? "rotate-180" : ""}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add stop
+            </Button>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       {/* Add stop drawer */}
       <AddToRouteDrawer

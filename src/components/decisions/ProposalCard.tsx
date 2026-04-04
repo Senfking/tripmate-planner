@@ -243,8 +243,7 @@ export function ProposalCard({
           className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full"
           onClick={() => setDatesExpanded(!datesExpanded)}
         >
-          <CalendarDays className="h-4 w-4" />
-          Date options ({dateOptions.length})
+          📅 When does this work? ({dateOptions.length})
           {datesExpanded ? (
             <ChevronUp className="h-3.5 w-3.5 ml-auto" />
           ) : (
