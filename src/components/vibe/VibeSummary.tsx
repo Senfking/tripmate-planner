@@ -40,7 +40,8 @@ const SUMMARY_PHRASES: Record<string, Record<string, string>> = {
     "4–5 days": "4–5 days",
     "A full week": "a full week",
     "1–2 weeks": "1–2 weeks",
-    "2+ weeks": "2+ weeks",
+    "2–3 weeks": "2–3 weeks",
+    "4+ weeks": "4+ weeks",
   },
 };
 
