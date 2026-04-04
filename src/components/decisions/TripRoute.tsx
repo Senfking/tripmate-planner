@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
-import { format, parseISO, differenceInDays, eachDayOfInterval } from "date-fns";
+import { format, parseISO, eachDayOfInterval } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Trash2,
   Plus,
@@ -72,7 +71,6 @@ export function TripRoute({
   onLockRoute,
   onUnlockRoute,
   isLocking,
-  proposalReactions = {},
 }: Props) {
   const isMobile = useIsMobile();
   const [addOpen, setAddOpen] = useState(false);
@@ -85,20 +83,10 @@ export function TripRoute({
 
   const fmt = (d: string) => format(parseISO(d), "MMM d");
 
-  // Sort stops by start_date and assign display numbers
   const sortedStops = useMemo(
     () => [...stops].sort((a, b) => a.start_date.localeCompare(b.start_date)),
     [stops]
   );
-
-  const tripStart = sortedStops[0]?.start_date || null;
-  const tripEnd = sortedStops.length > 0
-    ? [...sortedStops].sort((a, b) => b.end_date.localeCompare(a.end_date))[0]?.end_date
-    : null;
-  const totalDays =
-    tripStart && tripEnd
-      ? differenceInDays(parseISO(tripEnd), parseISO(tripStart))
-      : 0;
 
   const confirmRemove = () => {
     if (!removeConfirm) return;
@@ -140,7 +128,6 @@ export function TripRoute({
     setEditDateRange(undefined);
   };
 
-  // Validation for the currently editing stop
   const editValidation = useMemo(() => {
     if (!editingStopId || !editDateRange?.from || !editDateRange?.to) {
       return { hardError: null, softWarning: null, info: null };
@@ -199,20 +186,6 @@ export function TripRoute({
 
   return (
     <div className="space-y-3">
-      {/* Route summary */}
-      {sortedStops.length > 0 && tripStart && tripEnd && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            {totalDays} days · {fmt(tripStart)} – {fmt(tripEnd)}
-          </span>
-          {isRouteLocked && (
-            <Badge className="bg-muted text-muted-foreground text-[10px]">
-              <Lock className="h-3 w-3 mr-1" /> Locked
-            </Badge>
-          )}
-        </div>
-      )}
-
       {/* Unlock link for owner */}
       {isRouteLocked && isOwner && (
         <button
@@ -222,106 +195,6 @@ export function TripRoute({
           Unlock to make changes
         </button>
       )}
-
-      {/* Empty state */}
-      {sortedStops.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4">
-          No stops confirmed yet — add destinations below and confirm them to
-          build your route
-        </p>
-      )}
-
-      {/* Stops list */}
-      {sortedStops.map((stop, index) => {
-        const isEditing = editingStopId === stop.id;
-        const displayNumber = index + 1;
-        const reactions = stop.proposal_id ? proposalReactions[stop.proposal_id] : undefined;
-
-        return (
-          <div key={stop.id} className="space-y-2">
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
-                {displayNumber}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {stop.destination}
-                  </p>
-                  {reactions && (
-                    <span className="text-[11px] text-muted-foreground shrink-0">
-                      👍 {reactions.up} 👎 {reactions.down}
-                    </span>
-                  )}
-                </div>
-                {canManage && !isRouteLocked ? (
-                  <button
-                    onClick={() => isEditing ? setEditingStopId(null) : handleStartEdit(stop)}
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    <CalendarDays className="h-3 w-3" />
-                    {fmt(stop.start_date)} – {fmt(stop.end_date)}
-                  </button>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    {fmt(stop.start_date)} – {fmt(stop.end_date)}
-                  </p>
-                )}
-              </div>
-              {canManage && !isRouteLocked && (
-                <button
-                  onClick={() => setRemoveConfirm(stop)}
-                  className="p-1 text-muted-foreground hover:text-destructive shrink-0"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Inline date editor */}
-            {isEditing && (
-              <div className="ml-9 rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
-                <DateRangePicker
-                  value={editDateRange}
-                  onChange={setEditDateRange}
-                  className="w-full"
-                  placeholder="Select new dates"
-                />
-
-                {editValidation.hardError && (
-                  <p className="text-sm text-destructive">{editValidation.hardError}</p>
-                )}
-                {editValidation.info && !editValidation.hardError && (
-                  <p className="text-sm text-muted-foreground">{editValidation.info}</p>
-                )}
-                {editValidation.softWarning && !editValidation.hardError && (
-                  <p className="text-sm text-amber-600">{editValidation.softWarning}</p>
-                )}
-
-                <div className="flex items-center gap-2 justify-end md:justify-start">
-                  <button
-                    onClick={() => { setEditingStopId(null); setEditDateRange(undefined); }}
-                    className="text-sm text-muted-foreground hover:text-foreground underline"
-                  >
-                    Cancel
-                  </button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSaveEdit(stop.id)}
-                    disabled={!canSaveEdit || isUpdatingDates}
-                  >
-                    {isUpdatingDates
-                      ? "Saving…"
-                      : editValidation.softWarning
-                      ? "Save anyway"
-                      : "Save dates"}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
 
       {/* Admin actions row */}
       {canManage && !isRouteLocked && (
@@ -366,26 +239,70 @@ export function TripRoute({
             </Button>
             {sortedStops.length > 0 && (
               <div className="space-y-1.5">
-                {sortedStops.map((stop) => (
-                  <div key={stop.id} className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate">{stop.destination}</p>
-                      <button
-                        onClick={() => editingStopId === stop.id ? setEditingStopId(null) : handleStartEdit(stop)}
-                        className="text-[11px] text-primary hover:underline flex items-center gap-1"
-                      >
-                        <CalendarDays className="h-2.5 w-2.5" />
-                        {fmt(stop.start_date)} – {fmt(stop.end_date)}
-                      </button>
+                {sortedStops.map((stop) => {
+                  const isEditing = editingStopId === stop.id;
+                  return (
+                    <div key={stop.id} className="space-y-2">
+                      <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-foreground truncate">{stop.destination}</p>
+                          <button
+                            onClick={() => isEditing ? setEditingStopId(null) : handleStartEdit(stop)}
+                            className="text-[11px] text-primary hover:underline flex items-center gap-1"
+                          >
+                            <CalendarDays className="h-2.5 w-2.5" />
+                            {fmt(stop.start_date)} – {fmt(stop.end_date)}
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setRemoveConfirm(stop)}
+                          className="p-1 text-muted-foreground hover:text-destructive shrink-0"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {/* Inline date editor */}
+                      {isEditing && (
+                        <div className="ml-4 rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                          <DateRangePicker
+                            value={editDateRange}
+                            onChange={setEditDateRange}
+                            className="w-full"
+                            placeholder="Select new dates"
+                          />
+                          {editValidation.hardError && (
+                            <p className="text-sm text-destructive">{editValidation.hardError}</p>
+                          )}
+                          {editValidation.info && !editValidation.hardError && (
+                            <p className="text-sm text-muted-foreground">{editValidation.info}</p>
+                          )}
+                          {editValidation.softWarning && !editValidation.hardError && (
+                            <p className="text-sm text-amber-600">{editValidation.softWarning}</p>
+                          )}
+                          <div className="flex items-center gap-2 justify-end md:justify-start">
+                            <button
+                              onClick={() => { setEditingStopId(null); setEditDateRange(undefined); }}
+                              className="text-sm text-muted-foreground hover:text-foreground underline"
+                            >
+                              Cancel
+                            </button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveEdit(stop.id)}
+                              disabled={!canSaveEdit || isUpdatingDates}
+                            >
+                              {isUpdatingDates
+                                ? "Saving…"
+                                : editValidation.softWarning
+                                ? "Save anyway"
+                                : "Save dates"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <button
-                      onClick={() => setRemoveConfirm(stop)}
-                      className="p-1 text-muted-foreground hover:text-destructive shrink-0"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CollapsibleContent>

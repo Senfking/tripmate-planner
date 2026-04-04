@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { format, parseISO, differenceInDays } from "date-fns";
 import { useProposals } from "@/hooks/useProposals";
 import { useRouteStops } from "@/hooks/useRouteStops";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,8 +7,8 @@ import { ProposalCard } from "./ProposalCard";
 import { ProposalForm } from "./ProposalForm";
 import { LeadingComboBanner } from "./LeadingComboBanner";
 import { TripRoute } from "./TripRoute";
-import { MapPin, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MapPin, Trash2, CalendarDays, Lock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 
 type Props = {
@@ -46,7 +47,23 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     isProposalInRoute,
   } = useRouteStops(tripId);
 
-  const [showVoting, setShowVoting] = useState(false);
+  const fmt = (d: string) => format(parseISO(d), "MMM d");
+
+  // Sort stops by start_date
+  const sortedStops = useMemo(
+    () => [...stops].sort((a, b) => a.start_date.localeCompare(b.start_date)),
+    [stops]
+  );
+
+  // Route summary
+  const tripStart = sortedStops[0]?.start_date || null;
+  const tripEnd = sortedStops.length > 0
+    ? [...sortedStops].sort((a, b) => b.end_date.localeCompare(a.end_date))[0]?.end_date
+    : null;
+  const totalDays =
+    tripStart && tripEnd
+      ? differenceInDays(parseISO(tripEnd), parseISO(tripStart))
+      : 0;
 
   // Build proposalReactions map: proposal_id → { up, down }
   const proposalReactions = useMemo(() => {
@@ -60,12 +77,199 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     return map;
   }, [proposals, destVotes]);
 
-  const hasProposals = proposals.length > 0;
-  const votingSectionVisible = hasProposals || showVoting;
+  // Voting proposals = those NOT in route
+  const votingProposals = useMemo(
+    () => proposals.filter((p) => !isProposalInRoute(p.id)),
+    [proposals, isProposalInRoute]
+  );
+
+  const hasVotingProposals = votingProposals.length > 0;
+  const hasStops = sortedStops.length > 0;
 
   return (
-    <div className="space-y-6 mt-6">
-      {/* Trip Route section */}
+    <div className="space-y-4 mt-6">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-primary" />
+          <h2 className="font-semibold text-foreground">Where & When</h2>
+        </div>
+        {!isRouteLocked && (
+          <ProposalForm
+            onSubmit={async (data) => {
+              try {
+                await createProposal.mutateAsync(data);
+                toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" });
+              } catch {
+                toast({ title: "Failed to add destination", variant: "destructive" });
+                throw new Error("failed");
+              }
+            }}
+            isPending={createProposal.isPending}
+          />
+        )}
+      </div>
+
+      {/* Route summary */}
+      {hasStops && tripStart && tripEnd && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            {totalDays} days · {fmt(tripStart)} – {fmt(tripEnd)}
+          </span>
+          {isRouteLocked && (
+            <Badge className="bg-muted text-muted-foreground text-[10px]">
+              <Lock className="h-3 w-3 mr-1" /> Locked
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* IN ROUTE cards */}
+      {sortedStops.map((stop, index) => {
+        const reactions = stop.proposal_id ? proposalReactions[stop.proposal_id] : undefined;
+        return (
+          <div
+            key={stop.id}
+            className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3"
+          >
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
+              {index + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {stop.destination}
+                </p>
+                {reactions && (
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    👍 {reactions.up} 👎 {reactions.down}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" />
+                {fmt(stop.start_date)} – {fmt(stop.end_date)}
+              </p>
+            </div>
+            {canManage && !isRouteLocked && (
+              <button
+                onClick={() => {
+                  removeStop.mutate(
+                    { id: stop.id },
+                    { onSuccess: () => toast({ title: "Stop removed from route" }) }
+                  );
+                }}
+                className="p-1 text-muted-foreground hover:text-destructive shrink-0"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Leading combo banner */}
+      <LeadingComboBanner
+        leadingCombo={leadingCombo}
+        routeStops={stops}
+        isRouteLocked={isRouteLocked}
+      />
+
+      {/* Divider */}
+      {hasVotingProposals && hasStops && (
+        <div className="flex items-center gap-3 py-1">
+          <div className="flex-1 border-t border-border/50" />
+          <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+            Still deciding
+          </span>
+          <div className="flex-1 border-t border-border/50" />
+        </div>
+      )}
+
+      {/* VOTING cards */}
+      {votingProposals.length > 0 && (
+        <div className="space-y-3">
+          {votingProposals.map((p) => {
+            const pDateOptions = dateOptionsByProposal(p.id);
+            const isCreator = user?.id === p.created_by;
+            const hasOtherVotes = (destVotes[p.id]?.up || 0) + (destVotes[p.id]?.down || 0) > (myDestVotes[p.id] ? 1 : 0);
+            const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
+            return (
+              <ProposalCard
+                key={p.id}
+                proposal={p}
+                destVotes={destVotes[p.id] || { up: 0, down: 0 }}
+                myDestVote={myDestVotes[p.id]}
+                dateOptions={pDateOptions}
+                dateVotes={dateVotes}
+                myDateVotes={myDateVotes}
+                canManage={canManage}
+                isRouteLocked={isRouteLocked}
+                isInRoute={false}
+                existingStops={stops}
+                onReactDest={(value) => reactDest.mutate({ proposalId: p.id, value })}
+                onAddDateOption={(input) =>
+                  addDateOption.mutate({ proposalId: p.id, ...input })
+                }
+                onVoteDateOption={(dateOptionId, value) =>
+                  voteDateOption.mutate({ dateOptionId, value })
+                }
+                onAddToRoute={(input) => {
+                  addStop.mutate(input, {
+                    onSuccess: () => toast({ title: `${p.destination} added to route! 📍` }),
+                  });
+                }}
+                isAddingToRoute={addStop.isPending}
+                isAddingDate={addDateOption.isPending}
+                currentUserId={user?.id}
+                canDelete={canDeleteThis}
+                onDeleteProposal={(proposalId) => {
+                  deleteProposal.mutate({ proposalId }, {
+                    onSuccess: () => toast({ title: `${p.destination} removed` }),
+                    onError: (err) => {
+                      if (err.message === "IN_ROUTE") {
+                        toast({
+                          title: "Can't remove",
+                          description: "This destination is already in your route. Remove it from the route first.",
+                          variant: "destructive",
+                        });
+                      } else {
+                        toast({ title: "Failed to remove suggestion", variant: "destructive" });
+                      }
+                    },
+                  });
+                }}
+                isDeleting={deleteProposal.isPending}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!hasStops && !hasVotingProposals && (
+        <div className="text-center py-8 space-y-4">
+          <p className="text-muted-foreground">
+            No plans suggested yet. Be the first to suggest a destination! 🌍
+          </p>
+          <div className="flex justify-center">
+            <ProposalForm
+              onSubmit={async (data) => {
+                try {
+                  await createProposal.mutateAsync(data);
+                  toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" });
+                } catch {
+                  toast({ title: "Failed to add destination", variant: "destructive" });
+                  throw new Error("failed");
+                }
+              }}
+              isPending={createProposal.isPending}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Admin controls footer */}
       <TripRoute
         stops={stops}
         canManage={canManage}
@@ -93,140 +297,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         isLocking={lockRoute.isPending || unlockRoute.isPending}
         proposalReactions={proposalReactions}
       />
-
-      {/* Voting section — conditional */}
-      {votingSectionVisible ? (
-        <>
-          {/* Section header */}
-          <div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold text-foreground">Vote on destinations</h2>
-              </div>
-              {hasProposals && !isRouteLocked && (
-                <ProposalForm
-                  onSubmit={async (data) => {
-                    try {
-                      await createProposal.mutateAsync(data);
-                      toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" });
-                    } catch {
-                      toast({ title: "Failed to add destination", variant: "destructive" });
-                      throw new Error("failed");
-                    }
-                  }}
-                  isPending={createProposal.isPending}
-                />
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1 ml-7">
-              Suggest a place — the group votes, the admin adds it to the route.
-            </p>
-          </div>
-
-          {/* Leading combo banner */}
-          <LeadingComboBanner
-            leadingCombo={leadingCombo}
-            routeStops={stops}
-            isRouteLocked={isRouteLocked}
-          />
-
-          {/* Destination cards */}
-          {!hasProposals ? (
-            <div className="text-center py-8 space-y-4">
-              <p className="text-muted-foreground">
-                No plans suggested yet. Be the first to suggest a destination! 🌍
-              </p>
-              <div className="flex justify-center">
-                <ProposalForm
-                  onSubmit={async (data) => {
-                    try {
-                      await createProposal.mutateAsync(data);
-                      toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" });
-                    } catch {
-                      toast({ title: "Failed to add destination", variant: "destructive" });
-                      throw new Error("failed");
-                    }
-                  }}
-                  isPending={createProposal.isPending}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {proposals.map((p) => {
-                const pDateOptions = dateOptionsByProposal(p.id);
-                const isCreator = user?.id === p.created_by;
-                const hasOtherVotes = (destVotes[p.id]?.up || 0) + (destVotes[p.id]?.down || 0) > (myDestVotes[p.id] ? 1 : 0);
-                const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
-                return (
-                  <ProposalCard
-                    key={p.id}
-                    proposal={p}
-                    destVotes={destVotes[p.id] || { up: 0, down: 0 }}
-                    myDestVote={myDestVotes[p.id]}
-                    dateOptions={pDateOptions}
-                    dateVotes={dateVotes}
-                    myDateVotes={myDateVotes}
-                    canManage={canManage}
-                    isRouteLocked={isRouteLocked}
-                    isInRoute={isProposalInRoute(p.id)}
-                    existingStops={stops}
-                    onReactDest={(value) => reactDest.mutate({ proposalId: p.id, value })}
-                    onAddDateOption={(input) =>
-                      addDateOption.mutate({ proposalId: p.id, ...input })
-                    }
-                    onVoteDateOption={(dateOptionId, value) =>
-                      voteDateOption.mutate({ dateOptionId, value })
-                    }
-                    onAddToRoute={(input) => {
-                      addStop.mutate(input, {
-                        onSuccess: () => toast({ title: `${p.destination} added to route! 📍` }),
-                      });
-                    }}
-                    isAddingToRoute={addStop.isPending}
-                    isAddingDate={addDateOption.isPending}
-                    currentUserId={user?.id}
-                    canDelete={canDeleteThis}
-                    onDeleteProposal={(proposalId) => {
-                      deleteProposal.mutate({ proposalId }, {
-                        onSuccess: () => toast({ title: `${p.destination} removed` }),
-                        onError: (err) => {
-                          if (err.message === "IN_ROUTE") {
-                            toast({
-                              title: "Can't remove",
-                              description: "This destination is already in your route. Remove it from the route first.",
-                              variant: "destructive",
-                            });
-                          } else {
-                            toast({ title: "Failed to remove suggestion", variant: "destructive" });
-                          }
-                        },
-                      });
-                    }}
-                    isDeleting={deleteProposal.isPending}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </>
-      ) : (
-        /* No proposals and voting not activated — show subtle suggest button */
-        !isRouteLocked && (
-          <div className="flex justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-xs text-muted-foreground"
-              onClick={() => setShowVoting(true)}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Suggest a destination
-            </Button>
-          </div>
-        )
-      )}
     </div>
   );
 }
