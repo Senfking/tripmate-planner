@@ -310,11 +310,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         </span>
                       </div>
 
-                      {p.note && (
-                        <p className="text-sm text-foreground/80 italic">"{p.note}"</p>
-                      )}
-
-                      {/* Date options — reuse ProposalCard for this */}
+                      {/* Date options & Add to route — via ProposalCard */}
                       <ProposalCard
                         proposal={p}
                         destVotes={pDestVotes}
@@ -341,26 +337,9 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         isAddingToRoute={addStop.isPending}
                         isAddingDate={addDateOption.isPending}
                         currentUserId={user?.id}
-                        canDelete={canDeleteThis}
-                        onDeleteProposal={(proposalId) => {
-                          deleteProposal.mutate({ proposalId }, {
-                            onSuccess: () => toast({ title: `${p.destination} removed` }),
-                            onError: (err) => {
-                              if (err.message === "IN_ROUTE") {
-                                toast({
-                                  title: "Can't remove",
-                                  description: "This destination is already in your route. Remove it from the route first.",
-                                  variant: "destructive",
-                                });
-                              } else {
-                                toast({ title: "Failed to remove suggestion", variant: "destructive" });
-                              }
-                            },
-                          });
-                        }}
-                        isDeleting={deleteProposal.isPending}
                         hideDestVoting
                         hideHeader
+                        memberCount={memberCount}
                       />
                     </div>
                   </div>
