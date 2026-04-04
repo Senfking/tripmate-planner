@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { subscribeToPush } from "@/lib/pushSubscription";
 import { DesktopFooter } from "@/components/DesktopFooter";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,6 +46,55 @@ function getInitials(name: string | null | undefined, email: string | null | und
   if (name) return name.charAt(0).toUpperCase();
   if (email) return email.charAt(0).toUpperCase();
   return "?";
+}
+
+/* ───────── push enable button ───────── */
+
+function PushEnableButton() {
+  const [status, setStatus] = useState<"unknown" | "enabled" | "denied" | "available">("unknown");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setStatus("denied");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setStatus("denied");
+    } else if (Notification.permission === "granted") {
+      navigator.serviceWorker.ready.then((reg) =>
+        reg.pushManager.getSubscription().then((sub) => setStatus(sub ? "enabled" : "available")),
+      );
+    } else {
+      setStatus("available");
+    }
+  }, []);
+
+  if (status === "enabled") {
+    return <p className="text-xs text-muted-foreground">✅ Push notifications enabled</p>;
+  }
+  if (status === "denied") {
+    return <p className="text-xs text-muted-foreground">Push notifications are blocked in your browser settings.</p>;
+  }
+  if (status === "available") {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        disabled={loading}
+        onClick={async () => {
+          setLoading(true);
+          const sub = await subscribeToPush();
+          setStatus(sub ? "enabled" : "denied");
+          setLoading(false);
+        }}
+      >
+        Enable push notifications
+      </Button>
+    );
+  }
+  return null;
 }
 
 /* ───────── chevron row ───────── */
@@ -796,11 +846,11 @@ const More = () => {
           {notifPrefs && (
             <div className="space-y-3">
               {([
-                ["new_activity", "New activity added"],
-                ["new_expense", "New expense added"],
-                ["new_member", "New member joins"],
-                ["route_confirmed", "Route confirmed"],
-                ["decisions_reminder", "Decisions reminder"],
+                ["new_expense", "New expenses"],
+                ["decisions_reminder", "Polls (new + closing soon)"],
+                ["route_confirmed", "Trip countdown reminders"],
+                ["new_member", "New members joining"],
+                ["new_activity", "Itinerary changes"],
               ] as const).map(([key, label]) => (
                 <div key={key} className="flex items-center justify-between">
                   <span className="text-sm text-foreground">{label}</span>
@@ -812,9 +862,7 @@ const More = () => {
               ))}
             </div>
           )}
-          <p className="text-xs text-muted-foreground">
-            Push notifications coming soon — your preferences will be saved
-          </p>
+          <PushEnableButton />
         </CardContent>
       </Card>
 

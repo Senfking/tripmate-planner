@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
+import { usePushOptIn } from "@/components/PushOptInDrawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -54,6 +55,12 @@ export default function TripOnboarding() {
 
   const goNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   const goBack = () => setStep((s) => Math.max(s - 1, 1));
+
+  const navigateToTrip = useCallback(() => {
+    navigate(`/app/trips/${tripId}`);
+  }, [navigate, tripId]);
+
+  const { showOptIn, PushOptInDrawer } = usePushOptIn(navigateToTrip);
 
   const saveStep2 = async () => {
     const updates: Record<string, any> = { settlement_currency: currency };
@@ -181,12 +188,13 @@ export default function TripOnboarding() {
           <Button
             className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
             style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
-            onClick={() => navigate(`/app/trips/${tripId}`)}
+            onClick={showOptIn}
           >
             Let's go →
           </Button>
         )}
       </div>
+      <PushOptInDrawer />
     </div>
   );
 }

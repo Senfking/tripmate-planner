@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePushOptIn } from "@/components/PushOptInDrawer";
 import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,15 @@ export default function InviteRedeem() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const attempted = useRef(false);
+  const pendingTripId = useRef<string | null>(null);
+
+  const navigateToTrip = useCallback(() => {
+    if (pendingTripId.current) {
+      navigate(`/app/trips/${pendingTripId.current}`, { replace: true });
+    }
+  }, [navigate]);
+
+  const { showOptIn, PushOptInDrawer } = usePushOptIn(navigateToTrip);
 
   const redeem = useMutation({
     mutationFn: async () => {
@@ -33,7 +43,8 @@ export default function InviteRedeem() {
     onSuccess: (result) => {
       if (result.success) {
         toast.success(`You've joined ${result.trip_name}! 🎉`);
-        navigate(`/app/trips/${result.trip_id}`, { replace: true });
+        pendingTripId.current = result.trip_id!;
+        showOptIn();
       } else if (result.error === "already_member" && result.trip_id) {
         toast.info("You're already a member of this trip!");
         navigate(`/app/trips/${result.trip_id}`, { replace: true });
@@ -89,5 +100,5 @@ export default function InviteRedeem() {
     );
   }
 
-  return null;
+  return <PushOptInDrawer />;
 }
