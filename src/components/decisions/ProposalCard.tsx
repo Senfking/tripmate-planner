@@ -52,6 +52,7 @@ type Props = {
   isDeleting?: boolean;
   hideDestVoting?: boolean;
   hideHeader?: boolean;
+  memberCount?: number;
 };
 
 // Kept for reference — date voting now uses a single "Works for me" toggle
