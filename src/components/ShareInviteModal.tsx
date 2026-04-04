@@ -231,7 +231,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
 
   /* ── export helpers ────────────────────────────────── */
   const [icsLoading, setIcsLoading] = useState(false);
-  const [csvLoading, setCsvLoading] = useState(false);
+  
 
   const downloadFile = async (fn: string, filename: string, setLoading: (v: boolean) => void) => {
     try {
