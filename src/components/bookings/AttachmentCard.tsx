@@ -171,22 +171,41 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    let url: string | null = null;
-    if (attachment.file_path && getSignedUrl) {
-      try {
-        url = await getSignedUrl(attachment.file_path);
-      } catch { return; }
-    }
-    if (!url && attachment.url) url = attachment.url;
-    if (url) {
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = cleanTitle(attachment.title);
-      a.target = "_blank";
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    const fileName = cleanTitle(attachment.title);
+    try {
+      let blob: Blob | null = null;
+
+      // Try offline cache first
+      if (attachment.file_path) {
+        blob = await getDocument(attachment.file_path);
+      }
+
+      // Fetch via signed URL if not cached
+      if (!blob && attachment.file_path && getSignedUrl) {
+        const url = await getSignedUrl(attachment.file_path);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Download failed");
+        blob = await res.blob();
+      }
+
+      // Fallback for link-type attachments
+      if (!blob && attachment.url) {
+        window.open(attachment.url, "_blank", "noopener");
+        return;
+      }
+
+      if (blob) {
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      }
+    } catch {
+      toast.error("Download failed");
     }
   };
 
