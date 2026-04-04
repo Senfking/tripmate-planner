@@ -12,7 +12,7 @@ import { ExpenseCard } from "./ExpenseCard";
 import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles, Users } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles, Users, Download } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
@@ -57,6 +57,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const [settleOpen, setSettleOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [csvLoading, setCsvLoading] = useState(false);
   const receiptCameraRef = useRef<HTMLInputElement>(null);
   const receiptFileRef = useRef<HTMLInputElement>(null);
 
@@ -626,6 +627,41 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       </Collapsible>
 
       </div>{/* end frosted glass wrapper */}
+
+      {/* Export CSV — bottom of page */}
+      {expenses.length > 0 && (
+        <Button
+          variant="ghost"
+          className="w-full h-11 gap-2 text-[13px] font-medium text-muted-foreground"
+          disabled={csvLoading}
+          onClick={async () => {
+            setCsvLoading(true);
+            try {
+              const session = (await supabase.auth.getSession()).data.session;
+              const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-expenses-csv?trip_id=${tripId}`,
+                { headers: { Authorization: `Bearer ${session?.access_token}` } }
+              );
+              if (!res.ok) throw new Error("Export failed");
+              const blob = await res.blob();
+              trackEvent("export_downloaded", { trip_id: tripId, format: "csv" }, user?.id);
+              const a = document.createElement("a");
+              const objUrl = URL.createObjectURL(blob);
+              a.href = objUrl;
+              a.download = "expenses.csv";
+              a.click();
+              URL.revokeObjectURL(objUrl);
+            } catch {
+              toast.error("Failed to export CSV");
+            } finally {
+              setCsvLoading(false);
+            }
+          }}
+        >
+          {csvLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Download Expenses CSV
+        </Button>
+      )}
 
       <ExpenseFormModal
         open={formOpen}
