@@ -585,6 +585,7 @@ export default function TripHome() {
             onShare={() => setShareInviteOpen(true)}
             attendanceStatus={myAttendanceStatus}
             onAttendanceTap={handleOpenOverlay}
+            onDateTap={() => setDateEditorOpen(true)}
           />
         </div>
 
