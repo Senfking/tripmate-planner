@@ -229,8 +229,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
     }
   };
 
-    }
-  };
+
 
   /* ── render ────────────────────────────────────────── */
   return (
