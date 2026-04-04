@@ -78,7 +78,15 @@ export function DeleteTripDialog({ tripName, onConfirm, isPending }: Props) {
             <Button
               variant="destructive"
               disabled={!matches || isPending}
-              onClick={() => { if (matches) onConfirm(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (matches) {
+                  setOpen(false);
+                  // Small delay so drawer closes before mutation runs
+                  setTimeout(() => onConfirm(), 150);
+                }
+              }}
             >
               {isPending ? "Deleting…" : "Delete forever"}
             </Button>
