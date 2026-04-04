@@ -8,6 +8,7 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { ServiceWorkerUpdater } from "@/components/ServiceWorkerUpdater";
+import { BetaBadge } from "@/components/BetaBadge";
 import { useAuth } from "@/contexts/AuthContext";
 
 function OfflineBanner() {
@@ -100,13 +101,14 @@ export function AppLayout() {
                 }}
               />
 
-              <div className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center pointer-events-none">
+              <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2 pointer-events-auto">
                 <span
                   className="text-white font-bold"
                   style={{ fontSize: 18, letterSpacing: "0.18em" }}
                 >
                   JUNTO
                 </span>
+                <BetaBadge />
               </div>
 
               <HeaderAvatar />
