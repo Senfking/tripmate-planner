@@ -19,9 +19,10 @@ import { DateRangePicker } from "./DateRangePicker";
 type Props = {
   onSubmit: (data: { destination: string; note?: string; startDate?: string; endDate?: string }) => Promise<void>;
   isPending: boolean;
+  fullWidth?: boolean;
 };
 
-export function ProposalForm({ onSubmit, isPending }: Props) {
+export function ProposalForm({ onSubmit, isPending, fullWidth }: Props) {
   const [open, setOpen] = useState(false);
   const [destination, setDestination] = useState("");
   const [note, setNote] = useState("");
