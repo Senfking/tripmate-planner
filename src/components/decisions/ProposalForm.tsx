@@ -19,9 +19,10 @@ import { DateRangePicker } from "./DateRangePicker";
 type Props = {
   onSubmit: (data: { destination: string; note?: string; startDate?: string; endDate?: string }) => Promise<void>;
   isPending: boolean;
+  fullWidth?: boolean;
 };
 
-export function ProposalForm({ onSubmit, isPending }: Props) {
+export function ProposalForm({ onSubmit, isPending, fullWidth }: Props) {
   const [open, setOpen] = useState(false);
   const [destination, setDestination] = useState("");
   const [note, setNote] = useState("");
@@ -80,7 +81,7 @@ export function ProposalForm({ onSubmit, isPending }: Props) {
   };
 
   const trigger = (
-    <Button variant="outline" size="sm" className="gap-1.5">
+    <Button variant="outline" size="sm" className={`gap-1.5 ${fullWidth ? "w-full" : ""}`}>
       <Plus className="h-4 w-4" />
       Suggest a destination
     </Button>
