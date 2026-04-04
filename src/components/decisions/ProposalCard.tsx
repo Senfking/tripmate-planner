@@ -2,11 +2,7 @@ import { useState, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
-import {
-  Check,
-  Route,
-  Trophy,
-} from "lucide-react";
+import { Check } from "lucide-react";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { DateRangePicker } from "./DateRangePicker";
 import { validateRouteDate } from "./routeValidation";
