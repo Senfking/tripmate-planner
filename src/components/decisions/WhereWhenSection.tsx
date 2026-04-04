@@ -25,6 +25,7 @@ import {
   Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -100,6 +101,44 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         .eq("trip_id", tripId);
       return count ?? 0;
     },
+  });
+
+  // Fetch all proposal reactions with user profiles for avatars
+  const { data: reactionVoters = {} } = useQuery({
+    queryKey: ["proposal-reaction-voters", tripId],
+    queryFn: async () => {
+      const { data: props } = await supabase
+        .from("trip_proposals")
+        .select("id")
+        .eq("trip_id", tripId);
+      const propIds = (props || []).map((p: any) => p.id);
+      if (propIds.length === 0) return {} as Record<string, Array<{ id: string; display_name: string | null; avatar_url: string | null }>>;
+
+      const { data: reactions } = await supabase
+        .from("proposal_reactions")
+        .select("proposal_id, user_id")
+        .in("proposal_id", propIds)
+        .eq("value", "up");
+
+      const userIds = [...new Set((reactions || []).map((r) => r.user_id))];
+      if (userIds.length === 0) return {};
+
+      const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+      const result: Record<string, Array<{ id: string; display_name: string | null; avatar_url: string | null }>> = {};
+      for (const r of reactions || []) {
+        if (!result[r.proposal_id]) result[r.proposal_id] = [];
+        const profile = profileMap.get(r.user_id);
+        result[r.proposal_id].push({
+          id: r.user_id,
+          display_name: profile?.display_name || null,
+          avatar_url: profile?.avatar_url || null,
+        });
+      }
+      return result;
+    },
+    enabled: !!tripId && !!user,
   });
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -490,10 +529,29 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                   <div className="border-t border-border/50">
                     <div className="p-4 space-y-3">
                       <div className="flex items-center gap-3">
+                        {/* Voter avatars */}
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          {(reactionVoters[p.id] || []).length > 0 ? (
+                            <div className="flex -space-x-1.5">
+                              {(reactionVoters[p.id] || []).slice(0, 5).map((voter) => (
+                                <Avatar key={voter.id} className="h-6 w-6 border-2 border-background">
+                                  <AvatarImage src={voter.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                                    {(voter.display_name || "?")[0].toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ))}
+                            </div>
+                          ) : null}
+                          <span className="text-xs text-muted-foreground">
+                            {inCount} of {memberCount} in
+                          </span>
+                        </div>
+                        {/* I'm in button — right-aligned for thumb reach */}
                         <Button
                           variant={imIn ? "default" : "outline"}
                           size="sm"
-                          className={`gap-1.5 ${imIn ? "" : "text-muted-foreground"}`}
+                          className={`gap-1.5 shrink-0 ${imIn ? "" : "text-muted-foreground"}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             reactDest.mutate({ proposalId: p.id, value: "up" });
@@ -503,9 +561,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                           <UserCheck className="h-3.5 w-3.5" />
                           {imIn ? "I'm in!" : "I'm in"}
                         </Button>
-                        <span className="text-xs text-muted-foreground">
-                          {inCount} of {memberCount} members in
-                        </span>
                       </div>
 
                       <ProposalCard
