@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Junto Build Guide v9</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --teal:#0D9488;--teal-light:#14b8a6;--teal-dim:rgba(13,148,136,0.10);--teal-border:rgba(13,148,136,0.22);
+    --bg:#0b0e0e;--surface:#111716;--surface2:#181f1e;--border:rgba(255,255,255,0.06);
+    --text:#ddecea;--muted:#6b8e8a;--red:#ef4444;--amber:#f59e0b;--green:#22c55e;--blue:#3b82f6;--purple:#a855f7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+  /* TOP BAR */
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .topbar-logo{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;color:var(--teal-light);letter-spacing:.1em;}
+  .topbar-sep{color:var(--border);}
+  .topbar-title{font-size:12px;color:var(--muted);}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .progress-wrap{display:flex;align-items:center;gap:8px;}
+  .progress-bar-bg{width:100px;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+  .progress-bar-fill{height:100%;background:var(--teal);border-radius:2px;transition:width .3s ease;}
+  .progress-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);}
+  .topbar-badge{background:var(--teal-dim);border:1px solid var(--teal-border);color:var(--teal-light);font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:3px;}
+
+  /* LAYOUT */
+  .layout{display:flex;flex:1;overflow:hidden;}
+
+  /* SIDEBAR */
+  .sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);flex-shrink:0;overflow-y:auto;padding:10px 0 24px;}
+  .sidebar-group{padding:12px 0 2px;}
+  .sidebar-label{font-size:9px;font-family:'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:0 14px 5px;}
+  .sidebar-item{display:flex;align-items:center;gap:9px;padding:6px 14px;cursor:pointer;border-left:2px solid transparent;color:var(--muted);font-size:12px;transition:all .12s;line-height:1.3;}
+  .sidebar-item:hover{background:var(--surface2);color:var(--text);}
+  .sidebar-item.active{background:var(--teal-dim);border-left-color:var(--teal);color:var(--teal-light);}
+  .sidebar-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .dot-red{background:var(--red)}.dot-amber{background:var(--amber)}.dot-green{background:var(--green)}
+  .dot-blue{background:var(--blue)}.dot-purple{background:var(--purple)}.dot-teal{background:var(--teal)}.dot-muted{background:var(--muted);opacity:.4;}
+
+  /* MAIN */
+  .main{flex:1;overflow-y:auto;}
+  .section{display:none;padding:22px 26px 48px;max-width:840px;}
+  .section.visible{display:block;}
+  .section-header{margin-bottom:18px;padding-bottom:13px;border-bottom:1px solid var(--border);}
+  .section-header h2{font-size:16px;font-weight:600;color:var(--text);margin-bottom:3px;}
+  .section-header p{font-size:12px;color:var(--muted);}
+
+  /* TASK */
+  .task{display:flex;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:7px;margin-bottom:7px;background:var(--surface);transition:border-color .15s,background .15s;}
+  .task:hover{border-color:rgba(255,255,255,.11);background:var(--surface2);}
+  .task.done{opacity:.4;}
+  .task.done .task-title{text-decoration:line-through;color:var(--muted);}
+  .checkbox{width:17px;height:17px;border:1.5px solid var(--muted);border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;cursor:pointer;}
+  .task.done .checkbox{background:var(--teal);border-color:var(--teal);}
+  .checkmark{display:none;color:#fff;font-size:10px;line-height:1;}
+  .task.done .checkmark{display:block;}
+  .task-body{flex:1;min-width:0;}
+  .task-top{display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap;}
+  .task-title{font-size:13px;font-weight:500;color:var(--text);line-height:1.4;}
+  .task-note{font-size:11px;color:var(--muted);line-height:1.55;margin-top:2px;}
+
+  /* TAGS */
+  .tag{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.07em;padding:2px 6px;border-radius:3px;white-space:nowrap;text-transform:uppercase;}
+  .tag-bug{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.2);}
+  .tag-sql{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2);}
+  .tag-code{background:rgba(168,85,247,.12);color:#c084fc;border:1px solid rgba(168,85,247,.2);}
+  .tag-lovable{background:var(--teal-dim);color:var(--teal-light);border:1px solid var(--teal-border);}
+  .tag-legal{background:rgba(245,158,11,.10);color:#fbbf24;border:1px solid rgba(245,158,11,.2);}
+  .tag-manual{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border);}
+  .tag-ops{background:rgba(34,197,94,.10);color:#4ade80;border:1px solid rgba(34,197,94,.2);}
+  .tag-wip{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.2);}
+  .tag-critical{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.3);font-weight:700;}
+
+  /* REF BUTTON */
+  .ref-btn{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:3px;padding:3px 7px;cursor:pointer;transition:all .12s;white-space:nowrap;flex-shrink:0;}
+  .ref-btn:hover{color:var(--teal-light);border-color:var(--teal-border);background:var(--teal-dim);}
+  .ref-btn.copied{color:#4ade80;border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.07);}
+
+  /* EXPAND */
+  .expand-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;margin-top:5px;transition:color .12s;display:block;}
+  .expand-btn:hover{color:var(--teal-light);}
+  .task-detail{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+  .task.expanded .task-detail{display:block;}
+
+  /* CODE BLOCKS */
+  .code-block{background:#090d0c;border:1px solid var(--border);border-radius:5px;padding:11px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a8d5d0;line-height:1.75;overflow-x:auto;white-space:pre;position:relative;margin:8px 0;}
+  .code-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;display:block;}
+  .copy-btn{position:absolute;top:6px;right:6px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 7px;border-radius:3px;cursor:pointer;transition:all .12s;}
+  .copy-btn:hover{color:var(--text);border-color:var(--teal-border);}
+  .copy-btn.copied{color:#4ade80;border-color:rgba(34,197,94,.3);}
+
+  /* CALLOUTS */
+  .callout{border-left:2px solid var(--teal);background:var(--teal-dim);padding:8px 12px;border-radius:0 5px 5px 0;font-size:11px;color:var(--text);margin:8px 0;line-height:1.55;}
+  .callout-warn{border-left-color:var(--amber)!important;background:rgba(245,158,11,.07)!important;}
+  .callout-red{border-left-color:var(--red)!important;background:rgba(239,68,68,.07)!important;}
+  .callout-purple{border-left-color:var(--purple)!important;background:rgba(168,85,247,.07)!important;}
+  .callout-green{border-left-color:var(--green)!important;background:rgba(34,197,94,.07)!important;}
+
+  /* MISC */
+  h3{font-size:13px;font-weight:600;color:var(--text);margin:18px 0 9px;}
+  h3:first-child{margin-top:0;}
+  h4{font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:14px 0 7px;}
+  p{color:var(--muted);line-height:1.6;font-size:12px;margin-bottom:8px;}
+  ul{padding-left:16px;margin-bottom:8px;}
+  li{color:var(--muted);font-size:12px;line-height:1.75;}
+  li strong{color:var(--text);}
+  code{font-family:'IBM Plex Mono',monospace;font-size:11px;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;color:#a8d5d0;}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;}
+  th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--border);font-weight:500;}
+  td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text);vertical-align:top;line-height:1.5;}
+  tr:hover td{background:var(--surface2);}
+  .pill{display:inline-block;font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 7px;border-radius:3px;font-weight:500;white-space:nowrap;}
+  .pill-green{background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.2);}
+  .pill-amber{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.2);}
+  .pill-red{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.2);}
+  .pill-muted{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border);}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--surface2);border:1px solid var(--teal-border);color:var(--teal-light);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 16px;border-radius:5px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* TIMELINE */
+  .timeline{position:relative;padding-left:20px;margin:12px 0;}
+  .timeline::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:1px;background:var(--border);}
+  .timeline-item{position:relative;margin-bottom:16px;}
+  .timeline-item::before{content:'';position:absolute;left:-18px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--teal);border:2px solid var(--bg);}
+  .timeline-week{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--teal-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+  .timeline-content{font-size:12px;color:var(--muted);line-height:1.6;}
+  .timeline-content strong{color:var(--text);}
+
+  /* STAT CARDS */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:12px 14px;}
+  .stat-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+  .stat-value{font-size:18px;font-weight:600;color:var(--text);}
+  .stat-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+  ::-webkit-scrollbar{width:4px;height:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-logo">JUNTO</span>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-title">Build Guide v9 — Research Edition</span>
+  <div class="topbar-right">
+    <div class="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+      <span class="progress-label" id="progressLabel">0 / 0</span>
+    </div>
+    <span class="topbar-badge">Apr 2026</span>
+  </div>
+</div>
+
+<div class="layout">
+<nav class="sidebar">
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Overview</div>
+    <div class="sidebar-item active" onclick="show('position',this)"><span class="sidebar-dot dot-teal"></span> Why Junto Wins</div>
+    <div class="sidebar-item" onclick="show('status',this)"><span class="sidebar-dot dot-green"></span> Build Status</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Phase 0 — Fix Now</div>
+    <div class="sidebar-item" onclick="show('bugs',this)"><span class="sidebar-dot dot-red"></span> Active Bugs</div>
+    <div class="sidebar-item" onclick="show('ux',this)"><span class="sidebar-dot dot-amber"></span> UX Issues</div>
+    <div class="sidebar-item" onclick="show('prelaunch',this)"><span class="sidebar-dot dot-amber"></span> Pre-launch Tasks</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Phase 1 — Weeks 1–2</div>
+    <div class="sidebar-item" onclick="show('push',this)"><span class="sidebar-dot dot-red"></span> Push Notifications</div>
+    <div class="sidebar-item" onclick="show('packing',this)"><span class="sidebar-dot dot-blue"></span> Packing Lists</div>
+    <div class="sidebar-item" onclick="show('referral',this)"><span class="sidebar-dot dot-green"></span> Referral & Growth</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Phase 2 — Weeks 3–8</div>
+    <div class="sidebar-item" onclick="show('ai',this)"><span class="sidebar-dot dot-purple"></span> AI Itinerary</div>
+    <div class="sidebar-item" onclick="show('templates',this)"><span class="sidebar-dot dot-blue"></span> Trip Templates</div>
+    <div class="sidebar-item" onclick="show('maps',this)"><span class="sidebar-dot dot-blue"></span> Maps & Calendar</div>
+    <div class="sidebar-item" onclick="show('arrivals',this)"><span class="sidebar-dot dot-blue"></span> Arrival Notifications</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Phase 3 — Weeks 9–12</div>
+    <div class="sidebar-item" onclick="show('comments',this)"><span class="sidebar-dot dot-blue"></span> Comments & Chat</div>
+    <div class="sidebar-item" onclick="show('feed',this)"><span class="sidebar-dot dot-blue"></span> Activity Feed</div>
+    <div class="sidebar-item" onclick="show('og',this)"><span class="sidebar-dot dot-blue"></span> Trip Recap Card</div>
+    <div class="sidebar-item" onclick="show('quickwins',this)"><span class="sidebar-dot dot-muted"></span> Quick Wins</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Soft Launch</div>
+    <div class="sidebar-item" onclick="show('softlaunch',this)"><span class="sidebar-dot dot-green"></span> 8-Week Plan</div>
+    <div class="sidebar-item" onclick="show('communities',this)"><span class="sidebar-dot dot-green"></span> Communities</div>
+    <div class="sidebar-item" onclick="show('viral',this)"><span class="sidebar-dot dot-teal"></span> Viral Moments</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Monetization</div>
+    <div class="sidebar-item" onclick="show('affiliates',this)"><span class="sidebar-dot dot-amber"></span> Affiliate Links</div>
+    <div class="sidebar-item" onclick="show('pro',this)"><span class="sidebar-dot dot-amber"></span> Junto Pro</div>
+    <div class="sidebar-item" onclick="show('entity',this)"><span class="sidebar-dot dot-purple"></span> Legal Entity</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Phase 4 — Scale</div>
+    <div class="sidebar-item" onclick="show('native',this)"><span class="sidebar-dot dot-blue"></span> Native App</div>
+    <div class="sidebar-item" onclick="show('friendsearch',this)"><span class="sidebar-dot dot-blue"></span> Friend Search & Invites</div>
+    <div class="sidebar-item" onclick="show('discovery',this)"><span class="sidebar-dot dot-purple"></span> Trip Discovery</div>
+    <div class="sidebar-item" onclick="show('enterprise',this)"><span class="sidebar-dot dot-muted"></span> Enterprise & GDPR</div>
+    <div class="sidebar-item" onclick="show('selfheal',this)"><span class="sidebar-dot dot-muted"></span> Self-Healing Bugs</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Deferred</div>
+    <div class="sidebar-item" onclick="show('step16',this)"><span class="sidebar-dot dot-muted"></span> Step 16 · Lock Rates</div>
+    <div class="sidebar-item" onclick="show('step17',this)"><span class="sidebar-dot dot-muted"></span> Step 17 · Admin</div>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-label">Reference</div>
+    <div class="sidebar-item" onclick="show('tools',this)"><span class="sidebar-dot dot-muted"></span> Tool Guide</div>
+    <div class="sidebar-item" onclick="show('guardrails',this)"><span class="sidebar-dot dot-muted"></span> Guardrails</div>
+    <div class="sidebar-item" onclick="show('urls',this)"><span class="sidebar-dot dot-teal"></span> URLs & DNS</div>
+  </div>
+
+</nav>
+<div class="main">
+
+<!-- ══════════ WHY JUNTO WINS ══════════ -->
+<div id="position" class="section visible">
+  <div class="section-header">
+    <h2>Why Junto wins</h2>
+    <p>Competitive position based on deep research across App Store reviews, Reddit, and Trustpilot.</p>
+  </div>
+
+  <div class="callout callout-green">Junto occupies a gap no competitor has closed: the all-in-one group trip planner that combines itinerary, expenses, and group decisions in a single free PWA. This gap is real and validated by thousands of user complaints.</div>
+
+  <h3>Competitor weaknesses you can own</h3>
+  <table>
+    <thead><tr><th>Competitor</th><th>Fatal flaw</th><th>Junto's answer</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Wanderlog</strong></td><td>No expense splitting. Premium locks features per subscriber — group members get nothing. Map view is praised but expenses need Splitwise on top.</td><td>Unified expenses + itinerary, free for everyone in the group.</td></tr>
+      <tr><td><strong>TripIt</strong></td><td>Explicitly designed for solo business travel. Zero group coordination, zero expense tracking. Constant sign-out bugs reported.</td><td>Built for groups from day one.</td></tr>
+      <tr><td><strong>Splitwise</strong></td><td>Destroyed its free tier — 3-5 expense daily limit + 10-second ad timers. 1.8/5 on Trustpilot, 65% one-star reviews. Reddit threads titled "RIP Splitwise."</td><td>Free expense splitting, no limits, no ads.</td></tr>
+      <tr><td><strong>Tricount</strong></td><td>Sync failures and data loss since acquisition by bunq.</td><td>Reliable Supabase infrastructure.</td></tr>
+      <tr><td><strong>All of them</strong></td><td>"Everyone must download an app" — the #1 adoption complaint across every competitor's reviews.</td><td>PWA: share a link, open in browser, no App Store required.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The 5 pain points Junto is positioned to own</h3>
+  <table>
+    <thead><tr><th>Pain point</th><th>How Junto solves it</th></tr></thead>
+    <tbody>
+      <tr><td><strong>The "planning martyr" problem</strong> — one person does all the work</td><td>Real-time collaborative editing + group polls distribute the planning burden</td></tr>
+      <tr><td><strong>Expense splitting as a separate app</strong></td><td>Unified with itinerary — no context switching</td></tr>
+      <tr><td><strong>Multi-currency chaos</strong></td><td>Multi-currency settlement with AI receipt scanning. Fix rate drift (Step 16) before launch.</td></tr>
+      <tr><td><strong>"Tech-averse friends won't download another app"</strong></td><td>PWA: one link, works in the browser</td></tr>
+      <tr><td><strong>No group decision-making</strong></td><td>Integrated polls + Fortune Wheel — no competitor has this</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Junto's unfair advantages</h3>
+  <ul>
+    <li><strong>Dubai base:</strong> 85%+ of the city are expats who travel in friend groups. WhatsApp is default. In-person access to this community beats any online channel.</li>
+    <li><strong>Structural virality:</strong> Every trip created requires inviting friends. The product can't be used alone. This is the Venmo mechanic — every payment to a non-user is an implicit invite.</li>
+    <li><strong>PWA architecture:</strong> Eliminates the #1 adoption complaint across all competitors. Share a link, no App Store friction.</li>
+    <li><strong>Already built the hard things:</strong> Multi-currency expenses, AI receipt scanning, real-time collab, group polls. Competitors paywall or don't have these.</li>
+  </ul>
+</div>
+
+<!-- ══════════ BUILD STATUS ══════════ -->
+<div id="status" class="section">
+  <div class="section-header"><h2>Build Status</h2><p>What's shipped.</p></div>
+  <table>
+    <thead><tr><th>Feature</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Core: trips, itinerary, decisions, expenses, realtime, admin, share/invite, PWA</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>PWA polish: iOS install tip, transitions, offline banner, skeleton states, safe area insets</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>My Account screen + schema additions + Google OAuth invite loop fix</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Exchange rates: warning flash fix, silent stale refresh, 1:1 fallback removed</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>UI redesign: trip dashboard hero, My Trips editorial cards, expenses bank-app style, itinerary calendar</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Attendance: status column, confirmation card, vibe board gate, expense splits default</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Vibe Board V2: visual redesign, premium pill layout</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Receipt Scanner: camera → Claude Haiku → pre-fill expense form</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Expenses sync: global tab uses shared React Query cache</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Share modal: join code prominent, WhatsApp + copy</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Join trip: dashed row on home + bottom drawer with monospaced input</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Referral system: landing page, capture on signup, WhatsApp nudge, referral counter</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Fortune Wheel easter egg in decisions polls</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Step 15 Onboarding: 4-step wizard, enabled_modules + destination columns</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Desktop optimisation: top header nav, max-width containers, 2-col grids</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Feedback widget: floating button, AI response, screenshot, DB storage</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>junto.pro domain: purchased, DNS configured (not yet live)</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>PWA update banner</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>Privacy & T&Cs: placeholder pages live, content not written</td><td><span class="pill pill-red">Pending</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════ PHASE 0: BUGS ══════════ -->
+<div id="bugs" class="section">
+  <div class="section-header">
+    <h2>Active Bugs — Phase 0</h2>
+    <p>Fix all of these before sharing with anyone. Claude Code to diagnose first, always.</p>
+  </div>
+  <div class="callout callout-red">Research finding: travel apps lose ~97% of users by day 30. Every friction point in the first experience compounds. These are not optional.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Feedback AI summary not appearing in admin dashboard</span><span class="tag tag-wip">In progress</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">AI analysis writes to DB on submission but ai_summary / ai_fix / ai_category / ai_severity don't render in the admin component. Lovable already failed.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Step 1 — Claude Code (diagnose only)</span>
+        <div class="code-block">Find the admin dashboard feedback inbox component and the Edge Function that handles AI analysis on feedback submission. Don't fix anything yet. Tell me:
+1. What columns are being queried from the feedback table in the admin component?
+2. Is the Edge Function writing the AI results back to the feedback table, or just returning them in the response?
+3. What does the Lovable prompt generation logic look like — is it pulling from the DB row?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <p class="task-note">Paste Claude Code's findings to Claude.ai → get a targeted fix prompt → then run it.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Mobile UI batch fix — comment overflow, nav blur, background gap, T&Cs</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Four CSS/layout bugs. Batch into one Lovable prompt — these are all layout fixes with no logic involved.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-warn">Paste Lovable's plan back to Claude.ai for review before approving.</div>
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Fix these four mobile UI issues in Junto. Only touch what's listed — do not refactor anything else.
+
+1. Itinerary item cards: the comment/notes section overflows its container on mobile. Constrain it so it doesn't break the card layout.
+2. Bottom nav on iPhone: appears slightly blurry. Reduce or remove backdrop-blur on the bottom nav, add translateZ(0) to force GPU compositing.
+3. Background gap at bottom of screen (home indicator area on iPhone): the body background doesn't extend to the very bottom. Apply background-color to html and body, and use min-height: -webkit-fill-available on the root container.
+4. Privacy & T&Cs links: these exist but are not visible on mobile. Add them to the account screen or the onboarding footer so they're accessible.
+
+List every file you'll change before making any changes. Do not change any other UI.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Expense hero YOU PAID / YOUR SHARE discrepancy</span><span class="tag tag-wip">In progress</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Calculation mismatch. Claude Code diagnosing. Awaiting result — this is a trust-critical bug for a money app.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">PWA update banner not firing correctly</span><span class="tag tag-wip">In progress</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Verify service worker detection and banner display in standalone mode.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Refresh / direct navigation crashes all trip sub-pages</span><span class="tag tag-bug">Bug</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Refreshing or navigating directly to /itinerary, /expenses, or /bookings crashes the app with a React Error Boundary. Sub-pages rely on trip context only loaded by the parent route. The "Refresh" button on the error screen loops the broken state — users are trapped.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-red">Critical — users naturally refresh pages and share direct links. This breaks both behaviours.</div>
+        <div class="code-block">Trip sub-pages (/itinerary, /expenses, /bookings) crash with a React Error Boundary when refreshed or navigated to directly. The crash is caught by the error boundary so the actual JS error is silenced in the console. /decisions seems immune. Diagnose why these routes fail without the parent trip context and how to fix it — likely needs the tripId fetched at the sub-route level rather than inherited from parent state.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Edit button on itinerary items triggers Delete</span><span class="tag tag-bug">Bug</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Two icon buttons on itinerary activity cards are visually indistinguishable. The first opens Edit, the second instantly opens a Delete confirmation. Users trying to edit accidentally delete.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">On itinerary activity cards, the Edit and Delete icon buttons are too similar and positioned dangerously close together. Users are accidentally triggering Delete when trying to Edit. Make Delete visually distinct (red, trash icon) and consider moving it inside the Edit modal as a secondary action to prevent accidental clicks.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Expenses CSV export is empty</span><span class="tag tag-bug">Bug</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">The CSV download triggers successfully and produces junto-expenses.csv but the file is 0 bytes. Data extraction logic is failing silently.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">The "Expenses CSV" export in the Share modal downloads a file called junto-expenses.csv but it's always empty (0 bytes). Find the CSV generation logic and diagnose why no data is being written to the file.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Trip dates not saving correctly from date picker</span><span class="tag tag-bug">Bug</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">During trip creation, user-selected dates (e.g. May 22–31) are not being saved. The app displays a different date range (e.g. Apr–May, 30 days) suggesting it's defaulting to a generic window rather than saving the picker state.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Trip dates set during creation are not being saved correctly. The app shows a different date range than what was selected in the date picker — likely defaulting to a generic window. Find the trip creation flow and diagnose whether the date picker state is being submitted and written to the DB correctly.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Push notification toggles all OFF by default</span><span class="tag tag-bug">Bug</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">In Profile Settings, most push notification toggles are off by default. Users will miss new expenses, member joins, and other critical updates unless they proactively dig into settings.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">In Profile Settings, push notification toggles are off by default. Turn on the most important ones by default: new expense added, new member joined, poll created, and trip countdown. Users can still turn them off — but critical notifications should be opt-out, not opt-in.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Duplicate legal links in profile footer</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">The profile page footer shows Privacy Policy and Terms twice side by side. Remove the duplicate set.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Toast notification blocked by Dynamic Island on iPhone</span><span class="tag tag-bug">Bug</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Success/error toast appears too high on screen and is covered by the iOS Dynamic Island. Needs safe-area-aware positioning.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Feedback modal blocked by iOS keyboard</span><span class="tag tag-wip">In progress</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">The feedback bottom sheet is covered by the keyboard when the textarea is focused on mobile. visualViewport fix sent to Claude Code — verify result.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ UX ISSUES ══════════ -->
+<div id="ux" class="section">
+  <div class="section-header">
+    <h2>UX Issues</h2>
+    <p>Found in QA testing. Not launch blockers but fix as soon as bugs are cleared — these directly affect first impressions.</p>
+  </div>
+  <div class="callout callout-warn">Source: comprehensive end-to-end QA test (desktop, new user journey to Barcelona).</div>
+
+  <h3>High priority</h3>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Itinerary scroll of death — empty days before first activity</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Because trip dates default incorrectly, the itinerary starts at the wrong date and users must scroll past many empty days to reach their first activity. Fix: default the itinerary view to the first day that has activities, or add a "Jump to first activity" button.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Profile avatar in wrong position — top-left anti-pattern</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">The user avatar/settings is in the top-left, which is reserved for back buttons and nav in every modern app convention. Users don't recognize it as interactive. Move to top-right or add a visible "Profile" or "Settings" label.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Share & Invite modal is overloaded</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">One modal currently handles: inviting collaborators, sharing a view-only link, toggling expense visibility, revoking links, and exporting CSV/ICS. These are very different actions. Split into: "Invite Members", "Share View-Only Link", and move exports to a dedicated Export or Settings area.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Solo mode confusion — balance and voting shown for 1 person</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">When a trip has only one member, YOU PAID: €0 / YOUR SHARE: €0 is shown on expenses, and "1 of 1 members voted" appears on decisions. Hide split/balance UI and simplify voting when group size is 1. Show a prompt: "Invite friends to split expenses and vote on ideas."</p>
+    </div>
+  </div>
+
+  <h3>Medium priority</h3>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Decisions page: Lock buttons unexplained, Preferences section empty</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">"Lock vibe board" and "Lock route" buttons have no tooltip or explanation of what locking does or how to undo it. The Preferences section is completely empty with no placeholder examples. Add explanatory tooltips to Lock buttons and placeholder examples to Preferences (e.g. "Dietary restrictions? Early birds or night owls?").</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Itinerary: AI status labels unclear, no "Not Going", calendar Apply doesn't close</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Three separate issues: (1) AI import arbitrarily marks first items as CONFIRMED and rest as IDEA — no explanation of the difference. (2) Every activity has "Going" but no "Not Going" option. (3) Clicking Apply on the route date calendar doesn't close the picker — user has to click outside to reveal the Confirm button underneath.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Expense form UX: split tabs too prominent, wrong default date</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">The Equal / % / Custom split tabs are shown immediately, making the form look like accounting software. Hide % and Custom behind an "Advanced Split" toggle. Also, the expense date defaults to today's real-world date rather than a date within the trip window.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PRE-LAUNCH TASKS ══════════ -->
+<div id="prelaunch" class="section">
+  <div class="section-header">
+    <h2>Pre-launch Tasks — Phase 0</h2>
+    <p>Non-bug tasks to complete before any external user sees the app.</p>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Run pg_cron exchange rate warm-up</span><span class="tag tag-sql">SQL</span></div>
+      <p class="task-note">Schedules daily rate refresh at 2am. Prevents cold cache for new users. Run once in Supabase SQL editor.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ SQL</button>
+      <div class="task-detail">
+        <div class="callout callout-red">Not run yet. Must be done before launch.</div>
+        <div class="code-block">select cron.schedule(
+  'refresh-exchange-rates-daily',
+  '0 2 * * *',
+  $$
+    select net.http_post(
+      url := 'https://&lt;YOUR_PROJECT_REF&gt;.supabase.co/functions/v1/refresh-exchange-rates',
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer &lt;YOUR_ANON_KEY&gt;',
+        'Content-Type', 'application/json'
+      ),
+      body := '{}'::jsonb
+    );
+  $$
+);<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <p class="task-note">Values from: Lovable → Cloud → Overview → API settings.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Add hint_rating column to feedback table</span><span class="tag tag-sql">SQL</span></div>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ SQL</button>
+      <div class="task-detail">
+        <div class="code-block">ALTER TABLE public.feedback
+  ADD COLUMN IF NOT EXISTS hint_rating text
+  CHECK (hint_rating IN ('up','down'));<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Delete test trip "Carine's Wedding — Brazil May 2025"</span><span class="tag tag-sql">SQL</span></div>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ SQL</button>
+      <div class="task-detail">
+        <div class="code-block">-- Verify first
+SELECT id, name FROM trips WHERE name ILIKE '%carine%' OR name ILIKE '%test%';
+
+-- Then delete using the returned ID
+DELETE FROM trips WHERE id = '&lt;ID_HERE&gt;';<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Verify all profiles have a referral code</span><span class="tag tag-sql">SQL</span></div>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ SQL</button>
+      <div class="task-detail">
+        <div class="code-block">SELECT COUNT(*) FROM profiles WHERE referral_code IS NULL;<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <p class="task-note">Should return 0. Backfill if not.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Write Privacy Notice — junto.pro/privacy</span><span class="tag tag-legal">Legal</span></div>
+      <p class="task-note">Must cover: data collected, lawful basis, third parties (Supabase, Anthropic, Unsplash), retention, user rights (GDPR Art. 15–17), cookies, contact email. Ask Claude to draft — takes 10 minutes.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Write Terms & Conditions — junto.pro/terms</span><span class="tag tag-legal">Legal</span></div>
+      <p class="task-note">Must cover: what Junto is (planning tool, not a travel provider), acceptable use, liability limitation, age minimum (13+ or 18+), governing law (UAE/DIFC), account termination.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Sign up for affiliate programs</span><span class="tag tag-ops">OPS</span></div>
+      <p class="task-note">Free to join, instant approval. Start earning commission before Stripe is built. Sign up now so links are ready when Maps integration is built.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ programs</button>
+      <div class="task-detail">
+        <table>
+          <thead><tr><th>Program</th><th>Commission</th><th>Sign up</th></tr></thead>
+          <tbody>
+            <tr><td>Booking.com Partner Program</td><td>4–5% per booking</td><td>partner.booking.com</td></tr>
+            <tr><td>Viator Affiliate Program</td><td>8% per booking</td><td>viator.com/affiliates</td></tr>
+            <tr><td>GetYourGuide Affiliate</td><td>8% per booking</td><td>getyourguide.com/partner</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Record 60-second demo video</span><span class="tag tag-ops">OPS</span></div>
+      <p class="task-note">Screen record: trip creation → invite member → add itinerary item → log expense → view balance. Use this for Product Hunt, Reddit posts, and personal outreach. No voiceover needed — add captions.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Create accounts: Reddit, Product Hunt, Indie Hackers, LinkedIn</span><span class="tag tag-ops">OPS</span></div>
+      <p class="task-note">Set up all four before Week 1 community engagement starts. Profile should reference Junto and your Dubai/travel background.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Full end-to-end test as a new user</span><span class="tag tag-manual">Manual</span></div>
+      <p class="task-note">Create a fresh account via referral link → onboarding wizard → create trip → invite 2 people → add expense → check balances. Do this on iPhone in Safari.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">URL sweep — juntotravel.lovable.app → junto.pro</span><span class="tag tag-manual">Manual</span></div>
+      <p class="task-note">Global find-and-replace across codebase. Do only after junto.pro DNS has fully propagated and domain is confirmed live.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 1: PUSH NOTIFICATIONS ══════════ -->
+<div id="push" class="section">
+  <div class="section-header">
+    <h2>Push Notifications — Phase 1, Weeks 1–2</h2>
+    <p>The single highest-impact feature for retention. Build before anything else in Phase 1.</p>
+  </div>
+
+  <div class="callout callout-red">Research: travel apps lose ~77% of daily active users within 3 days without re-engagement. Push notifications are not a feature — they are the infrastructure that makes everything else valuable. A poll nobody knows about, an expense nobody sees, a trip countdown nobody receives — all worthless without this.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build push notification infrastructure</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Service worker + VAPID keys + Edge Function. The push_subscriptions table already exists in DB. iOS 16.4+ supports PWA push when installed to home screen — your install tip already handles this.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Step 1 — Claude Code (diagnose then build)</span>
+        <div class="code-block">Check the existing push_subscriptions table structure in our Supabase DB. Then implement PWA push notification infrastructure:
+
+1. Service worker registration with VAPID keys
+2. A Supabase Edge Function (send-push-notification) that accepts: user_id, title, body, url — and sends a push to all subscriptions for that user
+3. A second Edge Function or helper that triggers notifications for these events: new expense added to a trip, poll created, poll closing in 2 hours, trip starting in 3 days, new member joined trip, itinerary item changed
+
+Diagnose the existing push_subscriptions table first and show me its structure before writing anything. Don't build the UI permission prompt yet — just the backend infrastructure.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Add notification permission prompt + preferences UI</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Trigger the permission prompt after a user joins their first trip — not on landing. Add notification preferences to My Account screen.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-warn">Only send this after the Claude Code infrastructure step is confirmed working.</div>
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Add push notification opt-in and preferences to Junto. The backend infrastructure (service worker, VAPID, Edge Function) is already built.
+
+1. After a user joins or creates their first trip, show a one-time prompt: "Enable notifications to stay in sync with your group — polls, expenses, and trip updates." Two buttons: "Enable" and "Later." Do not show this on the landing page or immediately on signup.
+2. In My Account, add a Notifications section with toggles for: New expenses, Polls (new + closing soon), Trip countdown reminders, New members joining, Itinerary changes.
+3. On "Enable," call the browser's push permission API and save the subscription to the push_subscriptions table via Supabase.
+
+Keep the design consistent with existing My Account UI. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 1: PACKING LISTS ══════════ -->
+<div id="packing" class="section">
+  <div class="section-header">
+    <h2>Packing Lists — Phase 1, Weeks 1–2</h2>
+    <p>Quick win to ship alongside push notifications. Low effort, high perceived value.</p>
+  </div>
+
+  <div class="callout">PackPoint has millions of downloads as a standalone packing app. Wanderlog's FAQ suggests using a "note in the Overview tab" as a workaround — a genuine gap. For groups, coordinating shared items (first aid kit, speaker, snorkeling gear) currently gets lost in WhatsApp.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build collaborative packing list per trip</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Shared checklist with real-time sync via the existing useTripRealtime hook. Members add items, check them off, optionally assign to a person.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Add a collaborative packing list to each trip in Junto.
+
+New table: packing_items (id uuid primary key, trip_id uuid references trips, title text, assigned_to uuid references profiles nullable, is_checked boolean default false, created_by uuid references profiles, created_at timestamptz default now()). Add RLS so only trip members can read/write.
+
+UI: add a Packing List tab to the trip view — respect the enabled_modules pattern from onboarding so it can be toggled. The tab shows a checklist where members can:
+- Add items (text input + add button)
+- Check items off (strikethrough when checked)
+- Optionally assign an item to a trip member (simple dropdown of member names)
+- Delete their own items
+
+Changes sync in real time via Supabase Realtime (use the existing useTripRealtime pattern). Keep design consistent with existing trip tabs. No categories or complex filtering needed at this stage.
+
+List every file you'll change before making any changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 1: REFERRAL ══════════ -->
+<div id="referral" class="section">
+  <div class="section-header">
+    <h2>Referral & Growth — Phase 1</h2>
+    <p>Every surface that invites someone into Junto is a referral moment. Treat this as infrastructure, not a feature.</p>
+  </div>
+  <div class="callout callout-green">Splitwise grew to tens of millions of users with minimal paid marketing. Venmo spread campus to campus via the same structural loop — every payment to a non-user was an implicit invitation. Junto's model: every trip created requires inviting others to make it useful.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Home screen — add "Invite" pill to header row</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Add a third pill alongside "1 live" and "Join". Tapping opens the referral share sheet with personal link + WhatsApp CTA. Highest-visibility referral touchpoint in the app — seen every session.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Add an "Invite" pill to the home screen header row in Junto, alongside the existing "1 live" and "Join" pills.
+
+The pill label: "＋ Invite" (consistent styling with existing pills). On tap, open the existing referral share sheet — the one that shows the user's personal referral link with WhatsApp share and copy link buttons.
+
+If a referral share sheet doesn't exist yet as a standalone component, create one that shows: the user's referral link (from their profile's referral_code), a WhatsApp share button with pre-filled message: "I'm using Junto to plan trips together — join me: [link]", and a copy link button.
+
+Only change the home screen header and the share sheet component. Do not touch any other screens. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Verify: trip join link captures inviter's referral code</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">The single most important referral check. When someone joins via junto.pro/join/{code}, does their profile get the inviter's referral_code in referred_by? If not this is the biggest growth leak in the app.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Check whether the trip join flow correctly attributes referrals. Specifically:
+
+1. When a new user signs up via a trip join link (junto.pro/join/{trip_code}), does their profile row get the inviter's referral_code written to the referred_by column?
+2. Trace the full join flow — from the join URL through AuthCallback or wherever signup completes — and confirm whether referred_by is being set.
+3. If it's not being set, tell me exactly where in the flow it should be added. Don't fix yet — just diagnose and show me the relevant code paths.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Post-trip "Loved Junto? Invite a friend" nudge</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">After a trip's end date passes, show a one-time nudge card on the home screen: "You just planned [Trip name] — share Junto with someone planning their next trip." Highest-intent moment: user just had a positive experience.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Referral counter visible in My Account</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">"X friends joined with your link." referred_by data already in DB — just needs surfacing. Adds social proof and mild gamification.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Personally message 20–30 friends for beta</span><span class="tag tag-ops">OPS</span></div>
+      <p class="task-note">Not a mass blast. Individual WhatsApp messages: "I built this, would you try it for your next trip?" Target people with trips coming up in the next 60 days. Goal: 3 active trip groups with 3+ members each.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 2: AI ITINERARY ══════════ -->
+<div id="ai" class="section">
+  <div class="section-header">
+    <h2>AI Itinerary Suggestions — Phase 2, Weeks 3–5</h2>
+    <p>The acquisition magnet. The feature that makes someone try Junto instead of opening Google Docs.</p>
+  </div>
+  <div class="callout callout-purple">Research: Layla.ai generated 10M+ itineraries since 2024. But AI that balances multiple group preferences — "Alex wants museums, Jordan wants beaches" — doesn't exist yet. Junto's Vibe Board already captures these preferences. This is the unfair advantage.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build AI suggestions Edge Function</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Takes destination, dates, group size, budget, and Vibe Board interests. Returns structured JSON of suggested activities. Uses Claude API — same pattern as receipt scanner.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Build a Supabase Edge Function called suggest-activities for Junto.
+
+First, check how the existing receipt scanner Edge Function calls the Claude API so we use the same pattern and API key setup.
+
+The function should accept: { trip_id, destination, start_date, end_date, group_size, budget_level (low/mid/high), interests[] }
+
+It should query the trip's Vibe Board data from the DB to include group preferences automatically if available.
+
+Call the Claude API with a prompt that generates 8–12 activity suggestions for the destination, personalised to the group's interests and budget.
+
+Return a JSON array where each item has: { name, description, estimated_cost_eur, category (food/culture/nature/nightlife/adventure/relaxation), best_time_of_day (morning/afternoon/evening), google_maps_url }
+
+Show me the existing receipt scanner Edge Function structure before writing anything, so I can confirm the API pattern is correct.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build AI suggestions UI on itinerary view</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Swipeable suggestion cards with "Add to itinerary" action. Show Vibe Board personalisation label when relevant.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-warn">Only send this after the Edge Function is confirmed working.</div>
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Add an AI activity suggestions feature to the itinerary view in Junto. The suggest-activities Edge Function is already built.
+
+Add a button on the itinerary view. Label: "AI Suggestions" — or "Suggestions based on your group's vibes" if the trip has Vibe Board data. On tap, call the Edge Function with the trip's destination, dates, group size, and Vibe Board interests.
+
+Show results as scrollable cards. Each card shows: activity name (bold), description (2 lines), estimated cost, category icon, best time of day. Two actions per card: "Add to itinerary" (adds it as an itinerary item on the appropriate day) and "Dismiss."
+
+Show a loading skeleton while the Edge Function runs. Handle errors gracefully with a retry option.
+
+Do not change any existing itinerary functionality. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 2: TRIP TEMPLATES ══════════ -->
+<div id="templates" class="section">
+  <div class="section-header">
+    <h2>Trip Templates — Phase 2, Weeks 3–5</h2>
+    <p>Reduces activation friction massively — from blank page to populated plan in one tap.</p>
+  </div>
+  <div class="callout">The "blank page problem" is a major drop-off point in planning apps. Pre-built templates give users an instant starting point and demonstrate what Junto can do before they've invested any effort.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Create 5 template trips with pre-populated itineraries</span><span class="tag tag-ops">OPS</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Create manually in the app first. Then build a "Use template" clone flow in Lovable. Target destinations with Dubai travel relevance.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ templates + Lovable prompt</button>
+      <div class="task-detail">
+        <h4>Recommended templates</h4>
+        <ul>
+          <li><strong>Bali 7-Day Group Trip</strong> — most searched destination from Dubai</li>
+          <li><strong>Dubai to Oman Road Trip</strong> — highly relevant for Dubai expats</li>
+          <li><strong>Barcelona Long Weekend</strong> — popular European destination</li>
+          <li><strong>Thailand Island Hopping</strong> — group travel classic</li>
+          <li><strong>Georgia (Tbilisi) Weekend</strong> — trending Dubai expat destination</li>
+        </ul>
+        <p class="task-note">Each template should have: 4–6 itinerary items per day, a suggested budget range, and a starter packing list. Create them manually in the app first, then use Lovable to build the "Clone template" functionality.</p>
+        <span class="code-label">Lovable prompt (after templates are created manually)</span>
+        <div class="code-block">Add a trip templates feature to Junto's "New trip" flow.
+
+After a user fills in the trip name and destination, show an optional step: "Start from a template?" Display 5 pre-built template cards (we'll provide the trip IDs). Each card shows the destination photo, name, duration, and "Use template" button.
+
+On selecting a template, clone the template trip's itinerary items and packing list items into the new trip being created. Do not copy expenses, members, or any other data — only itinerary and packing list.
+
+If the user skips, continue to the normal blank trip creation. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 2: MAPS & CALENDAR ══════════ -->
+<div id="maps" class="section">
+  <div class="section-header">
+    <h2>Maps & Calendar — Phase 2, Weeks 6–8</h2>
+    <p>Map view is Wanderlog's single most praised feature. Calendar sync is TripIt's best feature. Build both.</p>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Diagnose itinerary data structure for Maps</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Must do this before building Maps. Need to know if lat/lng is stored, what the location field looks like, and whether Places API is needed.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Check the current itinerary data structure in Junto. Tell me:
+1. Do itinerary items currently store latitude/longitude, or just a text location field?
+2. What does the "add itinerary item" form look like — is there a structured location input or free text?
+3. Is there any existing Google Maps or Places API integration?
+4. What columns does the itinerary_items table have?
+
+Don't change anything. I need this before planning the Maps integration.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Add Google Maps view to itinerary</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Map pins per day, colour-coded. Route lines between same-day stops. Walking/driving time estimates. Add Places autocomplete to item creation so locations are structured from the start.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt (after diagnosis)</span>
+        <div class="code-block">Based on the itinerary structure diagnosis, plan the Google Maps integration for Junto:
+
+1. If itinerary items don't have lat/lng, what DB migration is needed?
+2. What changes are needed to the "add itinerary item" form to add Google Places autocomplete so locations are structured?
+3. What's the simplest way to render a map component showing each day's activities as pins, colour-coded by day?
+
+Give me a clear build plan. Don't write code yet — I'll prompt Lovable once the plan is confirmed.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after Claude Code plan is confirmed)</span>
+        <div class="code-block">Add a map view to the Junto itinerary. The DB migration and location structure changes are already done.
+
+Add a "Map" toggle on the itinerary view (alongside the existing list view). The map shows all itinerary items as pins, colour-coded by day. Tapping a pin shows the item name and time. Draw route lines between stops on the same day. Show walking/driving time estimates between consecutive same-day stops using the Google Maps Directions API.
+
+Also update the "Add itinerary item" form: replace the text location field with a Google Places autocomplete input that stores structured location data (name, lat, lng, place_id).
+
+List every file you'll change before making changes. Do not change any other screens.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Calendar sync — iCal export</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Generate .ics file from trip itinerary. Works with Google Calendar, Apple Calendar, Outlook. Small Edge Function — standard iCal format.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Build a Supabase Edge Function called export-trip-ical for Junto.
+
+The function accepts a trip_id, queries the itinerary_items for that trip (title, location, start datetime, end datetime, description), and returns a valid iCal (.ics) file that can be imported into Google Calendar, Apple Calendar, and Outlook.
+
+First check what datetime fields exist on itinerary_items — I need to know if start_time and end_time are stored before writing the function. If they're not structured, tell me what migration is needed.
+
+The response should have Content-Type: text/calendar and Content-Disposition: attachment; filename="junto-trip.ics"<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 2: ARRIVAL NOTIFICATIONS ══════════ -->
+<div id="arrivals" class="section">
+  <div class="section-header">
+    <h2>Arrival Notifications — Phase 2</h2>
+    <p>One of the most practical use cases for group travel — coordinate pickup, meet at the hotel, know when everyone has landed.</p>
+  </div>
+  <div class="callout">Build after Phase 1 push notifications are live. The infrastructure is the same — just a scheduled Edge Function checking upcoming arrival times.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Arrival time UI — highlight member arrivals on itinerary</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">On the itinerary, group member avatars by arrival time slot so the group can see at a glance who lands when. Highlight today's arrivals prominently — especially useful on the first and last day of a trip. E.g. "Oliver lands 14:00 · JuntoB lands 17:30".</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Arrival push notifications</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Scheduled Edge Function checks itinerary items with arrival times. Fires push notifications to trip members when an arrival is approaching (2 hours before) and when someone has just landed. Examples: "JuntoB lands in 2 hours — coordinate pickup?" and "Oliver just arrived in Bangkok 🛬". WhatsApp Business API integration deferred to Phase 4.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-warn">Requires Phase 1 push notifications to be live first.</div>
+        <div class="code-block">In Junto, itinerary items have arrival times. Build a scheduled Supabase Edge Function that:
+1. Runs every 30 minutes via pg_cron
+2. Queries itinerary_items where start_time is within the next 2 hours or within the last 15 minutes
+3. For items flagged as travel/arrival type, sends push notifications to all other trip members via the existing send-push-notification Edge Function
+4. Message format: "[Name] lands in 2 hours at [destination] — coordinate pickup?" or "[Name] just arrived in [destination] 🛬"
+5. Deduplicates — don't send the same notification twice for the same item
+
+First diagnose: does itinerary_items have a field to distinguish travel/arrival items from regular activities? And what time zone handling is in place?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 3: COMMENTS ══════════ -->
+<div id="comments" class="section">
+  <div class="section-header">
+    <h2>Comments & Chat — Phase 3, Weeks 9–12</h2>
+    <p>Keep group conversations tied to decisions, not lost in WhatsApp. Not full chat — contextual comments only.</p>
+  </div>
+  <div class="callout">Scattered communication across WhatsApp is the #1 operational pain in group travel. The solution is not to replace WhatsApp — it's entrenched — but to keep trip-specific discussions inside the planning context.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Contextual comments on itinerary items</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Comment thread per itinerary item. Real-time via Supabase Realtime. Wire to push notifications so comments actually notify people.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-warn">Push notifications (Phase 1) should be live before this. Comments without notifications are much less valuable.</div>
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Add contextual comments to itinerary items in Junto.
+
+New table: itinerary_comments (id uuid primary key, itinerary_item_id uuid references itinerary_items, user_id uuid references profiles, content text, created_at timestamptz default now()). RLS: only members of the item's trip can read/write.
+
+UI: add a comment icon with unread count on each itinerary card. Tapping opens a bottom sheet showing the comment thread. Each comment shows the author's avatar, name, message, and relative timestamp. New comment input at the bottom. Comments sync in real time via Supabase Realtime.
+
+When a comment is posted, trigger a push notification to other trip members: "[Name] commented on '[Itinerary item]': [preview]" — via the existing send-push-notification Edge Function.
+
+Keep it lightweight: flat list, no reactions, no threading. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 3: ACTIVITY FEED ══════════ -->
+<div id="feed" class="section">
+  <div class="section-header">
+    <h2>Activity Feed — Phase 3, Weeks 9–12</h2>
+    <p>A read-only view of everything happening in the trip. No new tables needed — aggregates existing data.</p>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Trip activity feed on dashboard</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Chronological feed of all trip events. Pull from existing tables — read only. Add "new since last visit" badges using the existing pattern.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Add a trip activity feed to the Junto trip dashboard.
+
+Show a chronological list of the 20 most recent events across: member joined trip, expense added, poll created, poll voted, itinerary item added or changed, packing item checked off, vibe board updated. Pull from existing tables — this is read-only, no new writes or tables needed.
+
+Each feed item shows: the actor's avatar, a short plain-language description ("Oliver added an expense: Dinner €45"), and a relative timestamp ("2 hours ago").
+
+Add "new since last visit" badges on items the current user hasn't seen since their last session — use the existing pattern already built for this.
+
+Place the feed as a section on the trip dashboard — not a separate tab. Do not change any other screens. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 3: OG / TRIP RECAP ══════════ -->
+<div id="og" class="section">
+  <div class="section-header">
+    <h2>Trip Recap Card — Phase 3</h2>
+    <p>Auto-generated shareable card at trip end. Creates passive social proof on Instagram and WhatsApp Stories.</p>
+  </div>
+  <div class="callout">This is a viral moment — users share without being asked because it feels good. "We spent €2,400 across 8 countries 🌍" with a Junto watermark is organic marketing.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Auto-generate trip recap card when trip ends</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">When a trip's end date passes, generate a shareable card showing: destinations visited, total group spend, number of activities, and member avatars. Subtle "Planned on Junto" watermark. Share to Instagram Stories or WhatsApp. Use Satori (headless canvas) or a simple styled HTML-to-image approach.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 3: QUICK WINS ══════════ -->
+<div id="quickwins" class="section">
+  <div class="section-header">
+    <h2>Quick Wins — Phase 3</h2>
+    <p>Low-effort, high-polish improvements. Build alongside the bigger Phase 3 features.</p>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Route stop date editing</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Use the same DateRangePicker as the trip confirmation panel for editing individual route stop dates. Currently inconsistent.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Collapsed Vibe Board summary in header</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">When the Vibe Board section is collapsed, show the user's top 2–3 picks as a summary line in the header so the result is visible without expanding.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Invite link redemption count</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Show "X people joined with this link" on the invite share sheet. Data already exists in the referral system — just needs surfacing.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Past trips toggle on Itinerary</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">On the global Itinerary view, add a toggle to show/hide past trips. Currently all trips show regardless of end date.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Bookings & Docs search and filter</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Full-text search + filter pills by category (flights, hotels, activities, documents). Currently a flat unfiltered list.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Full emoji picker for trip names</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Replace the current basic emoji field with @emoji-mart/react for a proper searchable emoji picker.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Offline document access — cache PDFs for offline use</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Critical for travel: users need visa documents, hotel confirmations, and boarding passes available when they have no signal — at border control, on arrival, in the air. When a user uploads a document to Bookings & Docs, cache it in the service worker so it's available offline. Add a visible "Available offline ✓" indicator on cached documents and a "Save for offline" button on uncached ones. Priority: PDFs and images only — skip large video files.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-red">This is a trust feature — a user who can't access their visa doc at the airport because Junto has no offline cache will never use the app again. Build this before any serious user growth.</div>
+        <div class="code-block">In Junto's Bookings & Docs section, uploaded documents (PDFs, images) need to be available offline. Diagnose:
+1. How are documents currently stored — Supabase Storage signed URLs or public URLs?
+2. Does the current service worker cache any Supabase Storage URLs, or only the app shell?
+3. What's the best approach to cache user-specific documents — Cache API in the service worker, or IndexedDB for the binary data?
+
+Then implement: when a user opens a document in Bookings & Docs, cache it automatically using the Cache API so it's available offline. Add an "Available offline ✓" badge on cached docs and a "Save for offline" button on uncached ones. Show a clear error if the user tries to open an uncached doc while offline, with a message: "Save this document while online to access it offline."
+
+Don't change the upload flow or storage backend.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Group arrival awareness — UI</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">When itinerary items have arrival times, make it visually clear who is arriving when and where. On the itinerary, show member avatars grouped by arrival time slot — so the group can see at a glance "Oliver lands at 14:00, JuntoB lands at 17:30". Highlight today's arrivals prominently. Especially useful on the first and last day of a trip.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Group arrival awareness — notifications</span><span class="tag tag-lovable">Lovable</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Push notifications when a group member's arrival time is approaching or they have just landed. Examples: "JuntoB lands in 2 hours — coordinate pickup?" or "Oliver just arrived in Bangkok 🛬". Requires arrival times stored on itinerary items and a scheduled Edge Function to check upcoming arrivals and fire push notifications. Build after push notifications (Phase 1) are live. WhatsApp Business API integration is Phase 4.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 4: NATIVE APP ══════════ -->
+<div id="native" class="section">
+  <div class="section-header">
+    <h2>Native App — Phase 4</h2>
+    <p>Wrap the existing React PWA in Capacitor. The PWA is the foundation — nothing gets rebuilt.</p>
+  </div>
+
+  <div class="callout callout-warn">Do not start this until at least 200–500 active users. The maintenance overhead is real and the PWA already works well. Build this when the triggers below are met.</div>
+
+  <h3>When to convert</h3>
+  <table>
+    <thead><tr><th>Trigger</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Users complaining PWA install is confusing</td><td>App Store solves discoverability</td></tr>
+      <tr><td>200–500 active users</td><td>Worth the maintenance overhead</td></tr>
+      <tr><td>Ready to charge (Stripe/IAP)</td><td>App Store billing required for iOS subscriptions</td></tr>
+      <tr><td>Push notifications needed reliably</td><td>Web push is unreliable on iOS below 16.4</td></tr>
+    </tbody>
+  </table>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Wrap PWA in Capacitor</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Capacitor wraps the existing React/Vite build. No code rewrite needed. Produces iOS (.ipa) and Android (.apk) from the same codebase.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Set up Capgo for OTA updates</span><span class="tag tag-ops">OPS</span></div>
+      <p class="task-note">Capgo enables instant over-the-air updates post-App Store launch so you don't need to go through App Store review for every bug fix. Set this up from day one of native.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">iOS lock screen widget</span><span class="tag tag-manual">Hire iOS dev</span></div>
+      <p class="task-note">Shows days to trip, next itinerary item, and balance on the iOS lock screen. Requires WidgetKit + SwiftUI + Xcode App Group entitlement + Capacitor bridge to share data. Cannot be vibe coded — hire an iOS dev for a bounded 2-day job. Do after App Store launch.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 4: FRIEND SEARCH & IN-APP INVITES ══════════ -->
+<div id="friendsearch" class="section">
+  <div class="section-header">
+    <h2>Friend Search & In-App Invites — Phase 4</h2>
+    <p>The earliest step toward making Junto a social app — find your friends directly in the app and invite them to trips without needing a link or code.</p>
+  </div>
+
+  <div class="callout">This is the foundation layer before Trip Discovery. It solves a real friction point: "I want to invite my friend who's already on Junto but I have to send them a link like it's 2010." Keep it simple — search, invite, notification. No social feed, no followers.</div>
+
+  <h3>Scope (Phase 4 — keep it minimal)</h3>
+  <ul>
+    <li><strong>Search by name or username</strong> — find existing Junto users from the invite screen</li>
+    <li><strong>Send in-app invite</strong> — tap to invite a found user to a trip. They get a push notification: "Oliver invited you to Bangkok April 2026 — tap to join"</li>
+    <li><strong>Invite inbox</strong> — a simple list of pending trip invitations inside the app, accessible from the profile/More screen</li>
+    <li><strong>Accept / decline</strong> — one tap to accept (joins the trip) or decline (dismisses)</li>
+  </ul>
+
+  <h3>What it is NOT yet</h3>
+  <ul>
+    <li>No followers, no friend requests, no social graph</li>
+    <li>No profile discovery or browse</li>
+    <li>No mutual friends or recommendations</li>
+    <li>That's all Trip Discovery territory — build this first as the prerequisite</li>
+  </ul>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Run Claude Code diagnosis before building</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Before building anything, Claude Code needs to check: does profiles table have a searchable username or display_name field? Is there any existing user search RPC? How does the current invite flow work (join codes) and what would a direct user invite need to change?</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">In Junto, we want to add friend search and in-app trip invites — find an existing user by name, invite them to a trip, they receive a push notification and can accept/decline. Diagnose:
+1. What fields does the profiles table have — is display_name indexed and searchable?
+2. Is there any existing user search RPC or full-text search setup?
+3. How does the current invite system work — what tables handle trip membership and pending invites?
+4. What would a "pending invite" data model look like — does one exist or does it need a new table?
+Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 4: TRIP DISCOVERY ══════════ -->
+<div id="discovery" class="section">
+  <div class="section-header">
+    <h2>Trip Discovery — Phase 4</h2>
+    <p>Find and join trips with strangers. Major platform evolution — do not build until 500+ active users.</p>
+  </div>
+
+  <div class="callout callout-red">Pre-requisites: solid user base, trust signals established, moderation capacity. Plan in a dedicated Deep Research session before building anything.</div>
+
+  <h3>What it requires</h3>
+
+  <h4>Traveller Profiles</h4>
+  <ul>
+    <li><strong>Public profile page</strong> — display name, avatar, bio, home city</li>
+    <li><strong>Travel stats</strong> — trips taken, countries visited, total travel days, group size preferences</li>
+    <li><strong>Travel style</strong> — pulled from Vibe Board history (budget tier, pace, sleep style) to show a consistent "traveller fingerprint"</li>
+    <li><strong>Badges & achievements</strong> — earned from past trips: "5 countries", "10 group trips", "Budget master", "Night owl", "First to arrive" etc. Makes profiles feel alive and builds trust between strangers</li>
+    <li><strong>Past trips</strong> — opt-in public trip history showing destinations visited (not expenses or private details)</li>
+  </ul>
+
+  <h4>Trip Discovery</h4>
+  <ul>
+    <li><strong>Trip visibility settings</strong> — private / friends-only / public / open to join</li>
+    <li><strong>Discovery feed</strong> — browse open trips by destination, dates, vibe, budget tier. AI-powered compatibility matching based on Vibe Board overlap</li>
+    <li><strong>Request-to-join flow</strong> — send a message to the trip host, host approves or declines</li>
+    <li><strong>Find travel companions</strong> — browse profiles of people looking to join trips, not just trips looking for people</li>
+  </ul>
+
+  <h4>Trust & Safety (non-negotiable before launch)</h4>
+  <ul>
+    <li>Verified profiles (email at minimum, optionally phone)</li>
+    <li>Profile reporting and blocking</li>
+    <li>Trip host controls — remove members, close trip to new requests</li>
+    <li>Moderation capacity — you need to be able to act on reports quickly</li>
+  </ul>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Run Deep Research session before planning</span><span class="tag tag-manual">Deep Research</span></div>
+      <p class="task-note">Use Claude Deep Research to analyse: trust & safety patterns in travel-matching apps, competitive landscape (Tripr, travel subreddits, Facebook groups), moderation requirements, and legal considerations (liability, background checks). Don't design anything until this is done.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ research prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Junto is a group trip planning PWA with 500+ active users. We want to add Trip Discovery — a feature letting users find and join trips with strangers. Research: what trust & safety mechanisms do successful travel-matching platforms use? What are the legal liability considerations? What does the competitive landscape look like (Tripr, Fairytrail, travel subreddits, Couchsurfing)? What features drive successful matches vs. poor experiences? Produce a requirements doc and risk assessment before we build anything.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 4: ENTERPRISE & GDPR ══════════ -->
+<div id="enterprise" class="section">
+  <div class="section-header">
+    <h2>Enterprise & GDPR — Phase 4</h2>
+    <p>Required at scale. Not needed at launch.</p>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">GDPR data export</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Required for EU users at scale (GDPR Art. 20 — data portability). User can request a full export of their data: profile, trips, expenses, itineraries. Delivered as a JSON or ZIP download. Build before approaching 1,000 EU users.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Org / team accounts</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Corporate travel use case — a company or agency manages multiple trips under one account with centralised billing and admin. Only worth building once you have evidence of corporate demand.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 4: SELF-HEALING ══════════ -->
+<div id="selfheal" class="section">
+  <div class="section-header">
+    <h2>Self-Healing Bug Fixes — Phase 4</h2>
+    <p>Fully autonomous: user feedback → AI analysis → Lovable prompt → PR → deploy. Needs a test suite first.</p>
+  </div>
+
+  <div class="callout callout-warn">This is the long-term evolution of Step 17's "Send to Lovable" button. The human stays in the loop for now — this automates the entire loop. Requires: test suite, Claude Code API access, CI/CD pipeline. Do not attempt without those in place.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build test suite first</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Self-healing is meaningless without automated tests to verify fixes don't break other things. This is the pre-requisite. Start with E2E tests for the core flows: signup, create trip, add expense, invite member.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Automated feedback → fix → deploy pipeline</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">When a bug ticket reaches a confidence threshold in the admin dashboard AI analysis: automatically generate a Lovable/Claude Code prompt, create a PR, run tests, and notify you for final approval before deploy. Human still approves — but 80% of the work is done.</p>
+    </div>
+  </div>
+</div>
+<div id="softlaunch" class="section">
+  <div class="section-header">
+    <h2>8-Week Soft Launch Plan</h2>
+    <p>Specific sequence. Do not skip ahead — each week builds on the last.</p>
+  </div>
+
+  <div class="callout callout-warn">Product Hunt is a credibility tool, not a growth engine. Realistic expectation: 10–150 signups, 1,000–5,000 visitors, a DA91 backlink. The real growth engine is personal outreach + structural virality from trips created.</div>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-week">Week 0 — Now</div>
+      <div class="timeline-content">
+        Fix all Phase 0 bugs. Remove test data. Write Privacy/T&Cs. Record demo video. Create Reddit, Product Hunt, Indie Hackers, LinkedIn accounts. Sign up for affiliate programs. <strong>Join all target Facebook groups (list in Communities tab). Do not post yet.</strong>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week">Weeks 1–2 — Build credibility, zero promotion</div>
+      <div class="timeline-content">
+        <strong>Reddit (45 min/day):</strong> Answer 3–5 questions per day on r/travel, r/solotravel, r/digitalnomads, r/grouptravel. Do not mention Junto. Focus only on group trip coordination questions. Target 200+ karma by end of week 2. Post one pure-value text post: "After planning 15+ group trips, here's my system for keeping everyone aligned."<br><br>
+        <strong>Facebook (30 min/day):</strong> Like and comment on 5+ posts daily in target groups. Post a research question in 2–3 groups: "What's the hardest part about planning a trip with a group of friends?" — genuine research, no promotion.<br><br>
+        <strong>Personal:</strong> Send individual WhatsApp messages to 20–30 friends with upcoming trips. Offer to set up their trip on Junto personally.
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week">Weeks 3–4 — First beta users and "I built this" posts</div>
+      <div class="timeline-content">
+        <strong>Reddit posts (stagger across days):</strong><br>
+        • r/alphaandbetausers: "Looking for beta testers for a free group trip planning PWA"<br>
+        • r/SideProject: "I built a free tool for planning group trips — looking for feedback" (include screenshots + GIF)<br>
+        • r/indiehackers: Build-in-public update with real numbers<br><br>
+        <strong>Dubai:</strong> Send personal WhatsApp to 20+ local contacts. Target people with Oman road trips, Eid getaways, or Europe trips planned. Offer to help set it up.<br><br>
+        <strong>Content:</strong> Publish Medium article: "What I learned building a group trip planning app as a non-technical founder." Cross-post to Indie Hackers and LinkedIn.
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week">Weeks 5–6 — Product Hunt launch + Dubai push</div>
+      <div class="timeline-content">
+        <strong>Product Hunt:</strong> Launch Tuesday or Wednesday at 12:01 AM PST (9:01 AM Dubai). Tagline: "Plan group trips without the WhatsApp chaos." Prepare 5 screenshots, 60-second demo GIF, maker comment with personal story. On launch day: post Twitter/LinkedIn at 6 AM → email beta testers at 7 AM → relevant Discord/Slack at 8 AM → r/SideProject at 9 AM. Respond to every PH comment within 30 minutes.<br><br>
+        <strong>Dubai groups:</strong> Post in expat Facebook groups: "Free group trip planning tool I made — thought Dubai friends might find it useful." Frame around Oman road trips, Georgia weekends, Eid getaways. Reach out to 2–3 Dubai micro-influencers (5K–50K Instagram, travel-focused) for early access.
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week">Weeks 7–8 — Scale what works</div>
+      <div class="timeline-content">
+        Analyze which channel drove the most signups — double down on the top performer. Share real numbers transparently on Indie Hackers: "I launched a group trip planner — here are my real numbers after 8 weeks." Publish 2–3 SEO blog posts (see Communities tab). Consider hosting a trip planning workshop at a Dubai coworking space (Astrolabs, Nasab by KOA). Set a daily routine: 30 min Reddit, 15 min Facebook, 15 min content.
+      </div>
+    </div>
+  </div>
+
+  <h3>0 → 100 user milestones</h3>
+  <table>
+    <thead><tr><th>Stage</th><th>How</th><th>Success metric</th></tr></thead>
+    <tbody>
+      <tr><td><strong>0 → 10</strong> (weeks 1–2)</td><td>Founder's circle. Personal outreach to 20–30 travel-active friends. Set up their trips manually if needed.</td><td>3 active trip groups with 3+ members each</td></tr>
+      <tr><td><strong>10 → 50</strong> (weeks 3–6)</td><td>Friends of friends. Each active user creates a trip and invites 4–5 people. Supplement with Reddit + Facebook. Launch trip templates to reduce activation friction.</td><td>3+ trips created by users not recruited by founder</td></tr>
+      <tr><td><strong>50 → 100</strong> (weeks 7–12)</td><td>Organic loops activate. Product Hunt. Dubai expat group push. Referral rewards (feature unlocks). SEO content. Micro-influencer partnerships.</td><td>Viral coefficient &gt; 1.0 — each user brings in more than one new user</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════ COMMUNITIES ══════════ -->
+<div id="communities" class="section">
+  <div class="section-header">
+    <h2>Communities & Tactics</h2>
+    <p>Specific places to engage. Join all Facebook groups in Week 0 — don't wait.</p>
+  </div>
+
+  <h3>Reddit (build karma first, promote later)</h3>
+  <table>
+    <thead><tr><th>Subreddit</th><th>Size</th><th>When to engage</th></tr></thead>
+    <tbody>
+      <tr><td>r/travel</td><td>9M</td><td>Weeks 1+ — answer group trip questions, never mention Junto initially</td></tr>
+      <tr><td>r/solotravel</td><td>4M</td><td>Weeks 1+ — yes, solo travellers also do group trips</td></tr>
+      <tr><td>r/digitalnomads</td><td>2.5M</td><td>Weeks 1+ — high overlap with tech-comfortable users</td></tr>
+      <tr><td>r/grouptravel</td><td>50K</td><td>Weeks 1+ — direct target, smaller but highly relevant</td></tr>
+      <tr><td>r/alphaandbetausers</td><td>9K</td><td>Week 3 — post for beta testers</td></tr>
+      <tr><td>r/SideProject</td><td>503K</td><td>Week 3–4 — "I built this" post with screenshots + GIF</td></tr>
+      <tr><td>r/indiehackers</td><td>100K</td><td>Week 3+ — build in public updates</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Facebook groups (join in Week 0)</h3>
+  <table>
+    <thead><tr><th>Group</th><th>Size</th><th>Angle</th></tr></thead>
+    <tbody>
+      <tr><td>Girls LOVE Travel</td><td>1.3M+</td><td>Group trip planning pain points</td></tr>
+      <tr><td>Solo Female Travelers Worldwide</td><td>450K+</td><td>Group trip coordination</td></tr>
+      <tr><td>Find a Travel Buddy</td><td>Large</td><td>Direct target — people forming groups</td></tr>
+      <tr><td>Young Travelers Network</td><td>Large</td><td>Target demographic</td></tr>
+      <tr><td>Dubai Expat Community</td><td>110K+</td><td>Primary distribution — Oman trips, Georgia, Bali</td></tr>
+      <tr><td>Dirham Stretcher Dubai</td><td>108K+</td><td>Budget-conscious expat travel groups</td></tr>
+      <tr><td>Brits in Dubai</td><td>Large</td><td>Europe trips, group holidays</td></tr>
+      <tr><td>American Expats in Dubai</td><td>Large</td><td>US destinations, group travel</td></tr>
+    </tbody>
+  </table>
+
+  <h3>SEO content (weeks 7+)</h3>
+  <p>Publish on Medium, then cross-post to Indie Hackers. These build organic discovery over time.</p>
+  <ul>
+    <li>"How to Plan a Group Trip in 2026 (Step-by-Step Guide)"</li>
+    <li>"Best Free Apps for Group Trip Planning 2026"</li>
+    <li>"What I Learned Building a Group Trip App as a Non-Technical Founder"</li>
+    <li>"How to Split Expenses on a Group Trip Without the Awkwardness"</li>
+  </ul>
+
+  <h3>Dubai in-person (ongoing)</h3>
+  <ul>
+    <li>Dubai Hiking Group Meetup (3,000+ members on Meetup.com)</li>
+    <li>Dubai Entrepreneurs Network events</li>
+    <li>Coworking events: Astrolabs, Nasab by KOA</li>
+    <li>Casually recruit 5–10 beta testers from personal connections at each event</li>
+  </ul>
+</div>
+
+<!-- ══════════ VIRAL MOMENTS ══════════ -->
+<div id="viral" class="section">
+  <div class="section-header">
+    <h2>Viral Moments</h2>
+    <p>The 5 moments in every group trip where Junto naturally spreads to new users. Each must be frictionless.</p>
+  </div>
+  <div class="callout callout-green">Unlike apps where referrals are bolted on, Junto's core use case — group trip planning — inherently requires inviting others. Every trip created is an acquisition event. This is the Venmo mechanic.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">1 · Trip creation → Invite (highest leverage moment)</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">After trip creation, the immediate next action must be "Invite your crew." One tap to share via WhatsApp. Pre-filled message: "Hey! We're planning our trip to [destination] on Junto — join here: [join link]." The link must deep-link directly into the trip, not a generic signup page. Verify this works end-to-end.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">2 · Expense entry → Split with group</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">After logging an expense where not all members are on the app, prompt: "Split with your trip group — invite [Name] to join." This gives the person who paid a strong incentive to get others on the app.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">3 · Poll creation → Everyone must vote</span><span class="task-note" style="display:inline"></span></div>
+      <p class="task-note">When a poll is created, every member who hasn't voted should get a push notification: "Poll closes in 2 hours — you haven't voted yet." Non-members get an invite. Already handled by push notification triggers — verify it's wired correctly.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">4 · Settle-up → Payment frictionless</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">At trip's end, the person owed the most is highly motivated to get everyone on the app. Make settle-up frictionless — show the balance breakdown clearly, add deep links to Venmo/PayPal/bank transfer for each debt. The person owed will share this themselves.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">5 · Trip recap → Shareable card</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">After trip ends, auto-generate a shareable "trip card": destinations visited, total spent per person, top activity, group photo (if uploaded). Subtle "Planned on Junto" watermark. Share to Instagram Stories or WhatsApp. Creates passive social proof.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MONETIZATION: AFFILIATES ══════════ -->
+<div id="affiliates" class="section">
+  <div class="section-header">
+    <h2>Affiliate Links — Months 1–6</h2>
+    <p>Revenue before Stripe. Free to set up, passive income tied to natural user behaviour.</p>
+  </div>
+  <div class="callout callout-green">Sign up for all three programs in Week 0 (Phase 0 pre-launch). Build the integration once Google Maps is live (Phase 2) since you'll have structured location data. Expected: $50–200/month initially depending on booking volume.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Sign up for Booking.com, Viator, GetYourGuide affiliate programs</span><span class="tag tag-ops">OPS</span></div>
+      <p class="task-note">All free, instant approval. Booking.com: 4–5% per booking. Viator: 8%. GetYourGuide: 8%. Do this in Week 0 — links are ready when the integration is built.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Add affiliate booking CTAs to itinerary items</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Subtle "Book on Booking.com" or "Find activities on Viator" links beneath itinerary items that have a location. Small muted text, not a prominent button. Should feel like a helpful suggestion, not an ad.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-warn">Build this after Google Maps integration is done — you'll have structured location data to generate better affiliate links.</div>
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Add subtle affiliate booking links to itinerary items in Junto.
+
+When an itinerary item has a location (name or address), show a small muted link beneath the item description. For accommodation-type items: "Book nearby hotels on Booking.com →" (affiliate link). For activity-type items: "Find activities on Viator →" or "Explore on GetYourGuide →" (affiliate links).
+
+I'll provide the base affiliate URLs and tracking IDs to use as constants. For now use placeholder URLs formatted as:
+- Booking.com: https://www.booking.com/search.html?ss=[location]&aid=[YOUR_AID]
+- Viator: https://www.viator.com/searchResults/all?text=[location]&mcid=[YOUR_MCID]
+
+Styling: small text (11px), muted colour, no icon. Should feel like a helpful footnote, not an advertisement. Only show on items that have a structured location — not on generic notes or items without location.
+
+Do not change any other UI. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MONETIZATION: PRO ══════════ -->
+<div id="pro" class="section">
+  <div class="section-header">
+    <h2>Junto Pro — Month 6+ (500+ users)</h2>
+    <p>Launch paid tier only after proving retention. stripe_customer_id already in DB.</p>
+  </div>
+
+  <div class="callout callout-warn">Splitwise's cautionary tale: restricting previously-free features triggered a user revolt (1.8/5 Trustpilot, "RIP Splitwise" Reddit threads). Core collaboration — creating trips, inviting, splitting expenses, polls — must stay free forever. Gate analytics and export only.</div>
+
+  <h3>What to gate (Pro only)</h3>
+  <ul>
+    <li>PDF/CSV expense reports with per-person breakdowns</li>
+    <li>Spending analytics charts across trips</li>
+    <li>Enhanced receipt scanning (batch + OCR)</li>
+    <li>Trip recap shareable card (premium version)</li>
+    <li>Custom trip themes</li>
+  </ul>
+
+  <h3>What stays free forever</h3>
+  <ul>
+    <li>Creating trips, inviting members, all core collaboration</li>
+    <li>Expense splitting and balances</li>
+    <li>Real-time editing, polls, itinerary</li>
+    <li>Every shared link (these are acquisition events)</li>
+  </ul>
+
+  <h3>Pricing</h3>
+  <table>
+    <thead><tr><th>Tier</th><th>Price</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Monthly</td><td>$4.99/month</td><td>Competitive with Wanderlog Pro</td></tr>
+      <tr><td>Annual</td><td>$29.99/year</td><td>At the "impulse" threshold for app subscriptions</td></tr>
+      <tr><td>Per-trip pass</td><td>$2.99–4.99</td><td>For the 1–2 trips/year traveller who won't subscribe</td></tr>
+      <tr><td>Founding subscriber</td><td>50% off for life</td><td>First 100 paying users — creates urgency and loyalty</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Pro principle: "One Pro user, free group"</h3>
+  <p>If the trip organiser has Pro, the entire group benefits from Pro features like export and reports. Removes pressure on non-paying group members while incentivising the power user to pay.</p>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Plan Stripe integration — DB and Edge Function audit</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Plan before building. stripe_customer_id already in DB. Need to understand what else is needed before prompting Lovable.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Plan the Stripe integration for Junto Pro. stripe_customer_id already exists on the profiles table.
+
+Tell me:
+1. What additional columns are needed on profiles or a new subscriptions table? (e.g. is_pro boolean, subscription_status, subscription_end_date, stripe_subscription_id)
+2. What Edge Functions are needed? (create-checkout-session, stripe-webhook handler for subscription events like created/cancelled/past_due)
+3. What RLS policy changes are needed to gate Pro-only features?
+4. How should the "one Pro user, free group" principle be implemented — where is this logic best enforced?
+
+Don't write any code yet. Give me a clear plan I can review before prompting Lovable.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build Stripe checkout + subscription management</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Only after the plan from Claude Code is reviewed and confirmed. Target: 500+ users before building this.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ LEGAL ENTITY ══════════ -->
+<div id="entity" class="section">
+  <div class="section-header">
+    <h2>Legal Entity — UAE</h2>
+    <p>Not needed for a free app. Trigger is monetization — any commercial revenue requires a UAE trade licence.</p>
+  </div>
+
+  <div class="callout callout-purple">You don't need a registered entity to run a free app. Register only when you're ready to charge. Budget 2–4 weeks for the process.</div>
+
+  <table>
+    <thead><tr><th>Route</th><th>Cost</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Free Zone (DMCC, Dubai Digital Park)</td><td>AED 10–15k/year</td><td>Recommended for SaaS. 100% ownership, no local sponsor. Use a formation agent: Virtuzone or Commitbiz.</td></tr>
+      <tr><td>Mainland (DED)</td><td>AED 15–25k/year</td><td>More flexibility for local trading, more overhead</td></tr>
+      <tr><td>DIFC</td><td>AED 20k+/year</td><td>Overkill at this stage</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-warn">If you're on a UAE work visa, check your employment contract for a NOC (No Objection Certificate) clause before any commercial activity. Some contracts prohibit side businesses.</div>
+
+  <h3>VAT thresholds</h3>
+  <table>
+    <thead><tr><th>Revenue</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td>Below AED 375k/year</td><td>VAT registration optional</td></tr>
+      <tr><td>Above AED 375k/year</td><td>UAE VAT mandatory (5%)</td></tr>
+      <tr><td>EU users paying</td><td>EU VAT (OSS scheme) may apply — get accountant advice</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════ STEP 16 ══════════ -->
+<div id="step16" class="section">
+  <div class="section-header">
+    <h2>Step 16 — Lock Exchange Rates</h2>
+    <p>Research priority: fix before launch. Balances shifting as rates change is the #1 trust-destroying bug for a money app.</p>
+  </div>
+  <div class="callout callout-red">Move this out of deferred — it should be in Phase 0. Multi-currency accuracy is a selling point vs Splitwise. Launching with balance drift undermines the core value proposition.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Run schema migration</span><span class="tag tag-sql">SQL</span></div>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ SQL</button>
+      <div class="task-detail">
+        <div class="code-block">ALTER TABLE public.expenses
+  ADD COLUMN eur_amount numeric,
+  ADD COLUMN exchange_rate_used numeric;
+
+UPDATE public.expenses
+  SET eur_amount = amount, exchange_rate_used = 1
+  WHERE currency = 'EUR';<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Identify affected files</span><span class="tag tag-code">Claude Code</span></div>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Find all files in Junto that are involved in expense creation, exchange rate lookup, and balance calculation. List them with a brief description of what each one does. I need to understand the full scope before prompting Lovable to make changes. Don't change anything yet.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Update addExpense to store eur_amount + exchange_rate_used</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">On creation: fetch live EUR rate, calculate and store both fields. All balance math then uses eur_amount — never live rates. Only send this prompt after Claude Code has identified the affected files.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Show locked rate in BalanceAuditSheet</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">"Rate locked at creation: 1 AED = €0.2727" — turns a technical fix into a visible trust signal.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ STEP 17 ══════════ -->
+<div id="step17" class="section">
+  <div class="section-header">
+    <h2>Step 17 — Founder Command Center</h2>
+    <p>/admin route, gated to VITE_ADMIN_USER_ID. Build modules in order.</p>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">1 · Feedback inbox with AI summaries</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">List all feedback. Filter by category/status/severity. Mark as done. Show ai_summary + ai_fix. "Send to Lovable" button pre-fills a fix prompt.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">2 · Analytics dashboard</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Users, trips, feature adoption, retention — from existing tables only. Track the activation metric: user creates/joins trip + 2 others join within 7 days.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">3 · AI analysis + "Generate Lovable prompt" button</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Feedback clustering. Button pre-fills a targeted Lovable fix prompt from the selected ticket — the semi-automated bug fixing workflow.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">4 · Health monitoring</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Exchange rate freshness, Edge Function errors, DB limits, orphaned data.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">5 · Weekly digest email</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Monday summary via SendGrid.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TOOL GUIDE ══════════ -->
+<div id="tools" class="section">
+  <div class="section-header"><h2>Tool Guide</h2></div>
+  <table>
+    <thead><tr><th>Task</th><th>Tool</th></tr></thead>
+    <tbody>
+      <tr><td>Planning features, writing prompts, strategy</td><td>Claude.ai (this)</td></tr>
+      <tr><td>Deep research, competitive analysis</td><td>Claude Deep Research feature</td></tr>
+      <tr><td>New UI, pages, components</td><td>Lovable</td></tr>
+      <tr><td>Bug diagnosis — always first</td><td>Claude Code</td></tr>
+      <tr><td>Targeted fix (1–2 files)</td><td>Claude Code or Lovable</td></tr>
+      <tr><td>SQL / schema changes</td><td>Lovable SQL editor</td></tr>
+      <tr><td>Verify DB state</td><td>Lovable SQL editor (fastest)</td></tr>
+    </tbody>
+  </table>
+  <h3>Claude Code tips</h3>
+  <ul>
+    <li><strong>Describe the problem and goal — not the solution.</strong> Let Claude Code decide how to implement it.</li>
+    <li>Always ask it to diagnose first, then fix in a second step</li>
+    <li>Give exact file paths or paste raw file URLs when relevant</li>
+    <li>It has real internet access — use it to find working API patterns, library docs, or URLs</li>
+    <li>Avoid open-ended builds — Claude Code is for precision fixes, Lovable is for creation</li>
+  </ul>
+  <h3>Lovable tips</h3>
+  <ul>
+    <li><strong>Describe what the user experience should be — not the implementation.</strong> Lovable understands the codebase and UI better than any prompt can specify.</li>
+    <li>Don't over-constrain UI changes — Lovable can make sensible design decisions</li>
+    <li>Never reference specific variable or file names unless you've seen the actual code first</li>
+    <li>Always paste Lovable's plan back to Claude.ai for review before approving</li>
+    <li>One prompt per session — verify before the next</li>
+  </ul>
+  <h3>Claude.ai (this) tips</h3>
+  <ul>
+    <li>Paste raw GitHub file URLs when sharing code — Claude cannot construct them reliably</li>
+    <li>Use the REF button on any task card to copy a reference block, then paste it here to get a prompt</li>
+    <li>For bugs: always ask for a step-by-step with separate Claude Code and Lovable prompts</li>
+    <li>Claude writes the prompts — you copy and run them. Don't ask Claude to fix things directly in Lovable or Claude Code.</li>
+  </ul>
+</div>
+
+<!-- ══════════ GUARDRAILS ══════════ -->
+<div id="guardrails" class="section">
+  <div class="section-header">
+    <h2>Guardrails</h2>
+    <p>Add to the bottom of fix prompts sent to Lovable when you want to prevent scope creep.</p>
+  </div>
+  <div class="code-block">GUARDRAILS:
+- Only fix the specific issue described. Do not refactor anything else.
+- List every file you will change before making any changes.
+- Security belongs in RLS and Edge Functions, not in the UI.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+  <p style="margin-top:8px">Note: don't over-constrain UI or implementation details in prompts — let Lovable and Claude Code make those decisions. Only add guardrails when there's a specific risk of scope creep.</p>
+
+  <h3>When to use Claude Code vs Lovable</h3>
+  <table>
+    <thead><tr><th>Situation</th><th>Use</th></tr></thead>
+    <tbody>
+      <tr><td>Bug involving a specific file, hook, or Edge Function</td><td>Claude Code — diagnose first, always</td></tr>
+      <tr><td>Lovable has already tried and failed on a bug</td><td>Claude Code only</td></tr>
+      <tr><td>New UI component or page</td><td>Lovable</td></tr>
+      <tr><td>Simple style tweak (1–2 files, no logic)</td><td>Either</td></tr>
+      <tr><td>DB schema change</td><td>SQL editor directly</td></tr>
+      <tr><td>Edge Function needed</td><td>Claude Code to plan + write, Lovable to wire into UI</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════ URLS ══════════ -->
+<div id="urls" class="section">
+  <div class="section-header"><h2>URLs & DNS</h2></div>
+  <div class="callout callout-warn">junto.pro is purchased and DNS is configured but not yet live. All live links use juntotravel.lovable.app. Do the URL sweep only after junto.pro is confirmed live.</div>
+  <table>
+    <thead><tr><th>Item</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Live URL (current)</td><td>juntotravel.lovable.app</td></tr>
+      <tr><td>Primary domain (not yet live)</td><td>junto.pro</td></tr>
+      <tr><td>Repo</td><td>github.com/Senfking/tripmate-planner</td></tr>
+      <tr><td>Trip join</td><td>junto.pro/join/{trip_code} — pending domain go-live</td></tr>
+      <tr><td>Referral</td><td>junto.pro/ref?ref={code} — pending domain go-live</td></tr>
+      <tr><td>Privacy</td><td>junto.pro/privacy — placeholder, content pending</td></tr>
+      <tr><td>Terms</td><td>junto.pro/terms — placeholder, content pending</td></tr>
+    </tbody>
+  </table>
+  <h4>DNS records (set)</h4>
+  <table>
+    <thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>@</td><td>13.248.243.5</td></tr>
+      <tr><td>CNAME</td><td>www</td><td>junto.pro</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<div class="toast" id="toast">Copied</div>
+
+<script>
+function show(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('visible');
+  if (el) el.classList.add('active');
+}
+
+function toggleTask(task) {
+  task.classList.toggle('done');
+  updateProgress();
+  saveState();
+}
+
+function toggleExpand(e, btn) {
+  e.stopPropagation();
+  const task = btn.closest('.task');
+  const isExpanded = task.classList.contains('expanded');
+  task.classList.toggle('expanded', !isExpanded);
+  const label = btn.textContent.slice(2);
+  btn.textContent = (isExpanded ? '▸ ' : '▾ ') + label;
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('.task');
+  const done = document.querySelectorAll('.task.done');
+  const pct = all.length ? Math.round((done.length / all.length) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = done.length + ' / ' + all.length;
+}
+
+function saveState() {
+  const tasks = document.querySelectorAll('.task');
+  const state = Array.from(tasks).map(t => t.classList.contains('done'));
+  try { localStorage.setItem('junto-v9', JSON.stringify(state)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const state = JSON.parse(localStorage.getItem('junto-v9') || '[]');
+    const tasks = document.querySelectorAll('.task');
+    tasks.forEach((t, i) => { if (state[i]) t.classList.add('done'); });
+  } catch(e) {}
+  updateProgress();
+}
+
+function fallbackCopy(text, callback) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (callback) callback();
+}
+
+function copyCode(btn) {
+  const block = btn.parentElement;
+  const clone = block.cloneNode(true);
+  clone.querySelector('.copy-btn').remove();
+  const text = clone.textContent.trim();
+  function finish() {
+    btn.textContent = 'copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(finish).catch(() => fallbackCopy(text, finish));
+  } else { fallbackCopy(text, finish); }
+}
+
+function copyRef(e, btn) {
+  e.stopPropagation();
+  const task = btn.closest('.task');
+  const section = task.closest('.section');
+  const sectionTitle = section ? (section.querySelector('.section-header h2') || {}).textContent || '' : '';
+  const title = (task.querySelector('.task-title') || {}).textContent || '';
+  const tags = Array.from(task.querySelectorAll('.tag')).map(t => t.textContent.trim()).join(', ');
+  const note = (task.querySelector('.task-note') || {}).textContent || '';
+  const detail = task.querySelector('.task-detail');
+  let detailText = '';
+  if (detail) {
+    const clone = detail.cloneNode(true);
+    clone.querySelectorAll('.copy-btn,.ref-btn,.expand-btn').forEach(b => b.remove());
+    detailText = clone.textContent.replace(/\s+/g,' ').trim();
+  }
+  const text = ['## Junto task reference', sectionTitle ? `Section: ${sectionTitle}` : '', `Task: ${title}`, tags ? `Tags: ${tags}` : '', note ? `Notes: ${note.trim()}` : '', detailText ? `Detail: ${detailText}` : ''].filter(Boolean).join('\n');
+  function finish() {
+    btn.textContent = 'copied!'; btn.classList.add('copied');
+    showToast('Copied — paste into Claude.ai');
+    setTimeout(() => { btn.textContent = 'ref'; btn.classList.remove('copied'); }, 1600);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(finish).catch(() => fallbackCopy(text, finish));
+  } else { fallbackCopy(text, finish); }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function wireCheckboxes() {
+  document.querySelectorAll('.task').forEach(task => {
+    task.removeAttribute('onclick');
+    task.style.cursor = 'default';
+    const cb = task.querySelector('.checkbox');
+    if (cb && !cb.dataset.wired) {
+      cb.dataset.wired = '1'; cb.style.cursor = 'pointer';
+      cb.addEventListener('click', e => { e.stopPropagation(); toggleTask(task); });
+    }
+  });
+}
+
+function injectRefButtons() {
+  document.querySelectorAll('.task').forEach(task => {
+    if (task.querySelector('.ref-btn')) return;
+    const taskTop = task.querySelector('.task-top');
+    if (!taskTop) return;
+    const btn = document.createElement('button');
+    btn.className = 'ref-btn'; btn.textContent = 'ref';
+    btn.title = 'Copy task reference to paste into Claude.ai';
+    btn.onclick = e => copyRef(e, btn);
+    taskTop.appendChild(btn);
+  });
+}
+
+loadState();
+injectRefButtons();
+wireCheckboxes();
+</script>
+</body>
+</html>
