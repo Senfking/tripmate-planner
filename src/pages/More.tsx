@@ -48,6 +48,55 @@ function getInitials(name: string | null | undefined, email: string | null | und
   return "?";
 }
 
+/* ───────── push enable button ───────── */
+
+function PushEnableButton() {
+  const [status, setStatus] = useState<"unknown" | "enabled" | "denied" | "available">("unknown");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setStatus("denied");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setStatus("denied");
+    } else if (Notification.permission === "granted") {
+      navigator.serviceWorker.ready.then((reg) =>
+        reg.pushManager.getSubscription().then((sub) => setStatus(sub ? "enabled" : "available")),
+      );
+    } else {
+      setStatus("available");
+    }
+  }, []);
+
+  if (status === "enabled") {
+    return <p className="text-xs text-muted-foreground">✅ Push notifications enabled</p>;
+  }
+  if (status === "denied") {
+    return <p className="text-xs text-muted-foreground">Push notifications are blocked in your browser settings.</p>;
+  }
+  if (status === "available") {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        disabled={loading}
+        onClick={async () => {
+          setLoading(true);
+          const sub = await subscribeToPush();
+          setStatus(sub ? "enabled" : "denied");
+          setLoading(false);
+        }}
+      >
+        Enable push notifications
+      </Button>
+    );
+  }
+  return null;
+}
+
 /* ───────── chevron row ───────── */
 
 function SettingRow({ icon: Icon, label, onClick }: { icon: any; label: string; onClick: () => void }) {
