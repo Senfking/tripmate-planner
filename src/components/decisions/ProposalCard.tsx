@@ -180,7 +180,7 @@ export function ProposalCard({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3 relative transition-opacity">
+    <div className="p-4 space-y-3 relative transition-opacity">
       {/* Top-right actions */}
       <div className="absolute top-3 right-3 flex items-center gap-1.5">
         {isInRoute && (
