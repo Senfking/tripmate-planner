@@ -224,112 +224,40 @@ export function ProposalCard({
         </div>
       )}
 
-      {/* Date options section */}
-      <div className="border-t border-border pt-3">
-        <button
-          className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full"
-          onClick={() => setDatesExpanded(!datesExpanded)}
-        >
-          📅 When does this work? ({dateOptions.length})
-          {datesExpanded ? (
-            <ChevronUp className="h-3.5 w-3.5 ml-auto" />
-          ) : (
-            <ChevronDown className="h-3.5 w-3.5 ml-auto" />
-          )}
-        </button>
-
-        {datesExpanded && (
-          <div className="mt-3 space-y-2">
-            {dateOptions.length === 0 && !showDateForm && (
-              <p className="text-xs text-muted-foreground italic">No date options yet</p>
-            )}
-
-            {dateOptions.map((d) => {
-              const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
-              const myVote = myDateVotes[d.id];
-              const votingDisabled = isFrozen || isInRoute;
-              return (
-                <div key={d.id} className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3">
+      {/* Date options — "Works for me" toggles */}
+      {dateOptions.length > 0 && (
+        <div className="space-y-2">
+          {dateOptions.map((d) => {
+            const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
+            const myVote = myDateVotes[d.id];
+            const worksForMe = myVote === "yes";
+            const availableCount = votes.yes || 0;
+            const votingDisabled = isFrozen || isInRoute;
+            return (
+              <div key={d.id} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">
                     {fmt(d.start_date)} – {fmt(d.end_date)}
                   </p>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {DATE_VOTE_BUTTONS.map(({ value, icon: Icon, label, activeClass }) => {
-                      const isSelected = myVote === value;
-                      const count = votes[value as keyof typeof votes] || 0;
-                      return (
-                        <button
-                          key={value}
-                          onClick={() => onVoteDateOption(d.id, value)}
-                          disabled={votingDisabled}
-                          className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs border transition-colors ${
-                            isSelected
-                              ? activeClass
-                              : "bg-background border-border text-muted-foreground hover:bg-muted"
-                          } ${votingDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
-                        >
-                          <Icon className="h-3 w-3" />
-                          <span>{label}</span>
-                          {count > 0 && <span className="font-semibold">{count}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {availableCount} of {memberCount} available
+                  </p>
                 </div>
-              );
-            })}
-
-            {/* Add date option inline form — any member can add */}
-            {!isFrozen && !isInRoute && (
-              <>
-                {showDateForm ? (
-                  <div className="space-y-2 rounded-lg bg-muted/20 p-3">
-                    <DateRangePicker
-                      value={dateRange}
-                      onChange={setDateRange}
-                      className="w-full"
-                      placeholder="Select date range"
-                    />
-                    <div className="flex gap-2 justify-end md:justify-start">
-                      <Button
-                        size="sm"
-                        onClick={handleAddDate}
-                        disabled={!dateRange?.from || !dateRange?.to || isAddingDate}
-                        className="text-xs"
-                      >
-                        {isAddingDate ? "Adding…" : "Add dates"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setShowDateForm(false);
-                          setDateRange(undefined);
-                        }}
-                        className="text-xs"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex justify-end md:justify-start">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1.5 text-xs"
-                      onClick={() => setShowDateForm(true)}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Suggest dates
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-      </div>
+                <Button
+                  variant={worksForMe ? "default" : "outline"}
+                  size="sm"
+                  className={`gap-1.5 shrink-0 ${worksForMe ? "" : "text-muted-foreground"}`}
+                  onClick={() => onVoteDateOption(d.id, "yes")}
+                  disabled={votingDisabled}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  {worksForMe ? "Works for me!" : "Works for me"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add to route button — owner/admin only */}
       {canManage && !isRouteLocked && !isInRoute && !confirmOpen && (
