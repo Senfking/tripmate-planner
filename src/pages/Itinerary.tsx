@@ -104,7 +104,7 @@ const Itinerary = () => {
       ...g,
       items: g.items.filter((i) => i.attendance === "in" || i.attendance === null),
     };
-  }).filter((g) => g.items.length > 0 || g.placeholders.length > 0 || (g.tripStartDate && g.tripEndDate));
+  }).filter((g) => g.items.length > 0 || g.placeholders.length > 0 || g.tripStartDate);
 
   // Build items by date
   type TimelineItem = typeof allItems[number];
