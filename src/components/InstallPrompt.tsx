@@ -24,6 +24,15 @@ export function InstallPrompt() {
   const [dismissed, setDismissed] = useState(() => localStorage.getItem("junto_install_dismissed") === "true");
   const [iosDismissed, setIosDismissed] = useState(() => localStorage.getItem("junto_ios_tip_dismissed") === "true");
 
+  const isInStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
+  const ua = navigator.userAgent;
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isAndroid = /android/i.test(ua);
+  const isChrome = /chrome/i.test(ua) && !/edg/i.test(ua);
+  const isSafari = /safari/i.test(ua) && !/chrome/i.test(ua);
+  const isFirefox = /firefox/i.test(ua);
+  const isSamsungBrowser = /samsungbrowser/i.test(ua);
+
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
@@ -32,6 +41,13 @@ export function InstallPrompt() {
     };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  // Track iOS/mobile manual install tip render
+  useEffect(() => {
+    if (!isInStandaloneMode && !iosDismissed && (isIOS || isAndroid)) {
+      trackEvent("pwa_install_prompted", { platform: isIOS ? "ios" : "android_manual" });
+    }
   }, []);
 
   const handleInstall = async () => {
@@ -70,25 +86,9 @@ export function InstallPrompt() {
   }
 
   /* ── Manual install tip (browser-aware) ── */
-  const isInStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
   if (isInStandaloneMode || iosDismissed) return null;
 
-  const ua = navigator.userAgent;
-  const isIOS = /iphone|ipad|ipod/i.test(ua);
-  const isAndroid = /android/i.test(ua);
-  const isChrome = /chrome/i.test(ua) && !/edg/i.test(ua);
-  const isSafari = /safari/i.test(ua) && !/chrome/i.test(ua);
-  const isFirefox = /firefox/i.test(ua);
-  const isSamsungBrowser = /samsungbrowser/i.test(ua);
-
   let instruction: React.ReactNode;
-
-  // Track iOS/mobile manual install tip render
-  useEffect(() => {
-    if (!isInStandaloneMode && !iosDismissed && (isIOS || isAndroid)) {
-      trackEvent("pwa_install_prompted", { platform: isIOS ? "ios" : "android_manual" });
-    }
-  }, []);
 
   if (isIOS && isSafari) {
     instruction = (
