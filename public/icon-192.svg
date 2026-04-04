@@ -6,10 +6,5 @@
     </linearGradient>
   </defs>
   <rect width="192" height="192" fill="url(#bg)"/>
-  <g transform="translate(96,96)">
-    <circle cx="0" cy="-20" r="18" fill="none" stroke="#fff" stroke-width="5"/>
-    <path d="M-30 25 Q0 -10 30 25" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-    <path d="M0 -38 L4 -48 L0 -45 L-4 -48 Z" fill="#fff"/>
-  </g>
-  <text x="96" y="145" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="28" fill="#fff">TC</text>
+  <text x="96" y="104" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-weight="800" font-size="27" letter-spacing="0.18em" fill="#fff">JUNTO</text>
 </svg>
