@@ -142,6 +142,7 @@ export default function JoinByCode() {
           </CardContent>
         </form>
       </Card>
+      <PushOptInDrawer />
     </div>
   );
 }
