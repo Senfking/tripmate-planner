@@ -289,8 +289,9 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
 
       {/* Solo trip prompt */}
       {members.length <= 1 && expenses.length > 0 && (
-        <div
-          className="mx-0 flex items-center gap-3 px-4 py-3.5"
+        <button
+          onClick={() => setInviteOpen(true)}
+          className="mx-0 flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:scale-[0.98]"
           style={{
             background: "rgba(255,255,255,0.7)",
             backdropFilter: "blur(12px)",
@@ -302,10 +303,14 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <Users className="h-4 w-4 text-primary" />
           </div>
-          <p className="text-[13px] text-muted-foreground leading-snug">
-            Invite friends to start splitting expenses.
-          </p>
-        </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] text-foreground font-medium leading-snug">
+              Invite friends to split expenses
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Tap to share an invite link</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+        </button>
       )}
 
       {/* Balance hero — teal gradient card (matches global expenses header) */}
