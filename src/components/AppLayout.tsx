@@ -101,13 +101,14 @@ export function AppLayout() {
                 }}
               />
 
-              <div className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center pointer-events-none">
+              <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2 pointer-events-auto">
                 <span
                   className="text-white font-bold"
                   style={{ fontSize: 18, letterSpacing: "0.18em" }}
                 >
                   JUNTO
                 </span>
+                <BetaBadge />
               </div>
 
               <HeaderAvatar />

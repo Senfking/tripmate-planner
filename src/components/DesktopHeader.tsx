@@ -60,20 +60,23 @@ export function DesktopHeader() {
 
       {/* Row 1 — Brand + Avatar */}
       <div className="relative z-10 flex items-center justify-between h-[44px] px-6 max-w-[1200px] mx-auto">
-        <div className="w-9" /> {/* spacer to center wordmark */}
-        <span
-          className="font-bold"
-          style={{
-            fontSize: 18,
-            letterSpacing: "0.18em",
-            background: "linear-gradient(135deg, #ffffff 0%, #5eead4 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          JUNTO
-        </span>
+        <div className="w-9" /> {/* spacer to balance avatar */}
+        <div className="flex items-center gap-2">
+          <span
+            className="font-bold"
+            style={{
+              fontSize: 18,
+              letterSpacing: "0.18em",
+              background: "linear-gradient(135deg, #ffffff 0%, #5eead4 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            JUNTO
+          </span>
+          <BetaBadge />
+        </div>
         <HeaderAvatar />
       </div>
 
