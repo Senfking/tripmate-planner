@@ -13,7 +13,7 @@ const typeConfig = {
   vibe: { label: "Vibe Board", icon: MessageSquare },
   destination: { label: "Destination vote", icon: MapPin },
   date: { label: "Date vote", icon: CalendarDays },
-  poll: { label: "Preference poll", icon: Vote },
+  poll: { label: "Group poll", icon: Vote },
   attendance: { label: "RSVP", icon: Plane },
 } as const;
 
