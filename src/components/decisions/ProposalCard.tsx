@@ -343,10 +343,10 @@ export function ProposalCard({
               disabled={!canConfirm || isAddingToRoute}
             >
               {isAddingToRoute
-                ? "Adding…"
+                ? "Confirming…"
                 : validation.softWarning
                 ? "Confirm anyway"
-                : "Confirm and add to route"}
+                : "Confirm destination & dates"}
             </Button>
           </div>
         </div>
