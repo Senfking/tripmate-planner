@@ -33,7 +33,7 @@ if ("serviceWorker" in navigator) {
     try {
       return window.self !== window.top;
     } catch {
-      return true;
+      return false;
     }
   })();
 
