@@ -168,7 +168,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
   const [newDateRange, setNewDateRange] = useState<DateRange | undefined>();
   const [showAddDate, setShowAddDate] = useState(false);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
-  const [editDateRange, setEditDateRangeForDate] = useState<DateRange | undefined>();
+  const [editDateOptionRange, setEditDateOptionRange] = useState<DateRange | undefined>();
 
   const toggle = (id: string) =>
     setExpandedIds((prev) => {
