@@ -10,7 +10,13 @@ import {
   CalendarDays,
   Settings,
   ChevronDown,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
@@ -318,9 +324,9 @@ export function TripRoute({
       })}
 
       {/* Lock / unlock actions */}
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
-          {canManage && !isRouteLocked && sortedStops.length > 0 && (
+      <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
+        {canManage && !isRouteLocked && sortedStops.length > 0 && (
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -330,12 +336,15 @@ export function TripRoute({
               <Lock className="h-3.5 w-3.5" />
               Lock route
             </Button>
-          )}
-        </div>
-        {canManage && !isRouteLocked && sortedStops.length > 0 && (
-          <p className="text-[11px] text-muted-foreground text-right md:text-left">
-            Prevents new destination suggestions. You can unlock anytime.
-          </p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[200px] text-xs">
+                Prevents new destination suggestions. You can unlock anytime.
+              </TooltipContent>
+            </Tooltip>
+          </>
         )}
       </div>
 
