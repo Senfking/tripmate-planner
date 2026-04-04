@@ -50,6 +50,8 @@ type Props = {
   canDelete?: boolean;
   onDeleteProposal?: (proposalId: string) => void;
   isDeleting?: boolean;
+  hideDestVoting?: boolean;
+  hideHeader?: boolean;
 };
 
 const DATE_VOTE_BUTTONS = [
@@ -100,6 +102,8 @@ export function ProposalCard({
   canDelete,
   onDeleteProposal,
   isDeleting,
+  hideDestVoting,
+  hideHeader,
 }: Props) {
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
   const isFrozen = isRouteLocked;
@@ -183,7 +187,7 @@ export function ProposalCard({
     <div className="p-4 space-y-3 relative transition-opacity">
       {/* Top-right actions */}
       <div className="absolute top-3 right-3 flex items-center gap-1.5">
-        {isInRoute && (
+        {!hideHeader && isInRoute && (
           <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
             <Check className="h-3 w-3 mr-1" /> In route
           </Badge>
@@ -200,42 +204,46 @@ export function ProposalCard({
       </div>
 
       {/* Destination + creator */}
-      <div className="pr-20">
-        <h4 className="font-semibold text-foreground text-base">{proposal.destination}</h4>
-        <p className="text-xs text-muted-foreground">Suggested by {proposal.creator_name}</p>
-      </div>
+      {!hideHeader && (
+        <div className="pr-20">
+          <h4 className="font-semibold text-foreground text-base">{proposal.destination}</h4>
+          <p className="text-xs text-muted-foreground">Suggested by {proposal.creator_name}</p>
+        </div>
+      )}
 
-      {proposal.note && (
+      {!hideHeader && proposal.note && (
         <p className="text-sm text-foreground/80 italic">"{proposal.note}"</p>
       )}
 
-      {/* Destination voting */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onReactDest("up")}
-          disabled={isFrozen}
-          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border transition-colors ${
-            myDestVote === "up"
-              ? "bg-primary/10 border-primary text-primary font-medium"
-              : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
-          } ${isFrozen ? "opacity-60 cursor-not-allowed" : ""}`}
-        >
-          <ThumbsUp className="h-3.5 w-3.5" />
-          <span>{destVotes.up || 0}</span>
-        </button>
-        <button
-          onClick={() => onReactDest("down")}
-          disabled={isFrozen}
-          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border transition-colors ${
-            myDestVote === "down"
-              ? "bg-destructive/10 border-destructive text-destructive font-medium"
-              : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
-          } ${isFrozen ? "opacity-60 cursor-not-allowed" : ""}`}
-        >
-          <ThumbsDown className="h-3.5 w-3.5" />
-          <span>{destVotes.down || 0}</span>
-        </button>
-      </div>
+      {/* Destination voting — hidden when parent provides its own "I'm in" button */}
+      {!hideDestVoting && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onReactDest("up")}
+            disabled={isFrozen}
+            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border transition-colors ${
+              myDestVote === "up"
+                ? "bg-primary/10 border-primary text-primary font-medium"
+                : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
+            } ${isFrozen ? "opacity-60 cursor-not-allowed" : ""}`}
+          >
+            <ThumbsUp className="h-3.5 w-3.5" />
+            <span>{destVotes.up || 0}</span>
+          </button>
+          <button
+            onClick={() => onReactDest("down")}
+            disabled={isFrozen}
+            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border transition-colors ${
+              myDestVote === "down"
+                ? "bg-destructive/10 border-destructive text-destructive font-medium"
+                : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
+            } ${isFrozen ? "opacity-60 cursor-not-allowed" : ""}`}
+          >
+            <ThumbsDown className="h-3.5 w-3.5" />
+            <span>{destVotes.down || 0}</span>
+          </button>
+        </div>
+      )}
 
       {/* Date options section */}
       <div className="border-t border-border pt-3">
