@@ -149,7 +149,7 @@ async function hkdf(
     ["sign"],
   );
   const infoWithCounter = concat(info, new Uint8Array([1]));
-  const okm = new Uint8Array(await crypto.subtle.sign("HMAC", expandKey, infoWithCounter));
+  const okm = new Uint8Array(await crypto.subtle.sign("HMAC", expandKey, (infoWithCounter as Uint8Array).buffer));
 
   return okm.slice(0, length);
 }
