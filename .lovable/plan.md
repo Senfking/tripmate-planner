@@ -1,117 +1,32 @@
 
 
-# Founder Admin Dashboard — Implementation Plan
+## Redesign "Where & When" Section — Amended Plan
 
-## Critical Architecture Decision: RLS Bypass
+### Files to change
 
-Most tables (trips, expenses, itinerary_items, trip_members, feedback, analytics_events) have RLS policies that restrict reads to trip members or own rows only. The admin dashboard needs aggregate access to ALL data. 
-
-**Solution**: Create a single Edge Function `admin-query` that uses the **service role key** to bypass RLS. It accepts a `query_type` parameter and returns pre-computed aggregates. The frontend calls this function for every data need. The Edge Function itself validates that the caller's user ID matches `ADMIN_USER_ID` (stored as a secret).
-
-This is more secure than adding broad RLS policies — the admin bypass is isolated to one function with explicit authorization.
+1. **`src/components/decisions/TripRoute.tsx`** — Add reaction counts on stops, move "Add stop" into collapsible admin section, add lock helper text
+2. **`src/components/decisions/WhereWhenSection.tsx`** — Rename header, add subtitle, pass destVotes to TripRoute, make voting section conditional (only show if proposals exist or user taps "Suggest a destination")
+3. **`src/components/decisions/ProposalCard.tsx`** — Change date options toggle label to "📅 When does this work?"
 
 ---
 
-## Database Migration
+### Detailed changes
 
-Add two columns needed for admin notes:
+**1. TripRoute.tsx**
 
-```sql
-ALTER TABLE public.feedback ADD COLUMN IF NOT EXISTS admin_notes text;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS admin_notes text;
-```
+- Accept new prop `proposalReactions: Record<string, { up: number; down: number }>` mapping proposal_id to vote counts.
+- On each stop card that has a `proposal_id`, render small read-only `👍 n  👎 n` labels next to the destination name.
+- Move the "Add stop" button out of the main actions row. Instead, below the lock button area, add a collapsible section (using Collapsible from Radix) labeled "⚙ Manage route directly", visible only when `canManage && !isRouteLocked`. Collapsed by default. Contains the "Add stop" button and keeps the existing `AddToRouteDrawer`. The `AddToRouteDrawer` import and state stay.
+- Below the "Lock route" button, add muted helper text: "Prevents new destination suggestions. You can unlock anytime."
 
----
+**2. WhereWhenSection.tsx**
 
-## Edge Function: `admin-query`
+- Rename section header from "Destinations" to "Vote on destinations".
+- Add subtitle below: "Suggest a place — the group votes, the admin adds it to the route."
+- Pass `destVotes` to `TripRoute` as `proposalReactions` — build a map from each proposal's `proposal_id` to its vote counts so TripRoute can look them up per stop.
+- Make the voting section conditional: add local state `showVoting` (default `false`). Render the full "Vote on destinations" section + proposal cards only if `proposals.length > 0` OR `showVoting` is true. Otherwise render just a subtle ghost button: "Suggest a destination" that sets `showVoting = true`.
 
-Single function handling ~20 query types. Validates caller is admin via a secret `ADMIN_USER_ID`. Returns JSON for each query type:
+**3. ProposalCard.tsx**
 
-- `dashboard_kpis` — aggregated counts for all 8 KPI cards
-- `user_growth_chart` — daily signups for period
-- `recent_activity` — union of recent profiles/trips/feedback/ai events
-- `acquisition_stats` — landing views, conversions, UTM breakdown
-- `acquisition_funnel` — stage counts for funnel
-- `ai_usage_summary` — per-feature call counts, success rates, unique users
-- `ai_usage_daily` — daily stacked data
-- `ai_power_users` — top 10 users by AI calls
-- `all_users` — paginated user list with search/sort
-- `user_detail` — single user full profile + stats
-- `retention_activation` — activation rates
-- `retention_cohorts` — weekly cohort data
-- `retention_dormant` — users with no trips after 14d
-- `referral_leaderboard` — top referrers
-- `referral_chain` — all referred users
-- `engagement_dau_wau_mau` — activity-based active user counts
-- `engagement_activity_chart` — daily activity by type
-- `engagement_top_trips` — most active trips
-- `engagement_distribution` — user trip count histogram
-- `feature_adoption` — per-trip feature adoption rates
-- `feedback_list` — all feedback with user info
-- `feedback_update` — update status/admin_notes (write operation)
-- `profile_update_notes` — update profiles.admin_notes (write operation)
-- `system_status` — exchange rate freshness, backlog counts
-- `weekly_digest` — all data for digest generation
-
-Each query accepts a `period` parameter (7d/30d/90d/all).
-
----
-
-## New Secret
-
-Store `ADMIN_USER_ID` as a Supabase secret so the Edge Function can verify the caller.
-
----
-
-## Environment Variable
-
-Add `VITE_ADMIN_USER_ID` to `.env` for client-side route gating (visual only — real security is in the Edge Function).
-
----
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `supabase/functions/admin-query/index.ts` | Edge Function — all admin data queries |
-| `src/pages/Admin.tsx` | Route wrapper with auth gate + sidebar + content router |
-| `src/hooks/useAdminQuery.ts` | Hook wrapping Edge Function calls with React Query |
-| `src/components/admin-dashboard/AdminSidebar.tsx` | Fixed left sidebar navigation |
-| `src/components/admin-dashboard/AdminShell.tsx` | Layout shell (sidebar + content) |
-| `src/components/admin-dashboard/DashboardOverview.tsx` | KPI cards + growth chart + activity feed |
-| `src/components/admin-dashboard/AcquisitionModule.tsx` | Funnel, UTM breakdown, referral chart |
-| `src/components/admin-dashboard/AIUsageModule.tsx` | AI feature table, daily chart, power users, cost estimator |
-| `src/components/admin-dashboard/AllUsersModule.tsx` | User table + detail drawer |
-| `src/components/admin-dashboard/RetentionModule.tsx` | Activation rates, cohorts, dormant users |
-| `src/components/admin-dashboard/ReferralsModule.tsx` | Leaderboard + chain + chart |
-| `src/components/admin-dashboard/EngagementModule.tsx` | DAU/WAU/MAU, activity chart, top trips, distribution |
-| `src/components/admin-dashboard/FeatureAdoptionModule.tsx` | Adoption progress bars + module toggles |
-| `src/components/admin-dashboard/FeedbackInbox.tsx` | Inbox list + detail panel |
-| `src/components/admin-dashboard/SystemStatus.tsx` | Status cards with auto-refresh |
-| `src/components/admin-dashboard/WeeklyDigest.tsx` | Auto-generated prose report |
-| `src/components/admin-dashboard/shared.tsx` | Shared components: StatCard, DateRangeFilter, StatusPill, AdminSkeleton |
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/App.tsx` | Add lazy `/admin` route (protected, outside AppLayout) |
-| `index.html` | Add IBM Plex Mono + IBM Plex Sans Google Fonts link |
-
----
-
-## Implementation Approach
-
-1. **Migration** — add `admin_notes` columns to feedback and profiles
-2. **Secret** — set `ADMIN_USER_ID` secret
-3. **Edge Function** — build `admin-query` with all query types using service role SQL
-4. **Shared components** — StatCard, DateRangeFilter, StatusPill with the dark command-center design tokens (inline styles/classes, not modifying Tailwind config)
-5. **Hook** — `useAdminQuery` wrapping `supabase.functions.invoke("admin-query", { body: { type, period, ... } })`
-6. **Modules** — build each of the 11 modules as standalone components
-7. **Shell + routing** — AdminSidebar + content area with internal state-based routing (no nested React Router — just a `activeModule` state)
-8. **App.tsx** — add the `/admin` route
-
-The dark design system will use inline Tailwind classes with arbitrary values (e.g. `bg-[#0b0e0e]`, `text-[#e8f0ef]`) to avoid polluting the main app's design tokens. IBM Plex fonts loaded via Google Fonts `<link>` in index.html.
-
-All charts use recharts (already available). Empty states rendered for all modules. Loading skeletons shown during data fetches.
+- Change the date options toggle text from the current label to "📅 When does this work?" (keep the count in parentheses). No logic changes; section stays collapsed by default.
 
