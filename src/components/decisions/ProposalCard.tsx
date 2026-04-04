@@ -180,24 +180,7 @@ export function ProposalCard({
   };
 
   return (
-    <div className="p-4 space-y-3 relative transition-opacity">
-      {/* Top-right actions */}
-      <div className="absolute top-3 right-3 flex items-center gap-1.5">
-        {!hideHeader && isInRoute && (
-          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-            <Check className="h-3 w-3 mr-1" /> In route
-          </Badge>
-        )}
-        {canDelete && !isFrozen && onDeleteProposal && (
-          <button
-            onClick={() => setDeleteOpen(true)}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            aria-label="Delete suggestion"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+    <div className="space-y-3 relative transition-opacity">
 
       {/* Destination + creator */}
       {!hideHeader && (
