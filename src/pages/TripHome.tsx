@@ -435,7 +435,7 @@ export default function TripHome() {
       {/* ─── HERO SECTION ─── */}
       <div
         ref={heroRef}
-        className="relative w-full overflow-hidden md:h-[320px]"
+        className="relative w-full overflow-hidden md:h-[320px] md:-mt-4 md:pt-4"
         style={{ height: 220 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
