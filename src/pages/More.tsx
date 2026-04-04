@@ -796,11 +796,11 @@ const More = () => {
           {notifPrefs && (
             <div className="space-y-3">
               {([
-                ["new_activity", "New activity added"],
-                ["new_expense", "New expense added"],
-                ["new_member", "New member joins"],
-                ["route_confirmed", "Route confirmed"],
-                ["decisions_reminder", "Decisions reminder"],
+                ["new_expense", "New expenses"],
+                ["decisions_reminder", "Polls (new + closing soon)"],
+                ["route_confirmed", "Trip countdown reminders"],
+                ["new_member", "New members joining"],
+                ["new_activity", "Itinerary changes"],
               ] as const).map(([key, label]) => (
                 <div key={key} className="flex items-center justify-between">
                   <span className="text-sm text-foreground">{label}</span>
@@ -812,9 +812,7 @@ const More = () => {
               ))}
             </div>
           )}
-          <p className="text-xs text-muted-foreground">
-            Push notifications coming soon — your preferences will be saved
-          </p>
+          <PushEnableButton />
         </CardContent>
       </Card>
 
