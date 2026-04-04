@@ -4,7 +4,6 @@ import { DayPicker, CaptionProps, useNavigation } from "react-day-picker";
 import { setMonth, setYear } from "date-fns";
 
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -34,7 +33,7 @@ function SteppedCaption({ displayMonth }: CaptionProps) {
               className={cn(
                 "h-9 rounded-lg text-sm font-medium transition-colors",
                 y === displayMonth.getFullYear()
-                  ? "bg-[hsl(var(--calendar-selected))] text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "hover:bg-accent text-foreground"
               )}
             >
@@ -62,7 +61,7 @@ function SteppedCaption({ displayMonth }: CaptionProps) {
               className={cn(
                 "h-9 rounded-lg text-sm font-medium transition-colors",
                 i === displayMonth.getMonth() && pendingYear === displayMonth.getFullYear()
-                  ? "bg-[hsl(var(--calendar-selected))] text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "hover:bg-accent text-foreground"
               )}
             >
@@ -115,32 +114,30 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         cell: cn(
           "h-9 w-9 text-center text-sm p-0 relative",
           "[&:has([aria-selected].day-range-end)]:rounded-r-xl",
-          "[&:has([aria-selected].day-outside)]:bg-[hsl(var(--calendar-selected)/0.08)]",
-          "[&:has([aria-selected])]:bg-[hsl(var(--calendar-selected)/0.10)]",
+          "[&:has([aria-selected].day-outside)]:bg-primary/5",
+          "[&:has([aria-selected])]:bg-primary/10",
           "first:[&:has([aria-selected])]:rounded-l-xl",
           "last:[&:has([aria-selected])]:rounded-r-xl",
           "focus-within:relative focus-within:z-20",
         ),
         day: cn(
           "h-9 w-9 p-0 font-normal rounded-xl transition-colors",
-          "hover:bg-[hsl(var(--calendar-selected)/0.12)] hover:text-foreground",
-          "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--calendar-selected)/0.4)] focus:ring-offset-1",
+          "hover:bg-primary/10 hover:text-foreground",
+          "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-1",
           "aria-selected:opacity-100",
         ),
         day_range_end: "day-range-end",
         day_selected: cn(
-          "bg-[hsl(var(--calendar-selected))] text-white",
-          "hover:bg-[hsl(var(--calendar-selected))] hover:text-white",
-          "focus:bg-[hsl(var(--calendar-selected))] focus:text-white",
+          "bg-primary text-primary-foreground",
+          "hover:bg-primary hover:text-primary-foreground",
+          "focus:bg-primary focus:text-primary-foreground",
           "rounded-xl",
         ),
-        day_today: cn(
-          "bg-[hsl(var(--calendar-selected)/0.12)] text-foreground font-medium",
-        ),
+        day_today: "bg-primary/12 text-foreground font-medium",
         day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-[hsl(var(--calendar-selected)/0.08)] aria-selected:text-muted-foreground aria-selected:opacity-30",
+          "day-outside text-muted-foreground opacity-50 aria-selected:bg-primary/5 aria-selected:text-muted-foreground aria-selected:opacity-30",
         day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle: "aria-selected:bg-[hsl(var(--calendar-selected)/0.10)] aria-selected:text-foreground",
+        day_range_middle: "aria-selected:bg-primary/10 aria-selected:text-foreground",
         day_hidden: "invisible",
         ...classNames,
       }}
