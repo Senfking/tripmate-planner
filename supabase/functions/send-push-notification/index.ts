@@ -143,7 +143,7 @@ async function hkdf(
 
   const expandKey = await crypto.subtle.importKey(
     "raw",
-    prkBytes,
+    (prkBytes as Uint8Array).buffer,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
