@@ -43,7 +43,7 @@ export function DesktopHeader() {
       className="hidden md:block sticky top-0 left-0 right-0 z-50 overflow-hidden"
       style={{
         background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
-        borderRadius: 0,
+        borderRadius: "0 0 16px 16px",
         margin: 0,
         paddingTop: "env(safe-area-inset-top, 0px)",
         width: "100%",
