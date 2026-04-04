@@ -10,7 +10,7 @@ const corsHeaders = {
 /*  Helpers: base64url encoding / decoding                            */
 /* ------------------------------------------------------------------ */
 
-function base64urlEncode(buf: ArrayBuffer): string {
+function base64urlEncode(buf: ArrayBuffer | Uint8Array): string {
   const bytes = new Uint8Array(buf);
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
