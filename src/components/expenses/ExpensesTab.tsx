@@ -282,9 +282,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           onChange={(c) => updateSettlementCurrency.mutate(c)}
           cachedCurrencyCodes={cachedCurrencyCodes}
         />
-        <Button size="sm" className="h-9 gap-1.5 px-4 text-[13px]" onClick={() => { setEditingExpense(null); setFormOpen(true); }}>
-          <Plus className="h-3.5 w-3.5" /> Add Expense
-        </Button>
+
+
       </div>
 
 
@@ -313,22 +312,13 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1">
                 {totalExpenses != null ? formatCurrency(totalExpenses, settlementCurrency) : "€0.00"}
               </p>
-              <div className="flex items-center gap-2 mt-4">
-                <button
-                  onClick={() => { setEditingExpense(null); setFormOpen(true); }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/20 hover:bg-white/30 px-4 py-2 text-[12px] font-semibold text-white transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add expense
-                </button>
-                <button
+              <button
                   onClick={() => setInviteOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 px-4 py-2 text-[12px] font-semibold text-white/70 transition-colors"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-4 py-2 text-[12px] font-semibold text-white/70 transition-colors"
                 >
                   <Users className="h-3.5 w-3.5" />
-                  Invite friends
+                  Invite friends to split
                 </button>
-              </div>
             </div>
           ) : heroData.type === "settled" ? (
             <div className="relative flex flex-col items-center gap-2">
@@ -391,6 +381,15 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           )}
         </div>
       )}
+
+      {/* Add expense — prominent CTA below hero */}
+      <Button
+        className="w-full h-12 gap-2 text-[15px] font-semibold rounded-2xl"
+        onClick={() => { setEditingExpense(null); setFormOpen(true); }}
+      >
+        <Plus className="h-4.5 w-4.5" />
+        Add Expense
+      </Button>
 
       {/* Balances / Settle Up / Expenses — frosted glass card */}
       <div
