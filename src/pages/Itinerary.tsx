@@ -142,9 +142,9 @@ const Itinerary = () => {
     };
 
     // Trip-level boundaries
-    if (g.tripStartDate && g.tripEndDate) {
+    if (g.tripStartDate) {
       const start = g.tripStartDate >= todayStr ? g.tripStartDate : todayStr;
-      const end = g.tripEndDate;
+      const end = g.tripEndDate ?? g.tripStartDate;
       if (start <= end) {
         // Add every day of the trip
         for (const d of enumerateDays(start, end)) {
@@ -156,9 +156,11 @@ const Itinerary = () => {
           arr.push(b);
           tripStartMap.set(g.tripStartDate, arr);
         }
-        const endArr = tripEndMap.get(g.tripEndDate) ?? [];
-        endArr.push(b);
-        tripEndMap.set(g.tripEndDate, endArr);
+        if (g.tripEndDate) {
+          const endArr = tripEndMap.get(g.tripEndDate) ?? [];
+          endArr.push(b);
+          tripEndMap.set(g.tripEndDate, endArr);
+        }
       }
     }
 
