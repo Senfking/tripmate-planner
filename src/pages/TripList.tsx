@@ -205,8 +205,8 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
             )}
           </div>
 
-          {/* Avatar stack */}
-          <div className="flex flex-col items-end gap-1 shrink-0">
+          {/* Avatar stack + count */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <div className="flex items-center -space-x-2">
               {visibleMembers.map((m) => (
                 <Avatar key={m.user_id} className="h-7 w-7 ring-2 ring-white/50">
@@ -220,7 +220,7 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
               ))}
             </div>
             {memberCount > 0 && (
-              <span className="text-[11px] text-white/60 font-medium">
+              <span className="text-[11px] text-white/70 font-medium">
                 {memberCount}
               </span>
             )}
