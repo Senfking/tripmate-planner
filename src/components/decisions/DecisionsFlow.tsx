@@ -223,11 +223,11 @@ export function DecisionsFlow({
         </StepSection>
       </div>
 
-      {/* Step 3: Preferences */}
+      {/* Step 3: Group Polls */}
       <div id="decisions-step-3">
         <StepSection
           stepNumber={3}
-          title="Preferences"
+          title="Group Polls"
           subtitle="Optional"
           statusText={prefsStatus.text}
           statusVariant={prefsStatus.variant}
