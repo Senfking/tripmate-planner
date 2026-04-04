@@ -100,5 +100,5 @@ export default function InviteRedeem() {
     );
   }
 
-  return null;
+  return <PushOptInDrawer />;
 }
