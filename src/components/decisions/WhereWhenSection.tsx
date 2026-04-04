@@ -518,41 +518,57 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                 key={`vote-${p.id}`}
                 className="rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all"
               >
-                <button
-                  onClick={() => toggle(`vote-${p.id}`)}
-                  className="flex items-center gap-3 p-3 w-full text-left"
-                >
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-muted-foreground text-xs shrink-0">
-                    ?
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {p.destination}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      suggested by {p.creator_name || "someone"}
-                    </p>
-                    {p.note && (
-                      <p className="text-[11px] text-foreground/60 italic truncate mt-0.5">
-                        "{p.note}"
+                <div className="flex items-center gap-3 p-3 w-full text-left">
+                  <button
+                    onClick={() => toggle(`vote-${p.id}`)}
+                    className="flex items-center gap-3 flex-1 min-w-0"
+                  >
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-muted-foreground text-xs shrink-0">
+                      ?
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {p.destination}
                       </p>
-                    )}
-                    {pDateOptions.length > 0 && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                        <CalendarDays className="h-3 w-3" />
-                        {pDateOptions.length} date {pDateOptions.length === 1 ? "option" : "options"}
+                      <p className="text-[11px] text-muted-foreground">
+                        suggested by {p.creator_name || "someone"}
                       </p>
+                      {p.note && (
+                        <p className="text-[11px] text-foreground/60 italic truncate mt-0.5">
+                          "{p.note}"
+                        </p>
+                      )}
+                      {pDateOptions.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <CalendarDays className="h-3 w-3" />
+                          {pDateOptions.length} date {pDateOptions.length === 1 ? "option" : "options"}
+                        </p>
+                      )}
+                    </div>
+                    {inCount > 0 && (
+                      <span className="text-[11px] text-muted-foreground shrink-0">
+                        {inCount} in
+                      </span>
                     )}
-                  </div>
-                  {inCount > 0 && (
-                    <span className="text-[11px] text-muted-foreground shrink-0">
-                      {inCount} in
-                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {canEditProposal && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isExpanded) toggle(`vote-${p.id}`);
+                        setEditingProposalId(p.id);
+                        setEditProposalDest(p.destination);
+                        setEditProposalNote(p.note || "");
+                      }}
+                      className="text-muted-foreground hover:text-primary p-1 shrink-0"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                   )}
-                  <ChevronDown
-                    className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                  />
-                </button>
+                </div>
 
                 {isExpanded && (
                   <div className="border-t border-border/50">
