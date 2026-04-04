@@ -296,6 +296,36 @@ export function useProposals(tripId: string | undefined) {
     },
   });
 
+  const updateProposal = useMutation({
+    mutationFn: async (input: { proposalId: string; destination?: string; note?: string | null }) => {
+      const updates: any = {};
+      if (input.destination !== undefined) updates.destination = input.destination;
+      if (input.note !== undefined) updates.note = input.note || null;
+      const { error } = await supabase
+        .from("trip_proposals")
+        .update(updates)
+        .eq("id", input.proposalId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      trackEvent("proposal_updated", { trip_id: tripId, proposal_id: vars.proposalId }, user?.id);
+      invalidateAll();
+    },
+  });
+
+  const deleteDateOption = useMutation({
+    mutationFn: async ({ dateOptionId }: { dateOptionId: string }) => {
+      const { error } = await supabase
+        .from("proposal_date_options")
+        .delete()
+        .eq("id", dateOptionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+    },
+  });
+
   const deleteProposal = useMutation({
     mutationFn: async ({ proposalId }: { proposalId: string }) => {
       // Check if proposal is referenced by a route stop
@@ -399,8 +429,10 @@ export function useProposals(tripId: string | undefined) {
     leadingCombo: getLeadingCombo(),
     isLoading: proposals.isLoading,
     createProposal,
+    updateProposal,
     reactDest,
     addDateOption,
+    deleteDateOption,
     voteDateOption,
     deleteProposal,
   };
