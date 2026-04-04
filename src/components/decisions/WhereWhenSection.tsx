@@ -677,7 +677,39 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                             const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
                             const myVote = myDateVotes[d.id];
                             const worksForMe = myVote === "yes";
-                            const canDeleteDate = !isRouteLocked && (d.created_by === user?.id || canManage);
+                            const canEditDate = !isRouteLocked && (d.created_by === user?.id || canManage);
+                            const isEditingDate = editingDateId === d.id;
+
+                            if (isEditingDate) {
+                              return (
+                                <div key={d.id} className="rounded-lg bg-muted/30 p-3 space-y-2">
+                                  <DateRangePicker
+                                    value={editDateOptionRange}
+                                    onChange={setEditDateOptionRange}
+                                    className="w-full"
+                                    placeholder="Select date range"
+                                  />
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingDateId(null)}>Cancel</Button>
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-2 text-xs"
+                                      disabled={!editDateOptionRange?.from || !editDateOptionRange?.to || updateDateOption.isPending}
+                                      onClick={() => {
+                                        if (!editDateOptionRange?.from || !editDateOptionRange?.to) return;
+                                        updateDateOption.mutate(
+                                          { dateOptionId: d.id, startDate: format(editDateOptionRange.from, "yyyy-MM-dd"), endDate: format(editDateOptionRange.to, "yyyy-MM-dd") },
+                                          { onSuccess: () => { toast({ title: "Dates updated" }); setEditingDateId(null); } }
+                                        );
+                                      }}
+                                    >
+                                      Save
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             return (
                               <div key={d.id} className="flex items-center gap-2 rounded-lg bg-muted/30 p-3">
                                 <div className="flex-1 min-w-0">
@@ -688,6 +720,17 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                                     {votes.yes} of {memberCount} available
                                   </p>
                                 </div>
+                                {canEditDate && (
+                                  <button
+                                    onClick={() => {
+                                      setEditingDateId(d.id);
+                                      setEditDateOptionRange({ from: parseISO(d.start_date), to: parseISO(d.end_date) });
+                                    }}
+                                    className="text-muted-foreground hover:text-primary p-1"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                )}
                                 <Button
                                   variant={worksForMe ? "default" : "outline"}
                                   size="sm"
@@ -698,7 +741,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                                   <Check className="h-3.5 w-3.5" />
                                   {worksForMe ? "Works!" : "Works for me"}
                                 </Button>
-                                {canDeleteDate && (
+                                {canEditDate && (
                                   <button
                                     onClick={() => deleteDateOption.mutate({ dateOptionId: d.id })}
                                     className="text-muted-foreground hover:text-destructive p-1"
