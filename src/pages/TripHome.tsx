@@ -274,6 +274,24 @@ export default function TripHome() {
   const [coverMenuOpen, setCoverMenuOpen] = useState(false);
   const [croppingCover, setCroppingCover] = useState(false);
   const [savingCrop, setSavingCrop] = useState(false);
+  const [dateEditorOpen, setDateEditorOpen] = useState(false);
+
+  const updateTripDates = useMutation({
+    mutationFn: async ({ start, end }: { start: string | null; end: string | null }) => {
+      const { error } = await supabase
+        .from("trips")
+        .update({ tentative_start_date: start, tentative_end_date: end })
+        .eq("id", tripId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trips", user?.id] });
+      setDateEditorOpen(false);
+      toast.success("Trip dates updated");
+    },
+    onError: () => toast.error("Failed to update dates"),
+  });
   const heroRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
