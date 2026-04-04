@@ -118,6 +118,38 @@ export function useRouteStops(tripId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const updateStop = useMutation({
+    mutationFn: async (input: {
+      id: string;
+      destination?: string;
+      notes?: string | null;
+      start_date?: string;
+      end_date?: string;
+    }) => {
+      const updates: any = {};
+      if (input.destination !== undefined) updates.destination = input.destination;
+      if (input.notes !== undefined) updates.notes = input.notes;
+      if (input.start_date !== undefined) updates.start_date = input.start_date;
+      if (input.end_date !== undefined) updates.end_date = input.end_date;
+
+      const { error } = await supabase
+        .from("trip_route_stops" as any)
+        .update(updates)
+        .eq("id", input.id);
+      if (error) throw error;
+
+      if (input.start_date || input.end_date) {
+        const { data: allStops } = await supabase
+          .from("trip_route_stops" as any)
+          .select("*")
+          .eq("trip_id", tripId!)
+          .order("start_date", { ascending: true });
+        await updateTripDates((allStops || []) as unknown as RouteStop[]);
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   const removeStop = useMutation({
     mutationFn: async ({
       id,
@@ -200,6 +232,7 @@ export function useRouteStops(tripId: string | undefined) {
     tripStart,
     tripEnd,
     addStop,
+    updateStop,
     updateStopDates,
     removeStop,
     lockRoute,
