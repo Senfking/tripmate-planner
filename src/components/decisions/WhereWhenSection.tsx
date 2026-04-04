@@ -254,9 +254,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
             const imIn = myDestVotes[p.id] === "up";
             const isExpanded = expandedIds.has(`vote-${p.id}`);
             const pDateOptions = dateOptionsByProposal(p.id);
-            const isCreator = user?.id === p.created_by;
-            const hasOtherVotes = inCount > (imIn ? 1 : 0);
-            const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
 
             return (
               <div
