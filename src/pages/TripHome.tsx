@@ -83,75 +83,18 @@ const ATTENDANCE_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 function StatusRow({
-  startDate,
-  endDate,
   onShare,
   attendanceStatus,
   onAttendanceTap,
-  onDateTap,
 }: {
-  startDate: string | null;
-  endDate: string | null;
   onShare: () => void;
   attendanceStatus?: string;
   onAttendanceTap?: () => void;
-  onDateTap?: () => void;
 }) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let content: React.ReactNode;
-
-  if (startDate && endDate) {
-    const s = parseISO(startDate);
-    const e = parseISO(endDate);
-    const totalDays = differenceInDays(e, s) + 1;
-
-    if (e < today) {
-      content = (
-        <span className="text-sm text-muted-foreground">
-          {format(s, "MMM yyyy")} · {totalDays} days
-        </span>
-      );
-    } else if (isWithinInterval(today, { start: s, end: e })) {
-      const dayNumber = differenceInDays(today, s) + 1;
-      content = (
-        <span className="text-sm font-semibold text-foreground">
-          Day {dayNumber} of {totalDays}
-        </span>
-      );
-    } else {
-      const daysUntil = differenceInCalendarDays(s, today);
-      if (daysUntil <= 7) {
-        content = (
-          <span className="text-sm font-medium" style={{ color: "#0D9488" }}>
-            In {daysUntil} day{daysUntil !== 1 ? "s" : ""} · {format(s, "MMM d")}
-          </span>
-        );
-      } else {
-        content = (
-          <span className="text-sm text-muted-foreground">
-            {daysUntil} days to go
-          </span>
-        );
-      }
-    }
-  } else {
-    content = (
-      <button onClick={onDateTap} className="text-sm text-primary font-medium flex items-center gap-1">
-        <CalendarDays className="h-3.5 w-3.5" />
-        Set dates
-      </button>
-    );
-  }
-
   const badge = attendanceStatus && attendanceStatus !== "pending" ? ATTENDANCE_BADGE[attendanceStatus] : null;
 
   return (
     <div className="flex items-center gap-2">
-      <button onClick={onDateTap} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-        {content}
-      </button>
       {badge && onAttendanceTap && (
         <button
           onClick={onAttendanceTap}
