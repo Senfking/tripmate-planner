@@ -38,6 +38,7 @@ interface DestBoundary { destination: string; tripName: string; tripEmoji: strin
 const Itinerary = () => {
   const { data: groups, isLoading } = useGlobalItinerary();
   const [filter, setFilter] = useState<FilterType>("all");
+  const scrolledToToday = useRef(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
