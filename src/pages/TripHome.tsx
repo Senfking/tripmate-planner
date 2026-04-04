@@ -544,6 +544,7 @@ export default function TripHome() {
           <HeroAvatar />
         </div>
 
+
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-white leading-tight truncate">{trip.name}</h1>
