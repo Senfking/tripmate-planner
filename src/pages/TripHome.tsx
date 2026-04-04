@@ -87,12 +87,14 @@ function StatusRow({
   onShare,
   attendanceStatus,
   onAttendanceTap,
+  onDateTap,
 }: {
   startDate: string | null;
   endDate: string | null;
   onShare: () => void;
   attendanceStatus?: string;
   onAttendanceTap?: () => void;
+  onDateTap?: () => void;
 }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
