@@ -8,11 +8,12 @@ import { DaySection } from "./DaySection";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarPlus, Loader2, Sparkles } from "lucide-react";
+import { CalendarPlus, Download, Loader2, Sparkles } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
 import { ImportItineraryModal } from "./ImportItineraryModal";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 /** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
 function timeToMinutes(t: string): number {
@@ -36,6 +37,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
   const [newDayDate, setNewDayDate] = useState<string | null>(null);
   const [newDayFormOpen, setNewDayFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [icsLoading, setIcsLoading] = useState(false);
   const [lastVisitItemIds, setLastVisitItemIds] = useState<Set<string>>(new Set());
   const [prevLastSeen, setPrevLastSeen] = useState<string | undefined>(undefined);
 
@@ -241,6 +243,42 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           saving={addItem.isPending}
           dayDate={newDayDate}
         />
+      )}
+
+      {/* Add to Calendar — bottom of page */}
+      {items.length > 0 && (
+        <Button
+          variant="ghost"
+          className="w-full h-11 gap-2 text-[13px] font-medium text-muted-foreground"
+          disabled={icsLoading}
+          onClick={async () => {
+            setIcsLoading(true);
+            try {
+              const session = (await supabase.auth.getSession()).data.session;
+              if (!session) { toast.error("Please sign in"); return; }
+              const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-trip-ics?trip_id=${tripId}`,
+                { headers: { Authorization: `Bearer ${session.access_token}` } }
+              );
+              if (!res.ok) throw new Error("Export failed");
+              const blob = await res.blob();
+              trackEvent("export_downloaded", { trip_id: tripId, format: "ics" }, user?.id);
+              const a = document.createElement("a");
+              const objUrl = URL.createObjectURL(blob);
+              a.href = objUrl;
+              a.download = "itinerary.ics";
+              a.click();
+              URL.revokeObjectURL(objUrl);
+            } catch {
+              toast.error("Failed to export calendar");
+            } finally {
+              setIcsLoading(false);
+            }
+          }}
+        >
+          {icsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
+          Add to Calendar
+        </Button>
       )}
     </div>
   );
