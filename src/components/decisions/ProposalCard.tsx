@@ -101,6 +101,7 @@ export function ProposalCard({
   isDeleting,
   hideDestVoting,
   hideHeader,
+  memberCount = 0,
 }: Props) {
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "MMM d");
   const isFrozen = isRouteLocked;
