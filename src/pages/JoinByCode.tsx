@@ -23,6 +23,15 @@ export default function JoinByCode() {
   const { code: urlCode } = useParams<{ code?: string }>();
   const [code, setCode] = useState(urlCode?.toUpperCase() || "");
   const attempted = useRef(false);
+  const pendingTripId = useRef<string | null>(null);
+
+  const navigateToTrip = useCallback(() => {
+    if (pendingTripId.current) {
+      navigate(`/app/trips/${pendingTripId.current}`, { replace: true });
+    }
+  }, [navigate]);
+
+  const { showOptIn, PushOptInDrawer } = usePushOptIn(navigateToTrip);
 
   const join = useMutation({
     mutationFn: async (joinCode: string) => {
@@ -37,7 +46,8 @@ export default function JoinByCode() {
       if (result.success) {
         trackEvent("trip_member_joined", { trip_id: result.trip_id }, user?.id);
         toast.success(`You've joined ${result.trip_name}! 🎉`);
-        navigate(`/app/trips/${result.trip_id}`, { replace: true });
+        pendingTripId.current = result.trip_id!;
+        showOptIn();
       } else if (result.error === "already_member" && result.trip_id) {
         toast.info("You're already in this trip!");
         navigate(`/app/trips/${result.trip_id}`, { replace: true });
