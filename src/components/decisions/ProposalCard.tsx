@@ -1,21 +1,11 @@
 import { useState, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  ThumbsUp,
-  ThumbsDown,
   Check,
-  HelpCircle,
-  X,
   Route,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  CalendarDays,
   Trophy,
-  Trash2,
 } from "lucide-react";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { DateRangePicker } from "./DateRangePicker";
