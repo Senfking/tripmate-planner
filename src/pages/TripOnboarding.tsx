@@ -188,12 +188,13 @@ export default function TripOnboarding() {
           <Button
             className="w-full h-12 rounded-xl text-[15px] font-semibold text-white"
             style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
-            onClick={() => navigate(`/app/trips/${tripId}`)}
+            onClick={showOptIn}
           >
             Let's go →
           </Button>
         )}
       </div>
+      <PushOptInDrawer />
     </div>
   );
 }
