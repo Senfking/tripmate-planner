@@ -567,12 +567,9 @@ export default function TripHome() {
       <div className="flex-1 rounded-t-3xl -mt-6 relative z-10 bg-background">
         <div className="px-4 pt-4 pb-2 md:max-w-[900px] md:mx-auto md:px-8">
           <StatusRow
-            startDate={trip.tentative_start_date}
-            endDate={trip.tentative_end_date}
             onShare={() => setShareInviteOpen(true)}
             attendanceStatus={myAttendanceStatus}
             onAttendanceTap={handleOpenOverlay}
-            onDateTap={() => setDateEditorOpen(true)}
           />
         </div>
 
