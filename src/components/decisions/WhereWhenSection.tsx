@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { useProposals } from "@/hooks/useProposals";
 import { useRouteStops } from "@/hooks/useRouteStops";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +8,15 @@ import { ProposalCard } from "./ProposalCard";
 import { ProposalForm } from "./ProposalForm";
 import { LeadingComboBanner } from "./LeadingComboBanner";
 import { TripRoute } from "./TripRoute";
-import { MapPin, Trash2, CalendarDays, Lock } from "lucide-react";
+import {
+  MapPin,
+  Trash2,
+  CalendarDays,
+  Lock,
+  ChevronDown,
+  ThumbsUp,
+  ThumbsDown,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 
@@ -47,15 +56,22 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     isProposalInRoute,
   } = useRouteStops(tripId);
 
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggle = (id: string) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
   const fmt = (d: string) => format(parseISO(d), "MMM d");
 
-  // Sort stops by start_date
   const sortedStops = useMemo(
     () => [...stops].sort((a, b) => a.start_date.localeCompare(b.start_date)),
     [stops]
   );
 
-  // Route summary
   const tripStart = sortedStops[0]?.start_date || null;
   const tripEnd = sortedStops.length > 0
     ? [...sortedStops].sort((a, b) => b.end_date.localeCompare(a.end_date))[0]?.end_date
@@ -65,7 +81,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
       ? differenceInDays(parseISO(tripEnd), parseISO(tripStart))
       : 0;
 
-  // Build proposalReactions map: proposal_id → { up, down }
   const proposalReactions = useMemo(() => {
     const map: Record<string, { up: number; down: number }> = {};
     for (const p of proposals) {
@@ -77,7 +92,13 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     return map;
   }, [proposals, destVotes]);
 
-  // Voting proposals = those NOT in route
+  // Map proposal_id → proposal for route stop lookups
+  const proposalMap = useMemo(() => {
+    const map: Record<string, typeof proposals[0]> = {};
+    for (const p of proposals) map[p.id] = p;
+    return map;
+  }, [proposals]);
+
   const votingProposals = useMemo(
     () => proposals.filter((p) => !isProposalInRoute(p.id)),
     [proposals, isProposalInRoute]
@@ -87,7 +108,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
   const hasStops = sortedStops.length > 0;
 
   return (
-    <div className="space-y-4 mt-6">
+    <div className="space-y-3 mt-6">
       {/* Header row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -124,45 +145,89 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
       )}
 
-      {/* IN ROUTE cards */}
+      {/* IN ROUTE expandable cards */}
       {sortedStops.map((stop, index) => {
         const reactions = stop.proposal_id ? proposalReactions[stop.proposal_id] : undefined;
+        const isExpanded = expandedIds.has(`route-${stop.id}`);
+        const linkedProposal = stop.proposal_id ? proposalMap[stop.proposal_id] : undefined;
+
         return (
           <div
             key={stop.id}
-            className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3"
+            className="rounded-lg border-l-[3px] border-l-primary border border-border bg-card overflow-hidden transition-all"
           >
-            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
-              {index + 1}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground truncate">
+            {/* Collapsed row */}
+            <button
+              onClick={() => toggle(`route-${stop.id}`)}
+              className="flex items-center gap-3 p-3 w-full text-left"
+            >
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold shrink-0">
+                {index + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
                   {stop.destination}
                 </p>
-                {reactions && (
-                  <span className="text-[11px] text-muted-foreground shrink-0">
-                    👍 {reactions.up} 👎 {reactions.down}
-                  </span>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3" />
+                  {fmt(stop.start_date)} – {fmt(stop.end_date)}
+                </p>
+              </div>
+              {reactions && (
+                <span className="text-[11px] text-muted-foreground shrink-0">
+                  👍{reactions.up} 👎{reactions.down}
+                </span>
+              )}
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {/* Expanded content — informational only */}
+            {isExpanded && (
+              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border/50">
+                {/* Reaction summary */}
+                {reactions && (reactions.up > 0 || reactions.down > 0) && (
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                      <span>{reactions.up}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <ThumbsDown className="h-3.5 w-3.5" />
+                      <span>{reactions.down}</span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground/70">from group vote</span>
+                  </div>
+                )}
+
+                {linkedProposal?.note && (
+                  <p className="text-xs text-foreground/70 italic">"{linkedProposal.note}"</p>
+                )}
+
+                {linkedProposal?.creator_name && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Originally suggested by {linkedProposal.creator_name}
+                  </p>
+                )}
+
+                {/* Admin remove */}
+                {canManage && !isRouteLocked && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeStop.mutate(
+                        { id: stop.id },
+                        { onSuccess: () => toast({ title: "Stop removed from route" }) }
+                      );
+                    }}
+                    className="flex items-center gap-1.5 text-xs text-destructive hover:underline"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Remove from route
+                  </button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <CalendarDays className="h-3 w-3" />
-                {fmt(stop.start_date)} – {fmt(stop.end_date)}
-              </p>
-            </div>
-            {canManage && !isRouteLocked && (
-              <button
-                onClick={() => {
-                  removeStop.mutate(
-                    { id: stop.id },
-                    { onSuccess: () => toast({ title: "Stop removed from route" }) }
-                  );
-                }}
-                className="p-1 text-muted-foreground hover:text-destructive shrink-0"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
             )}
           </div>
         );
@@ -186,61 +251,94 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
       )}
 
-      {/* VOTING cards */}
+      {/* VOTING expandable cards */}
       {votingProposals.length > 0 && (
         <div className="space-y-3">
           {votingProposals.map((p) => {
+            const pDestVotes = destVotes[p.id] || { up: 0, down: 0 };
+            const isExpanded = expandedIds.has(`vote-${p.id}`);
             const pDateOptions = dateOptionsByProposal(p.id);
             const isCreator = user?.id === p.created_by;
-            const hasOtherVotes = (destVotes[p.id]?.up || 0) + (destVotes[p.id]?.down || 0) > (myDestVotes[p.id] ? 1 : 0);
+            const hasOtherVotes = (pDestVotes.up || 0) + (pDestVotes.down || 0) > (myDestVotes[p.id] ? 1 : 0);
             const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
+
             return (
-              <ProposalCard
+              <div
                 key={p.id}
-                proposal={p}
-                destVotes={destVotes[p.id] || { up: 0, down: 0 }}
-                myDestVote={myDestVotes[p.id]}
-                dateOptions={pDateOptions}
-                dateVotes={dateVotes}
-                myDateVotes={myDateVotes}
-                canManage={canManage}
-                isRouteLocked={isRouteLocked}
-                isInRoute={false}
-                existingStops={stops}
-                onReactDest={(value) => reactDest.mutate({ proposalId: p.id, value })}
-                onAddDateOption={(input) =>
-                  addDateOption.mutate({ proposalId: p.id, ...input })
-                }
-                onVoteDateOption={(dateOptionId, value) =>
-                  voteDateOption.mutate({ dateOptionId, value })
-                }
-                onAddToRoute={(input) => {
-                  addStop.mutate(input, {
-                    onSuccess: () => toast({ title: `${p.destination} added to route! 📍` }),
-                  });
-                }}
-                isAddingToRoute={addStop.isPending}
-                isAddingDate={addDateOption.isPending}
-                currentUserId={user?.id}
-                canDelete={canDeleteThis}
-                onDeleteProposal={(proposalId) => {
-                  deleteProposal.mutate({ proposalId }, {
-                    onSuccess: () => toast({ title: `${p.destination} removed` }),
-                    onError: (err) => {
-                      if (err.message === "IN_ROUTE") {
-                        toast({
-                          title: "Can't remove",
-                          description: "This destination is already in your route. Remove it from the route first.",
-                          variant: "destructive",
-                        });
-                      } else {
-                        toast({ title: "Failed to remove suggestion", variant: "destructive" });
+                className="rounded-lg border-l-[3px] border-l-border border border-border bg-card overflow-hidden transition-all"
+              >
+                {/* Collapsed summary row */}
+                <button
+                  onClick={() => toggle(`vote-${p.id}`)}
+                  className="flex items-center gap-3 p-3 w-full text-left"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {p.destination}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      suggested by {p.creator_name || "someone"}
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    👍{pDestVotes.up} 👎{pDestVotes.down}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {/* Expanded content — full voting UI */}
+                {isExpanded && (
+                  <div className="border-t border-border/50">
+                    <ProposalCard
+                      proposal={p}
+                      destVotes={pDestVotes}
+                      myDestVote={myDestVotes[p.id]}
+                      dateOptions={pDateOptions}
+                      dateVotes={dateVotes}
+                      myDateVotes={myDateVotes}
+                      canManage={canManage}
+                      isRouteLocked={isRouteLocked}
+                      isInRoute={false}
+                      existingStops={stops}
+                      onReactDest={(value) => reactDest.mutate({ proposalId: p.id, value })}
+                      onAddDateOption={(input) =>
+                        addDateOption.mutate({ proposalId: p.id, ...input })
                       }
-                    },
-                  });
-                }}
-                isDeleting={deleteProposal.isPending}
-              />
+                      onVoteDateOption={(dateOptionId, value) =>
+                        voteDateOption.mutate({ dateOptionId, value })
+                      }
+                      onAddToRoute={(input) => {
+                        addStop.mutate(input, {
+                          onSuccess: () => toast({ title: `${p.destination} added to route! 📍` }),
+                        });
+                      }}
+                      isAddingToRoute={addStop.isPending}
+                      isAddingDate={addDateOption.isPending}
+                      currentUserId={user?.id}
+                      canDelete={canDeleteThis}
+                      onDeleteProposal={(proposalId) => {
+                        deleteProposal.mutate({ proposalId }, {
+                          onSuccess: () => toast({ title: `${p.destination} removed` }),
+                          onError: (err) => {
+                            if (err.message === "IN_ROUTE") {
+                              toast({
+                                title: "Can't remove",
+                                description: "This destination is already in your route. Remove it from the route first.",
+                                variant: "destructive",
+                              });
+                            } else {
+                              toast({ title: "Failed to remove suggestion", variant: "destructive" });
+                            }
+                          },
+                        });
+                      }}
+                      isDeleting={deleteProposal.isPending}
+                    />
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
