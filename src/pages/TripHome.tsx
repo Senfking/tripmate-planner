@@ -634,7 +634,14 @@ export default function TripHome() {
         />
       )}
 
-
+      <TripDateEditor
+        open={dateEditorOpen}
+        onOpenChange={setDateEditorOpen}
+        startDate={trip.tentative_start_date}
+        endDate={trip.tentative_end_date}
+        onSave={(start, end) => updateTripDates.mutate({ start, end })}
+        saving={updateTripDates.isPending}
+      />
 
       {/* Cover image menu drawer */}
       <Drawer open={coverMenuOpen} onOpenChange={setCoverMenuOpen}>
