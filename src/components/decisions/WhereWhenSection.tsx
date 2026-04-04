@@ -284,6 +284,13 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
       )}
 
+      {/* Route summary banner */}
+      <LeadingComboBanner
+        leadingCombo={leadingCombo}
+        routeStops={stops}
+        isRouteLocked={isRouteLocked}
+      />
+
       {/* Unified timeline */}
       {timeline.length > 0 && (
         <div className="space-y-2">
