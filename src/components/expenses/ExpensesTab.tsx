@@ -33,6 +33,18 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
 
+  const { data: trip } = useQuery({
+    queryKey: ["trip", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trips").select("name, emoji, tentative_start_date, tentative_end_date, trip_code, share_permission").eq("id", tripId).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tripId,
+  });
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+
   const allSameCurrency = useMemo(
     () => expenses.every((e) => e.currency === settlementCurrency),
     [expenses, settlementCurrency]
