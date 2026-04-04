@@ -54,11 +54,7 @@ type Props = {
   hideHeader?: boolean;
 };
 
-const DATE_VOTE_BUTTONS = [
-  { value: "yes", icon: Check, label: "Yes", activeClass: "bg-green-600/10 border-green-600 text-green-700" },
-  { value: "maybe", icon: HelpCircle, label: "Maybe", activeClass: "bg-amber-500/10 border-amber-500 text-amber-600" },
-  { value: "no", icon: X, label: "No", activeClass: "bg-destructive/10 border-destructive text-destructive" },
-] as const;
+// Kept for reference — date voting now uses a single "Works for me" toggle
 
 function getTopPickIndex(dateOptions: DateOption[], dateVotes: DateVotes): number {
   if (dateOptions.length === 0) return -1;
