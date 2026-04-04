@@ -522,10 +522,29 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                   <div className="border-t border-border/50">
                     <div className="p-4 space-y-3">
                       <div className="flex items-center gap-3">
+                        {/* Voter avatars */}
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          {(reactionVoters[p.id] || []).length > 0 ? (
+                            <div className="flex -space-x-1.5">
+                              {(reactionVoters[p.id] || []).slice(0, 5).map((voter) => (
+                                <Avatar key={voter.id} className="h-6 w-6 border-2 border-background">
+                                  <AvatarImage src={voter.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                                    {(voter.display_name || "?")[0].toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ))}
+                            </div>
+                          ) : null}
+                          <span className="text-xs text-muted-foreground">
+                            {inCount} of {memberCount} in
+                          </span>
+                        </div>
+                        {/* I'm in button — right-aligned for thumb reach */}
                         <Button
                           variant={imIn ? "default" : "outline"}
                           size="sm"
-                          className={`gap-1.5 ${imIn ? "" : "text-muted-foreground"}`}
+                          className={`gap-1.5 shrink-0 ${imIn ? "" : "text-muted-foreground"}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             reactDest.mutate({ proposalId: p.id, value: "up" });
@@ -535,9 +554,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                           <UserCheck className="h-3.5 w-3.5" />
                           {imIn ? "I'm in!" : "I'm in"}
                         </Button>
-                        <span className="text-xs text-muted-foreground">
-                          {inCount} of {memberCount} members in
-                        </span>
                       </div>
 
                       <ProposalCard
