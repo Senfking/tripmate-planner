@@ -104,12 +104,21 @@ const Itinerary = () => {
       ...g,
       items: g.items.filter((i) => i.attendance === "in" || i.attendance === null),
     };
-  }).filter((g) => g.items.length > 0 || g.placeholders.length > 0 || g.tripStartDate);
+  }).filter((g) => g.items.length > 0 || g.placeholders.length > 0 || g.tripStartDate || !g.tripStartDate);
+
+  // Exclude fully-past trips (end date < today) unless they have future items
+  const activeGroups = filteredGroups.filter((g) => {
+    // Trip is ongoing or future
+    if (!g.tripEndDate || g.tripEndDate >= todayStr) return true;
+    // Trip ended but has future items somehow
+    if (g.items.some((i) => i.dayDate >= todayStr)) return true;
+    return false;
+  });
 
   // Build items by date
   type TimelineItem = typeof allItems[number];
   const dateMap = new Map<string, TimelineItem[]>();
-  for (const g of filteredGroups) {
+  for (const g of activeGroups) {
     for (const item of g.items) {
       const enriched = { ...item, tripName: g.tripName, tripEmoji: g.tripEmoji };
       const existing = dateMap.get(item.dayDate) ?? [];
@@ -128,7 +137,7 @@ const Itinerary = () => {
   // Collect all dates we need to show
   const allDatesSet = new Set<string>([...dateMap.keys()]);
 
-  for (const g of filteredGroups) {
+  for (const g of activeGroups) {
     const routeStopDests = g.placeholders.map((p) => p.destination);
     const b: TripBoundary = {
       tripName: g.tripName,
@@ -141,28 +150,29 @@ const Itinerary = () => {
       routeStopDests,
     };
 
-    // Trip-level boundaries
     if (g.tripStartDate) {
-      const visibleStart = g.tripStartDate >= todayStr ? g.tripStartDate : todayStr;
-      const visibleEnd = g.tripEndDate ?? (g.tripStartDate <= todayStr ? todayStr : g.tripStartDate);
-
-      if (visibleStart <= visibleEnd) {
-        // Add every visible day of the trip
-        for (const d of enumerateDays(visibleStart, visibleEnd)) {
-          allDatesSet.add(d);
-        }
-
-        // Show a trip banner at the first visible day, including already-started trips
-        const startArr = tripStartMap.get(visibleStart) ?? [];
-        startArr.push(b);
-        tripStartMap.set(visibleStart, startArr);
-
-        if (g.tripEndDate) {
-          const endArr = tripEndMap.get(g.tripEndDate) ?? [];
-          endArr.push(b);
-          tripEndMap.set(g.tripEndDate, endArr);
-        }
+      // Ongoing trip: show ALL days from start to end (or today if no end)
+      const tripEnd = g.tripEndDate ?? todayStr;
+      for (const d of enumerateDays(g.tripStartDate, tripEnd >= g.tripStartDate ? tripEnd : g.tripStartDate)) {
+        allDatesSet.add(d);
       }
+
+      // Trip banner at start date
+      const startArr = tripStartMap.get(g.tripStartDate) ?? [];
+      startArr.push(b);
+      tripStartMap.set(g.tripStartDate, startArr);
+
+      if (g.tripEndDate) {
+        const endArr = tripEndMap.get(g.tripEndDate) ?? [];
+        endArr.push(b);
+        tripEndMap.set(g.tripEndDate, endArr);
+      }
+    } else {
+      // No dates set: show today as a rolling day
+      allDatesSet.add(todayStr);
+      const startArr = tripStartMap.get(todayStr) ?? [];
+      startArr.push(b);
+      tripStartMap.set(todayStr, startArr);
     }
 
     // Destination-level boundaries
