@@ -163,7 +163,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         return (
           <div
             key={stop.id}
-            className="rounded-lg border-l-[3px] border-l-primary border border-border bg-card overflow-hidden transition-all"
+            className="rounded-xl bg-card shadow-sm overflow-hidden transition-all"
           >
             {/* Collapsed row */}
             <button
