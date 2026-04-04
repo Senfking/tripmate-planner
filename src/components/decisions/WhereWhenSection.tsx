@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
-import type { DateRange } from "react-day-picker";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useProposals } from "@/hooks/useProposals";
 import { useRouteStops } from "@/hooks/useRouteStops";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,10 +15,10 @@ import {
   CalendarDays,
   Lock,
   ChevronDown,
-  ThumbsUp,
-  ThumbsDown,
+  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
 type Props = {
@@ -56,6 +57,18 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     isProposalInRoute,
   } = useRouteStops(tripId);
 
+  // Get member count for "n of m members in"
+  const { data: memberCount = 0 } = useQuery({
+    queryKey: ["trip-member-count", tripId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("trip_members")
+        .select("*", { count: "exact", head: true })
+        .eq("trip_id", tripId);
+      return count ?? 0;
+    },
+  });
+
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) =>
@@ -92,7 +105,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     return map;
   }, [proposals, destVotes]);
 
-  // Map proposal_id → proposal for route stop lookups
   const proposalMap = useMemo(() => {
     const map: Record<string, typeof proposals[0]> = {};
     for (const p of proposals) map[p.id] = p;
@@ -148,6 +160,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
       {/* IN ROUTE expandable cards */}
       {sortedStops.map((stop, index) => {
         const reactions = stop.proposal_id ? proposalReactions[stop.proposal_id] : undefined;
+        const inCount = reactions?.up || 0;
         const isExpanded = expandedIds.has(`route-${stop.id}`);
         const linkedProposal = stop.proposal_id ? proposalMap[stop.proposal_id] : undefined;
 
@@ -173,11 +186,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                   {fmt(stop.start_date)} – {fmt(stop.end_date)}
                 </p>
               </div>
-              {reactions && (
-                <span className="text-[11px] text-muted-foreground shrink-0">
-                  👍{reactions.up} 👎{reactions.down}
-                </span>
-              )}
               <ChevronDown
                 className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
               />
@@ -186,19 +194,10 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
             {/* Expanded content — informational only */}
             {isExpanded && (
               <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border/50">
-                {/* Reaction summary */}
-                {reactions && (reactions.up > 0 || reactions.down > 0) && (
-                  <div className="flex items-center gap-3 pt-2">
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <ThumbsUp className="h-3.5 w-3.5" />
-                      <span>{reactions.up}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <ThumbsDown className="h-3.5 w-3.5" />
-                      <span>{reactions.down}</span>
-                    </div>
-                    <span className="text-[11px] text-muted-foreground/70">from group vote</span>
-                  </div>
+                {inCount > 0 && (
+                  <p className="text-xs text-muted-foreground pt-2">
+                    {inCount} {inCount === 1 ? "member was" : "members were"} in
+                  </p>
                 )}
 
                 {linkedProposal?.note && (
@@ -211,7 +210,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                   </p>
                 )}
 
-                {/* Admin remove */}
                 {canManage && !isRouteLocked && (
                   <button
                     onClick={(e) => {
@@ -256,10 +254,12 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         <div className="space-y-3">
           {votingProposals.map((p) => {
             const pDestVotes = destVotes[p.id] || { up: 0, down: 0 };
+            const inCount = pDestVotes.up || 0;
+            const imIn = myDestVotes[p.id] === "up";
             const isExpanded = expandedIds.has(`vote-${p.id}`);
             const pDateOptions = dateOptionsByProposal(p.id);
             const isCreator = user?.id === p.created_by;
-            const hasOtherVotes = (pDestVotes.up || 0) + (pDestVotes.down || 0) > (myDestVotes[p.id] ? 1 : 0);
+            const hasOtherVotes = inCount > (imIn ? 1 : 0);
             const canDeleteThis = canManage || (isCreator && !hasOtherVotes);
 
             return (
@@ -280,62 +280,93 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                       suggested by {p.creator_name || "someone"}
                     </p>
                   </div>
-                  <span className="text-[11px] text-muted-foreground shrink-0">
-                    👍{pDestVotes.up} 👎{pDestVotes.down}
-                  </span>
+                  {inCount > 0 && (
+                    <span className="text-[11px] text-muted-foreground shrink-0">
+                      {inCount} in
+                    </span>
+                  )}
                   <ChevronDown
                     className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                   />
                 </button>
 
-                {/* Expanded content — full voting UI */}
+                {/* Expanded content — voting UI */}
                 {isExpanded && (
                   <div className="border-t border-border/50">
-                    <ProposalCard
-                      proposal={p}
-                      destVotes={pDestVotes}
-                      myDestVote={myDestVotes[p.id]}
-                      dateOptions={pDateOptions}
-                      dateVotes={dateVotes}
-                      myDateVotes={myDateVotes}
-                      canManage={canManage}
-                      isRouteLocked={isRouteLocked}
-                      isInRoute={false}
-                      existingStops={stops}
-                      onReactDest={(value) => reactDest.mutate({ proposalId: p.id, value })}
-                      onAddDateOption={(input) =>
-                        addDateOption.mutate({ proposalId: p.id, ...input })
-                      }
-                      onVoteDateOption={(dateOptionId, value) =>
-                        voteDateOption.mutate({ dateOptionId, value })
-                      }
-                      onAddToRoute={(input) => {
-                        addStop.mutate(input, {
-                          onSuccess: () => toast({ title: `${p.destination} added to route! 📍` }),
-                        });
-                      }}
-                      isAddingToRoute={addStop.isPending}
-                      isAddingDate={addDateOption.isPending}
-                      currentUserId={user?.id}
-                      canDelete={canDeleteThis}
-                      onDeleteProposal={(proposalId) => {
-                        deleteProposal.mutate({ proposalId }, {
-                          onSuccess: () => toast({ title: `${p.destination} removed` }),
-                          onError: (err) => {
-                            if (err.message === "IN_ROUTE") {
-                              toast({
-                                title: "Can't remove",
-                                description: "This destination is already in your route. Remove it from the route first.",
-                                variant: "destructive",
-                              });
-                            } else {
-                              toast({ title: "Failed to remove suggestion", variant: "destructive" });
-                            }
-                          },
-                        });
-                      }}
-                      isDeleting={deleteProposal.isPending}
-                    />
+                    <div className="p-4 space-y-3">
+                      {/* "I'm in" button */}
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant={imIn ? "default" : "outline"}
+                          size="sm"
+                          className={`gap-1.5 ${imIn ? "" : "text-muted-foreground"}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            reactDest.mutate({ proposalId: p.id, value: "up" });
+                          }}
+                          disabled={isRouteLocked}
+                        >
+                          <UserCheck className="h-3.5 w-3.5" />
+                          {imIn ? "I'm in!" : "I'm in"}
+                        </Button>
+                        <span className="text-xs text-muted-foreground">
+                          {inCount} of {memberCount} members in
+                        </span>
+                      </div>
+
+                      {p.note && (
+                        <p className="text-sm text-foreground/80 italic">"{p.note}"</p>
+                      )}
+
+                      {/* Date options — reuse ProposalCard for this */}
+                      <ProposalCard
+                        proposal={p}
+                        destVotes={pDestVotes}
+                        myDestVote={myDestVotes[p.id]}
+                        dateOptions={pDateOptions}
+                        dateVotes={dateVotes}
+                        myDateVotes={myDateVotes}
+                        canManage={canManage}
+                        isRouteLocked={isRouteLocked}
+                        isInRoute={false}
+                        existingStops={stops}
+                        onReactDest={(value) => reactDest.mutate({ proposalId: p.id, value })}
+                        onAddDateOption={(input) =>
+                          addDateOption.mutate({ proposalId: p.id, ...input })
+                        }
+                        onVoteDateOption={(dateOptionId, value) =>
+                          voteDateOption.mutate({ dateOptionId, value })
+                        }
+                        onAddToRoute={(input) => {
+                          addStop.mutate(input, {
+                            onSuccess: () => toast({ title: `${p.destination} added to route! 📍` }),
+                          });
+                        }}
+                        isAddingToRoute={addStop.isPending}
+                        isAddingDate={addDateOption.isPending}
+                        currentUserId={user?.id}
+                        canDelete={canDeleteThis}
+                        onDeleteProposal={(proposalId) => {
+                          deleteProposal.mutate({ proposalId }, {
+                            onSuccess: () => toast({ title: `${p.destination} removed` }),
+                            onError: (err) => {
+                              if (err.message === "IN_ROUTE") {
+                                toast({
+                                  title: "Can't remove",
+                                  description: "This destination is already in your route. Remove it from the route first.",
+                                  variant: "destructive",
+                                });
+                              } else {
+                                toast({ title: "Failed to remove suggestion", variant: "destructive" });
+                              }
+                            },
+                          });
+                        }}
+                        isDeleting={deleteProposal.isPending}
+                        hideDestVoting
+                        hideHeader
+                      />
+                    </div>
                   </div>
                 )}
               </div>
