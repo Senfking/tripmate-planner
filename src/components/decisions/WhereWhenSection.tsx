@@ -595,51 +595,71 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         </Button>
                       </div>
 
-                      {/* Inline edit form for proposal */}
-                      {isEditingThis ? (
-                        <div className="space-y-3">
-                          <div>
-                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Destination</label>
-                            <Input
-                              value={editProposalDest}
-                              onChange={(e) => setEditProposalDest(e.target.value)}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Note (optional)</label>
-                            <Textarea
-                              value={editProposalNote}
-                              onChange={(e) => setEditProposalNote(e.target.value)}
-                              className="text-sm min-h-[50px]"
-                              placeholder="e.g. Found cheap flights"
-                              rows={2}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 justify-end">
-                            <Button variant="ghost" size="sm" onClick={() => setEditingProposalId(null)}>Cancel</Button>
+                      {/* Destination name — inline editable with pencil icon */}
+                      <div className="flex items-center gap-2">
+                        {isEditingThis ? (
+                          <Input
+                            value={editProposalDest}
+                            onChange={(e) => setEditProposalDest(e.target.value)}
+                            className="h-7 text-sm font-semibold flex-1"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                updateProposal.mutate(
+                                  { proposalId: p.id, destination: editProposalDest.trim(), note: editProposalNote.trim() || null },
+                                  { onSuccess: () => { toast({ title: "Updated" }); setEditingProposalId(null); } }
+                                );
+                              }
+                              if (e.key === "Escape") setEditingProposalId(null);
+                            }}
+                          />
+                        ) : (
+                          <p className="text-sm font-semibold text-foreground flex-1">{p.destination}</p>
+                        )}
+                        {canEditProposal && !isEditingThis && (
+                          <button
+                            onClick={() => {
+                              setEditingProposalId(p.id);
+                              setEditProposalDest(p.destination);
+                              setEditProposalNote(p.note || "");
+                            }}
+                            className="text-muted-foreground hover:text-primary p-0.5"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
+                        {isEditingThis && (
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingProposalId(null)}>Cancel</Button>
                             <Button
                               size="sm"
+                              className="h-7 px-2 text-xs"
                               disabled={!editProposalDest.trim() || updateProposal.isPending}
                               onClick={() => {
                                 updateProposal.mutate(
                                   { proposalId: p.id, destination: editProposalDest.trim(), note: editProposalNote.trim() || null },
-                                  { onSuccess: () => { toast({ title: "Suggestion updated" }); setEditingProposalId(null); } }
+                                  { onSuccess: () => { toast({ title: "Updated" }); setEditingProposalId(null); } }
                                 );
                               }}
                             >
-                              {updateProposal.isPending ? "Saving..." : "Save"}
+                              Save
                             </Button>
                           </div>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Note display */}
-                          {p.note && (
-                            <p className="text-sm text-foreground/80 italic">"{p.note}"</p>
-                          )}
+                        )}
+                      </div>
 
-                          {/* Edit button */}
+                      {/* Note — inline editable with pencil icon */}
+                      {isEditingThis ? (
+                        <Textarea
+                          value={editProposalNote}
+                          onChange={(e) => setEditProposalNote(e.target.value)}
+                          className="text-sm min-h-[40px]"
+                          placeholder="Add a note (optional)"
+                          rows={2}
+                        />
+                      ) : p.note ? (
+                        <div className="flex items-start gap-1.5">
+                          <p className="text-sm text-foreground/70 italic flex-1">"{p.note}"</p>
                           {canEditProposal && (
                             <button
                               onClick={() => {
@@ -647,14 +667,24 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                                 setEditProposalDest(p.destination);
                                 setEditProposalNote(p.note || "");
                               }}
-                              className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                              className="text-muted-foreground hover:text-primary p-0.5 mt-0.5"
                             >
                               <Pencil className="h-3 w-3" />
-                              Edit suggestion
                             </button>
                           )}
-                        </>
-                      )}
+                        </div>
+                      ) : canEditProposal ? (
+                        <button
+                          onClick={() => {
+                            setEditingProposalId(p.id);
+                            setEditProposalDest(p.destination);
+                            setEditProposalNote("");
+                          }}
+                          className="text-xs text-muted-foreground hover:text-primary"
+                        >
+                          + Add a note
+                        </button>
+                      ) : null}
 
                       {/* Date options with delete */}
                       {pDateOptions.length > 0 && (
@@ -665,7 +695,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                             const worksForMe = myVote === "yes";
                             const canDeleteDate = !isRouteLocked && (d.created_by === user?.id || canManage);
                             return (
-                              <div key={d.id} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
+                              <div key={d.id} className="flex items-center gap-2 rounded-lg bg-muted/30 p-3">
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-foreground">
                                     {fmt(d.start_date)} – {fmt(d.end_date)}
