@@ -241,43 +241,40 @@ export function VibeBoard({
 
   return (
     <div className="space-y-4">
-      {/* Lock action for managers */}
-      {!isLocked && canManage && (
-        <div className="flex justify-end md:justify-start">
+      {/* Response counter + lock/unlock on one row */}
+      <div className="flex items-center justify-between">
+        {!isLocked ? (
+          <p className="text-xs text-muted-foreground">
+            {respondentCount} of {memberCount} responded
+          </p>
+        ) : (
+          <span />
+        )}
+        {!isLocked && canManage && (
           <Button
             variant="ghost"
             size="sm"
-            className="text-xs"
+            className="text-xs h-7 px-2"
             onClick={() => lockBoard.mutate()}
             disabled={lockBoard.isPending}
           >
-            <Lock className="h-3.5 w-3.5 mr-1" />
+            <Lock className="h-3 w-3 mr-1" />
             Lock
           </Button>
-        </div>
-      )}
-
-      {isLocked && canManage && (
-        <div className="flex justify-end md:justify-start">
+        )}
+        {isLocked && canManage && (
           <Button
             variant="ghost"
             size="sm"
-            className="text-xs"
+            className="text-xs h-7 px-2"
             onClick={() => unlockBoard.mutate()}
             disabled={unlockBoard.isPending}
           >
-            <Unlock className="h-3.5 w-3.5 mr-1" />
+            <Unlock className="h-3 w-3 mr-1" />
             Unlock
           </Button>
-        </div>
-      )}
-
-      {/* Response counter */}
-      {!isLocked && (
-        <p className="text-xs text-muted-foreground">
-          {respondentCount} of {memberCount} members have responded
-        </p>
-      )}
+        )}
+      </div>
 
       {/* Questions */}
       {!isLoading && (
