@@ -196,10 +196,15 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
     },
     onSuccess: () => {
       trackEvent("trip_deleted", { trip_id: tripId }, user?.id);
+      qc.setQueryData(["trips", user?.id], (current: Array<{ id: string }> | undefined) =>
+        current?.filter((trip) => trip.id !== tripId)
+      );
+      qc.invalidateQueries({ queryKey: ["trips", user?.id] });
+      qc.removeQueries({ queryKey: ["trip", tripId] });
       toast.success("Trip deleted");
-      navigate("/app/trips");
+      navigate("/app/trips", { replace: true });
     },
-    onError: () => toast.error("Failed to delete trip"),
+    onError: (e) => toast.error(e.message || "Failed to delete trip"),
   });
 
   const copyToClipboard = async (text: string) => {
