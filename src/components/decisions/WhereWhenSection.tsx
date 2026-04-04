@@ -78,6 +78,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     updateProposal,
     reactDest,
     addDateOption,
+    updateDateOption,
     deleteDateOption,
     voteDateOption,
     deleteProposal,
