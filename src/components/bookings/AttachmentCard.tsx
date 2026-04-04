@@ -102,11 +102,17 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
     if (hasUrl) {
       window.open(attachment.url!, "_blank", "noopener");
     } else if (hasFile && attachment.file_path && getSignedUrl) {
+      // Open a blank tab synchronously to avoid popup-blocker, then redirect after async fetch
+      const tab = window.open("about:blank", "_blank");
       try {
         const url = await getSignedUrl(attachment.file_path);
-        window.open(url, "_blank", "noopener");
+        if (tab) {
+          tab.location.href = url;
+        } else {
+          window.location.href = url;
+        }
       } catch {
-        // error handled by caller
+        tab?.close();
       }
     }
   };
