@@ -10,6 +10,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
+import ScrollToTop from "@/components/ScrollToTop";
 import { Loader2 } from "lucide-react";
 
 // Eagerly loaded (critical path)
