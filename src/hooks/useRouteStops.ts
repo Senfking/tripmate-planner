@@ -232,6 +232,7 @@ export function useRouteStops(tripId: string | undefined) {
     tripStart,
     tripEnd,
     addStop,
+    updateStop,
     updateStopDates,
     removeStop,
     lockRoute,
