@@ -120,14 +120,10 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
   const hasStops = sortedStops.length > 0;
 
   return (
-    <div className="space-y-3 mt-6">
-      {/* Header row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-foreground">Where & When</h2>
-        </div>
-        {!isRouteLocked && (
+    <div className="space-y-3">
+      {/* Action row */}
+      {!isRouteLocked && (
+        <div className="flex justify-end">
           <ProposalForm
             onSubmit={async (data) => {
               try {
@@ -140,8 +136,8 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
             }}
             isPending={createProposal.isPending}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Route summary */}
       {hasStops && tripStart && tripEnd && (
