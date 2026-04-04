@@ -106,6 +106,7 @@ function AppInner() {
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />
         <AuthProvider>
           <ErrorBoundaryWithUser>
           <Suspense fallback={<PageLoader />}>
