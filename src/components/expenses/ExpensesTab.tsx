@@ -312,7 +312,15 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             }}
           />
 
-          {heroData.type === "settled" ? (
+          {members.length <= 1 ? (
+            /* Solo trip — just show total spent */
+            <div className="relative flex flex-col items-center gap-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Total spent</p>
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1">
+                {totalExpenses != null ? formatCurrency(totalExpenses, settlementCurrency) : "€0.00"}
+              </p>
+            </div>
+          ) : heroData.type === "settled" ? (
             <div className="relative flex flex-col items-center gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Balance</p>
               <CheckCircle2 className="h-10 w-10 text-white" />
