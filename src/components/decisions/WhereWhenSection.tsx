@@ -536,12 +536,8 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         </div>
       )}
 
-      {/* Leading combo banner */}
-      <LeadingComboBanner
-        leadingCombo={leadingCombo}
-        routeStops={stops}
-        isRouteLocked={isRouteLocked}
-      />
+
+
 
       {/* Suggest a destination — full width at the bottom */}
       {!isRouteLocked && totalItems > 0 && (
