@@ -312,22 +312,13 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1">
                 {totalExpenses != null ? formatCurrency(totalExpenses, settlementCurrency) : "€0.00"}
               </p>
-              <div className="flex items-center gap-2 mt-4">
-                <button
-                  onClick={() => { setEditingExpense(null); setFormOpen(true); }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/20 hover:bg-white/30 px-4 py-2 text-[12px] font-semibold text-white transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add expense
-                </button>
-                <button
+              <button
                   onClick={() => setInviteOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 px-4 py-2 text-[12px] font-semibold text-white/70 transition-colors"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-4 py-2 text-[12px] font-semibold text-white/70 transition-colors"
                 >
                   <Users className="h-3.5 w-3.5" />
-                  Invite friends
+                  Invite friends to split
                 </button>
-              </div>
             </div>
           ) : heroData.type === "settled" ? (
             <div className="relative flex flex-col items-center gap-2">
