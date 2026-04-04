@@ -146,51 +146,50 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
   const hasVotingProposals = votingProposals.length > 0;
   const totalItems = sortedStops.length + votingProposals.length;
 
+  const createProposalHandler = async (data: any) => {
+    try {
+      await createProposal.mutateAsync(data);
+      toast({
+        title: data.startDate
+          ? "Destination & dates suggested! 🎉"
+          : "Destination suggested! 🎉",
+      });
+    } catch {
+      toast({ title: "Failed to add destination", variant: "destructive" });
+      throw new Error("failed");
+    }
+  };
+
   return (
     <div className="space-y-3">
-      {/* Route summary header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <span className="text-sm font-semibold text-foreground">
-            {hasStops
-              ? `${sortedStops.length} stop${sortedStops.length !== 1 ? "s" : ""} confirmed`
-              : "No stops confirmed yet"}
-            {hasVotingProposals &&
-              ` · ${votingProposals.length} suggested`}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {isRouteLocked && (
-            <Badge className="bg-muted text-muted-foreground text-[10px]">
-              <Lock className="h-3 w-3 mr-1" /> Locked
-            </Badge>
-          )}
-          {!isRouteLocked && (
-            <ProposalForm
-              onSubmit={async (data) => {
-                try {
-                  await createProposal.mutateAsync(data);
-                  toast({
-                    title: data.startDate
-                      ? "Destination & dates suggested! 🎉"
-                      : "Destination suggested! 🎉",
-                  });
-                } catch {
-                  toast({
-                    title: "Failed to add destination",
-                    variant: "destructive",
-                  });
-                  throw new Error("failed");
-                }
-              }}
-              isPending={createProposal.isPending}
-            />
-          )}
-        </div>
-      </div>
+      {/* Admin controls at top */}
+      <TripRoute
+        stops={stops}
+        canManage={canManage}
+        isOwner={isOwner}
+        isRouteLocked={isRouteLocked}
+        onAddStop={(input) => {
+          addStop.mutate(input, {
+            onSuccess: () => toast({ title: "Stop added to route! 📍" }),
+          });
+        }}
+        isAddingStop={addStop.isPending}
+        onRemoveStop={(input) => {
+          removeStop.mutate(input, {
+            onSuccess: () => toast({ title: "Stop removed from route" }),
+          });
+        }}
+        onUpdateStopDates={(input) => {
+          updateStopDates.mutate(input, {
+            onSuccess: () => toast({ title: "Dates updated! 📅" }),
+          });
+        }}
+        isUpdatingDates={updateStopDates.isPending}
+        onLockRoute={() => lockRoute.mutate()}
+        onUnlockRoute={() => unlockRoute.mutate()}
+        isLocking={lockRoute.isPending || unlockRoute.isPending}
+        proposalReactions={proposalReactions}
+      />
 
       {/* Unified timeline */}
       {timeline.length > 0 && (
@@ -405,64 +404,28 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         isRouteLocked={isRouteLocked}
       />
 
+      {/* Suggest a destination — full width at the bottom */}
+      {!isRouteLocked && totalItems > 0 && (
+        <ProposalForm
+          onSubmit={createProposalHandler}
+          isPending={createProposal.isPending}
+          fullWidth
+        />
+      )}
+
       {/* Empty state */}
       {totalItems === 0 && (
         <div className="text-center py-8 space-y-4">
           <p className="text-muted-foreground">
             No plans suggested yet. Be the first to suggest a destination! 🌍
           </p>
-          <div className="flex justify-center">
-            <ProposalForm
-              onSubmit={async (data) => {
-                try {
-                  await createProposal.mutateAsync(data);
-                  toast({
-                    title: data.startDate
-                      ? "Destination & dates suggested! 🎉"
-                      : "Destination suggested! 🎉",
-                  });
-                } catch {
-                  toast({
-                    title: "Failed to add destination",
-                    variant: "destructive",
-                  });
-                  throw new Error("failed");
-                }
-              }}
-              isPending={createProposal.isPending}
-            />
-          </div>
+          <ProposalForm
+            onSubmit={createProposalHandler}
+            isPending={createProposal.isPending}
+            fullWidth
+          />
         </div>
       )}
-
-      {/* Admin controls footer */}
-      <TripRoute
-        stops={stops}
-        canManage={canManage}
-        isOwner={isOwner}
-        isRouteLocked={isRouteLocked}
-        onAddStop={(input) => {
-          addStop.mutate(input, {
-            onSuccess: () => toast({ title: "Stop added to route! 📍" }),
-          });
-        }}
-        isAddingStop={addStop.isPending}
-        onRemoveStop={(input) => {
-          removeStop.mutate(input, {
-            onSuccess: () => toast({ title: "Stop removed from route" }),
-          });
-        }}
-        onUpdateStopDates={(input) => {
-          updateStopDates.mutate(input, {
-            onSuccess: () => toast({ title: "Dates updated! 📅" }),
-          });
-        }}
-        isUpdatingDates={updateStopDates.isPending}
-        onLockRoute={() => lockRoute.mutate()}
-        onUnlockRoute={() => unlockRoute.mutate()}
-        isLocking={lockRoute.isPending || unlockRoute.isPending}
-        proposalReactions={proposalReactions}
-      />
     </div>
   );
 }
