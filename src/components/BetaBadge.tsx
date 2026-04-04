@@ -36,8 +36,8 @@ export function BetaBadge() {
 
             <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
               <p>
-                Welcome to the early days of Junto! We're currently in <strong className="text-foreground">beta</strong> — 
-                this means the app is live and functional, but still evolving based on real feedback from users like you.
+              Welcome to the early days of Junto! We're currently in <strong className="text-foreground">beta</strong>, 
+                which means the app is live and functional, but still evolving based on real feedback from users like you.
               </p>
               <p>
                 Junto is a <strong className="text-foreground">web app</strong>, not a native app (yet). 
