@@ -58,7 +58,7 @@ function HeroAvatar() {
   return (
     <Link
       to="/app/more"
-      className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full overflow-hidden"
+      className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full overflow-hidden md:hidden"
       style={{
         background: "rgba(0,0,0,0.3)",
         backdropFilter: "blur(8px)",
@@ -543,6 +543,7 @@ export default function TripHome() {
           />
           <HeroAvatar />
         </div>
+
 
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
           <div className="min-w-0 flex-1">
