@@ -57,6 +57,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const [settleOpen, setSettleOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [csvLoading, setCsvLoading] = useState(false);
   const receiptCameraRef = useRef<HTMLInputElement>(null);
   const receiptFileRef = useRef<HTMLInputElement>(null);
 
