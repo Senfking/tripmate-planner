@@ -429,8 +429,10 @@ export function useProposals(tripId: string | undefined) {
     leadingCombo: getLeadingCombo(),
     isLoading: proposals.isLoading,
     createProposal,
+    updateProposal,
     reactDest,
     addDateOption,
+    deleteDateOption,
     voteDateOption,
     deleteProposal,
   };
