@@ -229,35 +229,6 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
     }
   };
 
-  /* ── export helpers ────────────────────────────────── */
-  const [icsLoading, setIcsLoading] = useState(false);
-  
-
-  const downloadFile = async (fn: string, filename: string, setLoading: (v: boolean) => void) => {
-    try {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { toast.error("Please sign in"); return; }
-      const projId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const url = `https://${projId}.supabase.co/functions/v1/${fn}?trip_id=${tripId}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) throw new Error("Export failed");
-      const blob = await res.blob();
-      trackEvent("export_downloaded", { trip_id: tripId, format: fn.includes("ics") ? "ics" : "csv" }, user?.id);
-      const a = document.createElement("a");
-      const objUrl = URL.createObjectURL(blob);
-      a.href = objUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(objUrl), 60_000);
-    } catch {
-      toast.error("Export failed");
-    } finally {
-      setLoading(false);
     }
   };
 
