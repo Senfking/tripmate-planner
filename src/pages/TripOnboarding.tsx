@@ -70,7 +70,7 @@ export default function TripOnboarding() {
     goNext();
   };
 
-  const joinUrl = `https://junto.pro/join/${trip?.trip_code}`;
+  const joinUrl = `https://juntotravel.lovable.app/join/${trip?.trip_code}`;
 
   const copyCode = () => {
     navigator.clipboard.writeText(joinUrl);

@@ -16,7 +16,7 @@ const Terms = () => (
       <h1 className="text-[24px] font-bold text-foreground mt-6">Terms of Service</h1>
       <p className="text-muted-foreground mt-4 leading-[1.6]">
         This page is coming soon. We're working on our terms of service and will publish it here shortly.
-        In the meantime, if you have any questions contact us at hello@junto.pro
+        In the meantime, if you have any questions In the meantime, if you have any questions contact us at hello@juntotravel.com
       </p>
       <Link to="/app/trips" className="inline-block mt-8 text-[#0D9488] font-medium hover:underline">
         ← Back to Junto
