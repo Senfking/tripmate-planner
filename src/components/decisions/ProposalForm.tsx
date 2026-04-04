@@ -81,7 +81,7 @@ export function ProposalForm({ onSubmit, isPending, fullWidth }: Props) {
   };
 
   const trigger = (
-    <Button variant="outline" size="sm" className="gap-1.5">
+    <Button variant="outline" size="sm" className={`gap-1.5 ${fullWidth ? "w-full" : ""}`}>
       <Plus className="h-4 w-4" />
       Suggest a destination
     </Button>
