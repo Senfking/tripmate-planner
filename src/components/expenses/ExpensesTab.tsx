@@ -295,7 +295,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       )}
 
       {/* Balance hero — teal gradient card (matches global expenses header) */}
-      {members.length > 1 && canShowBalances && expenses.length > 0 && (
+      {canShowBalances && expenses.length > 0 && (
         <div
           className="relative overflow-hidden py-6 text-center mx-0"
           style={{
@@ -312,7 +312,15 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             }}
           />
 
-          {heroData.type === "settled" ? (
+          {members.length <= 1 ? (
+            /* Solo trip — just show total spent */
+            <div className="relative flex flex-col items-center gap-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Total spent</p>
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1">
+                {totalExpenses != null ? formatCurrency(totalExpenses, settlementCurrency) : "€0.00"}
+              </p>
+            </div>
+          ) : heroData.type === "settled" ? (
             <div className="relative flex flex-col items-center gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Balance</p>
               <CheckCircle2 className="h-10 w-10 text-white" />
@@ -355,8 +363,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </div>
           )}
 
-          {/* Stat chips: You paid / Your share */}
-          {(myStats.totalPaid > 0.005 || myStats.myShare > 0.005) && (
+          {members.length > 1 && (myStats.totalPaid > 0.005 || myStats.myShare > 0.005) && (
             <div className="relative flex justify-center gap-3 mt-5 px-4">
               <div className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
                 <p className="text-[10px] uppercase tracking-wider font-medium text-white/40 mb-1">You paid</p>
