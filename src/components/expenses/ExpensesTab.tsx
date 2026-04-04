@@ -282,9 +282,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           onChange={(c) => updateSettlementCurrency.mutate(c)}
           cachedCurrencyCodes={cachedCurrencyCodes}
         />
-        <Button size="sm" className="h-9 gap-1.5 px-4 text-[13px]" onClick={() => { setEditingExpense(null); setFormOpen(true); }}>
-          <Plus className="h-3.5 w-3.5" /> Add Expense
-        </Button>
+
+
       </div>
 
 
