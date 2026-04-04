@@ -1169,6 +1169,17 @@ export type Database = {
         Returns: boolean
       }
       join_by_code: { Args: { _code: string }; Returns: Json }
+      notify_trip_members_push: {
+        Args: {
+          p_body: string
+          p_exclude: string
+          p_pref_key: string
+          p_title: string
+          p_trip_id: string
+          p_url: string
+        }
+        Returns: undefined
+      }
       redeem_invite: { Args: { _token: string }; Returns: Json }
       regenerate_trip_code: { Args: { _trip_id: string }; Returns: Json }
       remove_trip_member: {
