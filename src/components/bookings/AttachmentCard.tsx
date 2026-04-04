@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info } from "lucide-react";
+import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info, WifiOff, CloudDownload } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { saveDocument, getDocument, listCachedPaths } from "@/lib/offlineDocuments";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -64,7 +66,17 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [noteDraft, setNoteDraft] = useState(attachment.notes || "");
+  const [offlineCached, setOfflineCached] = useState(false);
+  const [savingOffline, setSavingOffline] = useState(false);
   const isMobile = useIsMobile();
+
+  // Check if this document is already cached offline
+  useEffect(() => {
+    if (!attachment.file_path) return;
+    listCachedPaths().then((paths) => {
+      setOfflineCached(paths.includes(attachment.file_path!));
+    }).catch(() => {});
+  }, [attachment.file_path]);
   const Icon = TYPE_ICONS[attachment.type] || File;
   const iconColor = TYPE_ICON_COLORS[attachment.type] || TYPE_ICON_COLORS.other;
   const addedBy = attachment.profiles?.display_name || "Unknown";
@@ -97,22 +109,62 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
     onDelete();
   };
 
+  const handleSaveOffline = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!attachment.file_path || !getSignedUrl) return;
+    setSavingOffline(true);
+    try {
+      const url = await getSignedUrl(attachment.file_path);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      await saveDocument(attachment.file_path, blob);
+      setOfflineCached(true);
+      toast.success("Saved for offline access");
+    } catch {
+      toast.error("Could not save for offline");
+    } finally {
+      setSavingOffline(false);
+    }
+  };
+
+  const cacheAndServeBlob = async (filePath: string): Promise<string | null> => {
+    // Try IndexedDB first
+    const cached = await getDocument(filePath);
+    if (cached) return URL.createObjectURL(cached);
+    // Not cached — fetch via signed URL and auto-cache
+    if (!getSignedUrl) return null;
+    try {
+      const url = await getSignedUrl(filePath);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      // Auto-cache on first open
+      saveDocument(filePath, blob).then(() => setOfflineCached(true)).catch(() => {});
+      return URL.createObjectURL(blob);
+    } catch {
+      return null;
+    }
+  };
+
   const handleOpen = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (hasUrl) {
       window.open(attachment.url!, "_blank", "noopener");
-    } else if (hasFile && attachment.file_path && getSignedUrl) {
-      // Open a blank tab synchronously to avoid popup-blocker, then redirect after async fetch
+    } else if (hasFile && attachment.file_path) {
       const tab = window.open("about:blank", "_blank");
-      try {
-        const url = await getSignedUrl(attachment.file_path);
+      const blobUrl = await cacheAndServeBlob(attachment.file_path);
+      if (blobUrl) {
         if (tab) {
-          tab.location.href = url;
+          tab.location.href = blobUrl;
         } else {
-          window.location.href = url;
+          window.location.href = blobUrl;
         }
-      } catch {
+      } else {
         tab?.close();
+        if (!navigator.onLine) {
+          toast.error("Save this document while online to access it offline");
+        }
       }
     }
   };
@@ -233,6 +285,11 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
               {isMine && (
                 <span className="inline-flex items-center rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium leading-none">You</span>
               )}
+              {offlineCached && hasFile && (
+                <span className="inline-flex items-center gap-0.5 rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-[10px] font-medium leading-none">
+                  <WifiOff className="h-2.5 w-2.5" /> Offline
+                </span>
+              )}
               <span className="text-[11px] text-muted-foreground">{addedBy} · {timeAgo}</span>
             </div>
           </div>
@@ -242,6 +299,11 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
             {canOpen && (
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleOpen}>
                 <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {hasFile && !offlineCached && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={handleSaveOffline} disabled={savingOffline} title="Save for offline">
+                <CloudDownload className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
               </Button>
             )}
             {canDelete && (
@@ -364,6 +426,17 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                   <Download className="h-3.5 w-3.5" />
                   Download
                 </Button>
+              )}
+              {hasFile && !offlineCached && (
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleSaveOffline} disabled={savingOffline}>
+                  <CloudDownload className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
+                  {savingOffline ? "Saving..." : "Save Offline"}
+                </Button>
+              )}
+              {hasFile && offlineCached && (
+                <div className="flex items-center gap-1 text-xs text-emerald-600 px-2">
+                  <WifiOff className="h-3.5 w-3.5" /> Available offline
+                </div>
               )}
             </div>
           </div>
