@@ -186,33 +186,22 @@ export function ProposalCard({
         <p className="text-sm text-foreground/80 italic">"{proposal.note}"</p>
       )}
 
-      {/* Destination voting — hidden when parent provides its own "I'm in" button */}
+      {/* Destination voting — "I'm in" toggle */}
       {!hideDestVoting && (
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex items-center gap-3">
+          <Button
+            variant={myDestVote === "up" ? "default" : "outline"}
+            size="sm"
+            className={`gap-1.5 ${myDestVote === "up" ? "" : "text-muted-foreground"}`}
             onClick={() => onReactDest("up")}
             disabled={isFrozen}
-            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border transition-colors ${
-              myDestVote === "up"
-                ? "bg-primary/10 border-primary text-primary font-medium"
-                : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
-            } ${isFrozen ? "opacity-60 cursor-not-allowed" : ""}`}
           >
-            <ThumbsUp className="h-3.5 w-3.5" />
-            <span>{destVotes.up || 0}</span>
-          </button>
-          <button
-            onClick={() => onReactDest("down")}
-            disabled={isFrozen}
-            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border transition-colors ${
-              myDestVote === "down"
-                ? "bg-destructive/10 border-destructive text-destructive font-medium"
-                : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
-            } ${isFrozen ? "opacity-60 cursor-not-allowed" : ""}`}
-          >
-            <ThumbsDown className="h-3.5 w-3.5" />
-            <span>{destVotes.down || 0}</span>
-          </button>
+            <Check className="h-3.5 w-3.5" />
+            {myDestVote === "up" ? "I'm in!" : "I'm in"}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {destVotes.up || 0} of {memberCount} members in
+          </span>
         </div>
       )}
 
