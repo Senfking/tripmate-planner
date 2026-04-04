@@ -1,32 +1,65 @@
 
 
-## Redesign "Where & When" Section — Amended Plan
+## Unified Destination List — UI Restructure
+
+### Summary
+Merge the separate TripRoute stops list and "Vote on destinations" proposal cards into one unified list in `WhereWhenSection.tsx`. Route stops render as compact confirmed cards; unconfirmed proposals render as interactive voting cards. TripRoute becomes the admin controls footer only.
 
 ### Files to change
 
-1. **`src/components/decisions/TripRoute.tsx`** — Add reaction counts on stops, move "Add stop" into collapsible admin section, add lock helper text
-2. **`src/components/decisions/WhereWhenSection.tsx`** — Rename header, add subtitle, pass destVotes to TripRoute, make voting section conditional (only show if proposals exist or user taps "Suggest a destination")
-3. **`src/components/decisions/ProposalCard.tsx`** — Change date options toggle label to "📅 When does this work?"
-
----
+1. **`src/components/decisions/WhereWhenSection.tsx`** — Major rewrite: build unified list, remove separate voting section
+2. **`src/components/decisions/TripRoute.tsx`** — Strip out the stops list rendering; keep only admin controls (lock/unlock, manage route collapsible, add stop drawer, confirm dialogs)
+3. **`src/components/decisions/ProposalCard.tsx`** — No changes needed (already has all voting/add-to-route UI)
 
 ### Detailed changes
 
-**1. TripRoute.tsx**
+**WhereWhenSection.tsx — Unified list**
 
-- Accept new prop `proposalReactions: Record<string, { up: number; down: number }>` mapping proposal_id to vote counts.
-- On each stop card that has a `proposal_id`, render small read-only `👍 n  👎 n` labels next to the destination name.
-- Move the "Add stop" button out of the main actions row. Instead, below the lock button area, add a collapsible section (using Collapsible from Radix) labeled "⚙ Manage route directly", visible only when `canManage && !isRouteLocked`. Collapsed by default. Contains the "Add stop" button and keeps the existing `AddToRouteDrawer`. The `AddToRouteDrawer` import and state stay.
-- Below the "Lock route" button, add muted helper text: "Prevents new destination suggestions. You can unlock anytime."
+- Remove the two-section layout (TripRoute + voting section below)
+- Build a single unified list with two groups:
 
-**2. WhereWhenSection.tsx**
+  **Group 1: IN ROUTE** — `sortedStops` (from `useRouteStops`), ordered by `start_date`
+  - Each card: route position number (1, 2, 3…), destination name, date range
+  - If stop has `proposal_id` and matching entry in `proposalReactions` map, show read-only `👍 n 👎 n`
+  - Admin sees trash icon to remove stop (calls `removeStop`)
+  - Compact card style similar to current TripRoute stop cards
 
-- Rename section header from "Destinations" to "Vote on destinations".
-- Add subtitle below: "Suggest a place — the group votes, the admin adds it to the route."
-- Pass `destVotes` to `TripRoute` as `proposalReactions` — build a map from each proposal's `proposal_id` to its vote counts so TripRoute can look them up per stop.
-- Make the voting section conditional: add local state `showVoting` (default `false`). Render the full "Vote on destinations" section + proposal cards only if `proposals.length > 0` OR `showVoting` is true. Otherwise render just a subtle ghost button: "Suggest a destination" that sets `showVoting = true`.
+  **Divider: "Still deciding"** — subtle muted text divider, only rendered when there are unconfirmed proposals
 
-**3. ProposalCard.tsx**
+  **Group 2: VOTING** — proposals filtered to exclude those already in route (`!isProposalInRoute(p.id)`)
+  - Render existing `ProposalCard` for each (already has thumbs voting, date voting, add-to-route)
 
-- Change the date options toggle text from the current label to "📅 When does this work?" (keep the count in parentheses). No logic changes; section stays collapsed by default.
+- **Header area**: section title + "Suggest a destination" `ProposalForm` button at top right (keep conditional: only show voting group if proposals exist or user taps suggest)
+- **Footer**: render `TripRoute` component but only for admin controls (lock button, manage route collapsible, dialogs)
+- Keep `LeadingComboBanner` between route stops and voting proposals
+- Route summary line (total days, date range) stays at top
+
+**TripRoute.tsx — Admin controls only**
+
+- Remove the stops list rendering (lines 234–324 — the `sortedStops.map` block)
+- Remove the route summary line and empty state (those move to WhereWhenSection)
+- Keep: admin actions row (lock/unlock buttons, manage route collapsible with add stop + edit stops), AddToRouteDrawer, all confirm dialogs (remove, lock, unlock)
+- The component becomes a footer-only admin toolbar
+
+**No changes to ProposalCard.tsx** — it already handles both voting and add-to-route flows perfectly.
+
+### Component layout (top to bottom)
+
+```text
+┌─────────────────────────────────┐
+│ Route summary (n days · dates)  │  ← from sortedStops
+│ [Suggest a destination]  (top R)│
+├─────────────────────────────────┤
+│ ① Barcelona  May 3–May 7       │  ← IN ROUTE card
+│   👍 4 👎 1          [🗑]      │
+│ ② Lisbon    May 8–May 12       │
+│   👍 3 👎 0          [🗑]      │
+├╌╌╌╌╌ Still deciding ╌╌╌╌╌╌╌╌╌╌┤  ← divider
+│ [ProposalCard: Porto]           │  ← VOTING state
+│   👍👎 voting + dates + add    │
+│ [ProposalCard: Seville]         │
+├─────────────────────────────────┤
+│ [Lock route] ℹ  ⚙ Manage route │  ← TripRoute (admin only)
+└─────────────────────────────────┘
+```
 
