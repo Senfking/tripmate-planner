@@ -137,7 +137,10 @@ function StatusRow({
     }
   } else {
     content = (
-      <span className="text-sm text-muted-foreground">Dates TBD</span>
+      <button onClick={onDateTap} className="text-sm text-primary font-medium flex items-center gap-1">
+        <CalendarDays className="h-3.5 w-3.5" />
+        Set dates
+      </button>
     );
   }
 
