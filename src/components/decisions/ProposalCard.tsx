@@ -242,31 +242,26 @@ export function ProposalCard({
 
       {/* Confirm destination button — owner/admin only */}
       {canManage && !isRouteLocked && !isInRoute && !confirmOpen && (
-        <div className="flex justify-end md:justify-start">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-            onClick={handleOpenConfirm}
-          >
-            <Check className="h-3.5 w-3.5" />
-            Confirm destination & dates
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+          onClick={handleOpenConfirm}
+        >
+          <Check className="h-3.5 w-3.5" />
+          Confirm destination & dates
+        </Button>
       )}
 
       {/* Inline confirm panel */}
       {confirmOpen && canManage && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
-          <h5 className="font-semibold text-sm text-foreground">
-            Confirm "{proposal.destination}"
-          </h5>
+          <p className="text-xs text-muted-foreground font-medium">
+            Select the dates for this stop:
+          </p>
 
           {dateOptions.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground font-medium">
-                Select the dates for this stop:
-              </p>
+            <div className="space-y-1.5">
               {dateOptions.map((d, i) => {
                 const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
                 const isTopPick = i === topPickIdx;
@@ -274,7 +269,7 @@ export function ProposalCard({
                 return (
                   <label
                     key={d.id}
-                    className={`flex items-center gap-3 rounded-lg p-3 cursor-pointer border transition-colors ${
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
                       isSelected
                         ? "border-primary bg-primary/10"
                         : "border-border bg-muted/20 hover:bg-muted/40"
@@ -287,17 +282,14 @@ export function ProposalCard({
                       onChange={() => setSelectedDateOptionId(d.id)}
                       className="accent-[hsl(var(--primary))]"
                     />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-foreground">
-                        {fmt(d.start_date)} – {fmt(d.end_date)}
+                    <span className="text-sm font-medium text-foreground flex-1">
+                      {fmt(d.start_date)} – {fmt(d.end_date)}
+                      <span className="text-xs text-muted-foreground ml-1.5">
+                        ({votes.yes} available)
                       </span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (✅ Yes {votes.yes} · 🤔 Maybe {votes.maybe})
-                      </span>
-                    </div>
+                    </span>
                     {isTopPick && (
-                      <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                        <Trophy className="h-3 w-3" />
+                      <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full shrink-0">
                         Top pick
                       </span>
                     )}
@@ -306,31 +298,23 @@ export function ProposalCard({
               })}
             </div>
           ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground font-medium">
-                No date options yet — pick dates manually:
-              </p>
-              <DateRangePicker
-                value={manualDateRange}
-                onChange={setManualDateRange}
-                className="w-full"
-                placeholder="Select date range"
-              />
-            </div>
+            <DateRangePicker
+              value={manualDateRange}
+              onChange={setManualDateRange}
+              className="w-full"
+              placeholder="Select date range"
+            />
           )}
 
           {/* Validation messages */}
           {validation.hardError && (
-            <p className="text-sm text-destructive">{validation.hardError}</p>
-          )}
-          {validation.info && !validation.hardError && (
-            <p className="text-sm text-muted-foreground">{validation.info}</p>
+            <p className="text-xs text-destructive">{validation.hardError}</p>
           )}
           {validation.softWarning && !validation.hardError && (
-            <p className="text-sm text-amber-600">{validation.softWarning}</p>
+            <p className="text-xs text-amber-600">{validation.softWarning}</p>
           )}
 
-          <div className="flex items-center gap-3 justify-end md:justify-start">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setConfirmOpen(false)}
               className="text-sm text-muted-foreground hover:text-foreground underline"
@@ -339,6 +323,7 @@ export function ProposalCard({
             </button>
             <Button
               size="sm"
+              className="flex-1"
               onClick={handleConfirmRoute}
               disabled={!canConfirm || isAddingToRoute}
             >
@@ -346,7 +331,7 @@ export function ProposalCard({
                 ? "Confirming…"
                 : validation.softWarning
                 ? "Confirm anyway"
-                : "Confirm destination & dates"}
+                : "Confirm"}
             </Button>
           </div>
         </div>
