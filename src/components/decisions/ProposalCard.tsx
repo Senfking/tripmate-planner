@@ -170,7 +170,7 @@ export function ProposalCard({
   return (
     <div className="space-y-3 relative transition-opacity">
 
-      {/* Destination + creator */}
+      {/* Destination + creator — only shown in standalone mode */}
       {!hideHeader && (
         <div className="pr-20">
           <h4 className="font-semibold text-foreground text-base">{proposal.destination}</h4>
@@ -182,7 +182,7 @@ export function ProposalCard({
         <p className="text-sm text-foreground/80 italic">"{proposal.note}"</p>
       )}
 
-      {/* Destination voting — "I'm in" toggle */}
+      {/* Destination voting — only shown in standalone mode */}
       {!hideDestVoting && (
         <div className="flex items-center gap-3">
           <Button
@@ -201,8 +201,8 @@ export function ProposalCard({
         </div>
       )}
 
-      {/* Date options — "Works for me" toggles */}
-      {dateOptions.length > 0 && (
+      {/* Date options — only shown in standalone mode (parent handles them when embedded) */}
+      {!hideDestVoting && dateOptions.length > 0 && (
         <div className="space-y-2">
           {dateOptions.map((d) => {
             const votes = dateVotes[d.id] || { yes: 0, maybe: 0, no: 0 };
