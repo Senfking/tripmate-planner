@@ -8,11 +8,12 @@ import { DaySection } from "./DaySection";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarPlus, Loader2, Sparkles } from "lucide-react";
+import { CalendarPlus, Download, Loader2, Sparkles } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
 import { ImportItineraryModal } from "./ImportItineraryModal";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 /** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
 function timeToMinutes(t: string): number {
