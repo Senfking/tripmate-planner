@@ -19,6 +19,7 @@ import {
 import { TripDashboard } from "@/components/trip/TripDashboard";
 import { MemberListSheet } from "@/components/trip/MemberListSheet";
 import { AttendanceInviteOverlay } from "@/components/trip/AttendanceInviteOverlay";
+import { TripDateEditor } from "@/components/trip/TripDateEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, parseISO, isWithinInterval, differenceInCalendarDays, differenceInDays } from "date-fns";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
