@@ -666,49 +666,6 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                           )}
                         </>
                       )}
-                              Save
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Note — inline editable with pencil icon */}
-                      {isEditingThis ? (
-                        <Textarea
-                          value={editProposalNote}
-                          onChange={(e) => setEditProposalNote(e.target.value)}
-                          className="text-sm min-h-[40px]"
-                          placeholder="Add a note (optional)"
-                          rows={2}
-                        />
-                      ) : p.note ? (
-                        <div className="flex items-start gap-1.5">
-                          <p className="text-sm text-foreground/70 italic flex-1">"{p.note}"</p>
-                          {canEditProposal && (
-                            <button
-                              onClick={() => {
-                                setEditingProposalId(p.id);
-                                setEditProposalDest(p.destination);
-                                setEditProposalNote(p.note || "");
-                              }}
-                              className="text-muted-foreground hover:text-primary p-0.5 mt-0.5"
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      ) : canEditProposal ? (
-                        <button
-                          onClick={() => {
-                            setEditingProposalId(p.id);
-                            setEditProposalDest(p.destination);
-                            setEditProposalNote("");
-                          }}
-                          className="text-xs text-muted-foreground hover:text-primary"
-                        >
-                          + Add a note
-                        </button>
-                      ) : null}
 
                       {/* Date options with delete */}
                       {pDateOptions.length > 0 && (
