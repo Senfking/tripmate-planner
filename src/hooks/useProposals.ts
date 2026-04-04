@@ -443,6 +443,7 @@ export function useProposals(tripId: string | undefined) {
     updateProposal,
     reactDest,
     addDateOption,
+    updateDateOption,
     deleteDateOption,
     voteDateOption,
     deleteProposal,
