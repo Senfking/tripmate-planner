@@ -66,7 +66,6 @@ export function useGlobalItinerary() {
           .from("itinerary_items")
           .select("id, trip_id, title, day_date, start_time, end_time, location_text, status")
           .in("trip_id", tripIds)
-          .gte("day_date", today)
           .order("day_date", { ascending: true })
           .order("start_time", { ascending: true }),
         supabase
@@ -78,7 +77,6 @@ export function useGlobalItinerary() {
           .from("trip_route_stops")
           .select("id, trip_id, destination, start_date, end_date")
           .in("trip_id", tripIds)
-          .gte("end_date", today)
           .order("start_date", { ascending: true }),
       ]);
 
