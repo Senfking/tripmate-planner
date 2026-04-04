@@ -32,8 +32,14 @@ function getTripStatus(start: string | null, end: string | null): { status: Trip
   const s = start ? parseISO(start) : null;
   const e = end ? parseISO(end) : null;
 
-  if (s && e && isWithinInterval(today, { start: s, end: e })) return { status: "live" };
+  // Trip has ended (end date is strictly before today)
   if (e && isBefore(e, today)) return { status: "ended" };
+
+  // Trip is live: today is within [start, end], OR start is today/past with no end date
+  if (s && e && isWithinInterval(today, { start: s, end: e })) return { status: "live" };
+  if (s && !e && !isAfter(s, today)) return { status: "live" };
+
+  // Trip is in the future
   if (s && isAfter(s, today)) {
     const days = differenceInDays(s, today);
     if (days <= 60) return { status: "countdown", daysToGo: days };
