@@ -1943,17 +1943,31 @@ function updateProgress() {
   document.getElementById('progressLabel').textContent = done.length + ' / ' + all.length;
 }
 
+function taskKey(task) {
+  const title = (task.querySelector('.task-title') || {}).textContent || '';
+  return title.trim().substring(0, 80);
+}
+
 function saveState() {
   const tasks = document.querySelectorAll('.task');
-  const state = Array.from(tasks).map(t => t.classList.contains('done'));
+  const state = {};
+  tasks.forEach(t => { const k = taskKey(t); if (k && t.classList.contains('done')) state[k] = true; });
   try { localStorage.setItem('junto-v9', JSON.stringify(state)); } catch(e) {}
 }
 
 function loadState() {
   try {
-    const state = JSON.parse(localStorage.getItem('junto-v9') || '[]');
-    const tasks = document.querySelectorAll('.task');
-    tasks.forEach((t, i) => { if (state[i]) t.classList.add('done'); });
+    const raw = JSON.parse(localStorage.getItem('junto-v9') || '{}');
+    // migrate old array format to object format
+    if (Array.isArray(raw)) {
+      const tasks = document.querySelectorAll('.task');
+      const migrated = {};
+      tasks.forEach((t, i) => { if (raw[i]) { const k = taskKey(t); if (k) migrated[k] = true; } });
+      tasks.forEach(t => { const k = taskKey(t); if (k && migrated[k]) t.classList.add('done'); });
+      try { localStorage.setItem('junto-v9', JSON.stringify(migrated)); } catch(e) {}
+    } else {
+      document.querySelectorAll('.task').forEach(t => { const k = taskKey(t); if (k && raw[k]) t.classList.add('done'); });
+    }
   } catch(e) {}
   updateProgress();
 }
