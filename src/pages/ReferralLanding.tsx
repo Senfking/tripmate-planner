@@ -24,31 +24,67 @@ const STATEMENTS = [
   { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
 ];
 
-/* ── Video slideshow — all stacked, opacity crossfade ── */
+/* ── Video slideshow — only mount active + next to save resources ── */
 function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
+  const prevIndex = useRef(activeIndex);
+  const [visible, setVisible] = useState<Set<number>>(new Set([activeIndex]));
+
+  useEffect(() => {
+    // Keep both previous and current visible during crossfade
+    setVisible(new Set([prevIndex.current, activeIndex]));
+    const timer = setTimeout(() => {
+      prevIndex.current = activeIndex;
+      setVisible(new Set([activeIndex]));
+    }, 1600);
+    return () => clearTimeout(timer);
+  }, [activeIndex]);
+
   return (
     <>
-      {VIDEOS.map((src, i) => (
-        <video
-          key={src}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: i === activeIndex ? 1 : 0,
-            transition: "opacity 1.5s ease-in-out",
-            WebkitTransform: 'translateZ(0)',
-            transform: 'translateZ(0)',
-          }}
-          src={src}
-          onError={(e) => {
-            (e.currentTarget as HTMLVideoElement).style.display = "none";
-          }}
-        />
-      ))}
+      {VIDEOS.map((src, i) => {
+        if (!visible.has(i)) return null;
+        return (
+          <AutoPlayVideo
+            key={src}
+            src={src}
+            active={i === activeIndex}
+          />
+        );
+      })}
     </>
+  );
+}
+
+function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    // Explicitly trigger play — required for iOS Safari
+    v.play().catch(() => {});
+  }, []);
+
+  return (
+    <video
+      ref={ref}
+      autoPlay
+      loop
+      muted
+      playsInline
+      preload="auto"
+      className="absolute inset-0 w-full h-full object-cover"
+      style={{
+        opacity: active ? 1 : 0,
+        transition: "opacity 1.5s ease-in-out",
+        WebkitTransform: 'translateZ(0)',
+        transform: 'translateZ(0)',
+      }}
+      src={src}
+      onError={(e) => {
+        (e.currentTarget as HTMLVideoElement).style.display = "none";
+      }}
+    />
   );
 }
 
