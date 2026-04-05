@@ -6,6 +6,7 @@ import { friendlyError } from "@/lib/friendlyError";
 import { lovable } from "@/integrations/lovable/index";
 import { trackEvent } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
+import posterImage from "@/assets/placeholder-transparent.png";
 
 
 /* ── Verified working video sources (diverse scenery) ── */
@@ -57,34 +58,98 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
 
 function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    // Explicitly trigger play — required for iOS Safari
-    v.play().catch(() => {});
-  }, []);
+
+    v.defaultMuted = true;
+    v.muted = true;
+    v.playsInline = true;
+    v.setAttribute("muted", "");
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "true");
+
+    const attemptPlay = async () => {
+      try {
+        await v.play();
+      } catch {
+        setReady(false);
+      }
+    };
+
+    const handleCanPlay = () => {
+      setReady(true);
+      void attemptPlay();
+    };
+
+    v.addEventListener("canplay", handleCanPlay);
+    void attemptPlay();
+
+    return () => {
+      v.removeEventListener("canplay", handleCanPlay);
+    };
+  }, [src]);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+
+    if (active) {
+      void v.play().catch(() => setReady(false));
+    } else {
+      v.pause();
+    }
+  }, [active]);
 
   return (
-    <video
-      ref={ref}
-      autoPlay
-      loop
-      muted
-      playsInline
-      preload="auto"
-      className="absolute inset-0 w-full h-full object-cover"
+    <div
+      className="absolute inset-0"
       style={{
         opacity: active ? 1 : 0,
         transition: "opacity 1.5s ease-in-out",
-        WebkitTransform: 'translateZ(0)',
-        transform: 'translateZ(0)',
+        WebkitTransform: "translateZ(0)",
+        transform: "translateZ(0)",
+        backgroundImage: ready ? undefined : `url(${posterImage})`,
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "cover",
       }}
-      src={src}
-      onError={(e) => {
-        (e.currentTarget as HTMLVideoElement).style.display = "none";
-      }}
-    />
+    >
+      <video
+        ref={ref}
+        autoPlay
+        loop
+        muted
+        playsInline
+        disablePictureInPicture
+        controls={false}
+        controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+        preload={active ? "auto" : "metadata"}
+        poster={posterImage}
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{
+          opacity: ready ? 1 : 0,
+          pointerEvents: "none",
+          WebkitTransform: "translateZ(0)",
+          transform: "translateZ(0)",
+        }}
+        src={src}
+        onLoadedData={() => setReady(true)}
+        onPlaying={() => setReady(true)}
+        onPause={() => {
+          if (active) {
+            const v = ref.current;
+            if (v) void v.play().catch(() => setReady(false));
+          }
+        }}
+        onError={(e) => {
+          setReady(false);
+          (e.currentTarget as HTMLVideoElement).style.display = "none";
+        }}
+      />
+    </div>
   );
 }
 
