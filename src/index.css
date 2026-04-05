@@ -312,4 +312,15 @@ html.dark, html.dark body, html.dark #root {
   .animate-fade-in-card {
     animation: fade-in-card 0.35s ease-out;
   }
+
+  .ref-hero-video::-webkit-media-controls,
+  .ref-hero-video::-webkit-media-controls-enclosure,
+  .ref-hero-video::-webkit-media-controls-panel,
+  .ref-hero-video::-webkit-media-controls-play-button,
+  .ref-hero-video::-webkit-media-controls-start-playback-button {
+    display: none !important;
+    -webkit-appearance: none;
+    opacity: 0;
+    pointer-events: none;
+  }
 }

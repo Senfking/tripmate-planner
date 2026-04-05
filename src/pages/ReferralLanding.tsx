@@ -6,13 +6,11 @@ import { friendlyError } from "@/lib/friendlyError";
 import { lovable } from "@/integrations/lovable/index";
 import { trackEvent } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
+import posterImage from "@/assets/video-poster.png";
 
 
 /* ── Verified working video sources (diverse scenery) ── */
 const VIDEOS = [
-  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",
-  "https://videos.pexels.com/video-files/3571264/3571264-hd_1920_1080_30fps.mp4",
-  "https://videos.pexels.com/video-files/3015488/3015488-hd_1920_1080_24fps.mp4",
   "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
   "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",
 ];
@@ -57,34 +55,101 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
 
 function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    // Explicitly trigger play — required for iOS Safari
-    v.play().catch(() => {});
-  }, []);
+
+    v.defaultMuted = true;
+    v.muted = true;
+    v.playsInline = true;
+    v.setAttribute("muted", "");
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "true");
+
+    const attemptPlay = async () => {
+      try {
+        await v.play();
+      } catch {
+        setReady(false);
+      }
+    };
+
+    const handleCanPlay = () => {
+      setReady(true);
+      void attemptPlay();
+    };
+
+    v.addEventListener("canplay", handleCanPlay);
+    void attemptPlay();
+
+    return () => {
+      v.removeEventListener("canplay", handleCanPlay);
+    };
+  }, [src]);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+
+    if (active) {
+      void v.play().catch(() => setReady(false));
+    } else {
+      v.pause();
+    }
+  }, [active]);
 
   return (
-    <video
-      ref={ref}
-      autoPlay
-      loop
-      muted
-      playsInline
-      preload="auto"
-      className="absolute inset-0 w-full h-full object-cover"
+    <div
+      className="absolute inset-0"
       style={{
         opacity: active ? 1 : 0,
         transition: "opacity 1.5s ease-in-out",
-        WebkitTransform: 'translateZ(0)',
-        transform: 'translateZ(0)',
+        WebkitTransform: "translateZ(0)",
+        transform: "translateZ(0)",
+        backgroundImage: ready ? undefined : `url(${posterImage})`,
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "cover",
       }}
-      src={src}
-      onError={(e) => {
-        (e.currentTarget as HTMLVideoElement).style.display = "none";
-      }}
-    />
+    >
+      <video
+        ref={ref}
+        autoPlay
+        loop
+        muted
+        playsInline
+        tabIndex={-1}
+        aria-hidden="true"
+        disablePictureInPicture
+        controls={false}
+        controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+        preload={active ? "auto" : "metadata"}
+        poster={posterImage}
+        className="ref-hero-video absolute inset-0 h-full w-full object-cover"
+        style={{
+          opacity: ready ? 1 : 0,
+          pointerEvents: "none",
+          WebkitTransform: "translateZ(0)",
+          transform: "translateZ(0)",
+        }}
+        src={src}
+        onContextMenu={(e) => e.preventDefault()}
+        onLoadedData={() => setReady(true)}
+        onPlaying={() => setReady(true)}
+        onPause={() => {
+          if (active) {
+            const v = ref.current;
+            if (v) void v.play().catch(() => setReady(false));
+          }
+        }}
+        onError={(e) => {
+          setReady(false);
+          (e.currentTarget as HTMLVideoElement).style.display = "none";
+        }}
+      />
+    </div>
   );
 }
 
