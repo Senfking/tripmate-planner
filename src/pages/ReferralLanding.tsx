@@ -6,14 +6,11 @@ import { friendlyError } from "@/lib/friendlyError";
 import { lovable } from "@/integrations/lovable/index";
 import { trackEvent } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
-import posterImage from "@/assets/placeholder-transparent.png";
+import posterImage from "@/assets/video-poster.png";
 
 
 /* ── Verified working video sources (diverse scenery) ── */
 const VIDEOS = [
-  "https://videos.pexels.com/video-files/4010511/4010511-hd_1920_1080_25fps.mp4",
-  "https://videos.pexels.com/video-files/3571264/3571264-hd_1920_1080_30fps.mp4",
-  "https://videos.pexels.com/video-files/3015488/3015488-hd_1920_1080_24fps.mp4",
   "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
   "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",
 ];
@@ -123,12 +120,14 @@ function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
         loop
         muted
         playsInline
+        tabIndex={-1}
+        aria-hidden="true"
         disablePictureInPicture
         controls={false}
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
         preload={active ? "auto" : "metadata"}
         poster={posterImage}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="ref-hero-video absolute inset-0 h-full w-full object-cover"
         style={{
           opacity: ready ? 1 : 0,
           pointerEvents: "none",
@@ -136,6 +135,7 @@ function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
           transform: "translateZ(0)",
         }}
         src={src}
+        onContextMenu={(e) => e.preventDefault()}
         onLoadedData={() => setReady(true)}
         onPlaying={() => setReady(true)}
         onPause={() => {
