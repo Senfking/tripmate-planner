@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
+import { useLineItemClaims } from "@/hooks/useLineItemClaims";
 import { convertAmount, formatCurrency, Rates } from "@/lib/settlementCalc";
 import { Button } from "@/components/ui/button";
+import { LineItemClaimList } from "./LineItemClaimList";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
   ArrowLeftRight, Pencil, Trash2,
@@ -29,6 +31,7 @@ interface Props {
   splits: SplitRow[];
   members: MemberProfile[];
   myRole?: string;
+  tripId: string;
   settlementCurrency: string;
   baseCurrency: string;
   rates: Rates;
@@ -39,11 +42,15 @@ interface Props {
 }
 
 export function ExpenseCard({
-  expense, splits, members, myRole, settlementCurrency,
+  expense, splits, members, myRole, tripId, settlementCurrency,
   baseCurrency, rates, itineraryItems, isNew, onEdit, onDelete,
 }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
+  const { lineItems, claims, hasLineItems, toggleClaim } = useLineItemClaims(
+    expanded ? expense.id : null,
+    tripId
+  );
 
   const cat = CATEGORY_CONFIG[expense.category] || CATEGORY_CONFIG.other;
   const Icon = cat.icon;
@@ -56,7 +63,6 @@ export function ExpenseCard({
   const isSettlement = expense.category === "settlement";
   const isPayer = expense.payer_id === user?.id;
   const mySplit = user ? splits.find((s) => s.user_id === user.id) : null;
-  // "You lent" = total minus your own split (what others owe you)
   const youLentAmount = isPayer && mySplit
     ? expense.amount - mySplit.share_amount
     : isPayer ? expense.amount : 0;
@@ -120,28 +126,45 @@ export function ExpenseCard({
       </button>
 
       {expanded && (
-        <div className="py-2.5 space-y-2" style={{ padding: "10px 16px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-          <div className="space-y-1">
-            {splits.map((s) => {
-              const member = members.find((m) => m.userId === s.user_id);
-              const convertedShare = isDifferentCurrency
-                ? convertAmount(s.share_amount, expense.currency, settlementCurrency, baseCurrency, rates)
-                : s.share_amount;
-              return (
-                <div key={s.id} className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{member?.displayName || "Unknown"}</span>
-                  <span>
-                    {formatCurrency(s.share_amount, expense.currency)}
-                    {isDifferentCurrency && convertedShare != null && (
-                      <span className="text-muted-foreground ml-1">
-                        ≈ {formatCurrency(convertedShare, settlementCurrency)}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+        <div className="py-2.5 space-y-3" style={{ padding: "10px 16px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+          {/* Line item claiming UI */}
+          {hasLineItems && (
+            <LineItemClaimList
+              lineItems={lineItems}
+              claims={claims}
+              members={members}
+              currency={expense.currency}
+              totalAmount={expense.amount}
+              onToggleClaim={(id) => toggleClaim.mutate(id)}
+              isToggling={toggleClaim.isPending}
+            />
+          )}
+
+          {/* Standard splits breakdown */}
+          {!hasLineItems && (
+            <div className="space-y-1">
+              {splits.map((s) => {
+                const member = members.find((m) => m.userId === s.user_id);
+                const convertedShare = isDifferentCurrency
+                  ? convertAmount(s.share_amount, expense.currency, settlementCurrency, baseCurrency, rates)
+                  : s.share_amount;
+                return (
+                  <div key={s.id} className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">{member?.displayName || "Unknown"}</span>
+                    <span>
+                      {formatCurrency(s.share_amount, expense.currency)}
+                      {isDifferentCurrency && convertedShare != null && (
+                        <span className="text-muted-foreground ml-1">
+                          ≈ {formatCurrency(convertedShare, settlementCurrency)}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {expense.notes && (
             <p className="text-xs text-muted-foreground italic">{expense.notes}</p>
           )}
