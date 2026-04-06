@@ -1,58 +1,47 @@
 
 
-## Plan: Push Notification Opt-in and Preferences
+## Plan: Proportional shared cost splitting for line items
 
 ### Files to change
 
-1. **`src/components/PushOptInDrawer.tsx`** (new) — One-time bottom sheet prompt
-2. **`src/pages/TripOnboarding.tsx`** — Show `PushOptInDrawer` after final step ("Let's go")
-3. **`src/pages/JoinByCode.tsx`** — Show `PushOptInDrawer` after successful join
-4. **`src/pages/InviteRedeem.tsx`** — Show `PushOptInDrawer` after successful redeem
-5. **`src/pages/More.tsx`** — Update the Notifications section (lines 792-819) with the new toggle categories and remove the "coming soon" text
+1. **Migration SQL** — Add `is_shared` column to `expense_line_items`
+2. **`src/hooks/useLineItemClaims.ts`** — Update `LineItemRow` interface to include `is_shared`; update `saveLineItems` to accept and persist `is_shared`; auto-detect shared items by name pattern
+3. **`src/components/expenses/ItemSplitPanel.tsx`** — Add `is_shared` to `LineItem` interface; add toggle for shared flag on each item; hide member assignment avatars for shared items; show "Shared cost" badge; update `computeItemSplits` with proportional logic
+4. **`src/components/expenses/LineItemClaimList.tsx`** — Split items into claimable vs shared sections; hide "Mine" button for shared items; show "split proportionally" label; update `perPersonTotals` calculation with proportional shared cost distribution
+5. **`src/components/expenses/ExpenseFormModal.tsx`** — Pass `is_shared` through when creating line items; initialize `is_shared` from auto-detection on scan results
 
----
+### Database change
 
-### 1. PushOptInDrawer component (new file)
+```sql
+ALTER TABLE public.expense_line_items
+  ADD COLUMN is_shared boolean NOT NULL DEFAULT false;
+```
 
-A reusable Drawer (bottom sheet on mobile, Dialog on desktop via `ResponsiveModal`) with:
-- Title: "Stay in sync with your group"
-- Body: "Get notified about new expenses, polls, and trip updates."
-- "Enable" button → calls `subscribeToPush()`, sets `localStorage.setItem("push_opt_in_shown", "true")`, closes
-- "Not now" button → sets `localStorage.setItem("push_opt_in_shown", "true")`, closes
-- Guard: if `localStorage.getItem("push_opt_in_shown")` is truthy, never renders
+No new RLS policies needed — existing policies cover the column.
 
-Exported as `usePushOptIn()` hook returning `{ showOptIn, PushOptInDrawer }` so consuming pages can mount it easily.
+### Auto-detection logic
 
-### 2. TripOnboarding — trigger after trip creation
+In `saveLineItems`, before inserting, check each item name against `/tax|vat|service.?charge|tip|gratuity|surcharge/i`. If matched, set `is_shared = true`.
 
-On the "Let's go" button in Step 4, before navigating to the trip, show the push opt-in drawer. Use the `usePushOptIn` hook; on step 4's CTA click, call `showOptIn()` which opens the drawer. After dismiss (either button), navigate to the trip.
+### Creator toggle (ItemSplitPanel)
 
-### 3. JoinByCode — trigger after joining
+Each item row gets a small icon button (e.g. a "share" or "link" icon) that toggles `is_shared` on/off. Shared items show a distinct badge ("Shared cost") and hide member avatars since they can't be assigned.
 
-In `onSuccess` of the join mutation, before navigating, trigger the opt-in. Since navigation happens immediately, instead set a flag and show the drawer, navigating only after the drawer is dismissed.
+### Updated calculation (both panels)
 
-### 4. InviteRedeem — trigger after redeeming
+```
+1. Separate items into claimable vs shared
+2. For claimable items: claimed → split among claimants; unclaimed → split equally among all
+3. Sum each person's claimable total → gives their "item subtotal"
+4. Compute each person's proportion = their item subtotal / sum of all item subtotals
+5. Distribute shared costs proportionally using those percentages
+6. Final total = item subtotal + proportional share of shared costs
+```
 
-Same pattern as JoinByCode: show opt-in drawer on successful redeem before navigating to the trip.
+Edge case: if all items are shared (no claimable items), shared costs split equally among all members.
 
-### 5. More.tsx — Updated notification toggles
+### Collaborative claiming view (LineItemClaimList)
 
-Replace the existing 5 toggles (lines 798-812) with these categories that map to `notification_preferences` JSONB keys:
-
-| Toggle label | JSONB key |
-|---|---|
-| New expenses | `new_expense` |
-| Polls (new + closing soon) | `decisions_reminder` |
-| Trip countdown reminders | `route_confirmed` |
-| New members joining | `new_member` |
-| Itinerary changes | `new_activity` |
-
-Remove the "Push notifications coming soon" text (line 815-817). Add an "Enable push notifications" button that calls `subscribeToPush()` if the browser doesn't already have a push subscription, or shows "Push notifications enabled" if it does.
-
-### Technical notes
-
-- `subscribeToPush()` from `src/lib/pushSubscription.ts` handles permission prompt, SW subscription, and DB persistence
-- localStorage key `push_opt_in_shown` prevents repeat prompts
-- Uses `ResponsiveModal` for consistent mobile drawer / desktop dialog pattern
-- No database migration needed — `notification_preferences` JSONB and `push_subscriptions` table already exist
+- Render two sections: "Claim your items" (non-shared) and "Shared costs — split proportionally" (shared items, no Mine button, just display)
+- Per-person summary includes the proportional shared cost breakdown
 
