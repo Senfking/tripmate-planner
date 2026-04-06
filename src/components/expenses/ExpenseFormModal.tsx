@@ -183,6 +183,7 @@ export function ExpenseFormModal({
   const hasNegativeSplit = computedSplits.some((s) => s.share_amount < 0);
   const customValid = !hasNegativeSplit && (
     splitMode === "equal"
+    || splitMode === "byItem"
     || (splitMode === "custom" && Math.abs(customSum - parsedAmount) < 0.01)
     || (splitMode === "percent" && Math.abs(customSum - 100) < 0.01)
   );
