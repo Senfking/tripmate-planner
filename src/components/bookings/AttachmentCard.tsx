@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info, WifiOff, CloudDownload } from "lucide-react";
+import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info, WifiOff } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -109,23 +109,10 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
     onDelete();
   };
 
+  // Unified download: saves to IndexedDB for offline viewing AND triggers device download
   const handleSaveOffline = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!attachment.file_path || !getSignedUrl) return;
-    setSavingOffline(true);
-    try {
-      const url = await getSignedUrl(attachment.file_path);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
-      await saveDocument(attachment.file_path, blob);
-      setOfflineCached(true);
-      toast.success("Saved for offline access");
-    } catch {
-      toast.error("Could not save for offline");
-    } finally {
-      setSavingOffline(false);
-    }
+    // no-op, kept for compatibility
   };
 
   const cacheAndServeBlob = async (filePath: string): Promise<string | null> => {
@@ -172,6 +159,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const fileName = cleanTitle(attachment.title);
+    setSavingOffline(true);
     try {
       let blob: Blob | null = null;
 
@@ -195,6 +183,13 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
       }
 
       if (blob) {
+        // Save to IndexedDB for offline viewing
+        if (attachment.file_path) {
+          await saveDocument(attachment.file_path, blob).catch(() => {});
+          setOfflineCached(true);
+        }
+
+        // Trigger device download
         const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = blobUrl;
@@ -203,9 +198,12 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
+        toast.success("Downloaded — also available offline");
       }
     } catch {
       toast.error("Download failed");
+    } finally {
+      setSavingOffline(false);
     }
   };
 
@@ -320,9 +318,9 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
             )}
-            {hasFile && !offlineCached && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={handleSaveOffline} disabled={savingOffline} title="Save for offline">
-                <CloudDownload className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
+            {hasFile && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={handleDownload} disabled={savingOffline} title="Download">
+                <Download className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
               </Button>
             )}
             {canDelete && (
@@ -441,20 +439,14 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                 </Button>
               )}
               {(hasFile || hasUrl) && (
-                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleDownload}>
-                  <Download className="h-3.5 w-3.5" />
-                  Download
-                </Button>
-              )}
-              {hasFile && !offlineCached && (
-                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleSaveOffline} disabled={savingOffline}>
-                  <CloudDownload className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
-                  {savingOffline ? "Saving..." : "Save Offline"}
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleDownload} disabled={savingOffline}>
+                  <Download className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
+                  {savingOffline ? "Saving…" : "Download"}
                 </Button>
               )}
               {hasFile && offlineCached && (
                 <div className="flex items-center gap-1 text-xs text-emerald-600 px-2">
-                  <WifiOff className="h-3.5 w-3.5" /> Available offline
+                  <WifiOff className="h-3.5 w-3.5" /> Offline ready
                 </div>
               )}
             </div>
