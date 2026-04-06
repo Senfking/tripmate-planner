@@ -90,7 +90,7 @@ Key rules:
 
 Field definitions:
 - title: The merchant or business name ONLY. Do NOT include table numbers, order numbers, cashier names, or codes. If no clear merchant name is printed, look for website/email domains on the receipt.
-- amount: The final TOTAL the customer pays, as a number. No currency symbols. Handle thousand separators correctly (e.g. 317,625 = 317625, not 317.625).
+- amount: The final TOTAL the customer pays, as a plain number (no currency symbols, no separators). IMPORTANT: Many countries use dots as thousand separators (e.g. Indonesia: "317.625" means 317625, NOT 317.625). Others use commas (e.g. "1,250.00" means 1250). Look at the currency/country context to decide. IDR, VND, KRW amounts are always whole numbers — if you see "317.625" in IDR, it means 317625.
 - currency: 3-letter ISO currency code. Infer from context (e.g. IDR for Indonesian receipts, THB for Thai, EUR for European).
 - date: YYYY-MM-DD format. Remember: most non-US receipts use DD/MM/YYYY format. A receipt showing "06/04/2026" in Indonesia means June 4th is WRONG — it means April 6th (2026-04-06).
 - category: food | transport | accommodation | activities | shopping | other
