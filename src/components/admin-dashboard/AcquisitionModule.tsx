@@ -19,7 +19,7 @@ export function AcquisitionModule() {
 
       {/* KPI Cards */}
       {sl ? <AdminSkeleton rows={2} /> : stats ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, marginBottom: 24 }}>
           <StatCard label="Landing Views" value={stats.landing_views} />
           <StatCard label="Page → Intent" value={`${stats.get_started_rate}%`} />
           <StatCard label="Intent → Signup" value={`${stats.signup_rate}%`} />

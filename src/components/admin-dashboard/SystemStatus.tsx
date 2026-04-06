@@ -19,7 +19,7 @@ function ErrorOverview() {
   const trendColor = increasing ? C.red : C.green;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
       <Card>
         <div style={{ fontFamily: mono, fontSize: 11, color: C.muted, textTransform: "uppercase", marginBottom: 8 }}>Errors (24h)</div>
         <div style={{ fontFamily: mono, fontSize: 28, color: errColor, fontWeight: 600 }}>{errors_24h}</div>
@@ -280,7 +280,7 @@ export function SystemStatus() {
       {/* EXISTING: System health checks */}
       <SectionHeader>System Health</SectionHeader>
       {isLoading ? <AdminSkeleton rows={6} /> : data ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
           {/* Exchange Rate */}
           <Card>
             <div style={{ fontFamily: mono, fontSize: 11, color: C.muted, textTransform: "uppercase", marginBottom: 8 }}>Exchange Rate</div>

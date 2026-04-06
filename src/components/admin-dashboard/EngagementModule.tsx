@@ -18,7 +18,7 @@ export function EngagementModule() {
       </div>
 
       {dl ? <AdminSkeleton rows={1} /> : dau ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, marginBottom: 24 }}>
           <StatCard label="DAU" value={dau.dau} />
           <StatCard label="WAU" value={dau.wau} />
           <StatCard label="MAU" value={dau.mau} />
