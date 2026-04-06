@@ -130,6 +130,8 @@ export function ExpenseFormModal({
         setSplitMode("equal");
         setSelectedMembers(new Set(members.filter(m => m.attendanceStatus === "going" || m.attendanceStatus === "maybe").map((m) => m.userId)));
         setCustomAmounts({});
+        setScannedLineItems([]);
+        setItemAssignments({});
       }
     }
   }, [open, editingExpense, editingSplits, members, settlementCurrency, user?.id]);
