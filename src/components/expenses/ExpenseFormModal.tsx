@@ -545,7 +545,7 @@ export function ExpenseFormModal({
                 const isSelected = selectedMembers.has(m.userId);
                 const showInput = (splitMode === "custom" || splitMode === "percent") && isSelected;
                 return (
-                  <div key={m.userId} className="grid min-h-[36px] grid-cols-[auto,minmax(0,1fr),auto] items-center gap-2 min-w-0">
+                  <div key={m.userId} className="grid min-h-[44px] grid-cols-[auto,minmax(0,1fr),auto] items-center gap-3 min-w-0">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={(checked) => {
