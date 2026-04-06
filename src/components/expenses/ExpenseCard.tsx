@@ -188,22 +188,36 @@ export function ExpenseCard({
           {expense.notes && (
             <p className="text-xs text-muted-foreground italic">{expense.notes}</p>
           )}
-          {canModify && (
-            <div className="flex gap-2 pt-1">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onEdit(expense)}>
-                <Pencil className="h-3 w-3" /> Edit
+
+          {/* Receipt & action buttons */}
+          <div className="flex gap-2 pt-1 flex-wrap">
+            {hasReceipt && (
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleViewReceipt}>
+                <Receipt className="h-3 w-3" /> View receipt
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
-                onClick={() => onDelete(expense.id)}
-              >
-                <Trash2 className="h-3 w-3" /> Delete
-              </Button>
-            </div>
-          )}
+            )}
+            {canModify && (
+              <>
+                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onEdit(expense)}>
+                  <Pencil className="h-3 w-3" /> Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+                  onClick={() => onDelete(expense.id)}
+                >
+                  <Trash2 className="h-3 w-3" /> Delete
+                </Button>
+              </>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Receipt lightbox */}
+      {hasReceipt && receiptUrl && (
+        <ReceiptLightbox open={lightboxOpen} onOpenChange={setLightboxOpen} imageUrl={receiptUrl} />
       )}
     </div>
   );
