@@ -267,28 +267,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Toolbar — frosted glass pill */}
-      <div
-        className="flex items-center justify-between gap-2 mx-0 px-4 py-2.5"
-        style={{
-          background: "rgba(255,255,255,0.6)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.8)",
-          borderRadius: 14,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        }}
-      >
-        <SettlementCurrencyPicker
-          value={settlementCurrency}
-          onChange={(c) => updateSettlementCurrency.mutate(c)}
-          cachedCurrencyCodes={cachedCurrencyCodes}
-        />
-
-
-      </div>
-
-
       {/* Balance hero — teal gradient card (matches global expenses header) */}
       {canShowBalances && expenses.length > 0 && (
         <div
@@ -384,14 +362,67 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Add expense — prominent CTA below hero */}
-      <Button
-        className="w-full h-12 gap-2 text-[15px] font-semibold rounded-2xl"
-        onClick={() => { setEditingExpense(null); setFormOpen(true); }}
-      >
-        <Plus className="h-4.5 w-4.5" />
-        Add Expense
-      </Button>
+      {/* Add expense row with settings menu */}
+      <div className="flex items-center gap-2">
+        <Button
+          className="flex-1 h-12 gap-2 text-[15px] font-semibold rounded-2xl"
+          onClick={() => { setEditingExpense(null); setFormOpen(true); }}
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Add Expense
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-12 w-12 rounded-2xl shrink-0">
+              <Settings2 className="h-4.5 w-4.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Settlement currency</DropdownMenuLabel>
+            <div className="px-2 py-1.5">
+              <SettlementCurrencyPicker
+                value={settlementCurrency}
+                onChange={(c) => updateSettlementCurrency.mutate(c)}
+                cachedCurrencyCodes={cachedCurrencyCodes}
+              />
+            </div>
+            {expenses.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={csvLoading}
+                  onClick={async () => {
+                    setCsvLoading(true);
+                    try {
+                      const session = (await supabase.auth.getSession()).data.session;
+                      const res = await fetch(
+                        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-expenses-csv?trip_id=${tripId}`,
+                        { headers: { Authorization: `Bearer ${session?.access_token}` } }
+                      );
+                      if (!res.ok) throw new Error("Export failed");
+                      const blob = await res.blob();
+                      trackEvent("export_downloaded", { trip_id: tripId, format: "csv" }, user?.id);
+                      const a = document.createElement("a");
+                      const objUrl = URL.createObjectURL(blob);
+                      a.href = objUrl;
+                      a.download = "expenses.csv";
+                      a.click();
+                      URL.revokeObjectURL(objUrl);
+                    } catch {
+                      toast.error("Failed to export CSV");
+                    } finally {
+                      setCsvLoading(false);
+                    }
+                  }}
+                >
+                  {csvLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                  Download CSV
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       {/* Balances / Settle Up / Expenses — frosted glass card */}
       <div
