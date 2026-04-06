@@ -161,11 +161,12 @@ export function ReceiptLightbox({ open, onOpenChange, imageUrl }: Props) {
         <img
           src={imageUrl}
           alt="Receipt"
-          className="max-w-full max-h-full object-contain select-none pointer-events-none"
+          className="w-full h-auto max-h-full object-contain select-none pointer-events-none"
           draggable={false}
           style={{
             transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
             transition: isPinching.current ? "none" : "transform 0.2s ease",
+            transformOrigin: "center center",
           }}
         />
       </div>
