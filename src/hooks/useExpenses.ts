@@ -17,6 +17,7 @@ export interface ExpenseRow {
   notes: string | null;
   incurred_on: string;
   itinerary_item_id: string | null;
+  receipt_image_path: string | null;
   created_at: string;
   updated_at: string;
 }
