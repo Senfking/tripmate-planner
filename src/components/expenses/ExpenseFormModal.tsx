@@ -192,7 +192,14 @@ export function ExpenseFormModal({
     || (splitMode === "percent" && Math.abs(customSum - 100) < 0.01)
   );
 
-  const canSubmit = title.trim() && parsedAmount > 0 && selectedMembers.size > 0 && customValid;
+  // Ensure payerId stays in sync with the authenticated user (handles async auth loading)
+  useEffect(() => {
+    if (!payerId && user?.id) {
+      setPayerId(user.id);
+    }
+  }, [user?.id, payerId]);
+
+  const canSubmit = title.trim() && parsedAmount > 0 && payerId && selectedMembers.size > 0 && customValid;
 
   // Settlement auto-detection
   const looksLikeSettlement = useMemo(() => {
