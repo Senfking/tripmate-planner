@@ -227,6 +227,7 @@ export function ExpenseFormModal({
     if (!file) return;
     // Reset input so same file can be re-selected
     e.target.value = "";
+    setReceiptFile(file);
 
     setScanning(true);
     try {
