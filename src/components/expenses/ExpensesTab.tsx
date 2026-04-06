@@ -597,6 +597,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                           splits={splits.filter((s) => s.expense_id === exp.id)}
                           members={members}
                           myRole={myRole}
+                          tripId={tripId}
                           settlementCurrency={settlementCurrency}
                           baseCurrency={settlementCurrency}
                           rates={rates}
