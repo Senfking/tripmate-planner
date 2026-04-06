@@ -411,23 +411,35 @@ Deno.serve(async (req) => {
         const userIds = (data || []).map((u: any) => u.id);
         let tripCounts: Record<string, number> = {};
         let aiCounts: Record<string, number> = {};
+        let lastActive: Record<string, string | null> = {};
 
         if (userIds.length > 0) {
-          const [tripData, aiData] = await Promise.all([
+          const [tripData, aiData, lastSeenData, lastEventData] = await Promise.all([
             db.from("trip_members").select("user_id").in("user_id", userIds),
             db.from("analytics_events").select("user_id").like("event_name", "ai_%").in("user_id", userIds),
+            // Latest trip_last_seen per user
+            db.from("trip_last_seen").select("user_id, last_seen_at").in("user_id", userIds).order("last_seen_at", { ascending: false }),
+            // Latest analytics event per user
+            db.from("analytics_events").select("user_id, created_at").in("user_id", userIds).order("created_at", { ascending: false }),
           ]);
           (tripData.data || []).forEach((r: any) => { tripCounts[r.user_id] = (tripCounts[r.user_id] || 0) + 1; });
           (aiData.data || []).forEach((r: any) => { aiCounts[r.user_id] = (aiCounts[r.user_id] || 0) + 1; });
-        }
 
-        // Get last_sign_in_at from auth for each user
-        let lastLogins: Record<string, string | null> = {};
-        if (userIds.length > 0) {
-          const authResults = await Promise.all(
-            userIds.map((uid: string) => db.auth.admin.getUserById(uid).then((r: any) => ({ uid, last: r.data?.user?.last_sign_in_at || null })).catch(() => ({ uid, last: null })))
-          );
-          authResults.forEach((r: any) => { lastLogins[r.uid] = r.last; });
+          // Compute last active = max(last_seen_at, latest analytics event)
+          const seenMap: Record<string, string> = {};
+          (lastSeenData.data || []).forEach((r: any) => {
+            if (!seenMap[r.user_id] || r.last_seen_at > seenMap[r.user_id]) seenMap[r.user_id] = r.last_seen_at;
+          });
+          const eventMap: Record<string, string> = {};
+          (lastEventData.data || []).forEach((r: any) => {
+            if (r.user_id && (!eventMap[r.user_id] || r.created_at > eventMap[r.user_id])) eventMap[r.user_id] = r.created_at;
+          });
+          for (const uid of userIds) {
+            const seen = seenMap[uid] || null;
+            const ev = eventMap[uid] || null;
+            if (seen && ev) lastActive[uid] = seen > ev ? seen : ev;
+            else lastActive[uid] = seen || ev || null;
+          }
         }
 
         // Get referrer names
@@ -442,16 +454,16 @@ Deno.serve(async (req) => {
           ...u,
           trips: tripCounts[u.id] || 0,
           ai_calls: aiCounts[u.id] || 0,
-          last_sign_in_at: lastLogins[u.id] || null,
+          last_active_at: lastActive[u.id] || null,
           referrer_name: u.referred_by ? referrerNames[u.referred_by] || null : null,
         }));
 
         // Sort by trips or AI if requested
         if (sort === "trips") users.sort((a: any, b: any) => b.trips - a.trips);
         if (sort === "ai") users.sort((a: any, b: any) => b.ai_calls - a.ai_calls);
-        if (sort === "last_login") users.sort((a: any, b: any) => {
-          const aTime = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0;
-          const bTime = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0;
+        if (sort === "last_active") users.sort((a: any, b: any) => {
+          const aTime = a.last_active_at ? new Date(a.last_active_at).getTime() : 0;
+          const bTime = b.last_active_at ? new Date(b.last_active_at).getTime() : 0;
           return bTime - aTime;
         });
 
@@ -510,10 +522,22 @@ Deno.serve(async (req) => {
 
         const au = authUser?.data?.user;
 
+        // Compute last active for this user
+        const [lastSeenDetail, lastEventDetail] = await Promise.all([
+          db.from("trip_last_seen").select("last_seen_at").eq("user_id", user_id).order("last_seen_at", { ascending: false }).limit(1),
+          db.from("analytics_events").select("created_at").eq("user_id", user_id).order("created_at", { ascending: false }).limit(1),
+        ]);
+        const lastSeen = lastSeenDetail.data?.[0]?.last_seen_at || null;
+        const lastEvent = lastEventDetail.data?.[0]?.created_at || null;
+        let lastActiveAt = null;
+        if (lastSeen && lastEvent) lastActiveAt = lastSeen > lastEvent ? lastSeen : lastEvent;
+        else lastActiveAt = lastSeen || lastEvent || null;
+
         return json({
           profile: profile.data,
           email: au?.email || null,
           last_sign_in_at: au?.last_sign_in_at || null,
+          last_active_at: lastActiveAt,
           email_confirmed_at: au?.email_confirmed_at || null,
           last_trip_created_at: lastTripCreated,
           referrer_name: referrerName,

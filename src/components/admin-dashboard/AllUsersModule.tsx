@@ -41,7 +41,7 @@ export function AllUsersModule() {
         {isLoading ? <AdminSkeleton rows={10} /> : !users.length ? <EmptyState /> : (
           <table style={{ width: "100%", fontFamily: sans, fontSize: 13, borderCollapse: "collapse" }}>
             <thead><tr style={{ color: C.muted, fontFamily: mono, fontSize: 10, textTransform: "uppercase" as const }}>
-              {["User", "Joined", "Last Login", "Source", "Trips", "AI", "Tier", "Stripe"].map(h => (
+              {["User", "Joined", "Last Active", "Source", "Trips", "AI", "Tier", "Stripe"].map(h => (
                 <th key={h} style={{ textAlign: "left", padding: 8 }}>{h}</th>
               ))}
             </tr></thead>
@@ -56,7 +56,7 @@ export function AllUsersModule() {
                     {u.display_name || "—"}
                   </td>
                   <td style={{ padding: 8, color: C.muted, fontFamily: mono, fontSize: 11 }}>{u.created_at?.slice(0, 10)}</td>
-                  <td style={{ padding: 8, color: u.last_sign_in_at ? C.text : C.muted, fontFamily: mono, fontSize: 11 }}>{u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : "Never"}</td>
+                  <td style={{ padding: 8, color: u.last_active_at ? C.text : C.muted, fontFamily: mono, fontSize: 11 }}>{u.last_active_at ? timeAgo(u.last_active_at) : "Never"}</td>
                   <td style={{ padding: 8 }}>{u.referred_by ? <StatusPill label="Referred" color={C.green} /> : <StatusPill label="Organic" color={C.muted} />}</td>
                   <td style={{ padding: 8, color: C.text, fontFamily: mono }}>{u.trips}</td>
                   <td style={{ padding: 8, color: C.text, fontFamily: mono }}>{u.ai_calls}</td>
@@ -119,7 +119,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
 
       <Detail label="Email" value={data.email || "—"} />
       <Detail label="Joined" value={p.created_at?.slice(0, 10)} />
-      <Detail label="Last login" value={data.last_sign_in_at ? timeAgo(data.last_sign_in_at) : "Never"} />
+      <Detail label="Last active" value={data.last_active_at ? timeAgo(data.last_active_at) : "Never"} />
       <Detail label="Last trip created" value={data.last_trip_created_at ? timeAgo(data.last_trip_created_at) : "—"} />
       <Detail label="Currency" value={p.default_currency} />
 
