@@ -15,7 +15,7 @@ import { WeeklyDigest } from "@/components/admin-dashboard/WeeklyDigest";
 import { NotificationsModule } from "@/components/admin-dashboard/NotificationsModule";
 import { C, AdminModule, AdminNavContext } from "@/components/admin-dashboard/shared";
 import { useAdminNotificationsRealtime } from "@/hooks/useAdminQuery";
-import { Loader2 } from "lucide-react";
+import { Loader2, Menu } from "lucide-react";
 
 const ADMIN_USER_ID = import.meta.env.VITE_ADMIN_USER_ID || "1d5b21fe-f74c-429b-8d9d-938a4f295013";
 
@@ -34,24 +34,37 @@ const MODULE_MAP: Record<AdminModule, React.FC> = {
   weekly_digest: WeeklyDigest,
 };
 
+function useIsMobileAdmin() {
+  const [mobile, setMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return mobile;
+}
+
 export default function Admin() {
   const { user, loading } = useAuth();
   useAdminNotificationsRealtime();
   const [activeModule, setActiveModule] = useState<AdminModule>("dashboard");
   const [navParams, setNavParams] = useState<Record<string, string>>({});
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobileAdmin();
 
   const navigateTo = useCallback((module: AdminModule, params?: Record<string, string>) => {
     setNavParams(params || {});
     setActiveModule(module);
-  }, []);
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
 
   const navCtx = useMemo(() => ({ navigateTo, navParams }), [navigateTo, navParams]);
 
-  // Clear params when navigating via sidebar
   const handleSidebarNav = useCallback((module: AdminModule) => {
     setNavParams({});
     setActiveModule(module);
-  }, []);
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
 
   if (loading) {
     return (
@@ -67,12 +80,52 @@ export default function Admin() {
   return (
     <AdminNavContext.Provider value={navCtx}>
       <div style={{ background: C.bg, minHeight: "100vh", color: C.text }}>
-        <AdminSidebar
-          active={activeModule}
-          onNavigate={handleSidebarNav}
-          userName={user.user_metadata?.display_name || user.email}
-        />
-        <main style={{ marginLeft: 220, padding: "24px 32px", minHeight: "100vh" }}>
+        {/* Mobile header */}
+        {isMobile && (
+          <header style={{
+            position: "sticky", top: 0, zIndex: 40,
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "12px 16px", background: C.surface,
+            borderBottom: `1px solid ${C.border}`,
+          }}>
+            <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "none", color: C.text, cursor: "pointer", padding: 4 }}>
+              <Menu size={22} />
+            </button>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, fontWeight: 600, color: C.tealLight }}>JUNTO ADMIN</span>
+          </header>
+        )}
+
+        {/* Backdrop for mobile sidebar */}
+        {isMobile && sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 49,
+              background: "rgba(0,0,0,0.6)",
+            }}
+          />
+        )}
+
+        {/* Sidebar: always visible on desktop, slide-over on mobile */}
+        <div style={{
+          ...(isMobile ? {
+            position: "fixed", left: 0, top: 0, zIndex: 50,
+            transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+            transition: "transform 0.2s ease",
+          } : {}),
+        }}>
+          <AdminSidebar
+            active={activeModule}
+            onNavigate={handleSidebarNav}
+            userName={user.user_metadata?.display_name || user.email}
+          />
+        </div>
+
+        <main style={{
+          marginLeft: isMobile ? 0 : 220,
+          padding: isMobile ? "16px 12px" : "24px 32px",
+          minHeight: isMobile ? "auto" : "100vh",
+        }}>
           <ActiveComponent />
         </main>
       </div>
