@@ -52,7 +52,7 @@ interface Props {
     notes?: string;
     itinerary_item_id?: string | null;
     splits: { user_id: string; share_amount: number }[];
-    lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number }[];
+    lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
   }) => void;
 }
 
