@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -15,12 +14,21 @@ export function ReceiptLightbox({ open, onOpenChange, imageUrl }: Props) {
   const lastDistance = useRef<number | null>(null);
   const lastCenter = useRef<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (open) {
       setScale(1);
       setTranslate({ x: 0, y: 0 });
     }
+  }, [open]);
+
+  // Prevent body scroll when lightbox is open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
   }, [open]);
 
   const getDistance = (t1: React.Touch, t2: React.Touch) =>
@@ -33,8 +41,20 @@ export function ReceiptLightbox({ open, onOpenChange, imageUrl }: Props) {
         x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
         y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
       };
+    } else if (e.touches.length === 1 && scale > 1) {
+      dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
   }, []);
+
+  const handleTouchMoveInner = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1 && dragStart.current && scale > 1) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - dragStart.current.x;
+      const dy = e.touches[0].clientY - dragStart.current.y;
+      dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      setTranslate((t) => ({ x: t.x + dx, y: t.y + dy }));
+    }
+  }, [scale]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2 && lastDistance.current != null) {
@@ -53,75 +73,85 @@ export function ReceiptLightbox({ open, onOpenChange, imageUrl }: Props) {
         }));
         lastCenter.current = { x: cx, y: cy };
       }
+    } else {
+      handleTouchMoveInner(e);
     }
-  }, []);
+  }, [handleTouchMoveInner]);
 
   const handleTouchEnd = useCallback(() => {
     lastDistance.current = null;
     lastCenter.current = null;
+    dragStart.current = null;
   }, []);
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[100vw] max-h-[100dvh] w-screen h-[100dvh] p-0 border-none bg-black/95 [&>button]:hidden">
-        {/* Top bar */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3">
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full bg-white/10 text-white hover:bg-white/20"
-              onClick={() => setScale((s) => Math.min(5, s * 1.5))}
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full bg-white/10 text-white hover:bg-white/20"
-              onClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }); }}
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-          </div>
+    <div
+      className="fixed inset-0 z-50 bg-black/95"
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
+      {/* Top bar — safe-area aware */}
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pb-2" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
+        <div className="flex gap-2">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full bg-white/10 text-white hover:bg-white/20"
-            onClick={() => onOpenChange(false)}
+            className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95"
+            onClick={() => setScale((s) => Math.min(5, s * 1.5))}
           >
-            <X className="h-4 w-4" />
+            <ZoomIn className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95"
+            onClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }); }}
+          >
+            <ZoomOut className="h-5 w-5" />
           </Button>
         </div>
-
-        {/* Image container */}
-        <div
-          ref={containerRef}
-          className="flex items-center justify-center w-full h-full overflow-hidden touch-none"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onDoubleClick={() => {
-            if (scale > 1) {
-              setScale(1);
-              setTranslate({ x: 0, y: 0 });
-            } else {
-              setScale(2.5);
-            }
-          }}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95"
+          onClick={() => onOpenChange(false)}
         >
-          <img
-            src={imageUrl}
-            alt="Receipt"
-            className="max-w-full max-h-full object-contain select-none"
-            draggable={false}
-            style={{
-              transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
-              transition: lastDistance.current != null ? "none" : "transform 0.2s ease",
-            }}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Image container */}
+      <div
+        ref={containerRef}
+        className="flex items-center justify-center w-full h-full overflow-hidden touch-none"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onDoubleClick={() => {
+          if (scale > 1) {
+            setScale(1);
+            setTranslate({ x: 0, y: 0 });
+          } else {
+            setScale(2.5);
+          }
+        }}
+        onClick={(e) => {
+          // Tap on backdrop (not on image) to close
+          if (e.target === containerRef.current) onOpenChange(false);
+        }}
+      >
+        <img
+          src={imageUrl}
+          alt="Receipt"
+          className="max-w-full max-h-full object-contain select-none pointer-events-none"
+          draggable={false}
+          style={{
+            transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+            transition: lastDistance.current != null ? "none" : "transform 0.2s ease",
+          }}
+        />
+      </div>
+    </div>
   );
 }
