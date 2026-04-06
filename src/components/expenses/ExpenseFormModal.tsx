@@ -14,7 +14,7 @@ import { CurrencyPicker } from "./CurrencyPicker";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Lightbulb, Camera, Upload, Loader2, Sparkles } from "lucide-react";
+import { CalendarIcon, Lightbulb, Camera, Upload, Loader2, Sparkles, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
