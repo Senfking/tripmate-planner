@@ -34,10 +34,11 @@ const NAV: { section: string; items: { key: AdminModule; label: string }[] }[] =
 
 const ICE_BLUE = "rgba(96, 165, 250, 0.85)";
 
-export function AdminSidebar({ active, onNavigate, userName }: {
+export function AdminSidebar({ active, onNavigate, userName, isMobile }: {
   active: AdminModule;
   onNavigate: (m: AdminModule) => void;
   userName?: string;
+  isMobile?: boolean;
 }) {
   const { data: feedbackData } = useAdminData("feedback_unread_count", {}, { refetchInterval: 60000 });
   const feedbackUnread = (feedbackData as any)?.count ?? 0;
@@ -48,7 +49,7 @@ export function AdminSidebar({ active, onNavigate, userName }: {
     <div style={{
       width: 220, minHeight: "100vh", background: C.surface,
       borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column",
-      position: "fixed", left: 0, top: 0, zIndex: 50,
+      ...(isMobile ? {} : { position: "fixed", left: 0, top: 0, zIndex: 50 }),
     }}>
       <div style={{ padding: "24px 20px 8px" }}>
         <div style={{ fontFamily: mono, fontSize: 20, fontWeight: 700, color: C.tealLight, letterSpacing: 2 }}>JUNTO</div>
