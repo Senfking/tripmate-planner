@@ -206,6 +206,7 @@
     <div class="sidebar-label">Phase 2 — Weeks 3–8</div>
     <div class="sidebar-item" onclick="show('ai',this)"><span class="sidebar-dot dot-purple"></span> AI Itinerary</div>
     <div class="sidebar-item" onclick="show('templates',this)"><span class="sidebar-dot dot-blue"></span> Trip Templates</div>
+    <div class="sidebar-item" onclick="show('recommendations',this)"><span class="sidebar-dot dot-purple"></span> Trip Recommendations</div>
     <div class="sidebar-item" onclick="show('maps',this)"><span class="sidebar-dot dot-blue"></span> Maps & Calendar</div>
     <div class="sidebar-item" onclick="show('arrivals',this)"><span class="sidebar-dot dot-blue"></span> Arrival Notifications</div>
   </div>
@@ -928,6 +929,147 @@ After a user fills in the trip name and destination, show an optional step: "Sta
 On selecting a template, clone the template trip's itinerary items and packing list items into the new trip being created. Do not copy expenses, members, or any other data — only itinerary and packing list.
 
 If the user skips, continue to the normal blank trip creation. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 2/4: TRIP RECOMMENDATIONS ══════════ -->
+<div id="recommendations" class="section">
+  <div class="section-header">
+    <h2>Trip Recommendations — Phase 2/4</h2>
+    <p>From AI-guided trip creation to a community library of real trips — two features that compound on each other.</p>
+  </div>
+
+  <h3>AI Trip Builder — Phase 2</h3>
+  <div class="callout">Guided AI flow that generates a fully populated trip from a short questionnaire. Extends the suggest-activities Edge Function into a full trip creation experience.</div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build "Plan with AI" guided trip creation flow</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">User taps "Plan with AI" from the new trip screen. A short questionnaire collects destination (or "surprise me"), dates/flexibility, trip length, budget level (budget / mid-range / premium), vibe (adventure / relaxation / culture / nightlife / foodie — multi-select, pulls from Vibe Board if available), group size, and preferences (family-friendly, accessibility, dietary). AI generates a full day-by-day itinerary with times, suggested packing list, and estimated daily budget breakdown. User previews and edits everything before confirming. On confirm, populates itinerary items, packing list, and budget notes into the trip.</p>
+      <p class="task-note">Depends on: AI Itinerary Suggestions Edge Function. Build after the suggest-activities Edge Function is live — this extends that work.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Build an AI Trip Builder flow for Junto. This extends the existing suggest-activities Edge Function into a full guided trip creation experience.
+
+Create a new Edge Function called "ai-trip-builder" that accepts a questionnaire payload:
+- destination (string, or "surprise me")
+- dates and flexibility (exact dates or flexible window)
+- trip length in days
+- budget level: budget | mid-range | premium
+- vibes: array of adventure | relaxation | culture | nightlife | foodie (pull from Vibe Board data if the user has history)
+- group size
+- preferences: family-friendly, accessibility needs, dietary restrictions
+
+The function should return:
+1. A full day-by-day itinerary with activity names, times, locations, and descriptions
+2. A suggested packing list tailored to the destination and activities
+3. An estimated daily budget breakdown (accommodation, food, transport, activities)
+
+Use the same AI provider pattern as the suggest-activities function. Include a "surprise me" destination picker that selects from trending destinations based on season and departure city.
+
+Do not change any existing Edge Functions. List every file you'll create or change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after Edge Function is built)</span>
+        <div class="code-block">Add a "Plan with AI" option to Junto's new trip creation screen.
+
+When the user taps "Plan with AI", show a multi-step questionnaire:
+1. Destination (text input with autocomplete, plus a "Surprise me" toggle)
+2. Dates — date picker with a "Flexible" checkbox
+3. Trip length in days (number input)
+4. Budget level — three selectable cards: Budget, Mid-range, Premium
+5. Vibe — multi-select chips: Adventure, Relaxation, Culture, Nightlife, Foodie. If the user has Vibe Board history, pre-select their top vibes.
+6. Group size (number input)
+7. Preferences — toggles for Family-friendly, Accessibility needs, Dietary restrictions (with text input for details)
+
+After submission, call the ai-trip-builder Edge Function. Show a loading state with animated progress. Display the AI-generated result as a preview: day-by-day itinerary cards, packing list, and budget breakdown. The user can edit any item inline before confirming.
+
+On confirm, populate the new trip with the itinerary items, packing list, and budget notes. If the user cancels, discard everything and return to normal trip creation.
+
+List every file you'll change before making changes. Do not modify any existing trip creation functionality — this is an additional optional flow.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Trip Database — Phase 4</h3>
+  <div class="callout">Community-powered library of real trips. Do not build before Trip Discovery — this is the content layer that feeds it. Requires 500+ users to have meaningful content.</div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Create published trips tables and publishing flow</span><span class="tag tag-lovable">Lovable</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Users can publish completed trips (opt-in, never automatic). Published trips show: destination, duration, itinerary, photos, experience notes, star ratings, group size, budget tier, season. Other users browse, search, and "Use this trip" to clone itinerary + packing list into a new editable trip. Users rate and review published trips.</p>
+      <p class="task-note">Depends on: 500+ users, Trip Discovery (Phase 4).</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt (database setup)</span>
+        <div class="code-block">Create the database tables for Junto's Trip Database feature — a community library of published trips.
+
+New tables needed:
+
+1. published_trips — snapshot of trip data when published
+   - id (uuid, primary key)
+   - original_trip_id (references trips)
+   - author_id (references auth.users)
+   - destination (text)
+   - duration_days (integer)
+   - itinerary_snapshot (jsonb — full itinerary at time of publishing)
+   - packing_list_snapshot (jsonb)
+   - experience_notes (text)
+   - group_size (integer)
+   - budget_tier (text — budget | mid-range | premium)
+   - season (text — spring | summer | autumn | winter)
+   - is_public (boolean, default true)
+   - published_at (timestamptz)
+   - times_cloned (integer, default 0)
+   - created_at / updated_at
+
+2. trip_ratings
+   - id (uuid, primary key)
+   - user_id (references auth.users)
+   - published_trip_id (references published_trips)
+   - rating (integer, 1-5)
+   - review_text (text, nullable)
+   - created_at
+   - Unique constraint on (user_id, published_trip_id)
+
+3. trip_photos
+   - id (uuid, primary key)
+   - published_trip_id (references published_trips)
+   - storage_url (text)
+   - caption (text, nullable)
+   - sort_order (integer)
+   - created_at
+
+Add RLS policies: anyone can read public published trips, only the author can publish/edit/delete their own, only authenticated users can rate, one rating per user per trip.
+
+Write the Supabase migration SQL. List every file you'll create before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after tables and Discovery exist)</span>
+        <div class="code-block">Build the Trip Database UI for Junto — a community library of published trips.
+
+Two main views:
+
+1. Browse/Discover page (accessible from main navigation):
+   - Search bar with filters: destination, duration, budget tier, vibe tags, season
+   - "Recommended for you" section based on user's Vibe Board history
+   - "Featured" section — most cloned and highest rated trips
+   - "Trending" section — recently published with high engagement
+   - Trip cards showing: destination photo, title, duration, star rating, budget tier, season badge, clone count
+   - Tapping a card opens a detail view with full itinerary, photos, reviews, and a "Use this trip" button
+
+2. Publish flow (from trip settings on a completed trip):
+   - "Share with community" button (opt-in, never automatic)
+   - Preview what will be published: destination, duration, itinerary, packing list
+   - Add experience notes, select budget tier, upload photos with captions
+   - Confirm and publish
+
+3. "Use this trip" clones the published trip's itinerary and packing list into a new editable trip (same pattern as Trip Templates clone flow).
+
+4. Rating/review: after using a published trip, prompt the user to rate it (1-5 stars + optional review text).
+
+List every file you'll change before making changes. Do not modify any existing trip functionality.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
       </div>
     </div>
   </div>
