@@ -374,16 +374,23 @@ export function FeedbackWidget() {
       // The Edge Function deduplicates by feedback_id, so this is safe even if
       // the trigger also fires. Delay 3s so the DB trigger has time to insert
       // first — prevents race-condition duplicates in the dedup check.
-      setTimeout(() => {
-        supabase.functions.invoke("check-admin-alerts", {
-          body: {
-            trigger: "feedback",
-            feedback_id: inserted.id,
-            body: message.trim().substring(0, 200),
-            category,
-            severity: "medium",
-          },
-        }).catch(() => { /* best-effort */ });
+      setTimeout(async () => {
+        try {
+          const { data: alertData } = await supabase.functions.invoke("check-admin-alerts", {
+            body: {
+              trigger: "feedback",
+              feedback_id: inserted.id,
+              body: message.trim().substring(0, 200),
+              category,
+              severity: "medium",
+            },
+          });
+          if (alertData?.whatsapp_error) {
+            console.warn("Admin alert WhatsApp failed:", alertData.whatsapp_error);
+          }
+        } catch (e) {
+          console.warn("Admin alert fallback failed:", e);
+        }
       }, 3000);
 
       try {

@@ -92,18 +92,21 @@ Deno.serve(async (req) => {
     } else if (trigger === "error_spike") {
       const count = body.count ?? 0;
 
+      const window = body.window || "5min";
+      const windowLabel = window === "5min" ? "last 5 minutes" : `last ${window}`;
+
       notification = {
         type: "error_spike",
         title: "Error spike detected",
-        body: `${count} errors in the last hour`,
+        body: `${count} errors in the ${windowLabel}`,
         severity: "critical",
         properties: {
           count,
-          window: body.window,
+          window,
         },
       };
 
-      whatsappMessage = `🚨 Error spike detected on Junto\n${count} errors in the last hour`;
+      whatsappMessage = `🚨 Error spike detected on Junto\n${count} errors in the ${windowLabel}`;
     } else if (trigger === "daily_digest") {
       const summary = body.summary || "No summary available";
 
@@ -150,54 +153,86 @@ Deno.serve(async (req) => {
     const twilioFrom = Deno.env.get("TWILIO_WHATSAPP_FROM");
     const twilioTo = Deno.env.get("TWILIO_WHATSAPP_TO");
     let whatsappSent = false;
+    let whatsappError: string | null = null;
 
     if (twilioSid && twilioAuth && twilioFrom && twilioTo && whatsappMessage) {
-      try {
-        const params = new URLSearchParams({
-          From: `whatsapp:${twilioFrom}`,
-          To: `whatsapp:${twilioTo}`,
-          Body: whatsappMessage,
-        });
+      // Normalize numbers: strip any existing "whatsapp:" prefix to avoid double-prefixing
+      const fromNumber = twilioFrom.replace(/^whatsapp:/, "");
+      const toNumber = twilioTo.replace(/^whatsapp:/, "");
 
-        const res = await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: "Basic " + btoa(`${twilioSid}:${twilioAuth}`),
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: params.toString(),
+      const params = new URLSearchParams({
+        From: `whatsapp:${fromNumber}`,
+        To: `whatsapp:${toNumber}`,
+        Body: whatsappMessage,
+      });
+
+      // Retry up to 3 times with exponential backoff for transient failures
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: "Basic " + btoa(`${twilioSid}:${twilioAuth}`),
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: params.toString(),
+            }
+          );
+
+          if (res.ok) {
+            whatsappSent = true;
+            console.log("WhatsApp sent for trigger:", trigger, "attempt:", attempt + 1);
+            break;
           }
-        );
 
-        if (res.ok) {
-          whatsappSent = true;
-          console.log("WhatsApp sent for trigger:", trigger);
-        } else {
           const errBody = await res.text();
-          console.error("Twilio error:", res.status, errBody);
+          whatsappError = `Twilio HTTP ${res.status}: ${errBody}`;
+          console.error("Twilio error (attempt", attempt + 1, "):", res.status, errBody);
+
+          // Don't retry on client errors (4xx) — these won't resolve with retries
+          if (res.status >= 400 && res.status < 500) {
+            break;
+          }
+        } catch (e) {
+          whatsappError = e instanceof Error ? e.message : String(e);
+          console.error("WhatsApp send failed (attempt", attempt + 1, "):", e);
         }
-      } catch (e) {
-        console.error("WhatsApp send failed:", e);
+
+        // Exponential backoff: 1s, 2s before retries
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        }
       }
     } else {
-      console.warn("Twilio secrets missing, skipping WhatsApp");
+      const missing = [
+        !twilioSid && "TWILIO_ACCOUNT_SID",
+        !twilioAuth && "TWILIO_AUTH_TOKEN",
+        !twilioFrom && "TWILIO_WHATSAPP_FROM",
+        !twilioTo && "TWILIO_WHATSAPP_TO",
+      ].filter(Boolean);
+      whatsappError = `Missing Twilio secrets: ${missing.join(", ")}`;
+      console.error(whatsappError);
     }
 
     // Mark notification with WhatsApp status
-    if (whatsappSent && inserted?.id) {
+    if (inserted?.id) {
       await db
         .from("admin_notifications")
         .update({
-          whatsapp_sent: true,
-          whatsapp_sent_at: new Date().toISOString(),
+          whatsapp_sent: whatsappSent,
+          whatsapp_sent_at: whatsappSent ? new Date().toISOString() : null,
         })
         .eq("id", inserted.id);
     }
 
     return new Response(
-      JSON.stringify({ success: true, whatsapp_sent: whatsappSent }),
+      JSON.stringify({
+        success: true,
+        whatsapp_sent: whatsappSent,
+        ...(whatsappError && { whatsapp_error: whatsappError }),
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
