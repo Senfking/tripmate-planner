@@ -39,6 +39,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       if (error) throw error;
       return data;
     },
+    enabled: !!userId,
   });
 
   // --- DECISIONS data ---
@@ -52,6 +53,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       if (error) throw error;
       return data;
     },
+    enabled: !!userId,
   });
 
   const { data: myReactions } = useQuery({
@@ -209,6 +211,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       if (error) throw error;
       return data;
     },
+    enabled: !!userId,
   });
 
   const { data: myAttendance } = useQuery({
@@ -277,6 +280,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       if (error) throw error;
       return data;
     },
+    enabled: !!userId,
   });
 
   const bookingsBadge: BadgeState = (() => {
@@ -318,6 +322,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       if (error) throw error;
       return data;
     },
+    enabled: !!userId,
   });
 
   const { data: rates } = useQuery({
@@ -331,6 +336,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       if (error) return {};
       return (data?.rates ?? {}) as Rates;
     },
+    enabled: !!userId,
   });
 
   let expensesSummary: string;
@@ -374,6 +380,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       if (error) throw error;
       return count || 0;
     },
+    enabled: !!userId,
   });
 
   const roleLabel = myRole ? myRole.charAt(0).toUpperCase() + myRole.slice(1) : "Member";
