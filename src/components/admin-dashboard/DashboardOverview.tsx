@@ -15,13 +15,13 @@ export function DashboardOverview() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ fontFamily: mono, fontSize: 18, color: C.text, fontWeight: 600 }}>Dashboard</h1>
         <DateRangeFilter value={period} onChange={setPeriod} />
       </div>
 
       {kpiLoading ? <AdminSkeleton rows={4} /> : kpis ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, marginBottom: 32 }}>
           <StatCard label="Total Users" value={kpis.total_users} />
           <StatCard label={`New Users (${period})`} value={kpis.new_users} trend={trend(kpis.new_users, kpis.new_users_prior)} />
           <StatCard label="Total Trips" value={kpis.total_trips} />
@@ -34,7 +34,7 @@ export function DashboardOverview() {
         </div>
       ) : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, marginBottom: 16 }}>
         <Card>
           <SectionHeader>User Growth</SectionHeader>
           {growthLoading ? <AdminSkeleton /> : !growth?.length ? <EmptyState /> : (
@@ -70,7 +70,7 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, marginBottom: 16 }}>
         <Card>
           <SectionHeader>Landing Page Visitors</SectionHeader>
           {landingLoading ? <AdminSkeleton /> : !landingChart?.length ? <EmptyState /> : (

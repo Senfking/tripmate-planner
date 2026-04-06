@@ -19,8 +19,8 @@ export function AllUsersModule() {
   const users = data?.users || [];
 
   return (
-    <div style={{ display: "flex", gap: 0, height: "calc(100vh - 40px)" }}>
-      <div style={{ flex: 1, overflow: "auto", paddingRight: selectedUser ? 16 : 0 }}>
+    <div style={{ display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row", gap: 0, height: window.innerWidth < 768 ? "auto" : "calc(100vh - 40px)" }}>
+      <div style={{ flex: 1, overflow: "auto", paddingRight: selectedUser && window.innerWidth >= 768 ? 16 : 0 }}>
         <h1 style={{ fontFamily: mono, fontSize: 18, color: C.text, fontWeight: 600, marginBottom: 16 }}>All Users</h1>
 
         <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
