@@ -370,6 +370,7 @@ export type Database = {
           itinerary_item_id: string | null
           notes: string | null
           payer_id: string
+          receipt_image_path: string | null
           title: string
           trip_id: string
           updated_at: string
@@ -384,6 +385,7 @@ export type Database = {
           itinerary_item_id?: string | null
           notes?: string | null
           payer_id: string
+          receipt_image_path?: string | null
           title: string
           trip_id: string
           updated_at?: string
@@ -398,6 +400,7 @@ export type Database = {
           itinerary_item_id?: string | null
           notes?: string | null
           payer_id?: string
+          receipt_image_path?: string | null
           title?: string
           trip_id?: string
           updated_at?: string

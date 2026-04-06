@@ -5,9 +5,11 @@ import { useLineItemClaims } from "@/hooks/useLineItemClaims";
 import { convertAmount, formatCurrency, Rates } from "@/lib/settlementCalc";
 import { Button } from "@/components/ui/button";
 import { LineItemClaimList } from "./LineItemClaimList";
+import { ReceiptLightbox } from "./ReceiptLightbox";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
-  ArrowLeftRight, Pencil, Trash2,
+  ArrowLeftRight, Pencil, Trash2, Receipt,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -47,10 +49,28 @@ export function ExpenseCard({
 }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const { lineItems, claims, hasLineItems, toggleClaim } = useLineItemClaims(
     expanded ? expense.id : null,
     tripId
   );
+
+  const hasReceipt = !!expense.receipt_image_path;
+
+  const handleViewReceipt = async () => {
+    if (receiptUrl) {
+      setLightboxOpen(true);
+      return;
+    }
+    const { data } = await supabase.storage
+      .from("receipt-images")
+      .createSignedUrl(expense.receipt_image_path!, 3600);
+    if (data?.signedUrl) {
+      setReceiptUrl(data.signedUrl);
+      setLightboxOpen(true);
+    }
+  };
 
   const cat = CATEGORY_CONFIG[expense.category] || CATEGORY_CONFIG.other;
   const Icon = cat.icon;
@@ -168,22 +188,36 @@ export function ExpenseCard({
           {expense.notes && (
             <p className="text-xs text-muted-foreground italic">{expense.notes}</p>
           )}
-          {canModify && (
-            <div className="flex gap-2 pt-1">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onEdit(expense)}>
-                <Pencil className="h-3 w-3" /> Edit
+
+          {/* Receipt & action buttons */}
+          <div className="flex gap-2 pt-1 flex-wrap">
+            {hasReceipt && (
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleViewReceipt}>
+                <Receipt className="h-3 w-3" /> View receipt
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
-                onClick={() => onDelete(expense.id)}
-              >
-                <Trash2 className="h-3 w-3" /> Delete
-              </Button>
-            </div>
-          )}
+            )}
+            {canModify && (
+              <>
+                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onEdit(expense)}>
+                  <Pencil className="h-3 w-3" /> Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+                  onClick={() => onDelete(expense.id)}
+                >
+                  <Trash2 className="h-3 w-3" /> Delete
+                </Button>
+              </>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Receipt lightbox */}
+      {hasReceipt && receiptUrl && (
+        <ReceiptLightbox open={lightboxOpen} onOpenChange={setLightboxOpen} imageUrl={receiptUrl} />
       )}
     </div>
   );

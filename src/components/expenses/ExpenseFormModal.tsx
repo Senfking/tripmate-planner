@@ -51,6 +51,7 @@ interface Props {
     payer_id: string;
     notes?: string;
     itinerary_item_id?: string | null;
+    receipt_image_path?: string | null;
     splits: { user_id: string; share_amount: number }[];
     lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
   }) => void;
@@ -79,6 +80,7 @@ export function ExpenseFormModal({
   const [scanning, setScanning] = useState(false);
   const [scannedLineItems, setScannedLineItems] = useState<LineItem[]>([]);
   const [itemAssignments, setItemAssignments] = useState<Record<number, Set<string>>>({});
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -133,6 +135,7 @@ export function ExpenseFormModal({
         setCustomAmounts({});
         setScannedLineItems([]);
         setItemAssignments({});
+        setReceiptFile(null);
       }
     }
   }, [open, editingExpense, editingSplits, members, settlementCurrency, user?.id]);
@@ -224,6 +227,7 @@ export function ExpenseFormModal({
     if (!file) return;
     // Reset input so same file can be re-selected
     e.target.value = "";
+    setReceiptFile(file);
 
     setScanning(true);
     try {
@@ -278,9 +282,30 @@ export function ExpenseFormModal({
     if (!open) setSubmitting(false);
   }, [open]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit || submitting) return;
     setSubmitting(true);
+
+    // Upload receipt image if we have one
+    let receiptPath: string | null = null;
+    if (receiptFile && !editingExpense) {
+      try {
+        const ext = receiptFile.name.split(".").pop() || "jpg";
+        const fileName = `${crypto.randomUUID()}.${ext}`;
+        // We need tripId from the parent — extract from URL as fallback
+        const tripIdFromUrl = window.location.pathname.match(/\/trips\/([^/]+)/)?.[1];
+        const storagePath = `${tripIdFromUrl}/${fileName}`;
+        const { error: upErr } = await supabase.storage
+          .from("receipt-images")
+          .upload(storagePath, receiptFile, { contentType: receiptFile.type });
+        if (!upErr) {
+          receiptPath = storagePath;
+        }
+      } catch {
+        // Non-blocking — expense still saves without receipt
+      }
+    }
+
     onSave({
       id: editingExpense?.id,
       title: title.trim(),
@@ -291,6 +316,7 @@ export function ExpenseFormModal({
       payer_id: payerId,
       notes: notes.trim() || undefined,
       itinerary_item_id: itineraryItemId === "none" ? null : itineraryItemId,
+      receipt_image_path: receiptPath,
       splits: computedSplits,
       lineItems: splitMode === "byItem" && scannedLineItems.length > 0 ? scannedLineItems : undefined,
     });
