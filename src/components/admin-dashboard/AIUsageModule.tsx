@@ -75,7 +75,7 @@ export function AIUsageModule() {
         </Card>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
         <div>
           <SectionHeader>Power Users</SectionHeader>
           {pl ? <AdminSkeleton rows={5} /> : !power?.length ? <EmptyState /> : (

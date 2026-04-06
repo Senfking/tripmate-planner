@@ -43,7 +43,7 @@ export function EngagementModule() {
         </Card>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
         <div>
           <SectionHeader>Top Active Trips</SectionHeader>
           {tl ? <AdminSkeleton rows={5} /> : !topTrips?.length ? <EmptyState /> : (
