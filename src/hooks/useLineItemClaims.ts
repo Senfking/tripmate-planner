@@ -9,8 +9,11 @@ export interface LineItemRow {
   quantity: number;
   unit_price: number;
   total_price: number;
+  is_shared: boolean;
   created_at: string;
 }
+
+const SHARED_PATTERN = /tax|vat|service.?charge|tip|gratuity|surcharge/i;
 
 export interface ClaimRow {
   id: string;
