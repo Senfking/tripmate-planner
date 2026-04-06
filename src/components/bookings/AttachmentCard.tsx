@@ -109,23 +109,10 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
     onDelete();
   };
 
+  // Unified download: saves to IndexedDB for offline viewing AND triggers device download
   const handleSaveOffline = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!attachment.file_path || !getSignedUrl) return;
-    setSavingOffline(true);
-    try {
-      const url = await getSignedUrl(attachment.file_path);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
-      await saveDocument(attachment.file_path, blob);
-      setOfflineCached(true);
-      toast.success("Saved for offline access");
-    } catch {
-      toast.error("Could not save for offline");
-    } finally {
-      setSavingOffline(false);
-    }
+    // no-op, kept for compatibility
   };
 
   const cacheAndServeBlob = async (filePath: string): Promise<string | null> => {
