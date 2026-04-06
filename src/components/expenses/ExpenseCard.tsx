@@ -49,10 +49,16 @@ export function ExpenseCard({
 }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const { lineItems, claims, hasLineItems, toggleClaim } = useLineItemClaims(
     expanded ? expense.id : null,
     tripId
   );
+
+  const hasReceipt = !!expense.receipt_image_path;
+  const receiptUrl = hasReceipt
+    ? supabase.storage.from("receipt-images").getPublicUrl(expense.receipt_image_path!).data.publicUrl
+    : "";
 
   const cat = CATEGORY_CONFIG[expense.category] || CATEGORY_CONFIG.other;
   const Icon = cat.icon;
