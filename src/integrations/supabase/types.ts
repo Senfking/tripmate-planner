@@ -294,6 +294,7 @@ export type Database = {
           created_at: string
           expense_id: string
           id: string
+          is_shared: boolean
           name: string
           quantity: number
           total_price: number
@@ -303,6 +304,7 @@ export type Database = {
           created_at?: string
           expense_id: string
           id?: string
+          is_shared?: boolean
           name: string
           quantity?: number
           total_price: number
@@ -312,6 +314,7 @@ export type Database = {
           created_at?: string
           expense_id?: string
           id?: string
+          is_shared?: boolean
           name?: string
           quantity?: number
           total_price?: number

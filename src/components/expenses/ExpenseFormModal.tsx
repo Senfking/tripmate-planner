@@ -14,7 +14,7 @@ import { CurrencyPicker } from "./CurrencyPicker";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Lightbulb, Camera, Upload, Loader2, Sparkles } from "lucide-react";
+import { CalendarIcon, Lightbulb, Camera, Upload, Loader2, Sparkles, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,7 +52,7 @@ interface Props {
     notes?: string;
     itinerary_item_id?: string | null;
     splits: { user_id: string; share_amount: number }[];
-    lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number }[];
+    lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
   }) => void;
 }
 
@@ -251,9 +251,14 @@ export function ExpenseFormModal({
         setCategory(data.category);
       }
       if (data.notes) setNotes(data.notes);
-      // Store line items for "Split by item" mode
+      // Store line items for "Split by item" mode with auto-detection of shared costs
       if (Array.isArray(data.line_items) && data.line_items.length > 0) {
-        setScannedLineItems(data.line_items as LineItem[]);
+        const SHARED_PATTERN = /tax|vat|service.?charge|tip|gratuity|surcharge/i;
+        const items = (data.line_items as LineItem[]).map((li) => ({
+          ...li,
+          is_shared: li.is_shared ?? SHARED_PATTERN.test(li.name),
+        }));
+        setScannedLineItems(items);
         setItemAssignments({});
       }
       toast.success("Receipt scanned ✓");
@@ -483,10 +488,21 @@ export function ExpenseFormModal({
                   return { ...prev, [idx]: current };
                 });
               }}
+              onToggleShared={(idx) => {
+                setScannedLineItems((prev) =>
+                  prev.map((li, i) => i === idx ? { ...li, is_shared: !li.is_shared } : li)
+                );
+                // Clear assignments for shared items
+                setItemAssignments((prev) => {
+                  const next = { ...prev };
+                  delete next[idx];
+                  return next;
+                });
+              }}
               currency={currency}
             />
             <p className="text-[11px] text-muted-foreground">
-              Tap avatars to assign items. Unassigned items split equally.
+              Tap avatars to assign items. <Link2 className="inline h-3 w-3" /> marks shared costs (tax, tip) split proportionally.
             </p>
           </>
         ) : (

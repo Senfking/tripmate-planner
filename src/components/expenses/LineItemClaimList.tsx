@@ -3,9 +3,10 @@ import { MemberProfile } from "@/hooks/useExpenses";
 import { LineItemRow, ClaimRow } from "@/hooks/useLineItemClaims";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/settlementCalc";
-import { Hand } from "lucide-react";
+import { Hand, Link2 } from "lucide-react";
 
 interface Props {
   lineItems: LineItemRow[];
@@ -22,14 +23,24 @@ export function LineItemClaimList({
 }: Props) {
   const { user } = useAuth();
 
+  const claimableItems = useMemo(() => lineItems.filter((li) => !li.is_shared), [lineItems]);
+  const sharedItems = useMemo(() => lineItems.filter((li) => li.is_shared), [lineItems]);
+
   const perPersonTotals = useMemo(() => {
     const memberIds = members.map((m) => m.userId);
     const totals: Record<string, number> = {};
     for (const uid of memberIds) totals[uid] = 0;
 
     let claimedTotal = 0;
+    let sharedTotal = 0;
 
-    for (const item of lineItems) {
+    // Calculate shared costs
+    for (const item of sharedItems) {
+      sharedTotal += item.total_price;
+    }
+
+    // Calculate claimable items
+    for (const item of claimableItems) {
       const itemClaims = claims.filter((c) => c.line_item_id === item.id);
       if (itemClaims.length > 0) {
         const perPerson = item.total_price / itemClaims.length;
@@ -42,8 +53,9 @@ export function LineItemClaimList({
       }
     }
 
-    // Unclaimed items split equally
-    const remainder = totalAmount - claimedTotal;
+    // Unclaimed claimable items split equally
+    const claimableSum = claimableItems.reduce((s, li) => s + li.total_price, 0);
+    const remainder = claimableSum - claimedTotal;
     if (remainder > 0.005 && memberIds.length > 0) {
       const perPerson = remainder / memberIds.length;
       for (const uid of memberIds) {
@@ -51,91 +63,134 @@ export function LineItemClaimList({
       }
     }
 
+    // Distribute shared costs proportionally
+    if (sharedTotal > 0.005 && memberIds.length > 0) {
+      const itemSubtotalSum = memberIds.reduce((s, uid) => s + totals[uid], 0);
+      if (itemSubtotalSum > 0.005) {
+        for (const uid of memberIds) {
+          totals[uid] += sharedTotal * (totals[uid] / itemSubtotalSum);
+        }
+      } else {
+        const perPerson = sharedTotal / memberIds.length;
+        for (const uid of memberIds) {
+          totals[uid] += perPerson;
+        }
+      }
+    }
+
     return totals;
-  }, [lineItems, claims, members, totalAmount]);
+  }, [claimableItems, sharedItems, claims, members]);
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">
-        Claim your items
-      </p>
+      {/* Claimable items */}
+      {claimableItems.length > 0 && (
+        <>
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">
+            Claim your items
+          </p>
+          <div className="space-y-2">
+            {claimableItems.map((item) => {
+              const itemClaims = claims.filter((c) => c.line_item_id === item.id);
+              const isClaimed = itemClaims.some((c) => c.user_id === user?.id);
 
-      <div className="space-y-2">
-        {lineItems.map((item) => {
-          const itemClaims = claims.filter((c) => c.line_item_id === item.id);
-          const isClaimed = itemClaims.some((c) => c.user_id === user?.id);
+              return (
+                <div key={item.id} className="rounded-lg border border-border/60 p-2.5 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium truncate">{item.name}</p>
+                      {item.quantity > 1 && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {item.quantity}× {item.unit_price?.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-[13px] font-semibold tabular-nums shrink-0">
+                      {formatCurrency(item.total_price, currency)}
+                    </span>
+                  </div>
 
-          return (
-            <div
-              key={item.id}
-              className="rounded-lg border border-border/60 p-2.5 space-y-2"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium truncate">{item.name}</p>
-                  {item.quantity > 1 && (
-                    <p className="text-[11px] text-muted-foreground">
-                      {item.quantity}× {item.unit_price?.toFixed(2)}
-                    </p>
-                  )}
-                </div>
-                <span className="text-[13px] font-semibold tabular-nums shrink-0">
-                  {formatCurrency(item.total_price, currency)}
-                </span>
-              </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isToggling}
+                      onClick={() => onToggleClaim(item.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all",
+                        isClaimed
+                          ? "bg-primary/15 text-primary border border-primary/30"
+                          : "bg-muted text-muted-foreground border border-border hover:border-primary/30 hover:text-primary"
+                      )}
+                    >
+                      <Hand className="h-3 w-3" />
+                      {isClaimed ? "Mine ✓" : "Mine"}
+                    </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isToggling}
-                  onClick={() => onToggleClaim(item.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all",
-                    isClaimed
-                      ? "bg-primary/15 text-primary border border-primary/30"
-                      : "bg-muted text-muted-foreground border border-border hover:border-primary/30 hover:text-primary"
-                  )}
-                >
-                  <Hand className="h-3 w-3" />
-                  {isClaimed ? "Mine ✓" : "Mine"}
-                </button>
+                    {itemClaims.length > 0 && (
+                      <div className="flex -space-x-1.5">
+                        {itemClaims.map((claim) => {
+                          const member = members.find((m) => m.userId === claim.user_id);
+                          const initials = (member?.displayName || "?")
+                            .split(" ")
+                            .map((w) => w[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase();
+                          return (
+                            <Avatar key={claim.id} className="h-5 w-5 border border-background">
+                              <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
+                                {initials}
+                              </AvatarFallback>
+                            </Avatar>
+                          );
+                        })}
+                        {itemClaims.length > 1 && (
+                          <span className="text-[10px] text-muted-foreground ml-2">
+                            {formatCurrency(item.total_price / itemClaims.length, currency)} each
+                          </span>
+                        )}
+                      </div>
+                    )}
 
-                {itemClaims.length > 0 && (
-                  <div className="flex -space-x-1.5">
-                    {itemClaims.map((claim) => {
-                      const member = members.find((m) => m.userId === claim.user_id);
-                      const initials = (member?.displayName || "?")
-                        .split(" ")
-                        .map((w) => w[0])
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase();
-                      return (
-                        <Avatar key={claim.id} className="h-5 w-5 border border-background">
-                          <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
-                            {initials}
-                          </AvatarFallback>
-                        </Avatar>
-                      );
-                    })}
-                    {itemClaims.length > 1 && (
-                      <span className="text-[10px] text-muted-foreground ml-2">
-                        {formatCurrency(item.total_price / itemClaims.length, currency)} each
+                    {itemClaims.length === 0 && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Split equally if unclaimed
                       </span>
                     )}
                   </div>
-                )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
-                {itemClaims.length === 0 && (
-                  <span className="text-[10px] text-muted-foreground">
-                    Split equally if unclaimed
-                  </span>
-                )}
+      {/* Shared costs */}
+      {sharedItems.length > 0 && (
+        <>
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mt-2">
+            Shared costs — split proportionally
+          </p>
+          <div className="space-y-2">
+            {sharedItems.map((item) => (
+              <div key={item.id} className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <p className="text-[13px] font-medium truncate">{item.name}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Shared</Badge>
+                    <span className="text-[13px] font-semibold tabular-nums">
+                      {formatCurrency(item.total_price, currency)}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Per-person summary */}
       <div className="rounded-lg bg-muted/50 p-2.5 space-y-1">

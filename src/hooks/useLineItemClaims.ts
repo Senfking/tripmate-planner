@@ -9,8 +9,11 @@ export interface LineItemRow {
   quantity: number;
   unit_price: number;
   total_price: number;
+  is_shared: boolean;
   created_at: string;
 }
+
+const SHARED_PATTERN = /tax|vat|service.?charge|tip|gratuity|surcharge/i;
 
 export interface ClaimRow {
   id: string;
@@ -91,7 +94,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
  */
 export async function saveLineItems(
   expenseId: string,
-  items: { name: string; quantity: number; unit_price: number | null; total_price: number }[]
+  items: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[]
 ) {
   if (items.length === 0) return;
   const rows = items.map((item) => ({
@@ -100,6 +103,7 @@ export async function saveLineItems(
     quantity: item.quantity,
     unit_price: item.unit_price ?? item.total_price,
     total_price: item.total_price,
+    is_shared: item.is_shared ?? SHARED_PATTERN.test(item.name),
   }));
   const { error } = await supabase.from("expense_line_items").insert(rows as any);
   if (error) throw error;
