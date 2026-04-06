@@ -5,9 +5,11 @@ import { useLineItemClaims } from "@/hooks/useLineItemClaims";
 import { convertAmount, formatCurrency, Rates } from "@/lib/settlementCalc";
 import { Button } from "@/components/ui/button";
 import { LineItemClaimList } from "./LineItemClaimList";
+import { ReceiptLightbox } from "./ReceiptLightbox";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
-  ArrowLeftRight, Pencil, Trash2,
+  ArrowLeftRight, Pencil, Trash2, Receipt,
 } from "lucide-react";
 import { format } from "date-fns";
 

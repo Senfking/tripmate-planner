@@ -306,6 +306,7 @@ export function useExpenses(tripId: string) {
       payer_id: string;
       notes?: string;
       itinerary_item_id?: string | null;
+      receipt_image_path?: string | null;
       splits: { user_id: string; share_amount: number }[];
       lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number }[];
     }) => {
