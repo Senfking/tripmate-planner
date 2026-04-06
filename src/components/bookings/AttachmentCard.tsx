@@ -439,20 +439,14 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                 </Button>
               )}
               {(hasFile || hasUrl) && (
-                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleDownload}>
-                  <Download className="h-3.5 w-3.5" />
-                  Download
-                </Button>
-              )}
-              {hasFile && !offlineCached && (
-                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleSaveOffline} disabled={savingOffline}>
-                  <CloudDownload className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
-                  {savingOffline ? "Saving..." : "Save Offline"}
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1.5" onClick={handleDownload} disabled={savingOffline}>
+                  <Download className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
+                  {savingOffline ? "Saving…" : "Download"}
                 </Button>
               )}
               {hasFile && offlineCached && (
                 <div className="flex items-center gap-1 text-xs text-emerald-600 px-2">
-                  <WifiOff className="h-3.5 w-3.5" /> Available offline
+                  <WifiOff className="h-3.5 w-3.5" /> Offline ready
                 </div>
               )}
             </div>
