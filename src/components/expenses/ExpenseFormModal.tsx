@@ -142,6 +142,10 @@ export function ExpenseFormModal({
     const selected = Array.from(selectedMembers);
     if (selected.length === 0) return [];
 
+    if (splitMode === "byItem") {
+      return computeItemSplits(scannedLineItems, itemAssignments, selected, parsedAmount);
+    }
+
     if (splitMode === "custom") {
       return selected.map((uid) => ({
         user_id: uid,
@@ -166,7 +170,7 @@ export function ExpenseFormModal({
       user_id: uid,
       share_amount: i === 0 ? base + remainder : base,
     }));
-  }, [selectedMembers, splitMode, parsedAmount, customAmounts]);
+  }, [selectedMembers, splitMode, parsedAmount, customAmounts, scannedLineItems, itemAssignments]);
 
   const customSum = splitMode === "custom"
     ? computedSplits.reduce((s, c) => s + c.share_amount, 0)
