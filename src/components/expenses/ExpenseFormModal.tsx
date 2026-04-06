@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ItemSplitPanel, computeItemSplits, type LineItem } from "./ItemSplitPanel";
 
 const CATEGORIES = [
   { value: "food", label: "Food & Drink" },
@@ -69,12 +70,14 @@ export function ExpenseFormModal({
   const [payerId, setPayerId] = useState(user?.id || "");
   const [notes, setNotes] = useState("");
   const [itineraryItemId, setItineraryItemId] = useState<string>("none");
-  const [splitMode, setSplitMode] = useState<"equal" | "custom" | "percent">("equal");
+  const [splitMode, setSplitMode] = useState<"equal" | "custom" | "percent" | "byItem">("equal");
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
   const [settlementDismissed, setSettlementDismissed] = useState(false);
   const [titleManuallySet, setTitleManuallySet] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [scannedLineItems, setScannedLineItems] = useState<LineItem[]>([]);
+  const [itemAssignments, setItemAssignments] = useState<Record<number, Set<string>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -127,6 +130,8 @@ export function ExpenseFormModal({
         setSplitMode("equal");
         setSelectedMembers(new Set(members.filter(m => m.attendanceStatus === "going" || m.attendanceStatus === "maybe").map((m) => m.userId)));
         setCustomAmounts({});
+        setScannedLineItems([]);
+        setItemAssignments({});
       }
     }
   }, [open, editingExpense, editingSplits, members, settlementCurrency, user?.id]);
@@ -136,6 +141,10 @@ export function ExpenseFormModal({
   const computedSplits = useMemo(() => {
     const selected = Array.from(selectedMembers);
     if (selected.length === 0) return [];
+
+    if (splitMode === "byItem") {
+      return computeItemSplits(scannedLineItems, itemAssignments, selected, parsedAmount);
+    }
 
     if (splitMode === "custom") {
       return selected.map((uid) => ({
@@ -161,7 +170,7 @@ export function ExpenseFormModal({
       user_id: uid,
       share_amount: i === 0 ? base + remainder : base,
     }));
-  }, [selectedMembers, splitMode, parsedAmount, customAmounts]);
+  }, [selectedMembers, splitMode, parsedAmount, customAmounts, scannedLineItems, itemAssignments]);
 
   const customSum = splitMode === "custom"
     ? computedSplits.reduce((s, c) => s + c.share_amount, 0)
@@ -174,6 +183,7 @@ export function ExpenseFormModal({
   const hasNegativeSplit = computedSplits.some((s) => s.share_amount < 0);
   const customValid = !hasNegativeSplit && (
     splitMode === "equal"
+    || splitMode === "byItem"
     || (splitMode === "custom" && Math.abs(customSum - parsedAmount) < 0.01)
     || (splitMode === "percent" && Math.abs(customSum - 100) < 0.01)
   );
@@ -240,6 +250,11 @@ export function ExpenseFormModal({
         setCategory(data.category);
       }
       if (data.notes) setNotes(data.notes);
+      // Store line items for "Split by item" mode
+      if (Array.isArray(data.line_items) && data.line_items.length > 0) {
+        setScannedLineItems(data.line_items as LineItem[]);
+        setItemAssignments({});
+      }
       toast.success("Receipt scanned ✓");
       trackEvent("ai_receipt_scan", { success: true });
     } catch {
@@ -426,7 +441,7 @@ export function ExpenseFormModal({
       <div className="space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Label className="text-xs">Split between</Label>
-          <div className="flex gap-1 self-start sm:self-auto">
+          <div className="flex gap-1 self-start sm:self-auto flex-wrap">
             {(["equal", "percent", "custom"] as const).map((mode) => (
               <Button
                 key={mode}
@@ -441,57 +456,90 @@ export function ExpenseFormModal({
                 {mode === "percent" ? "%" : mode}
               </Button>
             ))}
+            {scannedLineItems.length > 0 && (
+              <Button
+                type="button" size="sm"
+                variant={splitMode === "byItem" ? "default" : "outline"}
+                className="h-6 text-[10px] px-2"
+                onClick={() => setSplitMode("byItem")}
+              >
+                By item
+              </Button>
+            )}
           </div>
         </div>
-        <div className="space-y-1.5 max-h-48 overflow-y-auto overflow-x-hidden">
-          {members.map((m) => {
-            const isSelected = selectedMembers.has(m.userId);
-            const showInput = (splitMode === "custom" || splitMode === "percent") && isSelected;
-            return (
-              <div key={m.userId} className="grid min-h-[36px] grid-cols-[auto,minmax(0,1fr),auto] items-center gap-2 min-w-0">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={(checked) => {
-                    const next = new Set(selectedMembers);
-                    checked ? next.add(m.userId) : next.delete(m.userId);
-                    setSelectedMembers(next);
-                  }}
-                />
-                <span className="text-sm flex-1 truncate min-w-0">
-                  {m.displayName}{m.userId === user?.id ? " (You)" : ""}
-                </span>
-                {showInput && (
-                  <div className="flex min-w-0 items-center justify-end gap-1">
-                    <Input
-                      type="number" step="0.01" min="0" inputMode="decimal"
-                      className="h-9 w-[4.75rem] px-2 text-right text-base md:h-8 md:w-20 md:text-sm"
-                      value={customAmounts[m.userId] || ""}
-                      onChange={(e) => setCustomAmounts({ ...customAmounts, [m.userId]: e.target.value })}
-                      placeholder={splitMode === "percent" ? "0" : "0.00"}
+        {splitMode === "byItem" ? (
+          <>
+            <ItemSplitPanel
+              lineItems={scannedLineItems}
+              members={members.filter((m) => selectedMembers.has(m.userId))}
+              assignments={itemAssignments}
+              onToggle={(idx, uid) => {
+                setItemAssignments((prev) => {
+                  const current = new Set(prev[idx] ?? []);
+                  current.has(uid) ? current.delete(uid) : current.add(uid);
+                  return { ...prev, [idx]: current };
+                });
+              }}
+              currency={currency}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Tap avatars to assign items. Unassigned items split equally.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto overflow-x-hidden">
+              {members.map((m) => {
+                const isSelected = selectedMembers.has(m.userId);
+                const showInput = (splitMode === "custom" || splitMode === "percent") && isSelected;
+                return (
+                  <div key={m.userId} className="grid min-h-[36px] grid-cols-[auto,minmax(0,1fr),auto] items-center gap-2 min-w-0">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => {
+                        const next = new Set(selectedMembers);
+                        checked ? next.add(m.userId) : next.delete(m.userId);
+                        setSelectedMembers(next);
+                      }}
                     />
-                    {splitMode === "percent" && (
-                      <span className="text-xs text-muted-foreground">%</span>
+                    <span className="text-sm flex-1 truncate min-w-0">
+                      {m.displayName}{m.userId === user?.id ? " (You)" : ""}
+                    </span>
+                    {showInput && (
+                      <div className="flex min-w-0 items-center justify-end gap-1">
+                        <Input
+                          type="number" step="0.01" min="0" inputMode="decimal"
+                          className="h-9 w-[4.75rem] px-2 text-right text-base md:h-8 md:w-20 md:text-sm"
+                          value={customAmounts[m.userId] || ""}
+                          onChange={(e) => setCustomAmounts({ ...customAmounts, [m.userId]: e.target.value })}
+                          placeholder={splitMode === "percent" ? "0" : "0.00"}
+                        />
+                        {splitMode === "percent" && (
+                          <span className="text-xs text-muted-foreground">%</span>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {hasNegativeSplit && (
-          <p className="text-xs text-destructive">
-            Split amounts cannot be negative
-          </p>
-        )}
-        {splitMode === "custom" && !hasNegativeSplit && !customValid && (
-          <p className="text-xs text-destructive">
-            Amounts sum to {customSum.toFixed(2)} but total is {parsedAmount.toFixed(2)}
-          </p>
-        )}
-        {splitMode === "percent" && !hasNegativeSplit && !customValid && (
-          <p className="text-xs text-destructive">
-            Percentages sum to {customSum.toFixed(0)}% — should be 100%
-          </p>
+                );
+              })}
+            </div>
+            {hasNegativeSplit && (
+              <p className="text-xs text-destructive">
+                Split amounts cannot be negative
+              </p>
+            )}
+            {splitMode === "custom" && !hasNegativeSplit && !customValid && (
+              <p className="text-xs text-destructive">
+                Amounts sum to {customSum.toFixed(2)} but total is {parsedAmount.toFixed(2)}
+              </p>
+            )}
+            {splitMode === "percent" && !hasNegativeSplit && !customValid && (
+              <p className="text-xs text-destructive">
+                Percentages sum to {customSum.toFixed(0)}% — should be 100%
+              </p>
+            )}
+          </>
         )}
       </div>
 
