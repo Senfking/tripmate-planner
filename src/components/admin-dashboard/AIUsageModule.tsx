@@ -26,8 +26,8 @@ export function AIUsageModule() {
 
       <SectionHeader>Feature Summary</SectionHeader>
       {sl ? <AdminSkeleton rows={4} /> : !summary?.length ? <EmptyState /> : (
-        <Card>
-          <table style={{ width: "100%", fontFamily: sans, fontSize: 13, borderCollapse: "collapse" }}>
+        <Card style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", minWidth: 480, fontFamily: sans, fontSize: 13, borderCollapse: "collapse" }}>
             <thead><tr style={{ color: C.muted, fontFamily: mono, fontSize: 11, textTransform: "uppercase" as const }}>
               {["Feature", "Total", "Period", "Success %", "Users", "Avg/User"].map(h => (
                 <th key={h} style={{ textAlign: h === "Feature" ? "left" : "right", padding: 8 }}>{h}</th>
@@ -75,12 +75,12 @@ export function AIUsageModule() {
         </Card>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
         <div>
           <SectionHeader>Power Users</SectionHeader>
           {pl ? <AdminSkeleton rows={5} /> : !power?.length ? <EmptyState /> : (
-            <Card>
-              <table style={{ width: "100%", fontFamily: sans, fontSize: 12, borderCollapse: "collapse" }}>
+            <Card style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", minWidth: 400, fontFamily: sans, fontSize: 12, borderCollapse: "collapse" }}>
                 <thead><tr style={{ color: C.muted, fontFamily: mono, fontSize: 10, textTransform: "uppercase" as const }}>
                   {["User", "Scans", "Hints", "Imports", "Docs", "Total"].map(h => (
                     <th key={h} style={{ textAlign: h === "User" ? "left" : "right", padding: 6 }}>{h}</th>
@@ -112,7 +112,7 @@ export function AIUsageModule() {
             <div style={{ display: "grid", gap: 12 }}>
               <div>
                 <div style={{ fontFamily: mono, fontSize: 11, color: C.muted }}>Period calls × avg tokens</div>
-                <div style={{ fontFamily: mono, fontSize: 18, color: C.tealLight }}>{totalCalls} × ~{Math.round(totalTokens / Math.max(totalCalls, 1))} = {totalTokens.toLocaleString()} tokens</div>
+                <div style={{ fontFamily: mono, fontSize: 14, color: C.tealLight, wordBreak: "break-word" }}>{totalCalls} × ~{Math.round(totalTokens / Math.max(totalCalls, 1))} = {totalTokens.toLocaleString()} tokens</div>
               </div>
               <div>
                 <div style={{ fontFamily: mono, fontSize: 11, color: C.muted }}>Period cost ($3/1M tokens)</div>
