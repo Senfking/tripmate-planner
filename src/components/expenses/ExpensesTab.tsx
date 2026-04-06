@@ -665,17 +665,18 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       <ExpenseFormModal
         open={formOpen}
         onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingExpense(null); }}
+        tripId={tripId}
         members={members}
         settlementCurrency={settlementCurrency}
         itineraryItems={itineraryItems}
         usedCurrencies={usedCurrencies}
         editingExpense={editingExpense}
         editingSplits={editingSplits}
-        onSave={(data) => {
+        onSave={async (data) => {
           if (data.id) {
-            updateExpense.mutate(data as any);
+            await updateExpense.mutateAsync(data as any);
           } else {
-            addExpense.mutate(data as any);
+            await addExpense.mutateAsync(data as any);
           }
         }}
       />

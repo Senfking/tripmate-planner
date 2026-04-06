@@ -5,6 +5,155 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SHARED_PATTERN = /(?:^|\b)(tax|vat|service(?:\s*charge)?|tip|gratuity|surcharge)(?:\b|$)/i;
+
+const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+function parseMoney(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+
+  const raw = value.trim().replace(/[^\d.,-]/g, "");
+  if (!raw) return null;
+
+  if (raw.includes(".") && raw.includes(",")) {
+    const lastDot = raw.lastIndexOf(".");
+    const lastComma = raw.lastIndexOf(",");
+    const decimalSeparator = lastDot > lastComma ? "." : ",";
+    const thousandSeparator = decimalSeparator === "." ? "," : ".";
+    const normalized = raw.split(thousandSeparator).join("").replace(decimalSeparator, ".");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  if (/[.,]\d{3}(?:[.,]\d{3})*$/.test(raw)) {
+    const parsed = Number(raw.replace(/[.,]/g, ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  const parsed = Number(raw.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+const normalizeItemKey = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+function buildSharedLabel(names: string[], total: number) {
+  if (total < -0.005) return "Receipt adjustment";
+  const hasTax = names.some((name) => /tax|vat/i.test(name));
+  const hasService = names.some((name) => /service|tip|gratuity|surcharge/i.test(name));
+  if (hasTax && hasService) return "Tax & service";
+  if (hasTax) return "Tax";
+  if (hasService) return "Service & tips";
+  return "Shared receipt costs";
+}
+
+function normalizeReceiptPayload(payload: any) {
+  const amount = parseMoney(payload?.amount);
+  const rawItems = Array.isArray(payload?.line_items) ? payload.line_items : [];
+
+  const cleanedItems = rawItems
+    .map((item: any) => {
+      const name = String(item?.name ?? "").trim();
+      const quantity = Math.max(1, Math.round(parseMoney(item?.quantity) ?? Number(item?.quantity) ?? 1));
+      let totalPrice = parseMoney(item?.total_price) ?? 0;
+      let unitPrice = parseMoney(item?.unit_price);
+
+      if (totalPrice <= 0 && unitPrice && quantity > 0) {
+        totalPrice = unitPrice * quantity;
+      }
+
+      if ((!unitPrice || unitPrice <= 0) && totalPrice > 0 && quantity > 0) {
+        unitPrice = totalPrice / quantity;
+      }
+
+      return {
+        name,
+        quantity,
+        unit_price: unitPrice ? roundMoney(unitPrice) : null,
+        total_price: roundMoney(totalPrice),
+        is_shared: Boolean(item?.is_shared) || SHARED_PATTERN.test(name),
+      };
+    })
+    .filter((item: any) => item.name && item.total_price > 0);
+
+  const groups = new Map<string, any[]>();
+  for (const item of cleanedItems) {
+    if (item.is_shared) continue;
+    const key = normalizeItemKey(item.name);
+    if (!key) continue;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+
+  const canonicalUnitPrices = new Map<string, number>();
+  for (const [key, items] of groups.entries()) {
+    const qtyOneUnits = items
+      .filter((item) => item.quantity === 1)
+      .map((item) => item.total_price)
+      .filter((value) => value > 0);
+
+    const candidateUnits = qtyOneUnits.length > 0
+      ? qtyOneUnits
+      : items
+          .map((item) => Math.max(item.unit_price ?? 0, item.total_price / Math.max(item.quantity, 1)))
+          .filter((value) => value > 0);
+
+    if (candidateUnits.length > 0) {
+      canonicalUnitPrices.set(key, Math.max(...candidateUnits));
+    }
+  }
+
+  const normalizedItems = cleanedItems.map((item: any) => {
+    if (item.is_shared) return item;
+
+    const canonicalUnit = canonicalUnitPrices.get(normalizeItemKey(item.name));
+    if (!canonicalUnit) return item;
+
+    let unitPrice = item.unit_price ?? item.total_price / Math.max(item.quantity, 1);
+    let totalPrice = item.total_price;
+    const impliedUnit = totalPrice / Math.max(item.quantity, 1);
+
+    if (item.quantity > 1 && impliedUnit > 0 && impliedUnit < canonicalUnit * 0.75) {
+      unitPrice = canonicalUnit;
+      totalPrice = canonicalUnit * item.quantity;
+    } else if (!item.unit_price || Math.abs(item.unit_price - canonicalUnit) / canonicalUnit > 0.25) {
+      unitPrice = canonicalUnit;
+    }
+
+    return {
+      ...item,
+      unit_price: roundMoney(unitPrice),
+      total_price: roundMoney(totalPrice),
+    };
+  });
+
+  const claimableItems = normalizedItems.filter((item: any) => !item.is_shared);
+  const explicitSharedItems = normalizedItems.filter((item: any) => item.is_shared);
+  const claimableTotal = roundMoney(claimableItems.reduce((sum: number, item: any) => sum + item.total_price, 0));
+  const explicitSharedTotal = roundMoney(explicitSharedItems.reduce((sum: number, item: any) => sum + item.total_price, 0));
+  const normalizedAmount = amount ?? roundMoney(claimableTotal + explicitSharedTotal);
+  const sharedTotal = roundMoney(normalizedAmount - claimableTotal);
+
+  const line_items = Math.abs(sharedTotal) >= 0.01
+    ? [
+        ...claimableItems,
+        {
+          name: buildSharedLabel(explicitSharedItems.map((item: any) => item.name), sharedTotal),
+          quantity: 1,
+          unit_price: sharedTotal,
+          total_price: sharedTotal,
+          is_shared: true,
+        },
+      ]
+    : claimableItems;
+
+  return {
+    ...payload,
+    amount: normalizedAmount,
+    currency: typeof payload?.currency === "string" ? payload.currency.toUpperCase() : payload?.currency,
+    line_items,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -90,7 +239,8 @@ Key rules:
 
 Field definitions:
 - title: The merchant or business name ONLY. Do NOT include table numbers, order numbers, cashier names, or codes. If no clear merchant name is printed, look for website/email domains on the receipt.
-- amount: The final TOTAL the customer pays, as a plain number (no currency symbols, no separators). IMPORTANT: Many countries use dots as thousand separators (e.g. Indonesia: "317.625" means 317625, NOT 317.625). Others use commas (e.g. "1,250.00" means 1250). Look at the currency/country context to decide. IDR, VND, KRW amounts are always whole numbers — if you see "317.625" in IDR, it means 317625.
+- amount: The final TOTAL the customer pays, as a number. No currency symbols. Handle thousand separators correctly (e.g. 317,625 = 317625, not 317.625).
+- amount: The final TOTAL the customer pays, as a number. No currency symbols. Handle thousand separators correctly (e.g. 317,625 = 317625, 317.625 in Indonesia also means 317625).
 - currency: 3-letter ISO currency code. Infer from context (e.g. IDR for Indonesian receipts, THB for Thai, EUR for European).
 - date: YYYY-MM-DD format. Remember: most non-US receipts use DD/MM/YYYY format. A receipt showing "06/04/2026" in Indonesia means June 4th is WRONG — it means April 6th (2026-04-06).
 - category: food | transport | accommodation | activities | shopping | other
@@ -103,7 +253,8 @@ Field definitions:
   - name: item description as shown on receipt (clean up abbreviations if obvious)
   - quantity: number of units for THIS line (read from the receipt, default 1)
   - unit_price: price per unit as number (null if not shown or not determinable)
-  - total_price: line total as number
+  - total_price: the FULL printed line total as number, never the per-unit price
+  IMPORTANT EXAMPLE: if the receipt says "2 NASI GORENG 100,000", return quantity=2, unit_price=50000, total_price=100000.
   IMPORTANT: Do NOT merge lines. If the receipt shows "1 COKE ZERO 25,000" and "2 COKE ZERO 50,000" as two separate printed lines, return TWO separate line items.
   Also include tax, service charge, and other fee lines as separate items.
   Return [] if no individual items are visible.
@@ -138,7 +289,7 @@ Return ONLY the JSON object, no other text.`,
       });
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = normalizeReceiptPayload(JSON.parse(jsonMatch[0]));
 
     // Track AI usage server-side
     const svcClient = createClient(

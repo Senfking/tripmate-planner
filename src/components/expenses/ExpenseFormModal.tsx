@@ -18,6 +18,7 @@ import { CalendarIcon, Lightbulb, Camera, Upload, Loader2, Sparkles, Link2 } fro
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeScannedLineItems, sumLineItemTotals } from "@/lib/expenseLineItems";
 import { toast } from "sonner";
 import { ItemSplitPanel, computeItemSplits, type LineItem } from "./ItemSplitPanel";
 
@@ -35,6 +36,7 @@ const CATEGORIES = [
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tripId: string;
   members: MemberProfile[];
   settlementCurrency: string;
   itineraryItems: { id: string; title: string; day_date: string }[];
@@ -54,11 +56,32 @@ interface Props {
     receipt_image_path?: string | null;
     splits: { user_id: string; share_amount: number }[];
     lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
-  }) => void;
+  }) => Promise<void> | void;
 }
 
+interface ExpenseFormDraft {
+  savedAt: number;
+  title: string;
+  amount: string;
+  currency: string;
+  category: string;
+  incurredOn: string;
+  payerId: string;
+  notes: string;
+  itineraryItemId: string;
+  splitMode: "equal" | "custom" | "percent" | "byItem";
+  selectedMembers: string[];
+  customAmounts: Record<string, string>;
+  settlementDismissed: boolean;
+  titleManuallySet: boolean;
+  scannedLineItems: LineItem[];
+  itemAssignments: Record<number, string[]>;
+}
+
+const DRAFT_TTL_MS = 10 * 60 * 1000;
+
 export function ExpenseFormModal({
-  open, onOpenChange, members, settlementCurrency,
+  open, onOpenChange, tripId, members, settlementCurrency,
   itineraryItems, usedCurrencies = [], editingExpense, editingSplits, onSave,
 }: Props) {
   const isMobile = useIsMobile();
@@ -98,11 +121,106 @@ export function ExpenseFormModal({
     autoGrowNotes();
   }, [notes, autoGrowNotes]);
 
+  const defaultSelectedMemberIds = useMemo(
+    () => members
+      .filter((member) => member.attendanceStatus === "going" || member.attendanceStatus === "maybe")
+      .map((member) => member.userId),
+    [members],
+  );
+
+  const draftKey = useMemo(() => `expense-form-draft:${tripId}`, [tripId]);
+
+  const getPreferredPayerId = useCallback((candidate?: string) => {
+    if (candidate && members.some((member) => member.userId === candidate)) {
+      return candidate;
+    }
+
+    return members.find((member) => member.userId === user?.id)?.userId
+      ?? defaultSelectedMemberIds[0]
+      ?? members[0]?.userId
+      ?? user?.id
+      ?? "";
+  }, [defaultSelectedMemberIds, members, user?.id]);
+
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      // ignore storage issues
+    }
+  }, [draftKey]);
+
+  const resetNewExpenseForm = useCallback(() => {
+    setTitle("");
+    setAmount("");
+    setCurrency(settlementCurrency);
+    setCategory("other");
+    setIncurredOn(format(new Date(), "yyyy-MM-dd"));
+    setPayerId(getPreferredPayerId());
+    setNotes("");
+    setItineraryItemId("none");
+    setSplitMode("equal");
+    setSelectedMembers(new Set(defaultSelectedMemberIds));
+    setCustomAmounts({});
+    setSettlementDismissed(false);
+    setTitleManuallySet(false);
+    setScannedLineItems([]);
+    setItemAssignments({});
+    setReceiptFile(null);
+  }, [defaultSelectedMemberIds, getPreferredPayerId, settlementCurrency]);
+
+  const readDraft = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as ExpenseFormDraft;
+      if (!parsed?.savedAt || Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
+        localStorage.removeItem(draftKey);
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  }, [draftKey]);
+
+  const applyDraft = useCallback((draft: ExpenseFormDraft) => {
+    const nextSelectedMembers = new Set(
+      (draft.selectedMembers || []).filter((userId) => members.some((member) => member.userId === userId)),
+    );
+    const finalSelectedMembers = nextSelectedMembers.size > 0
+      ? nextSelectedMembers
+      : new Set(defaultSelectedMemberIds);
+
+    setTitle(draft.title || "");
+    setAmount(draft.amount || "");
+    setCurrency(draft.currency || settlementCurrency);
+    setCategory(draft.category || "other");
+    setIncurredOn(draft.incurredOn || format(new Date(), "yyyy-MM-dd"));
+    setPayerId(getPreferredPayerId(draft.payerId));
+    setNotes(draft.notes || "");
+    setItineraryItemId(draft.itineraryItemId || "none");
+    setSplitMode(draft.splitMode || "equal");
+    setSelectedMembers(finalSelectedMembers);
+    setCustomAmounts(draft.customAmounts || {});
+    setSettlementDismissed(Boolean(draft.settlementDismissed));
+    setTitleManuallySet(Boolean(draft.titleManuallySet));
+    setScannedLineItems(normalizeScannedLineItems(draft.scannedLineItems, Number(draft.amount) || 0) as LineItem[]);
+    setItemAssignments(
+      Object.fromEntries(
+        Object.entries(draft.itemAssignments || {}).map(([key, value]) => [
+          Number(key),
+          new Set((value || []).filter((userId) => finalSelectedMembers.has(userId))),
+        ]),
+      ),
+    );
+  }, [defaultSelectedMemberIds, getPreferredPayerId, members, normalizeScannedLineItems, settlementCurrency]);
+
   useEffect(() => {
     if (open) {
-      setSettlementDismissed(false);
-      setTitleManuallySet(false);
       if (editingExpense) {
+        clearDraft();
+        setSettlementDismissed(false);
         setTitle(editingExpense.title);
         setAmount(String(editingExpense.amount));
         setCurrency(editingExpense.currency);
@@ -112,6 +230,9 @@ export function ExpenseFormModal({
         setNotes(editingExpense.notes || "");
         setItineraryItemId(editingExpense.itinerary_item_id || "none");
         setTitleManuallySet(true);
+        setScannedLineItems([]);
+        setItemAssignments({});
+        setReceiptFile(null);
         if (editingSplits) {
           setSelectedMembers(new Set(editingSplits.map((s) => s.user_id)));
           const allEqual = editingSplits.length > 1 &&
@@ -122,23 +243,61 @@ export function ExpenseFormModal({
           }
         }
       } else {
-        setTitle("");
-        setAmount("");
-        setCurrency(settlementCurrency);
-        setCategory("other");
-        setIncurredOn(format(new Date(), "yyyy-MM-dd"));
-        setPayerId(user?.id || "");
-        setNotes("");
-        setItineraryItemId("none");
-        setSplitMode("equal");
-        setSelectedMembers(new Set(members.filter(m => m.attendanceStatus === "going" || m.attendanceStatus === "maybe").map((m) => m.userId)));
-        setCustomAmounts({});
-        setScannedLineItems([]);
-        setItemAssignments({});
-        setReceiptFile(null);
+        const draft = readDraft();
+        if (draft) {
+          applyDraft(draft);
+        } else {
+          resetNewExpenseForm();
+        }
       }
     }
-  }, [open, editingExpense, editingSplits, members, settlementCurrency, user?.id]);
+  }, [applyDraft, clearDraft, editingExpense, editingSplits, open, readDraft, resetNewExpenseForm]);
+
+  useEffect(() => {
+    if (!open || editingExpense) return;
+
+    const hasDraftContent = Boolean(
+      title.trim()
+      || amount
+      || notes.trim()
+      || scannedLineItems.length > 0
+      || splitMode !== "equal"
+      || Object.keys(customAmounts).length > 0
+      || receiptFile,
+    );
+
+    if (!hasDraftContent) {
+      clearDraft();
+      return;
+    }
+
+    const draft: ExpenseFormDraft = {
+      savedAt: Date.now(),
+      title,
+      amount,
+      currency,
+      category,
+      incurredOn,
+      payerId,
+      notes,
+      itineraryItemId,
+      splitMode,
+      selectedMembers: Array.from(selectedMembers),
+      customAmounts,
+      settlementDismissed,
+      titleManuallySet,
+      scannedLineItems,
+      itemAssignments: Object.fromEntries(
+        Object.entries(itemAssignments).map(([key, value]) => [Number(key), Array.from(value)]),
+      ),
+    };
+
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+    } catch {
+      // ignore storage issues
+    }
+  }, [amount, category, clearDraft, currency, draftKey, editingExpense, incurredOn, itemAssignments, itineraryItemId, notes, open, payerId, receiptFile, scannedLineItems, selectedMembers, settlementDismissed, splitMode, title, titleManuallySet, customAmounts]);
 
   const parsedAmount = parseFloat(amount) || 0;
 
@@ -192,14 +351,17 @@ export function ExpenseFormModal({
     || (splitMode === "percent" && Math.abs(customSum - 100) < 0.01)
   );
 
-  // Ensure payerId stays in sync with the authenticated user (handles async auth loading)
+  // Keep payerId valid as auth and member data load in asynchronously.
   useEffect(() => {
-    if (!payerId && user?.id) {
-      setPayerId(user.id);
+    if (!open || members.length === 0) return;
+    const nextPayerId = getPreferredPayerId(payerId);
+    if (nextPayerId && nextPayerId !== payerId) {
+      setPayerId(nextPayerId);
     }
-  }, [user?.id, payerId]);
+  }, [getPreferredPayerId, members.length, open, payerId]);
 
-  const canSubmit = title.trim() && parsedAmount > 0 && payerId && selectedMembers.size > 0 && customValid;
+  const hasValidPayer = members.some((member) => member.userId === payerId);
+  const canSubmit = title.trim() && parsedAmount > 0 && hasValidPayer && selectedMembers.size > 0 && customValid;
 
   // Settlement auto-detection
   const looksLikeSettlement = useMemo(() => {
@@ -255,22 +417,23 @@ export function ExpenseFormModal({
       }
 
       if (data.title) { setTitle(data.title); setTitleManuallySet(true); }
-      if (data.amount) setAmount(String(data.amount));
+      const scannedAmount = Number(data.amount) || 0;
+      if (scannedAmount > 0) setAmount(String(scannedAmount));
       if (data.currency) setCurrency(data.currency);
       if (data.date) setIncurredOn(data.date);
       if (data.category && CATEGORIES.some(c => c.value === data.category)) {
         setCategory(data.category);
       }
       if (data.notes) setNotes(data.notes);
-      // Store line items for "Split by item" mode with auto-detection of shared costs
+      // Store line items for "Split by item" mode with normalized totals and shared-cost rollup.
       if (Array.isArray(data.line_items) && data.line_items.length > 0) {
-        const SHARED_PATTERN = /tax|vat|service.?charge|tip|gratuity|surcharge/i;
-        const items = (data.line_items as LineItem[]).map((li) => ({
-          ...li,
-          is_shared: li.is_shared ?? SHARED_PATTERN.test(li.name),
-        }));
+        const items = normalizeScannedLineItems(data.line_items as LineItem[], scannedAmount) as LineItem[];
         setScannedLineItems(items);
         setItemAssignments({});
+        setSplitMode("byItem");
+        if (!scannedAmount) {
+          setAmount(String(sumLineItemTotals(items)));
+        }
       }
       toast.success("Receipt scanned ✓");
       trackEvent("ai_receipt_scan", { success: true });
@@ -293,41 +456,46 @@ export function ExpenseFormModal({
     if (!canSubmit || submitting) return;
     setSubmitting(true);
 
-    // Upload receipt image if we have one
-    let receiptPath: string | null = null;
-    if (receiptFile && !editingExpense) {
-      try {
-        const ext = receiptFile.name.split(".").pop() || "jpg";
-        const fileName = `${crypto.randomUUID()}.${ext}`;
-        // We need tripId from the parent — extract from URL as fallback
-        const tripIdFromUrl = window.location.pathname.match(/\/trips\/([^/]+)/)?.[1];
-        const storagePath = `${tripIdFromUrl}/${fileName}`;
-        const { error: upErr } = await supabase.storage
-          .from("receipt-images")
-          .upload(storagePath, receiptFile, { contentType: receiptFile.type });
-        if (!upErr) {
-          receiptPath = storagePath;
+    try {
+      // Upload receipt image if we have one
+      let receiptPath: string | null = null;
+      if (receiptFile && !editingExpense) {
+        try {
+          const ext = receiptFile.name.split(".").pop() || "jpg";
+          const fileName = `${crypto.randomUUID()}.${ext}`;
+          const storagePath = `${tripId}/${fileName}`;
+          const { error: upErr } = await supabase.storage
+            .from("receipt-images")
+            .upload(storagePath, receiptFile, { contentType: receiptFile.type });
+          if (!upErr) {
+            receiptPath = storagePath;
+          }
+        } catch {
+          // Non-blocking — expense still saves without receipt
         }
-      } catch {
-        // Non-blocking — expense still saves without receipt
       }
-    }
 
-    onSave({
-      id: editingExpense?.id,
-      title: title.trim(),
-      amount: parsedAmount,
-      currency,
-      category,
-      incurred_on: incurredOn,
-      payer_id: payerId,
-      notes: notes.trim() || undefined,
-      itinerary_item_id: itineraryItemId === "none" ? null : itineraryItemId,
-      receipt_image_path: receiptPath,
-      splits: computedSplits,
-      lineItems: splitMode === "byItem" && scannedLineItems.length > 0 ? scannedLineItems : undefined,
-    });
-    onOpenChange(false);
+      await Promise.resolve(onSave({
+        id: editingExpense?.id,
+        title: title.trim(),
+        amount: parsedAmount,
+        currency,
+        category,
+        incurred_on: incurredOn,
+        payer_id: payerId,
+        notes: notes.trim() || undefined,
+        itinerary_item_id: itineraryItemId === "none" ? null : itineraryItemId,
+        receipt_image_path: receiptPath,
+        splits: computedSplits,
+        lineItems: splitMode === "byItem" && scannedLineItems.length > 0 ? scannedLineItems : undefined,
+      }));
+
+      clearDraft();
+      setReceiptFile(null);
+      onOpenChange(false);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Group itinerary items by day
@@ -466,7 +634,7 @@ export function ExpenseFormModal({
       <div className="space-y-1.5">
         <Label className="text-xs">Paid by</Label>
         <Select value={payerId} onValueChange={setPayerId}>
-          <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-10"><SelectValue placeholder="Select payer" /></SelectTrigger>
           <SelectContent>
             {members.map((m) => (
               <SelectItem key={m.userId} value={m.userId}>
@@ -535,7 +703,7 @@ export function ExpenseFormModal({
               currency={currency}
             />
             <p className="text-[11px] text-muted-foreground">
-              Tap avatars to assign items. <Link2 className="inline h-3 w-3" /> marks shared costs (tax, tip) split proportionally.
+              Tap avatars to assign food and drinks. Taxes and service are split automatically based on ordered items.
             </p>
           </>
         ) : (
