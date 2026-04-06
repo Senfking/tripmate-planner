@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 512,
+        max_tokens: 1024,
         system: "You extract structured data from receipt images.",
         messages: [
           {
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
               {
                 type: "text",
                 text: `Extract from this receipt and return ONLY valid JSON:
-{ "title": "", "amount": 0, "currency": "", "date": "", "category": "", "notes": "" }
+{ "title": "", "amount": 0, "currency": "", "date": "", "category": "", "notes": "", "line_items": [] }
 
 - title: merchant name or description
 - amount: total as number, no currency symbol
@@ -91,6 +91,13 @@ Deno.serve(async (req) => {
   For a ticket: "\u2022 2x 5-Day Full Pass\n\u2022 Dec 3\u20137, 2026\n\u2022 Siam Country Club, Chonburi"
   For shopping: "\u2022 Sunscreen SPF50\n\u2022 Mosquito repellent\n\u2022 2x Water bottle"
   Only include the most important 2-5 items. null if nothing noteworthy beyond what title/amount already say.
+- line_items: array of individual items on the receipt. Each item is an object:
+  { "name": "item description", "quantity": 1, "unit_price": 0, "total_price": 0 }
+  - name: item description as shown on receipt
+  - quantity: number of units (default 1 if not stated)
+  - unit_price: price per unit as number, null if not determinable
+  - total_price: line total as number
+  Return an empty array [] if no individual items are visible.
 
 Return null for any field you cannot determine.
 Return ONLY the JSON object, no other text.`,
