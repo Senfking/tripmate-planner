@@ -59,16 +59,18 @@ export function ExpenseCard({
   const hasReceipt = !!expense.receipt_image_path;
 
   const handleViewReceipt = async () => {
-    if (receiptUrl) {
-      setLightboxOpen(true);
-      return;
-    }
+    const tab = window.open("about:blank", "_blank");
     const { data } = await supabase.storage
       .from("receipt-images")
       .createSignedUrl(expense.receipt_image_path!, 3600);
     if (data?.signedUrl) {
-      setReceiptUrl(data.signedUrl);
-      setLightboxOpen(true);
+      if (tab) {
+        tab.location.href = data.signedUrl;
+      } else {
+        window.open(data.signedUrl, "_blank", "noopener");
+      }
+    } else {
+      tab?.close();
     }
   };
 
