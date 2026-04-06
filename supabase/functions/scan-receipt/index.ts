@@ -65,9 +65,16 @@ Deno.serve(async (req) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        system: "You extract structured data from receipt images.",
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        system: `You are a precise receipt OCR assistant. You extract structured data from receipt images.
+Key rules:
+- Read every character carefully. Do NOT confuse table numbers, order numbers, or reference codes with the merchant name.
+- The merchant/restaurant name is typically the business name printed prominently, or derivable from an email/website on the receipt.
+- Dates on receipts outside the US are almost always DD/MM/YYYY. Parse accordingly.
+- For amounts, handle thousand separators (dots or commas depending on locale). The TOTAL is the final amount the customer pays.
+- Extract EVERY individual line item visible on the receipt. Each distinct printed line = one line item.
+- If the same item appears on multiple lines (e.g. "1 COKE ZERO 25,000" then "2 COKE ZERO 50,000"), treat them as SEPARATE line items — do not merge them.`,
         messages: [
           {
             role: "user",
@@ -81,23 +88,25 @@ Deno.serve(async (req) => {
                 text: `Extract from this receipt and return ONLY valid JSON:
 { "title": "", "amount": 0, "currency": "", "date": "", "category": "", "notes": "", "line_items": [] }
 
-- title: merchant name or description
-- amount: total as number, no currency symbol
-- currency: 3-letter ISO code or null
-- date: YYYY-MM-DD or null
+Field definitions:
+- title: The merchant or business name ONLY. Do NOT include table numbers, order numbers, cashier names, or codes. If no clear merchant name is printed, look for website/email domains on the receipt.
+- amount: The final TOTAL the customer pays, as a number. No currency symbols. Handle thousand separators correctly (e.g. 317,625 = 317625, not 317.625).
+- currency: 3-letter ISO currency code. Infer from context (e.g. IDR for Indonesian receipts, THB for Thai, EUR for European).
+- date: YYYY-MM-DD format. Remember: most non-US receipts use DD/MM/YYYY format. A receipt showing "06/04/2026" in Indonesia means June 4th is WRONG — it means April 6th (2026-04-06).
 - category: food | transport | accommodation | activities | shopping | other
-- notes: A concise, useful summary using bullet points (one per line, starting with "\u2022 "). Focus on WHAT was purchased/booked — not fees or totals. Examples:
-  For a restaurant receipt: "\u2022 2x Pad Thai\n\u2022 1x Green Curry\n\u2022 3x Chang Beer"
-  For a ticket: "\u2022 2x 5-Day Full Pass\n\u2022 Dec 3\u20137, 2026\n\u2022 Siam Country Club, Chonburi"
-  For shopping: "\u2022 Sunscreen SPF50\n\u2022 Mosquito repellent\n\u2022 2x Water bottle"
-  Only include the most important 2-5 items. null if nothing noteworthy beyond what title/amount already say.
-- line_items: array of individual items on the receipt. Each item is an object:
+- notes: A concise summary using bullet points (one per line, starting with "• "). Focus on WHAT was purchased. Only the most important 2-5 items. null if nothing noteworthy.
+  Examples:
+  For a restaurant: "• 2x Pad Thai\n• 1x Green Curry\n• 3x Chang Beer"
+  For a ticket: "• 2x 5-Day Full Pass\n• Dec 3–7, 2026"
+- line_items: Array of EVERY individual line item printed on the receipt. Each object:
   { "name": "item description", "quantity": 1, "unit_price": 0, "total_price": 0 }
-  - name: item description as shown on receipt
-  - quantity: number of units (default 1 if not stated)
-  - unit_price: price per unit as number, null if not determinable
+  - name: item description as shown on receipt (clean up abbreviations if obvious)
+  - quantity: number of units for THIS line (read from the receipt, default 1)
+  - unit_price: price per unit as number (null if not shown or not determinable)
   - total_price: line total as number
-  Return an empty array [] if no individual items are visible.
+  IMPORTANT: Do NOT merge lines. If the receipt shows "1 COKE ZERO 25,000" and "2 COKE ZERO 50,000" as two separate printed lines, return TWO separate line items.
+  Also include tax, service charge, and other fee lines as separate items.
+  Return [] if no individual items are visible.
 
 Return null for any field you cannot determine.
 Return ONLY the JSON object, no other text.`,
