@@ -50,15 +50,27 @@ export function ExpenseCard({
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const { lineItems, claims, hasLineItems, toggleClaim } = useLineItemClaims(
     expanded ? expense.id : null,
     tripId
   );
 
   const hasReceipt = !!expense.receipt_image_path;
-  const receiptUrl = hasReceipt
-    ? supabase.storage.from("receipt-images").getPublicUrl(expense.receipt_image_path!).data.publicUrl
-    : "";
+
+  const handleViewReceipt = async () => {
+    if (receiptUrl) {
+      setLightboxOpen(true);
+      return;
+    }
+    const { data } = await supabase.storage
+      .from("receipt-images")
+      .createSignedUrl(expense.receipt_image_path!, 3600);
+    if (data?.signedUrl) {
+      setReceiptUrl(data.signedUrl);
+      setLightboxOpen(true);
+    }
+  };
 
   const cat = CATEGORY_CONFIG[expense.category] || CATEGORY_CONFIG.other;
   const Icon = cat.icon;
