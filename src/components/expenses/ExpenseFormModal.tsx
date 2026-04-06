@@ -488,10 +488,21 @@ export function ExpenseFormModal({
                   return { ...prev, [idx]: current };
                 });
               }}
+              onToggleShared={(idx) => {
+                setScannedLineItems((prev) =>
+                  prev.map((li, i) => i === idx ? { ...li, is_shared: !li.is_shared } : li)
+                );
+                // Clear assignments for shared items
+                setItemAssignments((prev) => {
+                  const next = { ...prev };
+                  delete next[idx];
+                  return next;
+                });
+              }}
               currency={currency}
             />
             <p className="text-[11px] text-muted-foreground">
-              Tap avatars to assign items. Unassigned items split equally.
+              Tap avatars to assign items. <Link2 className="inline h-3 w-3" /> marks shared costs (tax, tip) split proportionally.
             </p>
           </>
         ) : (
