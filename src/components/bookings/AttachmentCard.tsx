@@ -318,9 +318,9 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
             )}
-            {hasFile && !offlineCached && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={handleSaveOffline} disabled={savingOffline} title="Save for offline">
-                <CloudDownload className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
+            {hasFile && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={handleDownload} disabled={savingOffline} title="Download">
+                <Download className={`h-3.5 w-3.5 ${savingOffline ? "animate-pulse" : ""}`} />
               </Button>
             )}
             {canDelete && (
