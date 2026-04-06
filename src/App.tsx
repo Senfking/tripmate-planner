@@ -78,13 +78,16 @@ const queryClient = new QueryClient({
   }),
 });
 
-function AppInner() {
+/** Pre-warm exchange rate cache after auth is ready. */
+function ExchangeRatePrefetch() {
   const qc = useQueryClient();
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Pre-warm the EUR exchange rate cache on app startup.
-    // Must return Record<string, number> to match the shape expected by
-    // useExpenses and useGlobalExpenses via qc.fetchQuery(["exchange-rates", "EUR"]).
+    // Only prefetch after auth — firing before risks caching empty {} for
+    // 1 hour if the table has RLS or the request fails without a valid JWT.
+    if (!user) return;
+
     qc.prefetchQuery({
       queryKey: ["exchange-rates", "EUR"],
       queryFn: async (): Promise<Record<string, number>> => {
@@ -100,7 +103,12 @@ function AppInner() {
       },
       staleTime: 1000 * 60 * 60,
     });
-  }, [qc]);
+  }, [qc, user]);
+
+  return null;
+}
+
+function AppInner() {
 
   return (
     <TooltipProvider>
@@ -109,6 +117,7 @@ function AppInner() {
       <BrowserRouter>
         <ScrollToTop />
         <AuthProvider>
+          <ExchangeRatePrefetch />
           <ErrorBoundaryWithUser>
           <Suspense fallback={<PageLoader />}>
           <Routes>

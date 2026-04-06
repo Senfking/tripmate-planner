@@ -326,6 +326,7 @@ export function useExpenses(tripId: string) {
       trackEvent("expense_created", { trip_id: tripId, currency: params.currency, category: params.category }, user?.id);
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense added");
     },
@@ -364,6 +365,7 @@ export function useExpenses(tripId: string) {
       trackEvent("expense_updated", { trip_id: tripId, expense_id: params.id }, user?.id);
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense updated");
     },
@@ -382,6 +384,7 @@ export function useExpenses(tripId: string) {
       trackEvent("expense_deleted", { trip_id: tripId, expense_id: id }, user?.id);
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense deleted");
     },
