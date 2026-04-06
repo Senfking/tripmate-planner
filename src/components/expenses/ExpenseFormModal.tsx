@@ -481,13 +481,13 @@ export function ExpenseFormModal({
       <div className="space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Label className="text-xs">Split between</Label>
-          <div className="flex gap-1 self-start sm:self-auto flex-wrap">
+          <div className="flex gap-1.5 self-start sm:self-auto flex-wrap">
             {(["equal", "percent", "custom"] as const).map((mode) => (
               <Button
                 key={mode}
                 type="button" size="sm"
                 variant={splitMode === mode ? "default" : "outline"}
-                className="h-6 text-[10px] px-2 capitalize"
+                className="h-8 text-xs px-3 capitalize"
                 onClick={() => {
                   setSplitMode(mode);
                   if (mode !== splitMode) setCustomAmounts({});
@@ -500,7 +500,7 @@ export function ExpenseFormModal({
               <Button
                 type="button" size="sm"
                 variant={splitMode === "byItem" ? "default" : "outline"}
-                className="h-6 text-[10px] px-2"
+                className="h-8 text-xs px-3"
                 onClick={() => setSplitMode("byItem")}
               >
                 By item
