@@ -4,6 +4,7 @@ import { LineItemRow, ClaimRow } from "@/hooks/useLineItemClaims";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { calculateLineItemTotals } from "@/lib/expenseLineItems";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { Hand, Link2 } from "lucide-react";
@@ -25,61 +26,23 @@ export function LineItemClaimList({
 
   const claimableItems = useMemo(() => lineItems.filter((li) => !li.is_shared), [lineItems]);
   const sharedItems = useMemo(() => lineItems.filter((li) => li.is_shared), [lineItems]);
-
-  const perPersonTotals = useMemo(() => {
-    const memberIds = members.map((m) => m.userId);
-    const totals: Record<string, number> = {};
-    for (const uid of memberIds) totals[uid] = 0;
-
-    let claimedTotal = 0;
-    let sharedTotal = 0;
-
-    // Calculate shared costs
-    for (const item of sharedItems) {
-      sharedTotal += item.total_price;
+  const claimsByItemId = useMemo(() => {
+    const map = new Map<string, ClaimRow[]>();
+    for (const claim of claims) {
+      map.set(claim.line_item_id, [...(map.get(claim.line_item_id) ?? []), claim]);
     }
+    return map;
+  }, [claims]);
 
-    // Calculate claimable items
-    for (const item of claimableItems) {
-      const itemClaims = claims.filter((c) => c.line_item_id === item.id);
-      if (itemClaims.length > 0) {
-        const perPerson = item.total_price / itemClaims.length;
-        for (const claim of itemClaims) {
-          if (totals[claim.user_id] !== undefined) {
-            totals[claim.user_id] += perPerson;
-          }
-        }
-        claimedTotal += item.total_price;
-      }
-    }
-
-    // Unclaimed claimable items split equally
-    const claimableSum = claimableItems.reduce((s, li) => s + li.total_price, 0);
-    const remainder = claimableSum - claimedTotal;
-    if (remainder > 0.005 && memberIds.length > 0) {
-      const perPerson = remainder / memberIds.length;
-      for (const uid of memberIds) {
-        totals[uid] += perPerson;
-      }
-    }
-
-    // Distribute shared costs proportionally
-    if (sharedTotal > 0.005 && memberIds.length > 0) {
-      const itemSubtotalSum = memberIds.reduce((s, uid) => s + totals[uid], 0);
-      if (itemSubtotalSum > 0.005) {
-        for (const uid of memberIds) {
-          totals[uid] += sharedTotal * (totals[uid] / itemSubtotalSum);
-        }
-      } else {
-        const perPerson = sharedTotal / memberIds.length;
-        for (const uid of memberIds) {
-          totals[uid] += perPerson;
-        }
-      }
-    }
-
-    return totals;
-  }, [claimableItems, sharedItems, claims, members]);
+  const { totals: perPersonTotals, sharedTotal } = useMemo(
+    () => calculateLineItemTotals({
+      lineItems,
+      memberIds: members.map((member) => member.userId),
+      totalAmount,
+      getAssigneeIds: (item) => (claimsByItemId.get(item.id) ?? []).map((claim) => claim.user_id),
+    }),
+    [claimsByItemId, lineItems, members, totalAmount],
+  );
 
   return (
     <div className="space-y-3">
@@ -91,7 +54,7 @@ export function LineItemClaimList({
           </p>
           <div className="space-y-2">
             {claimableItems.map((item) => {
-              const itemClaims = claims.filter((c) => c.line_item_id === item.id);
+              const itemClaims = claimsByItemId.get(item.id) ?? [];
               const isClaimed = itemClaims.some((c) => c.user_id === user?.id);
 
               return (
@@ -166,28 +129,32 @@ export function LineItemClaimList({
       )}
 
       {/* Shared costs */}
-      {sharedItems.length > 0 && (
+      {Math.abs(sharedTotal) > 0.005 && (
         <>
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mt-2">
-            Shared costs — split proportionally
+            Shared costs — split automatically
           </p>
-          <div className="space-y-2">
-            {sharedItems.map((item) => (
-              <div key={item.id} className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <p className="text-[13px] font-medium truncate">{item.name}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Shared</Badge>
-                    <span className="text-[13px] font-semibold tabular-nums">
-                      {formatCurrency(item.total_price, currency)}
-                    </span>
-                  </div>
-                </div>
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                <p className="text-[13px] font-medium truncate">Taxes, service, and receipt adjustments</p>
               </div>
-            ))}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Auto</Badge>
+                <span className="text-[13px] font-semibold tabular-nums">
+                  {formatCurrency(sharedTotal, currency)}
+                </span>
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Split pro rata based on each person&apos;s ordered items.
+            </p>
+            {sharedItems.length > 0 && (
+              <p className="text-[10px] text-muted-foreground truncate">
+                Includes: {sharedItems.map((item) => item.name).join(", ")}
+              </p>
+            )}
           </div>
         </>
       )}

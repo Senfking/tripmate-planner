@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { isSharedCostItem } from "@/lib/expenseLineItems";
 
 export interface LineItemRow {
   id: string;
@@ -12,8 +13,6 @@ export interface LineItemRow {
   is_shared: boolean;
   created_at: string;
 }
-
-const SHARED_PATTERN = /tax|vat|service.?charge|tip|gratuity|surcharge/i;
 
 export interface ClaimRow {
   id: string;
@@ -101,9 +100,9 @@ export async function saveLineItems(
     expense_id: expenseId,
     name: item.name,
     quantity: item.quantity,
-    unit_price: item.unit_price ?? item.total_price,
+    unit_price: item.unit_price ?? item.total_price / Math.max(item.quantity || 1, 1),
     total_price: item.total_price,
-    is_shared: item.is_shared ?? SHARED_PATTERN.test(item.name),
+    is_shared: item.is_shared ?? isSharedCostItem(item.name),
   }));
   const { error } = await supabase.from("expense_line_items").insert(rows as any);
   if (error) throw error;
