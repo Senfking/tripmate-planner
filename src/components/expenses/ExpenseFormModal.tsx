@@ -70,12 +70,14 @@ export function ExpenseFormModal({
   const [payerId, setPayerId] = useState(user?.id || "");
   const [notes, setNotes] = useState("");
   const [itineraryItemId, setItineraryItemId] = useState<string>("none");
-  const [splitMode, setSplitMode] = useState<"equal" | "custom" | "percent">("equal");
+  const [splitMode, setSplitMode] = useState<"equal" | "custom" | "percent" | "byItem">("equal");
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
   const [settlementDismissed, setSettlementDismissed] = useState(false);
   const [titleManuallySet, setTitleManuallySet] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [scannedLineItems, setScannedLineItems] = useState<LineItem[]>([]);
+  const [itemAssignments, setItemAssignments] = useState<Record<number, Set<string>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const notesRef = useRef<HTMLTextAreaElement>(null);
