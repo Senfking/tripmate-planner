@@ -251,9 +251,14 @@ export function ExpenseFormModal({
         setCategory(data.category);
       }
       if (data.notes) setNotes(data.notes);
-      // Store line items for "Split by item" mode
+      // Store line items for "Split by item" mode with auto-detection of shared costs
       if (Array.isArray(data.line_items) && data.line_items.length > 0) {
-        setScannedLineItems(data.line_items as LineItem[]);
+        const SHARED_PATTERN = /tax|vat|service.?charge|tip|gratuity|surcharge/i;
+        const items = (data.line_items as LineItem[]).map((li) => ({
+          ...li,
+          is_shared: li.is_shared ?? SHARED_PATTERN.test(li.name),
+        }));
+        setScannedLineItems(items);
         setItemAssignments({});
       }
       toast.success("Receipt scanned ✓");
