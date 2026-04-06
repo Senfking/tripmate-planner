@@ -118,6 +118,7 @@ export default function Admin() {
             active={activeModule}
             onNavigate={handleSidebarNav}
             userName={user.user_metadata?.display_name || user.email}
+            isMobile={isMobile}
           />
         </div>
 
