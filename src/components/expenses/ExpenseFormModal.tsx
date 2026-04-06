@@ -51,6 +51,7 @@ interface Props {
     payer_id: string;
     notes?: string;
     itinerary_item_id?: string | null;
+    receipt_image_path?: string | null;
     splits: { user_id: string; share_amount: number }[];
     lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
   }) => void;
@@ -79,6 +80,7 @@ export function ExpenseFormModal({
   const [scanning, setScanning] = useState(false);
   const [scannedLineItems, setScannedLineItems] = useState<LineItem[]>([]);
   const [itemAssignments, setItemAssignments] = useState<Record<number, Set<string>>>({});
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const notesRef = useRef<HTMLTextAreaElement>(null);
