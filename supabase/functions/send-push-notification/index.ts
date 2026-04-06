@@ -122,34 +122,34 @@ async function hkdf(
   info: Uint8Array,
   length: number,
 ): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", (ikm as Uint8Array).buffer, { name: "HMAC", hash: "SHA-256" }, false, [
+  const key = await crypto.subtle.importKey("raw", new Uint8Array(ikm) as unknown as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, [
     "sign",
   ]);
 
   // Extract
   const prk = new Uint8Array(
-    await crypto.subtle.sign("HMAC", key, (salt.length ? salt : new Uint8Array(32)).buffer),
+    await crypto.subtle.sign("HMAC", key, new Uint8Array(salt.length ? salt : new Uint8Array(32)) as unknown as ArrayBuffer),
   );
 
   // Actually do HKDF properly: extract then expand
   const prkKey = await crypto.subtle.importKey(
     "raw",
-    ((salt.length ? salt : new Uint8Array(32)) as Uint8Array).buffer,
+    new Uint8Array(salt.length ? salt : new Uint8Array(32)) as unknown as ArrayBuffer,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
-  const prkBytes = new Uint8Array(await crypto.subtle.sign("HMAC", prkKey, (ikm as Uint8Array).buffer));
+  const prkBytes = new Uint8Array(await crypto.subtle.sign("HMAC", prkKey, new Uint8Array(ikm) as unknown as ArrayBuffer));
 
   const expandKey = await crypto.subtle.importKey(
     "raw",
-    (prkBytes as Uint8Array).buffer,
+    new Uint8Array(prkBytes) as unknown as ArrayBuffer,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
   const infoWithCounter = concat(info, new Uint8Array([1]));
-  const okm = new Uint8Array(await crypto.subtle.sign("HMAC", expandKey, (infoWithCounter as Uint8Array).buffer));
+  const okm = new Uint8Array(await crypto.subtle.sign("HMAC", expandKey, new Uint8Array(infoWithCounter) as unknown as ArrayBuffer));
 
   return okm.slice(0, length);
 }
@@ -197,7 +197,7 @@ async function encryptPayload(
   // Import client public key
   const clientPublicKey = await crypto.subtle.importKey(
     "raw",
-    (clientPublicRaw as Uint8Array).buffer,
+    new Uint8Array(clientPublicRaw) as unknown as ArrayBuffer,
     { name: "ECDH", namedCurve: "P-256" },
     false,
     [],
@@ -233,11 +233,11 @@ async function encryptPayload(
   const padded = concat(payload, new Uint8Array([2]));
 
   // Encrypt with AES-128-GCM
-  const aesKey = await crypto.subtle.importKey("raw", (cek as Uint8Array).buffer, { name: "AES-GCM" }, false, [
+  const aesKey = await crypto.subtle.importKey("raw", new Uint8Array(cek) as unknown as ArrayBuffer, { name: "AES-GCM" }, false, [
     "encrypt",
   ]);
   const ciphertext = new Uint8Array(
-    await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, aesKey, (padded as Uint8Array).buffer),
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce as unknown as ArrayBufferView }, aesKey, new Uint8Array(padded) as unknown as ArrayBuffer),
   );
 
   // Build aes128gcm body: salt (16) + rs (4) + idLen (1) + keyId (65) + ciphertext
