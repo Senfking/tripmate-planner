@@ -19,8 +19,8 @@ export function AllUsersModule() {
   const users = data?.users || [];
 
   return (
-    <div style={{ display: "flex", gap: 0, height: "calc(100vh - 40px)" }}>
-      <div style={{ flex: 1, overflow: "auto", paddingRight: selectedUser ? 16 : 0 }}>
+    <div style={{ display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row", gap: 0, height: window.innerWidth < 768 ? "auto" : "calc(100vh - 40px)" }}>
+      <div style={{ flex: 1, overflow: "auto", paddingRight: selectedUser && window.innerWidth >= 768 ? 16 : 0 }}>
         <h1 style={{ fontFamily: mono, fontSize: 18, color: C.text, fontWeight: 600, marginBottom: 16 }}>All Users</h1>
 
         <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
@@ -39,7 +39,8 @@ export function AllUsersModule() {
         </div>
 
         {isLoading ? <AdminSkeleton rows={10} /> : !users.length ? <EmptyState /> : (
-          <table style={{ width: "100%", fontFamily: sans, fontSize: 13, borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <table style={{ width: "100%", minWidth: 700, fontFamily: sans, fontSize: 13, borderCollapse: "collapse" }}>
             <thead><tr style={{ color: C.muted, fontFamily: mono, fontSize: 10, textTransform: "uppercase" as const }}>
               {["User", "Joined", "Last Active", "Source", "Trips", "AI", "Tier", "Stripe"].map(h => (
                 <th key={h} style={{ textAlign: "left", padding: 8 }}>{h}</th>
@@ -69,6 +70,7 @@ export function AllUsersModule() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -103,7 +105,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
   };
 
   return (
-    <div style={{ width: 360, borderLeft: `1px solid ${C.border}`, padding: 20, background: C.surface, overflowY: "auto" }}>
+    <div style={{ width: window.innerWidth < 768 ? "100%" : 360, borderLeft: window.innerWidth >= 768 ? `1px solid ${C.border}` : "none", borderTop: window.innerWidth < 768 ? `1px solid ${C.border}` : "none", padding: 20, background: C.surface, overflowY: "auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ fontFamily: mono, fontSize: 14, color: C.text, fontWeight: 600 }}>User Detail</div>
         <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 18 }}>×</button>

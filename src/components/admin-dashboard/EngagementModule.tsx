@@ -18,7 +18,7 @@ export function EngagementModule() {
       </div>
 
       {dl ? <AdminSkeleton rows={1} /> : dau ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, marginBottom: 24 }}>
           <StatCard label="DAU" value={dau.dau} />
           <StatCard label="WAU" value={dau.wau} />
           <StatCard label="MAU" value={dau.mau} />
@@ -43,7 +43,7 @@ export function EngagementModule() {
         </Card>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
         <div>
           <SectionHeader>Top Active Trips</SectionHeader>
           {tl ? <AdminSkeleton rows={5} /> : !topTrips?.length ? <EmptyState /> : (
