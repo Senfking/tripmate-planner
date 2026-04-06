@@ -159,6 +159,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const fileName = cleanTitle(attachment.title);
+    setSavingOffline(true);
     try {
       let blob: Blob | null = null;
 
@@ -182,6 +183,13 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
       }
 
       if (blob) {
+        // Save to IndexedDB for offline viewing
+        if (attachment.file_path) {
+          await saveDocument(attachment.file_path, blob).catch(() => {});
+          setOfflineCached(true);
+        }
+
+        // Trigger device download
         const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = blobUrl;
@@ -190,9 +198,12 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
+        toast.success("Downloaded — also available offline");
       }
     } catch {
       toast.error("Download failed");
+    } finally {
+      setSavingOffline(false);
     }
   };
 
