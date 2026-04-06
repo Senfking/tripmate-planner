@@ -5,7 +5,7 @@ import { useLineItemClaims } from "@/hooks/useLineItemClaims";
 import { convertAmount, formatCurrency, Rates } from "@/lib/settlementCalc";
 import { Button } from "@/components/ui/button";
 import { LineItemClaimList } from "./LineItemClaimList";
-import { ReceiptLightbox } from "./ReceiptLightbox";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
@@ -49,8 +49,6 @@ export function ExpenseCard({
 }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const { lineItems, claims, hasLineItems, toggleClaim } = useLineItemClaims(
     expanded ? expense.id : null,
     tripId
@@ -59,16 +57,18 @@ export function ExpenseCard({
   const hasReceipt = !!expense.receipt_image_path;
 
   const handleViewReceipt = async () => {
-    if (receiptUrl) {
-      setLightboxOpen(true);
-      return;
-    }
+    const tab = window.open("about:blank", "_blank");
     const { data } = await supabase.storage
       .from("receipt-images")
       .createSignedUrl(expense.receipt_image_path!, 3600);
     if (data?.signedUrl) {
-      setReceiptUrl(data.signedUrl);
-      setLightboxOpen(true);
+      if (tab) {
+        tab.location.href = data.signedUrl;
+      } else {
+        window.open(data.signedUrl, "_blank", "noopener");
+      }
+    } else {
+      tab?.close();
     }
   };
 
@@ -215,10 +215,6 @@ export function ExpenseCard({
         </div>
       )}
 
-      {/* Receipt lightbox */}
-      {hasReceipt && receiptUrl && (
-        <ReceiptLightbox open={lightboxOpen} onOpenChange={setLightboxOpen} imageUrl={receiptUrl} />
-      )}
     </div>
   );
 }
