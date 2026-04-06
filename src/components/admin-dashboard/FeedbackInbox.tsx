@@ -90,6 +90,60 @@ export function FeedbackInbox() {
     }
   };
 
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+  if (isMobile) {
+    return (
+      <div>
+        {!selected ? (
+          <div style={{ overflowY: "auto" }}>
+            <h1 style={{ fontFamily: mono, fontSize: 18, color: C.text, fontWeight: 600, marginBottom: 8 }}>Feedback Inbox</h1>
+            <FilterBar
+              statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+              severityFilter={severityFilter} setSeverityFilter={setSeverityFilter}
+            />
+            {isLoading ? <AdminSkeleton rows={10} /> : !items?.length ? <EmptyState message="No feedback matches filter" /> : (
+              items.map((f: any) => {
+                const isUnread = !f.read_at;
+                const sevColor = f.ai_severity === "critical" ? C.red : f.ai_severity === "high" ? C.amber : C.muted;
+                const statusLabel = f.status === "done" ? "done" : f.status === "reviewing" ? "reviewing" : f.status === "dismissed" ? "dismissed" : "open";
+                const statusColor = f.status === "done" ? C.green : f.status === "reviewing" ? C.amber : f.status === "dismissed" ? C.muted : C.blue;
+                return (
+                  <div key={f.id} onClick={() => handleSelect(f)} style={{
+                    padding: "10px 12px", borderBottom: `1px solid ${C.border}`, cursor: "pointer",
+                    background: selectedId === f.id ? C.elevated : "transparent",
+                    display: "flex", gap: 10, alignItems: "flex-start",
+                  }}>
+                    <div style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, marginTop: 6, background: isUnread ? "rgba(96, 165, 250, 0.9)" : "transparent" }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4, flexWrap: "wrap" }}>
+                        {f.ai_severity && <StatusPill label={f.ai_severity} color={sevColor} />}
+                        {f.ai_category && <StatusPill label={f.ai_category} color={C.blue} />}
+                        <span style={{ marginLeft: "auto" }}><StatusPill label={statusLabel} color={statusColor} /></span>
+                      </div>
+                      <div style={{ fontFamily: sans, fontSize: 12, color: C.text, fontWeight: isUnread ? 600 : 400 }}>
+                        {f.ai_summary || f.body || `Rating: ${f.rating}`}
+                      </div>
+                      <div style={{ fontFamily: mono, fontSize: 10, color: C.muted, marginTop: 2 }}>
+                        {f.display_name || "Unknown"} · {timeAgo(f.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          <div>
+            <button onClick={() => setSelectedId(null)} style={{ background: "none", border: "none", color: C.tealLight, fontFamily: mono, fontSize: 12, cursor: "pointer", marginBottom: 12, padding: 0 }}>← Back</button>
+            <FeedbackDetail item={selected} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <PanelGroup direction="horizontal" style={{ height: "calc(100vh - 40px)" }}>
       <Panel defaultSize={42} minSize={28}>
