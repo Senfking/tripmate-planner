@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { saveLineItems } from "@/hooks/useLineItemClaims";
 
 export interface ExpenseRow {
   id: string;
@@ -305,8 +306,9 @@ export function useExpenses(tripId: string) {
       notes?: string;
       itinerary_item_id?: string | null;
       splits: { user_id: string; share_amount: number }[];
+      lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number }[];
     }) => {
-      const { splits, ...expenseData } = params;
+      const { splits, lineItems, ...expenseData } = params;
       const { data: expense, error } = await supabase
         .from("expenses")
         .insert({ ...expenseData, trip_id: tripId } as any)
@@ -321,6 +323,11 @@ export function useExpenses(tripId: string) {
       }));
       const { error: sErr } = await supabase.from("expense_splits").insert(splitRows);
       if (sErr) throw sErr;
+
+      // Save line items if using "Split by item" mode
+      if (lineItems && lineItems.length > 0) {
+        await saveLineItems(expense.id, lineItems);
+      }
     },
     onSuccess: (_data, params) => {
       trackEvent("expense_created", { trip_id: tripId, currency: params.currency, category: params.category }, user?.id);
