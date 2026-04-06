@@ -52,6 +52,7 @@ interface Props {
     notes?: string;
     itinerary_item_id?: string | null;
     splits: { user_id: string; share_amount: number }[];
+    lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number }[];
   }) => void;
 }
 
@@ -286,6 +287,7 @@ export function ExpenseFormModal({
       notes: notes.trim() || undefined,
       itinerary_item_id: itineraryItemId === "none" ? null : itineraryItemId,
       splits: computedSplits,
+      lineItems: splitMode === "byItem" && scannedLineItems.length > 0 ? scannedLineItems : undefined,
     });
     onOpenChange(false);
   };
