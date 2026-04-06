@@ -135,6 +135,7 @@ export function ExpenseFormModal({
         setCustomAmounts({});
         setScannedLineItems([]);
         setItemAssignments({});
+        setReceiptFile(null);
       }
     }
   }, [open, editingExpense, editingSplits, members, settlementCurrency, user?.id]);
