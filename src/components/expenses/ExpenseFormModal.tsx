@@ -249,6 +249,11 @@ export function ExpenseFormModal({
         setCategory(data.category);
       }
       if (data.notes) setNotes(data.notes);
+      // Store line items for "Split by item" mode
+      if (Array.isArray(data.line_items) && data.line_items.length > 0) {
+        setScannedLineItems(data.line_items as LineItem[]);
+        setItemAssignments({});
+      }
       toast.success("Receipt scanned ✓");
       trackEvent("ai_receipt_scan", { success: true });
     } catch {
