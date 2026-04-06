@@ -260,6 +260,73 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_line_item_claims: {
+        Row: {
+          created_at: string
+          id: string
+          line_item_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          line_item_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          line_item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_line_item_claims_line_item_id_fkey"
+            columns: ["line_item_id"]
+            isOneToOne: false
+            referencedRelation: "expense_line_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_line_items: {
+        Row: {
+          created_at: string
+          expense_id: string
+          id: string
+          name: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          expense_id: string
+          id?: string
+          name: string
+          quantity?: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          expense_id?: string
+          id?: string
+          name?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_line_items_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_splits: {
         Row: {
           expense_id: string
