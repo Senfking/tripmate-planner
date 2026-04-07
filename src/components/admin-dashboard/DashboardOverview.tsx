@@ -1,14 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useAdminData } from "@/hooks/useAdminQuery";
 import { StatCard, DateRangeFilter, Period, SectionHeader, Card, AdminSkeleton, EmptyState, C, mono, sans } from "./shared";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
+/** Ensure chart data includes today (and fills any gaps with 0s) */
+function padToToday(data: any[] | undefined, valueKeys: string[]): any[] {
+  if (!data || data.length === 0) return [];
+  const today = new Date().toISOString().slice(0, 10);
+  const last = data[data.length - 1]?.date;
+  if (last >= today) return data;
+  const zeroes = Object.fromEntries(valueKeys.map(k => [k, 0]));
+  return [...data, { date: today, ...zeroes }];
+}
+
 export function DashboardOverview() {
   const [period, setPeriod] = useState<Period>("30d");
   const { data: kpis, isLoading: kpiLoading } = useAdminData("dashboard_kpis", { period });
-  const { data: growth, isLoading: growthLoading } = useAdminData("user_growth_chart", { period });
-  const { data: dauChart, isLoading: dauLoading } = useAdminData("dau_chart", { period });
-  const { data: landingChart, isLoading: landingLoading } = useAdminData("landing_views_chart", { period });
+  const { data: rawGrowth, isLoading: growthLoading } = useAdminData("user_growth_chart", { period });
+  const { data: rawDau, isLoading: dauLoading } = useAdminData("dau_chart", { period });
+  const { data: rawLanding, isLoading: landingLoading } = useAdminData("landing_views_chart", { period });
+  const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
+
+  const growth = useMemo(() => padToToday(rawGrowth, ["count"]), [rawGrowth]);
+  const dauChart = useMemo(() => padToToday(rawDau, ["dau"]), [rawDau]);
+  const landingChart = useMemo(() => padToToday(rawLanding, ["count"]), [rawLanding]);
   const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
 
   const trend = (current: number, prior: number) => prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
