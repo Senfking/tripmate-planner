@@ -201,7 +201,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
         {p.avatar_url ? <img src={p.avatar_url} style={{ width: 40, height: 40, borderRadius: 20 }} /> : <div style={{ width: 40, height: 40, borderRadius: 20, background: C.teal }} />}
         <div>
           <div style={{ fontFamily: sans, fontSize: 15, color: C.text, fontWeight: 600 }}>{p.display_name || "—"}</div>
-          <div style={{ fontFamily: mono, fontSize: 10, color: C.muted, cursor: "copy" }} onClick={() => navigator.clipboard.writeText(p.id)}>{p.id.slice(0, 20)}…</div>
+          <div style={{ fontFamily: mono, fontSize: 10, color: C.muted, cursor: "copy", wordBreak: "break-all" }} onClick={() => navigator.clipboard.writeText(p.id)}>{p.id}</div>
         </div>
       </div>
 
