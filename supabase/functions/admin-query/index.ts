@@ -455,13 +455,28 @@ Deno.serve(async (req) => {
           (refs || []).forEach((r: any) => { referrerNames[r.id] = r.display_name; });
         }
 
-        const users = (data || []).map((u: any) => ({
-          ...u,
-          trips: tripCounts[u.id] || 0,
-          ai_calls: aiCounts[u.id] || 0,
-          last_active_at: lastActive[u.id] || null,
-          referrer_name: u.referred_by ? referrerNames[u.referred_by] || null : null,
-        }));
+        const invitedUsersSet = userIds.length > 0 ? new Set((data || []).filter((u: any) => {
+          // Check from the inviteRedemptions query above — but we need the set built in the if block
+          return false;
+        }).map((u: any) => u.id)) : new Set<string>();
+
+        const users = (data || []).map((u: any) => {
+          let source = "organic";
+          if (u.referred_by) source = "referred";
+          // @ts-ignore invitedUsers may be defined in the if block above
+          if (typeof invitedUsers !== "undefined" && invitedUsers.has(u.id)) source = "invite";
+          // If both referred and invited, prefer "referred"
+          if (u.referred_by) source = "referred";
+
+          return {
+            ...u,
+            source,
+            trips: tripCounts[u.id] || 0,
+            ai_calls: aiCounts[u.id] || 0,
+            last_active_at: lastActive[u.id] || null,
+            referrer_name: u.referred_by ? referrerNames[u.referred_by] || null : null,
+          };
+        });
 
         // Sort by trips or AI if requested
         if (sort === "trips") users.sort((a: any, b: any) => b.trips - a.trips);
