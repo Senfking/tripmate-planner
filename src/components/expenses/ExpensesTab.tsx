@@ -585,7 +585,10 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   }}
                 >
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    {format(parseISO(date), "EEE d MMM")}
+                    {(() => {
+                      const [y, m, d] = date.split("-").map(Number);
+                      return format(new Date(y, m - 1, d), "EEE d MMM");
+                    })()}
                   </p>
                 </div>
                 <div>
