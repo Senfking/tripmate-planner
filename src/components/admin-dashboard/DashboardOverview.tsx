@@ -24,7 +24,6 @@ export function DashboardOverview() {
   const growth = useMemo(() => padToToday(rawGrowth, ["count"]), [rawGrowth]);
   const dauChart = useMemo(() => padToToday(rawDau, ["dau"]), [rawDau]);
   const landingChart = useMemo(() => padToToday(rawLanding, ["count"]), [rawLanding]);
-  const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
 
   const trend = (current: number, prior: number) => prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
 
