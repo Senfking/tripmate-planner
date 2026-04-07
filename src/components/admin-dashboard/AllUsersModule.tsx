@@ -130,7 +130,7 @@ export function AllUsersModule() {
                   </td>
                   <td style={{ padding: 8, color: C.muted, fontFamily: mono, fontSize: 11 }}>{u.created_at?.slice(0, 10)}</td>
                   <td style={{ padding: 8, color: u.last_active_at ? C.text : C.muted, fontFamily: mono, fontSize: 11 }}>{u.last_active_at ? timeAgo(u.last_active_at) : "Never"}</td>
-                  <td style={{ padding: 8 }}>{u.referred_by ? <StatusPill label="Referred" color={C.green} /> : <StatusPill label="Organic" color={C.muted} />}</td>
+                  <td style={{ padding: 8 }}><SourcePill source={u.source} referredBy={u.referred_by} /></td>
                   <td style={{ padding: 8, color: C.text, fontFamily: mono }}>{u.trips}</td>
                   <td style={{ padding: 8, color: C.text, fontFamily: mono }}>{u.ai_calls}</td>
                   <td style={{ padding: 8 }}><StatusPill label={u.subscription_tier} color={u.subscription_tier === "pro" ? C.tealLight : C.muted} /></td>
