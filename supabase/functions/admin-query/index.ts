@@ -427,6 +427,9 @@ Deno.serve(async (req) => {
           (tripData.data || []).forEach((r: any) => { tripCounts[r.user_id] = (tripCounts[r.user_id] || 0) + 1; });
           (aiData.data || []).forEach((r: any) => { aiCounts[r.user_id] = (aiCounts[r.user_id] || 0) + 1; });
 
+          // Build invite set
+          const invitedUsers = new Set((inviteRedemptions.data || []).map((r: any) => r.user_id));
+
           // Compute last active = max(last_seen_at, latest analytics event)
           const seenMap: Record<string, string> = {};
           (lastSeenData.data || []).forEach((r: any) => {
