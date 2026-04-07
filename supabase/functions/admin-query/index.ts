@@ -412,25 +412,20 @@ Deno.serve(async (req) => {
         let tripCounts: Record<string, number> = {};
         let aiCounts: Record<string, number> = {};
         let lastActive: Record<string, string | null> = {};
+        let invitedUserSet = new Set<string>();
 
         if (userIds.length > 0) {
           const [tripData, aiData, lastSeenData, lastEventData, inviteRedemptions] = await Promise.all([
             db.from("trip_members").select("user_id").in("user_id", userIds),
             db.from("analytics_events").select("user_id").like("event_name", "ai_%").in("user_id", userIds),
-            // Latest trip_last_seen per user
             db.from("trip_last_seen").select("user_id, last_seen_at").in("user_id", userIds).order("last_seen_at", { ascending: false }),
-            // Latest analytics event per user
             db.from("analytics_events").select("user_id, created_at").in("user_id", userIds).order("created_at", { ascending: false }),
-            // Invite redemptions to determine source
             db.from("invite_redemptions").select("user_id").in("user_id", userIds),
           ]);
           (tripData.data || []).forEach((r: any) => { tripCounts[r.user_id] = (tripCounts[r.user_id] || 0) + 1; });
           (aiData.data || []).forEach((r: any) => { aiCounts[r.user_id] = (aiCounts[r.user_id] || 0) + 1; });
+          invitedUserSet = new Set((inviteRedemptions.data || []).map((r: any) => r.user_id));
 
-          // Build invite set
-          const invitedUsers = new Set((inviteRedemptions.data || []).map((r: any) => r.user_id));
-
-          // Compute last active = max(last_seen_at, latest analytics event)
           const seenMap: Record<string, string> = {};
           (lastSeenData.data || []).forEach((r: any) => {
             if (!seenMap[r.user_id] || r.last_seen_at > seenMap[r.user_id]) seenMap[r.user_id] = r.last_seen_at;
@@ -455,17 +450,9 @@ Deno.serve(async (req) => {
           (refs || []).forEach((r: any) => { referrerNames[r.id] = r.display_name; });
         }
 
-        const invitedUsersSet = userIds.length > 0 ? new Set((data || []).filter((u: any) => {
-          // Check from the inviteRedemptions query above — but we need the set built in the if block
-          return false;
-        }).map((u: any) => u.id)) : new Set<string>();
-
         const users = (data || []).map((u: any) => {
           let source = "organic";
-          if (u.referred_by) source = "referred";
-          // @ts-ignore invitedUsers may be defined in the if block above
-          if (typeof invitedUsers !== "undefined" && invitedUsers.has(u.id)) source = "invite";
-          // If both referred and invited, prefer "referred"
+          if (invitedUserSet.has(u.id)) source = "invite";
           if (u.referred_by) source = "referred";
 
           return {
