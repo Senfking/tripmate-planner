@@ -414,13 +414,15 @@ Deno.serve(async (req) => {
         let lastActive: Record<string, string | null> = {};
 
         if (userIds.length > 0) {
-          const [tripData, aiData, lastSeenData, lastEventData] = await Promise.all([
+          const [tripData, aiData, lastSeenData, lastEventData, inviteRedemptions] = await Promise.all([
             db.from("trip_members").select("user_id").in("user_id", userIds),
             db.from("analytics_events").select("user_id").like("event_name", "ai_%").in("user_id", userIds),
             // Latest trip_last_seen per user
             db.from("trip_last_seen").select("user_id, last_seen_at").in("user_id", userIds).order("last_seen_at", { ascending: false }),
             // Latest analytics event per user
             db.from("analytics_events").select("user_id, created_at").in("user_id", userIds).order("created_at", { ascending: false }),
+            // Invite redemptions to determine source
+            db.from("invite_redemptions").select("user_id").in("user_id", userIds),
           ]);
           (tripData.data || []).forEach((r: any) => { tripCounts[r.user_id] = (tripCounts[r.user_id] || 0) + 1; });
           (aiData.data || []).forEach((r: any) => { aiCounts[r.user_id] = (aiCounts[r.user_id] || 0) + 1; });
