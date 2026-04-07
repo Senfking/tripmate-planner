@@ -33,8 +33,8 @@ function sortUsers(users: any[], key: SortKey, dir: SortDir) {
         bv = b.last_active_at || "";
         break;
       case "source":
-        av = a.referred_by ? "referred" : "organic";
-        bv = b.referred_by ? "referred" : "organic";
+        av = a.source || "organic";
+        bv = b.source || "organic";
         break;
       case "trips":
         av = a.trips || 0;
