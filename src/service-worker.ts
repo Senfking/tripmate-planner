@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+// SW build 2026-04-07 — push + notificationclick included
 declare const __BUILD_TS__: string;
 declare const __PRECACHE_URLS__: string[];
 
