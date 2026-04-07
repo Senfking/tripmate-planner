@@ -474,29 +474,42 @@ Deno.serve(async (req) => {
         const { user_id } = params;
         if (!user_id) return err("user_id required");
 
-        const [profile, trips, aiEvents, feedbackData, referrals, authUser] = await Promise.all([
+        const [profile, trips, aiEvents, feedbackData, referrals, authUser,
+               expensesData, expenseAmounts, pollsCreated, pollVotes,
+               itineraryItems, pushSubs] = await Promise.all([
           db.from("profiles").select("*").eq("id", user_id).single(),
           db.from("trip_members").select("trip_id, role, joined_at").eq("user_id", user_id),
           db.from("analytics_events").select("event_name").like("event_name", "ai_%").eq("user_id", user_id),
           db.from("feedback").select("id", { count: "exact", head: true }).eq("user_id", user_id),
           db.from("profiles").select("id, display_name", { count: "exact" }).eq("referred_by", user_id),
           db.auth.admin.getUserById(user_id),
+          // Activity: expenses
+          db.from("expenses").select("id", { count: "exact", head: true }).eq("payer_id", user_id),
+          db.from("expenses").select("amount, currency").eq("payer_id", user_id),
+          // Activity: polls created (via analytics or direct)
+          db.from("analytics_events").select("id", { count: "exact", head: true }).eq("event_name", "poll_created").eq("user_id", user_id),
+          // Activity: poll votes
+          db.from("votes").select("id", { count: "exact", head: true }).eq("user_id", user_id),
+          // Activity: itinerary items
+          db.from("itinerary_items").select("id", { count: "exact", head: true }).eq("created_by", user_id),
+          // Engagement: push subscriptions
+          db.from("push_subscriptions").select("id, device_name", { count: "exact" }).eq("user_id", user_id),
         ]);
 
-        // Get trip details
+        // Get trip details including dates
         const tripIds = (trips.data || []).map((t: any) => t.trip_id);
         let tripDetails: any[] = [];
         let memberCounts: Record<string, number> = {};
         if (tripIds.length > 0) {
           const [td, mc] = await Promise.all([
-            db.from("trips").select("id, name, created_at").in("id", tripIds),
+            db.from("trips").select("id, name, created_at, tentative_start_date, tentative_end_date").in("id", tripIds),
             db.from("trip_members").select("trip_id").in("trip_id", tripIds),
           ]);
           tripDetails = td.data || [];
           (mc.data || []).forEach((r: any) => { memberCounts[r.trip_id] = (memberCounts[r.trip_id] || 0) + 1; });
         }
 
-        const tripMap = Object.fromEntries(tripDetails.map((t: any) => [t.id, { name: t.name, created_at: t.created_at }]));
+        const tripMap = Object.fromEntries(tripDetails.map((t: any) => [t.id, t]));
 
         const aiCounts: Record<string, number> = {};
         (aiEvents.data || []).forEach((r: any) => {
@@ -522,6 +535,9 @@ Deno.serve(async (req) => {
 
         const au = authUser?.data?.user;
 
+        // Auth provider
+        const authProvider = au?.app_metadata?.provider || au?.identities?.[0]?.provider || "email";
+
         // Compute last active for this user
         const [lastSeenDetail, lastEventDetail] = await Promise.all([
           db.from("trip_last_seen").select("last_seen_at").eq("user_id", user_id).order("last_seen_at", { ascending: false }).limit(1),
@@ -533,19 +549,42 @@ Deno.serve(async (req) => {
         if (lastSeen && lastEvent) lastActiveAt = lastSeen > lastEvent ? lastSeen : lastEvent;
         else lastActiveAt = lastSeen || lastEvent || null;
 
+        // Calculate total amount spent (EUR approximation)
+        const totalSpent = (expenseAmounts.data || []).reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+        // Engagement calculations
+        const daysSinceLastActive = lastActiveAt ? Math.floor((Date.now() - new Date(lastActiveAt).getTime()) / 86400000) : null;
+        const daysSinceSignup = profile.data?.created_at ? Math.floor((Date.now() - new Date(profile.data.created_at).getTime()) / 86400000) : null;
+
         return json({
           profile: profile.data,
           email: au?.email || null,
+          auth_provider: authProvider,
           last_sign_in_at: au?.last_sign_in_at || null,
           last_active_at: lastActiveAt,
           email_confirmed_at: au?.email_confirmed_at || null,
           last_trip_created_at: lastTripCreated,
           referrer_name: referrerName,
           referral_count: referrals.count || 0,
+          activity: {
+            expenses_created: expensesData.count || 0,
+            total_amount_spent: totalSpent,
+            polls_created: pollsCreated.count || 0,
+            poll_votes: pollVotes.count || 0,
+            itinerary_items: itineraryItems.count || 0,
+          },
+          engagement: {
+            push_subscribed: (pushSubs.count || 0) > 0,
+            push_device_count: pushSubs.count || 0,
+            days_since_last_active: daysSinceLastActive,
+            days_since_signup: daysSinceSignup,
+          },
           trips: (trips.data || []).map((t: any) => ({
             ...t,
             trip_name: tripMap[t.trip_id]?.name || "Unknown",
             trip_created_at: tripMap[t.trip_id]?.created_at || null,
+            trip_start_date: tripMap[t.trip_id]?.tentative_start_date || null,
+            trip_end_date: tripMap[t.trip_id]?.tentative_end_date || null,
             member_count: memberCounts[t.trip_id] || 0,
           })),
           ai_usage: aiCounts,
