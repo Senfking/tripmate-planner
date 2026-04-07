@@ -377,3 +377,14 @@ function timeAgo(ts: string): string {
   if (days < 30) return `${days}d ago`;
   return new Date(ts).toISOString().slice(0, 10);
 }
+
+function SourcePill({ source, referredBy }: { source?: string; referredBy?: string }) {
+  const s = source || (referredBy ? "referred" : "organic");
+  const config: Record<string, { label: string; color: string }> = {
+    referred: { label: "Referred", color: C.green },
+    invite: { label: "Invite", color: C.tealLight },
+    organic: { label: "Organic", color: C.muted },
+  };
+  const { label, color } = config[s] || config.organic;
+  return <StatusPill label={label} color={color} />;
+}
