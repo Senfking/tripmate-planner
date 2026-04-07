@@ -56,7 +56,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
   const [balancesOpen, setBalancesOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
-  const [expensesOpen, setExpensesOpen] = useState(true);
+  
   const [scanning, setScanning] = useState(false);
   const [csvLoading, setCsvLoading] = useState(false);
   const receiptCameraRef = useRef<HTMLInputElement>(null);
@@ -266,8 +266,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Balance hero — teal gradient card (matches global expenses header) */}
+    <div className="space-y-4">
+      {/* Balance hero — teal gradient card */}
       {canShowBalances && expenses.length > 0 && (
         <div
           className="relative overflow-hidden py-6 text-center mx-0"
@@ -277,6 +277,73 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             boxShadow: "0 6px 20px rgba(13,148,136,0.20)",
           }}
         >
+          {/* Settings overflow — top right of hero */}
+          <div className="absolute top-3 right-3 z-20">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-7 w-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                  <Settings2 className="h-3.5 w-3.5 text-white/60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">Settlement currency</DropdownMenuLabel>
+                <div className="px-2 py-1.5">
+                  <SettlementCurrencyPicker
+                    value={settlementCurrency}
+                    onChange={(c) => updateSettlementCurrency.mutate(c)}
+                    cachedCurrencyCodes={cachedCurrencyCodes}
+                  />
+                </div>
+                {expenses.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={csvLoading}
+                      onClick={async () => {
+                        setCsvLoading(true);
+                        try {
+                          const session = (await supabase.auth.getSession()).data.session;
+                          const res = await fetch(
+                            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-expenses-csv?trip_id=${tripId}`,
+                            { headers: { Authorization: `Bearer ${session?.access_token}` } }
+                          );
+                          if (!res.ok) throw new Error("Export failed");
+                          const blob = await res.blob();
+                          trackEvent("export_downloaded", { trip_id: tripId, format: "csv" }, user?.id);
+                          const a = document.createElement("a");
+                          const objUrl = URL.createObjectURL(blob);
+                          a.href = objUrl;
+                          a.download = "expenses.csv";
+                          a.click();
+                          URL.revokeObjectURL(objUrl);
+                        } catch {
+                          toast.error("Failed to export CSV");
+                        } finally {
+                          setCsvLoading(false);
+                        }
+                      }}
+                    >
+                      {csvLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                      Download CSV
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {!allSameCurrency && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={refreshingRates}
+                      onClick={() => refreshRates()}
+                    >
+                      {refreshingRates ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                      Refresh exchange rates
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           {/* Glass shine overlay */}
           <div
             className="absolute inset-0 pointer-events-none"
@@ -286,19 +353,18 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           />
 
           {members.length <= 1 ? (
-            /* Solo trip — just show total spent + actions */
             <div className="relative flex flex-col items-center gap-1.5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Total spent</p>
               <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1">
                 {totalExpenses != null ? formatCurrency(totalExpenses, settlementCurrency) : "€0.00"}
               </p>
               <button
-                  onClick={() => setInviteOpen(true)}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-4 py-2 text-[12px] font-semibold text-white/70 transition-colors"
-                >
-                  <Users className="h-3.5 w-3.5" />
-                  Invite friends to split
-                </button>
+                onClick={() => setInviteOpen(true)}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-4 py-2 text-[12px] font-semibold text-white/70 transition-colors"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Invite friends to split
+              </button>
             </div>
           ) : heroData.type === "settled" ? (
             <div className="relative flex flex-col items-center gap-2">
@@ -340,6 +406,18 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
                 {heroData.subline}
               </span>
+              {settlements.length > 0 && (
+                <div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="mt-3 h-8 px-4 text-[12px] bg-white/15 hover:bg-white/25 text-white border-0"
+                    onClick={() => setSettleOpen(true)}
+                  >
+                    View settlements
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -362,304 +440,183 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Add expense row with settings menu */}
-      <div className="flex items-center gap-2">
-        <Button
-          className="flex-1 h-12 gap-2 text-[15px] font-semibold rounded-2xl"
-          onClick={() => { setEditingExpense(null); setFormOpen(true); }}
-        >
-          <Plus className="h-4.5 w-4.5" />
-          Add Expense
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="h-12 w-12 rounded-2xl shrink-0">
-              <Settings2 className="h-4.5 w-4.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">Settlement currency</DropdownMenuLabel>
-            <div className="px-2 py-1.5">
-              <SettlementCurrencyPicker
-                value={settlementCurrency}
-                onChange={(c) => updateSettlementCurrency.mutate(c)}
-                cachedCurrencyCodes={cachedCurrencyCodes}
+      {/* Balances — compact collapsible, de-emphasized */}
+      {members.length > 1 && canShowBalances && balances.length > 0 && (
+        <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="flex w-full items-center justify-between px-1 py-1.5 text-left">
+              <div className="flex items-center gap-1.5">
+                <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground/50 transition-transform ${balancesOpen ? "rotate-90" : ""}`} />
+                <span className="text-[12px] font-medium text-muted-foreground">Balances</span>
+              </div>
+              {!balancesOpen && myBalance && (
+                <span className="text-[12px] font-medium">
+                  {myBalance.balance > 0.005
+                    ? <span style={{ color: "#0D9488" }}>+{formatCurrency(myBalance.balance, settlementCurrency)}</span>
+                    : myBalance.balance < -0.005
+                    ? <span style={{ color: "#EF4444" }}>−{formatCurrency(Math.abs(myBalance.balance), settlementCurrency)}</span>
+                    : <span className="text-muted-foreground/60">Settled</span>
+                  }
+                </span>
+              )}
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="rounded-xl bg-muted/30 px-3.5 py-3 mt-1">
+              <BalancesSummary
+                balances={balances}
+                currency={settlementCurrency}
+                expenses={expenses}
+                splits={splits}
+                members={members}
+                rates={rates}
+                ratesFetchedAt={ratesFetchedAt}
               />
             </div>
-            {expenses.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  disabled={csvLoading}
-                  onClick={async () => {
-                    setCsvLoading(true);
-                    try {
-                      const session = (await supabase.auth.getSession()).data.session;
-                      const res = await fetch(
-                        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-expenses-csv?trip_id=${tripId}`,
-                        { headers: { Authorization: `Bearer ${session?.access_token}` } }
-                      );
-                      if (!res.ok) throw new Error("Export failed");
-                      const blob = await res.blob();
-                      trackEvent("export_downloaded", { trip_id: tripId, format: "csv" }, user?.id);
-                      const a = document.createElement("a");
-                      const objUrl = URL.createObjectURL(blob);
-                      a.href = objUrl;
-                      a.download = "expenses.csv";
-                      a.click();
-                      URL.revokeObjectURL(objUrl);
-                    } catch {
-                      toast.error("Failed to export CSV");
-                    } finally {
-                      setCsvLoading(false);
-                    }
-                  }}
-                >
-                  {csvLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                  Download CSV
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
-      {/* Balances / Settle Up / Expenses — frosted glass card */}
+      {members.length > 1 && !canShowBalances && (
+        <div className="flex items-center gap-2 px-1 py-1.5">
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/50" />
+          <span className="text-[12px] text-muted-foreground/60">Checking exchange rates…</span>
+        </div>
+      )}
+
+      {/* Settle Up — shown as a sheet/drawer, triggered from hero button */}
+      {members.length > 1 && settlements.length > 0 && settleOpen && (
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: "rgba(255,255,255,0.7)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.8)",
+            boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+          }}
+        >
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Settle Up</span>
+              <button
+                onClick={() => setSettleOpen(false)}
+                className="text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
+              >
+                Hide
+              </button>
+            </div>
+            {mySettlements.length > 0 && (
+              <SettleUpSection
+                settlements={mySettlements}
+                currency={settlementCurrency}
+                settlementProgress={settlementProgress.filter((p) =>
+                  mySettlements.some((s) => `${s.from}→${s.to}` === p.pairKey)
+                )}
+                totalSettledOverall={totalSettledOverall}
+                onSettle={(data) => addExpense.mutate(data as any)}
+              />
+            )}
+            {otherSettlements.length > 0 && (
+              <div className="mt-3 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] mb-1.5">
+                  Between others
+                </p>
+                <div className="space-y-1">
+                  {otherSettlements.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs text-muted-foreground px-1 py-1">
+                      <span className="truncate">{s.fromName} → {s.toName}</span>
+                      <span className="whitespace-nowrap ml-2">{formatCurrency(s.amount, settlementCurrency)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add Expense button — full width, clean */}
+      <Button
+        className="w-full h-12 gap-2 text-[15px] font-semibold rounded-2xl"
+        onClick={() => { setEditingExpense(null); setFormOpen(true); }}
+      >
+        <Plus className="h-4.5 w-4.5" />
+        Add Expense
+      </Button>
+
+      {/* Expenses list — standalone */}
       <div
-        className="mx-0 overflow-hidden"
+        className="rounded-2xl overflow-hidden"
         style={{
           background: "rgba(255,255,255,0.7)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           border: "1px solid rgba(255,255,255,0.8)",
-          borderRadius: 20,
           boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
         }}
       >
-      {members.length <= 1 ? null : !canShowBalances ? (
-        <div className="space-y-2 px-4 py-3">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Balances</span>
-          <div className="flex items-center gap-2 py-2">
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Checking exchange rates…</span>
+        {expenses.length === 0 ? (
+          <div className="text-center py-8 space-y-1 px-4">
+            <p className="text-muted-foreground text-[14px]">No expenses yet</p>
+            <p className="text-xs text-muted-foreground">
+              Tap "Add Expense" to start tracking costs
+            </p>
           </div>
-        </div>
-      ) : (
-        <>
-          {/* Balances section */}
-          {balances.length > 0 && (
-            <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
-              <div className="space-y-2 relative px-4 py-3">
-                <CollapsibleTrigger asChild>
-                  <button className="flex w-full flex-col gap-0.5 text-left">
-                    <div className="flex w-full items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${balancesOpen ? "rotate-90" : ""}`} />
-                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Balances</span>
-                      </div>
-                    </div>
-                    {!balancesOpen && myBalance && (
-                      <p className="text-[13px] pl-6">
-                        {myBalance.balance > 0.005
-                          ? <span style={{ color: "#0D9488" }} className="font-medium">You are owed {formatCurrency(myBalance.balance, settlementCurrency)}</span>
-                          : myBalance.balance < -0.005
-                          ? <span style={{ color: "#EF4444" }} className="font-medium">You owe {formatCurrency(Math.abs(myBalance.balance), settlementCurrency)}</span>
-                          : <span className="text-muted-foreground">All settled</span>
-                        }
-                      </p>
-                    )}
-                  </button>
-                </CollapsibleTrigger>
-                {!allSameCurrency && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 absolute top-3 right-3"
-                    onClick={(e) => { e.stopPropagation(); refreshRates(); }}
-                    disabled={refreshingRates}
-                  >
-                    {refreshingRates
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                      : <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />}
-                  </Button>
-                )}
-                <CollapsibleContent>
-                  <div className="mt-2 border-t pt-2" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
-                  <BalancesSummary
-                    balances={balances}
-                    currency={settlementCurrency}
-                    expenses={expenses}
-                    splits={splits}
-                    members={members}
-                    rates={rates}
-                    ratesFetchedAt={ratesFetchedAt}
-                  />
-                  </div>
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
-          )}
-
-          {/* Divider between balances and settle up */}
-          <div className="mx-4" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }} />
-
-          {/* Settle Up section */}
-          {settlements.length === 0 ? (
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Settle Up</span>
-              <span className="flex items-center gap-1.5 text-[12px] font-medium" style={{ color: "#0D9488" }}>
-                <CheckCircle2 className="h-3 w-3" />
-                All settled
+        ) : (
+          <div>
+            {/* Header */}
+            <div className="px-4 py-3 flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">
+                Expenses
+              </span>
+              <span className="text-[11px] text-muted-foreground/60">
+                {nonSettlementCount} expense{nonSettlementCount !== 1 ? "s" : ""}
+                {!ratesLoading && totalExpenses !== null && ` · ${formatCurrency(totalExpenses, settlementCurrency)}`}
               </span>
             </div>
-          ) : (
-            <Collapsible open={settleOpen} onOpenChange={setSettleOpen}>
-              <div className="space-y-2 px-4 py-3">
-                <CollapsibleTrigger asChild>
-                  <button className="flex w-full flex-col gap-0.5 text-left">
-                    <div className="flex w-full items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${settleOpen ? "rotate-90" : ""}`} />
-                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Settle Up</span>
-                      </div>
-                    </div>
-                    {!settleOpen && (
-                      <p className={`text-[13px] pl-6 font-medium ${settleUpSummary.color}`}>
-                        {settleUpSummary.text}
-                      </p>
-                    )}
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-                  {/* My settlements (prominent) */}
-                  {mySettlements.length > 0 && (
-                    <SettleUpSection
-                      settlements={mySettlements}
-                      currency={settlementCurrency}
-                      settlementProgress={settlementProgress.filter((p) =>
-                        mySettlements.some((s) => `${s.from}→${s.to}` === p.pairKey)
-                      )}
-                      totalSettledOverall={totalSettledOverall}
-                      onSettle={(data) => addExpense.mutate(data as any)}
+            {groupedExpenses.map(({ date, items }) => (
+              <div key={date}>
+                <div
+                  style={{
+                    background: "rgba(0,0,0,0.02)",
+                    padding: "6px 16px",
+                    borderBottom: "1px solid rgba(0,0,0,0.04)",
+                  }}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(0,0,0,0.35)" }}>
+                    {format(parseISO(date), "EEE d MMM")}
+                  </p>
+                </div>
+                <div>
+                  {items.map((exp) => (
+                    <ExpenseCard
+                      key={exp.id}
+                      expense={exp}
+                      splits={splits.filter((s) => s.expense_id === exp.id)}
+                      members={members}
+                      myRole={myRole}
+                      tripId={tripId}
+                      settlementCurrency={settlementCurrency}
+                      baseCurrency={settlementCurrency}
+                      rates={rates}
+                      itineraryItems={itineraryItems}
+                      isNew={newItemIds?.has(exp.id)}
+                      onEdit={(e) => { setEditingExpense(e); setFormOpen(true); }}
+                      onDelete={(id) => deleteExpense.mutate(id)}
                     />
-                  )}
-                  {/* Third-party settlements (de-emphasised) */}
-                  {otherSettlements.length > 0 && (
-                    <div className="mt-3 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] mb-1.5">
-                        Between others
-                      </p>
-                      <div className="space-y-1">
-                        {otherSettlements.map((s, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between text-xs text-muted-foreground px-1 py-1"
-                          >
-                            <span className="truncate">
-                              {s.fromName} → {s.toName}
-                            </span>
-                            <span className="whitespace-nowrap ml-2">
-                              {formatCurrency(s.amount, settlementCurrency)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
-          )}
-        </>
-      )}
-
-      {/* Divider before expenses */}
-      <div className="mx-4" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }} />
-
-      {/* Expenses section */}
-      <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
-        <div className="space-y-2 px-4 py-3">
-          <CollapsibleTrigger asChild>
-            <button className="flex w-full flex-col gap-0.5 text-left">
-              <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expensesOpen ? "rotate-90" : ""}`} />
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">Expenses</span>
-                  {expenses.length > 0 && (
-                    <span className="text-[11px] text-muted-foreground/60">{nonSettlementCount} expense{nonSettlementCount !== 1 ? "s" : ""}</span>
-                  )}
+                  ))}
                 </div>
               </div>
-              {!expensesOpen && !ratesLoading && totalExpenses !== null && (
-                <p className="text-[13px] text-muted-foreground pl-6">
-                  Total: {formatCurrency(totalExpenses, settlementCurrency)}
-                </p>
-              )}
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 pt-1" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-            {expenses.length === 0 ? (
-              <div className="text-center py-8 space-y-1">
-                <p className="text-muted-foreground text-[14px]">No expenses yet</p>
-                <p className="text-xs text-muted-foreground">
-                  Tap "Add Expense" to start tracking costs
-                </p>
-              </div>
-            ) : (
-              <div>
-                {groupedExpenses.map(({ date, items }) => (
-                  <div key={date}>
-                    <div
-                      className="mt-2 first:mt-0"
-                      style={{
-                        background: "rgba(0,0,0,0.02)",
-                        padding: "6px 16px",
-                        borderBottom: "1px solid rgba(0,0,0,0.04)",
-                      }}
-                    >
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(0,0,0,0.35)" }}>
-                        {format(parseISO(date), "EEE d MMM")}
-                      </p>
-                    </div>
-                    <div>
-                      {items.map((exp) => (
-                        <ExpenseCard
-                          key={exp.id}
-                          expense={exp}
-                          splits={splits.filter((s) => s.expense_id === exp.id)}
-                          members={members}
-                          myRole={myRole}
-                          tripId={tripId}
-                          settlementCurrency={settlementCurrency}
-                          baseCurrency={settlementCurrency}
-                          rates={rates}
-                          itineraryItems={itineraryItems}
-                          isNew={newItemIds?.has(exp.id)}
-                          onEdit={(e) => { setEditingExpense(e); setFormOpen(true); }}
-                          onDelete={(id) => deleteExpense.mutate(id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {/* Total footer */}
-                {!ratesLoading && totalExpenses !== null && (
-                  <p className="text-[12px] text-muted-foreground text-center pt-4 mt-2">
-                    Total {formatCurrency(totalExpenses, settlementCurrency)} · {nonSettlementCount} expense{nonSettlementCount !== 1 ? "s" : ""}
-                  </p>
-                )}
-              </div>
-            )}
-          {!ratesLoading && ratesEmpty && !allSameCurrency && (
-            <p className="text-xs text-center text-muted-foreground py-2">
-              Some amounts couldn't be converted — exchange rates unavailable
-            </p>
-          )}
-        </CollapsibleContent>
-        </div>
-      </Collapsible>
-
-      </div>{/* end frosted glass wrapper */}
+            ))}
+          </div>
+        )}
+        {!ratesLoading && ratesEmpty && !allSameCurrency && (
+          <p className="text-xs text-center text-muted-foreground py-2">
+            Some amounts couldn't be converted — exchange rates unavailable
+          </p>
+        )}
+      </div>
 
 
       <ExpenseFormModal
