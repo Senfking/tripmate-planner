@@ -19,7 +19,7 @@ const SHELL_URLS: string[] =
 const SUPABASE_STORAGE_HOST = 'dwtbqomfleihcvkfoopm.supabase.co';
 const STORAGE_PATH_PREFIX = '/storage/v1/object/sign/trip-attachments/';
 
-const sw = self as unknown as ServiceWorkerGlobalScope;
+declare var self: ServiceWorkerGlobalScope;
 
 /* ---------- IndexedDB helpers (mirrors src/lib/offlineDocuments.ts) ---------- */
 
@@ -49,7 +49,7 @@ function idbGet(filePath: string): Promise<Blob | null> {
 
 /* ---------- Lifecycle ---------- */
 
-sw.addEventListener('install', (event) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
       // Use individual puts so a single 404 doesn't blow up the whole install.
@@ -65,19 +65,19 @@ sw.addEventListener('install', (event) => {
   // Don't skipWaiting here — let the client trigger it via message
 });
 
-sw.addEventListener('message', (event) => {
+self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
-    sw.skipWaiting();
+    self.skipWaiting();
   }
 });
 
-sw.addEventListener('activate', (event) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
-  sw.clients.claim();
+  self.clients.claim();
 });
 
 /* ---------- Fetch ---------- */
@@ -111,11 +111,11 @@ async function handleAsset(request: Request): Promise<Response> {
   return response;
 }
 
-sw.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Only handle same-origin requests (except Supabase storage)
-  if (url.origin !== sw.location.origin && url.host !== SUPABASE_STORAGE_HOST) {
+  if (url.origin !== self.location.origin && url.host !== SUPABASE_STORAGE_HOST) {
     return;
   }
 
@@ -157,12 +157,12 @@ sw.addEventListener('fetch', (event) => {
 
 /* ---------- Push Notifications ---------- */
 
-sw.addEventListener('push', (event) => {
+self.addEventListener('push', (event) => {
   // DEBUG: temporary logging to diagnose push notification issues
   try {
     if (!event.data) {
       event.waitUntil(
-        sw.registration.showNotification('Junto', {
+        self.registration.showNotification('Junto', {
           body: 'Debug: push event fired but event.data is null',
         })
       );
@@ -173,7 +173,7 @@ sw.addEventListener('push', (event) => {
     const title = data.title || 'Junto';
     const body = data.body || 'You have a new notification';
     event.waitUntil(
-      sw.registration.showNotification(title, {
+      self.registration.showNotification(title, {
         body,
         icon: data.icon,
         data: { url: data.url },
@@ -181,15 +181,15 @@ sw.addEventListener('push', (event) => {
     );
   } catch (error) {
     event.waitUntil(
-      sw.registration.showNotification('Junto', {
+      self.registration.showNotification('Junto', {
         body: 'Debug: push event fired but data parsing failed: ' + (error instanceof Error ? error.message : String(error)),
       })
     );
   }
 });
 
-sw.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url || '/';
-  event.waitUntil(sw.clients.openWindow(url));
+  event.waitUntil(self.clients.openWindow(url));
 });
