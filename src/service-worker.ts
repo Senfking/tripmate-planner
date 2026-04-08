@@ -158,16 +158,34 @@ sw.addEventListener('fetch', (event) => {
 /* ---------- Push Notifications ---------- */
 
 sw.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? {};
-  const title = data.title || 'Junto';
-  const body = data.body || 'You have a new notification';
-  event.waitUntil(
-    sw.registration.showNotification(title, {
-      body,
-      icon: data.icon,
-      data: { url: data.url },
-    })
-  );
+  // DEBUG: temporary logging to diagnose push notification issues
+  try {
+    if (!event.data) {
+      event.waitUntil(
+        sw.registration.showNotification('Junto', {
+          body: 'Debug: push event fired but event.data is null',
+        })
+      );
+      return;
+    }
+
+    const data = event.data.json();
+    const title = data.title || 'Junto';
+    const body = data.body || 'You have a new notification';
+    event.waitUntil(
+      sw.registration.showNotification(title, {
+        body,
+        icon: data.icon,
+        data: { url: data.url },
+      })
+    );
+  } catch (error) {
+    event.waitUntil(
+      sw.registration.showNotification('Junto', {
+        body: 'Debug: push event fired but data parsing failed: ' + (error instanceof Error ? error.message : String(error)),
+      })
+    );
+  }
 });
 
 sw.addEventListener('notificationclick', (event) => {
