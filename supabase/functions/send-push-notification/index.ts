@@ -116,6 +116,10 @@ function concat(...arrays: Uint8Array[]): Uint8Array {
   return out;
 }
 
+function toOwnedUint8Array(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  return Uint8Array.from(bytes);
+}
+
 async function hkdf(
   salt: Uint8Array,
   ikm: Uint8Array,
@@ -237,7 +241,11 @@ async function encryptPayload(
     "encrypt",
   ]);
   const ciphertext = new Uint8Array(
-    await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce as unknown as ArrayBufferView }, aesKey, new Uint8Array(padded) as unknown as ArrayBuffer),
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: toOwnedUint8Array(nonce) },
+      aesKey,
+      toOwnedUint8Array(padded),
+    ),
   );
 
   // Build aes128gcm body: salt (16) + rs (4) + idLen (1) + keyId (65) + ciphertext
