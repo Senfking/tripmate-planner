@@ -228,8 +228,11 @@ async function encryptPayload(
   const salt = crypto.getRandomValues(new Uint8Array(16));
 
   // Derive content encryption key (16 bytes) and nonce (12 bytes)
-  const cekInfo = buildInfo("aes128gcm", clientPublicRaw, localPublicKey);
-  const nonceInfo = buildInfo("nonce", clientPublicRaw, localPublicKey);
+  // RFC 8291 §3.4: aes128gcm uses simple info strings (NOT the old aesgcm
+  // format that included P-256 curve name and public keys).
+  const encoder = new TextEncoder();
+  const cekInfo = encoder.encode("Content-Encoding: aes128gcm\0");
+  const nonceInfo = encoder.encode("Content-Encoding: nonce\0");
   const cek = await hkdf(salt, ikm, cekInfo, 16);
   const nonce = await hkdf(salt, ikm, nonceInfo, 12);
 
