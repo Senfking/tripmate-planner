@@ -374,15 +374,6 @@ export default function TripList() {
   );
   const [nudgeDismissedState, setNudgeDismissedState] = useState(0);
 
-  const postTripNudge = useMemo(() => {
-    if (!trips || trips.length === 0) return null;
-    const ended = trips
-      .filter((t) => t.statusInfo.status === "ended" && !dismissedNudges.current.has(t.id))
-      .sort((a, b) => (b.tentative_end_date ?? "").localeCompare(a.tentative_end_date ?? ""));
-    return ended[0] ?? null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trips, nudgeDismissedState]);
-
   const handleDismissNudge = useCallback((tripId: string) => {
     dismissedNudges.current.add(tripId);
     localStorage.setItem("junto_post_trip_nudge_dismissed", JSON.stringify([...dismissedNudges.current]));
@@ -590,6 +581,15 @@ export default function TripList() {
     },
     enabled: !!user,
   });
+
+  const postTripNudge = useMemo(() => {
+    if (!trips || trips.length === 0) return null;
+    const ended = trips
+      .filter((t) => t.statusInfo.status === "ended" && !dismissedNudges.current.has(t.id))
+      .sort((a, b) => (b.tentative_end_date ?? "").localeCompare(a.tentative_end_date ?? ""));
+    return ended[0] ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trips, nudgeDismissedState]);
 
   if (isLoading) {
     return (
