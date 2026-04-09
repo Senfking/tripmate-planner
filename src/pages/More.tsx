@@ -71,7 +71,14 @@ function PushEnableButton() {
   }, []);
 
   if (status === "enabled") {
-    return <p className="text-xs text-muted-foreground">✅ Push notifications enabled</p>;
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15">
+          <Bell className="h-3 w-3 text-emerald-600" />
+        </div>
+        Push notifications enabled
+      </div>
+    );
   }
   if (status === "denied") {
     return <p className="text-xs text-muted-foreground">Push notifications are blocked in your browser settings.</p>;
