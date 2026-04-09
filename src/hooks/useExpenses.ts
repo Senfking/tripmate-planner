@@ -59,6 +59,8 @@ export function useExpenses(tripId: string) {
     enabled: !!tripId && !!user,
     staleTime: 0,
     refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   });
 
   // Fetch all splits for this trip's expenses
@@ -434,6 +436,7 @@ export function useExpenses(tripId: string) {
     itineraryItems: itineraryQuery.data || [],
     isLoading: !user || expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading,
     isFetchingExpenses: expensesQuery.isFetching,
+    hasFreshExpensesSnapshot: expensesQuery.isFetchedAfterMount,
     ratesLoading: ratesQuery.isLoading,
     updateSettlementCurrency,
     addExpense,
