@@ -48,6 +48,16 @@ const ALL_EMOJIS = EMOJI_GROUPS;
 
 export default function TripNew() {
   const navigate = useNavigate();
+  const pendingRedirect = useRef<string | null>(null);
+
+  const navigateToTrip = useCallback(() => {
+    if (pendingRedirect.current) {
+      navigate(pendingRedirect.current, { replace: true });
+    }
+  }, [navigate]);
+
+  const { showOptIn, PushOptInDrawer } = usePushOptIn(navigateToTrip);
+
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("✈️");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
