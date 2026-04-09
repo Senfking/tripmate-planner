@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Junto Build Guide v9</title>
+<title>Junto Build Guide v10</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
   :root {
@@ -168,7 +168,7 @@
   <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Toggle menu">☰</button>
   <span class="topbar-logo">JUNTO</span>
   <span class="topbar-sep">/</span>
-  <span class="topbar-title">Build Guide v9 — Research Edition</span>
+  <span class="topbar-title">Build Guide v10 — AI Strategy Edition</span>
   <div class="topbar-right">
     <div class="progress-wrap">
       <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
@@ -200,11 +200,14 @@
     <div class="sidebar-item" onclick="show('push',this)"><span class="sidebar-dot dot-red"></span> Push Notifications</div>
     <div class="sidebar-item" onclick="show('packing',this)"><span class="sidebar-dot dot-blue"></span> Packing Lists</div>
     <div class="sidebar-item" onclick="show('referral',this)"><span class="sidebar-dot dot-green"></span> Referral & Growth</div>
+    <div class="sidebar-item" onclick="show('crosslinking',this)"><span class="sidebar-dot dot-purple"></span> Smart Cross-Linking</div>
   </div>
 
   <div class="sidebar-group">
     <div class="sidebar-label">Phase 2 — Weeks 3–8</div>
+    <div class="sidebar-item" onclick="show('prefengine',this)"><span class="sidebar-dot dot-purple"></span> Group Preference Engine</div>
     <div class="sidebar-item" onclick="show('ai',this)"><span class="sidebar-dot dot-purple"></span> AI Trip Builder</div>
+    <div class="sidebar-item" onclick="show('receiptscanner',this)"><span class="sidebar-dot dot-purple"></span> Receipt & Doc Scanner</div>
     <div class="sidebar-item" onclick="show('templates',this)"><span class="sidebar-dot dot-blue"></span> Templates & Discovery</div>
     <div class="sidebar-item" onclick="show('recommendations',this)"><span class="sidebar-dot dot-purple"></span> Trip Recommendations</div>
     <div class="sidebar-item" onclick="show('maps',this)"><span class="sidebar-dot dot-blue"></span> Maps & Calendar</div>
@@ -230,6 +233,7 @@
     <div class="sidebar-label">Monetization</div>
     <div class="sidebar-item" onclick="show('affiliates',this)"><span class="sidebar-dot dot-amber"></span> Affiliate Links</div>
     <div class="sidebar-item" onclick="show('pro',this)"><span class="sidebar-dot dot-amber"></span> Junto Pro</div>
+    <div class="sidebar-item" onclick="show('aitiers',this)"><span class="sidebar-dot dot-purple"></span> AI Monetization Tiers</div>
     <div class="sidebar-item" onclick="show('entity',this)"><span class="sidebar-dot dot-purple"></span> Legal Entity</div>
   </div>
 
@@ -542,7 +546,7 @@ List every file you'll change before making any changes. Do not change any other
     <div class="checkbox"><span class="checkmark">✓</span></div>
     <div class="task-body">
       <div class="task-top"><span class="task-title">Expense form UX: split tabs too prominent, wrong default date</span><span class="tag tag-lovable">Lovable</span></div>
-      <p class="task-note">The Equal / % / Custom split tabs are shown immediately, making the form look like accounting software. Hide % and Custom behind an "Advanced Split" toggle. Also, the expense date defaults to today's real-world date rather than a date within the trip window.</p>
+      <p class="task-note">The Equal / % / Custom split tabs are shown immediately, making the form look like accounting software. Hide % and Custom behind an "Advanced Split" toggle. Also, the expense date defaults to today's real-world date rather than a date within the trip window. Future: Smart Cross-Linking (Phase 1) will enable expenses to be auto-created from receipt scans and booking uploads, and cross-linked with itinerary items.</p>
     </div>
   </div>
 </div>
@@ -685,6 +689,97 @@ DELETE FROM trips WHERE id = '&lt;ID_HERE&gt;';<button class="copy-btn" onclick=
     <div class="task-body">
       <div class="task-top"><span class="task-title">URL sweep — juntotravel.lovable.app → junto.pro</span><span class="tag tag-manual">Done</span></div>
       <p class="task-note">Completed. All codebase references updated to junto.pro.</p>
+    </div>
+  </div>
+
+  <h3>AI Cost Control Infrastructure</h3>
+  <div class="callout callout-red">Before launching any AI features, add tracking and cost controls. AI without metering is a blank cheque — even at $0.05/request, 1,000 users doing 10 requests/day = $500/day.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Create ai_request_log table and logging middleware</span><span class="tag tag-code">Claude Code</span><span class="tag tag-sql">SQL</span></div>
+      <p class="task-note">Track every AI API call. Create an <code>ai_request_log</code> table: <code>user_id, feature, model, input_tokens, output_tokens, cost_usd, cached, created_at</code>. Add logging to all existing Edge Functions that call Anthropic (receipt scanner, suggest-activities). This is the foundation for all AI cost management.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Create AI cost tracking infrastructure for Junto.
+
+1. Create a new table ai_request_log:
+   - id (uuid, primary key, default gen_random_uuid())
+   - user_id (uuid, references auth.users, not null)
+   - feature (text, not null) — e.g. 'receipt_scan', 'suggest_activities', 'trip_builder', 'packing_list'
+   - model (text, not null) — e.g. 'claude-haiku-4-5-20251001', 'claude-sonnet-4-6'
+   - input_tokens (integer)
+   - output_tokens (integer)
+   - cost_usd (numeric(8,6))
+   - cached (boolean, default false)
+   - created_at (timestamptz, default now())
+   Add RLS: users can read their own logs, service_role can write.
+
+2. Find all existing Edge Functions that call the Anthropic API (receipt scanner, suggest-activities, any others). Add logging after each API call — insert a row into ai_request_log with the token counts from the API response.
+
+3. Create a helper function or shared module that all Edge Functions can import for consistent logging.
+
+Show me the existing Edge Functions that call Anthropic before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Implement per-user daily rate limits</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Free tier: 10 AI requests/day. Pro tier: 100 AI requests/day. Check the ai_request_log count for the current user in the last 24 hours before processing any AI request. Return a clear error with reset time if limit exceeded.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Add per-user daily rate limits to all Junto Edge Functions that call the Anthropic API.
+
+Before processing any AI request, check ai_request_log for the current user's request count in the last 24 hours. Limits: free users = 10 requests/day, Pro users = 100 requests/day. If the limit is exceeded, return a 429 response with a JSON body: { error: "daily_limit_exceeded", limit: 10, reset_at: "ISO timestamp" }.
+
+Create a shared rate-limit checker that all AI Edge Functions can import. Check the user's Pro status from the profiles table (is_pro column or equivalent).
+
+Show me the current auth pattern in Edge Functions before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Create response_cache table for generic AI queries</span><span class="tag tag-code">Claude Code</span><span class="tag tag-sql">SQL</span></div>
+      <p class="task-note">Cache generic destination queries (e.g. "things to do in Bali") in a <code>response_cache</code> table with 7-day TTL. Key on feature + normalized input hash. Saves ~70% of AI costs for popular destinations. Haiku for simple tasks (receipt scanning, categorization, packing lists), Sonnet only for complex generation (trip builder, preference engine).</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Create an AI response caching layer for Junto.
+
+1. New table response_cache:
+   - id (uuid, primary key, default gen_random_uuid())
+   - cache_key (text, unique, not null) — hash of feature + normalized input
+   - feature (text, not null) — e.g. 'suggest_activities', 'packing_list'
+   - response_data (jsonb, not null) — the cached AI response
+   - created_at (timestamptz, default now())
+   - expires_at (timestamptz, not null) — default now() + interval '7 days'
+   Add an index on cache_key. Add a pg_cron job to delete expired rows daily.
+
+2. Create a shared cache helper: before calling the AI API, check if a matching cache_key exists and hasn't expired. If hit, return cached data and log it in ai_request_log with cached=true and cost_usd=0. If miss, call the API, cache the response, and log normally.
+
+3. Apply caching to suggest-activities for generic destination queries. Do NOT cache personalised queries that include group-specific data.
+
+Also document the model selection strategy as code comments:
+- Haiku: receipt scanning, expense categorization, packing list generation
+- Sonnet: trip builder, group preference reconciliation, complex activity suggestions<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Set Anthropic Console spending cap — $50/month</span><span class="tag tag-ops">OPS</span></div>
+      <p class="task-note">Hard spending cap in the Anthropic Console. Set to $50/month initially. Increase only after validating cost-per-user metrics from ai_request_log. This is the safety net — even if rate limits fail, billing stops at $50.</p>
     </div>
   </div>
 </div>
@@ -842,35 +937,235 @@ Only change the home screen header and the share sheet component. Do not touch a
   </div>
 </div>
 
-<!-- ══════════ PHASE 2: AI TRIP BUILDER ══════════ -->
-<div id="ai" class="section">
+<!-- ══════════ PHASE 1: SMART CROSS-LINKING ══════════ -->
+<div id="crosslinking" class="section">
   <div class="section-header">
-    <h2>AI Trip Builder — Phase 2</h2>
-    <p>Guided AI flow that generates a fully populated trip from a short questionnaire. The acquisition magnet that turns "I want to plan a trip" into a complete plan in under two minutes.</p>
+    <h2>Smart Cross-Linking — Phase 1</h2>
+    <p>Receipts, expenses, itinerary items, and bookings are currently separate silos. Make them intelligently connected so one action populates multiple parts of a trip.</p>
   </div>
-  <div class="callout callout-purple">Research: Layla.ai generated 10M+ itineraries since 2024. But AI that balances multiple group preferences — "Alex wants museums, Jordan wants beaches" — doesn't exist yet. Junto's Vibe Board already captures these preferences. This is the unfair advantage. The AI Trip Builder extends the suggest-activities Edge Function into a full trip creation experience.</div>
+  <div class="callout callout-purple">The goal: scan a receipt → expense created + itinerary item suggested + document shared with group. Instead of entering the same information in three places, one action does it all. This is what makes Junto feel like magic compared to using Splitwise + Google Sheets + WhatsApp.</div>
 
   <div class="task">
     <div class="checkbox"><span class="checkmark">✓</span></div>
     <div class="task-body">
-      <div class="task-top"><span class="task-title">Build AI suggestions Edge Function</span><span class="tag tag-code">Claude Code</span></div>
-      <p class="task-note">Takes destination, dates, group size, budget, and Vibe Board interests. Returns structured JSON of suggested activities. Uses Claude API — same pattern as receipt scanner. This is the foundation for the full AI Trip Builder.</p>
+      <div class="task-top"><span class="task-title">Receipt scan → expense + itinerary prompt</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">When a receipt is scanned and an expense is created, prompt the user: "Add [venue name] to your itinerary for [date]?" If yes, creates an itinerary item linked to the expense. Uses the venue name and date from the receipt scan data.</p>
       <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
       <div class="task-detail">
         <span class="code-label">Claude Code prompt</span>
-        <div class="code-block">Build a Supabase Edge Function called suggest-activities for Junto.
+        <div class="code-block">Add cross-linking between receipt scanning and itinerary in Junto.
 
-First, check how the existing receipt scanner Edge Function calls the Claude API so we use the same pattern and API key setup.
+After a receipt is scanned and an expense is created, check if the receipt data includes a venue name and date. If it does, show a prompt to the user: "Add [venue name] to your itinerary for [date]?" with "Add" and "Skip" buttons.
 
-The function should accept: { trip_id, destination, start_date, end_date, group_size, budget_level (low/mid/high), interests[] }
+If the user taps "Add", create an itinerary item with the venue name as the title, the receipt date, and a note linking to the expense. Store the link between the expense and itinerary item (add an expense_id column to itinerary_items or a cross_links table).
 
-It should query the trip's Vibe Board data from the DB to include group preferences automatically if available.
+Diagnose first: what data does the receipt scanner currently return after scanning? What fields are available (venue name, date, amount, category)?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
 
-Call the Claude API with a prompt that generates 8–12 activity suggestions for the destination, personalised to the group's interests and budget.
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Booking upload → itinerary + expense prompt</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">When a booking document is uploaded (hotel confirmation, flight ticket, activity voucher), AI extracts details (venue, dates, times, cost, confirmation number). Prompt: "Add to itinerary? Create an expense for [amount] split with the group?" Creates both if user confirms.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Add cross-linking between booking uploads and itinerary/expenses in Junto.
 
-Return a JSON array where each item has: { name, description, estimated_cost_eur, category (food/culture/nature/nightlife/adventure/relaxation), best_time_of_day (morning/afternoon/evening), google_maps_url }
+When a user uploads a document to Bookings & Docs, call the existing extract-booking-info Edge Function (or extend it) to extract: venue/hotel name, dates, times, cost, confirmation number, document type (hotel/flight/activity/restaurant).
 
-Show me the existing receipt scanner Edge Function structure before writing anything, so I can confirm the API pattern is correct.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+After extraction, show a confirmation card:
+- "Add [Hotel Name] to itinerary for [check-in] → [check-out]?" → creates itinerary item(s)
+- "Create expense for [amount] split with the group?" → pre-fills expense form with extracted data
+- User can confirm both, one, or neither
+
+Diagnose first: what does the extract-booking-info Edge Function currently return? What fields are extracted?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Itinerary item with cost → expense prompt</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">When an itinerary item is added with a cost mentioned in notes or description, prompt: "Create an expense for [amount]?" If yes, pre-fills the expense form with the itinerary item's title, date, and extracted amount.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Default-shared receipts and documents + private toggle</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">All scanned receipts and uploaded documents should be visible to all trip members by default — this is a group planning app. Add a "Private" toggle for sensitive documents (e.g. personal medical docs), but default is shared. Fix current issue: receipts attached to expenses must be viewable by all trip members, not just the uploader. Check and fix RLS policies on the receipt-images storage bucket.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Fix receipt and document sharing in Junto.
+
+1. Check the current RLS policies on the receipt-images storage bucket. Are receipts only visible to the uploader, or to all trip members? If only the uploader can see them, fix the RLS so all members of the same trip can view receipts attached to that trip's expenses.
+
+2. Add a "private" boolean column to the relevant table (bookings or a documents table) with default false. When private=true, only the uploader can see the document. When private=false (default), all trip members can see it.
+
+3. Add a "Private" toggle switch to the document upload UI — default OFF, with a tooltip: "Only you can see private documents."
+
+Diagnose the current storage bucket policies first before making any changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 2: GROUP PREFERENCE ENGINE ══════════ -->
+<div id="prefengine" class="section">
+  <div class="section-header">
+    <h2>Group Preference Engine — Phase 2</h2>
+    <p>Each trip member fills a quick 30-second preference quiz. AI reconciles everyone's preferences into a Group Profile that feeds directly into the AI Trip Builder.</p>
+  </div>
+  <div class="callout callout-purple">This is what makes the AI Trip Builder group-aware instead of generic. "3 of 4 want beach + culture, budget overlap is €80–120/day, Priya is vegetarian" → every AI suggestion reflects all of this. No competitor does group-optimised AI planning. Cost: ~$0.02 per reconciliation (Sonnet).</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build preference quiz UI and data model</span><span class="tag tag-lovable">Lovable</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">When a member joins a trip, prompt them to fill a quick preference quiz (30 seconds max). Questions: budget comfort zone (anonymous — nobody sees each other's number, AI finds the overlap), pace preference (packed schedule vs relaxed), activity interests (beach/culture/nature/nightlife/foodie/adventure), dietary restrictions, accessibility needs, early bird vs night owl.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt (database)</span>
+        <div class="code-block">Create the database tables for Junto's Group Preference Engine.
+
+New table: trip_member_preferences
+- id (uuid, primary key, default gen_random_uuid())
+- trip_id (uuid, references trips, not null)
+- user_id (uuid, references auth.users, not null)
+- budget_comfort_min (numeric) — anonymous, never shown to other members
+- budget_comfort_max (numeric)
+- budget_currency (text, default 'EUR')
+- pace (text, check: 'packed' | 'moderate' | 'relaxed')
+- interests (text[]) — e.g. ['beach', 'culture', 'nature', 'nightlife', 'foodie', 'adventure']
+- dietary_restrictions (text)
+- accessibility_needs (text)
+- schedule_preference (text, check: 'early_bird' | 'flexible' | 'night_owl')
+- created_at (timestamptz, default now())
+- updated_at (timestamptz, default now())
+- Unique constraint on (trip_id, user_id)
+
+RLS: users can read/write their own preferences. Users can read other trip members' preferences EXCEPT budget_comfort_min/max (those are only readable by the AI via service_role).
+
+New table: trip_group_profiles
+- id (uuid, primary key, default gen_random_uuid())
+- trip_id (uuid, references trips, unique, not null)
+- overlap_summary (jsonb) — what everyone agrees on
+- compromises (jsonb) — where preferences differ and how to balance
+- budget_sweet_spot (jsonb) — { min, max, currency } — anonymous overlap zone
+- generated_at (timestamptz, default now())
+- raw_ai_response (jsonb) — full AI response for debugging
+
+RLS: all trip members can read the group profile.
+
+Write the Supabase migration SQL.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after tables exist)</span>
+        <div class="code-block">Add a Group Preference Engine to Junto trips.
+
+1. Preference quiz (shown when a member joins a trip, or accessible from trip settings):
+   - Step 1: Budget comfort zone — slider or two number inputs (min/max per day). Label: "This is anonymous — your group won't see your number, the AI finds the overlap."
+   - Step 2: Pace — three selectable cards: Packed Schedule, Moderate, Relaxed
+   - Step 3: Interests — multi-select chips: Beach, Culture, Nature, Nightlife, Foodie, Adventure
+   - Step 4: Dietary restrictions — text input (optional)
+   - Step 5: Accessibility needs — text input (optional)
+   - Step 6: Schedule — three selectable cards: Early Bird, Flexible, Night Owl
+   - Save to trip_member_preferences table. Show a "Done ✓" state after completion.
+
+2. Group Profile summary card (visible on the trip dashboard once 2+ members have filled the quiz):
+   - Visual summary showing: the overlap zone (what everyone agrees on), the compromises (where preferences differ), and the anonymous budget sweet spot
+   - Radar chart or visual fingerprint of the group's collective travel personality
+   - Each member can see how their preferences map to the group (highlighted on the chart)
+   - "X of Y members have shared preferences" progress indicator with nudge to invite others to fill it
+
+Keep the quiz short and fun — this should feel like a personality quiz, not a form. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build AI preference reconciliation Edge Function</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">When all (or most) members have filled the quiz, call AI to reconcile preferences into a Group Profile. The AI finds: the overlap zone, the compromises, and the anonymous budget sweet spot. This Group Profile feeds directly into the AI Trip Builder. Use Sonnet for reconciliation. Cost: ~$0.02 per reconciliation.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Build a Supabase Edge Function called reconcile-preferences for Junto's Group Preference Engine.
+
+The function accepts a trip_id, queries all trip_member_preferences for that trip (using service_role to read budget data), and calls the Claude API (Sonnet) with a prompt that:
+
+1. Finds the overlap zone — what preferences all members share
+2. Identifies compromises — where preferences differ and suggests how to balance (e.g. "2 prefer packed, 2 prefer relaxed → suggest moderate pace with one packed day and one free day")
+3. Calculates the anonymous budget sweet spot — the overlapping range of all members' budget comfort zones
+4. Returns structured JSON matching the trip_group_profiles schema
+
+Save the result to trip_group_profiles table. Trigger this function automatically when a new preference is saved and 2+ members have filled the quiz (or manually via a "Generate Group Profile" button).
+
+Use the same Anthropic API pattern as the existing suggest-activities Edge Function. Log the request to ai_request_log.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Monetization</h3>
+  <p>Free for groups up to 4 members. Pro: any group size + detailed conflict analysis showing exactly how each member's preferences differ and specific compromise suggestions.</p>
+</div>
+
+<!-- ══════════ PHASE 2: AI TRIP BUILDER ══════════ -->
+<div id="ai" class="section">
+  <div class="section-header">
+    <h2>AI Trip Builder — Phase 2 (Hero Feature)</h2>
+    <p>Map-centric AI trip planning inspired by Layla.ai. NOT a form that outputs a text list — this is a visual, interactive, group-aware experience. The acquisition magnet that turns "I want to plan a trip" into a complete plan in under two minutes.</p>
+  </div>
+  <div class="callout callout-purple">Research: Layla.ai generated 10M+ itineraries since 2024. But AI that balances multiple group preferences — "3 of 4 want beach + culture, budget is €80–120/day, Priya is vegetarian" — doesn't exist yet. The key differentiator: this is group-aware. It pulls from the Group Preference Engine to balance everyone's interests. No competitor does this. Cost: ~$0.05 per full trip generation (Sonnet).</div>
+
+  <h3>The Flow</h3>
+  <p>User taps "Plan with AI" → short questionnaire (destination or "surprise me", dates, trip length, budget level, vibe multi-select from Vibe Board, group size, dietary/accessibility needs) → AI generates a full day-by-day plan.</p>
+
+  <h3>The Map Experience</h3>
+  <ul>
+    <li><strong>Full-screen interactive map</strong> — activities plotted as pins, colour-coded by day</li>
+    <li><strong>Swipeable day tabs</strong> at the top to navigate between days</li>
+    <li><strong>Rich activity cards</strong> — photo from Google Places, star rating, price range, category icon, estimated duration, walking/driving time from previous stop</li>
+    <li><strong>Tap to expand</strong> — full description, reviews snippet, "Add to itinerary" + "Remove" buttons</li>
+    <li><strong>Drag to reorder</strong> — activities within a day, route line updates dynamically</li>
+    <li><strong>Real-time collaboration</strong> — group members see the same view via Supabase Realtime</li>
+    <li><strong>Group voting</strong> — members can vote on suggestions (thumbs up/down) or add comments</li>
+    <li><strong>"Regenerate day"</strong> button for fresh suggestions on a specific day</li>
+    <li><strong>On confirm</strong> — all accepted activities populate the trip's itinerary, packing list suggestions, and estimated daily budget</li>
+  </ul>
+
+  <div class="callout callout-green">Depends on: Google Maps/Places integration (Phase 2), Group Preference Engine (Phase 2). The Group Preference Engine must be built first — it feeds the group-aware data into every suggestion.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build AI suggestions Edge Function (group-aware)</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Extend the existing suggest-activities Edge Function to accept Group Preference Engine data. Returns structured JSON with Google Places IDs for photo/rating lookup. Use Sonnet for generation, cache popular destination results in response_cache table.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Extend the existing suggest-activities Edge Function for Junto's AI Trip Builder.
+
+First, check the current suggest-activities Edge Function and the new trip_group_profiles table from the Group Preference Engine.
+
+The function should now accept an extended payload:
+- { trip_id, destination, start_date, end_date, group_size, budget_level, interests[], group_profile_id (optional) }
+
+When group_profile_id is provided, query the trip_group_profiles table to get: overlap zone, compromises, budget sweet spot, and all member preferences. Include this in the AI prompt so suggestions are group-optimised.
+
+Update the return format to include Google Places data:
+Each item: { name, description, estimated_cost_eur, category, best_time_of_day, google_places_id, lat, lng, duration_minutes, photo_reference }
+
+The google_places_id enables the frontend to fetch photos, ratings, and reviews from the Google Places API directly.
+
+Cache generic destination queries (without group-specific data) in the response_cache table with 7-day TTL. Log all requests to ai_request_log.
+
+Use Sonnet for generation. Show me the existing suggest-activities function before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
       </div>
     </div>
   </div>
@@ -878,53 +1173,62 @@ Show me the existing receipt scanner Edge Function structure before writing anyt
   <div class="task">
     <div class="checkbox"></div>
     <div class="task-body">
-      <div class="task-top"><span class="task-title">Build "Plan with AI" guided trip creation flow</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
-      <p class="task-note">User taps "Plan with AI" from the new trip screen. A short questionnaire collects: destination (or "surprise me"), dates/flexibility, trip length (3 / 5 / 7 / 10+ days), budget level (budget / mid-range / premium), vibe (adventure / relaxation / culture / nightlife / foodie — multi-select, pulls from Vibe Board if available), group size, and preferences (family-friendly, accessibility, dietary). AI generates a full day-by-day itinerary with times, suggested packing list, and estimated daily budget breakdown. User previews and edits everything before confirming. On confirm, populates itinerary items, packing list, and budget notes into the trip.</p>
-      <p class="task-note">Depends on: AI Itinerary Suggestions Edge Function. Build after the suggest-activities Edge Function is live — this extends that work.</p>
+      <div class="task-top"><span class="task-title">Build "Plan with AI" questionnaire flow</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">User taps "Plan with AI" from the new trip screen. Short multi-step questionnaire: destination (or "surprise me"), dates/flexibility, trip length (3/5/7/10+ days), budget level (budget/mid-range/premium), vibe multi-select (pulls from Vibe Board + Group Preference Engine if available), group size, dietary/accessibility needs. After submission, calls the AI Trip Builder Edge Function with group preference data if available.</p>
       <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
       <div class="task-detail">
         <span class="code-label">Claude Code prompt (Edge Function)</span>
         <div class="code-block">Build an AI Trip Builder Edge Function for Junto called "ai-trip-builder". This extends the existing suggest-activities Edge Function into a full guided trip creation experience.
 
-First, check the existing suggest-activities Edge Function so we reuse the same AI provider pattern and API key setup.
+First, check the existing suggest-activities Edge Function and the Group Preference Engine tables.
 
 The function should accept a questionnaire payload:
 - destination (string, or "surprise me")
 - dates and flexibility (exact dates or flexible window)
 - trip_length: 3 | 5 | 7 | 10+
 - budget_level: budget | mid-range | premium
-- vibes: array of adventure | relaxation | culture | nightlife | foodie (pull from Vibe Board data if user has history)
+- vibes: array of adventure | relaxation | culture | nightlife | foodie
 - group_size (integer)
 - preferences: { family_friendly: boolean, accessibility: boolean, dietary: string }
+- trip_id (optional — if provided, pull Group Preference Engine data automatically)
 
-Include a "surprise me" destination picker that selects from trending destinations based on season and departure city.
+When trip_id is provided, query trip_group_profiles and trip_member_preferences to make suggestions group-aware: "3 of 4 want beach + culture, budget is €80–120/day, Priya is vegetarian" → suggestions reflect all of this.
 
-The function should return structured JSON:
-1. Full day-by-day itinerary — each day has activities with: name, time, location, description, estimated_cost
+Return structured JSON:
+1. Full day-by-day itinerary — each day has activities with: name, time, location, description, estimated_cost, google_places_id, lat, lng, duration_minutes, category
 2. Suggested packing list tailored to the destination and activities
 3. Estimated daily budget breakdown: accommodation, food, transport, activities
 
-Do not change any existing Edge Functions. List every file you'll create before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-        <span class="code-label">Lovable prompt (after Edge Function is built)</span>
-        <div class="code-block">Add a "Plan with AI" option to Junto's new trip creation screen.
+Use Sonnet. Log to ai_request_log. Cache generic results in response_cache.
 
-When the user taps "Plan with AI", show a multi-step questionnaire:
-1. Destination — text input with autocomplete, plus a "Surprise me" toggle
+Do not change any existing Edge Functions. List every file you'll create.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after Edge Function is built)</span>
+        <div class="code-block">Add a "Plan with AI" option to Junto's new trip creation screen — this is a map-centric AI trip planning experience.
+
+Questionnaire (multi-step, smooth transitions):
+1. Destination — Google Places autocomplete, plus a "Surprise me" toggle
 2. Dates — date picker with a "Flexible" checkbox
 3. Trip length — selectable chips: 3 days, 5 days, 7 days, 10+ days
 4. Budget level — three selectable cards: Budget, Mid-range, Premium
-5. Vibe — multi-select chips: Adventure, Relaxation, Culture, Nightlife, Foodie. If the user has Vibe Board history, pre-select their top vibes.
-6. Group size — number input
-7. Preferences — toggles for Family-friendly, Accessibility needs, Dietary restrictions (with text input for details)
+5. Vibe — multi-select chips: Adventure, Relaxation, Culture, Nightlife, Foodie. Pre-select from Group Preference Engine data if available.
+6. Group size — number input (pre-filled from trip members if trip exists)
+7. Preferences — toggles for Family-friendly, Accessibility needs, Dietary restrictions
 
-After submission, call the ai-trip-builder Edge Function. Show a loading state with animated progress ("Building your trip…"). Display the AI-generated result as a full preview:
-- Day-by-day itinerary cards (expandable, editable inline)
-- Packing list (checkboxes, add/remove items)
-- Budget breakdown (table with daily totals)
+After submission, show a loading state with animated progress ("Building your trip…").
 
-The user can edit any item inline before confirming. On confirm, populate the new trip with itinerary items, packing list, and budget notes. If the user cancels, discard everything and return to normal trip creation.
+Results appear on a FULL-SCREEN INTERACTIVE MAP:
+- Activities plotted as pins on the map, colour-coded by day (Day 1 = blue, Day 2 = green, etc.)
+- Swipeable day tabs at the top to navigate between days
+- Each activity is a rich card (bottom sheet or side panel) showing: photo from Google Places, star rating, price range, category icon, estimated duration, walking/driving time from previous stop
+- Tap a card to expand: full description, reviews snippet, "Add to itinerary" + "Remove" buttons
+- Drag to reorder activities within a day — route line updates dynamically
+- Group members see the same view in real-time via Supabase Realtime
+- Members can vote on suggestions (thumbs up/down) inline
+- "Regenerate day" button to get fresh suggestions for a specific day
 
-List every file you'll change before making changes. Do not modify any existing trip creation functionality — this is an additional optional flow.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+On confirm, all accepted activities populate the trip's itinerary, packing list suggestions, and estimated daily budget.
+
+List every file you'll change. Do not modify any existing trip creation functionality — this is an additional optional flow.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
       </div>
     </div>
   </div>
@@ -932,17 +1236,25 @@ List every file you'll change before making changes. Do not modify any existing 
   <div class="task">
     <div class="checkbox"><span class="checkmark">✓</span></div>
     <div class="task-body">
-      <div class="task-top"><span class="task-title">Build AI suggestions UI on itinerary view</span><span class="tag tag-lovable">Lovable</span></div>
-      <p class="task-note">Swipeable suggestion cards with "Add to itinerary" action. Show Vibe Board personalisation label when relevant. This is the lightweight version — complements the full AI Trip Builder.</p>
+      <div class="task-top"><span class="task-title">Build real-time collaboration on AI suggestions</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">All group members see the same AI Trip Builder view in real-time via Supabase Realtime. When one member adds/removes/reorders an activity, all others see the change instantly. Thumbs up/down voting on each suggestion — show vote counts inline. Comments on individual suggestions for discussion before confirming.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build lightweight AI suggestions on itinerary view</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Separate from the full Trip Builder — this is the lightweight version for existing trips. Swipeable suggestion cards with "Add to itinerary" action on the itinerary view. Show Group Preference personalisation label when relevant. Uses the same suggest-activities Edge Function.</p>
       <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
       <div class="task-detail">
         <div class="callout callout-warn">Only send this after the suggest-activities Edge Function is confirmed working.</div>
         <span class="code-label">Lovable prompt</span>
         <div class="code-block">Add an AI activity suggestions feature to the itinerary view in Junto. The suggest-activities Edge Function is already built.
 
-Add a button on the itinerary view. Label: "AI Suggestions" — or "Suggestions based on your group's vibes" if the trip has Vibe Board data. On tap, call the Edge Function with the trip's destination, dates, group size, and Vibe Board interests.
+Add a button on the itinerary view. Label: "AI Suggestions" — or "Suggestions based on your group's profile" if the trip has Group Preference Engine data. On tap, call the Edge Function with the trip's destination, dates, group size, and group preference data.
 
-Show results as scrollable cards. Each card shows: activity name (bold), description (2 lines), estimated cost, category icon, best time of day. Two actions per card: "Add to itinerary" (adds it as an itinerary item on the appropriate day) and "Dismiss."
+Show results as scrollable cards. Each card shows: activity name (bold), description (2 lines), estimated cost, category icon, best time of day, Google Places photo. Two actions per card: "Add to itinerary" (adds it as an itinerary item on the appropriate day) and "Dismiss."
 
 Show a loading skeleton while the Edge Function runs. Handle errors gracefully with a retry option.
 
@@ -950,6 +1262,9 @@ Do not change any existing itinerary functionality. List every file you'll chang
       </div>
     </div>
   </div>
+
+  <h3>Monetization</h3>
+  <p>Free users get 2 trip builds total. Pro gets unlimited regeneration. See AI Monetization Tiers for full breakdown.</p>
 </div>
 
 <!-- ══════════ PHASE 2/4: TRIP TEMPLATES & DISCOVERY ══════════ -->
@@ -1171,61 +1486,11 @@ List every file you'll change before making changes. Do not modify any existing 
 <!-- ══════════ PHASE 2/4: TRIP RECOMMENDATIONS ══════════ -->
 <div id="recommendations" class="section">
   <div class="section-header">
-    <h2>Trip Recommendations — Phase 2/4</h2>
-    <p>From AI-guided trip creation to a community library of real trips — two features that compound on each other.</p>
+    <h2>Trip Recommendations — Phase 4</h2>
+    <p>Community-powered library of real trips. Builds on the AI Trip Builder and Trip Templates infrastructure.</p>
   </div>
 
-  <h3>AI Trip Builder — Phase 2</h3>
-  <div class="callout">Guided AI flow that generates a fully populated trip from a short questionnaire. Extends the suggest-activities Edge Function into a full trip creation experience.</div>
-
-  <div class="task">
-    <div class="checkbox"></div>
-    <div class="task-body">
-      <div class="task-top"><span class="task-title">Build "Plan with AI" guided trip creation flow</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
-      <p class="task-note">User taps "Plan with AI" from the new trip screen. A short questionnaire collects destination (or "surprise me"), dates/flexibility, trip length, budget level (budget / mid-range / premium), vibe (adventure / relaxation / culture / nightlife / foodie — multi-select, pulls from Vibe Board if available), group size, and preferences (family-friendly, accessibility, dietary). AI generates a full day-by-day itinerary with times, suggested packing list, and estimated daily budget breakdown. User previews and edits everything before confirming. On confirm, populates itinerary items, packing list, and budget notes into the trip.</p>
-      <p class="task-note">Depends on: AI Itinerary Suggestions Edge Function. Build after the suggest-activities Edge Function is live — this extends that work.</p>
-      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
-      <div class="task-detail">
-        <span class="code-label">Claude Code prompt</span>
-        <div class="code-block">Build an AI Trip Builder flow for Junto. This extends the existing suggest-activities Edge Function into a full guided trip creation experience.
-
-Create a new Edge Function called "ai-trip-builder" that accepts a questionnaire payload:
-- destination (string, or "surprise me")
-- dates and flexibility (exact dates or flexible window)
-- trip length in days
-- budget level: budget | mid-range | premium
-- vibes: array of adventure | relaxation | culture | nightlife | foodie (pull from Vibe Board data if the user has history)
-- group size
-- preferences: family-friendly, accessibility needs, dietary restrictions
-
-The function should return:
-1. A full day-by-day itinerary with activity names, times, locations, and descriptions
-2. A suggested packing list tailored to the destination and activities
-3. An estimated daily budget breakdown (accommodation, food, transport, activities)
-
-Use the same AI provider pattern as the suggest-activities function. Include a "surprise me" destination picker that selects from trending destinations based on season and departure city.
-
-Do not change any existing Edge Functions. List every file you'll create or change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-        <span class="code-label">Lovable prompt (after Edge Function is built)</span>
-        <div class="code-block">Add a "Plan with AI" option to Junto's new trip creation screen.
-
-When the user taps "Plan with AI", show a multi-step questionnaire:
-1. Destination (text input with autocomplete, plus a "Surprise me" toggle)
-2. Dates — date picker with a "Flexible" checkbox
-3. Trip length in days (number input)
-4. Budget level — three selectable cards: Budget, Mid-range, Premium
-5. Vibe — multi-select chips: Adventure, Relaxation, Culture, Nightlife, Foodie. If the user has Vibe Board history, pre-select their top vibes.
-6. Group size (number input)
-7. Preferences — toggles for Family-friendly, Accessibility needs, Dietary restrictions (with text input for details)
-
-After submission, call the ai-trip-builder Edge Function. Show a loading state with animated progress. Display the AI-generated result as a preview: day-by-day itinerary cards, packing list, and budget breakdown. The user can edit any item inline before confirming.
-
-On confirm, populate the new trip with the itinerary items, packing list, and budget notes. If the user cancels, discard everything and return to normal trip creation.
-
-List every file you'll change before making changes. Do not modify any existing trip creation functionality — this is an additional optional flow.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-      </div>
-    </div>
-  </div>
+  <div class="callout">The AI Trip Builder (Phase 2) generates trips from AI. This section is about user-generated content — real trips published by the community. Do not build before Trip Discovery. Requires 500+ users to have meaningful content.</div>
 
   <h3>Trip Database — Phase 4</h3>
   <div class="callout">Community-powered library of real trips. Do not build before Trip Discovery — this is the content layer that feeds it. Requires 500+ users to have meaningful content.</div>
@@ -1316,6 +1581,8 @@ List every file you'll change before making changes. Do not modify any existing 
     <p>Map view is Wanderlog's single most praised feature. Calendar sync is TripIt's best feature. Build both.</p>
   </div>
 
+  <div class="callout">The Maps integration serves double duty: (1) itinerary map view for manual trip planning, and (2) the full-screen interactive map for the AI Trip Builder (Phase 2). Build the map infrastructure here — the AI Trip Builder will extend it with AI-generated pins, day-colour-coding, drag-to-reorder, and real-time collaboration.</div>
+
   <div class="task">
     <div class="checkbox"><span class="checkmark">✓</span></div>
     <div class="task-body">
@@ -1339,7 +1606,7 @@ Don't change anything. I need this before planning the Maps integration.<button 
     <div class="checkbox"><span class="checkmark">✓</span></div>
     <div class="task-body">
       <div class="task-top"><span class="task-title">Add Google Maps view to itinerary</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
-      <p class="task-note">Map pins per day, colour-coded. Route lines between same-day stops. Walking/driving time estimates. Add Places autocomplete to item creation so locations are structured from the start.</p>
+      <p class="task-note">Map pins per day, colour-coded. Route lines between same-day stops. Walking/driving time estimates. Add Places autocomplete to item creation so locations are structured from the start. This map view will later be extended into the full-screen AI Trip Builder experience (Phase 2) with drag-to-reorder, real-time collaboration, and AI-generated activity pins.</p>
       <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
       <div class="task-detail">
         <span class="code-label">Claude Code prompt (after diagnosis)</span>
@@ -1415,6 +1682,54 @@ The response should have Content-Type: text/calendar and Content-Disposition: at
 
 First diagnose: does itinerary_items have a field to distinguish travel/arrival items from regular activities? And what time zone handling is in place?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 2: ENHANCED RECEIPT & DOCUMENT SCANNER ══════════ -->
+<div id="receiptscanner" class="section">
+  <div class="section-header">
+    <h2>Enhanced Receipt & Document Scanner — Phase 2</h2>
+    <p>Upgrade the existing receipt scanner to handle booking confirmations, flight tickets, activity vouchers, and restaurant reservations. Auto-categorize and cross-link with itinerary and expenses.</p>
+  </div>
+  <div class="callout callout-purple">The receipt scanner already works for basic receipts → expense pre-fill. This upgrade makes it handle every document type a traveller encounters. Combined with Smart Cross-Linking (Phase 1), one scan populates expenses, itinerary, and bookings simultaneously. Cost: ~$0.01 per scan (Haiku).</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Extend receipt scanner to handle multiple document types</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Upgrade the existing receipt scanning Edge Function to detect and extract data from: receipts (expense with line items — already built), hotel booking confirmations (hotel name, dates, cost, confirmation number), flight tickets / boarding passes (flight number, times, airport codes, seat), activity vouchers (activity name, date, time, cost, location), restaurant reservations (venue, date, time, party size). Use Haiku for all document scanning — fast and cheap at ~$0.01 per scan.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Extend the existing receipt scanning Edge Function in Junto to handle multiple document types.
+
+First, check the current receipt scanner Edge Function to understand its structure and what it currently extracts.
+
+Upgrade the function to detect the document type and extract relevant fields:
+
+1. Receipts (existing) → { type: 'receipt', vendor, date, items[], total, currency, category }
+2. Hotel booking confirmations → { type: 'hotel', hotel_name, check_in, check_out, cost, currency, confirmation_number, address }
+3. Flight tickets / boarding passes → { type: 'flight', airline, flight_number, departure_airport, arrival_airport, departure_time, arrival_time, seat, passenger_name, booking_reference }
+4. Activity vouchers → { type: 'activity', activity_name, date, time, cost, currency, location, confirmation_number }
+5. Restaurant reservations → { type: 'restaurant', venue_name, date, time, party_size, confirmation_number, address }
+
+Auto-categorize expenses from scanned receipts: food, transport, accommodation, activities, shopping, other.
+Detect currency automatically from the document.
+Suggest which trip members were likely involved based on the amount and context (e.g. a restaurant bill for 4 when the group has 4 members).
+
+Use Haiku for all scanning. Log every scan to ai_request_log. Return a unified response format with a 'type' field so the frontend knows which cross-linking prompts to show.
+
+Show me the current receipt scanner before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build enhanced scanner UI with document type detection</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Update the scanner UI to show document-type-specific extraction results. After scanning, show a preview card with the extracted data formatted for the detected document type. Include the Smart Cross-Linking prompts: "Add to itinerary?", "Create expense?", "Share with group?" based on the document type. Each prompt is a single tap to confirm.</p>
     </div>
   </div>
 </div>
@@ -1539,7 +1854,7 @@ Place the feed as a section on the trip dashboard — not a separate tab. Do not
     <div class="checkbox"><span class="checkmark">✓</span></div>
     <div class="task-body">
       <div class="task-top"><span class="task-title">Bookings & Docs search and filter</span><span class="tag tag-lovable">Lovable</span></div>
-      <p class="task-note">Full-text search + filter pills by category (flights, hotels, activities, documents). Currently a flat unfiltered list.</p>
+      <p class="task-note">Full-text search + filter pills by category (flights, hotels, activities, documents). Currently a flat unfiltered list. Future: AI extraction from uploaded documents (Enhanced Receipt & Doc Scanner, Phase 2) will auto-categorize and cross-link bookings with itinerary items and expenses via Smart Cross-Linking.</p>
     </div>
   </div>
 
@@ -2074,8 +2389,11 @@ Do not change any other UI. List every file you'll change before making changes.
   <ul>
     <li>PDF/CSV expense reports with per-person breakdowns</li>
     <li>Spending analytics charts across trips</li>
-    <li>Enhanced receipt scanning (batch + OCR)</li>
-    <li>Trip recap shareable card (premium version)</li>
+    <li>Unlimited AI receipt scanning (free: 10/month)</li>
+    <li>Unlimited AI Trip Builder regeneration (free: 2 total)</li>
+    <li>Sonnet-powered suggestions with richer detail</li>
+    <li>Group Preference Engine for any group size + conflict analysis (free: groups up to 4)</li>
+    <li>Budget health alerts, trip recap cards, enhanced document extraction</li>
     <li>Custom trip themes</li>
   </ul>
 
@@ -2085,7 +2403,10 @@ Do not change any other UI. List every file you'll change before making changes.
     <li>Expense splitting and balances</li>
     <li>Real-time editing, polls, itinerary</li>
     <li>Every shared link (these are acquisition events)</li>
+    <li>Basic AI features within daily limits (receipt scanning, packing lists, activity suggestions)</li>
   </ul>
+
+  <div class="callout callout-green">Gate AI quality and quantity, never gate collaboration. See AI Monetization Tiers for the full breakdown of AI-specific gating and cost analysis.</div>
 
   <h3>Pricing</h3>
   <table>
@@ -2129,6 +2450,64 @@ Don't write any code yet. Give me a clear plan I can review before prompting Lov
       <p class="task-note">Only after the plan from Claude Code is reviewed and confirmed. Target: 500+ users before building this.</p>
     </div>
   </div>
+</div>
+
+<!-- ══════════ AI MONETIZATION TIERS ══════════ -->
+<div id="aitiers" class="section">
+  <div class="section-header">
+    <h2>AI Monetization Tiers — Reference</h2>
+    <p>AI-specific gating for Free vs Pro tiers. Gate AI quality and quantity, never gate collaboration.</p>
+  </div>
+
+  <div class="callout callout-green">All core collaboration features (trips, itinerary, expenses, polls, sharing, real-time sync) stay free forever. AI features are the natural paywall — they have real per-request costs and clear quality tiers.</div>
+
+  <h3>Free Tier</h3>
+  <table>
+    <thead><tr><th>Feature</th><th>Limit</th><th>Model</th></tr></thead>
+    <tbody>
+      <tr><td>Receipt scanning</td><td>10 scans / month</td><td>Haiku</td></tr>
+      <tr><td>AI Trip Builder</td><td>2 trip builds total</td><td>Sonnet</td></tr>
+      <tr><td>Packing list generator</td><td>Basic (destination-only)</td><td>Haiku</td></tr>
+      <tr><td>Activity suggestions</td><td>3 requests / day</td><td>Haiku</td></tr>
+      <tr><td>Group Preference Engine</td><td>Groups up to 4 members</td><td>Sonnet</td></tr>
+      <tr><td>Document extraction</td><td>5 documents / month</td><td>Haiku</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Pro Tier — $4.99/month</h3>
+  <table>
+    <thead><tr><th>Feature</th><th>Limit</th><th>Model</th></tr></thead>
+    <tbody>
+      <tr><td>Receipt scanning</td><td>Unlimited</td><td>Haiku</td></tr>
+      <tr><td>AI Trip Builder</td><td>Unlimited regeneration</td><td>Sonnet</td></tr>
+      <tr><td>Packing list generator</td><td>Activity-aware, personalised</td><td>Sonnet</td></tr>
+      <tr><td>Activity suggestions</td><td>Unlimited, richer detail</td><td>Sonnet</td></tr>
+      <tr><td>Group Preference Engine</td><td>Any group size + detailed conflict analysis</td><td>Sonnet</td></tr>
+      <tr><td>Document extraction</td><td>Unlimited, all document types</td><td>Haiku</td></tr>
+      <tr><td>Budget health alerts</td><td>Included</td><td>Haiku</td></tr>
+      <tr><td>Trip recap cards</td><td>AI-generated summary</td><td>Haiku</td></tr>
+    </tbody>
+  </table>
+
+  <h3>AI Cost Analysis</h3>
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Expected AI cost per free user</td><td>~$0.03/month</td></tr>
+      <tr><td>Expected AI cost per Pro user</td><td>~$0.08–0.16/month</td></tr>
+      <tr><td>Pro revenue per user</td><td>$4.99/month</td></tr>
+      <tr><td>AI cost as % of Pro revenue</td><td>1.6–3.2%</td></tr>
+      <tr><td>Receipt scan (Haiku)</td><td>~$0.01/scan</td></tr>
+      <tr><td>Trip build (Sonnet)</td><td>~$0.05/generation</td></tr>
+      <tr><td>Preference reconciliation (Sonnet)</td><td>~$0.02/reconciliation</td></tr>
+      <tr><td>Activity suggestion (Haiku, cached)</td><td>~$0.005/request</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">Model selection strategy: Haiku for simple extraction tasks (receipt scanning, categorization, packing lists). Sonnet only for complex generation (trip builder, preference engine, rich activity suggestions for Pro users). Cache generic destination queries to reduce costs by ~70% for popular destinations.</div>
+
+  <h3>Rate Limiting Implementation</h3>
+  <p>All AI rate limits are enforced via the <code>ai_request_log</code> table (see AI Cost Control Infrastructure in Pre-launch Tasks). The Edge Function checks the user's request count before processing. Pro status is checked from the profiles table. Limits reset daily at midnight UTC.</p>
 </div>
 
 <!-- ══════════ LEGAL ENTITY ══════════ -->
@@ -2411,19 +2790,19 @@ function saveState() {
   const tasks = document.querySelectorAll('.task');
   const state = {};
   tasks.forEach(t => { const k = taskKey(t); if (k && t.classList.contains('done')) state[k] = true; });
-  try { localStorage.setItem('junto-v9', JSON.stringify(state)); } catch(e) {}
+  try { localStorage.setItem('junto-v10', JSON.stringify(state)); } catch(e) {}
 }
 
 function loadState() {
   try {
-    const raw = JSON.parse(localStorage.getItem('junto-v9') || '{}');
+    const raw = JSON.parse(localStorage.getItem('junto-v10') || '{}');
     // migrate old array format to object format
     if (Array.isArray(raw)) {
       const tasks = document.querySelectorAll('.task');
       const migrated = {};
       tasks.forEach((t, i) => { if (raw[i]) { const k = taskKey(t); if (k) migrated[k] = true; } });
       tasks.forEach(t => { const k = taskKey(t); if (k && migrated[k]) t.classList.add('done'); });
-      try { localStorage.setItem('junto-v9', JSON.stringify(migrated)); } catch(e) {}
+      try { localStorage.setItem('junto-v10', JSON.stringify(migrated)); } catch(e) {}
     } else {
       document.querySelectorAll('.task').forEach(t => { const k = taskKey(t); if (k && raw[k]) t.classList.add('done'); });
     }
