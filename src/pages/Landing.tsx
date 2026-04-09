@@ -411,8 +411,8 @@ function PainSection() {
 function HowItWorks() {
   const steps = [
     { num: "1", title: "Create your trip", desc: "Pick a destination and dates. Add your crew with a single link.", Skeleton: SkeletonCreateTrip },
-    { num: "2", title: "Plan together", desc: "Build the itinerary, vote on ideas, and track who's paying what — all in real time.", Skeleton: SkeletonItinerary },
-    { num: "3", title: "Stay in sync", desc: "Real-time updates, push notifications, and everyone on the same page — even mid-trip.", Skeleton: SkeletonExpenses },
+    { num: "2", title: "Plan together", desc: "Build the itinerary, vote on ideas, and track who's paying what, all in real time.", Skeleton: SkeletonItinerary },
+    { num: "3", title: "Stay in sync", desc: "Real-time updates, push notifications, and everyone on the same page, even mid-trip.", Skeleton: SkeletonExpenses },
   ];
 
   return (
@@ -488,7 +488,7 @@ function Features() {
       <div className="relative mx-auto max-w-6xl">
         <Reveal>
           <h2 className="text-center text-3xl font-bold sm:text-4xl text-[#f0ede8]">Built for the way groups actually travel</h2>
-          <p className="mt-6 text-center text-[#9ca3af] max-w-lg mx-auto text-[1.05rem] leading-relaxed">All the tools to plan, decide, and split — in one beautiful app.</p>
+          <p className="mt-6 text-center text-[#9ca3af] max-w-lg mx-auto text-[1.05rem] leading-relaxed">All the tools to plan, decide, and split in one beautiful app.</p>
         </Reveal>
 
         <div className="mt-20 grid gap-8 lg:grid-cols-3">
