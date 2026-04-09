@@ -457,7 +457,7 @@ const featureCards = [
   {
     icon: Wallet,
     title: "Split expenses instantly",
-    desc: "Multi-currency tracking with AI receipt scanning. Everyone sees who owes what, in real time.",
+    desc: "Multi-currency tracking with Junto AI receipt scanning. Everyone sees who owes what, in real time.",
     gradient: "from-[#1e1a20] via-[#191520] to-[#14111a]",
     Skeleton: SkeletonExpenses,
   },

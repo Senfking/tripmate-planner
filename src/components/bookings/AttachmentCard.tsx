@@ -285,7 +285,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
 
             {isExtracting && (
               <p className="text-[11px] font-medium animate-pulse flex items-center gap-1" style={{ color: "#0D9488" }}>
-                <Sparkles className="h-3 w-3" /> AI is reading this document…
+                <Sparkles className="h-3 w-3" /> Junto AI is reading this document…
               </p>
             )}
 
