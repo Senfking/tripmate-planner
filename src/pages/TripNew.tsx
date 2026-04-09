@@ -135,7 +135,8 @@ export default function TripNew() {
 
       trackEvent("trip_created", { trip_id: data.id, has_dates: !!dateRange?.from, has_cover: !!coverFile });
       toast.success("Trip created!");
-      navigate(`/app/trips/${data.id}/onboarding`);
+      pendingRedirect.current = `/app/trips/${data.id}/onboarding`;
+      showOptIn();
     } catch (err: any) {
       setError(friendlyError(err.message));
     } finally {
