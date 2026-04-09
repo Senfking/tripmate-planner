@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePushOptIn } from "@/components/PushOptInDrawer";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +48,16 @@ const ALL_EMOJIS = EMOJI_GROUPS;
 
 export default function TripNew() {
   const navigate = useNavigate();
+  const pendingRedirect = useRef<string | null>(null);
+
+  const navigateToTrip = useCallback(() => {
+    if (pendingRedirect.current) {
+      navigate(pendingRedirect.current, { replace: true });
+    }
+  }, [navigate]);
+
+  const { showOptIn, PushOptInDrawer } = usePushOptIn(navigateToTrip);
+
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("✈️");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -74,7 +85,8 @@ export default function TripNew() {
       setJoinOpen(false);
       toast.success(`Joined ${data.trip_name || "trip"}!`);
       trackEvent("trip_joined_by_code", { trip_id: data.trip_id });
-      navigate(`/app/trips/${data.trip_id}`);
+      pendingRedirect.current = `/app/trips/${data.trip_id}`;
+      showOptIn();
     },
     onError: () => {
       setJoinError("Code not found — check with your organiser");
@@ -123,7 +135,8 @@ export default function TripNew() {
 
       trackEvent("trip_created", { trip_id: data.id, has_dates: !!dateRange?.from, has_cover: !!coverFile });
       toast.success("Trip created!");
-      navigate(`/app/trips/${data.id}/onboarding`);
+      pendingRedirect.current = `/app/trips/${data.id}/onboarding`;
+      showOptIn();
     } catch (err: any) {
       setError(friendlyError(err.message));
     } finally {
@@ -353,6 +366,7 @@ export default function TripNew() {
           onCancel={() => setCropSource(null)}
         />
       )}
+      <PushOptInDrawer />
     </div>
   );
 }
