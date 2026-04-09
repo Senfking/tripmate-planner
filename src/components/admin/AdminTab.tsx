@@ -334,7 +334,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Trip Code</p>
-              <p className="text-sm font-mono">{(trip as any)?.trip_code ?? "—"}</p>
+              <p className="text-sm font-mono">{(trip as any)?.trip_code ?? "-"}</p>
             </div>
             <Button
               variant="ghost"
@@ -348,20 +348,20 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
           <div>
             <p className="text-xs text-muted-foreground">Created</p>
             <p className="text-sm">
-              {trip?.created_at ? format(new Date(trip.created_at), "MMM d, yyyy") : "—"}
+              {trip?.created_at ? format(new Date(trip.created_at), "MMM d, yyyy") : "-"}
             </p>
           </div>
           <div className="grid grid-cols-3 gap-3 pt-1">
             <div className="text-center">
-              <p className="text-lg font-semibold">{stats?.itinerary ?? "—"}</p>
+              <p className="text-lg font-semibold">{stats?.itinerary ?? "-"}</p>
               <p className="text-[11px] text-muted-foreground">Itinerary</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-semibold">{stats?.attachments ?? "—"}</p>
+              <p className="text-lg font-semibold">{stats?.attachments ?? "-"}</p>
               <p className="text-[11px] text-muted-foreground">Bookings</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-semibold">{stats?.expenses ?? "—"}</p>
+              <p className="text-lg font-semibold">{stats?.expenses ?? "-"}</p>
               <p className="text-[11px] text-muted-foreground">Expenses</p>
             </div>
           </div>
@@ -380,7 +380,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
           </CollapsibleTrigger>
           <CollapsibleContent>
              <Card className="border-destructive/40 p-4 space-y-3">
-              {/* Leave trip — non-owners */}
+              {/* Leave trip - non-owners */}
               {!isOwner && (
                 <>
                   <Button
@@ -419,7 +419,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
                 </>
               )}
 
-              {/* Delete trip — owner only */}
+              {/* Delete trip - owner only */}
               {isOwner && (
                 <DeleteTripDialog
                   tripName={tripName}

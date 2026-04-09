@@ -73,7 +73,7 @@ export function AcquisitionModule() {
                         {convPct}%
                       </span>
                     ) : (
-                      <span style={{ fontFamily: mono, fontSize: 11, color: C.muted }}>—</span>
+                      <span style={{ fontFamily: mono, fontSize: 11, color: C.muted }}>-</span>
                     )}
                   </div>
                 </div>
@@ -86,7 +86,7 @@ export function AcquisitionModule() {
       {/* Traffic Sources */}
       <SectionHeader>Traffic Sources</SectionHeader>
       {ul ? <AdminSkeleton /> : !utm?.length ? (
-        <Card><div style={{ color: C.muted, fontFamily: sans, fontSize: 13, padding: 16 }}>No UTM data yet — append ?utm_source=whatsapp to your referral links</div></Card>
+        <Card><div style={{ color: C.muted, fontFamily: sans, fontSize: 13, padding: 16 }}>No UTM data yet - append ?utm_source=whatsapp to your referral links</div></Card>
       ) : (
         <Card>
           <table style={{ width: "100%", fontFamily: sans, fontSize: 13, borderCollapse: "collapse" }}>

@@ -22,7 +22,7 @@ const STATEMENTS = [
   { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
 ];
 
-/* ── Video slideshow — only mount active + next to save resources ── */
+/* ── Video slideshow - only mount active + next to save resources ── */
 function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
   const prevIndex = useRef(activeIndex);
   const [visible, setVisible] = useState<Set<number>>(new Set([activeIndex]));

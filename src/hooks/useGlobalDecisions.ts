@@ -104,7 +104,7 @@ export function useGlobalDecisions() {
 
       const items: PendingItem[] = [];
 
-      // Attendance items — injected at top
+      // Attendance items - injected at top
       const pendingTrips = trips.filter((t) => membershipMap.get(t.id) === "pending");
       if (pendingTrips.length > 0) {
         // Get profiles for going members
@@ -205,7 +205,7 @@ export function useGlobalDecisions() {
           }
         }
 
-        // Date votes — only for unconfirmed proposals
+        // Date votes - only for unconfirmed proposals
         const tripProposalIds = new Set(tripProposals.map((p) => p.id));
         const tripDateOptions = (dateOptions ?? []).filter(
           (d) => tripProposalIds.has(d.proposal_id)

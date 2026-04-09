@@ -56,7 +56,7 @@ export function calcNetBalances(
   for (const exp of expenses) {
     const payerAmount = convertAmount(exp.amount, exp.currency, settlementCurrency, baseCurrency, rates);
     if (payerAmount == null) {
-      // Cannot convert — skip this expense entirely
+      // Cannot convert - skip this expense entirely
       excludedCount++;
       continue;
     }

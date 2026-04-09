@@ -264,7 +264,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     const attendingCount = itineraryItems.filter((i) => !outIds.has(i.id)).length;
     if (attendingCount > 0) itinerarySubline = `${attendingCount} activit${attendingCount > 1 ? "ies" : "y"} you're attending`;
   } else if (routeLocked) {
-    itinerarySummary = "Route confirmed — start planning activities";
+    itinerarySummary = "Route confirmed - start planning activities";
   } else {
     itinerarySummary = "Nothing planned yet";
   }

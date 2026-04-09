@@ -41,7 +41,7 @@ type Props = {
   memberCount?: number;
 };
 
-// Kept for reference — date voting now uses a single "Works for me" toggle
+// Kept for reference - date voting now uses a single "Works for me" toggle
 
 function getTopPickIndex(dateOptions: DateOption[], dateVotes: DateVotes): number {
   if (dateOptions.length === 0) return -1;
@@ -170,7 +170,7 @@ export function ProposalCard({
   return (
     <div className="space-y-3 relative transition-opacity">
 
-      {/* Destination + creator — only shown in standalone mode */}
+      {/* Destination + creator - only shown in standalone mode */}
       {!hideHeader && (
         <div className="pr-20">
           <h4 className="font-semibold text-foreground text-base">{proposal.destination}</h4>
@@ -182,7 +182,7 @@ export function ProposalCard({
         <p className="text-sm text-foreground/80 italic">"{proposal.note}"</p>
       )}
 
-      {/* Destination voting — only shown in standalone mode */}
+      {/* Destination voting - only shown in standalone mode */}
       {!hideDestVoting && (
         <div className="flex items-center gap-3">
           <Button
@@ -201,7 +201,7 @@ export function ProposalCard({
         </div>
       )}
 
-      {/* Date options — only shown in standalone mode (parent handles them when embedded) */}
+      {/* Date options - only shown in standalone mode (parent handles them when embedded) */}
       {!hideDestVoting && dateOptions.length > 0 && (
         <div className="space-y-2">
           {dateOptions.map((d) => {
@@ -236,7 +236,7 @@ export function ProposalCard({
         </div>
       )}
 
-      {/* Confirm destination button — owner/admin only */}
+      {/* Confirm destination button - owner/admin only */}
       {canManage && !isRouteLocked && !isInRoute && !confirmOpen && (
         <Button
           variant="outline"

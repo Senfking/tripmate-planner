@@ -202,7 +202,7 @@ export function useExpenses(tripId: string) {
 
       return { rates: {}, fetchedAt, source: "none" };
     },
-    // No staleTime here — the expensive DB call is already cached for 1hr by
+    // No staleTime here - the expensive DB call is already cached for 1hr by
     // the inner qc.fetchQuery(["exchange-rates", "EUR"]).  The outer query is
     // just a trivial cross-calculation wrapper; caching it independently means
     // it can stay stale with empty rates for an hour while the inner cache has
@@ -277,7 +277,7 @@ export function useExpenses(tripId: string) {
     enabled: !!tripId && !!user,
   });
 
-  // Update settlement currency — any member can do this
+  // Update settlement currency - any member can do this
   const updateSettlementCurrency = useMutation({
     mutationFn: async (currency: string) => {
       const { error } = await supabase

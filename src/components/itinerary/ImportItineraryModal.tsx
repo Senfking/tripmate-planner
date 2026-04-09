@@ -300,7 +300,7 @@ export function ImportItineraryModal({
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Upload an itinerary — we'll extract all the activities
+              Upload an itinerary - we'll extract all the activities
               automatically
             </p>
             {parsing ? (
@@ -389,7 +389,7 @@ export function ImportItineraryModal({
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                We found {parsedItems.length} activit{parsedItems.length === 1 ? "y" : "ies"} — review and edit before importing
+                We found {parsedItems.length} activit{parsedItems.length === 1 ? "y" : "ies"} - review and edit before importing
               </p>
 
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">

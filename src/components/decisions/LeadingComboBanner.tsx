@@ -25,7 +25,7 @@ export function LeadingComboBanner({ leadingCombo, routeStops, isRouteLocked }: 
       return (
         <div className="rounded-lg bg-gradient-to-r from-primary to-primary/80 px-4 py-3 text-primary-foreground">
           <p className="text-sm font-medium">
-            🔒 {routeStops.length}-stop route · {fmt(tripStart)} – {fmt(tripEnd)} · {totalDays} days — locked
+            🔒 {routeStops.length}-stop route · {fmt(tripStart)} – {fmt(tripEnd)} · {totalDays} days - locked
           </p>
         </div>
       );
@@ -35,7 +35,7 @@ export function LeadingComboBanner({ leadingCombo, routeStops, isRouteLocked }: 
       return (
         <div className="rounded-lg bg-primary/10 px-4 py-3">
           <p className="text-sm text-primary font-medium">
-            📍 1 stop confirmed — keep adding!
+            📍 1 stop confirmed - keep adding!
           </p>
         </div>
       );

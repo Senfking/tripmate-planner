@@ -279,7 +279,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     });
     removeStop.mutate(
       { id: unconfirmId, cleanupDates: days.map((d) => format(d, "yyyy-MM-dd")) },
-      { onSuccess: () => { toast({ title: "Stop unconfirmed — back to voting" }); setUnconfirmId(null); } }
+      { onSuccess: () => { toast({ title: "Stop unconfirmed - back to voting" }); setUnconfirmId(null); } }
     );
   };
 
@@ -800,7 +800,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                         )
                       )}
 
-                      {/* Confirm destination & dates — only for admins */}
+                      {/* Confirm destination & dates - only for admins */}
                       <ProposalCard
                         proposal={p}
                         destVotes={pDestVotes}
@@ -853,7 +853,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
 
 
 
-      {/* Suggest a destination — full width at the bottom */}
+      {/* Suggest a destination - full width at the bottom */}
       {!isRouteLocked && totalItems > 0 && (
         <ProposalForm
           onSubmit={createProposalHandler}
@@ -925,7 +925,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
         actions={
           <>
             <Button variant="ghost" onClick={() => setUnlockConfirm(false)}>Cancel</Button>
-            <Button onClick={() => { unlockRoute.mutate(); setUnlockConfirm(false); toast({ title: "Route unlocked — you can now make changes" }); }} disabled={unlockRoute.isPending}>
+            <Button onClick={() => { unlockRoute.mutate(); setUnlockConfirm(false); toast({ title: "Route unlocked - you can now make changes" }); }} disabled={unlockRoute.isPending}>
               Unlock route
             </Button>
           </>

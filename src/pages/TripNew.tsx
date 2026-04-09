@@ -89,7 +89,7 @@ export default function TripNew() {
       showOptIn();
     },
     onError: () => {
-      setJoinError("Code not found — check with your organiser");
+      setJoinError("Code not found - check with your organiser");
     },
   });
 
@@ -360,7 +360,7 @@ export default function TripNew() {
           onSave={(blob) => {
             setCoverFile(new File([blob], "cover.jpg", { type: "image/jpeg" }));
             setCoverPreview(URL.createObjectURL(blob));
-            // Don't clear cropSource — store original for re-crop via state
+            // Don't clear cropSource - store original for re-crop via state
             setCropSource(null);
           }}
           onCancel={() => setCropSource(null)}

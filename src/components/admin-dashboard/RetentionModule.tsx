@@ -63,7 +63,7 @@ export function RetentionModule() {
           <div style={{ fontFamily: sans, fontSize: 12, color: C.muted, marginBottom: 12 }}>Signed up 14+ days ago, never joined a trip</div>
           {dormant.users?.slice(0, 20).map((u: any) => (
             <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: `1px solid ${C.border}`, fontFamily: sans, fontSize: 12 }}>
-              <span style={{ color: C.text }}>{u.display_name || "—"}</span>
+              <span style={{ color: C.text }}>{u.display_name || "-"}</span>
               <span style={{ color: C.muted, fontFamily: mono }}>{u.days_since_signup}d ago</span>
             </div>
           ))}

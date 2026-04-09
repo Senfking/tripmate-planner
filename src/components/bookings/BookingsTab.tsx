@@ -240,7 +240,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
           <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Upload a confirmation — we'll extract the details automatically
+          Upload a confirmation - we'll extract the details automatically
         </p>
         {uploadFile.isPending ? (
           <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
@@ -376,7 +376,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               {peopleFilter === "others"
                 ? "No bookings from other members yet"
                 : peopleFilter === "mine"
-                ? "You haven't added any bookings yet — upload a confirmation or share a link"
+                ? "You haven't added any bookings yet - upload a confirmation or share a link"
                 : "No results matching your filter"}
             </p>
           )}

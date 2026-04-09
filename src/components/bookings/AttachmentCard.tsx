@@ -119,7 +119,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
     // Try IndexedDB first
     const cached = await getDocument(filePath);
     if (cached) return URL.createObjectURL(cached);
-    // Not cached — fetch via signed URL and auto-cache
+    // Not cached - fetch via signed URL and auto-cache
     if (!getSignedUrl) return null;
     try {
       const url = await getSignedUrl(filePath);
@@ -198,7 +198,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
-        toast.success("Downloaded — also available offline");
+        toast.success("Downloaded - also available offline");
       }
     } catch {
       toast.error("Download failed");
@@ -255,9 +255,9 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
         className={`overflow-hidden rounded-xl border bg-card shadow-sm transition-all cursor-pointer ${isNew ? "animate-realtime-flash" : ""}`}
         onClick={() => setExpanded((p) => !p)}
       >
-        {/* Compact row — always visible */}
+        {/* Compact row - always visible */}
         <div className="flex items-center gap-3 p-3">
-          {/* Type icon — centered vertically */}
+          {/* Type icon - centered vertically */}
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconColor}`}>
             <Icon className="h-[18px] w-[18px]" />
           </div>
@@ -311,7 +311,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
             </div>
           </div>
 
-          {/* Actions — compact */}
+          {/* Actions - compact */}
           <div className="flex flex-col gap-0.5 shrink-0 -mr-1">
             {canOpen && (
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleOpen}>
@@ -357,7 +357,7 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                 <File className="h-8 w-8 text-red-500 shrink-0" />
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-sm font-medium truncate">{cleanTitle(attachment.title)}</p>
-                  <p className="text-xs text-muted-foreground">PDF document — tap to view</p>
+                  <p className="text-xs text-muted-foreground">PDF document - tap to view</p>
                 </div>
                 <Maximize2 className="h-4 w-4 text-muted-foreground shrink-0" />
               </button>

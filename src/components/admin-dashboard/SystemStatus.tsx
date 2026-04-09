@@ -111,7 +111,7 @@ function ChartTooltip({ active, payload }: any) {
   const breakdown = d.breakdown || {};
   return (
     <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: 10, fontFamily: mono, fontSize: 11 }}>
-      <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>{d.label} — {d.count} error{d.count !== 1 ? "s" : ""}</div>
+      <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>{d.label} - {d.count} error{d.count !== 1 ? "s" : ""}</div>
       {Object.entries(breakdown).map(([type, count]) => (
         <div key={type} style={{ color: C.muted }}>{type}: {count as number}</div>
       ))}
@@ -165,7 +165,7 @@ function RecentErrorsFeed() {
           const props = err.properties || {};
           const severity = props.severity || "medium";
           const errType = props.type || "unknown";
-          const message = props.message || "—";
+          const message = props.message || "-";
           const route = props.route || "";
           const timeAgo = getTimeAgo(err.created_at);
           const isExpanded = expandedId === err.id;
@@ -256,7 +256,7 @@ function getTimeAgo(iso: string): string {
 export function SystemStatus() {
   const { data, isLoading, dataUpdatedAt } = useAdminData("system_status", {}, { refetchInterval: 60000 });
 
-  const lastRefresh = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : "—";
+  const lastRefresh = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : "-";
 
   return (
     <div>
@@ -307,7 +307,7 @@ export function SystemStatus() {
             </div>
             {data.critical_feedback.slice(0, 3).map((f: any) => (
               <div key={f.id} style={{ fontFamily: sans, fontSize: 11, color: C.text, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {f.ai_summary || f.body?.substring(0, 50) || "—"}
+                {f.ai_summary || f.body?.substring(0, 50) || "-"}
               </div>
             ))}
           </Card>

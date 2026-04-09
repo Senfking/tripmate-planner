@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-// SW build 2026-04-07 — push + notificationclick included
+// SW build 2026-04-07 - push + notificationclick included
 declare const __BUILD_TS__: string;
 declare const __PRECACHE_URLS__: string[];
 
@@ -62,7 +62,7 @@ self.addEventListener('install', (event) => {
       )
     )
   );
-  // Don't skipWaiting here — let the client trigger it via message
+  // Don't skipWaiting here - let the client trigger it via message
 });
 
 self.addEventListener('message', (event) => {
@@ -143,7 +143,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Hashed assets (/assets/*) — cache-first with runtime caching
+  // Hashed assets (/assets/*) - cache-first with runtime caching
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(handleAsset(event.request));
     return;

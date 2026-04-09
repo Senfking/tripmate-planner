@@ -451,7 +451,7 @@ function HowItWorks() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Features — 3 large showcase cards                                  */
+/*  Features - 3 large showcase cards                                  */
 /* ------------------------------------------------------------------ */
 const featureCards = [
   {

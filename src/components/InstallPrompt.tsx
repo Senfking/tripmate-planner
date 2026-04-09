@@ -129,7 +129,7 @@ export function InstallPrompt() {
             {instruction}
           </p>
           <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-            This is a browser setting — not a button inside the app.
+            This is a browser setting - not a button inside the app.
           </p>
         </div>
         <button onClick={handleIOSDismiss} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">

@@ -3,7 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { trackEvent } from "@/lib/analytics";
 
-// Global error listeners — fire-and-forget, never block
+// Global error listeners - fire-and-forget, never block
 window.addEventListener("unhandledrejection", (event) => {
   trackEvent("app_error", {
     type: "unhandled_promise_rejection",
@@ -27,7 +27,7 @@ window.addEventListener("error", (event) => {
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Service worker registration — only in production, not in iframes or preview hosts
+// Service worker registration - only in production, not in iframes or preview hosts
 if ("serviceWorker" in navigator) {
   const isInIframe = (() => {
     try {

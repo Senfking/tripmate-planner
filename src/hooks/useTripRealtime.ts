@@ -19,7 +19,7 @@ const TRIP_FILTERED_TABLES = [
   "trip_members",
 ] as const;
 
-// Tables without direct trip_id — subscribe unfiltered
+// Tables without direct trip_id - subscribe unfiltered
 const UNFILTERED_TABLES = [
   "votes",
   "date_option_votes",
@@ -193,14 +193,14 @@ export function useTripRealtime(tripId: string | undefined) {
       );
     }
 
-    // Show toast to other users — if created_by is missing (no REPLICA IDENTITY FULL), assume other user
+    // Show toast to other users - if created_by is missing (no REPLICA IDENTITY FULL), assume other user
     const userId = oldRecord?.created_by || oldRecord?.user_id;
     const isOtherUser = userId ? userId !== user?.id : true;
     if (isOtherUser) {
       if (userId) {
         showActivityToast("itinerary_items", userId, "delete");
       } else {
-        // No user info available — show generic toast
+        // No user info available - show generic toast
         const now = Date.now();
         if (now - lastToastAt.current >= 5000) {
           lastToastAt.current = now;
@@ -259,7 +259,7 @@ export function useTripRealtime(tripId: string | undefined) {
       );
     }
 
-    // Explicit DELETE for itinerary_items — uses direct cache removal
+    // Explicit DELETE for itinerary_items - uses direct cache removal
     channel.on(
       "postgres_changes" as any,
       {
@@ -271,7 +271,7 @@ export function useTripRealtime(tripId: string | undefined) {
       handleItineraryDelete
     );
 
-    // Explicit DELETE for itinerary_attendance — invalidate attendance query
+    // Explicit DELETE for itinerary_attendance - invalidate attendance query
     channel.on(
       "postgres_changes" as any,
       {

@@ -178,7 +178,7 @@ export function AttendanceInviteOverlay({
         onClick={isFull && !closing ? handleDismiss : undefined}
       />
 
-      {/* Single full-height sheet — translated when peeking; centered modal on desktop */}
+      {/* Single full-height sheet - translated when peeking; centered modal on desktop */}
       <div
         className="fixed inset-0 z-[60] md:flex md:items-center md:justify-center"
         style={{
@@ -187,7 +187,7 @@ export function AttendanceInviteOverlay({
           pointerEvents: isFull ? "auto" : "none",
         }}
       >
-        {/* Bounce wrapper — animates the entire visible slider, not just the teal strip */}
+        {/* Bounce wrapper - animates the entire visible slider, not just the teal strip */}
         <div
           className={cn(
             "flex flex-col h-full md:h-auto md:max-w-[560px] md:w-full md:rounded-2xl md:overflow-hidden md:max-h-[90vh] md:shadow-2xl",
@@ -196,7 +196,7 @@ export function AttendanceInviteOverlay({
           style={{ pointerEvents: !isFull ? "auto" : undefined }}
           onClick={!isFull ? (e) => { e.stopPropagation(); onPeekTap?.(); } : undefined}
         >
-        {/* Peeking top strip — message + avatars */}
+        {/* Peeking top strip - message + avatars */}
         <div
           className="shrink-0 rounded-t-2xl overflow-hidden"
           style={{
@@ -204,7 +204,7 @@ export function AttendanceInviteOverlay({
             boxShadow: !isFull ? "0 -4px 20px rgba(13,148,136,0.3)" : "none",
           }}
         >
-          {/* Message row — only visible when peeking */}
+          {/* Message row - only visible when peeking */}
           <div
             className="flex items-center px-4 text-[13px] font-semibold text-white overflow-hidden"
             style={{
@@ -217,7 +217,7 @@ export function AttendanceInviteOverlay({
               👀&nbsp; {PEEKING_MESSAGES[messageIndex]}
             </span>
           </div>
-          {/* Avatar row — visible when peeking, collapses when full */}
+          {/* Avatar row - visible when peeking, collapses when full */}
           <div
             className="flex items-center gap-2 px-4 overflow-hidden"
             style={{
@@ -248,9 +248,9 @@ export function AttendanceInviteOverlay({
           </div>
         </div>
 
-        {/* Full overlay body — hero + content */}
+        {/* Full overlay body - hero + content */}
         <div className="flex-1 flex flex-col bg-card overflow-hidden">
-          {/* Close button — only when full screen */}
+          {/* Close button - only when full screen */}
           {isFull && (
             <button
               onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
@@ -305,7 +305,7 @@ export function AttendanceInviteOverlay({
                 <div className="text-center mt-5" style={{ animation: "fade-up 0.5s ease 0.3s both" }}>
                   <p className="text-2xl font-bold text-foreground">You're in! 🎉</p>
                   <p className="text-[14px] text-muted-foreground mt-2">
-                    Get ready — this is going to be epic.
+                    Get ready - this is going to be epic.
                   </p>
                 </div>
 

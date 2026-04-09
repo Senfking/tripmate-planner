@@ -37,7 +37,7 @@ function OfflineBanner() {
       className="w-full text-center text-[13px] text-white py-1.5 transition-all duration-300"
       style={{ backgroundColor: "#1e293b" }}
     >
-      {isOffline ? "You're offline — showing cached content" : "Back online"}
+      {isOffline ? "You're offline - showing cached content" : "Back online"}
     </div>
   );
 }
@@ -75,7 +75,7 @@ export function AppLayout() {
   // Hide mobile bottom nav on trip detail pages (was previously handled by routing outside AppLayout)
   const isTripPage = /^\/app\/trips\/[^/]+/.test(location.pathname) && location.pathname !== "/app/trips/new";
 
-  // Global tabs use their own TabHeroHeader — hide the app header on mobile
+  // Global tabs use their own TabHeroHeader - hide the app header on mobile
   const globalTabPaths = ["/app/trips", "/app/trips/new", "/app/decisions", "/app/itinerary", "/app/expenses"];
   const hideHeader = globalTabPaths.includes(location.pathname) || location.pathname === "/app/more" || isTripPage;
 
@@ -87,7 +87,7 @@ export function AppLayout() {
           {/* Desktop top header */}
           <DesktopHeader />
 
-          {/* Mobile header — only on non-global-tab pages */}
+          {/* Mobile header - only on non-global-tab pages */}
           {!hideHeader && (
             <header
               className="sticky top-0 z-40 flex h-[52px] items-center px-4 text-white relative overflow-hidden border-b bg-gradient-primary md:hidden"

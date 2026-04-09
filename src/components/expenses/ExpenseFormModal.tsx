@@ -438,7 +438,7 @@ export function ExpenseFormModal({
       toast.success("Receipt scanned ✓");
       trackEvent("ai_receipt_scan", { success: true });
     } catch {
-      toast.error("Couldn't read receipt — fill in manually");
+      toast.error("Couldn't read receipt - fill in manually");
       trackEvent("ai_receipt_scan", { success: false });
     } finally {
       setScanning(false);
@@ -471,7 +471,7 @@ export function ExpenseFormModal({
             receiptPath = storagePath;
           }
         } catch {
-          // Non-blocking — expense still saves without receipt
+          // Non-blocking - expense still saves without receipt
         }
       }
 
@@ -535,7 +535,7 @@ export function ExpenseFormModal({
               <span className="text-[12px] font-medium text-[#0D9488]">Junto AI</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Scan a receipt — we'll extract the amount and details automatically
+              Scan a receipt - we'll extract the amount and details automatically
             </p>
 
             {scanning ? (
@@ -755,7 +755,7 @@ export function ExpenseFormModal({
             )}
             {splitMode === "percent" && !hasNegativeSplit && !customValid && (
               <p className="text-xs text-destructive">
-                Percentages sum to {customSum.toFixed(0)}% — should be 100%
+                Percentages sum to {customSum.toFixed(0)}% - should be 100%
               </p>
             )}
           </>

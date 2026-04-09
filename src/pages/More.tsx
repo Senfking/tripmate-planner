@@ -566,7 +566,7 @@ const More = () => {
     if (error) {
       toast({ title: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Password reset email sent — check your inbox" });
+      toast({ title: "Password reset email sent - check your inbox" });
     }
   };
 
@@ -672,7 +672,7 @@ const More = () => {
 
   const handleShareWhatsApp = useCallback(() => {
     if (!profile?.referral_code) return;
-    const text = `✈️ ${profile.display_name} thinks you'd love Junto.\n\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://junto.pro/ref?ref=${profile.referral_code}`;
+    const text = `✈️ ${profile.display_name} thinks you'd love Junto.\n\nGroup trips are chaos - 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://junto.pro/ref?ref=${profile.referral_code}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     trackEvent("referral_link_shared", { method: "whatsapp" }, user?.id);
   }, [profile?.referral_code, user?.id]);
@@ -936,7 +936,7 @@ const More = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground text-center mt-3">
-                  Invite friends — earn free Pro when we launch.
+                  Invite friends - earn free Pro when we launch.
                 </p>
               </div>
 

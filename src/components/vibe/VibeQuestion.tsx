@@ -36,7 +36,7 @@ export function VibeQuestion({
           )}
           {missing && (
             <span className="text-destructive font-normal ml-1 text-xs">
-              — pick one
+              - pick one
             </span>
           )}
         </p>

@@ -311,7 +311,7 @@ const Itinerary = () => {
 
               return (
                 <div key={date} id={`day-${date}`} className="scroll-mt-4">
-                  {/* Trip start — photo banner */}
+                  {/* Trip start - photo banner */}
                   {tripStarts.map((trip, i) => (
                     <TripStartBanner
                       key={`trip-start-${trip.tripId}-${i}`}
@@ -326,7 +326,7 @@ const Itinerary = () => {
                     />
                   ))}
 
-                  {/* Destination arrival — visible divider before the day */}
+                  {/* Destination arrival - visible divider before the day */}
                   {destStarts.map((dest, i) => (
                     <div
                       key={`dest-start-${dest.tripId}-${dest.destination}-${i}`}
@@ -432,7 +432,7 @@ const Itinerary = () => {
                     </div>
                   </div>
 
-                  {/* Destination departure — visible divider after the day */}
+                  {/* Destination departure - visible divider after the day */}
                   {destEnds.map((dest, i) => (
                     <div
                       key={`dest-end-${dest.tripId}-${dest.destination}-${i}`}
@@ -447,7 +447,7 @@ const Itinerary = () => {
                     </div>
                   ))}
 
-                  {/* Trip end — photo banner */}
+                  {/* Trip end - photo banner */}
                   {tripEnds.map((trip, i) => (
                     <TripEndBanner
                       key={`trip-end-${trip.tripId}-${i}`}

@@ -40,7 +40,7 @@ export function AIUsageModule() {
                   <td style={{ padding: 8, color: C.text, textAlign: "right", fontFamily: mono }}>{r.total_calls}</td>
                   <td style={{ padding: 8, color: C.tealLight, textAlign: "right", fontFamily: mono }}>{r.period_calls}</td>
                   <td style={{ padding: 8, color: C.text, textAlign: "right", fontFamily: mono }}>
-                    {r.success_count !== null && r.period_calls > 0 ? `${((r.success_count / r.period_calls) * 100).toFixed(0)}%` : "—"}
+                    {r.success_count !== null && r.period_calls > 0 ? `${((r.success_count / r.period_calls) * 100).toFixed(0)}%` : "-"}
                   </td>
                   <td style={{ padding: 8, color: C.text, textAlign: "right", fontFamily: mono }}>{r.unique_users}</td>
                   <td style={{ padding: 8, color: C.text, textAlign: "right", fontFamily: mono }}>{r.avg_per_user}</td>
@@ -89,7 +89,7 @@ export function AIUsageModule() {
                 <tbody>
                   {power.map((r: any) => (
                     <tr key={r.user_id} style={{ borderTop: `1px solid ${C.border}` }}>
-                      <td style={{ padding: 6, color: C.text }}>{r.display_name || "—"}</td>
+                      <td style={{ padding: 6, color: C.text }}>{r.display_name || "-"}</td>
                       <td style={{ padding: 6, color: C.text, textAlign: "right", fontFamily: mono }}>{r.receipt_scans}</td>
                       <td style={{ padding: 6, color: C.text, textAlign: "right", fontFamily: mono }}>{r.feedback_hints}</td>
                       <td style={{ padding: 6, color: C.text, textAlign: "right", fontFamily: mono }}>{r.itinerary_imports}</td>
@@ -107,7 +107,7 @@ export function AIUsageModule() {
           <SectionHeader>Cost Estimator</SectionHeader>
           <Card style={{ background: `${C.teal}15`, borderColor: `${C.teal}33` }}>
             <div style={{ fontFamily: mono, fontSize: 11, color: C.muted, marginBottom: 12, textTransform: "uppercase" }}>
-              Estimate only — based on average observed usage
+              Estimate only - based on average observed usage
             </div>
             <div style={{ display: "grid", gap: 12 }}>
               <div>

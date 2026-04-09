@@ -18,7 +18,7 @@ export function usePushOptIn(onDismiss?: () => void) {
 
   const showOptIn = useCallback(() => {
     if (localStorage.getItem(LS_KEY)) {
-      // Already shown — fire dismiss callback immediately
+      // Already shown - fire dismiss callback immediately
       onDismissRef.current?.();
       return;
     }
@@ -40,7 +40,7 @@ export function usePushOptIn(onDismiss?: () => void) {
         toast.success("Notifications enabled! 🔔");
       }
     } catch {
-      // permission denied or error — silently move on
+      // permission denied or error - silently move on
     }
     onDismissRef.current?.();
   }, []);

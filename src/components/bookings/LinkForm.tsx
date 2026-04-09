@@ -33,7 +33,7 @@ export function LinkForm({ onSubmit, isPending, onCancel }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <p className="text-[13px] text-muted-foreground italic">
-        Share a public page — hotel listing, activity, or flight route. For booking confirmations, upload the PDF or screenshot instead — our AI will read it automatically.
+        Share a public page - hotel listing, activity, or flight route. For booking confirmations, upload the PDF or screenshot instead - our AI will read it automatically.
       </p>
       <Input placeholder="URL *" value={url} onChange={(e) => setUrl(e.target.value)} required type="url" />
       <Input placeholder="Title *" value={title} onChange={(e) => setTitle(e.target.value)} required />
