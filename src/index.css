@@ -317,19 +317,13 @@ html.dark, html.dark body, html.dark #root {
   .landing-page {
     background: linear-gradient(
       180deg,
-      hsl(200, 15%, 8%) 0%,
-      hsl(200, 12%, 10%) 15%,
-      hsl(200, 10%, 13%) 35%,
-      hsl(200, 8%, 15%) 55%,
-      hsl(195, 10%, 14%) 75%,
-      hsl(200, 12%, 11%) 90%,
-      hsl(200, 15%, 9%) 100%
+      #0f1115 0%,
+      #121317 20%,
+      #14151a 40%,
+      #16171c 60%,
+      #14151a 80%,
+      #111215 100%
     );
-  }
-
-  /* Alternate section bg */
-  .landing-section-alt {
-    background: linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.015) 100%);
   }
 
   /* Landing page scroll reveal */
@@ -386,26 +380,26 @@ html.dark, html.dark body, html.dark #root {
   .landing-blob {
     position: absolute;
     border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.35;
-    animation: landing-float 12s ease-in-out infinite;
+    filter: blur(120px);
+    opacity: 0.2;
+    animation: landing-float 14s ease-in-out infinite;
   }
   .landing-blob-1 {
     width: 420px; height: 420px;
     left: 15%; top: 20%;
-    background: hsl(175 84% 32% / 0.4);
+    background: hsl(175 84% 32% / 0.3);
     animation-delay: 0s;
   }
   .landing-blob-2 {
     width: 350px; height: 350px;
     right: 10%; top: 30%;
-    background: hsl(199 89% 48% / 0.25);
+    background: hsl(199 89% 48% / 0.2);
     animation-delay: -4s;
   }
   .landing-blob-3 {
     width: 280px; height: 280px;
     left: 40%; bottom: 15%;
-    background: hsl(175 60% 40% / 0.2);
+    background: hsl(175 60% 40% / 0.15);
     animation-delay: -8s;
   }
   @keyframes landing-float {
