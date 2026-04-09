@@ -532,7 +532,7 @@ export function ExpenseFormModal({
           <div className="rounded-xl border border-[#0D9488]/20 bg-[#0D9488]/[0.03] p-4 space-y-3">
             <div className="flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
-              <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
+              <span className="text-[12px] font-medium text-[#0D9488]">Junto AI</span>
             </div>
             <p className="text-xs text-muted-foreground">
               Scan a receipt — we'll extract the amount and details automatically

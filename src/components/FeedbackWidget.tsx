@@ -537,10 +537,10 @@ export function FeedbackWidget() {
                 >
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5" style={{ color: "#0D9488" }} />
-                    <span className="text-xs font-semibold" style={{ color: "#0D9488" }}>AI-powered</span>
+                    <span className="text-xs font-semibold" style={{ color: "#0D9488" }}>Junto AI</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Upload a screenshot and AI will take a look. No promises.
+                    Upload a screenshot and Junto AI will take a look. No promises.
                   </p>
                   <button
                     type="button"
@@ -573,18 +573,18 @@ export function FeedbackWidget() {
                   </div>
                   {analyzingScreenshot && (
                     <p className="text-xs animate-pulse mt-2" style={{ color: "#0D9488" }}>
-                      AI is squinting at your screenshot...
+                      Junto AI is squinting at your screenshot...
                     </p>
                   )}
                   {screenshotAnalysisFailed && !analyzingScreenshot && (
                     <p className="text-xs text-muted-foreground italic mt-2">
-                      AI couldn't analyze the screenshot — no worries, just describe the issue below.
+                      Junto AI couldn't analyze the screenshot — no worries, just describe the issue below.
                     </p>
                   )}
                   {screenshotHint && !analyzingScreenshot && (
                     <div ref={hintRef} className="mt-2">
                       <p className="text-xs text-muted-foreground italic">
-                        💡 AI spotted: {screenshotHint}
+                        💡 Junto AI spotted: {screenshotHint}
                       </p>
                       {/* Thumbs up/down — only for app screenshots */}
                       {isAppScreenshot && (

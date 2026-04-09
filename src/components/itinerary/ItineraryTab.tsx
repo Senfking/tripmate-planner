@@ -175,7 +175,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
         className="w-full rounded-xl border border-dashed border-[#0D9488]/30 py-3 text-center text-[13px] font-medium text-[#0D9488]/70 hover:border-[#0D9488]/60 hover:text-[#0D9488] transition-colors flex items-center justify-center gap-1.5"
       >
         <Sparkles className="h-4 w-4" />
-        Import with AI
+        Import with Junto AI
       </button>
 
       {allDays.length === 0 && (
