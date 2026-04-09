@@ -204,8 +204,8 @@
 
   <div class="sidebar-group">
     <div class="sidebar-label">Phase 2 — Weeks 3–8</div>
-    <div class="sidebar-item" onclick="show('ai',this)"><span class="sidebar-dot dot-purple"></span> AI Itinerary</div>
-    <div class="sidebar-item" onclick="show('templates',this)"><span class="sidebar-dot dot-blue"></span> Trip Templates</div>
+    <div class="sidebar-item" onclick="show('ai',this)"><span class="sidebar-dot dot-purple"></span> AI Trip Builder</div>
+    <div class="sidebar-item" onclick="show('templates',this)"><span class="sidebar-dot dot-blue"></span> Templates & Discovery</div>
     <div class="sidebar-item" onclick="show('recommendations',this)"><span class="sidebar-dot dot-purple"></span> Trip Recommendations</div>
     <div class="sidebar-item" onclick="show('maps',this)"><span class="sidebar-dot dot-blue"></span> Maps & Calendar</div>
     <div class="sidebar-item" onclick="show('arrivals',this)"><span class="sidebar-dot dot-blue"></span> Arrival Notifications</div>
@@ -841,19 +841,19 @@ Only change the home screen header and the share sheet component. Do not touch a
   </div>
 </div>
 
-<!-- ══════════ PHASE 2: AI ITINERARY ══════════ -->
+<!-- ══════════ PHASE 2: AI TRIP BUILDER ══════════ -->
 <div id="ai" class="section">
   <div class="section-header">
-    <h2>AI Itinerary Suggestions — Phase 2, Weeks 3–5</h2>
-    <p>The acquisition magnet. The feature that makes someone try Junto instead of opening Google Docs.</p>
+    <h2>AI Trip Builder — Phase 2</h2>
+    <p>Guided AI flow that generates a fully populated trip from a short questionnaire. The acquisition magnet that turns "I want to plan a trip" into a complete plan in under two minutes.</p>
   </div>
-  <div class="callout callout-purple">Research: Layla.ai generated 10M+ itineraries since 2024. But AI that balances multiple group preferences — "Alex wants museums, Jordan wants beaches" — doesn't exist yet. Junto's Vibe Board already captures these preferences. This is the unfair advantage.</div>
+  <div class="callout callout-purple">Research: Layla.ai generated 10M+ itineraries since 2024. But AI that balances multiple group preferences — "Alex wants museums, Jordan wants beaches" — doesn't exist yet. Junto's Vibe Board already captures these preferences. This is the unfair advantage. The AI Trip Builder extends the suggest-activities Edge Function into a full trip creation experience.</div>
 
   <div class="task">
     <div class="checkbox"><span class="checkmark">✓</span></div>
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build AI suggestions Edge Function</span><span class="tag tag-code">Claude Code</span></div>
-      <p class="task-note">Takes destination, dates, group size, budget, and Vibe Board interests. Returns structured JSON of suggested activities. Uses Claude API — same pattern as receipt scanner.</p>
+      <p class="task-note">Takes destination, dates, group size, budget, and Vibe Board interests. Returns structured JSON of suggested activities. Uses Claude API — same pattern as receipt scanner. This is the foundation for the full AI Trip Builder.</p>
       <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
       <div class="task-detail">
         <span class="code-label">Claude Code prompt</span>
@@ -875,13 +875,67 @@ Show me the existing receipt scanner Edge Function structure before writing anyt
   </div>
 
   <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build "Plan with AI" guided trip creation flow</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">User taps "Plan with AI" from the new trip screen. A short questionnaire collects: destination (or "surprise me"), dates/flexibility, trip length (3 / 5 / 7 / 10+ days), budget level (budget / mid-range / premium), vibe (adventure / relaxation / culture / nightlife / foodie — multi-select, pulls from Vibe Board if available), group size, and preferences (family-friendly, accessibility, dietary). AI generates a full day-by-day itinerary with times, suggested packing list, and estimated daily budget breakdown. User previews and edits everything before confirming. On confirm, populates itinerary items, packing list, and budget notes into the trip.</p>
+      <p class="task-note">Depends on: AI Itinerary Suggestions Edge Function. Build after the suggest-activities Edge Function is live — this extends that work.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt (Edge Function)</span>
+        <div class="code-block">Build an AI Trip Builder Edge Function for Junto called "ai-trip-builder". This extends the existing suggest-activities Edge Function into a full guided trip creation experience.
+
+First, check the existing suggest-activities Edge Function so we reuse the same AI provider pattern and API key setup.
+
+The function should accept a questionnaire payload:
+- destination (string, or "surprise me")
+- dates and flexibility (exact dates or flexible window)
+- trip_length: 3 | 5 | 7 | 10+
+- budget_level: budget | mid-range | premium
+- vibes: array of adventure | relaxation | culture | nightlife | foodie (pull from Vibe Board data if user has history)
+- group_size (integer)
+- preferences: { family_friendly: boolean, accessibility: boolean, dietary: string }
+
+Include a "surprise me" destination picker that selects from trending destinations based on season and departure city.
+
+The function should return structured JSON:
+1. Full day-by-day itinerary — each day has activities with: name, time, location, description, estimated_cost
+2. Suggested packing list tailored to the destination and activities
+3. Estimated daily budget breakdown: accommodation, food, transport, activities
+
+Do not change any existing Edge Functions. List every file you'll create before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after Edge Function is built)</span>
+        <div class="code-block">Add a "Plan with AI" option to Junto's new trip creation screen.
+
+When the user taps "Plan with AI", show a multi-step questionnaire:
+1. Destination — text input with autocomplete, plus a "Surprise me" toggle
+2. Dates — date picker with a "Flexible" checkbox
+3. Trip length — selectable chips: 3 days, 5 days, 7 days, 10+ days
+4. Budget level — three selectable cards: Budget, Mid-range, Premium
+5. Vibe — multi-select chips: Adventure, Relaxation, Culture, Nightlife, Foodie. If the user has Vibe Board history, pre-select their top vibes.
+6. Group size — number input
+7. Preferences — toggles for Family-friendly, Accessibility needs, Dietary restrictions (with text input for details)
+
+After submission, call the ai-trip-builder Edge Function. Show a loading state with animated progress ("Building your trip…"). Display the AI-generated result as a full preview:
+- Day-by-day itinerary cards (expandable, editable inline)
+- Packing list (checkboxes, add/remove items)
+- Budget breakdown (table with daily totals)
+
+The user can edit any item inline before confirming. On confirm, populate the new trip with itinerary items, packing list, and budget notes. If the user cancels, discard everything and return to normal trip creation.
+
+List every file you'll change before making changes. Do not modify any existing trip creation functionality — this is an additional optional flow.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
     <div class="checkbox"><span class="checkmark">✓</span></div>
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build AI suggestions UI on itinerary view</span><span class="tag tag-lovable">Lovable</span></div>
-      <p class="task-note">Swipeable suggestion cards with "Add to itinerary" action. Show Vibe Board personalisation label when relevant.</p>
+      <p class="task-note">Swipeable suggestion cards with "Add to itinerary" action. Show Vibe Board personalisation label when relevant. This is the lightweight version — complements the full AI Trip Builder.</p>
       <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
       <div class="task-detail">
-        <div class="callout callout-warn">Only send this after the Edge Function is confirmed working.</div>
+        <div class="callout callout-warn">Only send this after the suggest-activities Edge Function is confirmed working.</div>
         <span class="code-label">Lovable prompt</span>
         <div class="code-block">Add an AI activity suggestions feature to the itinerary view in Junto. The suggest-activities Edge Function is already built.
 
@@ -897,38 +951,217 @@ Do not change any existing itinerary functionality. List every file you'll chang
   </div>
 </div>
 
-<!-- ══════════ PHASE 2: TRIP TEMPLATES ══════════ -->
+<!-- ══════════ PHASE 2/4: TRIP TEMPLATES & DISCOVERY ══════════ -->
 <div id="templates" class="section">
   <div class="section-header">
-    <h2>Trip Templates — Phase 2, Weeks 3–5</h2>
-    <p>Reduces activation friction massively — from blank page to populated plan in one tap.</p>
+    <h2>Trip Templates & Discovery — Phase 2/4</h2>
+    <p>From curated seed trips to a community-powered trip library. Solves the blank page problem now, becomes a growth engine later.</p>
   </div>
-  <div class="callout">The "blank page problem" is a major drop-off point in planning apps. Pre-built templates give users an instant starting point and demonstrate what Junto can do before they've invested any effort.</div>
+  <div class="callout">The "blank page problem" is a major drop-off point in planning apps. Pre-built templates give users an instant starting point and demonstrate what Junto can do before they've invested any effort. Phase 2 ships AI-generated seed templates. Phase 4 evolves this into a community-powered Trip Database once there are 500+ users.</div>
+
+  <h3>Phase 2 (now) — AI-Generated Seed Templates</h3>
+  <div class="callout callout-purple">Use the AI Trip Builder to generate 10–15 realistic template trips covering popular destinations. Users browse, copy, and rate them. This provides immediate value and validates the template concept before investing in community features.</div>
 
   <div class="task">
-    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="checkbox"></div>
     <div class="task-body">
-      <div class="task-top"><span class="task-title">Create 5 template trips with pre-populated itineraries</span><span class="tag tag-ops">OPS</span><span class="tag tag-lovable">Lovable</span></div>
-      <p class="task-note">Create manually in the app first. Then build a "Use template" clone flow in Lovable. Target destinations with Dubai travel relevance.</p>
-      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ templates + Lovable prompt</button>
+      <div class="task-top"><span class="task-title">Create trip_templates and template_ratings tables</span><span class="tag tag-code">Claude Code</span><span class="tag tag-sql">SQL</span></div>
+      <p class="task-note">New tables to store template data separately from live trips. Templates are snapshot data — not linked to real trips.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
       <div class="task-detail">
-        <h4>Recommended templates</h4>
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Create the database tables for Junto's Trip Templates feature.
+
+New tables needed:
+
+1. trip_templates — snapshot data for browseable template trips
+   - id (uuid, primary key, default gen_random_uuid())
+   - title (text, not null) — e.g. "Bali 7-Day Adventure"
+   - destination (text, not null)
+   - duration_days (integer, not null)
+   - itinerary_snapshot (jsonb, not null) — full day-by-day itinerary
+   - packing_list_snapshot (jsonb) — suggested packing list
+   - budget_tier (text, not null) — budget | mid-range | premium
+   - estimated_daily_budget (jsonb) — { accommodation, food, transport, activities }
+   - season (text) — spring | summer | autumn | winter | year-round
+   - cover_image_url (text)
+   - tags (text[]) — e.g. ['adventure', 'culture', 'foodie']
+   - avg_rating (numeric(2,1), default 0)
+   - copy_count (integer, default 0)
+   - is_active (boolean, default true)
+   - created_at (timestamptz, default now())
+   - updated_at (timestamptz, default now())
+
+2. template_ratings — user ratings for templates
+   - id (uuid, primary key, default gen_random_uuid())
+   - user_id (uuid, references auth.users, not null)
+   - template_id (uuid, references trip_templates, not null)
+   - rating (integer, not null, check 1-5)
+   - created_at (timestamptz, default now())
+   - Unique constraint on (user_id, template_id)
+
+Add RLS policies: anyone can read active templates, only authenticated users can rate, one rating per user per template. Create a trigger to update avg_rating on trip_templates when a new rating is inserted or updated.
+
+Write the Supabase migration SQL. List every file you'll create before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Generate 10–15 AI seed templates</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Use the AI Trip Builder to generate realistic template trips for popular destinations. Each template shows destination, duration, full itinerary, estimated budget, and season. Target destinations with Dubai travel relevance.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ template list + prompt</button>
+      <div class="task-detail">
+        <h4>Recommended seed templates (10–15)</h4>
         <ul>
-          <li><strong>Bali 7-Day Group Trip</strong> — most searched destination from Dubai</li>
-          <li><strong>Dubai to Oman Road Trip</strong> — highly relevant for Dubai expats</li>
-          <li><strong>Barcelona Long Weekend</strong> — popular European destination</li>
-          <li><strong>Thailand Island Hopping</strong> — group travel classic</li>
-          <li><strong>Georgia (Tbilisi) Weekend</strong> — trending Dubai expat destination</li>
+          <li><strong>Bali 7-Day Group Trip</strong> — most searched destination from Dubai, adventure + culture</li>
+          <li><strong>Barcelona Long Weekend (4 days)</strong> — popular European city break, culture + nightlife + foodie</li>
+          <li><strong>Thailand Island Hopping (10 days)</strong> — group travel classic, adventure + relaxation</li>
+          <li><strong>Dubai to Oman Road Trip (3 days)</strong> — highly relevant for Dubai expats, adventure</li>
+          <li><strong>Georgia (Tbilisi + Kazbegi) (5 days)</strong> — trending Dubai expat destination, culture + adventure</li>
+          <li><strong>Japan First-Timer (10 days)</strong> — Tokyo, Kyoto, Osaka, culture + foodie</li>
+          <li><strong>Greek Islands (7 days)</strong> — Santorini + Mykonos, relaxation + nightlife</li>
+          <li><strong>Sri Lanka Circuit (7 days)</strong> — budget-friendly, adventure + culture</li>
+          <li><strong>Morocco (Marrakech + Desert) (5 days)</strong> — accessible from Dubai, culture + adventure</li>
+          <li><strong>Maldives Luxury Escape (5 days)</strong> — premium tier, relaxation</li>
+          <li><strong>Portugal Road Trip (7 days)</strong> — Lisbon + Porto + Algarve, culture + foodie</li>
+          <li><strong>Kenya Safari + Coast (7 days)</strong> — adventure + relaxation</li>
         </ul>
-        <p class="task-note">Each template should have: 4–6 itinerary items per day, a suggested budget range, and a starter packing list. Create them manually in the app first, then use Lovable to build the "Clone template" functionality.</p>
-        <span class="code-label">Lovable prompt (after templates are created manually)</span>
-        <div class="code-block">Add a trip templates feature to Junto's "New trip" flow.
+        <p class="task-note">Each template should have: full day-by-day itinerary with times, a suggested packing list, estimated daily budget breakdown (accommodation / food / transport / activities), and season recommendation. Generate using the AI Trip Builder, then insert into trip_templates table.</p>
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Generate seed data for Junto's trip_templates table using the AI Trip Builder.
 
-After a user fills in the trip name and destination, show an optional step: "Start from a template?" Display 5 pre-built template cards (we'll provide the trip IDs). Each card shows the destination photo, name, duration, and "Use template" button.
+For each of the 12 template destinations, call the ai-trip-builder Edge Function (or use the same Claude API prompt pattern) with appropriate parameters to generate:
+- Full day-by-day itinerary (activities with name, time, location, description, estimated_cost)
+- Packing list tailored to the destination
+- Daily budget breakdown (accommodation, food, transport, activities)
 
-On selecting a template, clone the template trip's itinerary items and packing list items into the new trip being created. Do not copy expenses, members, or any other data — only itinerary and packing list.
+Format the results as INSERT statements for the trip_templates table. Include:
+- title, destination, duration_days
+- itinerary_snapshot (jsonb), packing_list_snapshot (jsonb)
+- budget_tier, estimated_daily_budget (jsonb)
+- season, tags array
+- cover_image_url (use placeholder URLs we'll replace later)
 
-If the user skips, continue to the normal blank trip creation. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+Generate realistic, detailed content — each day should have 3–5 activities with specific times and locations. Budget estimates should reflect actual destination costs.
+
+Output as a single Supabase migration SQL file.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build template browse UI and "Use this trip" clone flow</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Users browse templates from the new trip screen or a dedicated templates page. "Use this trip" clones itinerary + packing list into a new editable trip. Users can rate templates 1–5 stars after using them.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <span class="code-label">Lovable prompt</span>
+        <div class="code-block">Add a Trip Templates feature to Junto with browse, clone, and rating functionality.
+
+1. Templates browse view (accessible from "New trip" screen and main navigation):
+   - Grid of template cards showing: cover image, destination, duration, budget tier badge, avg rating (stars), season tag
+   - Filter chips at the top: destination, duration (3/5/7/10+ days), budget tier, vibe tags
+   - Sort options: highest rated, most copied, newest
+   - Tapping a card opens a detail view with: full day-by-day itinerary, packing list, budget breakdown, rating count
+
+2. "Use this trip" flow:
+   - Button on template detail view
+   - Creates a new trip with the template's itinerary items and packing list pre-populated
+   - User can set their own trip name, dates, and invite members as normal
+   - Do NOT copy budget notes as expenses — show them as reference info only
+   - Increment copy_count on the template
+
+3. Rating flow:
+   - After a user clones a template, show a subtle prompt to rate it (1–5 stars)
+   - Also allow rating from the template detail view
+   - Update avg_rating on the template via the database trigger
+
+Query templates from the trip_templates table where is_active = true. Do not modify any existing trip creation functionality — templates are an additional starting option.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Phase 4 (500+ users) — Community Trip Database</h3>
+  <div class="callout">Evolves templates into a community-powered Trip Database. Users publish their own completed trips (opt-in, never automatic). Discovery features turn Junto into a platform, not just a tool. Do not build before Trip Discovery infrastructure from Phase 4 is in place.</div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build community trip publishing and discovery</span><span class="tag tag-lovable">Lovable</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Users can publish their own completed trips (opt-in, never automatic). Published trips show photos, experience notes, and reviews. Discovery features: search by destination / duration / budget / vibe / season, "Recommended for you" based on Vibe Board history, featured/trending sections. Depends on: Trip Discovery infrastructure from Phase 4.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt (database setup)</span>
+        <div class="code-block">Extend the Junto Trip Templates database for community publishing. This adds user-generated content on top of the existing trip_templates / template_ratings tables.
+
+New tables needed:
+
+1. published_trips — snapshot of trip data when a user publishes
+   - id (uuid, primary key)
+   - original_trip_id (references trips)
+   - author_id (references auth.users)
+   - destination (text)
+   - duration_days (integer)
+   - itinerary_snapshot (jsonb — full itinerary at time of publishing)
+   - packing_list_snapshot (jsonb)
+   - experience_notes (text)
+   - group_size (integer)
+   - budget_tier (text — budget | mid-range | premium)
+   - season (text — spring | summer | autumn | winter)
+   - is_public (boolean, default true)
+   - published_at (timestamptz)
+   - times_cloned (integer, default 0)
+   - avg_rating (numeric(2,1), default 0)
+   - created_at / updated_at
+
+2. published_trip_ratings
+   - id (uuid, primary key)
+   - user_id (references auth.users)
+   - published_trip_id (references published_trips)
+   - rating (integer, 1-5)
+   - review_text (text, nullable)
+   - created_at
+   - Unique constraint on (user_id, published_trip_id)
+
+3. published_trip_photos
+   - id (uuid, primary key)
+   - published_trip_id (references published_trips)
+   - storage_url (text)
+   - caption (text, nullable)
+   - sort_order (integer)
+   - created_at
+
+Add RLS policies: anyone can read public published trips, only the author can publish/edit/delete their own, only authenticated users can rate, one rating per user per trip.
+
+Write the Supabase migration SQL.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after tables and Discovery exist)</span>
+        <div class="code-block">Build the community Trip Database UI for Junto — extends the existing Trip Templates feature.
+
+1. Discovery page (accessible from main navigation):
+   - Search bar with filters: destination, duration, budget tier, vibe tags, season
+   - "Recommended for you" section based on user's Vibe Board history
+   - "Featured" section — most cloned and highest rated trips
+   - "Trending" section — recently published with high engagement
+   - Trip cards showing: destination photo, title, duration, star rating, budget tier, season badge, clone count
+   - Tapping a card opens detail view with full itinerary, photos, reviews, "Use this trip" button
+
+2. Publish flow (from trip settings on a completed trip):
+   - "Share with community" button (opt-in, never automatic)
+   - Preview what will be published: destination, duration, itinerary, packing list
+   - Add experience notes, select budget tier, upload photos with captions
+   - Confirm and publish
+
+3. "Use this trip" clones the published trip's itinerary and packing list into a new editable trip (same pattern as Trip Templates clone flow)
+
+4. Rating/review: after using a published trip, prompt user to rate it (1-5 stars + optional review text)
+
+List every file you'll change before making changes. Do not modify any existing trip functionality.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
       </div>
     </div>
   </div>
