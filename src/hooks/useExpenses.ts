@@ -433,6 +433,7 @@ export function useExpenses(tripId: string) {
     cachedCurrencyCodes: cachedCodesQuery.data || [],
     itineraryItems: itineraryQuery.data || [],
     isLoading: !user || expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading,
+    isFetchingExpenses: expensesQuery.isFetching,
     ratesLoading: ratesQuery.isLoading,
     updateSettlementCurrency,
     addExpense,
