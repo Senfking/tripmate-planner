@@ -237,6 +237,7 @@
     <div class="sidebar-label">Phase 4 — Scale</div>
     <div class="sidebar-item" onclick="show('native',this)"><span class="sidebar-dot dot-blue"></span> Native App</div>
     <div class="sidebar-item" onclick="show('friendsearch',this)"><span class="sidebar-dot dot-blue"></span> Friend Search & Invites</div>
+    <div class="sidebar-item" onclick="show('livelocation',this)"><span class="sidebar-dot dot-blue"></span> Live Location Sharing</div>
     <div class="sidebar-item" onclick="show('discovery',this)"><span class="sidebar-dot dot-purple"></span> Trip Discovery</div>
     <div class="sidebar-item" onclick="show('enterprise',this)"><span class="sidebar-dot dot-muted"></span> Enterprise & GDPR</div>
     <div class="sidebar-item" onclick="show('selfheal',this)"><span class="sidebar-dot dot-muted"></span> Self-Healing Bugs</div>
@@ -1438,6 +1439,67 @@ Don't change the upload flow or storage backend.<button class="copy-btn" onclick
 4. What would a "pending invite" data model look like — does one exist or does it need a new table?
 Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 4: LIVE LOCATION SHARING ══════════ -->
+<div id="livelocation" class="section">
+  <div class="section-header">
+    <h2>Live Location Sharing — Phase 4</h2>
+    <p>Real-time location sharing during active trips. Group members can share their live location with the trip group so everyone can see where each other is on a map — useful for coordinating meetups, airport pickups, and finding each other at crowded venues.</p>
+  </div>
+
+  <div class="callout callout-red">Depends on: Google Maps integration (Phase 2), Capacitor native wrapper (Phase 4). Do not build before native app.</div>
+
+  <h3>Scope</h3>
+  <ul>
+    <li><strong>Session-based, not always-on</strong> — user taps "Share my location" to start a timed session (30 min / 1 hour / until I stop). Location is never shared without explicit action</li>
+    <li><strong>Map view</strong> — shows member avatars at their current position, updated every 30–60 seconds</li>
+    <li><strong>Privacy controls</strong> — each user chooses when to share. No background tracking. Location history is not stored — only the latest position is kept and deleted when sharing stops</li>
+    <li><strong>"Find my group" button</strong> — shows all currently-sharing members on the map with walking/driving distance and ETA</li>
+  </ul>
+
+  <h3>Technical notes</h3>
+  <ul>
+    <li>PWAs have limited background GPS access — this feature likely requires the Capacitor native wrapper (Phase 4) for reliable background updates. Basic foreground-only sharing may work in PWA</li>
+    <li>Approach options: WebSocket via Supabase Realtime for live updates, or periodic polling (every 30–60s) to a location table</li>
+    <li>Battery impact must be managed — use significant-change location updates, not continuous GPS polling</li>
+    <li>Research needed: check how WhatsApp Live Location and Find My Friends handle session-based sharing, privacy, and battery</li>
+  </ul>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Research & design session — location sharing architecture</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Before building anything, run a Deep Research session. Investigate: Supabase Realtime vs polling for location updates, Capacitor Geolocation plugin capabilities and battery trade-offs, privacy model design (session table schema, auto-expiry), and how WhatsApp Live Location / Find My Friends handle session-based sharing.</p>
+      <p class="task-note">Depends on: Google Maps integration (Phase 2), Capacitor native wrapper (Phase 4).</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">We want to add live location sharing to Junto — session-based (not always-on), where trip members can share their position on a map for a set duration (30 min / 1 hr / until stopped). Research and report:
+1. What does the Capacitor Geolocation plugin offer — foreground vs background modes, battery impact, iOS/Android differences?
+2. Supabase Realtime channels vs periodic polling to a locations table — which approach fits better for 30-60s update intervals?
+3. What schema would a location_sessions table need — user_id, trip_id, lat/lng, expires_at, started_at? How should expired sessions be cleaned up?
+4. How do WhatsApp Live Location and Apple Find My handle session expiry, battery, and privacy?
+5. Can we do a basic foreground-only PWA version first, then upgrade to background tracking with Capacitor?
+Don't build anything yet — just report findings.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build location sharing database + API layer</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Create the location_sessions table, RLS policies, and Supabase Realtime channel setup. Include auto-expiry logic (cron or DB trigger) to delete positions when a session ends or times out. Edge function for cleanup if needed.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build map UI — "Share my location" + group map view</span><span class="tag tag-lovable">Lovable</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Map component showing member avatars at live positions. "Share my location" button with duration picker (30 min / 1 hr / until I stop). "Find my group" button showing all sharing members with distance and ETA. Uses Google Maps integration from Phase 2.</p>
     </div>
   </div>
 </div>
