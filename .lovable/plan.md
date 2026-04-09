@@ -1,47 +1,39 @@
 
 
-## Plan: Proportional shared cost splitting for line items
+## Plan: Public Landing Page at "/"
+
+### Summary
+Create a new dark-themed landing page at `/` for unauthenticated users. Authenticated users redirect to `/app/trips` as before. The `/ref` page stays untouched.
 
 ### Files to change
+1. **`src/pages/Landing.tsx`** — NEW. The full landing page component with all 5 sections + footer.
+2. **`src/App.tsx`** — Update routing: `/` renders `<Landing />` for unauth users (redirect to `/app/trips` for auth'd), add lazy import.
+3. **`src/index.css`** — Add a small `fade-in-up` animation for scroll-triggered reveals (reuse existing keyframes where possible).
 
-1. **Migration SQL** — Add `is_shared` column to `expense_line_items`
-2. **`src/hooks/useLineItemClaims.ts`** — Update `LineItemRow` interface to include `is_shared`; update `saveLineItems` to accept and persist `is_shared`; auto-detect shared items by name pattern
-3. **`src/components/expenses/ItemSplitPanel.tsx`** — Add `is_shared` to `LineItem` interface; add toggle for shared flag on each item; hide member assignment avatars for shared items; show "Shared cost" badge; update `computeItemSplits` with proportional logic
-4. **`src/components/expenses/LineItemClaimList.tsx`** — Split items into claimable vs shared sections; hide "Mine" button for shared items; show "split proportionally" label; update `perPersonTotals` calculation with proportional shared cost distribution
-5. **`src/components/expenses/ExpenseFormModal.tsx`** — Pass `is_shared` through when creating line items; initialize `is_shared` from auto-detection on scan results
+### Routing logic
+- `/` route renders a wrapper component that checks `useAuth()`: if `user` exists, `<Navigate to="/app/trips" />`; otherwise, renders `<Landing />`.
+- The `/ref` page is completely untouched.
+- All other routes remain as-is.
 
-### Database change
+### Landing page structure
+- **Dark theme forced** via `className="dark"` wrapper on the page (so it's always dark regardless of system preference).
+- Uses the existing dark CSS variables (`--background: 176 30% 8%`, teal gradient, etc.).
+- Each section uses an `IntersectionObserver`-based fade-in-on-scroll hook for subtle entrance animations.
+- No external images or stock photos — gradient backgrounds, glassmorphic cards, icon-based visuals using Lucide icons.
 
-```sql
-ALTER TABLE public.expense_line_items
-  ADD COLUMN is_shared boolean NOT NULL DEFAULT false;
-```
+### Sections
+1. **Hero** — Full viewport height. Large headline, subtitle, two CTAs. "Start Planning" links to `/ref` (signup flow). "See how it works" smooth-scrolls to Section 2.
+2. **The Pain** — 3 cards with quotation-style frustrations, followed by the resolution line.
+3. **How It Works** — 3 numbered steps, horizontal on `md:` breakpoint, stacked on mobile.
+4. **Feature Highlights** — 4 cards with Lucide icons (Wallet, Vote, CalendarDays, Smartphone).
+5. **Social Proof** — 3 placeholder testimonial cards with avatar circles.
+6. **Final CTA** — Centered headline + big gradient button → `/ref`.
+7. **Footer** — Privacy, Terms, email link, "Made with ☀️ in Dubai".
 
-No new RLS policies needed — existing policies cover the column.
-
-### Auto-detection logic
-
-In `saveLineItems`, before inserting, check each item name against `/tax|vat|service.?charge|tip|gratuity|surcharge/i`. If matched, set `is_shared = true`.
-
-### Creator toggle (ItemSplitPanel)
-
-Each item row gets a small icon button (e.g. a "share" or "link" icon) that toggles `is_shared` on/off. Shared items show a distinct badge ("Shared cost") and hide member avatars since they can't be assigned.
-
-### Updated calculation (both panels)
-
-```
-1. Separate items into claimable vs shared
-2. For claimable items: claimed → split among claimants; unclaimed → split equally among all
-3. Sum each person's claimable total → gives their "item subtotal"
-4. Compute each person's proportion = their item subtotal / sum of all item subtotals
-5. Distribute shared costs proportionally using those percentages
-6. Final total = item subtotal + proportional share of shared costs
-```
-
-Edge case: if all items are shared (no claimable items), shared costs split equally among all members.
-
-### Collaborative claiming view (LineItemClaimList)
-
-- Render two sections: "Claim your items" (non-shared) and "Shared costs — split proportionally" (shared items, no Mine button, just display)
-- Per-person summary includes the proportional shared cost breakdown
+### Design details
+- Cards: `bg-white/5 border border-white/10 backdrop-blur` glassmorphic style.
+- Gradient accents using `--gradient-primary` (teal→sky).
+- Inter font, consistent with app.
+- Mobile-first responsive, max-width container `max-w-6xl`.
+- Scroll animations: elements start `opacity-0 translate-y-6` and animate to `opacity-1 translate-y-0` when intersecting viewport.
 
