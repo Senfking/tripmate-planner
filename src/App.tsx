@@ -164,6 +164,12 @@ function AppInner() {
   );
 }
 
+function RootRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  return user ? <Navigate to="/app/trips" replace /> : <Landing />;
+}
+
 function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   return <ErrorBoundary userId={user?.id}>{children}</ErrorBoundary>;
