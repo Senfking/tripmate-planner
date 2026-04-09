@@ -74,8 +74,8 @@ function PushEnableButton() {
   if (status === "enabled") {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15">
-          <Bell className="h-3 w-3 text-emerald-600" />
+        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15">
+          <Bell className="h-3 w-3 text-primary" />
         </div>
         Push notifications enabled
       </div>
