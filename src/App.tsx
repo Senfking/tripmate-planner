@@ -34,6 +34,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Admin = lazy(() => import("./pages/Admin"));
+const Landing = lazy(() => import("./pages/Landing"));
 
 function PageLoader() {
   return (
@@ -150,7 +151,7 @@ function AppInner() {
             </Route>
 
             {/* Redirects */}
-            <Route path="/" element={<Navigate to="/app/trips" replace />} />
+            <Route path="/" element={<RootRoute />} />
             <Route path="/app" element={<Navigate to="/app/trips" replace />} />
             <Route path="/trips" element={<Navigate to="/app/trips" replace />} />
             <Route path="*" element={<NotFound />} />
@@ -161,6 +162,12 @@ function AppInner() {
       </BrowserRouter>
     </TooltipProvider>
   );
+}
+
+function RootRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  return user ? <Navigate to="/app/trips" replace /> : <Landing />;
 }
 
 function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {

@@ -313,6 +313,17 @@ html.dark, html.dark body, html.dark #root {
     animation: fade-in-card 0.35s ease-out;
   }
 
+  /* Landing page scroll reveal */
+  .landing-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .landing-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   .ref-hero-video::-webkit-media-controls,
   .ref-hero-video::-webkit-media-controls-enclosure,
   .ref-hero-video::-webkit-media-controls-panel,
