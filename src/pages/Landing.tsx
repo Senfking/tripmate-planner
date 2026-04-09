@@ -165,10 +165,10 @@ function Hero() {
           className="w-full h-full object-cover"
           loading="eager"
         />
-        {/* Strong gradient: dark top for nav, fully opaque bottom half for seamless blend */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0f1115]/90 via-[#0f1115]/20 via-35% to-[#0f1115]" />
-        <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-[#0f1115] via-[#0f1115]/95 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0f1115]/60 via-transparent to-transparent" />
+        {/* Gradient overlays — bottom 60% is fully opaque for seamless blend */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0f1115]/90 via-[#0f1115]/30 via-30% to-[#0f1115]" />
+        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-[#0f1115] from-30% via-[#0f1115] via-50% to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0f1115]/50 via-transparent to-transparent" />
       </div>
 
       {/* Floating blobs */}
