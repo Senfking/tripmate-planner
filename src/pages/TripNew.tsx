@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePushOptIn } from "@/components/PushOptInDrawer";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { supabase } from "@/integrations/supabase/client";
