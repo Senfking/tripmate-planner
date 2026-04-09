@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { DesktopFooter } from "@/components/DesktopFooter";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -368,6 +368,31 @@ export default function TripList() {
     () => localStorage.getItem("junto_referral_card_dismissed") === "true"
   );
 
+  // Post-trip nudge: find the most recently ended trip that hasn't been dismissed
+  const dismissedNudges = useRef<Set<string>>(
+    new Set(JSON.parse(localStorage.getItem("junto_post_trip_nudge_dismissed") || "[]"))
+  );
+  const [nudgeDismissedState, setNudgeDismissedState] = useState(0);
+
+  const handleDismissNudge = useCallback((tripId: string) => {
+    dismissedNudges.current.add(tripId);
+    localStorage.setItem("junto_post_trip_nudge_dismissed", JSON.stringify([...dismissedNudges.current]));
+    setNudgeDismissedState((n) => n + 1);
+  }, []);
+
+  const handleNudgeWhatsApp = useCallback((tripName: string) => {
+    const displayName = profile?.display_name || "Someone";
+    const refCode = (profile as any)?.referral_code || "";
+    const text = `Hey! I just planned "${tripName}" with Junto and it made everything so much easier - itinerary, expenses, group decisions, all in one place.\n\nIf you're planning a trip, check it out → https://junto.pro/ref?ref=${refCode}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }, [profile]);
+
+  const handleNudgeCopyLink = useCallback(() => {
+    const refCode = (profile as any)?.referral_code || "";
+    navigator.clipboard.writeText(`https://junto.pro/ref?ref=${refCode}`);
+    toast.success("Link copied!");
+  }, [profile]);
+
   const handleDismissReferral = useCallback(() => {
     setReferralDismissed(true);
     localStorage.setItem("junto_referral_card_dismissed", "true");
@@ -557,6 +582,15 @@ export default function TripList() {
     enabled: !!user,
   });
 
+  const postTripNudge = useMemo(() => {
+    if (!trips || trips.length === 0) return null;
+    const ended = trips
+      .filter((t) => t.statusInfo.status === "ended" && !dismissedNudges.current.has(t.id))
+      .sort((a, b) => (b.tentative_end_date ?? "").localeCompare(a.tentative_end_date ?? ""));
+    return ended[0] ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trips, nudgeDismissedState]);
+
   if (isLoading) {
     return (
       <div className="min-h-dvh bg-background">
@@ -673,6 +707,54 @@ export default function TripList() {
           <span className="ml-3 flex-1 text-left font-medium text-foreground text-sm">Join a trip</span>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
+
+        {/* Post-trip referral nudge */}
+        {postTripNudge && (profile as any)?.referral_code && (
+          <div
+            className="md:col-span-2 rounded-2xl overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)",
+            }}
+          >
+            <div className="p-5 text-white">
+              <div className="flex items-start justify-between">
+                <span className="text-2xl">🎉</span>
+                <button
+                  onClick={() => handleDismissNudge(postTripNudge.id)}
+                  className="text-white/40 hover:text-white/80 transition-colors -mt-0.5 -mr-0.5"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="mt-2 font-bold text-[15px] leading-snug">
+                Loved planning {postTripNudge.name}?
+              </p>
+              <p className="mt-1 text-[13px] text-white/70 leading-relaxed">
+                Share Junto with someone planning their next trip.
+              </p>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  size="sm"
+                  className="flex-1 gap-2 text-white border-0 font-semibold"
+                  style={{ background: "#25D366" }}
+                  onClick={() => handleNudgeWhatsApp(postTripNudge.name)}
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  Share via WhatsApp
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 gap-2 border-white/20 text-white hover:bg-white/10 hover:text-white"
+                  onClick={handleNudgeCopyLink}
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy link
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Referral card - show when < 2 trips and not dismissed */}
         {tripCount < 2 && !referralDismissed && (profile as any)?.referral_code && (
