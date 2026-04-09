@@ -30,7 +30,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
     ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
-    cachedCurrencyCodes, itineraryItems, isLoading, updateSettlementCurrency,
+    cachedCurrencyCodes, itineraryItems, isLoading, isFetchingExpenses, updateSettlementCurrency,
     addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
 
@@ -257,7 +257,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       }))
     : undefined;
 
-  if (isLoading) {
+  if (isLoading || (expenses.length === 0 && isFetchingExpenses)) {
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
