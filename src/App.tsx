@@ -167,7 +167,8 @@ function AppInner() {
 function RootRoute() {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
-  return user ? <Navigate to="/app/trips" replace /> : <Landing />;
+  // Landing page temporarily hidden — redirect unauth users to /ref
+  return <Navigate to={user ? "/app/trips" : "/ref"} replace />;
 }
 
 function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
