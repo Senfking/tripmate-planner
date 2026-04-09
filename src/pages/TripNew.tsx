@@ -85,7 +85,8 @@ export default function TripNew() {
       setJoinOpen(false);
       toast.success(`Joined ${data.trip_name || "trip"}!`);
       trackEvent("trip_joined_by_code", { trip_id: data.trip_id });
-      navigate(`/app/trips/${data.trip_id}`);
+      pendingRedirect.current = `/app/trips/${data.trip_id}`;
+      showOptIn();
     },
     onError: () => {
       setJoinError("Code not found — check with your organiser");
