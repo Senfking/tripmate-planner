@@ -132,7 +132,7 @@ export function LineItemClaimList({
       {Math.abs(sharedTotal) > 0.005 && (
         <>
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mt-2">
-            Shared costs — split automatically
+            Shared costs - split automatically
           </p>
           <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5 space-y-1.5">
             <div className="flex items-center justify-between gap-2">

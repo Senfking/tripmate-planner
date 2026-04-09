@@ -298,7 +298,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
         <section className="space-y-3">
           <div>
             <h3 className="text-[15px] font-semibold text-foreground">Share plan</h3>
-            <p className="text-[13px] text-muted-foreground font-normal mt-0.5">View-only — no login needed</p>
+            <p className="text-[13px] text-muted-foreground font-normal mt-0.5">View-only - no login needed</p>
           </div>
 
           <div className="flex items-center justify-between gap-3 py-0.5">

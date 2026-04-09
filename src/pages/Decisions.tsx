@@ -106,7 +106,7 @@ const Decisions = () => {
 
   const subtitle = (() => {
     if (isLoading) return "Loading…";
-    if (items.length === 0) return "No pending votes — you're all caught up";
+    if (items.length === 0) return "No pending votes - you're all caught up";
     return `${items.length} vote${items.length !== 1 ? "s" : ""} across ${tripIds.size} trip${tripIds.size !== 1 ? "s" : ""}`;
   })();
 

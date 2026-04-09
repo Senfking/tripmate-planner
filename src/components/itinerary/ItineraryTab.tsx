@@ -245,7 +245,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
         />
       )}
 
-      {/* Add to Calendar — bottom of page */}
+      {/* Add to Calendar - bottom of page */}
       {items.length > 0 && (
         <Button
           variant="ghost"

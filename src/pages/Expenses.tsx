@@ -97,7 +97,7 @@ const Expenses = () => {
         </div>
       ) : (
         <div className="space-y-3 px-4 mt-4 pb-24 md:max-w-[900px] md:mx-auto md:px-6 w-full">
-          {/* Premium balance hero card — desktop only */}
+          {/* Premium balance hero card - desktop only */}
           <div
             className="hidden md:block rounded-2xl overflow-hidden mb-2"
             style={{

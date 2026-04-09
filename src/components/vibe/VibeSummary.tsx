@@ -117,9 +117,9 @@ export function VibeSummary({ aggregates, respondentCount, memberCount }: Props)
       : "The group's vibes are coming together";
 
     if (discussItems.length > 0) {
-      sentence += ` — but ${discussItems.join(" and ")} need${discussItems.length === 1 ? "s" : ""} a chat.`;
+      sentence += ` - but ${discussItems.join(" and ")} need${discussItems.length === 1 ? "s" : ""} a chat.`;
     } else {
-      sentence += " — the group is fully aligned!";
+      sentence += " - the group is fully aligned!";
     }
 
     return sentence;

@@ -181,7 +181,7 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
           }}
         />
 
-        {/* Status badge — top right */}
+        {/* Status badge - top right */}
         <div className="absolute right-4 top-4">
           <StatusBadge info={trip.statusInfo} />
         </div>
@@ -376,7 +376,7 @@ export default function TripList() {
   const handleReferralWhatsApp = useCallback(() => {
     const displayName = profile?.display_name || "Someone";
     const refCode = (profile as any)?.referral_code || "";
-    const text = `✈️ ${displayName} thinks you'd love Junto.\n\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://junto.pro/ref?ref=${refCode}`;
+    const text = `✈️ ${displayName} thinks you'd love Junto.\n\nGroup trips are chaos - 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://junto.pro/ref?ref=${refCode}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }, [profile]);
 
@@ -416,7 +416,7 @@ export default function TripList() {
         if (tripId) navigate(`/app/trips/${tripId}`);
         else toast.info("You're already a member of this trip");
       } else {
-        setJoinError("Code not found — check with your organiser");
+        setJoinError("Code not found - check with your organiser");
       }
     },
   });
@@ -575,14 +575,14 @@ export default function TripList() {
   const nextCountdown = trips?.find((t) => t.statusInfo.status === "countdown");
 
   const subtitle = (() => {
-    if (tripCount === 0) return "No trips yet — start planning!";
+    if (tripCount === 0) return "No trips yet - start planning!";
     if (liveCount > 0) return `${tripCount} trip${tripCount !== 1 ? "s" : ""} · ${liveCount} happening now`;
     if (nextCountdown?.statusInfo.daysToGo !== undefined)
       return `${tripCount} trip${tripCount !== 1 ? "s" : ""} · next in ${nextCountdown.statusInfo.daysToGo}d`;
     return `${tripCount} trip${tripCount !== 1 ? "s" : ""}`;
   })();
 
-  // Actionable pills — quick actions
+  // Actionable pills - quick actions
   const tripsPills: HeroPill[] = [
     { icon: <Hash className="h-3 w-3" />, label: "Join", onClick: () => { setJoinCode(""); setJoinError(""); setJoinOpen(true); } },
     { icon: <Plus className="h-3 w-3" />, label: "New trip", to: "/app/trips/new" },
@@ -595,11 +595,11 @@ export default function TripList() {
   if (!trips || trips.length === 0) {
     return (
       <div className="relative min-h-dvh flex flex-col bg-background">
-        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={tripsPills} />
+        <TabHeroHeader title={greeting} subtitle="No trips yet - start planning!" pills={tripsPills} />
 
         <div className="hidden md:block pt-6 pb-4 px-4">
           <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
-          <p className="text-sm text-muted-foreground mt-1">No trips yet — start planning!</p>
+          <p className="text-sm text-muted-foreground mt-1">No trips yet - start planning!</p>
         </div>
 
         <div className="flex flex-1 flex-col items-center px-6 pt-12 md:pt-4 mt-4 md:mt-0">
@@ -642,7 +642,7 @@ export default function TripList() {
     <div className="relative min-h-dvh flex flex-col bg-background">
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
-      {/* Desktop compact greeting — replaces hero */}
+      {/* Desktop compact greeting - replaces hero */}
       <div className="hidden md:block pt-6 pb-4 px-8 max-w-[900px] mx-auto">
         <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
         <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
@@ -674,7 +674,7 @@ export default function TripList() {
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
 
-        {/* Referral card — show when < 2 trips and not dismissed */}
+        {/* Referral card - show when < 2 trips and not dismissed */}
         {tripCount < 2 && !referralDismissed && (profile as any)?.referral_code && (
           <div
             className="md:col-span-2 rounded-2xl p-4"
@@ -693,7 +693,7 @@ export default function TripList() {
               Junto is better with your people
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Invite friends to plan trips together — or just share the app.
+              Invite friends to plan trips together - or just share the app.
             </p>
             <div className="flex gap-2 mt-3">
               <Button

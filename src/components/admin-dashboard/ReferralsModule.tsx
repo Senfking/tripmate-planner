@@ -45,11 +45,11 @@ export function ReferralsModule() {
             <tbody>
               {chain.map((r: any, i: number) => (
                 <tr key={i} style={{ borderTop: `1px solid ${C.border}` }}>
-                  <td style={{ padding: 8, color: C.text }}>{r.display_name || "—"}</td>
+                  <td style={{ padding: 8, color: C.text }}>{r.display_name || "-"}</td>
                   <td style={{ padding: 8, color: C.muted, fontFamily: mono, fontSize: 11 }}>{r.created_at?.slice(0, 10)}</td>
                   <td style={{ padding: 8, color: C.text }}>{r.referred_by_name}</td>
                   <td style={{ padding: 8, color: r.days_to_first_trip !== null ? C.tealLight : C.muted, fontFamily: mono }}>
-                    {r.days_to_first_trip !== null ? `${r.days_to_first_trip}d` : "—"}
+                    {r.days_to_first_trip !== null ? `${r.days_to_first_trip}d` : "-"}
                   </td>
                 </tr>
               ))}

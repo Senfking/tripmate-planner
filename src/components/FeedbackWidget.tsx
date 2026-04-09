@@ -45,7 +45,7 @@ export function FeedbackWidget() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Draggable vertical tab state — vertical drag only
+  // Draggable vertical tab state - vertical drag only
   const [tabY, setTabY] = useState<number | null>(null);
   const dragRef = useRef<{
     dragging: boolean;
@@ -361,7 +361,7 @@ export function FeedbackWidget() {
       if (insertErr || !inserted) {
         console.error("Feedback insert failed after retries:", insertErr);
         toast.error(insertErr?.message?.includes("row-level security")
-          ? "Permission error — please log out and back in."
+          ? "Permission error - please log out and back in."
           : "Something went wrong. Please try again.");
         setSubmitting(false);
         return;
@@ -373,7 +373,7 @@ export function FeedbackWidget() {
       // Fire admin notification as a fallback in case the DB trigger is missing.
       // The Edge Function deduplicates by feedback_id, so this is safe even if
       // the trigger also fires. Delay 3s so the DB trigger has time to insert
-      // first — prevents race-condition duplicates in the dedup check.
+      // first - prevents race-condition duplicates in the dedup check.
       setTimeout(async () => {
         try {
           const { data: alertData } = await supabase.functions.invoke("check-admin-alerts", {
@@ -522,7 +522,7 @@ export function FeedbackWidget() {
             onChange={handleFileChange}
           />
 
-          {/* Screenshot card — bugs & suggestions */}
+          {/* Screenshot card - bugs & suggestions */}
           {(category === "bug" || category === "suggestion") && (
             <>
               {!screenshotFile ? (
@@ -578,7 +578,7 @@ export function FeedbackWidget() {
                   )}
                   {screenshotAnalysisFailed && !analyzingScreenshot && (
                     <p className="text-xs text-muted-foreground italic mt-2">
-                      Junto AI couldn't analyze the screenshot — no worries, just describe the issue below.
+                      Junto AI couldn't analyze the screenshot - no worries, just describe the issue below.
                     </p>
                   )}
                   {screenshotHint && !analyzingScreenshot && (
@@ -586,7 +586,7 @@ export function FeedbackWidget() {
                       <p className="text-xs text-muted-foreground italic">
                         💡 Junto AI spotted: {screenshotHint}
                       </p>
-                      {/* Thumbs up/down — only for app screenshots */}
+                      {/* Thumbs up/down - only for app screenshots */}
                       {isAppScreenshot && (
                         <div className="flex items-center gap-2 mt-2">
                           <span className="text-xs text-muted-foreground">Was this helpful?</span>
@@ -669,7 +669,7 @@ export function FeedbackWidget() {
 
   return (
     <>
-      {/* Vertical side tab — right edge, draggable vertically */}
+      {/* Vertical side tab - right edge, draggable vertically */}
       {tabY != null && (
         <button
           ref={fabRef}

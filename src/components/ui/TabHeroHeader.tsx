@@ -69,10 +69,10 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
         }}
       />
 
-      {/* Avatar — top right */}
+      {/* Avatar - top right */}
       <HeaderAvatar />
 
-      {/* Content — consistent structure */}
+      {/* Content - consistent structure */}
       <div
         className="relative z-10 flex flex-col"
         style={{
@@ -82,7 +82,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
           paddingBottom: 18,
         }}
       >
-        {/* JUNTO — mobile only */}
+        {/* JUNTO - mobile only */}
         <div className="flex justify-center items-center gap-2 w-full mb-3 md:hidden">
           <span className="text-[13px] font-extrabold tracking-[0.3em] uppercase text-white/70">
             JUNTO
@@ -90,7 +90,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
           <BetaBadge />
         </div>
 
-        {/* Title — always at same vertical position */}
+        {/* Title - always at same vertical position */}
         <h1 className="text-[26px] font-bold text-white tracking-tight leading-tight">
           {title}
         </h1>
@@ -100,7 +100,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
           <p className="text-[13px] text-white/60 font-normal mt-1">{subtitle}</p>
         )}
 
-        {/* Pills — actionable row */}
+        {/* Pills - actionable row */}
         {pills && pills.length > 0 && (
           <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
             {pills.map((pill, i) => {
@@ -131,7 +131,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
           </div>
         )}
 
-        {/* Custom content area — per-tab functionality */}
+        {/* Custom content area - per-tab functionality */}
         {children}
       </div>
     </div>

@@ -9,7 +9,7 @@ export function WeeklyDigest() {
     if (!data) return;
     const d = data;
     const text = [
-      `JUNTO Weekly Digest — ${new Date().toISOString().slice(0, 10)}`,
+      `JUNTO Weekly Digest - ${new Date().toISOString().slice(0, 10)}`,
       ``,
       `GROWTH`,
       `${d.growth.new_users} new users this week (${d.growth.pct_change >= 0 ? "+" : ""}${d.growth.pct_change}% vs prior). ${d.growth.organic} organic, ${d.growth.referred} referred.`,

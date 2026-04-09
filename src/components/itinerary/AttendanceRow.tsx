@@ -134,7 +134,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
     );
   }
 
-  // Full (non-compact) layout — kept for other usages
+  // Full (non-compact) layout - kept for other usages
   return (
     <>
       <div className="space-y-1">
@@ -172,7 +172,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                 )}
                 title={
                   isMe
-                    ? `You: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"} — tap to change`
+                    ? `You: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"} - tap to change`
                     : `${member.display_name || "?"}: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"}`
                 }
               >

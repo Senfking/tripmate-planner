@@ -85,7 +85,7 @@ function ExchangeRatePrefetch() {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Only prefetch after auth — firing before risks caching empty {} for
+    // Only prefetch after auth - firing before risks caching empty {} for
     // 1 hour if the table has RLS or the request fails without a valid JWT.
     if (!user) return;
 
@@ -167,7 +167,7 @@ function AppInner() {
 function RootRoute() {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
-  // Landing page temporarily hidden — redirect unauth users to /ref
+  // Landing page temporarily hidden - redirect unauth users to /ref
   return <Navigate to={user ? "/app/trips" : "/ref"} replace />;
 }
 

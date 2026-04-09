@@ -7,16 +7,16 @@ export function getShareableAppOrigin(): string | null {
   const origin = window.location.origin;
   const hostname = window.location.hostname;
 
-  // Running inside the Lovable editor iframe — not shareable
+  // Running inside the Lovable editor iframe - not shareable
   if (hostname.includes("lovable.dev")) {
     return null;
   }
 
-  // Private preview URLs require Lovable login — not shareable to outsiders
+  // Private preview URLs require Lovable login - not shareable to outsiders
   if (hostname.includes("id-preview--") && hostname.includes("lovable.app")) {
     return null;
   }
 
-  // Published lovable.app domain or custom domain — shareable
+  // Published lovable.app domain or custom domain - shareable
   return origin;
 }

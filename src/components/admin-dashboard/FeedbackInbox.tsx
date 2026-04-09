@@ -200,7 +200,7 @@ export function FeedbackInbox() {
                       </div>
                     )}
                     <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: C.muted, marginTop: 2 }}>
-                      <span>{f.route || "—"}</span>
+                      <span>{f.route || "-"}</span>
                       <span>{f.display_name || "Unknown"} · {timeAgo(f.created_at)}</span>
                     </div>
                   </div>
@@ -328,8 +328,8 @@ function FeedbackDetail({ item }: { item: any }) {
             onClick={handleUserClick}
             style={{ color: C.tealLight, cursor: item.user_id ? "pointer" : "default", textDecoration: item.user_id ? "underline" : "none" }}
           >{item.display_name}</span></span>
-          <span>Route: {item.route || "—"}</span>
-          <span>v{item.app_version || "—"}</span>
+          <span>Route: {item.route || "-"}</span>
+          <span>v{item.app_version || "-"}</span>
           <span>{item.created_at?.slice(0, 16)}</span>
         </div>
       </Card>
@@ -366,7 +366,7 @@ function FeedbackDetail({ item }: { item: any }) {
         ].map((r) => (
           <div key={r.label} style={{ marginBottom: 8 }}>
             <div style={{ fontFamily: mono, fontSize: 10, color: C.muted, textTransform: "uppercase", marginBottom: 2 }}>{r.label}</div>
-            <div style={{ fontFamily: sans, fontSize: 13, color: C.text }}>{r.value || "—"}</div>
+            <div style={{ fontFamily: sans, fontSize: 13, color: C.text }}>{r.value || "-"}</div>
           </div>
         ))}
         {item.hint_rating && (

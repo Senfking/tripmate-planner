@@ -232,7 +232,7 @@ export default function ShareView() {
                 return (
                   <div key={day}>
                     <h3 className="text-sm font-semibold text-teal-700 mb-2">
-                      {dayNum != null && dayNum > 0 ? `Day ${dayNum} — ` : ""}
+                      {dayNum != null && dayNum > 0 ? `Day ${dayNum} - ` : ""}
                       {format(parseISO(day), "EEE d MMM")}
                       {destination ? ` · ${destination}` : ""}
                     </h3>

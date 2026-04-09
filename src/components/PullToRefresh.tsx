@@ -87,7 +87,7 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
       onTouchEnd={onTouchEnd}
       className="relative"
     >
-      {/* Floating spinner overlay — doesn't push content */}
+      {/* Floating spinner overlay - doesn't push content */}
       <div
         ref={indicatorRef}
         className="absolute left-1/2 z-50 -ml-5 pointer-events-none"

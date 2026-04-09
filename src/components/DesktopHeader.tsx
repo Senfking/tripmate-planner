@@ -58,7 +58,7 @@ export function DesktopHeader() {
         }}
       />
 
-      {/* Row 1 — Brand + Avatar */}
+      {/* Row 1 - Brand + Avatar */}
       <div className="relative z-10 flex items-center justify-between h-[44px] px-6 max-w-[1200px] mx-auto">
         <div className="w-9" /> {/* spacer to balance avatar */}
         <div className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export function DesktopHeader() {
       {/* Divider */}
       <div className="h-px bg-white/10" />
 
-      {/* Row 2 — Nav tabs */}
+      {/* Row 2 - Nav tabs */}
       <div className="relative z-10 flex items-center h-[40px] px-6 max-w-[1200px] mx-auto">
         {/* Centered tabs */}
         <nav className="flex items-center justify-center flex-1 gap-0">

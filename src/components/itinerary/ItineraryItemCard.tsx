@@ -200,7 +200,7 @@ export function ItineraryItemCard({
           </div>
         )}
 
-        {/* Row 4: Comment count + actions — tappable to expand */}
+        {/* Row 4: Comment count + actions - tappable to expand */}
         <div className="flex items-center justify-between px-3 pb-2 cursor-pointer" onClick={handleCardClick}>
           <div className="flex items-center gap-1.5 text-muted-foreground/50">
             <MessageCircle className="h-3 w-3" />

@@ -171,7 +171,7 @@ export default function TripHome() {
       qc.invalidateQueries({ queryKey: ["global-decisions"] });
       if (status === "going") toast.success("You're in! 🎉");
       else if (status === "maybe") toast.success("Marked as maybe");
-      else toast.success("Got it — you can still follow along");
+      else toast.success("Got it - you can still follow along");
     },
     onError: () => toast.error("Failed to update attendance"),
   });

@@ -95,7 +95,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         updated_at: new Date().toISOString(),
       } as ExpenseRow);
       setFormOpen(true);
-      toast.success("Receipt scanned — review the details");
+      toast.success("Receipt scanned - review the details");
     } catch (err: any) {
       toast.error(err.message || "Failed to scan receipt");
       trackEvent("ai_receipt_scan", { success: false });
@@ -244,7 +244,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       } else if (rates && rates[exp.currency]) {
         total += exp.amount / rates[exp.currency];
       } else {
-        // rates unavailable for this currency — skip from total
+        // rates unavailable for this currency - skip from total
       }
     }
     return { totalExpenses: count > 0 ? total : null, nonSettlementCount: count };
@@ -267,7 +267,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Balance hero — teal gradient card */}
+      {/* Balance hero - teal gradient card */}
       {canShowBalances && expenses.length > 0 && (
         <div
           className="relative overflow-hidden py-6 text-center mx-0"
@@ -277,7 +277,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             boxShadow: "0 6px 20px rgba(13,148,136,0.20)",
           }}
         >
-          {/* Settings overflow — top right of hero */}
+          {/* Settings overflow - top right of hero */}
           <div className="absolute top-3 right-3 z-20">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -440,7 +440,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Balances — compact collapsible, de-emphasized */}
+      {/* Balances - compact collapsible, de-emphasized */}
       {members.length > 1 && canShowBalances && balances.length > 0 && (
         <Collapsible open={balancesOpen} onOpenChange={setBalancesOpen}>
           <CollapsibleTrigger asChild>
@@ -484,7 +484,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Settle Up — shown as a sheet/drawer, triggered from hero button */}
+      {/* Settle Up - shown as a sheet/drawer, triggered from hero button */}
       {members.length > 1 && settlements.length > 0 && settleOpen && (
         <div
           className="rounded-2xl overflow-hidden"
@@ -536,7 +536,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Add Expense button — full width, clean */}
+      {/* Add Expense button - full width, clean */}
       <Button
         className="w-full h-12 gap-2 text-[15px] font-semibold rounded-2xl"
         onClick={() => { setEditingExpense(null); setFormOpen(true); }}
@@ -545,7 +545,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         Add Expense
       </Button>
 
-      {/* Expenses list — standalone */}
+      {/* Expenses list - standalone */}
       <div
         className="rounded-2xl overflow-hidden"
         style={{
@@ -616,7 +616,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         )}
         {!ratesLoading && ratesEmpty && !allSameCurrency && (
           <p className="text-xs text-center text-muted-foreground py-2">
-            Some amounts couldn't be converted — exchange rates unavailable
+            Some amounts couldn't be converted - exchange rates unavailable
           </p>
         )}
       </div>

@@ -397,7 +397,7 @@ export function useProposals(tripId: string | undefined) {
         return bYes - aYes;
       });
 
-  // Leading combo (frontrunner only — no confirmed state)
+  // Leading combo (frontrunner only - no confirmed state)
   const getLeadingCombo = () => {
     if (proposalList.length === 0) return null;
 

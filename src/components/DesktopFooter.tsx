@@ -8,7 +8,7 @@ export function DesktopFooter() {
     const name = profile?.display_name || "A friend";
     const code = profile?.referral_code || "";
     const refUrl = `https://junto.pro/ref${code ? `?ref=${code}` : ""}`;
-    const msg = `✈️ ${name} thinks you'd love Junto.\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\nJunto fixes that.\nTry it free → ${refUrl}`;
+    const msg = `✈️ ${name} thinks you'd love Junto.\nGroup trips are chaos - 200-message threads, spreadsheets, nobody knowing who booked what.\nJunto fixes that.\nTry it free → ${refUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };
 

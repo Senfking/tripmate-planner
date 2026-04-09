@@ -108,7 +108,7 @@ export function TripRoute({
   const confirmUnlock = () => {
     onUnlockRoute();
     setUnlockConfirm(false);
-    toast({ title: "Route unlocked — you can now make changes" });
+    toast({ title: "Route unlocked - you can now make changes" });
   };
 
   const handleStartEdit = (stop: RouteStop) => {

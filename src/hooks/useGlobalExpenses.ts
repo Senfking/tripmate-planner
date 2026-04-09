@@ -32,7 +32,7 @@ function parseRates(raw: unknown): Record<string, number> | null {
   return Object.keys(obj).length > 0 ? (obj as Record<string, number>) : null;
 }
 
-// Returns plain Record<string, number> — the same shape and queryKey that
+// Returns plain Record<string, number> - the same shape and queryKey that
 // useExpenses uses via qc.fetchQuery(["exchange-rates", "EUR"]).
 // Both hooks share a single cache entry and can never diverge.
 async function fetchEurRates(): Promise<Record<string, number>> {
@@ -71,7 +71,7 @@ export function useGlobalExpenses() {
     queryFn: async (): Promise<GlobalExpensesResult> => {
       const userId = user!.id;
 
-      // Share the exact same cache entry as useExpenses — same key, same return
+      // Share the exact same cache entry as useExpenses - same key, same return
       // type (plain Record<string, number>), same staleTime.
       const eurRates = await qc.fetchQuery({
         queryKey: ["exchange-rates", "EUR"],
@@ -155,7 +155,7 @@ export function useGlobalExpenses() {
       for (const [tripId, trip] of tripMap) {
         const sc = trip.settlement_currency || "EUR";
 
-        // Cross-calculate from EUR rates to this trip's settlement currency —
+        // Cross-calculate from EUR rates to this trip's settlement currency -
         // identical math to what useExpenses does in its ratesQuery.
         let ratesForTrip = eurRates;
         if (sc !== "EUR" && eurRates[sc]) {

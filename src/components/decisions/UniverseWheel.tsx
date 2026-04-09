@@ -128,7 +128,7 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
     const fullSpins = 8 + Math.floor(Math.random() * 3);
     const targetRotation = fullSpins * 360 + (360 - targetAngleInSegment);
 
-    // Apply rotation directly on the DOM element — no React re-render
+    // Apply rotation directly on the DOM element - no React re-render
     const el = wheelRef.current;
     if (el) {
       el.style.transition = `transform ${SPIN_DURATION_MS}ms ${SPIN_EASING}`;
@@ -180,7 +180,7 @@ export function UniverseWheel({ open, onOpenChange, options, onAccept }: Props) 
         </div>
       </div>
 
-      {/* Fixed-height result area — prevents layout shift */}
+      {/* Fixed-height result area - prevents layout shift */}
       <div style={{ minHeight: 130 }} className="w-full flex flex-col items-center justify-start mt-4">
         {phase === "idle" && (
           <button

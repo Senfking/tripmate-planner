@@ -25,7 +25,7 @@ export function validateRouteDate(
 
   // Same day = single-day stop, show info
   if (endDate === startDate) {
-    result.info = "This is a single-day stop — no overnight stay";
+    result.info = "This is a single-day stop - no overnight stay";
   }
 
   // Filter out self when editing
@@ -42,7 +42,7 @@ export function validateRouteDate(
     return result;
   }
 
-  // Gap check — find adjacent stops
+  // Gap check - find adjacent stops
   if (stops.length > 0) {
     const sorted = [...stops].sort((a, b) =>
       a.end_date.localeCompare(b.end_date)

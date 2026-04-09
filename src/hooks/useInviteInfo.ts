@@ -34,7 +34,7 @@ export function useInviteInfo() {
         }
       })
       .catch(() => {
-        // silently fail — just show generic invite message
+        // silently fail - just show generic invite message
       });
   }, [token, joinCode]);
 

@@ -140,7 +140,7 @@ const Privacy = () => (
         <p>
           We use industry-standard security measures including encryption in transit and at rest, and implement Row Level Security (RLS) policies to ensure users can only access data they are authorised to see.
         </p>
-        <p>Receipt images are stored in a private storage bucket with signed URL access — they are not publicly accessible.</p>
+        <p>Receipt images are stored in a private storage bucket with signed URL access - they are not publicly accessible.</p>
         <p>No system is completely secure. You are also responsible for protecting your login credentials, securing your devices, and managing access to shared trips appropriately.</p>
 
         <h2 className="text-lg font-semibold text-foreground mt-8">7. Data Retention</h2>
@@ -156,7 +156,7 @@ const Privacy = () => (
           When you delete your account, we will delete or anonymise your personal data within a reasonable timeframe. Some data may be retained for a limited period in backups, logs, or where reasonably necessary for legal compliance, security, fraud prevention, dispute resolution, or enforcement of our Terms.
         </p>
         <p>
-          Content you contributed to shared trips — such as expense entries, itinerary items, or poll votes — may remain visible to other trip members where necessary to preserve the integrity of shared trip records and group coordination. Where feasible, your personal identifiers may be removed or anonymised.
+          Content you contributed to shared trips - such as expense entries, itinerary items, or poll votes - may remain visible to other trip members where necessary to preserve the integrity of shared trip records and group coordination. Where feasible, your personal identifiers may be removed or anonymised.
         </p>
 
         <h2 className="text-lg font-semibold text-foreground mt-8">8. Your Rights</h2>

@@ -80,7 +80,7 @@ export function SettleConfirmDrawer({ settlement, currency, onOpenChange, onConf
         />
         {isPartial && (
           <p className="text-xs text-amber-600">
-            Partial payment — remaining balance will update automatically
+            Partial payment - remaining balance will update automatically
           </p>
         )}
         {numAmount > maxAmount + 0.005 && (

@@ -126,7 +126,7 @@ export function AllUsersModule() {
                   onMouseLeave={(e) => e.currentTarget.style.background = selectedUser === u.id ? C.elevated : "transparent"}>
                   <td style={{ padding: 8, color: C.text, display: "flex", alignItems: "center", gap: 8 }}>
                     {u.avatar_url ? <img src={u.avatar_url} style={{ width: 24, height: 24, borderRadius: 12 }} /> : <div style={{ width: 24, height: 24, borderRadius: 12, background: C.teal }} />}
-                    {u.display_name || "—"}
+                    {u.display_name || "-"}
                   </td>
                   <td style={{ padding: 8, color: C.muted, fontFamily: mono, fontSize: 11 }}>{u.created_at?.slice(0, 10)}</td>
                   <td style={{ padding: 8, color: u.last_active_at ? C.text : C.muted, fontFamily: mono, fontSize: 11 }}>{u.last_active_at ? timeAgo(u.last_active_at) : "Never"}</td>
@@ -136,7 +136,7 @@ export function AllUsersModule() {
                   <td style={{ padding: 8 }}><StatusPill label={u.subscription_tier} color={u.subscription_tier === "pro" ? C.tealLight : C.muted} /></td>
                   <td style={{ padding: 8, color: C.muted, fontFamily: mono, fontSize: 11, cursor: "copy" }}
                     onClick={(e) => { e.stopPropagation(); if (u.stripe_customer_id) navigator.clipboard.writeText(u.stripe_customer_id); }}>
-                    {u.stripe_customer_id?.slice(0, 14) || "—"}
+                    {u.stripe_customer_id?.slice(0, 14) || "-"}
                   </td>
                 </tr>
               ))}
@@ -200,7 +200,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         {p.avatar_url ? <img src={p.avatar_url} style={{ width: 40, height: 40, borderRadius: 20 }} /> : <div style={{ width: 40, height: 40, borderRadius: 20, background: C.teal }} />}
         <div>
-          <div style={{ fontFamily: sans, fontSize: 15, color: C.text, fontWeight: 600 }}>{p.display_name || "—"}</div>
+          <div style={{ fontFamily: sans, fontSize: 15, color: C.text, fontWeight: 600 }}>{p.display_name || "-"}</div>
           <div style={{ fontFamily: mono, fontSize: 10, color: C.muted, cursor: "copy", wordBreak: "break-all" }} onClick={() => navigator.clipboard.writeText(p.id)}>{p.id}</div>
         </div>
       </div>
@@ -227,7 +227,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
       {tab === "trips" && <TripsTab data={data} />}
       {tab === "engagement" && <EngagementTab data={data} />}
 
-      {/* Admin Notes — always visible */}
+      {/* Admin Notes - always visible */}
       <SectionHeader>Admin Notes</SectionHeader>
       <textarea
         value={notes} onChange={(e) => setNotes(e.target.value)}
@@ -243,11 +243,11 @@ function ProfileTab({ data }: { data: any }) {
   const p = data.profile;
   return (
     <>
-      <Detail label="Email" value={data.email || "—"} />
+      <Detail label="Email" value={data.email || "-"} />
       <Detail label="Auth provider" value={data.auth_provider || "email"} />
-      <Detail label="Joined" value={p.created_at ? new Date(p.created_at).toLocaleString() : "—"} />
+      <Detail label="Joined" value={p.created_at ? new Date(p.created_at).toLocaleString() : "-"} />
       <Detail label="Last active" value={data.last_active_at ? new Date(data.last_active_at).toLocaleString() : "Never"} />
-      <Detail label="Last sign-in" value={data.last_sign_in_at ? new Date(data.last_sign_in_at).toLocaleString() : "—"} />
+      <Detail label="Last sign-in" value={data.last_sign_in_at ? new Date(data.last_sign_in_at).toLocaleString() : "-"} />
       <Detail label="Currency" value={p.default_currency || "EUR"} />
 
       <SectionHeader>Subscription</SectionHeader>
@@ -258,8 +258,8 @@ function ProfileTab({ data }: { data: any }) {
       {p.subscription_expires_at && <Detail label="Expires" value={p.subscription_expires_at.slice(0, 10)} />}
 
       <SectionHeader>Referral</SectionHeader>
-      <Detail label="Code" value={p.referral_code || "—"} />
-      <Detail label="Referred by" value={data.referrer_name || "—"} />
+      <Detail label="Code" value={p.referral_code || "-"} />
+      <Detail label="Referred by" value={data.referrer_name || "-"} />
       <Detail label="Referred count" value={data.referral_count} />
     </>
   );
@@ -270,12 +270,12 @@ function ActivityTab({ data }: { data: any }) {
   return (
     <>
       <SectionHeader>Usage Stats</SectionHeader>
-      <Detail label="Expenses created" value={activity.expenses_created ?? "—"} />
-      <Detail label="Total spent" value={activity.total_amount_spent != null ? `€${Number(activity.total_amount_spent).toFixed(2)}` : "—"} />
-      <Detail label="Polls created" value={activity.polls_created ?? "—"} />
-      <Detail label="Poll votes cast" value={activity.poll_votes ?? "—"} />
-      <Detail label="Itinerary items added" value={activity.itinerary_items ?? "—"} />
-      <Detail label="Feedback submitted" value={data.feedback_count ?? "—"} />
+      <Detail label="Expenses created" value={activity.expenses_created ?? "-"} />
+      <Detail label="Total spent" value={activity.total_amount_spent != null ? `€${Number(activity.total_amount_spent).toFixed(2)}` : "-"} />
+      <Detail label="Polls created" value={activity.polls_created ?? "-"} />
+      <Detail label="Poll votes cast" value={activity.poll_votes ?? "-"} />
+      <Detail label="Itinerary items added" value={activity.itinerary_items ?? "-"} />
+      <Detail label="Feedback submitted" value={data.feedback_count ?? "-"} />
 
       <SectionHeader>AI Usage</SectionHeader>
       {Object.entries(data.ai_usage || {}).length === 0 ? (
@@ -294,13 +294,13 @@ function TripsTab({ data }: { data: any }) {
   const now = new Date();
 
   const getTripStatus = (t: any) => {
-    if (!t.trip_start_date && !t.trip_end_date) return "—";
+    if (!t.trip_start_date && !t.trip_end_date) return "-";
     const end = t.trip_end_date ? new Date(t.trip_end_date) : null;
     const start = t.trip_start_date ? new Date(t.trip_start_date) : null;
     if (end && end < now) return "past";
     if (start && start <= now && (!end || end >= now)) return "active";
     if (start && start > now) return "upcoming";
-    return "—";
+    return "-";
   };
 
   const statusColor = (s: string) => {
@@ -321,7 +321,7 @@ function TripsTab({ data }: { data: any }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontFamily: sans, fontSize: 13, color: C.text, fontWeight: 500 }}>{t.trip_name}</span>
               <div style={{ display: "flex", gap: 4 }}>
-                {status !== "—" && <StatusPill label={status} color={statusColor(status)} />}
+                {status !== "-" && <StatusPill label={status} color={statusColor(status)} />}
                 <StatusPill label={t.role} color={t.role === "owner" ? C.tealLight : C.muted} />
               </div>
             </div>
@@ -351,9 +351,9 @@ function EngagementTab({ data }: { data: any }) {
       ))}
 
       <SectionHeader>Activity</SectionHeader>
-      <Detail label="Days since last active" value={engagement.days_since_last_active != null ? `${engagement.days_since_last_active}d` : "—"} />
-      <Detail label="Days since signup" value={engagement.days_since_signup != null ? `${engagement.days_since_signup}d` : "—"} />
-      <Detail label="Last trip created" value={data.last_trip_created_at ? new Date(data.last_trip_created_at).toLocaleString() : "—"} />
+      <Detail label="Days since last active" value={engagement.days_since_last_active != null ? `${engagement.days_since_last_active}d` : "-"} />
+      <Detail label="Days since signup" value={engagement.days_since_signup != null ? `${engagement.days_since_signup}d` : "-"} />
+      <Detail label="Last trip created" value={data.last_trip_created_at ? new Date(data.last_trip_created_at).toLocaleString() : "-"} />
     </>
   );
 }
