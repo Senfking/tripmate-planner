@@ -237,6 +237,7 @@
     <div class="sidebar-label">Phase 4 — Scale</div>
     <div class="sidebar-item" onclick="show('native',this)"><span class="sidebar-dot dot-blue"></span> Native App</div>
     <div class="sidebar-item" onclick="show('friendsearch',this)"><span class="sidebar-dot dot-blue"></span> Friend Search & Invites</div>
+    <div class="sidebar-item" onclick="show('livlocation',this)"><span class="sidebar-dot dot-blue"></span> Live Location Sharing</div>
     <div class="sidebar-item" onclick="show('discovery',this)"><span class="sidebar-dot dot-purple"></span> Trip Discovery</div>
     <div class="sidebar-item" onclick="show('enterprise',this)"><span class="sidebar-dot dot-muted"></span> Enterprise & GDPR</div>
     <div class="sidebar-item" onclick="show('selfheal',this)"><span class="sidebar-dot dot-muted"></span> Self-Healing Bugs</div>
@@ -1671,6 +1672,89 @@ Don't change the upload flow or storage backend.<button class="copy-btn" onclick
 4. What would a "pending invite" data model look like — does one exist or does it need a new table?
 Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 4: LIVE LOCATION SHARING ══════════ -->
+<div id="livlocation" class="section">
+  <div class="section-header">
+    <h2>Live Location Sharing — Phase 4</h2>
+    <p>Real-time location sharing during active trips. Group members can share their live location with the trip group so everyone can see where each other is on a map — useful for coordinating meetups, airport pickups, and finding each other at crowded venues.</p>
+  </div>
+
+  <div class="callout">Session-based, not always-on. Location is never shared without explicit action. No background tracking. Location history is not stored — only the latest position is kept and deleted when sharing stops. Privacy is non-negotiable.</div>
+
+  <h3>Scope (Phase 4 — privacy-first)</h3>
+  <ul>
+    <li><strong>Session-based sharing</strong> — user taps "Share my location" to start a timed session (30 min / 1 hour / until I stop). Location is never shared without explicit action.</li>
+    <li><strong>Map view</strong> — shows member avatars at their current position, updated every 30–60 seconds.</li>
+    <li><strong>Privacy controls</strong> — each user chooses when to share. No background tracking. Location history is not stored — only the latest position is kept and deleted when sharing stops.</li>
+    <li><strong>"Find my group" button</strong> — shows all currently-sharing members on the map with walking/driving distance and ETA.</li>
+  </ul>
+
+  <h3>Technical notes</h3>
+  <ul>
+    <li><strong>Native wrapper required</strong> — PWAs have limited background GPS access. This feature likely requires the Capacitor native wrapper (Phase 4) for reliable background updates. Basic foreground-only sharing may work in PWA.</li>
+    <li><strong>Live updates</strong> — WebSocket via Supabase Realtime for live updates, or periodic polling (every 30–60s) to a location table.</li>
+    <li><strong>Battery management</strong> — use significant-change location updates, not continuous GPS polling.</li>
+    <li><strong>Research needed</strong> — check how WhatsApp Live Location and Find My Friends handle session-based sharing, privacy, and battery.</li>
+  </ul>
+
+  <h3>Dependencies</h3>
+  <ul>
+    <li>Google Maps integration (Phase 2)</li>
+    <li>Capacitor native wrapper (Phase 4)</li>
+    <li>Do not build before native app</li>
+  </ul>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Run Claude Code diagnosis before building</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Before building anything, Claude Code needs to check: does the current Maps integration support marker overlays for user avatars? Is Supabase Realtime set up for presence/broadcast channels? What Capacitor plugins exist for background geolocation (e.g. @capacitor-community/background-geolocation)? What does the data model look like for ephemeral location records — a simple table with user_id, trip_id, lat, lng, expires_at that auto-deletes on session end?</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">In Junto, we want to add live location sharing during active trips — session-based, privacy-first, real-time map view of group members. Diagnose:
+1. Does the current Google Maps integration support custom marker overlays for user avatars?
+2. Is Supabase Realtime already configured for presence or broadcast channels? What would a location-sharing channel look like?
+3. What Capacitor plugins exist for background geolocation (@capacitor-community/background-geolocation)? What are the iOS/Android permission requirements?
+4. What data model would work for ephemeral location records — user_id, trip_id, lat, lng, expires_at? Should this be a Supabase table with RLS or a Realtime-only broadcast (no persistence)?
+5. How do WhatsApp Live Location and Apple Find My handle session timers, battery optimization, and auto-stop?
+Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build location sharing UI and session controls</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Build the "Share my location" button on the trip map view. Tapping it opens a session picker (30 min / 1 hour / until I stop). While sharing, show a pulsing indicator on the user's avatar. Add a "Stop sharing" button. Show a countdown timer for timed sessions. The map shows avatars of all currently-sharing members with their display name.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build Supabase Realtime location channel and ephemeral storage</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Set up a Supabase Realtime presence channel per trip for location updates. Create an ephemeral location table (user_id, trip_id, lat, lng, accuracy, updated_at, expires_at) with RLS policies so only trip members can read. Add a database function or cron to auto-delete expired records. Location updates are sent every 30–60 seconds while a session is active.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Build "Find my group" with distance and ETA</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Add a "Find my group" button that zooms the map to show all currently-sharing members with walking/driving distance and ETA from the user's current position. Uses Google Maps Directions API. Falls back gracefully if no group members are currently sharing.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Add Capacitor background geolocation plugin</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Integrate @capacitor-community/background-geolocation (or equivalent) for reliable background GPS on native iOS/Android. Configure significant-change updates (not continuous polling) to manage battery. Handle iOS/Android permission flows (Always Allow vs. While Using). Foreground-only fallback for PWA.</p>
     </div>
   </div>
 </div>
