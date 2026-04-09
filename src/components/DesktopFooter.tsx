@@ -7,7 +7,7 @@ export function DesktopFooter() {
   const handleShare = () => {
     const name = profile?.display_name || "A friend";
     const code = profile?.referral_code || "";
-    const refUrl = `https://juntotravel.lovable.app/ref${code ? `?ref=${code}` : ""}`;
+    const refUrl = `https://junto.pro/ref${code ? `?ref=${code}` : ""}`;
     const msg = `✈️ ${name} thinks you'd love Junto.\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\nJunto fixes that.\nTry it free → ${refUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };
@@ -25,7 +25,7 @@ export function DesktopFooter() {
 
       {/* Center */}
       <a
-        href="https://juntotravel.lovable.app/ref"
+        href="https://junto.pro/ref"
         className="text-xs text-muted-foreground hover:text-[#0D9488] transition-colors"
       >
         Plan your next trip →

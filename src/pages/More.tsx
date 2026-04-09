@@ -656,7 +656,7 @@ const More = () => {
 
   const handleCopyReferralLink = useCallback(() => {
     if (profile?.referral_code) {
-      navigator.clipboard.writeText(`https://juntotravel.lovable.app/ref?ref=${profile.referral_code}`);
+      navigator.clipboard.writeText(`https://junto.pro/ref?ref=${profile.referral_code}`);
       toast({ title: "Copied!" });
       trackEvent("referral_code_copied", { type: "link" }, user?.id);
     }
@@ -664,7 +664,7 @@ const More = () => {
 
   const handleShareWhatsApp = useCallback(() => {
     if (!profile?.referral_code) return;
-    const text = `✈️ ${profile.display_name} thinks you'd love Junto.\n\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://juntotravel.lovable.app/ref?ref=${profile.referral_code}`;
+    const text = `✈️ ${profile.display_name} thinks you'd love Junto.\n\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://junto.pro/ref?ref=${profile.referral_code}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     trackEvent("referral_link_shared", { method: "whatsapp" }, user?.id);
   }, [profile?.referral_code, user?.id]);

@@ -376,13 +376,13 @@ export default function TripList() {
   const handleReferralWhatsApp = useCallback(() => {
     const displayName = profile?.display_name || "Someone";
     const refCode = (profile as any)?.referral_code || "";
-    const text = `✈️ ${displayName} thinks you'd love Junto.\n\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://juntotravel.lovable.app/ref?ref=${refCode}`;
+    const text = `✈️ ${displayName} thinks you'd love Junto.\n\nGroup trips are chaos — 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://junto.pro/ref?ref=${refCode}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }, [profile]);
 
   const handleCopyReferralLink = useCallback(() => {
     const refCode = (profile as any)?.referral_code || "";
-    navigator.clipboard.writeText(`https://juntotravel.lovable.app/ref?ref=${refCode}`);
+    navigator.clipboard.writeText(`https://junto.pro/ref?ref=${refCode}`);
     toast.success("Link copied!");
   }, [profile]);
 
