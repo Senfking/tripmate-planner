@@ -366,6 +366,7 @@ export default function TripNew() {
           onCancel={() => setCropSource(null)}
         />
       )}
+      <PushOptInDrawer />
     </div>
   );
 }
