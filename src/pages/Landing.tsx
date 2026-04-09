@@ -102,13 +102,19 @@ function Nav() {
       }`}
     >
       <div className="mx-auto max-w-6xl flex items-center justify-between px-6 h-16">
-        <Link to="/" className="text-xl font-bold tracking-tight text-white">
-          junto<span className="text-primary">.</span>
-        </Link>
-
+        {/* Left nav links */}
         <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
           <button onClick={() => scroll("how")} className="hover:text-white transition-colors">How it works</button>
           <button onClick={() => scroll("features")} className="hover:text-white transition-colors">Features</button>
+        </div>
+
+        {/* Center logo */}
+        <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+          <img src="/favicon.svg" alt="Junto" className="h-8 w-8 rounded-lg" />
+        </Link>
+
+        {/* Right CTA */}
+        <div className="hidden md:block">
           <Link to="/ref">
             <Button size="sm" className="text-sm px-5">Start Planning</Button>
           </Link>
@@ -159,9 +165,9 @@ function Hero() {
           className="w-full h-full object-cover"
           loading="eager"
         />
-        {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(200,15%,8%)/0.7] via-[hsl(200,15%,8%)/0.6] to-[hsl(200,15%,10%)]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[hsl(200,15%,8%)/0.8] via-transparent to-transparent" />
+      {/* Gradient overlays — strong top & bottom for nav readability and seamless blend */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[hsl(200,15%,8%)]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
       </div>
 
       {/* Floating shapes */}
@@ -248,7 +254,9 @@ function ChatBubble({ text, align, delay }: { text: string; align: "left" | "rig
 
 function PainSection() {
   return (
-    <section id="pain" className="landing-section-alt py-28 px-6">
+    <section id="pain" className="py-28 px-6 relative">
+      {/* Top gradient to blend from hero */}
+      <div className="pointer-events-none absolute inset-x-0 -top-32 h-32 bg-gradient-to-b from-transparent to-transparent" />
       <div className="mx-auto max-w-3xl">
         <Reveal>
           <h2 className="text-center text-3xl font-bold sm:text-4xl text-white">Sound familiar?</h2>
@@ -285,7 +293,7 @@ function HowItWorks() {
   ];
 
   return (
-    <section id="how" className="py-28 px-6 relative">
+    <section id="how" className="py-28 px-6 relative bg-white/[0.015]">
       <div className="mx-auto max-w-6xl">
         <Reveal>
           <h2 className="text-center text-3xl font-bold sm:text-4xl text-white">Three taps to a planned trip</h2>
@@ -332,7 +340,7 @@ function Features() {
   ];
 
   return (
-    <section id="features" className="landing-section-alt py-28 px-6">
+    <section id="features" className="py-28 px-6">
       <div className="mx-auto max-w-6xl">
         <Reveal>
           <h2 className="text-center text-3xl font-bold sm:text-4xl text-white">Everything your group needs</h2>
@@ -376,7 +384,7 @@ function Features() {
 /* ------------------------------------------------------------------ */
 function DemoVideo() {
   return (
-    <section className="py-28 px-6">
+    <section className="py-28 px-6 bg-white/[0.015]">
       <div className="mx-auto max-w-4xl">
         <Reveal>
           <h2 className="text-center text-3xl font-bold sm:text-4xl text-white">See Junto in action</h2>
@@ -443,7 +451,7 @@ function FinalCta() {
 /* ------------------------------------------------------------------ */
 function Footer() {
   return (
-    <footer className="border-t border-white/[0.06] py-10 px-6">
+    <footer className="border-t border-white/[0.04] py-10 px-6">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-xs text-white/40 sm:flex-row sm:justify-between">
         <div className="flex gap-6">
           <Link to="/privacy" className="hover:text-white/70 transition-colors">Privacy Notice</Link>
