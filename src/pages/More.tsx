@@ -36,6 +36,7 @@ import {
   Crown,
   Hash,
   ArrowLeft,
+  Bell,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "@/hooks/use-toast";
@@ -71,7 +72,14 @@ function PushEnableButton() {
   }, []);
 
   if (status === "enabled") {
-    return <p className="text-xs text-muted-foreground">✅ Push notifications enabled</p>;
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15">
+          <Bell className="h-3 w-3 text-primary" />
+        </div>
+        Push notifications enabled
+      </div>
+    );
   }
   if (status === "denied") {
     return <p className="text-xs text-muted-foreground">Push notifications are blocked in your browser settings.</p>;
