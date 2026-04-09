@@ -313,6 +313,23 @@ html.dark, html.dark body, html.dark #root {
     animation: fade-in-card 0.35s ease-out;
   }
 
+  /* Landing page gradient background */
+  .landing-page {
+    background: linear-gradient(
+      180deg,
+      hsl(200, 15%, 8%) 0%,
+      hsl(200, 12%, 11%) 25%,
+      hsl(200, 10%, 14%) 50%,
+      hsl(195, 12%, 12%) 75%,
+      hsl(200, 15%, 9%) 100%
+    );
+  }
+
+  /* Alternate section bg */
+  .landing-section-alt {
+    background: linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.015) 100%);
+  }
+
   /* Landing page scroll reveal */
   .landing-reveal {
     opacity: 0;
@@ -322,6 +339,45 @@ html.dark, html.dark body, html.dark #root {
   .landing-visible {
     opacity: 1;
     transform: translateY(0);
+  }
+
+  /* Phone float animation */
+  .landing-phone-float {
+    animation: phone-float 4s ease-in-out infinite;
+  }
+  @keyframes phone-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  /* Feature card gradient border on hover */
+  .landing-feature-card {
+    position: relative;
+  }
+  .landing-feature-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 1rem;
+    padding: 1px;
+    background: linear-gradient(135deg, transparent, transparent);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+    transition: background 0.3s;
+  }
+  .landing-feature-card:hover::before {
+    background: linear-gradient(135deg, hsl(175 84% 32% / 0.5), transparent 60%);
+  }
+
+  /* Play button pulsing glow */
+  .landing-play-glow {
+    animation: play-glow 2.5s ease-in-out infinite;
+  }
+  @keyframes play-glow {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(175 84% 32% / 0.3); }
+    50% { box-shadow: 0 0 30px 8px hsl(175 84% 32% / 0.15); }
   }
 
   /* Landing page animated blobs */
