@@ -315,15 +315,15 @@ html.dark, html.dark body, html.dark #root {
 
   /* Landing page gradient background */
   .landing-page {
-    background: linear-gradient(
-      180deg,
-      #0f1115 0%,
-      #121317 20%,
-      #14151a 40%,
-      #16171c 60%,
-      #14151a 80%,
-      #111215 100%
-    );
+    background: #0f1115;
+  }
+
+  /* Alternating section backgrounds for visual rhythm */
+  .landing-section-dark {
+    background: #0f1115;
+  }
+  .landing-section-light {
+    background: #161920;
   }
 
   /* Landing page scroll reveal */
