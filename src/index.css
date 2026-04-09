@@ -316,12 +316,44 @@ html.dark, html.dark body, html.dark #root {
   /* Landing page scroll reveal */
   .landing-reveal {
     opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
+    transform: translateY(28px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .landing-visible {
     opacity: 1;
     transform: translateY(0);
+  }
+
+  /* Landing page animated blobs */
+  .landing-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px);
+    opacity: 0.35;
+    animation: landing-float 12s ease-in-out infinite;
+  }
+  .landing-blob-1 {
+    width: 420px; height: 420px;
+    left: 15%; top: 20%;
+    background: hsl(175 84% 32% / 0.4);
+    animation-delay: 0s;
+  }
+  .landing-blob-2 {
+    width: 350px; height: 350px;
+    right: 10%; top: 30%;
+    background: hsl(199 89% 48% / 0.25);
+    animation-delay: -4s;
+  }
+  .landing-blob-3 {
+    width: 280px; height: 280px;
+    left: 40%; bottom: 15%;
+    background: hsl(175 60% 40% / 0.2);
+    animation-delay: -8s;
+  }
+  @keyframes landing-float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -25px) scale(1.05); }
+    66% { transform: translate(-20px, 15px) scale(0.95); }
   }
 
   .ref-hero-video::-webkit-media-controls,
