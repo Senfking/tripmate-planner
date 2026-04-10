@@ -13,7 +13,8 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -59,12 +60,14 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [search, setSearch] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const ACCEPT_ALL = ".pdf,.jpg,.jpeg,.png,.webp";
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      Object.defineProperty(file, "__isPrivate", { value: isPrivate });
       uploadFile.mutate(file);
     }
     e.target.value = "";
@@ -73,13 +76,14 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const handleManualSubmit = () => {
     if (!manualTitle.trim()) return;
     addManual.mutate(
-      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined },
+      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined, is_private: isPrivate },
       {
         onSuccess: () => {
           setShowManualForm(false);
           setManualTitle("");
           setManualType("other");
           setManualNotes("");
+          setIsPrivate(false);
         },
       }
     );
@@ -192,6 +196,36 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         <Label className="text-xs">Notes (optional)</Label>
         <Textarea value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} rows={3} placeholder="Confirmation #, dates, details…" className="text-sm" />
       </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setIsPrivate((p) => !p)}
+              className={`w-full flex items-center gap-2.5 rounded-lg border px-3 py-2.5 transition-colors ${
+                isPrivate
+                  ? "border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700"
+                  : "hover:bg-muted/50"
+              }`}
+            >
+              <Lock className={`h-3.5 w-3.5 shrink-0 ${isPrivate ? "text-amber-600" : "text-muted-foreground"}`} />
+              <div className="flex-1 text-left">
+                <p className={`text-[13px] font-medium ${isPrivate ? "text-amber-700 dark:text-amber-400" : ""}`}>
+                  {isPrivate ? "Private — only you can see this" : "Shared with trip"}
+                </p>
+              </div>
+              <div className={`h-5 w-9 rounded-full transition-colors flex items-center ${
+                isPrivate ? "bg-amber-500 justify-end" : "bg-muted-foreground/20 justify-start"
+              }`}>
+                <div className="h-4 w-4 rounded-full bg-white shadow-sm mx-0.5" />
+              </div>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs max-w-[200px]">
+            Private documents are only visible to you — other trip members won't see them
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <Button onClick={handleManualSubmit} disabled={!manualTitle.trim() || addManual.isPending} className="w-full">
         {addManual.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
         Add Booking
@@ -228,22 +262,24 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       ) : (
         <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => galleryInputRef.current?.click()}
-            className="w-full flex items-center gap-3 rounded-xl border-2 border-[#0D9488]/20 bg-[#0D9488]/[0.04] px-4 py-3.5 text-left transition-colors hover:bg-[#0D9488]/[0.08] active:scale-[0.98]"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0D9488]/15">
-              <Sparkles className="h-5 w-5 text-[#0D9488]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">Upload confirmation</p>
-              <p className="text-[12px] text-[#0D9488] font-medium">✦ Junto AI extracts details automatically</p>
-            </div>
-            <Upload className="h-4 w-4 text-[#0D9488] shrink-0" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className="flex-1 flex items-center gap-3 rounded-xl border-2 border-[#0D9488]/20 bg-[#0D9488]/[0.04] px-4 py-3.5 text-left transition-colors hover:bg-[#0D9488]/[0.08] active:scale-[0.98]"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0D9488]/15">
+                <Sparkles className="h-5 w-5 text-[#0D9488]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-foreground">Upload confirmation</p>
+                <p className="text-[12px] text-[#0D9488] font-medium">✦ Junto AI extracts details automatically</p>
+              </div>
+              <Upload className="h-4 w-4 text-[#0D9488] shrink-0" />
+            </button>
+          </div>
 
-          <div className="flex items-center gap-2 px-1">
+          <div className="flex items-center justify-between px-1">
             <button
               type="button"
               onClick={openManualForm}
@@ -252,6 +288,29 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               <Plus className="h-3.5 w-3.5" />
               Add manually
             </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivate((p) => !p)}
+                    className={`flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1 rounded-full transition-all ${
+                      isPrivate
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ring-1 ring-amber-300/50"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Lock className="h-3 w-3" />
+                    {isPrivate ? "Private" : "Shared"}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs max-w-[200px]">
+                  {isPrivate
+                    ? "Next upload will be private — only you can see it"
+                    : "Tap to make next upload private (only visible to you)"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       )}
