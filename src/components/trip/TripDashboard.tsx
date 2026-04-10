@@ -403,6 +403,29 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   return (
     <div className="animate-fade-in-card pb-12">
+      {/* Plan with AI banner */}
+      <div className="px-4 md:max-w-[900px] md:mx-auto md:px-8 mb-3">
+        <button
+          onClick={() => setBuilderOpen(true)}
+          className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all active:scale-[0.98] text-left"
+        >
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
+            <Sparkles className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground text-[14px]">Plan with AI ✨</p>
+            <p className="text-xs text-muted-foreground">Generate a day-by-day itinerary in seconds</p>
+          </div>
+        </button>
+      </div>
+
+      {builderOpen && (
+        <TripBuilderFlow
+          tripId={tripId}
+          onClose={() => setBuilderOpen(false)}
+        />
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 px-4 md:max-w-[900px] md:mx-auto md:px-8">
         <SectionCard
           icon={Compass}
