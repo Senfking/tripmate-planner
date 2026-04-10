@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAttachments, type AttachmentRow } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
 import { AttachmentCard } from "./AttachmentCard";
+import { BookingCrossLinkDrawer, extractBookingFields } from "./BookingCrossLinkDrawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -51,8 +52,9 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
+  const { query, uploadFile, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
   const isMobile = useIsMobile();
+  const [crossLinkAttachment, setCrossLinkAttachment] = useState<AttachmentRow | null>(null);
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
   const [manualType, setManualType] = useState("other");
@@ -102,6 +104,16 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
 
   const isAdmin = myRole === "owner" || myRole === "admin";
   const attachments = query.data ?? [];
+
+  // Show cross-link drawer when extraction finishes with valid booking data
+  useEffect(() => {
+    if (!lastExtractedId || !attachments.length) return;
+    const att = attachments.find((a) => a.id === lastExtractedId);
+    if (att && extractBookingFields(att)) {
+      setCrossLinkAttachment(att);
+    }
+    clearLastExtractedId();
+  }, [lastExtractedId, attachments]);
 
   const isSearching = search.trim().length > 0;
   const isGroupedView = filter === "all" && !isSearching;
@@ -305,6 +317,16 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     <div className="space-y-4">
       {aiSection}
       {manualFormModal}
+
+      {/* Booking cross-link drawer */}
+      {crossLinkAttachment && (
+        <BookingCrossLinkDrawer
+          open={!!crossLinkAttachment}
+          onOpenChange={(open) => { if (!open) setCrossLinkAttachment(null); }}
+          tripId={tripId}
+          attachment={crossLinkAttachment}
+        />
+      )}
 
       {/* Filters + search */}
       {attachments.length > 0 && (
