@@ -49,7 +49,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
+  const { query, uploadFile, addManual, deleteAttachment, updateNotes, updatePrivacy, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
   const isMobile = useIsMobile();
   const [crossLinkAttachment, setCrossLinkAttachment] = useState<AttachmentRow | null>(null);
   const [showManualForm, setShowManualForm] = useState(false);
