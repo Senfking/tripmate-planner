@@ -234,7 +234,8 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       </div>
 
       {/* Step content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto flex justify-center">
+        <div className="w-full max-w-2xl">
         {step === 0 && (
           <StepEntryChoice
             onStepByStep={() => setStep(1)}
@@ -291,46 +292,51 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
             onNotesChange={(v) => update("notes", v)}
           />
         )}
+        </div>
       </div>
 
       {/* Footer */}
       {step > 0 && (
-        <div className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-3 border-t border-border bg-background">
-          {isLastStep ? (
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1 h-12 rounded-xl"
-                onClick={() => setStep(step + 1 > 6 ? 6 : step - 1)}
-              >
-                Back
-              </Button>
-              <Button
-                className="flex-1 h-12 rounded-xl font-semibold text-primary-foreground text-[15px]"
-                style={{ background: "var(--gradient-primary)" }}
+        <div className="border-t border-border bg-background flex justify-center">
+          <div className="w-full max-w-2xl px-6 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-3">
+            {isLastStep ? (
+              <div className="flex gap-3 sm:justify-end">
+                <Button
+                  variant="outline"
+                  className="flex-1 sm:flex-none sm:px-8 h-12 rounded-xl"
+                  onClick={() => setStep(step + 1 > 6 ? 6 : step - 1)}
+                >
+                  Back
+                </Button>
+                <Button
+                  className="flex-1 sm:flex-none sm:px-8 h-12 rounded-xl font-semibold text-primary-foreground text-[15px]"
+                  style={{ background: "var(--gradient-primary)" }}
+                  onClick={handleGenerate}
+                >
+                  Generate my trip ✨
+                </Button>
+              </div>
+            ) : (
+              <div className="sm:flex sm:justify-end">
+                <Button
+                  className="w-full sm:w-auto sm:px-12 h-12 rounded-xl font-semibold text-primary-foreground text-[15px]"
+                  style={{ background: "var(--gradient-primary)" }}
+                  disabled={!canAdvance}
+                  onClick={() => setStep((s) => s + 1)}
+                >
+                  {step === 6 ? "Generate my trip ✨" : "Continue"}
+                </Button>
+              </div>
+            )}
+            {step === 6 && (
+              <button
                 onClick={handleGenerate}
+                className="w-full sm:w-auto text-center text-sm text-muted-foreground mt-2"
               >
-                Generate my trip ✨
-              </Button>
-            </div>
-          ) : (
-            <Button
-              className="w-full h-12 rounded-xl font-semibold text-primary-foreground text-[15px]"
-              style={{ background: "var(--gradient-primary)" }}
-              disabled={!canAdvance}
-              onClick={() => setStep((s) => s + 1)}
-            >
-              {step === 6 ? "Generate my trip ✨" : "Continue"}
-            </Button>
-          )}
-          {step === 6 && (
-            <button
-              onClick={handleGenerate}
-              className="w-full text-center text-sm text-muted-foreground mt-2"
-            >
-              Skip extras
-            </button>
-          )}
+                Skip extras
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
