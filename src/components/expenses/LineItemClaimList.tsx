@@ -18,6 +18,7 @@ interface Props {
   totalAmount: number;
   onToggleClaim: (lineItemId: string) => void;
   isToggling: boolean;
+  storedSplits?: { user_id: string; share_amount: number }[];
 }
 
 function getInitials(name: string) {
@@ -25,7 +26,7 @@ function getInitials(name: string) {
 }
 
 export function LineItemClaimList({
-  lineItems, claims, members, currency, totalAmount, onToggleClaim, isToggling,
+  lineItems, claims, members, currency, totalAmount, onToggleClaim, isToggling, storedSplits,
 }: Props) {
   const { user } = useAuth();
   const [showAll, setShowAll] = useState(false);
@@ -40,7 +41,10 @@ export function LineItemClaimList({
     return map;
   }, [claims]);
 
-  const { totals: perPersonTotals, sharedTotal } = useMemo(
+  // Use stored splits as source of truth for per-person totals when available;
+  // only fall back to recalculating from claims when there are actual claims
+  const hasClaims = claims.length > 0;
+  const { totals: calculatedTotals, sharedTotal } = useMemo(
     () => calculateLineItemTotals({
       lineItems,
       memberIds: members.map((member) => member.userId),
@@ -49,6 +53,19 @@ export function LineItemClaimList({
     }),
     [claimsByItemId, lineItems, members, totalAmount],
   );
+
+  const perPersonTotals = useMemo(() => {
+    // If we have stored splits and no claims, use the stored splits as they reflect
+    // the actual assignments made during creation
+    if (storedSplits && storedSplits.length > 0 && !hasClaims) {
+      const map: Record<string, number> = {};
+      for (const s of storedSplits) {
+        map[s.user_id] = s.share_amount;
+      }
+      return map;
+    }
+    return calculatedTotals;
+  }, [storedSplits, hasClaims, calculatedTotals]);
 
   const COLLAPSED_COUNT = 4;
   const visibleItems = showAll ? claimableItems : claimableItems.slice(0, COLLAPSED_COUNT);
