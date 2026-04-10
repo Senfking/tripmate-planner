@@ -83,9 +83,11 @@ export function ExpenseCard({
   const isSettlement = expense.category === "settlement";
   const isPayer = expense.payer_id === user?.id;
   const mySplit = user ? splits.find((s) => s.user_id === user.id) : null;
+  // If no splits loaded yet for this expense and we're the payer, don't flash the full amount
+  const splitsReady = splits.length > 0 || !isPayer;
   const youLentAmount = isPayer && mySplit
     ? expense.amount - mySplit.share_amount
-    : isPayer ? expense.amount : 0;
+    : isPayer && !splitsReady ? null : isPayer ? expense.amount : 0;
 
   const canModify =
     expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
