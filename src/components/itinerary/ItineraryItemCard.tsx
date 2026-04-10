@@ -67,6 +67,30 @@ export function ItineraryItemCard({
   // Get comment count for collapsed pill
   const { comments } = useItemComments(tripId, item.id);
   const commentCount = comments.length;
+  const navigate = useNavigate();
+
+  // Linked expenses query
+  const { data: linkedExpenses } = useQuery({
+    queryKey: ["linked-expenses", item.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("id, amount, currency")
+        .eq("itinerary_item_id", item.id);
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 60_000,
+  });
+
+  const expenseTotal = useMemo(() => {
+    if (!linkedExpenses || linkedExpenses.length === 0) return null;
+    // Sum amounts (simple sum, no conversion — show in first expense's currency)
+    const currency = linkedExpenses[0].currency;
+    const allSame = linkedExpenses.every((e) => e.currency === currency);
+    const total = linkedExpenses.reduce((s, e) => s + e.amount, 0);
+    return { total, currency: allSame ? currency : null, count: linkedExpenses.length };
+  }, [linkedExpenses]);
 
   /* ── new-item animation ── */
   const [animPhase, setAnimPhase] = useState<"skeleton" | "fadein" | "done">(isNew ? "skeleton" : "done");
