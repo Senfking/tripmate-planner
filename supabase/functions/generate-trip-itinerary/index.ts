@@ -373,14 +373,35 @@ Generate the complete itinerary as JSON.`;
     const inputTokens: number = anthropicData.usage?.input_tokens ?? 0;
     const outputTokens: number = anthropicData.usage?.output_tokens ?? 0;
 
+    // ---- DIAGNOSTIC LOGGING (temporary) ----
+    const stopReason = anthropicData.stop_reason ?? "unknown";
+    console.log("[DIAG] AI response stop_reason:", stopReason);
+    console.log("[DIAG] AI response token usage — input:", inputTokens, "output:", outputTokens);
+    console.log("[DIAG] AI response text length:", textContent.length, "chars");
+    console.log("[DIAG] AI response first 500 chars:", textContent.slice(0, 500));
+    console.log("[DIAG] AI response last 200 chars:", textContent.slice(-200));
+    if (stopReason === "max_tokens") {
+      console.warn("[DIAG] WARNING: Response was truncated — hit max_tokens limit. JSON is likely incomplete.");
+    }
+    const startsWithBrace = textContent.trimStart().startsWith("{");
+    const startsWithCodeFence = textContent.trimStart().startsWith("```");
+    console.log("[DIAG] Starts with '{':", startsWithBrace, "| Starts with code fence:", startsWithCodeFence);
+    // ---- END DIAGNOSTIC LOGGING ----
+
     // ---- Parse JSON response ----
     let itinerary: Record<string, unknown>;
     try {
       const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/);
       const raw = jsonMatch ? jsonMatch[1].trim() : textContent.trim();
+      console.log("[DIAG] jsonMatch found code block:", !!jsonMatch);
+      console.log("[DIAG] raw JSON to parse — first 300 chars:", raw.slice(0, 300));
+      console.log("[DIAG] raw JSON to parse — last 200 chars:", raw.slice(-200));
       itinerary = JSON.parse(raw);
-    } catch {
+    } catch (parseErr) {
       console.error("Failed to parse AI response:", textContent.slice(0, 500));
+      console.error("[DIAG] Parse error details:", (parseErr as Error).message);
+      console.error("[DIAG] stop_reason was:", stopReason);
+      console.error("[DIAG] output_tokens:", outputTokens, "/ max_tokens: 8000");
       return jsonResponse(
         { success: false, error: "Failed to parse AI-generated itinerary" },
         500,
