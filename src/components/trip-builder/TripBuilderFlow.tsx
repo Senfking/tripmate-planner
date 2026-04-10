@@ -26,6 +26,72 @@ type Props = {
   onSuccess?: (data: any) => void;
 };
 
+/**
+ * Normalizes the raw Edge Function response into a valid AITripResult.
+ *
+ * The edge function returns `{ success: true, ...itinerary }` — the itinerary
+ * fields are spread at the top level. The AI-generated JSON *should* match the
+ * AITripResult schema, but since an LLM produces it, fields may be missing,
+ * named differently, or have unexpected types. This function provides safe
+ * defaults so TripResultsView never crashes on undefined property access.
+ */
+function normalizeAIResponse(raw: Record<string, any>): AITripResult {
+  // Destinations: the core data — must be an array
+  const destinations = Array.isArray(raw.destinations) ? raw.destinations : [];
+
+  // Ensure every destination has the required nested structure
+  const safeDestinations = destinations.map((dest: any) => ({
+    name: dest?.name || "Unknown destination",
+    start_date: dest?.start_date || "",
+    end_date: dest?.end_date || dest?.start_date || "",
+    intro: dest?.intro || "",
+    days: Array.isArray(dest?.days)
+      ? dest.days.map((day: any) => ({
+          date: day?.date || "",
+          day_number: day?.day_number || 0,
+          theme: day?.theme || "",
+          activities: Array.isArray(day?.activities) ? day.activities : [],
+        }))
+      : [],
+    accommodation: dest?.accommodation || undefined,
+    transport_to_next: dest?.transport_to_next || undefined,
+  }));
+
+  // map_center: the AI might omit it, use `center`, or use lat/longitude keys
+  let mapCenter = raw.map_center;
+  if (!mapCenter || typeof mapCenter.lat !== "number") {
+    // Fallback: try to derive from first activity with coordinates
+    for (const dest of safeDestinations) {
+      for (const day of dest.days) {
+        for (const act of day.activities) {
+          if (act.latitude != null && act.longitude != null) {
+            mapCenter = { lat: act.latitude, lng: act.longitude };
+            break;
+          }
+        }
+        if (mapCenter?.lat != null) break;
+      }
+      if (mapCenter?.lat != null) break;
+    }
+  }
+  // Final fallback
+  if (!mapCenter || typeof mapCenter.lat !== "number") {
+    mapCenter = { lat: 0, lng: 0 };
+  }
+
+  return {
+    trip_title: raw.trip_title || raw.title || "Your Trip",
+    trip_summary: raw.trip_summary || raw.summary || "",
+    destinations: safeDestinations,
+    map_center: mapCenter,
+    map_zoom: typeof raw.map_zoom === "number" ? raw.map_zoom : 6,
+    daily_budget_estimate: typeof raw.daily_budget_estimate === "number" ? raw.daily_budget_estimate : 0,
+    currency: raw.currency || "USD",
+    packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions : [],
+    total_activities: typeof raw.total_activities === "number" ? raw.total_activities : 0,
+  };
+}
+
 type Answers = {
   destination: string;
   surpriseMe: boolean;
@@ -156,12 +222,21 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         body: payload,
       });
 
+      console.log("[TripBuilder] Raw edge function response:", JSON.stringify(data, null, 2)?.slice(0, 2000));
+      console.log("[TripBuilder] Edge function error:", error);
+      console.log("[TripBuilder] data type:", typeof data, "| keys:", data ? Object.keys(data) : "null");
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (!data) throw new Error("No data returned from generate-trip-itinerary");
 
-      setResults(data as AITripResult);
-      onSuccess?.(data);
+      const normalized = normalizeAIResponse(data);
+      console.log("[TripBuilder] Normalized result — destinations:", normalized.destinations?.length, "| map_center:", normalized.map_center);
+
+      setResults(normalized);
+      onSuccess?.(normalized);
     } catch (err: any) {
+      console.error("[TripBuilder] Generation failed:", err);
       setGenError(err?.message || "Failed to generate itinerary. Please try again.");
     } finally {
       setGenerating(false);
