@@ -117,7 +117,12 @@ export function ExpenseCard({
               </p>
             </div>
             <div className="text-right shrink-0">
-              {!isSettlement && isPayer && youLentAmount > 0 ? (
+              {!isSettlement && isPayer && youLentAmount === null ? (
+                <>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
+                  <p className="text-[17px] font-bold text-foreground text-muted-foreground/50">…</p>
+                </>
+              ) : !isSettlement && isPayer && youLentAmount != null && youLentAmount > 0 ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
                   <p className="text-[17px] font-bold text-foreground">
