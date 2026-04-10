@@ -7,6 +7,7 @@ import { SectionCard } from "./SectionCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
 import { SharedItemsSection } from "./SharedItemsSection";
+import { ArrivalsCard } from "@/components/bookings/ArrivalsCard";
 
 type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
 
@@ -443,6 +444,9 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           imageUrl="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
           className="md:col-span-2"
         />
+      </div>
+      <div className="px-4 md:max-w-[900px] md:mx-auto md:px-8 mt-3">
+        <ArrivalsCard tripId={tripId} />
       </div>
       <SharedItemsSection tripId={tripId} />
     </div>

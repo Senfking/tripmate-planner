@@ -2,23 +2,18 @@ import { useState, useMemo, useEffect } from "react";
 import { useAttachments, type AttachmentRow } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
 import { AttachmentCard } from "./AttachmentCard";
+import { ArrivalsSection } from "./ArrivalsSection";
 import { BookingCrossLinkDrawer, extractBookingFields } from "./BookingCrossLinkDrawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload, Plus, Lock, Info } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -62,7 +57,6 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [manualType, setManualType] = useState("other");
   const [manualNotes, setManualNotes] = useState("");
   const [filter, setFilter] = useState("all");
-  const [peopleFilter, setPeopleFilter] = useState<"all" | "mine" | "others">("all");
   const [search, setSearch] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -110,13 +104,11 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
 
   const isAdmin = myRole === "owner" || myRole === "admin";
   const allAttachments = query.data ?? [];
-  // Filter: show shared + own private
   const attachments = useMemo(() =>
     allAttachments.filter((a) => !a.is_private || a.created_by === user?.id),
     [allAttachments, user?.id],
   );
 
-  // Show cross-link drawer when extraction finishes with valid booking data
   useEffect(() => {
     if (!lastExtractedId || !attachments.length) return;
     const att = attachments.find((a) => a.id === lastExtractedId);
@@ -129,14 +121,8 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const isSearching = search.trim().length > 0;
   const isGroupedView = filter === "all" && !isSearching;
 
-  const peopleFiltered = useMemo(() => {
-    if (peopleFilter === "mine") return attachments.filter((a) => a.created_by === user?.id);
-    if (peopleFilter === "others") return attachments.filter((a) => a.created_by !== user?.id);
-    return attachments;
-  }, [attachments, peopleFilter, user?.id]);
-
   const filtered = useMemo(() => {
-    let list = peopleFiltered;
+    let list = attachments;
     if (filter !== "all") list = list.filter((a) => a.type === filter);
     if (isSearching) {
       const q = search.toLowerCase();
@@ -147,15 +133,15 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       );
     }
     return sortByOwnership(list, user?.id);
-  }, [peopleFiltered, filter, search, isSearching, user?.id]);
+  }, [attachments, filter, search, isSearching, user?.id]);
 
   const groupedSections = useMemo(() => {
     if (!isGroupedView) return [];
     return SECTIONS.map((s) => {
-      const items = peopleFiltered.filter((a) => a.type === s.type);
+      const items = attachments.filter((a) => a.type === s.type);
       return { ...s, items: sortByOwnership(items, user?.id) };
     }).filter((s) => s.items.length > 0);
-  }, [peopleFiltered, isGroupedView, user?.id]);
+  }, [attachments, isGroupedView, user?.id]);
 
   const handleOpen = async (a: AttachmentRow) => {
     if (a.url) {
@@ -164,9 +150,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       try {
         const url = await getSignedUrl(a.file_path);
         window.open(url, "_blank");
-      } catch {
-        /* toast already shown */
-      }
+      } catch {}
     }
   };
 
@@ -186,25 +170,6 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       getSignedUrl={getSignedUrl}
     />
   );
-
-  const renderOwnedSection = (items: AttachmentRow[]) => {
-    const mine = items.filter((a) => a.created_by === user?.id);
-    const others = items.filter((a) => a.created_by !== user?.id);
-    const showLabels = mine.length > 0 && others.length > 0;
-
-    return (
-      <>
-        {showLabels && mine.length > 0 && (
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider pt-1 pb-0.5 px-1">Yours</p>
-        )}
-        {mine.map(renderCard)}
-        {showLabels && others.length > 0 && (
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider pt-2 pb-0.5 px-1">From others</p>
-        )}
-        {others.map(renderCard)}
-      </>
-    );
-  };
 
   /* ── Manual form modal ── */
   const manualFormContent = (
@@ -251,70 +216,62 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     </Dialog>
   );
 
-  /* ── AI scan section (reusable) ── */
-  const aiSection = (
+  /* ── Compact upload bar ── */
+  const uploadBar = (
     <>
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
       <input ref={galleryInputRef} type="file" accept={ACCEPT_ALL} className="hidden" onChange={handleFile} />
 
-      <div className="rounded-xl border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/[0.03] p-4 space-y-3">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
-          <span className="text-[12px] font-medium text-[#0D9488]">AI-powered</span>
+      {uploadFile.isPending ? (
+        <div className="flex items-center justify-center gap-2 py-3 rounded-xl border bg-card text-[13px] font-medium text-[#0D9488]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Processing…
         </div>
-        <p className="text-xs text-muted-foreground">
-          Upload a confirmation - we'll extract the details automatically
-        </p>
-        {uploadFile.isPending ? (
-          <div className="flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-[#0D9488]">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Processing…
+      ) : (
+        <div className="flex items-center gap-2 rounded-xl border bg-card px-3 py-2.5">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <Sparkles className="h-3.5 w-3.5 text-[#0D9488] shrink-0" />
+            <span className="text-[12px] text-muted-foreground truncate">AI extraction</span>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
-              <Camera className="h-4 w-4 text-[#0D9488]" />
-              Take photo
-            </button>
-            <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]">
-              <Upload className="h-4 w-4 text-[#0D9488]" />
-              Upload file
-            </button>
-          </div>
-        )}
 
-        {/* Private toggle */}
-        <TooltipProvider>
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-1.5">
-              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Private</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground/60 hover:text-muted-foreground">
-                    <Info className="h-3 w-3" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                    <Switch checked={isPrivate} onCheckedChange={setIsPrivate} className="scale-75" />
+                  </div>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[200px] text-xs">
+                <TooltipContent side="bottom" className="text-xs max-w-[180px]">
                   Only you can see private documents
                 </TooltipContent>
               </Tooltip>
-            </div>
-            <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+            </TooltipProvider>
+
+            <div className="w-px h-5 bg-border" />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground"
+              onClick={openManualForm}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Manual
+            </Button>
+
+            <Button
+              size="sm"
+              className="h-7 px-3 text-xs gap-1.5"
+              onClick={() => galleryInputRef.current?.click()}
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Upload
+            </Button>
           </div>
-        </TooltipProvider>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-[11px] text-muted-foreground">or add manually</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-
-      <Button variant="outline" size="sm" className="w-full" onClick={openManualForm}>
-        <Plus className="h-4 w-4 mr-1.5" />
-        Add details manually
-      </Button>
+        </div>
+      )}
     </>
   );
 
@@ -333,24 +290,47 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         <p className="text-4xl">📄</p>
         <div>
           <p className="text-lg font-semibold text-foreground">No docs saved yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Upload a confirmation to get started
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Upload a confirmation to get started</p>
         </div>
         <div className="w-full max-w-xs space-y-3">
-          {aiSection}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 rounded-lg border py-2.5 text-[13px] font-medium hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
+            >
+              <Camera className="h-4 w-4 text-[#0D9488]" />
+              Take photo
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 rounded-lg border py-2.5 text-[13px] font-medium hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
+            >
+              <Upload className="h-4 w-4 text-[#0D9488]" />
+              Upload file
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={openManualForm}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            or add details manually
+          </button>
         </div>
         {manualFormModal}
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+        <input ref={galleryInputRef} type="file" accept={ACCEPT_ALL} className="hidden" onChange={handleFile} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {aiSection}
+    <div className="space-y-3">
+      {uploadBar}
       {manualFormModal}
 
-      {/* Booking cross-link drawer */}
       {crossLinkAttachment && (
         <BookingCrossLinkDrawer
           open={!!crossLinkAttachment}
@@ -360,37 +340,25 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         />
       )}
 
+      {/* Arrivals section */}
+      <ArrivalsSection attachments={attachments} />
+
       {/* Filters + search */}
       {attachments.length > 0 && (
-        <>
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+        <div className="space-y-2">
+          <div className="flex gap-1 overflow-x-auto pb-0.5">
             {FILTERS.map((f) => (
-              <Button
+              <button
                 key={f.value}
-                size="sm"
-                variant={filter === f.value ? "default" : "outline"}
                 onClick={() => setFilter(f.value)}
-                className="shrink-0 text-xs h-7 px-2.5"
+                className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
+                  filter === f.value
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
               >
                 {f.label}
-              </Button>
-            ))}
-           </div>
-          <div className="flex gap-1.5 pb-1">
-            {([
-              { value: "all", label: "All people" },
-              { value: "mine", label: "Mine" },
-              { value: "others", label: "Others" },
-            ] as const).map((f) => (
-              <Button
-                key={f.value}
-                size="sm"
-                variant={peopleFilter === f.value ? "default" : "outline"}
-                onClick={() => setPeopleFilter(f.value)}
-                className="shrink-0 text-xs h-7 px-2.5"
-              >
-                {f.label}
-              </Button>
+              </button>
             ))}
           </div>
           <div className="relative">
@@ -402,81 +370,39 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               className="pl-8 h-9"
             />
           </div>
-        </>
+        </div>
       )}
 
-      {/* Grouped view */}
+      {/* Grouped view — Airbnb-style subtle dividers */}
       {isGroupedView && (
-        <div className="space-y-3">
-          {groupedSections.map((section) => (
-            <SectionGroup
-              key={section.type}
-              label={section.label}
-              icon={section.icon}
-              count={section.items.length}
-            >
-              {renderOwnedSection(section.items)}
-            </SectionGroup>
+        <div className="space-y-1">
+          {groupedSections.map((section, idx) => (
+            <div key={section.type}>
+              {idx > 0 && <div className="h-px bg-border my-3" />}
+              <div className="flex items-center gap-2 py-1.5 px-0.5">
+                <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</span>
+                <span className="text-[11px] text-muted-foreground/60">{section.items.length}</span>
+              </div>
+              <div className="space-y-2 mt-1">
+                {section.items.map(renderCard)}
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Flat list view (filtered or search) */}
+      {/* Flat list */}
       {!isGroupedView && (
         <div className="space-y-2">
           {filtered.map(renderCard)}
           {filtered.length === 0 && attachments.length > 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">
-              {peopleFilter === "others"
-                ? "No bookings from other members yet"
-                : peopleFilter === "mine"
-                ? "You haven't added any bookings yet - upload a confirmation or share a link"
-                : "No results matching your filter"}
+              No results matching your filter
             </p>
           )}
         </div>
       )}
     </div>
-  );
-}
-
-/* ---------- Collapsible section ---------- */
-
-function SectionGroup({
-  label,
-  icon: Icon,
-  count,
-  children,
-}: {
-  label: string;
-  icon: React.ElementType;
-  count: number;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(true);
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger asChild>
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-accent/50"
-        >
-          <Icon className="h-4 w-4 text-primary shrink-0" />
-          <span className="text-sm font-medium flex-1">{label}</span>
-          <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-            {count}
-          </Badge>
-          <ChevronDown
-            className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-              open ? "rotate-0" : "-rotate-90"
-            }`}
-          />
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-        <div className="space-y-2 pt-2">{children}</div>
-      </CollapsibleContent>
-    </Collapsible>
   );
 }
