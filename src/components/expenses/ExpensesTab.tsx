@@ -71,7 +71,30 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   } | null>(null);
   const lastScanWasReceipt = useRef(false);
 
-  const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle prefill from itinerary cost detection
+  useEffect(() => {
+    const state = location.state as { prefillExpense?: { title: string; amount: number; currency: string; date: string; itineraryItemId?: string } } | null;
+    if (state?.prefillExpense) {
+      const p = state.prefillExpense;
+      setEditingExpense({
+        id: "",
+        title: p.title,
+        amount: p.amount,
+        currency: p.currency,
+        category: "activities",
+        payer_id: user?.id || "",
+        trip_id: tripId,
+        incurred_on: p.date,
+        notes: null,
+        itinerary_item_id: p.itineraryItemId || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as ExpenseRow);
+      setFormOpen(true);
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
+
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
