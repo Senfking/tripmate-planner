@@ -40,10 +40,7 @@ export function LineItemClaimList({
     return map;
   }, [claims]);
 
-  // Use stored splits as source of truth for per-person totals when available;
-  // only fall back to recalculating from claims when there are actual claims
-  const hasClaims = claims.length > 0;
-  const { totals: calculatedTotals, sharedTotal } = useMemo(
+  const { totals: perPersonTotals, sharedTotal } = useMemo(
     () => calculateLineItemTotals({
       lineItems,
       memberIds: members.map((member) => member.userId),
@@ -52,8 +49,6 @@ export function LineItemClaimList({
     }),
     [claimsByItemId, lineItems, members, totalAmount],
   );
-
-  const perPersonTotals = calculatedTotals;
 
   const COLLAPSED_COUNT = 4;
   const visibleItems = showAll ? claimableItems : claimableItems.slice(0, COLLAPSED_COUNT);
