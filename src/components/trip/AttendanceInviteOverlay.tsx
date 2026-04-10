@@ -363,7 +363,7 @@ export function AttendanceInviteOverlay({
                     className="w-full rounded-2xl text-[16px] font-bold text-white transition-all active:scale-[0.97]"
                     style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)", height: 52 }}
                   >
-                    ✈️  I'm going!
+                    I'm going!
                   </button>
                   <button
                     onClick={() => handleRespond("maybe")}
