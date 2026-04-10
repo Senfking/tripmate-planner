@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 import { parseISO } from "date-fns";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
