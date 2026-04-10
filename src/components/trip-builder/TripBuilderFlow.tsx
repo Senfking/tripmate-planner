@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 import { useTripBuilderDefaults, type BudgetLevel, type PaceLevel } from "./useTripBuilderDefaults";
-import { parseFreeText } from "./parseFreeTex";
+import { parseFreeText } from "./parseFreeText";
 import { StepEntryChoice } from "./StepEntryChoice";
 import { StepDestination } from "./StepDestination";
 import { StepDates } from "./StepDates";
