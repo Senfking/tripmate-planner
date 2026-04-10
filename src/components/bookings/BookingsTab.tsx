@@ -13,7 +13,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, ChevronDown } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +60,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -404,11 +405,44 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       {/* Arrivals section */}
       <ArrivalsSection attachments={attachments} />
 
-      {/* Filters + search */}
+      {/* Filter & search icons */}
       {attachments.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 overflow-x-auto flex-1 min-w-0 pb-0.5">
+          <div className="flex items-center gap-1.5 justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setFiltersOpen((o) => !o);
+                if (filtersOpen) setFilter("all");
+              }}
+              className={cn(
+                "shrink-0 flex items-center justify-center h-7 w-7 rounded-full transition-colors",
+                filtersOpen || filter !== "all"
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchOpen((o) => !o);
+                if (!searchOpen) setTimeout(() => searchInputRef.current?.focus(), 100);
+                if (searchOpen) setSearch("");
+              }}
+              className={cn(
+                "shrink-0 flex items-center justify-center h-7 w-7 rounded-full transition-colors",
+                searchOpen || isSearching
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              )}
+            >
+              <Search className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          {filtersOpen && (
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
               {FILTERS.map((f) => (
                 <button
                   key={f.value}
@@ -423,22 +457,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchOpen((o) => !o);
-                if (!searchOpen) setTimeout(() => searchInputRef.current?.focus(), 100);
-                if (searchOpen) setSearch("");
-              }}
-              className={`shrink-0 flex items-center justify-center h-7 w-7 rounded-full transition-colors ${
-                searchOpen || isSearching
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              <Search className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          )}
           {searchOpen && (
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
