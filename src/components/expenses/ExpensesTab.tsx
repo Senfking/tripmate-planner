@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { trackEvent } from "@/lib/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
+  const location = useLocation();
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
@@ -68,6 +70,30 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     expenseId: string; title: string; date: string; amount: number; currency: string; category: string;
   } | null>(null);
   const lastScanWasReceipt = useRef(false);
+
+  // Handle prefill from itinerary cost detection
+  useEffect(() => {
+    const state = location.state as { prefillExpense?: { title: string; amount: number; currency: string; date: string; itineraryItemId?: string } } | null;
+    if (state?.prefillExpense) {
+      const p = state.prefillExpense;
+      setEditingExpense({
+        id: "",
+        title: p.title,
+        amount: p.amount,
+        currency: p.currency,
+        category: "activities",
+        payer_id: user?.id || "",
+        trip_id: tripId,
+        incurred_on: p.date,
+        notes: null,
+        itinerary_item_id: p.itineraryItemId || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as ExpenseRow);
+      setFormOpen(true);
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
 
   const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
