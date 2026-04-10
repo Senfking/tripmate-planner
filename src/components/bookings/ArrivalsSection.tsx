@@ -177,7 +177,7 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
   const grouped = useMemo(() => {
     const map = new Map<string, FlightEntry[]>();
     for (const f of flights) {
-      const key = format(f.date, "yyyy-MM-dd");
+      const key = f.usedFallbackDate ? "unknown" : format(f.date, "yyyy-MM-dd");
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(f);
     }
@@ -185,6 +185,7 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
       dateKey,
       date: entries[0].date,
       entries,
+      isFallback: dateKey === "unknown",
     }));
   }, [flights]);
 
@@ -199,119 +200,113 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
   }
 
   return (
-    <div className="relative px-1">
-      {/* Vertical timeline line */}
-      <div className="absolute left-[23px] top-4 bottom-4 w-px bg-gradient-to-b from-[#0D9488]/40 via-border to-[#E07A5F]/40" />
+    <div className="space-y-5 px-1">
+      {grouped.map((group, groupIdx) => {
+        const dateLabel = group.isFallback
+          ? "Date not available"
+          : isToday(group.date)
+          ? "Today"
+          : isTomorrow(group.date)
+          ? "Tomorrow"
+          : format(group.date, "EEE, MMM d");
 
-      <div className="space-y-6">
-        {grouped.map((group) => {
-          const dateLabel = isToday(group.date)
-            ? "Today"
-            : isTomorrow(group.date)
-            ? "Tomorrow"
-            : format(group.date, "EEEE, MMM d");
+        const daysAway = differenceInDays(group.date, new Date());
+        const daysLabel = group.isFallback
+          ? null
+          : daysAway === 0
+          ? "today"
+          : daysAway > 0
+          ? `in ${daysAway}d`
+          : `${Math.abs(daysAway)}d ago`;
 
-          const anyFallback = group.entries.some((e) => e.usedFallbackDate);
-          const daysAway = differenceInDays(group.date, new Date());
-          const daysLabel =
-            anyFallback
-              ? "date unknown"
-              : daysAway === 0
-              ? null
-              : daysAway > 0
-              ? `in ${daysAway}d`
-              : `${Math.abs(daysAway)}d ago`;
+        const isPast = !group.isFallback && isBefore(group.date, new Date()) && !isToday(group.date);
 
-          return (
-            <div key={group.dateKey} className="space-y-2.5">
-              {/* Date marker */}
-              <div className="flex items-center gap-3">
-                <div className={`relative z-10 flex h-[14px] w-[14px] items-center justify-center rounded-full ${
-                  isToday(group.date) ? "bg-amber-500 ring-4 ring-amber-500/20" : "bg-muted-foreground/30"
-                } ml-[16px]`}>
-                  {isToday(group.date) && (
-                    <span className="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-40" />
-                  )}
-                </div>
-                <span className={`text-[12px] font-bold uppercase tracking-wider ${
-                  isToday(group.date) ? "text-amber-600" : "text-muted-foreground"
+        return (
+          <div key={group.dateKey}>
+            {/* Date header */}
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className={`text-[12px] font-semibold uppercase tracking-wide ${
+                isToday(group.date) ? "text-amber-600" : isPast ? "text-muted-foreground/60" : "text-foreground"
+              }`}>
+                {dateLabel}
+              </span>
+              {daysLabel && (
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
+                  isToday(group.date)
+                    ? "bg-amber-100 text-amber-700"
+                    : isPast
+                    ? "text-muted-foreground/50"
+                    : "text-muted-foreground"
                 }`}>
-                  {dateLabel}
+                  {daysLabel}
                 </span>
-                {daysLabel && (
-                  <span className="text-[11px] text-muted-foreground/60">{daysLabel}</span>
-                )}
-              </div>
+              )}
+              {isPast && (
+                <span className="text-[10px] text-emerald-600 font-medium">✓</span>
+              )}
+            </div>
 
-              {/* Flight cards */}
+            {/* Flight cards */}
+            <div className="space-y-2.5">
               {group.entries.map((flight) => {
                 const config = DIRECTION_CONFIG[flight.direction];
                 const DirIcon = config.icon;
 
                 return (
-                  <div key={flight.id} className="flex items-start gap-3 ml-[10px]">
-                    {/* Timeline node */}
-                    <div className="flex flex-col items-center pt-3.5">
-                      <div className={`h-[10px] w-[10px] rounded-full border-2 border-background ${config.dot} ring-2 ring-background z-10`} />
+                  <div key={flight.id} className={`rounded-xl border ${config.border} ${config.bg} p-3.5 space-y-2.5 transition-all ${isPast ? "opacity-75" : ""}`}>
+                    {/* Header row */}
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-[10px] font-semibold bg-muted">
+                          {getInitials(flight.memberName)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold truncate">{flight.memberName}</p>
+                        <div className="flex items-center gap-1">
+                          <DirIcon className={`h-3 w-3 ${config.text}`} />
+                          <span className={`text-[11px] font-medium ${config.text}`}>{config.label}</span>
+                        </div>
+                      </div>
+                      {flight.time && (
+                        <span className="text-[15px] font-bold tabular-nums">{flight.time}</span>
+                      )}
                     </div>
 
-                    {/* Card */}
-                    <div className={`flex-1 rounded-xl border ${config.border} ${config.bg} p-3.5 space-y-2 transition-all`}>
-                      <div className="flex items-center gap-2.5">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-[10px] font-semibold bg-muted">
-                            {getInitials(flight.memberName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold truncate">{flight.memberName}</p>
-                          <div className="flex items-center gap-1">
-                            <DirIcon className={`h-3 w-3 ${config.text}`} />
-                            <span className={`text-[11px] font-medium ${config.text}`}>{config.label}</span>
+                    {/* Route visualization */}
+                    {(flight.departure || flight.destination) && (
+                      <div className="flex items-center gap-2">
+                        {flight.departure && (
+                          <span className="text-[12px] font-semibold bg-background/80 px-2.5 py-1 rounded-lg border shadow-sm">
+                            {flight.departure}
+                          </span>
+                        )}
+                        {flight.departure && flight.destination && (
+                          <div className="flex-1 flex items-center gap-1 min-w-0">
+                            <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
+                            <Plane className={`h-3.5 w-3.5 ${config.text} shrink-0`} />
+                            <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
                           </div>
-                        </div>
-                        {flight.time && (
-                          <span className="text-[13px] font-bold tabular-nums">{flight.time}</span>
+                        )}
+                        {flight.destination && (
+                          <span className="text-[12px] font-semibold bg-background/80 px-2.5 py-1 rounded-lg border shadow-sm">
+                            {flight.destination}
+                          </span>
                         )}
                       </div>
-
-                      {/* Route visualization */}
-                      {(flight.departure || flight.destination) && (
-                        <div className="flex items-center gap-2 px-1">
-                          {flight.departure && (
-                            <span className="text-[12px] font-medium bg-background/80 px-2 py-0.5 rounded-md border">
-                              {flight.departure}
-                            </span>
-                          )}
-                          {flight.departure && flight.destination && (
-                            <div className="flex-1 flex items-center gap-1 min-w-0">
-                              <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
-                              <Plane className={`h-3 w-3 ${config.text} shrink-0`} />
-                              <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
-                            </div>
-                          )}
-                          {flight.destination && (
-                            <span className="text-[12px] font-medium bg-background/80 px-2 py-0.5 rounded-md border">
-                              {flight.destination}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Status badge */}
-                      {flight.status === "past" && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                          ✓ Completed
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-          );
-        })}
-      </div>
+
+            {/* Separator between groups */}
+            {groupIdx < grouped.length - 1 && (
+              <div className="h-px bg-border mt-5" />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
