@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { DateRange } from "react-day-picker";
 import { parseISO } from "date-fns";
 import { ArrowLeft, X, Sparkles } from "lucide-react";
@@ -122,13 +122,8 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
     // Skip to first step that still needs input, or generate directly
     const nextStep = findFirstIncompleteStep(merged as Answers);
     if (nextStep === -1) {
-      // All required info filled — generate directly
-      setAnswers(merged as Answers);
-      // Trigger generation after state update
-      setTimeout(() => {
-        setGenerating(true);
-        setGenError(null);
-      }, 0);
+      // All required info filled — flag for auto-generation
+      pendingGenerate.current = true;
     } else {
       setStep(nextStep);
     }
