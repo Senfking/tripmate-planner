@@ -224,7 +224,22 @@ export function useAttachments(tripId: string) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateType = useMutation({
+    mutationFn: async ({ id, type }: { id: string; type: string }) => {
+      const { error } = await supabase
+        .from("attachments")
+        .update({ type })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Category updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const clearLastExtractedId = () => setLastExtractedId(null);
 
-  return { query, uploadFile, addLink, addManual, deleteAttachment, updateNotes, updatePrivacy, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId };
+  return { query, uploadFile, addLink, addManual, deleteAttachment, updateNotes, updatePrivacy, updateType, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId };
 }

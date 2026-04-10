@@ -15,23 +15,31 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Compass, Car, Shield, HeartPulse, CreditCard, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const FILTERS = [
+const FILTERS: { value: string; label: string; icon?: React.ElementType }[] = [
   { value: "all", label: "All" },
   { value: "mine", label: "Mine" },
-  { value: "flight", label: "Flights" },
-  { value: "hotel", label: "Hotels" },
-  { value: "activity", label: "Activities" },
-  { value: "other", label: "Other" },
+  { value: "flight", label: "Flights", icon: Plane },
+  { value: "hotel", label: "Hotels", icon: Hotel },
+  { value: "activity", label: "Activities", icon: Compass },
+  { value: "transport", label: "Transport", icon: Car },
+  { value: "visa", label: "Visa & Entry", icon: Shield },
+  { value: "insurance", label: "Insurance", icon: HeartPulse },
+  { value: "payment", label: "Payments", icon: CreditCard },
+  { value: "other", label: "Other", icon: File },
 ];
 
 const SECTIONS: { type: string; label: string; icon: React.ElementType }[] = [
   { type: "flight", label: "Flights", icon: Plane },
   { type: "hotel", label: "Hotels", icon: Hotel },
-  { type: "activity", label: "Activities", icon: Activity },
+  { type: "activity", label: "Activities", icon: Compass },
+  { type: "transport", label: "Transport", icon: Car },
+  { type: "visa", label: "Visa & Entry", icon: Shield },
+  { type: "insurance", label: "Insurance", icon: HeartPulse },
+  { type: "payment", label: "Payments", icon: CreditCard },
   { type: "other", label: "Other / Files", icon: File },
 ];
 
@@ -126,6 +134,10 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     { value: "flight", label: "Flight" },
     { value: "hotel", label: "Hotel" },
     { value: "activity", label: "Activity" },
+    { value: "transport", label: "Transport" },
+    { value: "visa", label: "Visa & Entry" },
+    { value: "insurance", label: "Insurance" },
+    { value: "payment", label: "Payment" },
     { value: "other", label: "Other" },
   ];
 
