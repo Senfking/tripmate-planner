@@ -17,6 +17,8 @@ import { StepVibes } from "./StepVibes";
 import { StepPace } from "./StepPace";
 import { StepExtras } from "./StepExtras";
 import { GeneratingScreen } from "./GeneratingScreen";
+import { TripResultsView } from "@/components/trip-results/TripResultsView";
+import type { AITripResult } from "@/components/trip-results/useResultsState";
 
 type Props = {
   tripId: string;
