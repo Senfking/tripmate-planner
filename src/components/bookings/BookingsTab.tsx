@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAttachments, type AttachmentRow } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
 import { AttachmentCard } from "./AttachmentCard";
+import { BookingCrossLinkDrawer, extractBookingFields } from "./BookingCrossLinkDrawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +52,9 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds } = useAttachments(tripId);
+  const { query, uploadFile, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
+  const isMobile = useIsMobile();
+  const [crossLinkAttachment, setCrossLinkAttachment] = useState<AttachmentRow | null>(null);
   const isMobile = useIsMobile();
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
