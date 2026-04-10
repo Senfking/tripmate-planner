@@ -59,6 +59,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [manualNotes, setManualNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -456,19 +457,43 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       {/* Grouped view — Airbnb-style subtle dividers */}
       {isGroupedView && (
         <div className="space-y-1">
-          {groupedSections.map((section, idx) => (
-            <div key={section.type}>
-              {idx > 0 && <div className="h-px bg-border my-3" />}
-              <div className="flex items-center gap-2 py-1.5 px-0.5">
-                <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</span>
-                <span className="text-[11px] text-muted-foreground/60">{section.items.length}</span>
+          {groupedSections.map((section, idx) => {
+            const isCollapsed = collapsedSections.has(section.type);
+            return (
+              <div key={section.type}>
+                {idx > 0 && <div className="h-px bg-border my-3" />}
+                <button
+                  type="button"
+                  onClick={() => setCollapsedSections((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(section.type)) next.delete(section.type);
+                    else next.add(section.type);
+                    return next;
+                  })}
+                  className="flex items-center gap-2 py-1.5 px-0.5 w-full text-left"
+                >
+                  <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</span>
+                  <span className="text-[11px] text-muted-foreground/60">{section.items.length}</span>
+                  <div className="flex-1" />
+                  <ChevronDown className={cn(
+                    "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                    isCollapsed && "-rotate-90"
+                  )} />
+                </button>
+                <div className={cn(
+                  "grid transition-all duration-200 ease-in-out",
+                  isCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]"
+                )}>
+                  <div className="overflow-hidden">
+                    <div className="space-y-2 mt-1">
+                      {section.items.map(renderCard)}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2 mt-1">
-                {section.items.map(renderCard)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
