@@ -49,6 +49,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   const [genError, setGenError] = useState<string | null>(null);
   const [results, setResults] = useState<AITripResult | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
+  const pendingGenerate = useRef(false);
 
   const [answers, setAnswers] = useState<Answers>({
     destination: "",
