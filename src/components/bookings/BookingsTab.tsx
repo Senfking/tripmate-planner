@@ -105,6 +105,16 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const isAdmin = myRole === "owner" || myRole === "admin";
   const attachments = query.data ?? [];
 
+  // Show cross-link drawer when extraction finishes with valid booking data
+  useEffect(() => {
+    if (!lastExtractedId || !attachments.length) return;
+    const att = attachments.find((a) => a.id === lastExtractedId);
+    if (att && extractBookingFields(att)) {
+      setCrossLinkAttachment(att);
+    }
+    clearLastExtractedId();
+  }, [lastExtractedId, attachments]);
+
   const isSearching = search.trim().length > 0;
   const isGroupedView = filter === "all" && !isSearching;
 
