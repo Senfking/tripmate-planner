@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useAttachments, type AttachmentRow } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
 import { AttachmentCard } from "./AttachmentCard";
@@ -13,8 +13,9 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, ChevronDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -58,6 +59,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [manualNotes, setManualNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -405,21 +407,22 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       {/* Filters + search */}
       {attachments.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value)}
-                className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
-                  filter === f.value
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-            <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 overflow-x-auto flex-1 min-w-0 pb-0.5">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setFilter(f.value)}
+                  className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
+                    filter === f.value
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -427,7 +430,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                 if (!searchOpen) setTimeout(() => searchInputRef.current?.focus(), 100);
                 if (searchOpen) setSearch("");
               }}
-              className={`shrink-0 flex items-center justify-center h-6 w-6 rounded-full transition-colors ${
+              className={`shrink-0 flex items-center justify-center h-7 w-7 rounded-full transition-colors ${
                 searchOpen || isSearching
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -454,19 +457,43 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       {/* Grouped view — Airbnb-style subtle dividers */}
       {isGroupedView && (
         <div className="space-y-1">
-          {groupedSections.map((section, idx) => (
-            <div key={section.type}>
-              {idx > 0 && <div className="h-px bg-border my-3" />}
-              <div className="flex items-center gap-2 py-1.5 px-0.5">
-                <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</span>
-                <span className="text-[11px] text-muted-foreground/60">{section.items.length}</span>
+          {groupedSections.map((section, idx) => {
+            const isCollapsed = collapsedSections.has(section.type);
+            return (
+              <div key={section.type}>
+                {idx > 0 && <div className="h-px bg-border my-3" />}
+                <button
+                  type="button"
+                  onClick={() => setCollapsedSections((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(section.type)) next.delete(section.type);
+                    else next.add(section.type);
+                    return next;
+                  })}
+                  className="flex items-center gap-2 py-1.5 px-0.5 w-full text-left"
+                >
+                  <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</span>
+                  <span className="text-[11px] text-muted-foreground/60">{section.items.length}</span>
+                  <div className="flex-1" />
+                  <ChevronDown className={cn(
+                    "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                    isCollapsed && "-rotate-90"
+                  )} />
+                </button>
+                <div className={cn(
+                  "grid transition-all duration-200 ease-in-out",
+                  isCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]"
+                )}>
+                  <div className="overflow-hidden">
+                    <div className="space-y-2 mt-1">
+                      {section.items.map(renderCard)}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2 mt-1">
-                {section.items.map(renderCard)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
