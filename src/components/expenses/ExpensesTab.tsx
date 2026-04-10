@@ -101,6 +101,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       } as ExpenseRow);
+      lastScanWasReceipt.current = true;
       setFormOpen(true);
       toast.success("Receipt scanned - review the details");
     } catch (err: any) {
@@ -643,10 +644,35 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         editingExpense={editingExpense}
         editingSplits={editingSplits}
         onSave={async (data) => {
+          const isReceiptScan = lastScanWasReceipt.current && !data.id;
+          lastScanWasReceipt.current = false;
           if (data.id) {
             await updateExpense.mutateAsync(data as any);
           } else {
-            await addExpense.mutateAsync(data as any);
+            const result = await addExpense.mutateAsync(data as any);
+            // After saving a receipt-scanned expense, offer cross-link if we have title + date
+            if (isReceiptScan && data.title && data.incurred_on) {
+              // Need to get the new expense id - fetch the latest expense matching
+              const { data: latest } = await supabase
+                .from("expenses")
+                .select("id")
+                .eq("trip_id", tripId)
+                .eq("title", data.title)
+                .eq("incurred_on", data.incurred_on)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+              if (latest?.id) {
+                setCrossLinkData({
+                  expenseId: latest.id,
+                  title: data.title,
+                  date: data.incurred_on,
+                  amount: data.amount,
+                  currency: data.currency,
+                  category: data.category,
+                });
+              }
+            }
           }
         }}
       />
