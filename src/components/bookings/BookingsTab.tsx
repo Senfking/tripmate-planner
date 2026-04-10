@@ -61,14 +61,12 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [search, setSearch] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
-  const [isPrivate, setIsPrivate] = useState(false);
 
   const ACCEPT_ALL = ".pdf,.jpg,.jpeg,.png,.webp";
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      Object.defineProperty(file, "__isPrivate", { value: isPrivate });
       uploadFile.mutate(file);
     }
     e.target.value = "";
@@ -77,7 +75,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const handleManualSubmit = () => {
     if (!manualTitle.trim()) return;
     addManual.mutate(
-      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined, is_private: isPrivate },
+      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined },
       {
         onSuccess: () => {
           setShowManualForm(false);
@@ -124,7 +122,8 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
 
   const filtered = useMemo(() => {
     let list = attachments;
-    if (filter !== "all") list = list.filter((a) => a.type === filter);
+    if (filter === "mine") list = list.filter((a) => a.created_by === user?.id);
+    else if (filter !== "all") list = list.filter((a) => a.type === filter);
     if (isSearching) {
       const q = search.toLowerCase();
       list = list.filter(
