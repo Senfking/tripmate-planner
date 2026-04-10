@@ -68,7 +68,9 @@ export function useExpenses(tripId: string) {
   const splitsQuery = useQuery({
     queryKey: ["expense-splits", tripId],
     queryFn: async () => {
-      const expenseIds = expensesQuery.data?.map((e) => e.id) || [];
+      // Read expense IDs from query cache to avoid stale closure
+      const cachedExpenses = qc.getQueryData<ExpenseRow[]>(["expenses", tripId]);
+      const expenseIds = (cachedExpenses ?? expensesQuery.data)?.map((e) => e.id) || [];
       if (expenseIds.length === 0) return [] as SplitRow[];
       const { data, error } = await supabase
         .from("expense_splits")
