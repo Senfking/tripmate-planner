@@ -111,7 +111,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
             onClick={onRegenerate}
             className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Regenerate ✨
+            <RefreshCw className="h-3.5 w-3.5" /> Regenerate
           </Button>
         </div>
         {/* Info pills */}
