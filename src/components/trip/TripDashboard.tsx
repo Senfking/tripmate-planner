@@ -1,13 +1,15 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInCalendarDays, isWithinInterval, parseISO } from "date-fns";
-import { Compass, CalendarDays, Plane, Wallet, Users } from "lucide-react";
+import { Compass, CalendarDays, Plane, Wallet, Users, Sparkles } from "lucide-react";
 import { SectionCard } from "./SectionCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
 import { SharedItemsSection } from "./SharedItemsSection";
 import { ArrivalsCard } from "@/components/bookings/ArrivalsCard";
+import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 
 type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
 
@@ -25,6 +27,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const userId = user?.id;
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
+  const [builderOpen, setBuilderOpen] = useState(false);
 
   const tripEnded = endDate ? new Date(endDate) < new Date(todayStr) : false;
   const endedBadge: BadgeState = { label: "Trip ended", color: "grey" };
@@ -400,6 +403,29 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   return (
     <div className="animate-fade-in-card pb-12">
+      {/* Plan with AI banner */}
+      <div className="px-4 md:max-w-[900px] md:mx-auto md:px-8 mb-3">
+        <button
+          onClick={() => setBuilderOpen(true)}
+          className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all active:scale-[0.98] text-left"
+        >
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
+            <Sparkles className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground text-[14px]">Plan with AI ✨</p>
+            <p className="text-xs text-muted-foreground">Generate a day-by-day itinerary in seconds</p>
+          </div>
+        </button>
+      </div>
+
+      {builderOpen && (
+        <TripBuilderFlow
+          tripId={tripId}
+          onClose={() => setBuilderOpen(false)}
+        />
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 px-4 md:max-w-[900px] md:mx-auto md:px-8">
         <SectionCard
           icon={Compass}

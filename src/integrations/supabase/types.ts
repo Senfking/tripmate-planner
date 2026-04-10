@@ -56,6 +56,66 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_request_log: {
+        Row: {
+          cached: boolean | null
+          cost_usd: number | null
+          created_at: string | null
+          feature: string
+          id: string
+          input_tokens: number | null
+          model: string
+          output_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          cached?: boolean | null
+          cost_usd?: number | null
+          created_at?: string | null
+          feature: string
+          id?: string
+          input_tokens?: number | null
+          model: string
+          output_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          cached?: boolean | null
+          cost_usd?: number | null
+          created_at?: string | null
+          feature?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string
+          output_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_response_cache: {
+        Row: {
+          cache_key: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          response_json: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          response_json: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          response_json?: Json
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string | null
