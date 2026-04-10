@@ -17,6 +17,8 @@ import { StepVibes } from "./StepVibes";
 import { StepPace } from "./StepPace";
 import { StepExtras } from "./StepExtras";
 import { GeneratingScreen } from "./GeneratingScreen";
+import { TripResultsView } from "@/components/trip-results/TripResultsView";
+import type { AITripResult } from "@/components/trip-results/useResultsState";
 
 type Props = {
   tripId: string;
@@ -45,6 +47,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   const [step, setStep] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  const [results, setResults] = useState<AITripResult | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   const [answers, setAnswers] = useState<Answers>({
@@ -136,9 +139,8 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success("Itinerary generated! 🎉");
+      setResults(data as AITripResult);
       onSuccess?.(data);
-      onClose();
     } catch (err: any) {
       setGenError(err?.message || "Failed to generate itinerary. Please try again.");
     } finally {
@@ -170,6 +172,20 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   }, [step, answers]);
 
   const isLastStep = step === TOTAL_STEPS - 1;
+
+  if (results) {
+    return (
+      <TripResultsView
+        tripId={tripId}
+        result={results}
+        onClose={onClose}
+        onRegenerate={() => {
+          setResults(null);
+          handleGenerate();
+        }}
+      />
+    );
+  }
 
   if (generating || genError) {
     return (
