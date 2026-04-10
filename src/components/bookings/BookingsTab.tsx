@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useAttachments, type AttachmentRow } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { AttachmentCard } from "./AttachmentCard";
 import { ArrivalsSection } from "./ArrivalsSection";
 import { BookingCrossLinkDrawer, extractBookingFields } from "./BookingCrossLinkDrawer";
@@ -52,6 +54,25 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
   const { query, uploadFile, addManual, deleteAttachment, updateNotes, updatePrivacy, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
   const isMobile = useIsMobile();
+
+  // Fetch trip destination for flight direction inference
+  const { data: tripDestination } = useQuery({
+    queryKey: ["trip-destination", tripId],
+    queryFn: async () => {
+      // Try trips.destination first
+      const { data: trip } = await supabase.from("trips").select("destination").eq("id", tripId).single();
+      if (trip?.destination) return trip.destination;
+      // Fallback to proposals
+      const { data: proposals } = await supabase
+        .from("trip_proposals")
+        .select("destination")
+        .eq("trip_id", tripId)
+        .order("created_at", { ascending: true })
+        .limit(1);
+      return proposals?.[0]?.destination || null;
+    },
+    enabled: !!user,
+  });
   const [crossLinkAttachment, setCrossLinkAttachment] = useState<AttachmentRow | null>(null);
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
@@ -403,7 +424,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       )}
 
       {/* Arrivals section */}
-      <ArrivalsSection attachments={attachments} />
+      <ArrivalsSection attachments={attachments} tripDestination={tripDestination} />
 
       {/* Filter & search icons */}
       {attachments.length > 0 && (

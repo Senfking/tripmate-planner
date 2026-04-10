@@ -24,14 +24,16 @@ interface FlightEntry {
 interface Props {
   attachments: AttachmentRow[];
   compact?: boolean;
+  tripDestination?: string | null;
 }
 
 function getInitials(name: string): string {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
+function extractFlights(attachments: AttachmentRow[], tripDestination?: string | null): FlightEntry[] {
   const now = new Date();
+  const tripDest = tripDestination?.toLowerCase().trim() || null;
   const entries: FlightEntry[] = [];
 
   for (const att of attachments) {
@@ -59,12 +61,24 @@ function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
     const flightDate = tryParseDate(bd.flight_date, bd.check_in);
     const returnDate = tryParseDate(bd.check_out);
 
-    // Determine direction from booking_data or infer
+    // Determine direction from booking_data, trip destination, or default
     const rawDirection = bd.direction ? String(bd.direction).toLowerCase() : null;
-    const inferredDirection: FlightEntry["direction"] =
-      rawDirection === "return" ? "departure" :
-      rawDirection === "outbound" ? "arrival" :
-      "arrival"; // default; will be overridden below for return-date entries
+    let inferredDirection: FlightEntry["direction"];
+    if (rawDirection === "return") {
+      inferredDirection = "departure";
+    } else if (rawDirection === "outbound") {
+      inferredDirection = "arrival";
+    } else if (tripDest && departure) {
+      // If the flight departs FROM the trip destination → it's a departure flight
+      const depLower = String(departure).toLowerCase();
+      inferredDirection = depLower.includes(tripDest) || tripDest.includes(depLower) ? "departure" : "arrival";
+    } else if (tripDest && destination) {
+      // If the flight arrives AT the trip destination → it's an arrival flight
+      const destLower = String(destination).toLowerCase();
+      inferredDirection = destLower.includes(tripDest) || tripDest.includes(destLower) ? "arrival" : "departure";
+    } else {
+      inferredDirection = "arrival";
+    }
 
     // If we have a flight date, add the outbound entry
     if (flightDate) {
@@ -302,11 +316,11 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
   );
 }
 
-export function ArrivalsSection({ attachments, compact = false }: Props) {
+export function ArrivalsSection({ attachments, compact = false, tripDestination }: Props) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  const flights = useMemo(() => extractFlights(attachments), [attachments]);
+  const flights = useMemo(() => extractFlights(attachments, tripDestination), [attachments, tripDestination]);
 
   const upcomingCount = flights.filter((f) => f.status !== "past").length;
   const todayCount = flights.filter((f) => f.status === "today").length;
