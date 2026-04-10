@@ -294,9 +294,40 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   if (isLoading) {
     return (
       <div className="space-y-4">
+        {/* Hero card skeleton — uses the real teal gradient with translucent placeholders */}
+        <div
+          className="relative overflow-hidden py-6 text-center mx-0"
+          style={{
+            background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
+            borderRadius: 20,
+            boxShadow: "0 6px 20px rgba(13,148,136,0.20)",
+          }}
+        >
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="h-2.5 w-16 rounded bg-white/20 animate-pulse" />
+            <div className="h-9 w-48 rounded-lg bg-white/15 mt-1 animate-pulse" />
+            <div className="h-5 w-24 rounded-full bg-white/10 mt-1 animate-pulse" />
+            <div className="h-8 w-24 rounded-lg bg-white/15 mt-2 animate-pulse" />
+            <div className="flex justify-center gap-3 mt-3">
+              <div className="bg-white/10 rounded-xl w-[120px] h-[52px] animate-pulse" />
+              <div className="bg-white/10 rounded-xl w-[120px] h-[52px] animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        {/* Balances row skeleton */}
+        <div className="flex items-center justify-between px-1 py-1.5">
+          <div className="flex items-center gap-1.5">
+            <Skeleton className="h-3.5 w-3.5" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+          <Skeleton className="h-3 w-24" />
+        </div>
+
         {/* Add Expense button skeleton */}
         <Skeleton className="h-12 w-full rounded-2xl" />
-        {/* Expenses list card skeleton */}
+
+        {/* Expense list card skeleton */}
         <div
           className="rounded-2xl overflow-hidden"
           style={{
@@ -307,24 +338,24 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
           }}
         >
-          {/* Header skeleton */}
           <div className="px-4 py-3 flex items-center justify-between">
             <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-3 w-32" />
           </div>
-          {/* Date group header */}
           <div style={{ background: "rgba(0,0,0,0.02)", padding: "6px 16px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
             <Skeleton className="h-2.5 w-20" />
           </div>
-          {/* Expense row skeletons */}
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
               <Skeleton className="h-9 w-9 rounded-full shrink-0" />
               <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-3.5 w-2/3" />
-                <Skeleton className="h-2.5 w-1/3" />
+                <Skeleton className="h-3.5 w-3/5" />
+                <Skeleton className="h-2.5 w-2/5" />
               </div>
-              <Skeleton className="h-3.5 w-14" />
+              <div className="space-y-1.5 text-right">
+                <Skeleton className="h-2.5 w-14 ml-auto" />
+                <Skeleton className="h-3.5 w-24 ml-auto" />
+              </div>
             </div>
           ))}
         </div>
@@ -641,16 +672,22 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           <div>
             <div className="px-4 py-3 flex items-center justify-between">
               <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <div style={{ background: "rgba(0,0,0,0.02)", padding: "6px 16px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+              <Skeleton className="h-2.5 w-20" />
             </div>
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                 <Skeleton className="h-9 w-9 rounded-full shrink-0" />
                 <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-3.5 w-2/3" />
-                  <Skeleton className="h-2.5 w-1/3" />
+                  <Skeleton className="h-3.5 w-3/5" />
+                  <Skeleton className="h-2.5 w-2/5" />
                 </div>
-                <Skeleton className="h-3.5 w-14" />
+                <div className="space-y-1.5 text-right">
+                  <Skeleton className="h-2.5 w-14 ml-auto" />
+                  <Skeleton className="h-3.5 w-24 ml-auto" />
+                </div>
               </div>
             ))}
           </div>
