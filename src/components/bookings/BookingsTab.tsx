@@ -49,7 +49,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
+  const { query, uploadFile, addManual, deleteAttachment, updateNotes, updatePrivacy, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
   const isMobile = useIsMobile();
   const [crossLinkAttachment, setCrossLinkAttachment] = useState<AttachmentRow | null>(null);
   const [showManualForm, setShowManualForm] = useState(false);
@@ -167,6 +167,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       onDelete={() => deleteAttachment.mutate(a)}
       onUploadPrompt={() => galleryInputRef.current?.click()}
       onUpdateNotes={(id, notes) => updateNotes.mutate({ id, notes })}
+      onTogglePrivacy={(id, isPriv) => updatePrivacy.mutate({ id, is_private: isPriv })}
       getSignedUrl={getSignedUrl}
     />
   );
@@ -193,6 +194,16 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         <Label className="text-xs">Notes (optional)</Label>
         <Textarea value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} rows={3} placeholder="Confirmation #, dates, details…" className="text-sm" />
       </div>
+      <div className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+          <div>
+            <p className="text-[13px] font-medium">Private</p>
+            <p className="text-[11px] text-muted-foreground">Only visible to you</p>
+          </div>
+        </div>
+        <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+      </div>
       <Button onClick={handleManualSubmit} disabled={!manualTitle.trim() || addManual.isPending} className="w-full">
         {addManual.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
         Add Booking
@@ -216,14 +227,14 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     </Dialog>
   );
 
-  /* ── Compact upload bar ── */
+  /* ── Upload bar ── */
   const uploadBar = (
     <>
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
       <input ref={galleryInputRef} type="file" accept={ACCEPT_ALL} className="hidden" onChange={handleFile} />
 
       {uploadFile.isPending ? (
-        <div className="flex items-center justify-center gap-2 py-4 rounded-xl border bg-card text-[13px] font-medium text-[#0D9488]">
+        <div className="flex items-center justify-center gap-2.5 py-4 rounded-xl border-2 border-[#0D9488]/20 bg-[#0D9488]/[0.04] text-[13px] font-medium text-[#0D9488]">
           <Loader2 className="h-4 w-4 animate-spin" />
           Junto AI is processing…
         </div>
@@ -232,39 +243,48 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
           <button
             type="button"
             onClick={() => galleryInputRef.current?.click()}
-            className="w-full flex items-center gap-3 rounded-xl border bg-card px-4 py-3.5 text-left transition-colors hover:bg-accent/50 active:scale-[0.98]"
+            className="w-full flex items-center gap-3 rounded-xl border-2 border-[#0D9488]/20 bg-[#0D9488]/[0.04] px-4 py-3.5 text-left transition-colors hover:bg-[#0D9488]/[0.08] active:scale-[0.98]"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0D9488]/10">
-              <Upload className="h-4 w-4 text-[#0D9488]" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0D9488]/15">
+              <Sparkles className="h-5 w-5 text-[#0D9488]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-foreground">Upload confirmation</p>
-              <p className="text-[11px] text-muted-foreground">Junto AI will extract the details</p>
+              <p className="text-[13px] font-semibold text-foreground">Upload confirmation</p>
+              <p className="text-[12px] text-[#0D9488] font-medium">✦ Junto AI extracts details automatically</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <Lock className="h-3 w-3 text-muted-foreground" />
-                      <Switch checked={isPrivate} onCheckedChange={setIsPrivate} className="scale-75" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs max-w-[180px]">
-                    Only you can see private documents
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <Upload className="h-4 w-4 text-[#0D9488] shrink-0" />
           </button>
 
-          <button
-            type="button"
-            onClick={openManualForm}
-            className="w-full text-center text-[12px] text-muted-foreground hover:text-foreground transition-colors py-1"
-          >
-            or <span className="underline">add details manually</span>
-          </button>
+          <div className="flex items-center justify-between px-1">
+            <button
+              type="button"
+              onClick={openManualForm}
+              className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              or <span className="underline">add manually</span>
+            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivate((p) => !p)}
+                    className={`flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-full transition-colors ${
+                      isPrivate
+                        ? "bg-amber-100 text-amber-700"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Lock className="h-3 w-3" />
+                    {isPrivate ? "Private mode on" : "Private"}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs max-w-[180px]">
+                  {isPrivate ? "Uploads will only be visible to you" : "Tap to make next upload private"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       )}
     </>

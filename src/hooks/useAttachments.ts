@@ -209,7 +209,22 @@ export function useAttachments(tripId: string) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updatePrivacy = useMutation({
+    mutationFn: async ({ id, is_private }: { id: string; is_private: boolean }) => {
+      const { error } = await supabase
+        .from("attachments")
+        .update({ is_private })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success(vars.is_private ? "Set to private" : "Set to shared");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const clearLastExtractedId = () => setLastExtractedId(null);
 
-  return { query, uploadFile, addLink, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId };
+  return { query, uploadFile, addLink, addManual, deleteAttachment, updateNotes, updatePrivacy, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId };
 }
