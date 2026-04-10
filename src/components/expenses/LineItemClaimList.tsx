@@ -54,18 +54,7 @@ export function LineItemClaimList({
     [claimsByItemId, lineItems, members, totalAmount],
   );
 
-  const perPersonTotals = useMemo(() => {
-    // If we have stored splits and no claims, use the stored splits as they reflect
-    // the actual assignments made during creation
-    if (storedSplits && storedSplits.length > 0 && !hasClaims) {
-      const map: Record<string, number> = {};
-      for (const s of storedSplits) {
-        map[s.user_id] = s.share_amount;
-      }
-      return map;
-    }
-    return calculatedTotals;
-  }, [storedSplits, hasClaims, calculatedTotals]);
+  const perPersonTotals = calculatedTotals;
 
   const COLLAPSED_COUNT = 4;
   const visibleItems = showAll ? claimableItems : claimableItems.slice(0, COLLAPSED_COUNT);
