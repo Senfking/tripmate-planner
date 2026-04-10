@@ -1,13 +1,15 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInCalendarDays, isWithinInterval, parseISO } from "date-fns";
-import { Compass, CalendarDays, Plane, Wallet, Users } from "lucide-react";
+import { Compass, CalendarDays, Plane, Wallet, Users, Sparkles } from "lucide-react";
 import { SectionCard } from "./SectionCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
 import { SharedItemsSection } from "./SharedItemsSection";
 import { ArrivalsCard } from "@/components/bookings/ArrivalsCard";
+import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 
 type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
 
@@ -25,6 +27,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const userId = user?.id;
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
+  const [builderOpen, setBuilderOpen] = useState(false);
 
   const tripEnded = endDate ? new Date(endDate) < new Date(todayStr) : false;
   const endedBadge: BadgeState = { label: "Trip ended", color: "grey" };
