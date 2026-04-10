@@ -47,7 +47,7 @@ const STATUS_STYLES = {
 export function ArrivalsSection({ attachments, compact = false }: Props) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const arrivals = useMemo(() => {
+  const arrivals = useMemo<ArrivalEntry[]>(() => {
     const now = new Date();
     const entries: ArrivalEntry[] = [];
 
