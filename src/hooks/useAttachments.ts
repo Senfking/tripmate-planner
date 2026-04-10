@@ -176,13 +176,14 @@ export function useAttachments(tripId: string) {
   };
 
   const addManual = useMutation({
-    mutationFn: async (params: { title: string; type: string; notes?: string }) => {
+    mutationFn: async (params: { title: string; type: string; notes?: string; is_private?: boolean }) => {
       const { error } = await supabase.from("attachments").insert({
         trip_id: tripId,
         title: params.title,
         type: params.type,
         notes: params.notes || null,
         created_by: user!.id,
+        is_private: params.is_private ?? false,
       });
       if (error) throw error;
     },
