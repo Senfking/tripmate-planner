@@ -2,12 +2,13 @@ import { useMemo } from "react";
 import { MemberProfile } from "@/hooks/useExpenses";
 import { LineItemRow, ClaimRow } from "@/hooks/useLineItemClaims";
 import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { calculateLineItemTotals } from "@/lib/expenseLineItems";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/settlementCalc";
-import { Hand, Link2 } from "lucide-react";
+import { Hand, Link2, ChevronDown } from "lucide-react";
+import { useState } from "react";
 
 interface Props {
   lineItems: LineItemRow[];
@@ -19,10 +20,15 @@ interface Props {
   isToggling: boolean;
 }
 
+function getInitials(name: string) {
+  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
 export function LineItemClaimList({
   lineItems, claims, members, currency, totalAmount, onToggleClaim, isToggling,
 }: Props) {
   const { user } = useAuth();
+  const [showAll, setShowAll] = useState(false);
 
   const claimableItems = useMemo(() => lineItems.filter((li) => !li.is_shared), [lineItems]);
   const sharedItems = useMemo(() => lineItems.filter((li) => li.is_shared), [lineItems]);
@@ -44,6 +50,10 @@ export function LineItemClaimList({
     [claimsByItemId, lineItems, members, totalAmount],
   );
 
+  const COLLAPSED_COUNT = 4;
+  const visibleItems = showAll ? claimableItems : claimableItems.slice(0, COLLAPSED_COUNT);
+  const hiddenCount = claimableItems.length - COLLAPSED_COUNT;
+
   return (
     <div className="space-y-3">
       {/* Claimable items */}
@@ -52,111 +62,86 @@ export function LineItemClaimList({
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">
             Claim your items
           </p>
-          <div className="space-y-2">
-            {claimableItems.map((item) => {
+          <div className="space-y-1.5">
+            {visibleItems.map((item) => {
               const itemClaims = claimsByItemId.get(item.id) ?? [];
               const isClaimed = itemClaims.some((c) => c.user_id === user?.id);
 
               return (
-                <div key={item.id} className="rounded-lg border border-border/60 p-2.5 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium truncate">{item.name}</p>
-                      {item.quantity > 1 && (
-                        <p className="text-[11px] text-muted-foreground">
-                          {item.quantity}× {item.unit_price?.toFixed(2)}
-                        </p>
-                      )}
+                <div key={item.id} className="flex items-center gap-2.5 rounded-lg border border-border/60 px-2.5 py-2">
+                  {/* Mine button */}
+                  <button
+                    type="button"
+                    disabled={isToggling}
+                    onClick={() => onToggleClaim(item.id)}
+                    className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all border",
+                      isClaimed
+                        ? "bg-primary/15 text-primary border-primary/30"
+                        : "bg-muted text-muted-foreground border-border hover:border-primary/30 hover:text-primary"
+                    )}
+                  >
+                    {isClaimed ? "✓ Mine" : "Mine"}
+                  </button>
+
+                  {/* Item info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium truncate">{item.name}</p>
+                  </div>
+
+                  {/* Price */}
+                  <span className="text-[12px] font-semibold tabular-nums shrink-0">
+                    {formatCurrency(item.total_price, currency)}
+                  </span>
+
+                  {/* Claimed avatars */}
+                  {itemClaims.length > 0 && (
+                    <div className="flex -space-x-1.5 shrink-0">
+                      {itemClaims.map((claim) => {
+                        const member = members.find((m) => m.userId === claim.user_id);
+                        return (
+                          <Avatar key={claim.id} className="h-5 w-5 border-2 border-background">
+                            {member?.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.displayName} />}
+                            <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
+                              {getInitials(member?.displayName || "?")}
+                            </AvatarFallback>
+                          </Avatar>
+                        );
+                      })}
                     </div>
-                    <span className="text-[13px] font-semibold tabular-nums shrink-0">
-                      {formatCurrency(item.total_price, currency)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={isToggling}
-                      onClick={() => onToggleClaim(item.id)}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all",
-                        isClaimed
-                          ? "bg-primary/15 text-primary border border-primary/30"
-                          : "bg-muted text-muted-foreground border border-border hover:border-primary/30 hover:text-primary"
-                      )}
-                    >
-                      <Hand className="h-3 w-3" />
-                      {isClaimed ? "Mine ✓" : "Mine"}
-                    </button>
-
-                    {itemClaims.length > 0 && (
-                      <div className="flex -space-x-1.5">
-                        {itemClaims.map((claim) => {
-                          const member = members.find((m) => m.userId === claim.user_id);
-                          const initials = (member?.displayName || "?")
-                            .split(" ")
-                            .map((w) => w[0])
-                            .join("")
-                            .slice(0, 2)
-                            .toUpperCase();
-                          return (
-                            <Avatar key={claim.id} className="h-5 w-5 border border-background">
-                              <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
-                                {initials}
-                              </AvatarFallback>
-                            </Avatar>
-                          );
-                        })}
-                        {itemClaims.length > 1 && (
-                          <span className="text-[10px] text-muted-foreground ml-2">
-                            {formatCurrency(item.total_price / itemClaims.length, currency)} each
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {itemClaims.length === 0 && (
-                      <span className="text-[10px] text-muted-foreground">
-                        Split equally if unclaimed
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
               );
             })}
           </div>
+
+          {/* Show more/less toggle */}
+          {claimableItems.length > COLLAPSED_COUNT && (
+            <button
+              type="button"
+              onClick={() => setShowAll(!showAll)}
+              className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline w-full justify-center py-1"
+            >
+              <ChevronDown className={cn("h-3 w-3 transition-transform", showAll && "rotate-180")} />
+              {showAll ? "Show less" : `Show ${hiddenCount} more items`}
+            </button>
+          )}
         </>
       )}
 
       {/* Shared costs */}
       {Math.abs(sharedTotal) > 0.005 && (
-        <>
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mt-2">
-            Shared costs - split automatically
-          </p>
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5 space-y-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                <p className="text-[13px] font-medium truncate">Taxes, service, and receipt adjustments</p>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Auto</Badge>
-                <span className="text-[13px] font-semibold tabular-nums">
-                  {formatCurrency(sharedTotal, currency)}
-                </span>
-              </div>
+        <div className="rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+              <p className="text-[12px] font-medium truncate">Taxes & service (auto-split)</p>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Split pro rata based on each person&apos;s ordered items.
-            </p>
-            {sharedItems.length > 0 && (
-              <p className="text-[10px] text-muted-foreground truncate">
-                Includes: {sharedItems.map((item) => item.name).join(", ")}
-              </p>
-            )}
+            <span className="text-[12px] font-semibold tabular-nums shrink-0">
+              {formatCurrency(sharedTotal, currency)}
+            </span>
           </div>
-        </>
+        </div>
       )}
 
       {/* Per-person summary */}
@@ -168,11 +153,19 @@ export function LineItemClaimList({
           const total = perPersonTotals[m.userId] || 0;
           if (total < 0.005) return null;
           return (
-            <div key={m.userId} className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">
-                {m.displayName}{m.userId === user?.id ? " (You)" : ""}
-              </span>
-              <span className="font-medium tabular-nums">
+            <div key={m.userId} className="flex items-center justify-between text-xs gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Avatar className="h-4 w-4">
+                  {m.avatarUrl && <AvatarImage src={m.avatarUrl} alt={m.displayName} />}
+                  <AvatarFallback className="text-[7px] bg-primary/10 text-primary">
+                    {getInitials(m.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-muted-foreground truncate">
+                  {m.displayName}{m.userId === user?.id ? " (You)" : ""}
+                </span>
+              </div>
+              <span className="font-medium tabular-nums shrink-0">
                 {formatCurrency(total, currency)}
               </span>
             </div>

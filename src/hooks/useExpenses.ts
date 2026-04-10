@@ -32,6 +32,7 @@ export interface SplitRow {
 export interface MemberProfile {
   userId: string;
   displayName: string;
+  avatarUrl: string | null;
   role: string;
   attendanceStatus: string;
 }
@@ -97,12 +98,13 @@ export function useExpenses(tripId: string) {
       if (pErr) throw pErr;
 
       const profileMap = Object.fromEntries(
-        (profiles || []).map((p) => [p.id, p.display_name || "Member"])
+        (profiles || []).map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url }])
       );
 
       return data.map((m) => ({
         userId: m.user_id,
-        displayName: profileMap[m.user_id] || "Member",
+        displayName: profileMap[m.user_id]?.name || "Member",
+        avatarUrl: profileMap[m.user_id]?.avatar || null,
         role: m.role,
         attendanceStatus: (m as any).attendance_status ?? "pending",
       })) as MemberProfile[];
@@ -311,8 +313,9 @@ export function useExpenses(tripId: string) {
       receipt_image_path?: string | null;
       splits: { user_id: string; share_amount: number }[];
       lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
+      itemAssignments?: Record<number, Set<string> | string[]>;
     }) => {
-      const { splits, lineItems, ...expenseData } = params;
+      const { splits, lineItems, itemAssignments, ...expenseData } = params;
       const { data: expense, error } = await supabase
         .from("expenses")
         .insert({ ...expenseData, trip_id: tripId } as any)
@@ -328,15 +331,15 @@ export function useExpenses(tripId: string) {
       const { error: sErr } = await supabase.from("expense_splits").insert(splitRows);
       if (sErr) throw sErr;
 
-      // Save line items if using "Split by item" mode
+      // Save line items + claims if using "Split by item" mode
       if (lineItems && lineItems.length > 0) {
-        await saveLineItems(expense.id, lineItems);
+        await saveLineItems(expense.id, lineItems, itemAssignments);
       }
     },
-    onSuccess: (_data, params) => {
+    onSuccess: async (_data, params) => {
       trackEvent("expense_created", { trip_id: tripId, currency: params.currency, category: params.category }, user?.id);
-      qc.invalidateQueries({ queryKey: ["expenses", tripId] });
-      qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      await qc.invalidateQueries({ queryKey: ["expenses", tripId] });
+      await qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
       qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense added");

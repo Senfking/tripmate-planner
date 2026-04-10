@@ -56,6 +56,7 @@ interface Props {
     receipt_image_path?: string | null;
     splits: { user_id: string; share_amount: number }[];
     lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
+    itemAssignments?: Record<number, Set<string>>;
   }) => Promise<void> | void;
 }
 
@@ -488,6 +489,7 @@ export function ExpenseFormModal({
         receipt_image_path: receiptPath,
         splits: computedSplits,
         lineItems: splitMode === "byItem" && scannedLineItems.length > 0 ? scannedLineItems : undefined,
+        itemAssignments: splitMode === "byItem" && Object.keys(itemAssignments).length > 0 ? itemAssignments : undefined,
       }));
 
       clearDraft();

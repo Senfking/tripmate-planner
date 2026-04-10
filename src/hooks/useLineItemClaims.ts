@@ -93,7 +93,8 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
  */
 export async function saveLineItems(
   expenseId: string,
-  items: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[]
+  items: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[],
+  assignments?: Record<number, Set<string> | string[]>,
 ) {
   if (items.length === 0) return;
   const rows = items.map((item) => ({
@@ -104,6 +105,29 @@ export async function saveLineItems(
     total_price: item.total_price,
     is_shared: item.is_shared ?? isSharedCostItem(item.name),
   }));
-  const { error } = await supabase.from("expense_line_items").insert(rows as any);
+  const { data: inserted, error } = await supabase
+    .from("expense_line_items")
+    .insert(rows as any)
+    .select("id");
   if (error) throw error;
+
+  // Save claims from assignments made during creation
+  if (assignments && inserted) {
+    const claimRows: { line_item_id: string; user_id: string }[] = [];
+    for (const [indexStr, userIds] of Object.entries(assignments)) {
+      const idx = Number(indexStr);
+      const lineItemId = inserted[idx]?.id;
+      if (!lineItemId) continue;
+      const ids = userIds instanceof Set ? Array.from(userIds) : userIds;
+      for (const userId of ids) {
+        claimRows.push({ line_item_id: lineItemId, user_id: userId });
+      }
+    }
+    if (claimRows.length > 0) {
+      const { error: claimErr } = await supabase
+        .from("expense_line_item_claims")
+        .insert(claimRows as any);
+      if (claimErr) throw claimErr;
+    }
+  }
 }
