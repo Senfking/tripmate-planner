@@ -1,7 +1,8 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Plus, MapPin } from "lucide-react";
+import { Plus, MapPin, Receipt, X } from "lucide-react";
+import { detectCost, costPromptKey, type DetectedCost } from "@/lib/detectCost";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
