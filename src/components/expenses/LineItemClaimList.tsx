@@ -25,7 +25,7 @@ function getInitials(name: string) {
 }
 
 export function LineItemClaimList({
-  lineItems, claims, members, currency, totalAmount, onToggleClaim, isToggling, storedSplits,
+  lineItems, claims, members, currency, totalAmount, onToggleClaim, isToggling,
 }: Props) {
   const { user } = useAuth();
   const [showAll, setShowAll] = useState(false);
