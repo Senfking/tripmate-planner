@@ -617,8 +617,8 @@ Generate the itinerary JSON for these days only. Use day_number starting from ${
 
       // Run both API calls in parallel
       const [firstResult, secondResult] = await Promise.all([
-        callAnthropicApi(anthropicKey, systemPrompt, firstHalfPrompt, 8000),
-        callAnthropicApi(anthropicKey, systemPrompt, secondHalfPrompt, 8000),
+        callAnthropicApi(anthropicKey, systemPrompt, firstHalfPrompt, 12000),
+        callAnthropicApi(anthropicKey, systemPrompt, secondHalfPrompt, 12000),
       ]);
 
       totalInputTokens = firstResult.inputTokens + secondResult.inputTokens;
