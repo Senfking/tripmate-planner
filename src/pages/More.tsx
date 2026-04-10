@@ -751,7 +751,7 @@ const More = () => {
         <CardContent className="p-4 flex items-center justify-around">
           <div className="text-center">
             <p className="text-lg font-bold text-foreground">{tripCount}</p>
-            <p className="text-xs text-muted-foreground">✈️ Trips</p>
+            <p className="text-xs text-muted-foreground">Trips</p>
           </div>
           <div className="h-8 w-px bg-border" />
           <div className="text-center">

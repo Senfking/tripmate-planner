@@ -116,10 +116,10 @@ export function ItemFormModal({ open, onOpenChange, onSave, saving, dayDate, ite
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="idea">💡 Idea</SelectItem>
-            <SelectItem value="planned">📋 Planned</SelectItem>
-            <SelectItem value="booked">🎫 Booked</SelectItem>
-            <SelectItem value="confirmed">✅ Confirmed</SelectItem>
+            <SelectItem value="idea">Idea</SelectItem>
+            <SelectItem value="planned">Planned</SelectItem>
+            <SelectItem value="booked">Booked</SelectItem>
+            <SelectItem value="confirmed">Confirmed</SelectItem>
           </SelectContent>
         </Select>
       </div>

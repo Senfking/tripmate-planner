@@ -303,7 +303,7 @@ export function AttendanceInviteOverlay({
 
                 {/* Main message */}
                 <div className="text-center mt-5" style={{ animation: "fade-up 0.5s ease 0.3s both" }}>
-                  <p className="text-2xl font-bold text-foreground">You're in! 🎉</p>
+                  <p className="text-2xl font-bold text-foreground">You're in!</p>
                   <p className="text-[14px] text-muted-foreground mt-2">
                     Get ready - this is going to be epic.
                   </p>
@@ -314,7 +314,7 @@ export function AttendanceInviteOverlay({
                   className="mt-6 px-4 py-2 rounded-full bg-[#0D9488]/10 text-[#0D9488] text-[13px] font-semibold"
                   style={{ animation: "fade-up 0.5s ease 0.5s both" }}
                 >
-                  ✈️ {tripName}
+                  {tripName}
                 </div>
               </div>
             ) : (
