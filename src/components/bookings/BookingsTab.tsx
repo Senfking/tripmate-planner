@@ -477,19 +477,23 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
           </div>
           {filtersOpen && (
             <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
-              {FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setFilter(f.value)}
-                  className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
-                    filter === f.value
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
+              {FILTERS.map((f) => {
+                const FIcon = f.icon;
+                return (
+                  <button
+                    key={f.value}
+                    onClick={() => setFilter(f.value)}
+                    className={`shrink-0 flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
+                      filter === f.value
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {FIcon && <FIcon className="h-3 w-3" />}
+                    {f.label}
+                  </button>
+                );
+              })}
             </div>
           )}
           {searchOpen && (

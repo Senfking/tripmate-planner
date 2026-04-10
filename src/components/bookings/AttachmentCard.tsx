@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info, WifiOff, Lock, MoreHorizontal } from "lucide-react";
+import { Plane, Hotel, Compass, Car, Shield, HeartPulse, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info, WifiOff, Lock, MoreHorizontal, RefreshCw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO, isValid, isBefore } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { saveDocument, getDocument, listCachedPaths } from "@/lib/offlineDocuments";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -24,18 +24,37 @@ import type { AttachmentRow } from "@/hooks/useAttachments";
 const TYPE_ICONS: Record<string, React.ElementType> = {
   flight: Plane,
   hotel: Hotel,
-  activity: Activity,
+  activity: Compass,
+  transport: Car,
+  visa: Shield,
+  insurance: HeartPulse,
+  payment: CreditCard,
   link: Link2,
   other: File,
 };
 
 const TYPE_ICON_COLORS: Record<string, string> = {
-  flight: "bg-blue-50 text-blue-600",
-  hotel: "bg-amber-50 text-amber-600",
-  activity: "bg-green-50 text-green-600",
-  link: "bg-teal-50 text-teal-600",
-  other: "bg-slate-100 text-slate-500",
+  flight: "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400",
+  hotel: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400",
+  activity: "bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400",
+  transport: "bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400",
+  visa: "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400",
+  insurance: "bg-pink-50 text-pink-600 dark:bg-pink-950/40 dark:text-pink-400",
+  payment: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400",
+  link: "bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400",
+  other: "bg-slate-100 text-slate-500 dark:bg-slate-800/40 dark:text-slate-400",
 };
+
+const ALL_TYPES = [
+  { value: "flight", label: "Flight" },
+  { value: "hotel", label: "Hotel" },
+  { value: "activity", label: "Activity" },
+  { value: "transport", label: "Transport" },
+  { value: "visa", label: "Visa & Entry" },
+  { value: "insurance", label: "Insurance" },
+  { value: "payment", label: "Payment" },
+  { value: "other", label: "Other" },
+];
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif)$/i;
 const PDF_EXTENSION = /\.pdf$/i;
@@ -62,6 +81,7 @@ interface Props {
   onUploadPrompt?: () => void;
   onUpdateNotes?: (id: string, notes: string) => void;
   onTogglePrivacy?: (id: string, isPrivate: boolean) => void;
+  onChangeType?: (id: string, type: string) => void;
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
