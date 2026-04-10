@@ -7,6 +7,7 @@ import { SectionCard } from "./SectionCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
 import { SharedItemsSection } from "./SharedItemsSection";
+import { ArrivalsCard } from "@/components/bookings/ArrivalsCard";
 
 type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
 
