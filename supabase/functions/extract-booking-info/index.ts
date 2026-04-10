@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
   "title": "short descriptive title e.g. Ryanair FR1234 or Park Hyatt Bangkok",
   "provider": "airline or hotel name",
   "booking_reference": "confirmation code",
-  "flight_date": "YYYY-MM-DD date of the flight (for flights only, null otherwise)",
+  "flight_date": "YYYY-MM-DD — the actual calendar date of the flight. CRITICAL: This is the most important field for flights. Look for departure date, travel date, flight date anywhere in the document. This must be a real date like 2025-07-15, NOT null if any date appears in the document.",
   "check_in": "YYYY-MM-DD date string or null",
   "check_out": "YYYY-MM-DD date string or null",
   "departure": "airport code or city or null",
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
   "total_price": "price with currency or null",
   "notes": "SHORT summary (max 2-3 lines) of other important details — e.g. baggage allowance, room type, cancellation policy, meal plan, special instructions, total price breakdown. Only the most useful info. null if nothing noteworthy."
 }
-For flights: always try to extract the flight_date in YYYY-MM-DD format. Use check_in for the outbound flight date if no separate field exists. Use check_out for a return flight date.
+IMPORTANT for flights: The flight_date field is critical and must NEVER be null if there is any date visible in the document. Search the entire document for dates — headers, footers, itinerary sections, booking details. Also set check_in to the same date for flights. If there's a return flight date, set check_out to that date.
 Return only valid JSON, no other text.`;
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
