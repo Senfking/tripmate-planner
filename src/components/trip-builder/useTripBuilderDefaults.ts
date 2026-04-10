@@ -215,7 +215,7 @@ export function useTripBuilderDefaults(tripId: string | undefined): TripBuilderD
         vibes.push(mapped);
       }
     }
-    if (vibes.length > 0) vibeSource = "✨ From your Vibe Board";
+    if (vibes.length > 0) vibeSource = "From your Vibe Board";
 
     // budget
     const budgetResponses = vibeAgg.data.filter((a: any) => a.question_key === "budget");
@@ -224,7 +224,7 @@ export function useTripBuilderDefaults(tripId: string | undefined): TripBuilderD
       const mappedBudget = BUDGET_MAP[topBudget.answer_value];
       if (mappedBudget) {
         budgetLevel = mappedBudget;
-        budgetSource = "✨ From your Vibe Board";
+        budgetSource = "From your Vibe Board";
       }
     }
 
@@ -235,7 +235,7 @@ export function useTripBuilderDefaults(tripId: string | undefined): TripBuilderD
       const mappedPace = PACE_MAP[topEnergy.answer_value];
       if (mappedPace) {
         pace = mappedPace;
-        paceSource = "✨ From your Vibe Board";
+        paceSource = "From your Vibe Board";
       }
     }
   }

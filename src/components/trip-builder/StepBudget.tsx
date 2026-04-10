@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils";
+import { Wallet, CreditCard, Gem } from "lucide-react";
 import type { BudgetLevel } from "./useTripBuilderDefaults";
+import type { LucideIcon } from "lucide-react";
 
 type Props = {
   value: BudgetLevel;
@@ -7,10 +9,10 @@ type Props = {
   onChange: (v: BudgetLevel) => void;
 };
 
-const OPTIONS: { key: BudgetLevel; emoji: string; label: string; desc: string }[] = [
-  { key: "budget", emoji: "💰", label: "Budget", desc: "Street food, hostels, local transport" },
-  { key: "mid-range", emoji: "💳", label: "Mid-range", desc: "Nice restaurants, 3-star hotels, mix of transport" },
-  { key: "premium", emoji: "💎", label: "Premium", desc: "Fine dining, luxury stays, private transfers" },
+const OPTIONS: { key: BudgetLevel; icon: LucideIcon; label: string; desc: string }[] = [
+  { key: "budget", icon: Wallet, label: "Budget", desc: "Street food, hostels, local transport" },
+  { key: "mid-range", icon: CreditCard, label: "Mid-range", desc: "Nice restaurants, 3-star hotels, mix of transport" },
+  { key: "premium", icon: Gem, label: "Premium", desc: "Fine dining, luxury stays, private transfers" },
 ];
 
 export function StepBudget({ value, source, onChange }: Props) {
@@ -37,7 +39,7 @@ export function StepBudget({ value, source, onChange }: Props) {
               )}
               style={selected ? { background: "var(--gradient-primary)" } : undefined}
             >
-              <span className="text-3xl">{opt.emoji}</span>
+              <opt.icon className={cn("h-7 w-7", selected ? "text-primary-foreground" : "text-primary")} />
               <div>
                 <p className={cn("font-semibold text-[15px]", selected ? "text-primary-foreground" : "text-foreground")}>{opt.label}</p>
                 <p className={cn("text-sm mt-0.5", selected ? "text-primary-foreground/70" : "text-muted-foreground")}>{opt.desc}</p>
