@@ -1,0 +1,3 @@
+ALTER TABLE attachments DROP CONSTRAINT attachments_type_check;
+ALTER TABLE attachments ADD CONSTRAINT attachments_type_check CHECK (type = ANY (ARRAY['flight','hotel','activity','transport','visa','insurance','payment','other','link']));
+UPDATE attachments SET type = 'visa' WHERE id IN ('fb07c190-cb85-4f60-876a-87bb802828b3', '4fe9d673-5cad-4e0e-9c09-b0e2602d898e', 'b0341fd0-7876-43e3-ae00-99aef39fccc1');
