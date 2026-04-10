@@ -218,6 +218,24 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
 
   const compactBookingSummary = buildCompactSummary(attachment.type, booking);
 
+  // Visa validity badge
+  const visaBadge = (() => {
+    if (attachment.type !== "visa" || !booking) return null;
+    const expiry = booking.check_out || booking.expiry_date || booking.valid_until;
+    if (!expiry || typeof expiry !== "string") {
+      const passengerNames = Array.isArray(booking.passenger_names) ? booking.passenger_names.join(", ") : null;
+      return passengerNames ? { text: passengerNames, expired: false } : null;
+    }
+    try {
+      const d = parseISO(expiry);
+      if (!isValid(d)) return null;
+      const expired = isBefore(d, new Date());
+      const passengerNames = Array.isArray(booking.passenger_names) ? booking.passenger_names.join(", ") : null;
+      const dateStr = `Valid until ${format(d, "MMM yyyy")}`;
+      return { text: passengerNames ? `${passengerNames} · ${dateStr}` : dateStr, expired };
+    } catch { return null; }
+  })();
+
   const confirmUI = isMobile ? (
     <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
       <DrawerContent>
@@ -320,6 +338,16 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                 {isMine ? "You" : addedBy} · {timeAgo}
               </span>
             </div>
+            {visaBadge && (
+              <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                visaBadge.expired
+                  ? "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400"
+                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+              }`}>
+                <Shield className="h-2.5 w-2.5" />
+                {visaBadge.text}
+              </span>
+            )}
           </div>
 
           {/* Chevron only */}
@@ -454,6 +482,25 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                       <Lock className="h-4 w-4 mr-2" />
                       {attachment.is_private ? "Make shared" : "Make private"}
                     </DropdownMenuItem>
+                  )}
+                  {(isMine || canDelete) && onChangeType && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Change category
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {ALL_TYPES.filter(t => t.value !== attachment.type).map(t => {
+                          const TIcon = TYPE_ICONS[t.value] || File;
+                          return (
+                            <DropdownMenuItem key={t.value} onClick={() => onChangeType(attachment.id, t.value)}>
+                              <TIcon className="h-4 w-4 mr-2" />
+                              {t.label}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                   )}
                   {canDelete && (
                     <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmOpen(true)}>
