@@ -385,6 +385,14 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Expense hero YOU PAID / YOUR SHARE discrepancy</span><span class="tag tag-wip">In progress</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">Calculation mismatch. Claude Code diagnosing. Awaiting result — this is a trust-critical bug for a money app.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">The expense hero section shows YOU PAID and YOUR SHARE with numbers that don't add up correctly. Diagnose the calculation logic:
+1. Find the component that renders the expense hero (YOU PAID / YOUR SHARE).
+2. Trace how those values are calculated — which hook or query provides them?
+3. Compare the calculation against the raw expense data in the DB for a trip with multiple members and mixed currencies.
+Tell me what's wrong before fixing anything.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -393,6 +401,17 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">PWA update banner not firing correctly</span><span class="tag tag-wip">In progress</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Verify service worker detection and banner display in standalone mode.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">The PWA update banner is not appearing when a new service worker version is available. Fix this:
+
+1. When a new service worker is detected (waiting state), show a banner at the top of the screen: "A new version is available" with an "Update" button.
+2. Tapping "Update" calls skipWaiting on the new service worker and reloads the page.
+3. The banner must work in standalone PWA mode (display: standalone), not just the browser tab.
+4. Test: the banner should appear after a new deploy when the user reopens the app.
+
+Only change files related to the service worker registration and the update banner component. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -462,6 +481,12 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Duplicate legal links in profile footer</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">The profile page footer shows Privacy Policy and Terms twice side by side. Remove the duplicate set.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">On the profile/account page footer, the Privacy Policy and Terms & Conditions links are duplicated — they appear twice side by side. Remove the duplicate set so each link appears only once. Do not change any other part of the profile page.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -470,6 +495,14 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Toast notification blocked by Dynamic Island on iPhone</span><span class="tag tag-bug">Bug</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">Success/error toast appears too high on screen and is covered by the iOS Dynamic Island. Needs safe-area-aware positioning.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Toast notifications (success/error) are hidden behind the Dynamic Island on iPhones with the pill-shaped notch. Diagnose:
+1. Find the toast/notification component and its positioning CSS.
+2. Is it using env(safe-area-inset-top) or a fixed top offset?
+3. Fix the positioning so the toast appears below the Dynamic Island on all iOS devices — use safe-area-inset-top with a sensible fallback for older devices.
+Don't change the toast styling or behaviour, only its vertical positioning.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -478,6 +511,14 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Feedback modal blocked by iOS keyboard</span><span class="tag tag-wip">In progress</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">The feedback bottom sheet is covered by the keyboard when the textarea is focused on mobile. visualViewport fix sent to Claude Code — verify result.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">The feedback bottom sheet modal is hidden behind the on-screen keyboard on iOS when the user taps the textarea. Diagnose:
+1. Find the feedback modal component and how it's positioned (fixed bottom sheet?).
+2. Check if it uses visualViewport API to adjust when the keyboard opens.
+3. Fix it so the textarea and submit button remain visible above the keyboard. The standard approach: listen to visualViewport resize events and adjust the modal's bottom offset or max-height.
+Don't change the feedback form content or submission logic.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -497,6 +538,14 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Itinerary scroll of death — empty days before first activity</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Because trip dates default incorrectly, the itinerary starts at the wrong date and users must scroll past many empty days to reach their first activity. Fix: default the itinerary view to the first day that has activities, or add a "Jump to first activity" button.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">The itinerary view starts at the first date of the trip range, which is often wrong (see trip dates bug). Users have to scroll through many empty days to find their first activity.
+
+Fix: when the itinerary view loads, auto-scroll to the first day that has at least one activity. If no activities exist yet, show a friendly empty state ("No activities yet — tap + to add one" or "Try AI Suggestions"). Do not change how trip dates are stored — just fix where the itinerary view starts.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -505,6 +554,14 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Profile avatar in wrong position — top-left anti-pattern</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">The user avatar/settings is in the top-left, which is reserved for back buttons and nav in every modern app convention. Users don't recognize it as interactive. Move to top-right or add a visible "Profile" or "Settings" label.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">The user profile avatar is positioned in the top-left of the header on the home screen. This is an anti-pattern — top-left is universally expected to be a back button or navigation menu. Users don't recognise the avatar as tappable.
+
+Move the profile avatar to the top-right of the header. If there's already something in the top-right, swap the positions. The avatar should be clearly tappable — add a subtle ring or "Profile" label if needed.
+
+Only change the header layout on the home/My Trips screen. Do not change the profile page itself. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -513,6 +570,18 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Share & Invite modal is overloaded</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">One modal currently handles: inviting collaborators, sharing a view-only link, toggling expense visibility, revoking links, and exporting CSV/ICS. These are very different actions. Split into: "Invite Members", "Share View-Only Link", and move exports to a dedicated Export or Settings area.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">The Share & Invite modal in Junto is doing too many things at once. Split it into focused actions:
+
+1. "Invite Members" — the primary action. Shows the join code prominently, WhatsApp share button, and copy link button. This is what 90% of users want.
+2. "Share View-Only Link" — separate option for sharing a read-only view of the trip with non-members. Toggle for expense visibility.
+3. Move CSV and ICS exports to a dedicated "Export" section in trip settings — these are power-user features, not sharing.
+
+Keep the existing functionality — just reorganise it into separate, focused modals or screens. The "Invite Members" action should be the default when the share button is tapped.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -521,6 +590,19 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Solo mode confusion — balance and voting shown for 1 person</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">When a trip has only one member, YOU PAID: €0 / YOUR SHARE: €0 is shown on expenses, and "1 of 1 members voted" appears on decisions. Hide split/balance UI and simplify voting when group size is 1. Show a prompt: "Invite friends to split expenses and vote on ideas."</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">When a trip has only one member, the expense and decisions UI looks broken:
+- Expenses show "YOU PAID: €0 / YOUR SHARE: €0" which is meaningless for one person
+- Decisions show "1 of 1 members voted" which looks silly
+
+Fix: when the trip has only 1 member:
+1. On expenses, hide the split/balance hero entirely. Replace with a prompt: "Invite friends to split expenses" with an invite button.
+2. On decisions, hide the "X of Y voted" counter. Show a prompt: "Invite friends to vote on ideas" with an invite button.
+3. Keep expense logging functional — solo users should still be able to track spending, just without the split UI.
+
+Do not change behaviour for trips with 2+ members. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -531,6 +613,16 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Decisions page: Lock buttons unexplained, Preferences section empty</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">"Lock vibe board" and "Lock route" buttons have no tooltip or explanation of what locking does or how to undo it. The Preferences section is completely empty with no placeholder examples. Add explanatory tooltips to Lock buttons and placeholder examples to Preferences (e.g. "Dietary restrictions? Early birds or night owls?").</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Two UX issues on the Decisions page in Junto:
+
+1. The "Lock vibe board" and "Lock route" buttons have no explanation. Add a tooltip or subtitle text explaining: "Locking prevents changes — only the trip admin can unlock." Show a lock/unlock icon that clearly indicates the current state.
+
+2. The Preferences section is completely empty with no guidance. Add placeholder examples so users know what to add: "e.g. Dietary restrictions, Early birds or night owls?, Budget comfort zone, Must-see spots." Show these as light grey placeholder text that disappears when the user adds their first preference.
+
+Do not change any other part of the Decisions page. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -539,6 +631,18 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Itinerary: AI status labels unclear, no "Not Going", calendar Apply doesn't close</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Three separate issues: (1) AI import arbitrarily marks first items as CONFIRMED and rest as IDEA — no explanation of the difference. (2) Every activity has "Going" but no "Not Going" option. (3) Clicking Apply on the route date calendar doesn't close the picker — user has to click outside to reveal the Confirm button underneath.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Fix three itinerary UX issues in Junto:
+
+1. AI-imported itinerary items are randomly labelled CONFIRMED or IDEA with no explanation. Change the default: all AI-imported items should start as "Suggested" (a new status or rename IDEA). Add a short label explaining statuses — e.g. "Suggested = from AI, Confirmed = group agreed."
+
+2. Each activity has a "Going" button but no "Not Going" option. Add a "Not Going" option so members can indicate they'll skip an activity. Show attendance counts: "3 going, 1 not going."
+
+3. On the route date calendar, clicking "Apply" does not close the date picker. Fix: clicking Apply should close the picker and reveal the Confirm button underneath. Standard modal behaviour.
+
+Do not change any other itinerary functionality. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -547,6 +651,16 @@ List every file you'll change before making any changes. Do not change any other
     <div class="task-body">
       <div class="task-top"><span class="task-title">Expense form UX: split tabs too prominent, wrong default date</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">The Equal / % / Custom split tabs are shown immediately, making the form look like accounting software. Hide % and Custom behind an "Advanced Split" toggle. Also, the expense date defaults to today's real-world date rather than a date within the trip window. Future: Smart Cross-Linking (Phase 1) will enable expenses to be auto-created from receipt scans and booking uploads, and cross-linked with itinerary items.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Fix two expense form UX issues in Junto:
+
+1. The Equal / % / Custom split tabs are shown immediately, making the form look intimidating. Default to "Equal" split (which is what 90% of users want). Hide "%" and "Custom" behind an "Advanced Split" link or toggle that expands to show those options. The form should look simple by default.
+
+2. The expense date defaults to today's real-world date. Instead, default to today only if today is within the trip's date range. If today is outside the trip dates, default to the trip's start date (or the most recent itinerary day with activities).
+
+Do not change the split calculation logic — only the form presentation. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -630,6 +744,21 @@ DELETE FROM trips WHERE id = '&lt;ID_HERE&gt;';<button class="copy-btn" onclick=
     <div class="task-body">
       <div class="task-top"><span class="task-title">Write Privacy Notice — junto.pro/privacy</span><span class="tag tag-legal">Legal</span></div>
       <p class="task-note">Must cover: data collected, lawful basis, third parties (Supabase, Anthropic, Unsplash), retention, user rights (GDPR Art. 15–17), cookies, contact email. Ask Claude to draft — takes 10 minutes.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Draft a Privacy Notice for Junto (junto.pro/privacy). Cover these sections:
+
+1. What data we collect: name, email, trip data, expenses, itinerary items, uploaded documents, usage analytics
+2. Lawful basis: consent (signup), legitimate interest (analytics), contract (providing the service)
+3. Third parties: Supabase (database/auth), Anthropic (AI features — receipt scanning, trip builder), Unsplash (cover images), Google Maps/Places (location data)
+4. Data retention: active account = data retained; deleted account = data purged within 30 days
+5. User rights (GDPR Art. 15–17): access, rectification, erasure, data portability, right to object
+6. Cookies: session cookies only, no third-party tracking cookies
+7. Contact: privacy@junto.pro
+8. AI disclosure: uploaded receipts and documents are processed by Anthropic's Claude API — data is not retained by Anthropic for training
+
+Keep it clear and readable — not legalese. Target: 1 page.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -638,6 +767,21 @@ DELETE FROM trips WHERE id = '&lt;ID_HERE&gt;';<button class="copy-btn" onclick=
     <div class="task-body">
       <div class="task-top"><span class="task-title">Write Terms & Conditions — junto.pro/terms</span><span class="tag tag-legal">Legal</span></div>
       <p class="task-note">Must cover: what Junto is (planning tool, not a travel provider), acceptable use, liability limitation, age minimum (13+ or 18+), governing law (UAE/DIFC), account termination.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Draft Terms & Conditions for Junto (junto.pro/terms). Cover these sections:
+
+1. Service description: Junto is a group trip planning tool — NOT a travel agency, booking provider, or financial service. We don't book hotels, flights, or activities.
+2. Acceptable use: no spam, no illegal content, no harassment, no commercial use without permission
+3. Liability limitation: Junto is not responsible for trip outcomes, expense accuracy, or third-party services linked from the app. Users are responsible for verifying travel information.
+4. Age minimum: 13+ (or 18+ if handling financial data under UAE law — check)
+5. Governing law: UAE / DIFC courts
+6. Account termination: we can suspend or terminate accounts that violate terms; users can delete their account at any time
+7. AI features disclaimer: AI-generated suggestions (trip plans, packing lists) are for inspiration only — users should verify all information
+8. Expense tracking disclaimer: Junto assists with expense tracking but is not a financial service. Users are responsible for actual payments between group members.
+
+Keep it concise and readable. Target: 1–2 pages.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -665,6 +809,21 @@ DELETE FROM trips WHERE id = '&lt;ID_HERE&gt;';<button class="copy-btn" onclick=
     <div class="task-body">
       <div class="task-top"><span class="task-title">Record 60-second demo video</span><span class="tag tag-ops">OPS</span></div>
       <p class="task-note">Screen record: trip creation → invite member → add itinerary item → log expense → view balance. Use this for Product Hunt, Reddit posts, and personal outreach. No voiceover needed — add captions.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Steps:
+1. Use iPhone screen recording (Settings → Control Centre → Screen Recording)
+2. Start on the home screen with a real trip that has 2–3 members
+3. Record this flow in one continuous take (60 seconds max):
+   - Create a new trip "Bali Adventure 🌴" → set dates → skip AI
+   - Open the trip → tap Invite → show WhatsApp share
+   - Add an itinerary item (e.g. "Temple visit, 9am")
+   - Add an expense (e.g. "Dinner €45, split equally")
+   - Show the expense balance hero (YOU PAID / YOUR SHARE)
+4. Trim in iMovie or CapCut — add captions for each action
+5. Export as MP4 (1080×1920 vertical for Stories, 1920×1080 horizontal for PH)
+6. Save both versions for: Product Hunt, Reddit, WhatsApp messages<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -673,6 +832,15 @@ DELETE FROM trips WHERE id = '&lt;ID_HERE&gt;';<button class="copy-btn" onclick=
     <div class="task-body">
       <div class="task-top"><span class="task-title">Create accounts: Reddit, Product Hunt, Indie Hackers, LinkedIn</span><span class="tag tag-ops">OPS</span></div>
       <p class="task-note">Set up all four before Week 1 community engagement starts. Profile should reference Junto and your Dubai/travel background.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Steps:
+1. Reddit — create account, join all target subreddits (see Communities tab). Bio: "Building a group trip planning app from Dubai." Do NOT post about Junto yet.
+2. Product Hunt — create maker profile. Add "Junto" as an upcoming product. Upload logo + tagline: "Plan group trips without the WhatsApp chaos."
+3. Indie Hackers — create product page for Junto. Fill in: revenue ($0), description, stack. Post an intro in the community.
+4. LinkedIn — update personal profile to mention Junto. Draft a "building in public" post for Week 3 launch.
+5. Set the same avatar/branding across all four platforms for recognition.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -681,6 +849,23 @@ DELETE FROM trips WHERE id = '&lt;ID_HERE&gt;';<button class="copy-btn" onclick=
     <div class="task-body">
       <div class="task-top"><span class="task-title">Full end-to-end test as a new user</span><span class="tag tag-manual">Manual</span></div>
       <p class="task-note">Create a fresh account via referral link → onboarding wizard → create trip → invite 2 people → add expense → check balances. Do this on iPhone in Safari.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Test on iPhone Safari (not desktop). Use a fresh email address.
+
+1. Open a referral link → land on signup → create account
+2. Complete onboarding wizard (name, avatar, trip preferences)
+3. Create a trip: "Test Trip Barcelona" → set dates → pick destination
+4. Invite 2 real people via WhatsApp share link
+5. Wait for them to join → verify they appear as members
+6. Add an itinerary item with a location
+7. Create a poll ("Beach day or museum?")
+8. Add an expense: €50 dinner, split equally among 3
+9. Check balance hero: does YOU PAID / YOUR SHARE look correct?
+10. Open the trip on a second device — verify real-time sync
+11. Install as PWA (Add to Home Screen) → reopen → verify it works
+12. Note every friction point, confusion, or bug on a sheet<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -780,6 +965,18 @@ Also document the model selection strategy as code comments:
     <div class="task-body">
       <div class="task-top"><span class="task-title">Set Anthropic Console spending cap — $50/month</span><span class="tag tag-ops">OPS</span></div>
       <p class="task-note">Hard spending cap in the Anthropic Console. Set to $50/month initially. Increase only after validating cost-per-user metrics from ai_request_log. This is the safety net — even if rate limits fail, billing stops at $50.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Steps:
+1. Log in to console.anthropic.com
+2. Go to Plans & Billing → Usage Limits
+3. Set monthly spending limit to $50
+4. Set up email alerts at $25 (50% warning) and $45 (90% warning)
+5. Verify the API key used in Supabase Edge Functions matches this account
+6. After 2 weeks of live usage, query ai_request_log to check actual cost:
+   SELECT SUM(cost_usd) as total_cost, COUNT(*) as requests FROM ai_request_log WHERE created_at > now() - interval '14 days';
+7. Adjust cap based on actual usage patterns<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -917,6 +1114,20 @@ Only change the home screen header and the share sheet component. Do not touch a
     <div class="task-body">
       <div class="task-top"><span class="task-title">Post-trip "Loved Junto? Invite a friend" nudge</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">After a trip's end date passes, show a one-time nudge card on the home screen: "You just planned [Trip name] — share Junto with someone planning their next trip." Highest-intent moment: user just had a positive experience.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">After a trip's end date has passed, show a one-time nudge card on the home screen (My Trips view).
+
+The card should say: "You just planned [Trip Name] — share Junto with a friend who's planning their next trip!" with two buttons: "Share Junto" (opens the referral share sheet with the user's personal referral link) and "Dismiss" (hides it permanently for this trip).
+
+Rules:
+- Only show once per completed trip, never repeat after dismissal
+- Store dismissal state so it persists across sessions
+- Only show if the trip had 2+ members (solo trips don't trigger referral intent)
+- Show above the trip cards list, below the header
+
+Do not change any other home screen elements. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -925,6 +1136,16 @@ Only change the home screen header and the share sheet component. Do not touch a
     <div class="task-body">
       <div class="task-top"><span class="task-title">Referral counter visible in My Account</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">"X friends joined with your link." referred_by data already in DB — just needs surfacing. Adds social proof and mild gamification.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add a referral counter to the My Account / Profile screen in Junto.
+
+Show: "[X] friends joined with your link" — query the profiles table where referred_by matches the current user's referral_code. Display as a small stat card or line item in the profile section, near the existing referral link.
+
+If the count is 0, show encouraging text: "Share your link to invite friends — you'll see your invite count here." If the count is 1+, show the number with a subtle celebration (e.g. a small star icon).
+
+Only change the My Account screen. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -933,6 +1154,18 @@ Only change the home screen header and the share sheet component. Do not touch a
     <div class="task-body">
       <div class="task-top"><span class="task-title">Personally message 20–30 friends for beta</span><span class="tag tag-ops">OPS</span></div>
       <p class="task-note">Not a mass blast. Individual WhatsApp messages: "I built this, would you try it for your next trip?" Target people with trips coming up in the next 60 days. Goal: 3 active trip groups with 3+ members each.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Steps:
+1. Make a list of 30 friends/contacts who have trips coming up in the next 60 days
+2. Prioritise: Dubai expat friends (Oman road trips, Georgia, Bali), travel-active friends globally
+3. Send INDIVIDUAL WhatsApp messages (not a broadcast — personal feels different):
+   "Hey [name]! I've been building a group trip planning app — would love your feedback. Can I set up your [destination] trip on it? Takes 2 minutes: [junto.pro link with your referral code]"
+4. Offer to set up their trip personally — remove all friction
+5. Follow up after 3 days if no response (once only)
+6. Goal: 3 active trip groups with 3+ members each by end of Week 2
+7. Track who joined and which trips are active in a simple spreadsheet<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -991,6 +1224,16 @@ Diagnose first: what does the extract-booking-info Edge Function currently retur
     <div class="task-body">
       <div class="task-top"><span class="task-title">Itinerary item with cost → expense prompt</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">When an itinerary item is added with a cost mentioned in notes or description, prompt: "Create an expense for [amount]?" If yes, pre-fills the expense form with the itinerary item's title, date, and extracted amount.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add cross-linking from itinerary items to expenses in Junto.
+
+When a user saves an itinerary item that contains a cost in the notes or description (e.g. "Entry fee €25" or "$40 per person"), detect the amount using a simple regex pattern for currency + number.
+
+If a cost is detected, show a subtle prompt below the saved item: "Create an expense for [€25]?" with "Create" and "Skip" buttons. Tapping "Create" opens the expense form pre-filled with: title = itinerary item title, date = itinerary item date, amount = detected amount, category = auto-detected if possible.
+
+Keep the detection simple — regex for common patterns like €25, $40, 150 EUR. Don't use AI for this. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1238,6 +1481,30 @@ List every file you'll change. Do not modify any existing trip creation function
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build real-time collaboration on AI suggestions</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">All group members see the same AI Trip Builder view in real-time via Supabase Realtime. When one member adds/removes/reorders an activity, all others see the change instantly. Thumbs up/down voting on each suggestion — show vote counts inline. Comments on individual suggestions for discussion before confirming.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Add real-time collaboration to the AI Trip Builder in Junto.
+
+1. Check the existing useTripRealtime hook — can we extend it, or do we need a separate channel for AI suggestions?
+2. Create a table (or extend an existing one) to store the current AI Trip Builder state per trip: suggested activities, their order, votes, and acceptance status.
+3. Set up Supabase Realtime subscription so all trip members see the same AI Trip Builder view. When one member adds, removes, reorders, or votes on a suggestion, all others see the change instantly.
+4. Add a thumbs up/down voting mechanism per suggestion — store votes in the DB, show counts inline.
+
+Diagnose the current Realtime setup before building.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after real-time is wired)</span>
+        <div class="code-block">Add collaborative UI to the AI Trip Builder view in Junto. Real-time sync is already wired via Supabase Realtime.
+
+On each AI-suggested activity card, show:
+1. Thumbs up / thumbs down buttons with vote counts (e.g. "👍 3  👎 1")
+2. Small member avatars showing who voted which way
+3. A "comment" icon that opens a small inline thread for discussing the suggestion
+4. Visual indicators when another member is currently viewing the same day (presence)
+
+When one member adds/removes/reorders an activity, animate the change for all viewers. Show a subtle toast: "[Name] added [Activity] to Day 2."
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1662,6 +1929,18 @@ The response should have Content-Type: text/calendar and Content-Disposition: at
     <div class="task-body">
       <div class="task-top"><span class="task-title">Arrival time UI — highlight member arrivals on itinerary</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">On the itinerary, group member avatars by arrival time slot so the group can see at a glance who lands when. Highlight today's arrivals prominently — especially useful on the first and last day of a trip. E.g. "Oliver lands 14:00 · JuntoB lands 17:30".</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add arrival awareness to the itinerary view in Junto.
+
+On the first and last days of a trip, show a prominent "Arrivals" section at the top of the day view. Group member avatars by arrival time: "Oliver lands 14:00 · JuntoB lands 17:30". Highlight today's arrivals with a special badge or colour.
+
+Data source: itinerary items that are tagged as flights or travel (check if there's a category or type field on itinerary_items). If no category exists, match on keywords like "flight", "arrive", "land", "depart" in the title.
+
+Show member avatars next to their arrival time. If no arrival times exist for a day, don't show the section.
+
+Only change the itinerary day view. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1730,6 +2009,28 @@ Show me the current receipt scanner before making changes.<button class="copy-bt
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build enhanced scanner UI with document type detection</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Update the scanner UI to show document-type-specific extraction results. After scanning, show a preview card with the extracted data formatted for the detected document type. Include the Smart Cross-Linking prompts: "Add to itinerary?", "Create expense?", "Share with group?" based on the document type. Each prompt is a single tap to confirm.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Update the receipt scanner UI in Junto to handle multiple document types. The enhanced Edge Function already returns a response with a "type" field (receipt, hotel, flight, activity, restaurant).
+
+After scanning, show a preview card formatted for the detected document type:
+- Receipt → vendor name, date, items list, total, currency, suggested category
+- Hotel → hotel name, check-in/out dates, cost, confirmation number
+- Flight → airline, flight number, departure/arrival airports + times, seat
+- Activity → activity name, date, time, cost, location
+- Restaurant → venue, date, time, party size
+
+Below the preview, show Smart Cross-Linking action buttons based on the type:
+- Receipt: "Create expense" + "Add [venue] to itinerary for [date]?"
+- Hotel: "Add to itinerary" + "Create expense for [cost]?"
+- Flight: "Add to itinerary" + "Notify group of arrival time?"
+- Activity: "Add to itinerary" + "Create expense for [cost]?"
+- Restaurant: "Add to itinerary"
+
+Each action is a single tap — pre-fill all data from the scan. User confirms or skips.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1807,6 +2108,28 @@ Place the feed as a section on the trip dashboard — not a separate tab. Do not
     <div class="task-body">
       <div class="task-top"><span class="task-title">Auto-generate trip recap card when trip ends</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">When a trip's end date passes, generate a shareable card showing: destinations visited, total group spend, number of activities, and member avatars. Subtle "Planned on Junto" watermark. Share to Instagram Stories or WhatsApp. Use Satori (headless canvas) or a simple styled HTML-to-image approach.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">When a trip's end date passes, auto-generate a shareable trip recap card in Junto.
+
+The card should be a styled visual (not just text) showing:
+- Trip name and destination(s)
+- Trip dates and duration
+- Total group spend (from expenses)
+- Number of activities completed
+- Member avatars (the group)
+- Subtle "Planned on Junto" watermark in the bottom corner
+
+Two share formats:
+1. Vertical (1080×1920) for Instagram Stories and WhatsApp Status
+2. Square (1080×1080) for general sharing
+
+Use a canvas-based approach (html2canvas or Satori) to render the card as a PNG image. Add a "Share" button that opens the native share sheet, and a "Download" button to save the image.
+
+Show the recap card on the trip dashboard after the trip ends. Do not generate it for trips with 0 expenses or 0 itinerary items.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1823,6 +2146,12 @@ Place the feed as a section on the trip dashboard — not a separate tab. Do not
     <div class="task-body">
       <div class="task-top"><span class="task-title">Route stop date editing</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Use the same DateRangePicker as the trip confirmation panel for editing individual route stop dates. Currently inconsistent.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">On trip route stops, the date editing UI is inconsistent with the trip confirmation panel. Fix: when a user taps to edit dates on an individual route stop, use the same DateRangePicker component already used in the trip confirmation panel. Ensure the date range is constrained to the parent trip's date range.
+
+Do not change the trip confirmation panel or any other date pickers. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1831,6 +2160,12 @@ Place the feed as a section on the trip dashboard — not a separate tab. Do not
     <div class="task-body">
       <div class="task-top"><span class="task-title">Collapsed Vibe Board summary in header</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">When the Vibe Board section is collapsed, show the user's top 2–3 picks as a summary line in the header so the result is visible without expanding.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">When the Vibe Board section on the Decisions page is collapsed, the user's selections are completely hidden. Add a summary line in the collapsed header showing the top 2–3 selected vibes as small pills or tags — e.g. "🏖 Beach · 🍜 Foodie · 🎭 Culture". If more than 3 are selected, show "… +2 more". This gives at-a-glance visibility without expanding.
+
+Only change the Vibe Board collapse/expand header. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1839,6 +2174,12 @@ Place the feed as a section on the trip dashboard — not a separate tab. Do not
     <div class="task-body">
       <div class="task-top"><span class="task-title">Invite link redemption count</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Show "X people joined with this link" on the invite share sheet. Data already exists in the referral system — just needs surfacing.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">On the trip invite share sheet in Junto, show how many people have joined using the current trip's join link. Display: "[X] people joined with this link" below the join code. Query the trip_members count (excluding the creator). If 0, show encouraging text instead: "Share this link — your group is waiting."
+
+Only change the invite share sheet component. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1847,6 +2188,12 @@ Place the feed as a section on the trip dashboard — not a separate tab. Do not
     <div class="task-body">
       <div class="task-top"><span class="task-title">Past trips toggle on Itinerary</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">On the global Itinerary view, add a toggle to show/hide past trips. Currently all trips show regardless of end date.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">On the global Itinerary view (the one that shows itinerary items across all trips), add a toggle to show/hide past trips. Default: hide past trips (only show trips where end_date >= today). Toggle label: "Show past trips" — when enabled, past trips appear below current/upcoming ones, visually muted.
+
+Only change the global itinerary view. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1855,6 +2202,16 @@ Place the feed as a section on the trip dashboard — not a separate tab. Do not
     <div class="task-body">
       <div class="task-top"><span class="task-title">Bookings & Docs search and filter</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Full-text search + filter pills by category (flights, hotels, activities, documents). Currently a flat unfiltered list. Future: AI extraction from uploaded documents (Enhanced Receipt & Doc Scanner, Phase 2) will auto-categorize and cross-link bookings with itinerary items and expenses via Smart Cross-Linking.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add search and filtering to the Bookings & Docs section in Junto. Currently it's a flat, unfiltered list.
+
+1. Add a search bar at the top — full-text search across document titles, descriptions, and extracted text.
+2. Add filter pills below the search bar: All, Flights, Hotels, Activities, Documents. Tapping a pill filters the list to that category.
+3. If bookings don't have a category field yet, add one (text field with values: flight, hotel, activity, document, other) and default existing items to "other".
+
+Keep the existing upload and view functionality unchanged. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1863,6 +2220,12 @@ Place the feed as a section on the trip dashboard — not a separate tab. Do not
     <div class="task-body">
       <div class="task-top"><span class="task-title">Full emoji picker for trip names</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Replace the current basic emoji field with @emoji-mart/react for a proper searchable emoji picker.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Replace the basic emoji input on the trip creation and editing screens with a proper searchable emoji picker using @emoji-mart/react. The picker should open as a popover when the user taps the emoji field. It should support search (e.g. typing "beach" shows 🏖️), recently used emojis, and category browsing. Keep the selected emoji displayed as the trip icon.
+
+Only change the emoji selection component. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1891,6 +2254,20 @@ Don't change the upload flow or storage backend.<button class="copy-btn" onclick
     <div class="task-body">
       <div class="task-top"><span class="task-title">Group arrival awareness — UI</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">When itinerary items have arrival times, make it visually clear who is arriving when and where. On the itinerary, show member avatars grouped by arrival time slot — so the group can see at a glance "Oliver lands at 14:00, JuntoB lands at 17:30". Highlight today's arrivals prominently. Especially useful on the first and last day of a trip.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add a group arrival awareness section to the itinerary day view in Junto.
+
+On days that have flight/arrival itinerary items, show an "Arrivals" banner at the top of the day:
+- Group member avatars sorted by arrival time
+- Each avatar has the time below it: "Oliver 14:00 · JuntoB 17:30"
+- If the day is today, highlight the banner with a special colour and show "Today's arrivals"
+- If an arrival is within the next 2 hours, add a pulsing indicator
+
+Data: pull from itinerary items that have flight/travel keywords in the title or a travel category tag. Match items to members via the created_by or assigned_to field.
+
+Only change the itinerary day view component. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1899,6 +2276,19 @@ Don't change the upload flow or storage backend.<button class="copy-btn" onclick
     <div class="task-body">
       <div class="task-top"><span class="task-title">Group arrival awareness — notifications</span><span class="tag tag-lovable">Lovable</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">Push notifications when a group member's arrival time is approaching or they have just landed. Examples: "JuntoB lands in 2 hours — coordinate pickup?" or "Oliver just arrived in Bangkok 🛬". Requires arrival times stored on itinerary items and a scheduled Edge Function to check upcoming arrivals and fire push notifications. Build after push notifications (Phase 1) are live. WhatsApp Business API integration is Phase 4.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Build arrival push notifications for Junto. Requires: push notification infrastructure (Phase 1) to be live.
+
+Create a scheduled Supabase Edge Function (check-arrivals) that:
+1. Runs every 30 minutes via pg_cron
+2. Queries itinerary_items where the item is a flight/arrival type and start_time is within the next 2 hours or within the last 15 minutes
+3. For upcoming arrivals: sends push to all other trip members: "[Name] lands in [X] hours at [destination] — coordinate pickup?"
+4. For just-arrived: sends push: "[Name] just arrived in [destination]"
+5. Tracks which notifications have already been sent (add a notifications_sent jsonb column or a separate table) to avoid duplicates
+
+Diagnose first: does itinerary_items have a type/category field to identify flights? What does the existing send-push-notification Edge Function expect as input?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1928,6 +2318,19 @@ Don't change the upload flow or storage backend.<button class="copy-btn" onclick
     <div class="task-body">
       <div class="task-top"><span class="task-title">Wrap PWA in Capacitor</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">Capacitor wraps the existing React/Vite build. No code rewrite needed. Produces iOS (.ipa) and Android (.apk) from the same codebase.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Wrap Junto's existing React/Vite PWA in Capacitor to produce native iOS and Android builds.
+
+1. Check the current Vite build config and output directory.
+2. Install @capacitor/core and @capacitor/cli. Run npx cap init with app ID "pro.junto.app".
+3. Add iOS and Android platforms: npx cap add ios && npx cap add android.
+4. Configure capacitor.config.ts: set webDir to the Vite output folder, set server URL for dev mode.
+5. Verify the build works: bun run build && npx cap sync && npx cap open ios.
+6. Check that Supabase auth redirects, deep links (junto.pro/join/*), and push notifications still work in the native wrapper.
+
+Don't change any existing web functionality. List every file you'll create or change.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1936,6 +2339,17 @@ Don't change the upload flow or storage backend.<button class="copy-btn" onclick
     <div class="task-body">
       <div class="task-top"><span class="task-title">Set up Capgo for OTA updates</span><span class="tag tag-ops">OPS</span></div>
       <p class="task-note">Capgo enables instant over-the-air updates post-App Store launch so you don't need to go through App Store review for every bug fix. Set this up from day one of native.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Steps:
+1. Sign up at capgo.app — free tier covers small user base
+2. Install the Capgo plugin: bun add @capgo/capacitor-updater
+3. Configure in capacitor.config.ts with your Capgo API key
+4. Set up the update channel (production) in the Capgo dashboard
+5. Add auto-update logic: check for updates on app launch, download in background, apply on next restart
+6. Test: push a small UI change via Capgo, verify it appears without App Store review
+7. Set up rollback: configure automatic rollback if crash rate spikes after an update<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -1944,6 +2358,19 @@ Don't change the upload flow or storage backend.<button class="copy-btn" onclick
     <div class="task-body">
       <div class="task-top"><span class="task-title">iOS lock screen widget</span><span class="tag tag-manual">Hire iOS dev</span></div>
       <p class="task-note">Shows days to trip, next itinerary item, and balance on the iOS lock screen. Requires WidgetKit + SwiftUI + Xcode App Group entitlement + Capacitor bridge to share data. Cannot be vibe coded — hire an iOS dev for a bounded 2-day job. Do after App Store launch.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Steps:
+1. Write a brief for an iOS developer (Upwork, Fiverr, or personal network):
+   - "Build an iOS Lock Screen widget for a Capacitor-wrapped React app"
+   - Widget shows: days until next trip, next itinerary item name + time, expense balance
+   - Requires: WidgetKit, SwiftUI, App Group entitlement, Capacitor bridge to share data from web layer to native widget
+   - Bounded scope: 2-day job, no backend changes needed
+2. Share the Capacitor project + Supabase API details with the developer
+3. Data flow: web app writes trip data to UserDefaults via App Group → widget reads from UserDefaults
+4. Test on real devices (lock screen widgets can't be tested in simulator reliably)
+5. Submit widget as part of an app update<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2046,6 +2473,18 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build location sharing UI and session controls</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Build the "Share my location" button on the trip map view. Tapping it opens a session picker (30 min / 1 hour / until I stop). While sharing, show a pulsing indicator on the user's avatar. Add a "Stop sharing" button. Show a countdown timer for timed sessions. The map shows avatars of all currently-sharing members with their display name.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add live location sharing UI to the trip map view in Junto.
+
+1. "Share my location" button on the map view. On tap, show a bottom sheet with session duration options: 30 minutes, 1 hour, Until I stop.
+2. While sharing: show a pulsing blue ring around the user's avatar on the map. Add a persistent banner at the top: "Sharing your location · [countdown] remaining" with a "Stop" button.
+3. Other members' locations: show their avatars on the map at their current position, updated in real-time. Show their display name below the avatar.
+4. If no one else is sharing, show a message: "No one in your group is sharing their location right now."
+5. Privacy: never start sharing without explicit user action. No background tracking indicator in the UI.
+
+The Supabase Realtime channel and ephemeral location table must be built first (Claude Code task). List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2054,6 +2493,20 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build Supabase Realtime location channel and ephemeral storage</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">Set up a Supabase Realtime presence channel per trip for location updates. Create an ephemeral location table (user_id, trip_id, lat, lng, accuracy, updated_at, expires_at) with RLS policies so only trip members can read. Add a database function or cron to auto-delete expired records. Location updates are sent every 30–60 seconds while a session is active.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Build the backend for live location sharing in Junto.
+
+1. Create an ephemeral location table: live_locations (id uuid PK, user_id uuid references auth.users, trip_id uuid references trips, lat numeric, lng numeric, accuracy numeric, updated_at timestamptz default now(), expires_at timestamptz not null). RLS: only members of the same trip can read. Users can only write their own rows.
+
+2. Set up a Supabase Realtime subscription on this table — the frontend will listen for INSERT/UPDATE events filtered by trip_id.
+
+3. Add a pg_cron job to auto-delete expired rows: DELETE FROM live_locations WHERE expires_at < now(); Run every 5 minutes.
+
+4. Create an Edge Function or RPC to start a sharing session (inserts/updates the row with expires_at) and stop a session (deletes the row).
+
+Diagnose first: is Supabase Realtime already configured for table-level subscriptions? What's the existing pattern in useTripRealtime?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2062,6 +2515,29 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build "Find my group" with distance and ETA</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Add a "Find my group" button that zooms the map to show all currently-sharing members with walking/driving distance and ETA from the user's current position. Uses Google Maps Directions API. Falls back gracefully if no group members are currently sharing.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt</span>
+        <div class="code-block">Add a "Find my group" feature to Junto's live location sharing.
+
+When the user taps "Find my group" on the trip map:
+1. Query live_locations for all currently-sharing members of this trip.
+2. Get the user's current position via the browser Geolocation API.
+3. Call the Google Maps Directions API to calculate walking/driving distance and ETA from the user to each sharing member.
+4. Return structured data: [{ member_name, avatar_url, lat, lng, distance_text, duration_text, travel_mode }]
+
+If no members are currently sharing, return an empty array. Handle the case where the user's own location is unavailable.
+
+Diagnose: is Google Maps Directions API already configured in the project, or do we need to add it?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after backend is built)</span>
+        <div class="code-block">Add a "Find my group" button to the trip map view in Junto. The backend API is already built.
+
+When tapped: zoom the map to fit all currently-sharing members plus the user's position. Show a bottom sheet listing each sharing member with: avatar, name, distance ("1.2 km"), ETA ("8 min walk"), and a travel mode icon (walking/driving). Tapping a member in the list centres the map on them with a route line drawn from the user's position.
+
+If no one is sharing, show: "No one in your group is sharing their location. Tap 'Share my location' to start." Disable the button and show it greyed out.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2070,6 +2546,19 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">Add Capacitor background geolocation plugin</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">Integrate @capacitor-community/background-geolocation (or equivalent) for reliable background GPS on native iOS/Android. Configure significant-change updates (not continuous polling) to manage battery. Handle iOS/Android permission flows (Always Allow vs. While Using). Foreground-only fallback for PWA.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add background geolocation to Junto's native app (Capacitor) for live location sharing.
+
+1. Install @capacitor-community/background-geolocation (or the best current alternative).
+2. Configure for significant-change updates — NOT continuous GPS polling. Battery life is critical.
+3. Handle permission flows: iOS (Always Allow vs While Using App), Android (ACCESS_FINE_LOCATION + ACCESS_BACKGROUND_LOCATION).
+4. When a location sharing session is active, send location updates to the live_locations table every 30–60 seconds.
+5. When the session expires or the user stops sharing, stop background updates immediately.
+6. Add a foreground-only fallback for the PWA (browser Geolocation API, updates only while the tab is active).
+
+Diagnose: is Capacitor already set up in the project? What does the current location sharing code look like?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2135,6 +2624,20 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">GDPR data export</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">Required for EU users at scale (GDPR Art. 20 — data portability). User can request a full export of their data: profile, trips, expenses, itineraries. Delivered as a JSON or ZIP download. Build before approaching 1,000 EU users.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Build a GDPR data export feature for Junto (Art. 20 — data portability).
+
+Create a Supabase Edge Function (export-user-data) that:
+1. Accepts the authenticated user's ID
+2. Queries all data belonging to that user: profile, trips (where they're a member), expenses (created by them), itinerary items (created by them), decisions/votes, packing items, feedback submissions, AI request logs
+3. Packages everything as a structured JSON file inside a ZIP
+4. Returns the ZIP as a downloadable file
+
+Add a "Download my data" button in the My Account screen that calls this function and triggers a download.
+
+Diagnose first: which tables have user_id columns? Are there any tables where user data might be stored without a direct user_id reference?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2143,6 +2646,18 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">Org / team accounts</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Corporate travel use case — a company or agency manages multiple trips under one account with centralised billing and admin. Only worth building once you have evidence of corporate demand.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add organisation/team accounts to Junto for corporate travel management.
+
+1. New table: organisations (id, name, logo_url, created_by, billing_email, stripe_customer_id, created_at). A user can belong to one organisation.
+2. Org admin dashboard: view all trips created by org members, centralised billing, add/remove team members.
+3. Org-level settings: default trip template, default currency, mandatory expense categories.
+4. All trips created by org members are visible to the org admin.
+5. Billing: single Stripe subscription for the org, covers all members (Pro features for everyone in the org).
+
+Keep the existing personal account flow unchanged — org accounts are additive. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2161,6 +2676,24 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build test suite first</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">Self-healing is meaningless without automated tests to verify fixes don't break other things. This is the pre-requisite. Start with E2E tests for the core flows: signup, create trip, add expense, invite member.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Build an E2E test suite for Junto using the existing Playwright setup.
+
+First, check the current Playwright config (playwright.config.ts and playwright-fixture.ts) to understand what's already set up.
+
+Write E2E tests for these core flows (in priority order):
+1. Signup → onboarding wizard → land on home screen
+2. Create a trip → set name, dates, destination → verify it appears on home screen
+3. Add an itinerary item → verify it appears on the itinerary view
+4. Add an expense → verify it appears in the expense list and balance updates
+5. Invite flow → generate join link → verify it's copyable
+6. Join a trip via join code → verify the user appears as a member
+
+Use realistic test data. Set up test fixtures for authenticated users. Make tests independent — each test should clean up after itself or use isolated data.
+
+Show me the current Playwright setup before writing tests.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2169,6 +2702,19 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">Automated feedback → fix → deploy pipeline</span><span class="tag tag-code">Claude Code</span></div>
       <p class="task-note">When a bug ticket reaches a confidence threshold in the admin dashboard AI analysis: automatically generate a Lovable/Claude Code prompt, create a PR, run tests, and notify you for final approval before deploy. Human still approves — but 80% of the work is done.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Build a semi-automated bug fix pipeline for Junto. Requires: test suite and CI/CD to be in place first.
+
+1. When a feedback ticket's AI analysis reaches high confidence (ai_severity = 'high' and ai_fix is not null), trigger the pipeline.
+2. The pipeline calls the Claude Code API with the ai_fix prompt to generate a code change.
+3. Create a PR on a fix/[ticket-id] branch with the changes.
+4. Run the E2E test suite against the PR.
+5. If tests pass, send a push notification to the admin: "Auto-fix ready for review: [ticket title] — PR #[number]."
+6. Admin reviews and merges (human stays in the loop).
+
+Diagnose first: what CI/CD is currently available? Is there a GitHub Actions workflow? What API access does Claude Code have for automated PR creation?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2299,6 +2845,20 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">1 · Trip creation → Invite (highest leverage moment)</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">After trip creation, the immediate next action must be "Invite your crew." One tap to share via WhatsApp. Pre-filled message: "Hey! We're planning our trip to [destination] on Junto — join here: [join link]." The link must deep-link directly into the trip, not a generic signup page. Verify this works end-to-end.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">After a user creates a new trip in Junto, the very next screen must be the invite flow — not the trip dashboard.
+
+Show a full-screen "Invite your crew" prompt with:
+1. The trip's join link prominently displayed
+2. A "Share via WhatsApp" button with pre-filled message: "Hey! We're planning our trip to [destination] on Junto — join here: [join link]"
+3. A "Copy link" button
+4. A "Skip for now" link at the bottom (not a prominent button — we want them to invite)
+
+The join link must deep-link directly into the trip (not a generic signup page). Verify: when a non-user taps the link, they land on signup and are automatically added to the trip after account creation.
+
+Only change the post-trip-creation flow. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2307,6 +2867,16 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">2 · Expense entry → Split with group</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">After logging an expense where not all members are on the app, prompt: "Split with your trip group — invite [Name] to join." This gives the person who paid a strong incentive to get others on the app.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">After a user logs an expense in Junto, if the trip has fewer members than the split count (e.g. expense split 4 ways but only 2 members on the app), show a prompt:
+
+"This expense is split with [X] people, but only [Y] are on Junto. Invite the others so they can see what they owe."
+
+Show an "Invite" button that opens the trip invite share sheet. This gives the person who paid a strong financial incentive to get others on the app — they want to be reimbursed.
+
+Only show this prompt when split count > member count. Show once per expense, not every time the expense list loads. List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2315,6 +2885,16 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">3 · Poll creation → Everyone must vote</span><span class="task-note" style="display:inline"></span></div>
       <p class="task-note">When a poll is created, every member who hasn't voted should get a push notification: "Poll closes in 2 hours — you haven't voted yet." Non-members get an invite. Already handled by push notification triggers — verify it's wired correctly.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Verify and fix the poll notification flow in Junto.
+
+1. When a poll is created, does it trigger a push notification to all other trip members? Check the send-push-notification Edge Function triggers.
+2. Is there a "closing soon" reminder? There should be a scheduled check that sends "Poll closes in 2 hours — you haven't voted yet" to members who haven't voted.
+3. On the poll UI, does it show which members haven't voted yet? If not, add a "Waiting for: [avatars]" indicator.
+
+Diagnose the current poll creation flow and push notification triggers. Tell me what's already wired and what's missing.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2323,6 +2903,21 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">4 · Settle-up → Payment frictionless</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">At trip's end, the person owed the most is highly motivated to get everyone on the app. Make settle-up frictionless — show the balance breakdown clearly, add deep links to Venmo/PayPal/bank transfer for each debt. The person owed will share this themselves.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Make the settle-up flow in Junto as frictionless as possible.
+
+After a trip ends (or on demand from the expense balance view), show a settle-up screen:
+1. Clear list of who owes whom and how much (in the trip's base currency)
+2. For each debt, show action buttons: "Pay via Venmo" / "Pay via PayPal" / "Bank transfer" — these open deep links to the respective apps with the amount pre-filled where possible
+3. A "Mark as settled" button for each debt (updates the balance)
+4. A "Share balance summary" button that generates a text summary and opens the native share sheet — so the person owed can send it to the group
+
+Venmo deep link format: venmo://paycharge?txn=pay&recipients=[username]&amount=[amount]
+PayPal deep link: paypal.me/[username]/[amount]
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2331,6 +2926,18 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">5 · Trip recap → Shareable card</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">After trip ends, auto-generate a shareable "trip card": destinations visited, total spent per person, top activity, group photo (if uploaded). Subtle "Planned on Junto" watermark. Share to Instagram Stories or WhatsApp. Creates passive social proof.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">This is the same feature as the Trip Recap Card (Phase 3) — see that section for the full prompt. The key viral mechanics to verify:
+
+1. The "Planned on Junto" watermark is subtle but visible in the shared image
+2. The share flow uses the native share sheet (Web Share API) so it works with Instagram Stories, WhatsApp Status, and direct messages
+3. After sharing, show a prompt: "Loved Junto? Share it with a friend planning their next trip" with the user's personal referral link
+
+The trip recap card is the highest-leverage passive marketing moment — users share it because it feels good, and every share includes the Junto brand.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2348,6 +2955,16 @@ Don't build anything yet.<button class="copy-btn" onclick="copyCode(this)">copy<
     <div class="task-body">
       <div class="task-top"><span class="task-title">Sign up for Booking.com, Viator, GetYourGuide affiliate programs</span><span class="tag tag-ops">OPS</span></div>
       <p class="task-note">All free, instant approval. Booking.com: 4–5% per booking. Viator: 8%. GetYourGuide: 8%. Do this in Week 0 — links are ready when the integration is built.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ checklist</button>
+      <div class="task-detail">
+        <div class="code-block">Steps:
+1. Booking.com Partner Program → partner.booking.com → sign up with junto.pro as website → get your AID (affiliate ID)
+2. Viator Affiliate Program → viator.com/affiliates → sign up → get your MCID
+3. GetYourGuide Partner → getyourguide.com/partner → sign up → get your partner ID
+4. Save all three IDs in a secure note — you'll need them when building the affiliate link integration (Phase 2, after Maps)
+5. All three are free and approval is instant or within 24 hours
+6. Note: you don't need to build anything in the app yet — just have the accounts ready<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2448,6 +3065,29 @@ Don't write any code yet. Give me a clear plan I can review before prompting Lov
     <div class="task-body">
       <div class="task-top"><span class="task-title">Build Stripe checkout + subscription management</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Only after the plan from Claude Code is reviewed and confirmed. Target: 500+ users before building this.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ prompts</button>
+      <div class="task-detail">
+        <span class="code-label">Claude Code prompt (Edge Functions)</span>
+        <div class="code-block">Build the Stripe integration Edge Functions for Junto Pro, based on the confirmed plan from the diagnosis step.
+
+1. create-checkout-session: accepts user_id and price_id, creates a Stripe Checkout Session, returns the checkout URL. Set success/cancel URLs to junto.pro/account.
+2. stripe-webhook: handles Stripe webhook events (checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed). Updates the user's subscription status in the DB.
+3. create-portal-session: creates a Stripe Customer Portal session so users can manage their subscription (cancel, update payment method).
+
+Use the existing stripe_customer_id on the profiles table. Add is_pro boolean and subscription_status columns if they don't exist.
+
+Show me the current profiles table schema before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <span class="code-label">Lovable prompt (after Edge Functions work)</span>
+        <div class="code-block">Add Junto Pro subscription UI. The Stripe Edge Functions are already built.
+
+1. Pro upgrade page: show the pricing table (monthly $4.99, annual $29.99, per-trip $2.99–4.99). "Upgrade" button calls create-checkout-session and redirects to Stripe Checkout.
+2. Pro badge: show a subtle "Pro" badge next to the user's name in the header and profile when they have an active subscription.
+3. Manage subscription: in My Account, show subscription status and a "Manage subscription" button that opens the Stripe Customer Portal.
+4. Feature gates: when a free user hits a Pro-only feature (e.g. unlimited AI Trip Builder), show a tasteful upgrade prompt — not a hard paywall wall, but a clear value proposition.
+5. "One Pro user, free group" principle: if the trip organiser has Pro, all group members see Pro features on that trip.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2583,6 +3223,20 @@ UPDATE public.expenses
     <div class="task-body">
       <div class="task-top"><span class="task-title">Update addExpense to store eur_amount + exchange_rate_used</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">On creation: fetch live EUR rate, calculate and store both fields. All balance math then uses eur_amount — never live rates. Only send this prompt after Claude Code has identified the affected files.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="callout callout-warn">Only send this after Claude Code has identified the affected files (previous task).</div>
+        <div class="code-block">Fix exchange rate drift in Junto expenses. The eur_amount and exchange_rate_used columns already exist on the expenses table.
+
+When a new expense is created:
+1. If currency is EUR, set eur_amount = amount and exchange_rate_used = 1.
+2. If currency is not EUR, fetch the current EUR exchange rate from the existing rate lookup, calculate eur_amount = amount * rate, and store both eur_amount and exchange_rate_used.
+3. Update ALL balance calculations to use eur_amount instead of recalculating from live rates. This means balances are locked at creation time and never drift.
+
+Do not change the currency display — users still see the original currency. Only the internal balance math changes to use eur_amount.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2591,6 +3245,16 @@ UPDATE public.expenses
     <div class="task-body">
       <div class="task-top"><span class="task-title">Show locked rate in BalanceAuditSheet</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">"Rate locked at creation: 1 AED = €0.2727" — turns a technical fix into a visible trust signal.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">In the Balance Audit Sheet (the detailed expense breakdown view) in Junto, show the locked exchange rate for each non-EUR expense.
+
+Below each expense line item that has a non-EUR currency, add a small muted line: "Rate locked at creation: 1 [CURRENCY] = €[rate]" — using the exchange_rate_used value stored on the expense.
+
+This turns a technical fix into a visible trust signal for users — they can see that rates don't drift after the expense is logged. Keep the text subtle (small font, muted colour). Only show for non-EUR expenses.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2607,6 +3271,18 @@ UPDATE public.expenses
     <div class="task-body">
       <div class="task-top"><span class="task-title">1 · Feedback inbox with AI summaries</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">List all feedback. Filter by category/status/severity. Mark as done. Show ai_summary + ai_fix. "Send to Lovable" button pre-fills a fix prompt.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Build a feedback inbox on the /admin route in Junto (gated to VITE_ADMIN_USER_ID).
+
+Show a table of all rows from the feedback table with columns: date, user email, message preview, ai_category, ai_severity, status. Click a row to expand and see: full message, screenshot (if attached), ai_summary, ai_fix.
+
+Add filter dropdowns: by ai_category, ai_severity, status (new/in-progress/done). Add a "Mark as done" button. Add a "Send to Lovable" button that copies a pre-filled fix prompt to the clipboard based on ai_fix: "Fix this issue in Junto: [ai_summary]. Suggested fix: [ai_fix]."
+
+Sort by newest first. Show unread count in the sidebar.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2615,6 +3291,22 @@ UPDATE public.expenses
     <div class="task-body">
       <div class="task-top"><span class="task-title">2 · Analytics dashboard</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Users, trips, feature adoption, retention — from existing tables only. Track the activation metric: user creates/joins trip + 2 others join within 7 days.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add an analytics dashboard to the /admin route in Junto.
+
+Show stat cards at the top: total users, total trips, active trips (end_date > today), new users this week, new trips this week.
+
+Below, show:
+1. Signup chart — new users per day for the last 30 days (simple bar chart from profiles.created_at)
+2. Feature adoption — percentage of trips using: expenses, polls, itinerary, packing list, vibe board (query each feature table)
+3. Activation metric — users who created/joined a trip AND had 2+ others join within 7 days. Show as a percentage of all signups.
+4. Referral stats — total referrals, top referrers, referral conversion rate
+
+Query from existing tables only — no new tracking needed. Use Recharts or a simple chart library already in the project.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2623,6 +3315,17 @@ UPDATE public.expenses
     <div class="task-body">
       <div class="task-top"><span class="task-title">3 · AI analysis + "Generate Lovable prompt" button</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Feedback clustering. Button pre-fills a targeted Lovable fix prompt from the selected ticket — the semi-automated bug fixing workflow.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Extend the admin feedback inbox in Junto with AI-powered analysis and prompt generation.
+
+1. Cluster similar feedback tickets — group tickets with similar ai_category and keywords. Show clusters as collapsible groups: "Login issues (4 tickets)", "Expense bugs (3 tickets)".
+2. For each ticket, add a "Generate fix prompt" button that creates a targeted Lovable prompt from the AI analysis: "Fix this issue in Junto: [ai_summary]. The root cause is likely: [ai_fix]. Affected area: [ai_category]. Steps to reproduce: [user's message]. Only fix this specific issue — do not change anything else. List every file you'll change before making changes."
+3. The button copies the generated prompt to the clipboard with a "Copied!" confirmation.
+4. Add a confidence indicator (high/medium/low) based on ai_severity and whether ai_fix is populated.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2631,6 +3334,21 @@ UPDATE public.expenses
     <div class="task-body">
       <div class="task-top"><span class="task-title">4 · Health monitoring</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Exchange rate freshness, Edge Function errors, DB limits, orphaned data.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Lovable prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Add a health monitoring panel to the /admin route in Junto.
+
+Show status indicators (green/amber/red) for:
+1. Exchange rate freshness — query the exchange_rates table for the most recent updated_at. Green if < 24h, amber if 24–48h, red if > 48h.
+2. AI cost tracking — show today's AI spend from ai_request_log (SUM of cost_usd where created_at > today). Amber if > $5/day, red if > $20/day.
+3. Database size — show row counts for the largest tables (expenses, itinerary_items, profiles, trips). Amber if any table > 100k rows.
+4. Orphaned data — count expenses where trip_id references a deleted trip, or profiles with no auth.users entry.
+5. Edge Function health — show last invocation time for each Edge Function (if logged).
+
+Auto-refresh every 5 minutes. Show a "Last checked" timestamp.
+
+List every file you'll change before making changes.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 
@@ -2639,6 +3357,18 @@ UPDATE public.expenses
     <div class="task-body">
       <div class="task-top"><span class="task-title">5 · Weekly digest email</span><span class="tag tag-lovable">Lovable</span></div>
       <p class="task-note">Monday summary via SendGrid.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ Claude Code prompt</button>
+      <div class="task-detail">
+        <div class="code-block">Build a weekly founder digest email for Junto, sent every Monday at 9am Dubai time via SendGrid.
+
+Create a Supabase Edge Function (send-weekly-digest) that:
+1. Queries the last 7 days of data: new signups, new trips created, total expenses logged, new feedback tickets, AI request count + total cost from ai_request_log.
+2. Formats a clean HTML email with these stats, plus a "Top feedback this week" section showing the 3 highest-severity tickets.
+3. Sends to the admin email via SendGrid API.
+4. Schedule with pg_cron: every Monday at 05:00 UTC (9am Dubai).
+
+Diagnose first: is SendGrid already configured in the project? Is there an existing email-sending pattern?<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      </div>
     </div>
   </div>
 </div>
