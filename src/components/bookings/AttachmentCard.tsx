@@ -60,10 +60,11 @@ interface Props {
   onDelete: () => void;
   onUploadPrompt?: () => void;
   onUpdateNotes?: (id: string, notes: string) => void;
+  onTogglePrivacy?: (id: string, isPrivate: boolean) => void;
   getSignedUrl?: (filePath: string) => Promise<string>;
 }
 
-export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, isFetching, isNew, onOpen, onDelete, onUploadPrompt, onUpdateNotes, getSignedUrl }: Props) {
+export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, isFetching, isNew, onOpen, onDelete, onUploadPrompt, onUpdateNotes, onTogglePrivacy, getSignedUrl }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
