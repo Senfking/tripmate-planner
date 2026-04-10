@@ -6,6 +6,7 @@ import { Compass, CalendarDays, Plane, Wallet, Users } from "lucide-react";
 import { SectionCard } from "./SectionCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
+import { SharedItemsSection } from "./SharedItemsSection";
 
 type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
 
