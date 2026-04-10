@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock, MessageCircle, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock, MessageCircle, ChevronDown, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortable } from "@dnd-kit/sortable";
@@ -20,6 +20,10 @@ import type { ItineraryItem } from "@/hooks/useItinerary";
 import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 import { useAuth } from "@/contexts/AuthContext";
 import { useItemComments } from "@/hooks/useItemComments";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { formatCurrency } from "@/lib/settlementCalc";
 
 /* ── status config ── */
 const STATUS: Record<string, { label: string; fg: string; bg: string; tint: string }> = {
