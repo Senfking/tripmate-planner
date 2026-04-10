@@ -30,6 +30,7 @@ interface Props {
 }
 
 export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Props) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { items, isLoading, addItem, batchAddItems, updateItem, deleteItem, reorderItems } = useItinerary(tripId);
   const { stops } = useRouteStops(tripId);
@@ -206,6 +207,19 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           onUpdateItem={handleUpdateItem}
           onDeleteItem={(id) => deleteItem.mutate(id)}
           onReorder={(r) => reorderItems.mutate(r)}
+          onCreateExpenseFromItem={(prefill) => {
+            navigate(`/app/trips/${tripId}/expenses`, {
+              state: {
+                prefillExpense: {
+                  title: prefill.title,
+                  amount: prefill.amount,
+                  currency: prefill.currency,
+                  date: prefill.date,
+                  itineraryItemId: prefill.itineraryItemId,
+                },
+              },
+            });
+          }}
           saving={addItem.isPending || updateItem.isPending}
         />
       ))}
