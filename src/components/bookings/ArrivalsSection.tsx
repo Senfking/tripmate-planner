@@ -42,46 +42,44 @@ function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
     const destination = bd.destination ? String(bd.destination) : null;
     if (!destination && !departure) continue;
 
-    const checkIn = bd.check_in ? String(bd.check_in) : null;
-    const checkOut = bd.check_out ? String(bd.check_out) : null;
     const arrivalTimeStr = bd.arrival_time ? String(bd.arrival_time) : null;
     const departureTimeStr = bd.departure_time ? String(bd.departure_time) : null;
 
-    // Determine direction heuristic
-    let direction: FlightEntry["direction"] = "arrival";
-    // If we have both check_in and check_out with different dates, it could be a round trip
-    // For now, treat each flight as one entry based on available data
+    // Try multiple date sources: flight_date, check_in, or created_at as last resort
+    const tryParseDate = (...sources: (unknown | undefined)[]): Date | null => {
+      for (const src of sources) {
+        if (!src) continue;
+        const parsed = parseISO(String(src));
+        if (isValid(parsed)) return parsed;
+      }
+      return null;
+    };
 
-    let flightDate: Date | null = null;
-    if (checkIn) {
-      const parsed = parseISO(checkIn);
-      if (isValid(parsed)) flightDate = parsed;
-    }
-    if (!flightDate) continue;
+    const flightDate = tryParseDate(bd.flight_date, bd.check_in);
+    const returnDate = tryParseDate(bd.check_out);
 
-    let status: FlightEntry["status"] = "upcoming";
-    if (isToday(flightDate)) status = "today";
-    else if (isBefore(flightDate, now)) status = "past";
+    // If we have a flight date, add the outbound entry
+    if (flightDate) {
+      let status: FlightEntry["status"] = "upcoming";
+      if (isToday(flightDate)) status = "today";
+      else if (isBefore(flightDate, now)) status = "past";
 
-    const route = departure && destination ? `${departure} → ${destination}` : (destination || departure || "");
-    const memberName = att.profiles?.display_name || "Unknown";
+      const memberName = att.profiles?.display_name || "Unknown";
 
-    entries.push({
-      id: att.id,
-      memberName,
-      memberId: att.created_by,
-      departure,
-      destination,
-      date: flightDate,
-      time: arrivalTimeStr || departureTimeStr,
-      direction,
-      status,
-    });
+      entries.push({
+        id: att.id,
+        memberName,
+        memberId: att.created_by,
+        departure,
+        destination,
+        date: flightDate,
+        time: departureTimeStr || arrivalTimeStr,
+        direction: "arrival",
+        status,
+      });
 
-    // If there's a return/checkout date, add a departure entry
-    if (checkOut) {
-      const returnDate = parseISO(checkOut);
-      if (isValid(returnDate) && returnDate.getTime() !== flightDate.getTime()) {
+      // If there's a return date, add a departure entry
+      if (returnDate && returnDate.getTime() !== flightDate.getTime()) {
         let returnStatus: FlightEntry["status"] = "upcoming";
         if (isToday(returnDate)) returnStatus = "today";
         else if (isBefore(returnDate, now)) returnStatus = "past";
@@ -98,6 +96,23 @@ function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
           status: returnStatus,
         });
       }
+    } else {
+      // No date available — still show the flight but without a specific date
+      // Use created_at as a fallback so it at least appears
+      const fallbackDate = parseISO(att.created_at);
+      const memberName = att.profiles?.display_name || "Unknown";
+
+      entries.push({
+        id: att.id,
+        memberName,
+        memberId: att.created_by,
+        departure,
+        destination,
+        date: fallbackDate,
+        time: departureTimeStr || arrivalTimeStr,
+        direction: "arrival",
+        status: "upcoming",
+      });
     }
   }
 
