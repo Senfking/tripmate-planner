@@ -24,6 +24,7 @@ interface FlightEntry {
 interface Props {
   attachments: AttachmentRow[];
   compact?: boolean;
+  tripDestination?: string | null;
 }
 
 function getInitials(name: string): string {

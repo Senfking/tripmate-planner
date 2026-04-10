@@ -424,7 +424,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       )}
 
       {/* Arrivals section */}
-      <ArrivalsSection attachments={attachments} />
+      <ArrivalsSection attachments={attachments} tripDestination={tripDestination} />
 
       {/* Filter & search icons */}
       {attachments.length > 0 && (
