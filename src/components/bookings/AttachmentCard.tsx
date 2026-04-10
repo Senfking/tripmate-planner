@@ -414,6 +414,12 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
                       {attachment.notes ? "Edit notes" : "Add notes"}
                     </DropdownMenuItem>
                   )}
+                  {isMine && onTogglePrivacy && (
+                    <DropdownMenuItem onClick={() => onTogglePrivacy(attachment.id, !attachment.is_private)}>
+                      <Lock className="h-4 w-4 mr-2" />
+                      {attachment.is_private ? "Make shared" : "Make private"}
+                    </DropdownMenuItem>
+                  )}
                   {canDelete && (
                     <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmOpen(true)}>
                       <Trash2 className="h-4 w-4 mr-2" />
