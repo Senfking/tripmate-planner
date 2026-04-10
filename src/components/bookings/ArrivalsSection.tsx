@@ -61,12 +61,24 @@ function extractFlights(attachments: AttachmentRow[], tripDestination?: string |
     const flightDate = tryParseDate(bd.flight_date, bd.check_in);
     const returnDate = tryParseDate(bd.check_out);
 
-    // Determine direction from booking_data or infer
+    // Determine direction from booking_data, trip destination, or default
     const rawDirection = bd.direction ? String(bd.direction).toLowerCase() : null;
-    const inferredDirection: FlightEntry["direction"] =
-      rawDirection === "return" ? "departure" :
-      rawDirection === "outbound" ? "arrival" :
-      "arrival"; // default; will be overridden below for return-date entries
+    let inferredDirection: FlightEntry["direction"];
+    if (rawDirection === "return") {
+      inferredDirection = "departure";
+    } else if (rawDirection === "outbound") {
+      inferredDirection = "arrival";
+    } else if (tripDest && departure) {
+      // If the flight departs FROM the trip destination → it's a departure flight
+      const depLower = String(departure).toLowerCase();
+      inferredDirection = depLower.includes(tripDest) || tripDest.includes(depLower) ? "departure" : "arrival";
+    } else if (tripDest && destination) {
+      // If the flight arrives AT the trip destination → it's an arrival flight
+      const destLower = String(destination).toLowerCase();
+      inferredDirection = destLower.includes(tripDest) || tripDest.includes(destLower) ? "arrival" : "departure";
+    } else {
+      inferredDirection = "arrival";
+    }
 
     // If we have a flight date, add the outbound entry
     if (flightDate) {
