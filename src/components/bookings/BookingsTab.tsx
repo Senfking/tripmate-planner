@@ -282,6 +282,27 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
             </button>
           </div>
         )}
+
+        {/* Private toggle */}
+        <TooltipProvider>
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-1.5">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Private</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground/60 hover:text-muted-foreground">
+                    <Info className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[200px] text-xs">
+                  Only you can see private documents
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+          </div>
+        </TooltipProvider>
       </div>
 
       <div className="flex items-center gap-3">
