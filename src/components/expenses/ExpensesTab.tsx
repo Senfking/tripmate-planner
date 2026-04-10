@@ -687,6 +687,20 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           trip={trip}
         />
       )}
+
+      {crossLinkData && (
+        <ItineraryCrossLinkDrawer
+          open={!!crossLinkData}
+          onOpenChange={(open) => { if (!open) setCrossLinkData(null); }}
+          tripId={tripId}
+          expenseId={crossLinkData.expenseId}
+          title={crossLinkData.title}
+          date={crossLinkData.date}
+          amount={crossLinkData.amount}
+          currency={crossLinkData.currency}
+          category={crossLinkData.category}
+        />
+      )}
     </div>
   );
 }
