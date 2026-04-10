@@ -398,51 +398,53 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 px-4 pb-12 animate-fade-in-card md:max-w-[900px] md:mx-auto md:px-8">
-      <SectionCard
-        icon={Compass}
-        title="Decisions"
-        summary={decisionsSummary}
-        to={`/app/trips/${tripId}/decisions`}
-        badge={decisionsBadge}
-        imageUrl="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80"
-      />
-      <SectionCard
-        icon={CalendarDays}
-        title="Itinerary"
-        summary={itinerarySummary}
-        subline={itinerarySubline}
-        to={`/app/trips/${tripId}/itinerary`}
-        badge={itineraryBadge}
-        imageUrl="https://images.unsplash.com/photo-1530521954074-e64f6810b32d?w=800&q=80"
-      />
-      <SectionCard
-        icon={Plane}
-        title="Bookings & Docs"
-        summary={bookingsSummary}
-        subline={bookingsSubline}
-        to={`/app/trips/${tripId}/bookings`}
-        badge={bookingsBadge}
-        imageUrl="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80"
-      />
-      <SectionCard
-        icon={Wallet}
-        title="Expenses"
-        summary={expensesSummary}
-        
-        to={`/app/trips/${tripId}/expenses`}
-        badge={expensesBadge}
-        imageUrl="https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?w=800&q=80"
-      />
-      <SectionCard
-        icon={Users}
-        title="Admin"
-        summary={adminSummary}
-        to={`/app/trips/${tripId}/admin`}
-        badge={adminBadge}
-        imageUrl="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
-        className="md:col-span-2"
-      />
+    <div className="animate-fade-in-card pb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 px-4 md:max-w-[900px] md:mx-auto md:px-8">
+        <SectionCard
+          icon={Compass}
+          title="Decisions"
+          summary={decisionsSummary}
+          to={`/app/trips/${tripId}/decisions`}
+          badge={decisionsBadge}
+          imageUrl="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80"
+        />
+        <SectionCard
+          icon={CalendarDays}
+          title="Itinerary"
+          summary={itinerarySummary}
+          subline={itinerarySubline}
+          to={`/app/trips/${tripId}/itinerary`}
+          badge={itineraryBadge}
+          imageUrl="https://images.unsplash.com/photo-1530521954074-e64f6810b32d?w=800&q=80"
+        />
+        <SectionCard
+          icon={Plane}
+          title="Bookings & Docs"
+          summary={bookingsSummary}
+          subline={bookingsSubline}
+          to={`/app/trips/${tripId}/bookings`}
+          badge={bookingsBadge}
+          imageUrl="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80"
+        />
+        <SectionCard
+          icon={Wallet}
+          title="Expenses"
+          summary={expensesSummary}
+          to={`/app/trips/${tripId}/expenses`}
+          badge={expensesBadge}
+          imageUrl="https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?w=800&q=80"
+        />
+        <SectionCard
+          icon={Users}
+          title="Admin"
+          summary={adminSummary}
+          to={`/app/trips/${tripId}/admin`}
+          badge={adminBadge}
+          imageUrl="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
+          className="md:col-span-2"
+        />
+      </div>
+      <SharedItemsSection tripId={tripId} />
     </div>
   );
 }
