@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info, WifiOff, Lock, MoreHorizontal } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -241,7 +242,21 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
           {/* Content */}
           <div className="flex-1 min-w-0 space-y-0.5">
             <div className="flex items-center gap-1.5">
-              {attachment.is_private && <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />}
+              {attachment.is_private && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">
+                        <Lock className="h-2.5 w-2.5" />
+                        Private
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs max-w-[180px]">
+                      Only you can see this document
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <p className="font-medium text-[13px] leading-snug truncate flex-1">{displayTitle}</p>
             </div>
 
