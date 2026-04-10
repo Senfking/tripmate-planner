@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info, WifiOff } from "lucide-react";
+import { Plane, Hotel, Activity, Link2, File, Trash2, ExternalLink, MapPin, Calendar, Clock, Hash, Users, ChevronDown, Sparkles, Download, Maximize2, StickyNote, Pencil, Check, X, CreditCard, Info, WifiOff, Lock } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -265,6 +265,9 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
           {/* Content */}
           <div className="flex-1 min-w-0 space-y-0.5">
             <div className="flex items-center gap-2">
+              {attachment.is_private && (
+                <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
+              )}
               <p className="font-medium text-sm leading-snug truncate flex-1">{displayTitle}</p>
               <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
             </div>

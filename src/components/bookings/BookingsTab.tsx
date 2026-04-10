@@ -18,7 +18,9 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload, Plus } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload, Plus, Lock, Info } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -64,19 +66,23 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [search, setSearch] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const ACCEPT_ALL = ".pdf,.jpg,.jpeg,.png,.webp";
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadFile.mutate(file);
+    if (file) {
+      Object.defineProperty(file, "__isPrivate", { value: isPrivate });
+      uploadFile.mutate(file);
+    }
     e.target.value = "";
   };
 
   const handleManualSubmit = () => {
     if (!manualTitle.trim()) return;
     addManual.mutate(
-      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined },
+      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined, is_private: isPrivate },
       {
         onSuccess: () => {
           setShowManualForm(false);
@@ -103,7 +109,12 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   ];
 
   const isAdmin = myRole === "owner" || myRole === "admin";
-  const attachments = query.data ?? [];
+  const allAttachments = query.data ?? [];
+  // Filter: show shared + own private
+  const attachments = useMemo(() =>
+    allAttachments.filter((a) => !a.is_private || a.created_by === user?.id),
+    [allAttachments, user?.id],
+  );
 
   // Show cross-link drawer when extraction finishes with valid booking data
   useEffect(() => {
@@ -271,6 +282,27 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
             </button>
           </div>
         )}
+
+        {/* Private toggle */}
+        <TooltipProvider>
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-1.5">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Private</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground/60 hover:text-muted-foreground">
+                    <Info className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[200px] text-xs">
+                  Only you can see private documents
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+          </div>
+        </TooltipProvider>
       </div>
 
       <div className="flex items-center gap-3">
