@@ -194,16 +194,6 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         <Label className="text-xs">Notes (optional)</Label>
         <Textarea value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} rows={3} placeholder="Confirmation #, dates, details…" className="text-sm" />
       </div>
-      <div className="flex items-center justify-between rounded-lg border px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-          <div>
-            <p className="text-[13px] font-medium">Private</p>
-            <p className="text-[11px] text-muted-foreground">Only visible to you</p>
-          </div>
-        </div>
-        <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-      </div>
       <Button onClick={handleManualSubmit} disabled={!manualTitle.trim() || addManual.isPending} className="w-full">
         {addManual.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
         Add Booking
@@ -255,35 +245,15 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
             <Upload className="h-4 w-4 text-[#0D9488] shrink-0" />
           </button>
 
-          <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2 px-1">
             <button
               type="button"
               onClick={openManualForm}
-              className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              or <span className="underline">add manually</span>
+              <Plus className="h-3.5 w-3.5" />
+              Add manually
             </button>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setIsPrivate((p) => !p)}
-                    className={`flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-full transition-colors ${
-                      isPrivate
-                        ? "bg-amber-100 text-amber-700"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Lock className="h-3 w-3" />
-                    {isPrivate ? "Private mode on" : "Private"}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs max-w-[180px]">
-                  {isPrivate ? "Uploads will only be visible to you" : "Tap to make next upload private"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
         </div>
       )}
