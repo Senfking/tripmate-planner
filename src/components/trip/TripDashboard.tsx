@@ -445,6 +445,9 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           className="md:col-span-2"
         />
       </div>
+      <div className="px-4 md:max-w-[900px] md:mx-auto md:px-8 mt-3">
+        <ArrivalsCard tripId={tripId} />
+      </div>
       <SharedItemsSection tripId={tripId} />
     </div>
   );
