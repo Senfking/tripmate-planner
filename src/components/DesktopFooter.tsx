@@ -36,7 +36,7 @@ export function DesktopFooter() {
         onClick={handleShare}
         className="border border-[#E5E7EB] rounded-[20px] px-3 py-1 text-xs font-medium text-[#0D9488] hover:bg-[#F0FDFA] transition-colors"
       >
-        ✈️ Share Junto
+        Share Junto
       </button>
     </footer>
   );
