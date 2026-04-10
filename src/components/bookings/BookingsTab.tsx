@@ -167,7 +167,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     if (isSearching) {
       const q = search.toLowerCase();
       // Type label mapping for searching by category name
-      const typeLabels: Record<string, string> = { flight: "flight flights", hotel: "hotel hotels", activity: "activity activities", other: "other files" };
+      const typeLabels: Record<string, string> = { flight: "flight flights", hotel: "hotel hotels", activity: "activity activities", transport: "transport", visa: "visa entry", insurance: "insurance", payment: "payment payments", other: "other files" };
       list = list.filter((a) => {
         const memberName = a.profiles?.display_name?.toLowerCase() || "";
         const ogTitle = a.og_title?.toLowerCase() || "";
