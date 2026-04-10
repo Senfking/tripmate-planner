@@ -193,6 +193,16 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         <Label className="text-xs">Notes (optional)</Label>
         <Textarea value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} rows={3} placeholder="Confirmation #, dates, details…" className="text-sm" />
       </div>
+      <div className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+          <div>
+            <p className="text-[13px] font-medium">Private</p>
+            <p className="text-[11px] text-muted-foreground">Only visible to you</p>
+          </div>
+        </div>
+        <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+      </div>
       <Button onClick={handleManualSubmit} disabled={!manualTitle.trim() || addManual.isPending} className="w-full">
         {addManual.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
         Add Booking
