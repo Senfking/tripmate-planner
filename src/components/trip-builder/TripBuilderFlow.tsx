@@ -168,6 +168,14 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
     }
   }, [tripId, answers, defaults.groupSize, onSuccess, onClose]);
 
+  // Auto-generate after free text fills all required fields
+  useEffect(() => {
+    if (pendingGenerate.current && !generating) {
+      pendingGenerate.current = false;
+      handleGenerate();
+    }
+  }, [answers, generating, handleGenerate]);
+
   const toggleVibe = useCallback((v: string) => {
     setAnswers((prev) => ({
       ...prev,
