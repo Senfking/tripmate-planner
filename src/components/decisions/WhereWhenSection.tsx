@@ -286,7 +286,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
   const createProposalHandler = async (data: any) => {
     try {
       await createProposal.mutateAsync(data);
-      toast({ title: data.startDate ? "Destination & dates suggested! 🎉" : "Destination suggested! 🎉" });
+      toast({ title: data.startDate ? "Destination & dates suggested" : "Destination suggested" });
     } catch {
       toast({ title: "Failed to add destination", variant: "destructive" });
       throw new Error("failed");
@@ -866,7 +866,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
       {totalItems === 0 && (
         <div className="text-center py-8 space-y-4">
           <p className="text-muted-foreground">
-            No plans suggested yet. Be the first to suggest a destination! 🌍
+            No plans suggested yet. Be the first to suggest a destination.
           </p>
           <ProposalForm
             onSubmit={createProposalHandler}
