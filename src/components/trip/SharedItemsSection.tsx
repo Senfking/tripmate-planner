@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronDown, Plus, Trash2, Hand } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Hand, Backpack } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -51,7 +51,8 @@ export function SharedItemsSection({ tripId }: { tripId: string }) {
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
           <span className="flex items-center gap-2">
-            🎒 Who's bringing what?
+            <Backpack className="h-4 w-4" />
+            Who's bringing what?
             {items.length > 0 && (
               <span className="text-xs bg-muted rounded-full px-2 py-0.5">{items.length}</span>
             )}
