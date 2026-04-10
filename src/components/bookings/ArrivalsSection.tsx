@@ -31,8 +31,10 @@ function getInitials(name: string): string {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
+function extractFlights(attachments: AttachmentRow[], tripDestination?: string | null): FlightEntry[] {
   const now = new Date();
+  const entries: FlightEntry[] = [];
+  const tripDest = tripDestination?.toLowerCase().trim() || null;
   const entries: FlightEntry[] = [];
 
   for (const att of attachments) {
