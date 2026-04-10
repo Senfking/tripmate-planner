@@ -173,6 +173,20 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
 
   const isLastStep = step === TOTAL_STEPS - 1;
 
+  if (results) {
+    return (
+      <TripResultsView
+        tripId={tripId}
+        result={results}
+        onClose={onClose}
+        onRegenerate={() => {
+          setResults(null);
+          handleGenerate();
+        }}
+      />
+    );
+  }
+
   if (generating || genError) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex flex-col">
