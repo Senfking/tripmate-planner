@@ -117,14 +117,6 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const pendingGenerate = useRef(false);
 
-  // DIAGNOSTIC: log mount/unmount to detect unexpected unmounts (e.g. parent re-render)
-  useEffect(() => {
-    console.log("[TripBuilder] MOUNTED — tripId:", tripId);
-    return () => {
-      console.log("[TripBuilder] UNMOUNTED — was generating:", generating, "had error:", genError);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const [answers, setAnswers] = useState<Answers>({
     destination: "",
     surpriseMe: false,
@@ -205,8 +197,6 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   }, [answers, findFirstIncompleteStep]);
 
   const handleGenerate = useCallback(async () => {
-    const t0 = performance.now();
-    console.log("[TripBuilder] handleGenerate START — timestamp:", new Date().toISOString());
     setGenerating(true);
     setGenError(null);
 
@@ -228,47 +218,22 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         group_size: defaults.groupSize || 1,
       };
 
-      console.log("[TripBuilder] Invoking edge function with payload keys:", Object.keys(payload));
-
       const { data, error } = await supabase.functions.invoke("generate-trip-itinerary", {
         body: payload,
       });
-
-      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-      console.log(`[TripBuilder] Edge function returned after ${elapsed}s`);
-      console.log("[TripBuilder] data is null:", data === null, "| data is undefined:", data === undefined);
-      console.log("[TripBuilder] data type:", typeof data, "| data keys:", data ? Object.keys(data) : "N/A");
-      console.log("[TripBuilder] data.success:", data?.success, "| data.error:", data?.error);
-      console.log("[TripBuilder] Raw edge function response (first 2000 chars):", JSON.stringify(data, null, 2)?.slice(0, 2000));
-      console.log("[TripBuilder] Edge function error object:", error, "| error type:", typeof error, "| error message:", error?.message);
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data) throw new Error("No data returned from generate-trip-itinerary");
 
-      console.log("[TripBuilder] About to call normalizeAIResponse...");
-      let normalized: AITripResult;
-      try {
-        normalized = normalizeAIResponse(data);
-      } catch (normErr: any) {
-        console.error("[TripBuilder] normalizeAIResponse THREW:", normErr);
-        throw new Error(`Failed to process response: ${normErr?.message}`);
-      }
-      console.log("[TripBuilder] Normalized result — destinations:", normalized.destinations?.length, "| title:", normalized.trip_title, "| map_center:", JSON.stringify(normalized.map_center));
+      const normalized = normalizeAIResponse(data);
 
       setResults(normalized);
       onSuccess?.(normalized);
     } catch (err: any) {
-      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-      console.error(`[TripBuilder] Generation FAILED after ${elapsed}s`);
-      console.error("[TripBuilder] Error name:", err?.name, "| message:", err?.message);
-      console.error("[TripBuilder] Full error:", err);
-      console.error("[TripBuilder] Error stack:", err?.stack);
-      const errorMsg = err?.message || "Failed to generate itinerary. Please try again.";
-      console.log("[TripBuilder] Setting genError to:", errorMsg);
-      setGenError(errorMsg);
+      console.error("[TripBuilder] Generation failed:", err);
+      setGenError(err?.message || "Failed to generate itinerary. Please try again.");
     } finally {
-      console.log("[TripBuilder] handleGenerate FINALLY — setting generating=false");
       setGenerating(false);
     }
   }, [tripId, answers, defaults.groupSize, onSuccess, onClose]);

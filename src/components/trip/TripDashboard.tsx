@@ -397,15 +397,10 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     stopsLoading || proposalsLoading || pollsLoading ||
     itineraryLoading || attachmentsLoading || expensesLoading || memberCountLoading;
 
-  // DIAGNOSTIC: detect if isLoading goes true while builder is open (would unmount TripBuilderFlow)
-  if (isLoading && builderOpen) {
-    console.warn("[TripDashboard] isLoading=true WHILE builderOpen=true — TripBuilderFlow will be UNMOUNTED!", {
-      stopsLoading, proposalsLoading, pollsLoading,
-      itineraryLoading, attachmentsLoading, expensesLoading, memberCountLoading,
-    });
-  }
-
-  if (isLoading) {
+  // Don't show skeleton while builder is open — it's a full-screen overlay so the
+  // dashboard isn't visible, and returning the skeleton would unmount the builder
+  // mid-generation, silently killing the AI request.
+  if (isLoading && !builderOpen) {
     return <DashboardSkeleton />;
   }
 
