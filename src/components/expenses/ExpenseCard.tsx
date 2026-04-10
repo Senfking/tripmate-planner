@@ -164,6 +164,7 @@ export function ExpenseCard({
               totalAmount={expense.amount}
               onToggleClaim={(id) => toggleClaim.mutate(id)}
               isToggling={toggleClaim.isPending}
+              storedSplits={splits}
             />
           )}
 
