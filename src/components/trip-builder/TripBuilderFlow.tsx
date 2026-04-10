@@ -202,7 +202,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-2">
+      <div className="flex items-center justify-between px-4 sm:px-6 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-2 max-w-2xl mx-auto w-full">
         {step > 0 ? (
           <button onClick={() => setStep((s) => s - 1)} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
             <ArrowLeft className="h-5 w-5 text-foreground" />
