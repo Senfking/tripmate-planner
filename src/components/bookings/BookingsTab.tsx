@@ -318,6 +318,16 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       {aiSection}
       {manualFormModal}
 
+      {/* Booking cross-link drawer */}
+      {crossLinkAttachment && (
+        <BookingCrossLinkDrawer
+          open={!!crossLinkAttachment}
+          onOpenChange={(open) => { if (!open) setCrossLinkAttachment(null); }}
+          tripId={tripId}
+          attachment={crossLinkAttachment}
+        />
+      )}
+
       {/* Filters + search */}
       {attachments.length > 0 && (
         <>
