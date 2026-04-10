@@ -95,6 +95,7 @@ export type Database = {
           created_by: string | null
           file_path: string | null
           id: string
+          is_private: boolean
           itinerary_item_id: string | null
           notes: string | null
           og_description: string | null
@@ -111,6 +112,7 @@ export type Database = {
           created_by?: string | null
           file_path?: string | null
           id?: string
+          is_private?: boolean
           itinerary_item_id?: string | null
           notes?: string | null
           og_description?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           created_by?: string | null
           file_path?: string | null
           id?: string
+          is_private?: boolean
           itinerary_item_id?: string | null
           notes?: string | null
           og_description?: string | null
