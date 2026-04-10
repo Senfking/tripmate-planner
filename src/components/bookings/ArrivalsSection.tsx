@@ -33,7 +33,6 @@ function getInitials(name: string): string {
 
 function extractFlights(attachments: AttachmentRow[], tripDestination?: string | null): FlightEntry[] {
   const now = new Date();
-  const entries: FlightEntry[] = [];
   const tripDest = tripDestination?.toLowerCase().trim() || null;
   const entries: FlightEntry[] = [];
 
