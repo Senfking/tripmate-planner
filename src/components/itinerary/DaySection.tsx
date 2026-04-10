@@ -69,6 +69,13 @@ interface Props {
   onUpdateItem: (data: any) => void;
   onDeleteItem: (id: string) => void;
   onReorder: (reordered: { id: string; sort_order: number }[]) => void;
+  onCreateExpenseFromItem?: (prefill: {
+    title: string;
+    date: string;
+    amount: number;
+    currency: string;
+    itineraryItemId?: string;
+  }) => void;
   saving?: boolean;
 }
 
