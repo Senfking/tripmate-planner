@@ -14,6 +14,7 @@ import { ItemFormModal } from "./ItemFormModal";
 import { ImportItineraryModal } from "./ImportItineraryModal";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { useNavigate } from "react-router-dom";
 
 /** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
 function timeToMinutes(t: string): number {
