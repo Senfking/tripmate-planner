@@ -225,13 +225,14 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       {uploadFile.isPending ? (
         <div className="flex items-center justify-center gap-2 py-3 rounded-xl border bg-card text-[13px] font-medium text-[#0D9488]">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Processing…
+          Junto AI is processing…
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-xl border bg-card px-3 py-2.5">
+        <div className="flex items-center gap-2.5 rounded-xl border bg-card px-3.5 py-3">
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <Sparkles className="h-3.5 w-3.5 text-[#0D9488] shrink-0" />
-            <span className="text-[12px] text-muted-foreground truncate">AI extraction</span>
+            <Sparkles className="h-4 w-4 text-[#0D9488] shrink-0" />
+            <span className="text-[13px] font-medium text-foreground">Upload</span>
+            <span className="text-[12px] text-muted-foreground hidden min-[360px]:inline">· Junto AI extracts details</span>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
@@ -263,7 +264,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
 
             <Button
               size="sm"
-              className="h-7 px-3 text-xs gap-1.5"
+              className="h-8 px-3.5 text-xs gap-1.5"
               onClick={() => galleryInputRef.current?.click()}
             >
               <Upload className="h-3.5 w-3.5" />
