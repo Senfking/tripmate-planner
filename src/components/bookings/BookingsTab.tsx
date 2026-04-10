@@ -55,7 +55,6 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { query, uploadFile, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
   const isMobile = useIsMobile();
   const [crossLinkAttachment, setCrossLinkAttachment] = useState<AttachmentRow | null>(null);
-  const isMobile = useIsMobile();
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
   const [manualType, setManualType] = useState("other");
