@@ -13,7 +13,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, ChevronDown } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +60,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
