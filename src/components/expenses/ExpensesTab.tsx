@@ -33,8 +33,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
     ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
-    cachedCurrencyCodes, itineraryItems, isLoading, updateSettlementCurrency,
-    addExpense, updateExpense, deleteExpense,
+    cachedCurrencyCodes, itineraryItems, isLoading, isFetchingExpenses, isExpensesSuccess,
+    updateSettlementCurrency, addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
 
   const { data: trip } = useQuery({
@@ -294,19 +294,40 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        {/* Balance hero skeleton */}
-        <Skeleton className="h-[160px] w-full rounded-[20px]" />
-        {/* Expense card skeletons */}
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 px-1">
-            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-3 w-1/3" />
-            </div>
-            <Skeleton className="h-4 w-16" />
+        {/* Add Expense button skeleton */}
+        <Skeleton className="h-12 w-full rounded-2xl" />
+        {/* Expenses list card skeleton */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: "rgba(255,255,255,0.7)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.8)",
+            boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+          }}
+        >
+          {/* Header skeleton */}
+          <div className="px-4 py-3 flex items-center justify-between">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-24" />
           </div>
-        ))}
+          {/* Date group header */}
+          <div style={{ background: "rgba(0,0,0,0.02)", padding: "6px 16px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+            <Skeleton className="h-2.5 w-20" />
+          </div>
+          {/* Expense row skeletons */}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+              <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-2/3" />
+                <Skeleton className="h-2.5 w-1/3" />
+              </div>
+              <Skeleton className="h-3.5 w-14" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -593,7 +614,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
 
       {/* Expenses list - standalone */}
       <div
-        className="rounded-2xl overflow-hidden"
+        className="rounded-2xl overflow-hidden relative"
         style={{
           background: "rgba(255,255,255,0.7)",
           backdropFilter: "blur(20px)",
@@ -602,12 +623,36 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
         }}
       >
-        {expenses.length === 0 ? (
+        {/* Subtle top-edge refetch indicator */}
+        {isFetchingExpenses && expenses.length > 0 && (
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary/20 overflow-hidden z-10">
+            <div className="h-full w-1/3 bg-primary/40 rounded-full" style={{ animation: "shimmer 1.5s ease-in-out infinite" }} />
+          </div>
+        )}
+        {expenses.length === 0 && isExpensesSuccess ? (
           <div className="text-center py-8 space-y-1 px-4">
             <p className="text-muted-foreground text-[14px]">No expenses yet</p>
             <p className="text-xs text-muted-foreground">
               Tap "Add Expense" to start tracking costs
             </p>
+          </div>
+        ) : expenses.length === 0 ? (
+          /* Still fetching — show inline skeleton rows */
+          <div>
+            <div className="px-4 py-3 flex items-center justify-between">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-2/3" />
+                  <Skeleton className="h-2.5 w-1/3" />
+                </div>
+                <Skeleton className="h-3.5 w-14" />
+              </div>
+            ))}
           </div>
         ) : (
           <div>
