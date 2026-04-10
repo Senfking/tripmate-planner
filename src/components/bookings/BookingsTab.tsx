@@ -15,23 +15,31 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Compass, Car, Shield, HeartPulse, CreditCard, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const FILTERS = [
+const FILTERS: { value: string; label: string; icon?: React.ElementType }[] = [
   { value: "all", label: "All" },
   { value: "mine", label: "Mine" },
-  { value: "flight", label: "Flights" },
-  { value: "hotel", label: "Hotels" },
-  { value: "activity", label: "Activities" },
-  { value: "other", label: "Other" },
+  { value: "flight", label: "Flights", icon: Plane },
+  { value: "hotel", label: "Hotels", icon: Hotel },
+  { value: "activity", label: "Activities", icon: Compass },
+  { value: "transport", label: "Transport", icon: Car },
+  { value: "visa", label: "Visa & Entry", icon: Shield },
+  { value: "insurance", label: "Insurance", icon: HeartPulse },
+  { value: "payment", label: "Payments", icon: CreditCard },
+  { value: "other", label: "Other", icon: File },
 ];
 
 const SECTIONS: { type: string; label: string; icon: React.ElementType }[] = [
   { type: "flight", label: "Flights", icon: Plane },
   { type: "hotel", label: "Hotels", icon: Hotel },
-  { type: "activity", label: "Activities", icon: Activity },
+  { type: "activity", label: "Activities", icon: Compass },
+  { type: "transport", label: "Transport", icon: Car },
+  { type: "visa", label: "Visa & Entry", icon: Shield },
+  { type: "insurance", label: "Insurance", icon: HeartPulse },
+  { type: "payment", label: "Payments", icon: CreditCard },
   { type: "other", label: "Other / Files", icon: File },
 ];
 
@@ -52,7 +60,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addManual, deleteAttachment, updateNotes, updatePrivacy, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
+  const { query, uploadFile, addManual, deleteAttachment, updateNotes, updatePrivacy, updateType, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
   const isMobile = useIsMobile();
 
   // Fetch trip destination for flight direction inference
@@ -126,6 +134,10 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     { value: "flight", label: "Flight" },
     { value: "hotel", label: "Hotel" },
     { value: "activity", label: "Activity" },
+    { value: "transport", label: "Transport" },
+    { value: "visa", label: "Visa & Entry" },
+    { value: "insurance", label: "Insurance" },
+    { value: "payment", label: "Payment" },
     { value: "other", label: "Other" },
   ];
 
@@ -155,7 +167,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     if (isSearching) {
       const q = search.toLowerCase();
       // Type label mapping for searching by category name
-      const typeLabels: Record<string, string> = { flight: "flight flights", hotel: "hotel hotels", activity: "activity activities", other: "other files" };
+      const typeLabels: Record<string, string> = { flight: "flight flights", hotel: "hotel hotels", activity: "activity activities", transport: "transport", visa: "visa entry", insurance: "insurance", payment: "payment payments", other: "other files" };
       list = list.filter((a) => {
         const memberName = a.profiles?.display_name?.toLowerCase() || "";
         const ogTitle = a.og_title?.toLowerCase() || "";
@@ -211,6 +223,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       onUploadPrompt={() => galleryInputRef.current?.click()}
       onUpdateNotes={(id, notes) => updateNotes.mutate({ id, notes })}
       onTogglePrivacy={(id, isPriv) => updatePrivacy.mutate({ id, is_private: isPriv })}
+      onChangeType={(id, type) => updateType.mutate({ id, type })}
       getSignedUrl={getSignedUrl}
     />
   );
@@ -464,19 +477,23 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
           </div>
           {filtersOpen && (
             <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
-              {FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setFilter(f.value)}
-                  className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
-                    filter === f.value
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
+              {FILTERS.map((f) => {
+                const FIcon = f.icon;
+                return (
+                  <button
+                    key={f.value}
+                    onClick={() => setFilter(f.value)}
+                    className={`shrink-0 flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
+                      filter === f.value
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {FIcon && <FIcon className="h-3 w-3" />}
+                    {f.label}
+                  </button>
+                );
+              })}
             </div>
           )}
           {searchOpen && (
