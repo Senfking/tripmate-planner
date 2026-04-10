@@ -130,6 +130,14 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
     }
   }, [answers, findFirstIncompleteStep]);
 
+  // Auto-generate after free text fills all required fields
+  useEffect(() => {
+    if (pendingGenerate.current && !generating) {
+      pendingGenerate.current = false;
+      handleGenerateRef.current();
+    }
+  });
+
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
     setGenError(null);
