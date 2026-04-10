@@ -230,11 +230,28 @@ export function ItineraryItemCard({
 
         {/* Row 4: Comment count + actions - tappable to expand */}
         <div className="flex items-center justify-between px-3 pb-2 cursor-pointer" onClick={handleCardClick}>
-          <div className="flex items-center gap-1.5 text-muted-foreground/50">
-            <MessageCircle className="h-3 w-3" />
-            <span className="text-[10px] font-medium">
-              {commentCount > 0 ? commentCount : 0}
-            </span>
+          <div className="flex items-center gap-3 text-muted-foreground/50">
+            <div className="flex items-center gap-1.5">
+              <MessageCircle className="h-3 w-3" />
+              <span className="text-[10px] font-medium">
+                {commentCount > 0 ? commentCount : 0}
+              </span>
+            </div>
+            {expenseTotal && (
+              <button
+                className="flex items-center gap-1 rounded-full bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted transition-colors"
+                data-action
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/app/trips/${tripId}/expenses`);
+                }}
+              >
+                <Receipt className="h-2.5 w-2.5" />
+                {expenseTotal.currency
+                  ? formatCurrency(expenseTotal.total, expenseTotal.currency)
+                  : `${expenseTotal.count} expense${expenseTotal.count > 1 ? "s" : ""}`}
+              </button>
+            )}
             <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", expanded && "rotate-180")} />
           </div>
           <div className="flex items-center gap-0.5" data-action>
