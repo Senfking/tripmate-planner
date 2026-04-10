@@ -79,10 +79,14 @@ interface Props {
   saving?: boolean;
 }
 
-export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, newItemIds, lastVisitItemIds, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, saving, isLast }: Props & { isLast?: boolean }) {
+export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destination, members, attendance, newItemIds, lastVisitItemIds, onCycleAttendance, onAddItem, onUpdateItem, onDeleteItem, onReorder, onCreateExpenseFromItem, saving, isLast }: Props & { isLast?: boolean }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ItineraryItem | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Cost detection prompt state
+  const [costPrompt, setCostPrompt] = useState<{ itemId: string; title: string; dayDate: string; cost: DetectedCost } | null>(null);
+  const dismissedKeys = useRef<Set<string>>(new Set());
 
   const dateObj = new Date(dayDate + "T00:00:00");
   const isActiveDay = isToday(dateObj);
@@ -102,6 +106,22 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
     }
     setFormOpen(false);
     setEditItem(null);
+
+    // Detect cost in title + notes
+    const combinedText = `${data.title || ""} ${data.notes || ""}`;
+    const detected = detectCost(combinedText);
+    if (detected) {
+      const key = costPromptKey(data.id || `new:${data.title}`, data.title, data.notes);
+      if (!dismissedKeys.current.has(key)) {
+        // For existing items, use the id. For new items, we'll try to match after render.
+        setCostPrompt({
+          itemId: data.id || "",
+          title: data.title,
+          dayDate: data.day_date,
+          cost: detected,
+        });
+      }
+    }
   };
 
   const handleEdit = (item: ItineraryItem) => {
