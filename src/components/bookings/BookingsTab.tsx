@@ -58,6 +58,8 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [manualNotes, setManualNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const [isPrivate, setIsPrivate] = useState(false);
@@ -128,11 +130,26 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     else if (filter !== "all") list = list.filter((a) => a.type === filter);
     if (isSearching) {
       const q = search.toLowerCase();
-      list = list.filter(
-        (a) =>
+      // Type label mapping for searching by category name
+      const typeLabels: Record<string, string> = { flight: "flight flights", hotel: "hotel hotels", activity: "activity activities", other: "other files" };
+      list = list.filter((a) => {
+        const memberName = a.profiles?.display_name?.toLowerCase() || "";
+        const ogTitle = a.og_title?.toLowerCase() || "";
+        const ogDesc = a.og_description?.toLowerCase() || "";
+        const typeLabel = typeLabels[a.type] || "";
+        const bd = a.booking_data as Record<string, unknown> | null;
+        const bdStr = bd ? [bd.provider, bd.departure, bd.destination, bd.booking_reference, bd.title, bd.notes]
+          .filter(Boolean).map(String).join(" ").toLowerCase() : "";
+        return (
           a.title.toLowerCase().includes(q) ||
-          (a.notes && a.notes.toLowerCase().includes(q)),
-      );
+          (a.notes && a.notes.toLowerCase().includes(q)) ||
+          memberName.includes(q) ||
+          ogTitle.includes(q) ||
+          ogDesc.includes(q) ||
+          typeLabel.includes(q) ||
+          bdStr.includes(q)
+        );
+      });
     }
     return sortByOwnership(list, user?.id);
   }, [attachments, filter, search, isSearching, user?.id]);
@@ -388,7 +405,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       {/* Filters + search */}
       {attachments.length > 0 && (
         <div className="space-y-2">
-          <div className="flex gap-1 overflow-x-auto pb-0.5">
+          <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
             {FILTERS.map((f) => (
               <button
                 key={f.value}
@@ -402,16 +419,35 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                 {f.label}
               </button>
             ))}
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => {
+                setSearchOpen((o) => !o);
+                if (!searchOpen) setTimeout(() => searchInputRef.current?.focus(), 100);
+                if (searchOpen) setSearch("");
+              }}
+              className={`shrink-0 flex items-center justify-center h-6 w-6 rounded-full transition-colors ${
+                searchOpen || isSearching
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              <Search className="h-3.5 w-3.5" />
+            </button>
           </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search docs…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-9"
-            />
-          </div>
+          {searchOpen && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Search by name, airline, city…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
+          )}
         </div>
       )}
 
