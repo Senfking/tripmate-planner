@@ -97,8 +97,6 @@ export function ArrivalsSection({ attachments, compact = false }: Props) {
     return entries;
   }, [attachments]);
 
-  if (arrivals.length === 0) return null;
-
   // Group by date
   const grouped = useMemo(() => {
     const map = new Map<string, ArrivalEntry[]>();
@@ -123,10 +121,12 @@ export function ArrivalsSection({ attachments, compact = false }: Props) {
     return `${upcoming.length} member${upcoming.length > 1 ? "s" : ""} arriving ${dates[0]}–${dates[dates.length - 1]}`;
   }, [arrivals]);
 
+  if (arrivals.length === 0) return null;
+
   if (compact) {
     const nextArrivals = arrivals.filter((a) => a.status !== "arrived").slice(0, 2);
     if (nextArrivals.length === 0 && arrivals.every((a) => a.status === "arrived")) {
-      return null; // Don't show on dashboard if everyone arrived
+      return null;
     }
 
     return (
