@@ -18,7 +18,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload, Plus, Lock } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload, Plus, Lock, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
