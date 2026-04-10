@@ -29,6 +29,7 @@ export function useAttachments(tripId: string) {
   const key = ["attachments", tripId];
   const [extractingIds, setExtractingIds] = useState<Set<string>>(new Set());
   const [fetchingIds, setFetchingIds] = useState<Set<string>>(new Set());
+  const [lastExtractedId, setLastExtractedId] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: key,
@@ -86,6 +87,7 @@ export function useAttachments(tripId: string) {
           .then(() => {
             qc.invalidateQueries({ queryKey: key });
             trackEvent("ai_booking_extract", { success: true }, user?.id);
+            setLastExtractedId(data.id);
           })
           .catch(() => {
             trackEvent("ai_booking_extract", { success: false }, user?.id);
@@ -204,5 +206,7 @@ export function useAttachments(tripId: string) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  return { query, uploadFile, addLink, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds };
+  const clearLastExtractedId = () => setLastExtractedId(null);
+
+  return { query, uploadFile, addLink, addManual, deleteAttachment, updateNotes, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId };
 }
