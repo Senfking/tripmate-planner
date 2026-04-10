@@ -105,16 +105,18 @@ Deno.serve(async (req) => {
   "title": "short descriptive title e.g. Ryanair FR1234 or Park Hyatt Bangkok",
   "provider": "airline or hotel name",
   "booking_reference": "confirmation code",
-  "check_in": "date string or null",
-  "check_out": "date string or null",
-  "departure": "airport or city or null",
-  "destination": "airport or city or null",
-  "departure_time": "time string or null",
-  "arrival_time": "time string or null",
+  "flight_date": "YYYY-MM-DD date of the flight (for flights only, null otherwise)",
+  "check_in": "YYYY-MM-DD date string or null",
+  "check_out": "YYYY-MM-DD date string or null",
+  "departure": "airport code or city or null",
+  "destination": "airport code or city or null",
+  "departure_time": "HH:MM time string or null",
+  "arrival_time": "HH:MM time string or null",
   "passenger_names": ["name1"] or null,
   "total_price": "price with currency or null",
   "notes": "SHORT summary (max 2-3 lines) of other important details — e.g. baggage allowance, room type, cancellation policy, meal plan, special instructions, total price breakdown. Only the most useful info. null if nothing noteworthy."
 }
+For flights: always try to extract the flight_date in YYYY-MM-DD format. Use check_in for the outbound flight date if no separate field exists. Use check_out for a return flight date.
 Return only valid JSON, no other text.`;
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
