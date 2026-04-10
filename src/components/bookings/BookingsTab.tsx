@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 
 const FILTERS = [
   { value: "all", label: "All" },
+  { value: "mine", label: "Mine" },
   { value: "flight", label: "Flights" },
   { value: "hotel", label: "Hotels" },
   { value: "activity", label: "Activities" },
