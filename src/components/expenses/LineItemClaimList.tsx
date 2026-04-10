@@ -18,7 +18,6 @@ interface Props {
   totalAmount: number;
   onToggleClaim: (lineItemId: string) => void;
   isToggling: boolean;
-  storedSplits?: { user_id: string; share_amount: number }[];
 }
 
 function getInitials(name: string) {
