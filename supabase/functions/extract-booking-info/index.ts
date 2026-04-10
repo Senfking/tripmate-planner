@@ -101,9 +101,9 @@ Deno.serve(async (req) => {
 
     const extractionPrompt = `Extract booking information from this document. Return ONLY a JSON object with these fields (null for anything not found):
 {
-  "booking_type": "flight|hotel|activity|other",
+  "booking_type": "flight|hotel|activity|visa|insurance|transport|payment|other",
   "title": "short descriptive title e.g. Ryanair FR1234 or Park Hyatt Bangkok",
-  "provider": "airline or hotel name",
+  "provider": "airline, hotel, insurer, or service provider name",
   "booking_reference": "confirmation code",
   "flight_date": "YYYY-MM-DD — the actual calendar date of the flight. CRITICAL: This is the most important field for flights. Look for departure date, travel date, flight date anywhere in the document. This must be a real date like 2025-07-15, NOT null if any date appears in the document.",
   "check_in": "YYYY-MM-DD date string or null",
@@ -117,6 +117,17 @@ Deno.serve(async (req) => {
   "total_price": "price with currency or null",
   "notes": "SHORT summary (max 2-3 lines) of other important details — e.g. baggage allowance, room type, cancellation policy, meal plan, special instructions, total price breakdown. Only the most useful info. null if nothing noteworthy."
 }
+
+BOOKING TYPE CLASSIFICATION RULES (apply in order):
+1. "flight" — airline boarding passes, flight confirmations, e-tickets with flight numbers
+2. "hotel" — hotel/hostel/apartment/Airbnb reservations with check-in/check-out dates
+3. "visa" — visa documents, eVisa, eVOA (e.g. Indonesia eVOA), entry permits, arrival cards (e.g. Germany Arrival Card), immigration forms, passport copies, tourist levy vouchers (e.g. Bali Tourist Levy), departure tax receipts, customs declarations
+4. "insurance" — travel insurance policies, health insurance cards, health certificates, vaccination records, COVID test results, medical clearance documents
+5. "transport" — car rentals, train/rail tickets, ferry/boat bookings, airport transfers, shuttle services, bus tickets, taxi vouchers, ride-hailing receipts — any ground/sea transport that is NOT a flight
+6. "payment" — payment confirmations, deposit receipts, booking payment proofs, invoices, bank transfer confirmations — documents that primarily confirm a payment was made rather than describing a specific service
+7. "activity" — tours, excursions, museum tickets, event tickets, restaurant reservations, experience bookings
+8. "other" — anything that doesn't clearly fit the above categories
+
 IMPORTANT for flights: The flight_date field is critical and must NEVER be null if there is any date visible in the document. Search the entire document for dates — headers, footers, itinerary sections, booking details. Also set check_in to the same date for flights. If there's a return flight date, set check_out to that date.
 Return only valid JSON, no other text.`;
 
