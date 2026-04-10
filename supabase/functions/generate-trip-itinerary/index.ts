@@ -22,42 +22,54 @@ type Pace = "packed" | "balanced" | "relaxed";
 
 interface TripBuilderRequest {
   trip_id?: string | null;
-  destination: string;
-  start_date: string;
-  end_date: string;
-  group_size: number;
-  budget_level: BudgetLevel;
-  interests: string[];
-  dietary: string[];
-  pace: Pace;
+  destination?: string | null;
+  surprise_me?: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
+  flexible?: boolean;
+  duration_days?: number | null;
+  group_size?: number;
+  budget_level?: BudgetLevel;
+  vibes?: string[];
+  interests?: string[];
+  dietary?: string[];
+  pace?: Pace;
   notes?: string | null;
+  free_text?: string | null;
+  alternatives_mode?: boolean;
 }
 
-/** Calculate the number of days between two YYYY-MM-DD date strings (inclusive). */
 function daysBetween(start: string, end: string): number {
   const ms = new Date(end).getTime() - new Date(start).getTime();
-  return Math.round(ms / 86_400_000) + 1; // inclusive
+  return Math.round(ms / 86_400_000) + 1;
 }
 
-/** Build a deterministic cache key from the request parameters. */
-function buildCacheKey(r: TripBuilderRequest): string {
+function buildCacheKey(r: TripBuilderRequest, dest: string, numDays: number): string {
+  const interests = r.vibes || r.interests || [];
   const parts = [
-    r.destination.toLowerCase().trim(),
-    r.start_date,
-    r.end_date,
-    String(r.group_size),
-    r.budget_level,
-    [...r.interests].sort().join(","),
-    [...r.dietary].sort().join(","),
-    r.pace,
+    dest.toLowerCase().trim(),
+    String(numDays),
+    String(r.group_size || 1),
+    r.budget_level || "mid-range",
+    [...interests].sort().join(","),
+    [...(r.dietary || [])].sort().join(","),
+    r.pace || "balanced",
   ];
   return parts.join("|");
 }
 
-/** Estimate cost in USD based on model and token counts. Sonnet 4 pricing. */
 function estimateCostUsd(inputTokens: number, outputTokens: number): number {
-  // Claude Sonnet 4: $3/M input, $15/M output
   return (inputTokens * 3 + outputTokens * 15) / 1_000_000;
+}
+
+/** Generate fake start/end dates for flexible trips */
+function generateFlexDates(durationDays: number): { start: string; end: string } {
+  const start = new Date();
+  start.setDate(start.getDate() + 30); // 30 days from now
+  const end = new Date(start);
+  end.setDate(end.getDate() + durationDays - 1);
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  return { start: fmt(start), end: fmt(end) };
 }
 
 // ---------------------------------------------------------------------------
@@ -90,55 +102,72 @@ Deno.serve(async (req) => {
 
     // ---- Parse & validate input ----
     const body: TripBuilderRequest = await req.json();
+
+    // Handle alternatives mode separately
+    if (body.alternatives_mode) {
+      // TODO: implement alternatives generation
+      return jsonResponse({ success: true, alternatives: [] });
+    }
+
     const {
       trip_id = null,
-      destination,
-      start_date,
-      end_date,
-      group_size,
-      budget_level,
-      interests = [],
+      destination: rawDest,
+      surprise_me = false,
+      start_date: rawStart,
+      end_date: rawEnd,
+      flexible = false,
+      duration_days: rawDuration,
+      group_size = 1,
+      budget_level = "mid-range",
+      vibes = [],
+      interests: rawInterests = [],
       dietary = [],
-      pace,
+      pace = "balanced",
       notes = null,
+      free_text = null,
     } = body;
 
-    if (!destination || !destination.trim()) {
-      return jsonResponse({ success: false, error: "destination is required" }, 400);
+    // Resolve destination
+    const destination = surprise_me ? "a surprise destination (you choose an amazing, underrated destination)" : (rawDest || "").trim();
+    if (!destination) {
+      return jsonResponse({ success: false, error: "destination is required (or set surprise_me=true)" }, 400);
     }
-    if (!start_date || !end_date) {
-      return jsonResponse({ success: false, error: "start_date and end_date are required" }, 400);
+
+    // Resolve dates
+    let startDate: string;
+    let endDate: string;
+
+    if (flexible || (!rawStart && !rawEnd)) {
+      const dur = rawDuration && rawDuration > 0 ? Math.min(rawDuration, 21) : 7;
+      const flexDates = generateFlexDates(dur);
+      startDate = flexDates.start;
+      endDate = flexDates.end;
+    } else {
+      if (!rawStart || !rawEnd) {
+        return jsonResponse({ success: false, error: "start_date and end_date are required when not using flexible dates" }, 400);
+      }
+      startDate = rawStart;
+      endDate = rawEnd;
     }
-    const numDays = daysBetween(start_date, end_date);
+
+    const numDays = daysBetween(startDate, endDate);
     if (numDays < 1) {
       return jsonResponse({ success: false, error: "end_date must be on or after start_date" }, 400);
     }
     if (numDays > 21) {
-      return jsonResponse(
-        { success: false, error: "Trip duration cannot exceed 21 days" },
-        400,
-      );
+      return jsonResponse({ success: false, error: "Trip duration cannot exceed 21 days" }, 400);
     }
-    if (!group_size || group_size < 1 || group_size > 20) {
-      return jsonResponse(
-        { success: false, error: "group_size must be between 1 and 20" },
-        400,
-      );
-    }
+
+    const clampedGroupSize = Math.max(1, Math.min(group_size, 20));
+
     const validBudgets: BudgetLevel[] = ["budget", "mid-range", "premium"];
-    if (!validBudgets.includes(budget_level)) {
-      return jsonResponse(
-        { success: false, error: "budget_level must be budget, mid-range, or premium" },
-        400,
-      );
-    }
+    const safeBudget = validBudgets.includes(budget_level) ? budget_level : "mid-range";
+
     const validPaces: Pace[] = ["packed", "balanced", "relaxed"];
-    if (!validPaces.includes(pace)) {
-      return jsonResponse(
-        { success: false, error: "pace must be packed, balanced, or relaxed" },
-        400,
-      );
-    }
+    const safePace = validPaces.includes(pace) ? pace : "balanced";
+
+    // Merge vibes and interests
+    const allInterests = [...new Set([...vibes, ...rawInterests])].filter(Boolean);
 
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!anthropicKey) {
@@ -151,29 +180,27 @@ Deno.serve(async (req) => {
     );
 
     // ---- Cache check ----
-    const cacheKey = buildCacheKey(body);
+    const cacheKey = buildCacheKey(body, destination, numDays);
     try {
       const { data: cached } = await svcClient
         .from("ai_response_cache")
-        .select("response, created_at")
+        .select("response_json, created_at")
         .eq("cache_key", cacheKey)
         .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (cached?.response) {
+      if (cached?.response_json) {
         console.log("Cache hit for trip builder:", cacheKey.slice(0, 60));
-        // Track cache hit
         await svcClient.from("analytics_events").insert({
           event_name: "ai_trip_builder",
           user_id: user.id,
           properties: { source: "cache", destination: destination.trim() },
         });
-        return jsonResponse({ success: true, ...cached.response });
+        return jsonResponse({ success: true, ...cached.response_json as Record<string, unknown> });
       }
     } catch {
-      // ai_response_cache table may not exist yet — continue without cache
       console.log("Cache lookup skipped (table may not exist)");
     }
 
@@ -195,11 +222,10 @@ Deno.serve(async (req) => {
           const lines = Object.entries(grouped)
             .map(([k, vals]) => `  ${k}: ${vals.join(", ")}`)
             .join("\n");
-          vibeContext = `\n\nGROUP VIBE BOARD RESULTS (from trip members voting):\n${lines}\nUse these preferences to guide your choices. For example, if most voted "Full send" for energy, plan more intense activities. If "Slow & easy" won, keep it relaxed regardless of the pace parameter.`;
+          vibeContext = `\n\nGROUP VIBE BOARD RESULTS (from trip members voting):\n${lines}\nUse these preferences to guide your choices.`;
         }
       } catch (e) {
         console.error("Failed to fetch vibe data:", e);
-        // Non-fatal — continue without vibe context
       }
     }
 
@@ -211,93 +237,108 @@ Deno.serve(async (req) => {
     };
 
     const budgetGuide: Record<BudgetLevel, string> = {
-      budget:
-        "Street food, local eateries, hostels, budget guesthouses. Activities: free walking tours, public beaches, markets, temples. Transport: public transit, shared rides.",
-      "mid-range":
-        "Mid-tier restaurants, 3-star hotels, boutique stays. Activities: guided tours, cooking classes, snorkeling trips. Transport: private transfers for longer distances.",
-      premium:
-        "Fine dining, luxury resorts, 5-star hotels. Activities: private tours, spa treatments, yacht charters, exclusive experiences. Transport: private car/driver.",
+      budget: "Street food, local eateries, hostels, budget guesthouses. Activities: free walking tours, public beaches, markets, temples. Transport: public transit, shared rides.",
+      "mid-range": "Mid-tier restaurants, 3-star hotels, boutique stays. Activities: guided tours, cooking classes, snorkeling trips. Transport: private transfers for longer distances.",
+      premium: "Fine dining, luxury resorts, 5-star hotels. Activities: private tours, spa treatments, yacht charters, exclusive experiences. Transport: private car/driver.",
     };
 
     const dietaryNote =
-      dietary.length > 0 && !dietary.every((d) => d === "none")
-        ? `\n\nDIETARY REQUIREMENTS: ${dietary.filter((d) => d !== "none").join(", ")}. For EVERY restaurant/food activity, include a dietary_notes field explaining how this venue accommodates these requirements. If a venue cannot accommodate them, choose a different venue.`
+      dietary.length > 0 && !dietary.every((d) => d === "none" || d === "No restrictions")
+        ? `\n\nDIETARY REQUIREMENTS: ${dietary.filter((d) => d !== "none" && d !== "No restrictions").join(", ")}. For EVERY restaurant/food activity, include a dietary_notes field explaining how this venue accommodates these requirements.`
         : "";
 
-    const accessibilityNote = notes
-      ? `\n\nSPECIAL NOTES FROM THE GROUP: "${notes}". Factor these into every recommendation. If accessibility is mentioned, avoid venues with stairs-only access, long hikes, etc.`
-      : "";
+    const notesSection = [];
+    if (notes) notesSection.push(`SPECIAL NOTES: "${notes}"`);
+    if (free_text) notesSection.push(`FREE-TEXT DESCRIPTION FROM USER: "${free_text}"`);
+    const accessibilityNote = notesSection.length > 0 ? `\n\n${notesSection.join("\n\n")}. Factor these into every recommendation.` : "";
 
     const systemPrompt = `You are an expert travel planner for Junto, a group trip planning app. You create detailed, realistic, map-ready itineraries using REAL venues and places that actually exist.
 
 CRITICAL RULES:
-1. Use REAL, SPECIFIC venue names that actually exist in ${destination.trim()}. Never use generic descriptions like "a nice beachside restaurant" — instead use the actual name like "La Brisa Beach Club, Canggu". Every venue must be a real place someone can find on Google Maps.
-2. Include realistic latitude/longitude coordinates for each venue. You know approximate locations of real places — use that knowledge. Coordinates should place a map pin within a few hundred meters of the actual venue.
-3. Schedule realistically: include travel time between locations, proper meal times (breakfast 7-9am, lunch 12-2pm, dinner 7-9pm). Don't schedule an activity in the north of a city at 10am and another in the south at 10:30am.
-4. Each day should flow naturally: morning activity -> lunch -> afternoon -> dinner -> optional evening activity.
-5. Balance different group interests across the trip. Don't cluster all culture on one day and all food on another — weave them together.
-6. The google_maps_query should be specific enough to find the exact venue (e.g. "Ku De Ta Seminyak Bali" not just "restaurant Bali").
-7. The google_maps_url must be a valid Google Maps search URL: https://www.google.com/maps/search/?api=1&query=<URL-encoded query>
+1. Use REAL, SPECIFIC venue names that actually exist in ${destination.trim()}. Never use generic descriptions.
+2. Include realistic latitude/longitude coordinates for each venue.
+3. Schedule realistically: include travel time between locations, proper meal times.
+4. Each day should flow naturally: morning activity -> lunch -> afternoon -> dinner -> optional evening.
+5. Balance different group interests across the trip.
+6. The google_maps_url must be a valid Google Maps search URL: https://www.google.com/maps/search/?api=1&query=<URL-encoded query>
 
-PACE: ${paceGuide[pace]}
+PACE: ${paceGuide[safePace]}
 
-BUDGET LEVEL (${budget_level}): ${budgetGuide[budget_level]}
+BUDGET LEVEL (${safeBudget}): ${budgetGuide[safeBudget]}
 
-GROUP SIZE: ${group_size} people. Ensure venues can accommodate this group size. For large groups (8+), prefer venues with group seating or reservable spaces.
+GROUP SIZE: ${clampedGroupSize} people.
 
-INTERESTS: ${interests.length > 0 ? interests.join(", ") : "general sightseeing"}. Prioritize these but also include essential activities (meals, transport) that may not match an interest category.${dietaryNote}${accessibilityNote}${vibeContext}
+INTERESTS: ${allInterests.length > 0 ? allInterests.join(", ") : "general sightseeing"}.${dietaryNote}${accessibilityNote}${vibeContext}
 
-BOOKING URLS — generate affiliate-ready URLs using these patterns:
-- Hotels/accommodation: https://www.booking.com/search.html?ss=<venue+name+location, URL-encoded>&aid=PLACEHOLDER_AID
-- Bookable activities/tours: https://www.viator.com/searchResults/all?text=<activity+name+location, URL-encoded>&mcid=PLACEHOLDER_MCID
-- Restaurants: null (no affiliate)
-- Free attractions (temples, beaches, parks, markets): null
-
-OUTPUT FORMAT: Return ONLY valid JSON matching the exact schema below. No markdown, no code fences, no explanation — just the raw JSON object.
+OUTPUT FORMAT: Return ONLY valid JSON matching the exact schema below. No markdown, no code fences — just the raw JSON object.
 
 {
+  "trip_title": "Catchy trip title (e.g. '7-Day Bali Beach & Culture Adventure')",
   "trip_summary": "2-3 sentence overview of the trip plan",
-  "map_center": { "latitude": number, "longitude": number },
-  "map_zoom": number (13 for a city, 10 for a region/island),
-  "daily_budget_estimate": { "amount": number, "currency": "USD" },
-  "packing_suggestions": ["item1", "item2", ...] (5-8 practical items specific to this destination and activities),
-  "days": [
+  "destinations": [
     {
-      "date": "YYYY-MM-DD",
-      "theme": "Creative theme for the day (e.g. 'Beach Day & Sunset Vibes')",
-      "activities": [
+      "name": "Destination Name",
+      "start_date": "YYYY-MM-DD",
+      "end_date": "YYYY-MM-DD",
+      "intro": "2-3 vivid sentences about this destination",
+      "days": [
         {
-          "title": "Specific Real Venue Name",
-          "description": "2-3 vivid sentences describing the experience at this specific venue",
-          "category": "food" | "culture" | "nature" | "nightlife" | "adventure" | "relaxation" | "transport" | "accommodation",
-          "start_time": "HH:MM",
-          "duration_minutes": number,
-          "estimated_cost_per_person": number,
-          "currency": "local currency code",
-          "location_name": "Exact venue name as on Google Maps",
-          "location_address": "Street address or area",
-          "latitude": number,
-          "longitude": number,
-          "google_maps_query": "search query to find this exact place",
-          "google_maps_url": "https://www.google.com/maps/search/?api=1&query=...",
-          "photo_query": "search query for a representative photo",
-          "booking_url": "affiliate URL or null",
-          "tips": "One practical insider tip",
-          "dietary_notes": "Dietary info or null"
+          "date": "YYYY-MM-DD",
+          "day_number": 1,
+          "theme": "Creative theme for the day",
+          "activities": [
+            {
+              "title": "Specific Real Venue Name",
+              "description": "2-3 vivid sentences",
+              "category": "food|culture|nature|nightlife|adventure|relaxation|transport|accommodation",
+              "start_time": "HH:MM",
+              "duration_minutes": 60,
+              "estimated_cost_per_person": 15,
+              "currency": "USD",
+              "location_name": "Exact venue name",
+              "latitude": -8.65,
+              "longitude": 115.16,
+              "google_maps_url": "https://www.google.com/maps/search/?api=1&query=...",
+              "booking_url": null,
+              "photo_query": "search query for photo",
+              "tips": "One practical insider tip",
+              "dietary_notes": null,
+              "travel_time_from_previous": "15 min walk",
+              "travel_mode_from_previous": "walk"
+            }
+          ]
         }
-      ]
+      ],
+      "accommodation": {
+        "name": "Hotel Name",
+        "stars": 4,
+        "price_per_night": 120,
+        "currency": "USD",
+        "booking_url": "https://www.booking.com/search.html?ss=..."
+      },
+      "transport_to_next": null
     }
-  ]
-}`;
+  ],
+  "map_center": { "lat": -8.65, "lng": 115.16 },
+  "map_zoom": 12,
+  "daily_budget_estimate": 85,
+  "currency": "USD",
+  "packing_suggestions": ["item1", "item2"],
+  "total_activities": 24
+}
 
-    const userPrompt = `Plan a ${numDays}-day group trip to ${destination.trim()} for ${group_size} people.
+For multi-city trips, include transport_to_next between destinations:
+"transport_to_next": { "mode": "flight", "duration": "1h 30m", "from": "City A", "to": "City B" }`;
 
-Dates: ${start_date} to ${end_date}
-Budget: ${budget_level}
-Pace: ${pace}
-Interests: ${interests.length > 0 ? interests.join(", ") : "general"}
+    const userPrompt = `Plan a ${numDays}-day group trip to ${destination.trim()} for ${clampedGroupSize} people.
+
+Dates: ${startDate} to ${endDate}${flexible ? " (flexible — dates are approximate)" : ""}
+Budget: ${safeBudget}
+Pace: ${safePace}
+Interests: ${allInterests.length > 0 ? allInterests.join(", ") : "general"}
 Dietary: ${dietary.length > 0 ? dietary.join(", ") : "none"}
 ${notes ? `Notes: ${notes}` : ""}
+${free_text ? `User description: ${free_text}` : ""}
 
 Generate the complete itinerary as JSON.`;
 
@@ -311,7 +352,7 @@ Generate the complete itinerary as JSON.`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 4000,
+        max_tokens: 8000,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
@@ -335,7 +376,6 @@ Generate the complete itinerary as JSON.`;
     // ---- Parse JSON response ----
     let itinerary: Record<string, unknown>;
     try {
-      // Handle possible markdown code fences
       const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/);
       const raw = jsonMatch ? jsonMatch[1].trim() : textContent.trim();
       itinerary = JSON.parse(raw);
@@ -347,7 +387,7 @@ Generate the complete itinerary as JSON.`;
       );
     }
 
-    // ---- Log request to ai_request_log (if table exists) ----
+    // ---- Log request ----
     try {
       await svcClient.from("ai_request_log").insert({
         user_id: user.id,
@@ -358,22 +398,21 @@ Generate the complete itinerary as JSON.`;
         cost_usd: estimateCostUsd(inputTokens, outputTokens),
       });
     } catch {
-      // Table may not exist — log to analytics instead
-      console.log("ai_request_log insert skipped (table may not exist)");
+      console.log("ai_request_log insert skipped");
     }
 
     // ---- Cache the response ----
     try {
       await svcClient.from("ai_response_cache").insert({
         cache_key: cacheKey,
-        feature: "trip_builder",
-        response: itinerary,
+        response_json: itinerary,
+        expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
       });
     } catch {
-      console.log("ai_response_cache insert skipped (table may not exist)");
+      console.log("ai_response_cache insert skipped");
     }
 
-    // ---- Track usage in analytics_events ----
+    // ---- Track usage ----
     await svcClient.from("analytics_events").insert({
       event_name: "ai_trip_builder",
       user_id: user.id,
@@ -381,9 +420,9 @@ Generate the complete itinerary as JSON.`;
         source: "generated",
         destination: destination.trim(),
         days: numDays,
-        group_size,
-        budget_level,
-        pace,
+        group_size: clampedGroupSize,
+        budget_level: safeBudget,
+        pace: safePace,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
       },
