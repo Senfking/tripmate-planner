@@ -13,12 +13,11 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus, Lock, Info } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, Sparkles, Upload, Plus } from "lucide-react";
 
 const FILTERS = [
   { value: "all", label: "All" },
+  { value: "mine", label: "Mine" },
   { value: "flight", label: "Flights" },
   { value: "hotel", label: "Hotels" },
   { value: "activity", label: "Activities" },
@@ -60,14 +59,12 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [search, setSearch] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
-  const [isPrivate, setIsPrivate] = useState(false);
 
   const ACCEPT_ALL = ".pdf,.jpg,.jpeg,.png,.webp";
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      Object.defineProperty(file, "__isPrivate", { value: isPrivate });
       uploadFile.mutate(file);
     }
     e.target.value = "";
@@ -76,7 +73,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const handleManualSubmit = () => {
     if (!manualTitle.trim()) return;
     addManual.mutate(
-      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined, is_private: isPrivate },
+      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined },
       {
         onSuccess: () => {
           setShowManualForm(false);
@@ -123,7 +120,8 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
 
   const filtered = useMemo(() => {
     let list = attachments;
-    if (filter !== "all") list = list.filter((a) => a.type === filter);
+    if (filter === "mine") list = list.filter((a) => a.created_by === user?.id);
+    else if (filter !== "all") list = list.filter((a) => a.type === filter);
     if (isSearching) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -194,16 +192,6 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         <Label className="text-xs">Notes (optional)</Label>
         <Textarea value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} rows={3} placeholder="Confirmation #, dates, details…" className="text-sm" />
       </div>
-      <div className="flex items-center justify-between rounded-lg border px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-          <div>
-            <p className="text-[13px] font-medium">Private</p>
-            <p className="text-[11px] text-muted-foreground">Only visible to you</p>
-          </div>
-        </div>
-        <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-      </div>
       <Button onClick={handleManualSubmit} disabled={!manualTitle.trim() || addManual.isPending} className="w-full">
         {addManual.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
         Add Booking
@@ -255,35 +243,15 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
             <Upload className="h-4 w-4 text-[#0D9488] shrink-0" />
           </button>
 
-          <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2 px-1">
             <button
               type="button"
               onClick={openManualForm}
-              className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              or <span className="underline">add manually</span>
+              <Plus className="h-3.5 w-3.5" />
+              Add manually
             </button>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setIsPrivate((p) => !p)}
-                    className={`flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-full transition-colors ${
-                      isPrivate
-                        ? "bg-amber-100 text-amber-700"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Lock className="h-3 w-3" />
-                    {isPrivate ? "Private mode on" : "Private"}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs max-w-[180px]">
-                  {isPrivate ? "Uploads will only be visible to you" : "Tap to make next upload private"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
         </div>
       )}
