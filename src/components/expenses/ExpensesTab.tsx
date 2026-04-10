@@ -33,7 +33,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
     ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
-    cachedCurrencyCodes, itineraryItems, isLoading, isFetchingExpenses, hasFreshExpensesSnapshot, updateSettlementCurrency,
+    cachedCurrencyCodes, itineraryItems, isLoading, updateSettlementCurrency,
     addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
 
@@ -291,13 +291,22 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       }))
     : undefined;
 
-  const showLoadingState = isLoading || !hasFreshExpensesSnapshot || (expenses.length === 0 && isFetchingExpenses);
-
-  if (showLoadingState) {
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Checking latest expenses...</p>
+      <div className="space-y-4">
+        {/* Balance hero skeleton */}
+        <Skeleton className="h-[160px] w-full rounded-[20px]" />
+        {/* Expense card skeletons */}
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-3 px-1">
+            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
       </div>
     );
   }
