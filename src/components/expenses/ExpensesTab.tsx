@@ -95,6 +95,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     }
   }, [location.state]);
 
+  const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
