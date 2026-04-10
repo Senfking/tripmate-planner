@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
+import { ItineraryCrossLinkDrawer } from "./ItineraryCrossLinkDrawer";
 import { toast } from "sonner";
 
 interface Props {
@@ -61,6 +62,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const [csvLoading, setCsvLoading] = useState(false);
   const receiptCameraRef = useRef<HTMLInputElement>(null);
   const receiptFileRef = useRef<HTMLInputElement>(null);
+
+  // Cross-link prompt state for receipt-scanned expenses
+  const [crossLinkData, setCrossLinkData] = useState<{
+    expenseId: string; title: string; date: string; amount: number; currency: string; category: string;
+  } | null>(null);
+  const lastScanWasReceipt = useRef(false);
 
   const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
