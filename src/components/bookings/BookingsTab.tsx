@@ -60,7 +60,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const { user } = useAuth();
-  const { query, uploadFile, addManual, deleteAttachment, updateNotes, updatePrivacy, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
+  const { query, uploadFile, addManual, deleteAttachment, updateNotes, updatePrivacy, updateType, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
   const isMobile = useIsMobile();
 
   // Fetch trip destination for flight direction inference
@@ -223,6 +223,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       onUploadPrompt={() => galleryInputRef.current?.click()}
       onUpdateNotes={(id, notes) => updateNotes.mutate({ id, notes })}
       onTogglePrivacy={(id, isPriv) => updatePrivacy.mutate({ id, is_private: isPriv })}
+      onChangeType={(id, type) => updateType.mutate({ id, type })}
       getSignedUrl={getSignedUrl}
     />
   );
