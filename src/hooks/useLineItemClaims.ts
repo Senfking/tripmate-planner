@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { isSharedCostItem } from "@/lib/expenseLineItems";
+import { isSharedCostItem, calculateLineItemTotals } from "@/lib/expenseLineItems";
 
 export interface LineItemRow {
   id: string;
@@ -57,7 +57,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
 
   const toggleClaim = useMutation({
     mutationFn: async (lineItemId: string) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!user || !expenseId) throw new Error("Not authenticated");
       const existing = claimsQuery.data?.find(
         (c) => c.line_item_id === lineItemId && c.user_id === user.id
       );
@@ -74,8 +74,61 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["expense-line-item-claims", expenseId] });
+    onSuccess: async () => {
+      // Refetch claims first so we have latest data
+      await qc.invalidateQueries({ queryKey: ["expense-line-item-claims", expenseId] });
+
+      // Now recompute and persist splits from the updated claims
+      const items = lineItemsQuery.data || [];
+      if (items.length === 0 || !expenseId) return;
+
+      // Get the expense to know totalAmount and trip members
+      const { data: expense } = await supabase
+        .from("expenses")
+        .select("amount")
+        .eq("id", expenseId)
+        .single();
+      if (!expense) return;
+
+      const { data: tripMembers } = await supabase
+        .from("trip_members")
+        .select("user_id")
+        .eq("trip_id", tripId);
+      if (!tripMembers || tripMembers.length === 0) return;
+
+      // Re-fetch fresh claims after invalidation
+      const itemIds = items.map((li) => li.id);
+      const { data: freshClaims } = await supabase
+        .from("expense_line_item_claims")
+        .select("*")
+        .in("line_item_id", itemIds);
+
+      const claimsByItemId = new Map<string, string[]>();
+      for (const c of (freshClaims || [])) {
+        const existing = claimsByItemId.get(c.line_item_id) || [];
+        existing.push(c.user_id);
+        claimsByItemId.set(c.line_item_id, existing);
+      }
+
+      const memberIds = tripMembers.map((m) => m.user_id);
+      const { totals } = calculateLineItemTotals({
+        lineItems: items,
+        memberIds,
+        totalAmount: expense.amount,
+        getAssigneeIds: (item) => claimsByItemId.get(item.id) ?? [],
+      });
+
+      const splitsPayload = memberIds
+        .filter((uid) => (totals[uid] || 0) >= 0.005)
+        .map((uid) => ({ user_id: uid, share_amount: totals[uid] }));
+
+      await supabase.rpc("replace_expense_splits", {
+        _expense_id: expenseId,
+        _splits: splitsPayload as any,
+      });
+
+      // Invalidate splits/expenses queries so the card header updates
+      qc.invalidateQueries({ queryKey: ["expenses", tripId] });
     },
   });
 
