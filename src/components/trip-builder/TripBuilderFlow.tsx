@@ -139,9 +139,8 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success("Itinerary generated! 🎉");
+      setResults(data as AITripResult);
       onSuccess?.(data);
-      onClose();
     } catch (err: any) {
       setGenError(err?.message || "Failed to generate itinerary. Please try again.");
     } finally {
