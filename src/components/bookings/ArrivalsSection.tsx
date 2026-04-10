@@ -316,11 +316,11 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
   );
 }
 
-export function ArrivalsSection({ attachments, compact = false }: Props) {
+export function ArrivalsSection({ attachments, compact = false, tripDestination }: Props) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  const flights = useMemo(() => extractFlights(attachments), [attachments]);
+  const flights = useMemo(() => extractFlights(attachments, tripDestination), [attachments, tripDestination]);
 
   const upcomingCount = flights.filter((f) => f.status !== "past").length;
   const todayCount = flights.filter((f) => f.status === "today").length;
