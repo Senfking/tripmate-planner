@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock, MessageCircle, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Pencil, Trash2, GripVertical, MapPin, AlertTriangle, Clock, MessageCircle, ChevronDown, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortable } from "@dnd-kit/sortable";
@@ -20,6 +20,10 @@ import type { ItineraryItem } from "@/hooks/useItinerary";
 import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendance";
 import { useAuth } from "@/contexts/AuthContext";
 import { useItemComments } from "@/hooks/useItemComments";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { formatCurrency } from "@/lib/settlementCalc";
 
 /* ── status config ── */
 const STATUS: Record<string, { label: string; fg: string; bg: string; tint: string }> = {
@@ -63,6 +67,30 @@ export function ItineraryItemCard({
   // Get comment count for collapsed pill
   const { comments } = useItemComments(tripId, item.id);
   const commentCount = comments.length;
+  const navigate = useNavigate();
+
+  // Linked expenses query
+  const { data: linkedExpenses } = useQuery({
+    queryKey: ["linked-expenses", item.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("id, amount, currency")
+        .eq("itinerary_item_id", item.id);
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 60_000,
+  });
+
+  const expenseTotal = useMemo(() => {
+    if (!linkedExpenses || linkedExpenses.length === 0) return null;
+    // Sum amounts (simple sum, no conversion — show in first expense's currency)
+    const currency = linkedExpenses[0].currency;
+    const allSame = linkedExpenses.every((e) => e.currency === currency);
+    const total = linkedExpenses.reduce((s, e) => s + e.amount, 0);
+    return { total, currency: allSame ? currency : null, count: linkedExpenses.length };
+  }, [linkedExpenses]);
 
   /* ── new-item animation ── */
   const [animPhase, setAnimPhase] = useState<"skeleton" | "fadein" | "done">(isNew ? "skeleton" : "done");
@@ -202,11 +230,28 @@ export function ItineraryItemCard({
 
         {/* Row 4: Comment count + actions - tappable to expand */}
         <div className="flex items-center justify-between px-3 pb-2 cursor-pointer" onClick={handleCardClick}>
-          <div className="flex items-center gap-1.5 text-muted-foreground/50">
-            <MessageCircle className="h-3 w-3" />
-            <span className="text-[10px] font-medium">
-              {commentCount > 0 ? commentCount : 0}
-            </span>
+          <div className="flex items-center gap-3 text-muted-foreground/50">
+            <div className="flex items-center gap-1.5">
+              <MessageCircle className="h-3 w-3" />
+              <span className="text-[10px] font-medium">
+                {commentCount > 0 ? commentCount : 0}
+              </span>
+            </div>
+            {expenseTotal && (
+              <button
+                className="flex items-center gap-1 rounded-full bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted transition-colors"
+                data-action
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/app/trips/${tripId}/expenses`);
+                }}
+              >
+                <Receipt className="h-2.5 w-2.5" />
+                {expenseTotal.currency
+                  ? formatCurrency(expenseTotal.total, expenseTotal.currency)
+                  : `${expenseTotal.count} expense${expenseTotal.count > 1 ? "s" : ""}`}
+              </button>
+            )}
             <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", expanded && "rotate-180")} />
           </div>
           <div className="flex items-center gap-0.5" data-action>

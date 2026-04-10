@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
+import { ItineraryCrossLinkDrawer } from "./ItineraryCrossLinkDrawer";
 import { toast } from "sonner";
 
 interface Props {
@@ -62,6 +63,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const receiptCameraRef = useRef<HTMLInputElement>(null);
   const receiptFileRef = useRef<HTMLInputElement>(null);
 
+  // Cross-link prompt state for receipt-scanned expenses
+  const [crossLinkData, setCrossLinkData] = useState<{
+    expenseId: string; title: string; date: string; amount: number; currency: string; category: string;
+  } | null>(null);
+  const lastScanWasReceipt = useRef(false);
+
   const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -94,6 +101,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       } as ExpenseRow);
+      lastScanWasReceipt.current = true;
       setFormOpen(true);
       toast.success("Receipt scanned - review the details");
     } catch (err: any) {
@@ -636,10 +644,35 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         editingExpense={editingExpense}
         editingSplits={editingSplits}
         onSave={async (data) => {
+          const isReceiptScan = lastScanWasReceipt.current && !data.id;
+          lastScanWasReceipt.current = false;
           if (data.id) {
             await updateExpense.mutateAsync(data as any);
           } else {
-            await addExpense.mutateAsync(data as any);
+            const result = await addExpense.mutateAsync(data as any);
+            // After saving a receipt-scanned expense, offer cross-link if we have title + date
+            if (isReceiptScan && data.title && data.incurred_on) {
+              // Need to get the new expense id - fetch the latest expense matching
+              const { data: latest } = await supabase
+                .from("expenses")
+                .select("id")
+                .eq("trip_id", tripId)
+                .eq("title", data.title)
+                .eq("incurred_on", data.incurred_on)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+              if (latest?.id) {
+                setCrossLinkData({
+                  expenseId: latest.id,
+                  title: data.title,
+                  date: data.incurred_on,
+                  amount: data.amount,
+                  currency: data.currency,
+                  category: data.category,
+                });
+              }
+            }
           }
         }}
       />
@@ -652,6 +685,20 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           onOpenChange={setInviteOpen}
           isAdmin={myRole === "owner" || myRole === "admin"}
           trip={trip}
+        />
+      )}
+
+      {crossLinkData && (
+        <ItineraryCrossLinkDrawer
+          open={!!crossLinkData}
+          onOpenChange={(open) => { if (!open) setCrossLinkData(null); }}
+          tripId={tripId}
+          expenseId={crossLinkData.expenseId}
+          title={crossLinkData.title}
+          date={crossLinkData.date}
+          amount={crossLinkData.amount}
+          currency={crossLinkData.currency}
+          category={crossLinkData.category}
         />
       )}
     </div>
