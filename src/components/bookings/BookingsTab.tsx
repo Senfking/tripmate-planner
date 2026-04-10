@@ -223,54 +223,48 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       <input ref={galleryInputRef} type="file" accept={ACCEPT_ALL} className="hidden" onChange={handleFile} />
 
       {uploadFile.isPending ? (
-        <div className="flex items-center justify-center gap-2 py-3 rounded-xl border bg-card text-[13px] font-medium text-[#0D9488]">
+        <div className="flex items-center justify-center gap-2 py-4 rounded-xl border bg-card text-[13px] font-medium text-[#0D9488]">
           <Loader2 className="h-4 w-4 animate-spin" />
           Junto AI is processing…
         </div>
       ) : (
-        <div className="flex items-center gap-2.5 rounded-xl border bg-card px-3.5 py-3">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <Sparkles className="h-4 w-4 text-[#0D9488] shrink-0" />
-            <span className="text-[13px] font-medium text-foreground">Upload</span>
-            <span className="text-[12px] text-muted-foreground hidden min-[360px]:inline">· Junto AI extracts details</span>
-          </div>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            className="w-full flex items-center gap-3 rounded-xl border bg-card px-4 py-3.5 text-left transition-colors hover:bg-accent/50 active:scale-[0.98]"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0D9488]/10">
+              <Upload className="h-4 w-4 text-[#0D9488]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-foreground">Upload confirmation</p>
+              <p className="text-[11px] text-muted-foreground">Junto AI will extract the details</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Lock className="h-3 w-3 text-muted-foreground" />
+                      <Switch checked={isPrivate} onCheckedChange={setIsPrivate} className="scale-75" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs max-w-[180px]">
+                    Only you can see private documents
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </button>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1">
-                    <Lock className="h-3 w-3 text-muted-foreground" />
-                    <Switch checked={isPrivate} onCheckedChange={setIsPrivate} className="scale-75" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs max-w-[180px]">
-                  Only you can see private documents
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <div className="w-px h-5 bg-border" />
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-muted-foreground"
-              onClick={openManualForm}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Manual
-            </Button>
-
-            <Button
-              size="sm"
-              className="h-8 px-3.5 text-xs gap-1.5"
-              onClick={() => galleryInputRef.current?.click()}
-            >
-              <Upload className="h-3.5 w-3.5" />
-              Upload
-            </Button>
-          </div>
+          <button
+            type="button"
+            onClick={openManualForm}
+            className="w-full text-center text-[12px] text-muted-foreground hover:text-foreground transition-colors py-1"
+          >
+            or <span className="underline">add details manually</span>
+          </button>
         </div>
       )}
     </>
