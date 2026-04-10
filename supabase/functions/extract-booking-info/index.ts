@@ -112,6 +112,7 @@ Deno.serve(async (req) => {
   "destination": "airport code or city or null",
   "departure_time": "HH:MM time string or null",
   "arrival_time": "HH:MM time string or null",
+  "direction": "outbound|return — is this an outbound/going flight or a return/coming-back flight? Infer from context clues like 'return', route order, dates. null if unclear",
   "passenger_names": ["name1"] or null,
   "total_price": "price with currency or null",
   "notes": "SHORT summary (max 2-3 lines) of other important details — e.g. baggage allowance, room type, cancellation policy, meal plan, special instructions, total price breakdown. Only the most useful info. null if nothing noteworthy."

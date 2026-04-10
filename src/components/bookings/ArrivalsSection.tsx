@@ -18,6 +18,7 @@ interface FlightEntry {
   time: string | null;
   direction: "arrival" | "departure" | "transit";
   status: "upcoming" | "today" | "past";
+  usedFallbackDate?: boolean;
 }
 
 interface Props {
@@ -58,6 +59,13 @@ function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
     const flightDate = tryParseDate(bd.flight_date, bd.check_in);
     const returnDate = tryParseDate(bd.check_out);
 
+    // Determine direction from booking_data or infer
+    const rawDirection = bd.direction ? String(bd.direction).toLowerCase() : null;
+    const inferredDirection: FlightEntry["direction"] =
+      rawDirection === "return" ? "departure" :
+      rawDirection === "outbound" ? "arrival" :
+      "arrival"; // default; will be overridden below for return-date entries
+
     // If we have a flight date, add the outbound entry
     if (flightDate) {
       let status: FlightEntry["status"] = "upcoming";
@@ -74,7 +82,7 @@ function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
         destination,
         date: flightDate,
         time: departureTimeStr || arrivalTimeStr,
-        direction: "arrival",
+        direction: inferredDirection,
         status,
       });
 
@@ -97,8 +105,7 @@ function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
         });
       }
     } else {
-      // No date available — still show the flight but without a specific date
-      // Use created_at as a fallback so it at least appears
+      // No date available — still show the flight with created_at as fallback
       const fallbackDate = parseISO(att.created_at);
       const memberName = att.profiles?.display_name || "Unknown";
 
@@ -110,8 +117,9 @@ function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
         destination,
         date: fallbackDate,
         time: departureTimeStr || arrivalTimeStr,
-        direction: "arrival",
+        direction: inferredDirection,
         status: "upcoming",
+        usedFallbackDate: true,
       });
     }
   }
@@ -189,9 +197,12 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
             ? "Tomorrow"
             : format(group.date, "EEEE, MMM d");
 
+          const anyFallback = group.entries.some((e) => e.usedFallbackDate);
           const daysAway = differenceInDays(group.date, new Date());
           const daysLabel =
-            daysAway === 0
+            anyFallback
+              ? "date unknown"
+              : daysAway === 0
               ? null
               : daysAway > 0
               ? `in ${daysAway}d`
