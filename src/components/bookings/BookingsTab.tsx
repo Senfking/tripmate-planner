@@ -406,21 +406,22 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       {/* Filters + search */}
       {attachments.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value)}
-                className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
-                  filter === f.value
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-            <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 overflow-x-auto flex-1 min-w-0 pb-0.5">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setFilter(f.value)}
+                  className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors ${
+                    filter === f.value
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -428,7 +429,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                 if (!searchOpen) setTimeout(() => searchInputRef.current?.focus(), 100);
                 if (searchOpen) setSearch("");
               }}
-              className={`shrink-0 flex items-center justify-center h-6 w-6 rounded-full transition-colors ${
+              className={`shrink-0 flex items-center justify-center h-7 w-7 rounded-full transition-colors ${
                 searchOpen || isSearching
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
