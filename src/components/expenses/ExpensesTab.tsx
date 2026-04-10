@@ -28,6 +28,7 @@ interface Props {
 }
 
 export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
+  const location = useLocation();
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
