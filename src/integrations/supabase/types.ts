@@ -873,6 +873,48 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_items: {
+        Row: {
+          claimed_by: string | null
+          created_at: string
+          created_by: string
+          id: string
+          title: string
+          trip_id: string
+        }
+        Insert: {
+          claimed_by?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          title: string
+          trip_id: string
+        }
+        Update: {
+          claimed_by?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          title?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_items_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_last_seen: {
         Row: {
           last_seen_at: string
