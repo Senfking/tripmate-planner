@@ -18,7 +18,9 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload, Plus } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Activity, File, ChevronDown, Sparkles, Upload, Plus, Lock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -64,19 +66,23 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const [search, setSearch] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const ACCEPT_ALL = ".pdf,.jpg,.jpeg,.png,.webp";
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadFile.mutate(file);
+    if (file) {
+      Object.defineProperty(file, "__isPrivate", { value: isPrivate });
+      uploadFile.mutate(file);
+    }
     e.target.value = "";
   };
 
   const handleManualSubmit = () => {
     if (!manualTitle.trim()) return;
     addManual.mutate(
-      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined },
+      { title: manualTitle.trim(), type: manualType, notes: manualNotes.trim() || undefined, is_private: isPrivate },
       {
         onSuccess: () => {
           setShowManualForm(false);
@@ -103,7 +109,12 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   ];
 
   const isAdmin = myRole === "owner" || myRole === "admin";
-  const attachments = query.data ?? [];
+  const allAttachments = query.data ?? [];
+  // Filter: show shared + own private
+  const attachments = useMemo(() =>
+    allAttachments.filter((a) => !a.is_private || a.created_by === user?.id),
+    [allAttachments, user?.id],
+  );
 
   // Show cross-link drawer when extraction finishes with valid booking data
   useEffect(() => {
