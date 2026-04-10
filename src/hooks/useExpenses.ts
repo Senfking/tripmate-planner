@@ -32,6 +32,7 @@ export interface SplitRow {
 export interface MemberProfile {
   userId: string;
   displayName: string;
+  avatarUrl: string | null;
   role: string;
   attendanceStatus: string;
 }
@@ -97,12 +98,13 @@ export function useExpenses(tripId: string) {
       if (pErr) throw pErr;
 
       const profileMap = Object.fromEntries(
-        (profiles || []).map((p) => [p.id, p.display_name || "Member"])
+        (profiles || []).map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url }])
       );
 
       return data.map((m) => ({
         userId: m.user_id,
-        displayName: profileMap[m.user_id] || "Member",
+        displayName: profileMap[m.user_id]?.name || "Member",
+        avatarUrl: profileMap[m.user_id]?.avatar || null,
         role: m.role,
         attendanceStatus: (m as any).attendance_status ?? "pending",
       })) as MemberProfile[];
@@ -333,10 +335,10 @@ export function useExpenses(tripId: string) {
         await saveLineItems(expense.id, lineItems);
       }
     },
-    onSuccess: (_data, params) => {
+    onSuccess: async (_data, params) => {
       trackEvent("expense_created", { trip_id: tripId, currency: params.currency, category: params.category }, user?.id);
-      qc.invalidateQueries({ queryKey: ["expenses", tripId] });
-      qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      await qc.invalidateQueries({ queryKey: ["expenses", tripId] });
+      await qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
       qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense added");
