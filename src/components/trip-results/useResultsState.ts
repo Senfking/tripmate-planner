@@ -120,11 +120,11 @@ export function useResultsState(tripId: string) {
           location_text: activity.location_name || null,
           notes: [
             activity.description,
-            activity.tips ? `\n💡 Tip: ${activity.tips}` : "",
+            activity.tips ? `\nTip: ${activity.tips}` : "",
             activity.estimated_cost_per_person
-              ? `\n💰 ~${activity.currency || "€"}${activity.estimated_cost_per_person}/person`
+              ? `\n~${activity.currency || "€"}${activity.estimated_cost_per_person}/person`
               : "",
-            activity.dietary_notes ? `\n🥬 ${activity.dietary_notes}` : "",
+            activity.dietary_notes ? `\nDietary: ${activity.dietary_notes}` : "",
           ]
             .filter(Boolean)
             .join(""),
@@ -159,11 +159,11 @@ export function useResultsState(tripId: string) {
               location_text: act.location_name || null,
               notes: [
                 act.description,
-                act.tips ? `\n💡 Tip: ${act.tips}` : "",
+                act.tips ? `\nTip: ${act.tips}` : "",
                 act.estimated_cost_per_person
-                  ? `\n💰 ~${act.currency || "€"}${act.estimated_cost_per_person}/person`
+                  ? `\n~${act.currency || "€"}${act.estimated_cost_per_person}/person`
                   : "",
-                act.dietary_notes ? `\n🥬 ${act.dietary_notes}` : "",
+                act.dietary_notes ? `\nDietary: ${act.dietary_notes}` : "",
               ]
                 .filter(Boolean)
                 .join(""),
