@@ -1,17 +1,23 @@
 import { useMemo, useState } from "react";
-import { format, formatDistanceToNow, isToday, isBefore, parseISO, isValid } from "date-fns";
-import { Plane, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { format, formatDistanceToNow, isToday, isTomorrow, isBefore, parseISO, isValid, differenceInDays } from "date-fns";
+import { Plane, PlaneTakeoff, PlaneLanding, ChevronRight, X, ArrowRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
 import type { AttachmentRow } from "@/hooks/useAttachments";
 
-interface ArrivalEntry {
+interface FlightEntry {
   id: string;
   memberName: string;
   memberId: string | null;
-  route: string;
-  arrivalDate: Date;
-  arrivalTime: string | null;
-  status: "upcoming" | "today" | "arrived";
+  departure: string | null;
+  destination: string | null;
+  date: Date;
+  time: string | null;
+  direction: "arrival" | "departure" | "transit";
+  status: "upcoming" | "today" | "past";
 }
 
 interface Props {
@@ -23,231 +29,376 @@ function getInitials(name: string): string {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-const STATUS_STYLES = {
-  upcoming: {
-    dot: "bg-[#0D9488]",
-    text: "text-[#0D9488]",
+function extractFlights(attachments: AttachmentRow[]): FlightEntry[] {
+  const now = new Date();
+  const entries: FlightEntry[] = [];
+
+  for (const att of attachments) {
+    if (att.type !== "flight") continue;
+    const bd = att.booking_data as Record<string, unknown> | null;
+    if (!bd) continue;
+
+    const departure = bd.departure ? String(bd.departure) : null;
+    const destination = bd.destination ? String(bd.destination) : null;
+    if (!destination && !departure) continue;
+
+    const checkIn = bd.check_in ? String(bd.check_in) : null;
+    const checkOut = bd.check_out ? String(bd.check_out) : null;
+    const arrivalTimeStr = bd.arrival_time ? String(bd.arrival_time) : null;
+    const departureTimeStr = bd.departure_time ? String(bd.departure_time) : null;
+
+    // Determine direction heuristic
+    let direction: FlightEntry["direction"] = "arrival";
+    // If we have both check_in and check_out with different dates, it could be a round trip
+    // For now, treat each flight as one entry based on available data
+
+    let flightDate: Date | null = null;
+    if (checkIn) {
+      const parsed = parseISO(checkIn);
+      if (isValid(parsed)) flightDate = parsed;
+    }
+    if (!flightDate) continue;
+
+    let status: FlightEntry["status"] = "upcoming";
+    if (isToday(flightDate)) status = "today";
+    else if (isBefore(flightDate, now)) status = "past";
+
+    const route = departure && destination ? `${departure} → ${destination}` : (destination || departure || "");
+    const memberName = att.profiles?.display_name || "Unknown";
+
+    entries.push({
+      id: att.id,
+      memberName,
+      memberId: att.created_by,
+      departure,
+      destination,
+      date: flightDate,
+      time: arrivalTimeStr || departureTimeStr,
+      direction,
+      status,
+    });
+
+    // If there's a return/checkout date, add a departure entry
+    if (checkOut) {
+      const returnDate = parseISO(checkOut);
+      if (isValid(returnDate) && returnDate.getTime() !== flightDate.getTime()) {
+        let returnStatus: FlightEntry["status"] = "upcoming";
+        if (isToday(returnDate)) returnStatus = "today";
+        else if (isBefore(returnDate, now)) returnStatus = "past";
+
+        entries.push({
+          id: att.id + "-return",
+          memberName,
+          memberId: att.created_by,
+          departure: destination,
+          destination: departure,
+          date: returnDate,
+          time: departureTimeStr,
+          direction: "departure",
+          status: returnStatus,
+        });
+      }
+    }
+  }
+
+  entries.sort((a, b) => a.date.getTime() - b.date.getTime());
+  return entries;
+}
+
+const DIRECTION_CONFIG = {
+  arrival: {
+    icon: PlaneLanding,
+    label: "Arriving",
+    gradient: "from-[#0D9488] to-[#0D9488]/70",
     bg: "bg-[#0D9488]/5",
     border: "border-[#0D9488]/15",
+    dot: "bg-[#0D9488]",
+    text: "text-[#0D9488]",
   },
-  today: {
-    dot: "bg-amber-500 animate-pulse",
-    text: "text-amber-600",
-    bg: "bg-amber-50",
-    border: "border-amber-200/50",
+  departure: {
+    icon: PlaneTakeoff,
+    label: "Departing",
+    gradient: "from-[#E07A5F] to-[#E07A5F]/70",
+    bg: "bg-[#E07A5F]/5",
+    border: "border-[#E07A5F]/15",
+    dot: "bg-[#E07A5F]",
+    text: "text-[#E07A5F]",
   },
-  arrived: {
-    dot: "bg-emerald-500",
-    text: "text-emerald-600",
-    bg: "bg-emerald-50/50",
-    border: "border-emerald-200/30",
+  transit: {
+    icon: Plane,
+    label: "Transit",
+    gradient: "from-[#6366F1] to-[#6366F1]/70",
+    bg: "bg-[#6366F1]/5",
+    border: "border-[#6366F1]/15",
+    dot: "bg-[#6366F1]",
+    text: "text-[#6366F1]",
   },
 };
 
-export function ArrivalsSection({ attachments, compact = false }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  const arrivals = useMemo<ArrivalEntry[]>(() => {
-    const now = new Date();
-    const entries: ArrivalEntry[] = [];
-
-    for (const att of attachments) {
-      if (att.type !== "flight") continue;
-      const bd = att.booking_data as Record<string, unknown> | null;
-      if (!bd) continue;
-
-      const departure = bd.departure ? String(bd.departure) : null;
-      const destination = bd.destination ? String(bd.destination) : null;
-      if (!destination) continue;
-
-      // Determine arrival date from check_in or arrival_time
-      let arrivalDate: Date | null = null;
-      const checkIn = bd.check_in ? String(bd.check_in) : null;
-      const arrivalTimeStr = bd.arrival_time ? String(bd.arrival_time) : null;
-
-      if (checkIn) {
-        const parsed = parseISO(checkIn);
-        if (isValid(parsed)) arrivalDate = parsed;
-      }
-
-      if (!arrivalDate) continue;
-
-      const route = departure && destination ? `${departure} → ${destination}` : destination;
-      const memberName = att.profiles?.display_name || "Unknown";
-
-      let status: ArrivalEntry["status"] = "upcoming";
-      if (isToday(arrivalDate)) {
-        status = "today";
-      } else if (isBefore(arrivalDate, now)) {
-        status = "arrived";
-      }
-
-      entries.push({
-        id: att.id,
-        memberName,
-        memberId: att.created_by,
-        route,
-        arrivalDate,
-        arrivalTime: arrivalTimeStr,
-        status,
-      });
-    }
-
-    entries.sort((a, b) => a.arrivalDate.getTime() - b.arrivalDate.getTime());
-    return entries;
-  }, [attachments]);
-
+function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
   // Group by date
   const grouped = useMemo(() => {
-    const map = new Map<string, ArrivalEntry[]>();
-    for (const a of arrivals) {
-      const key = format(a.arrivalDate, "yyyy-MM-dd");
+    const map = new Map<string, FlightEntry[]>();
+    for (const f of flights) {
+      const key = format(f.date, "yyyy-MM-dd");
       if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(a);
+      map.get(key)!.push(f);
     }
     return Array.from(map.entries()).map(([dateKey, entries]) => ({
       dateKey,
-      date: entries[0].arrivalDate,
+      date: entries[0].date,
       entries,
     }));
-  }, [arrivals]);
+  }, [flights]);
 
-  // Compact summary line
-  const summaryLine = useMemo(() => {
-    const upcoming = arrivals.filter((a) => a.status !== "arrived");
-    if (upcoming.length === 0) return "All members arrived";
-    const dates = [...new Set(upcoming.map((a) => format(a.arrivalDate, "MMM d")))];
-    if (dates.length === 1) return `${upcoming.length} member${upcoming.length > 1 ? "s" : ""} arriving ${dates[0]}`;
-    return `${upcoming.length} member${upcoming.length > 1 ? "s" : ""} arriving ${dates[0]}–${dates[dates.length - 1]}`;
-  }, [arrivals]);
+  if (flights.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Plane className="h-8 w-8 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">No flights uploaded yet</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">Upload flight confirmations to see the timeline</p>
+      </div>
+    );
+  }
 
-  if (arrivals.length === 0) return null;
+  return (
+    <div className="relative px-1">
+      {/* Vertical timeline line */}
+      <div className="absolute left-[23px] top-4 bottom-4 w-px bg-gradient-to-b from-[#0D9488]/40 via-border to-[#E07A5F]/40" />
 
+      <div className="space-y-6">
+        {grouped.map((group) => {
+          const dateLabel = isToday(group.date)
+            ? "Today"
+            : isTomorrow(group.date)
+            ? "Tomorrow"
+            : format(group.date, "EEEE, MMM d");
+
+          const daysAway = differenceInDays(group.date, new Date());
+          const daysLabel =
+            daysAway === 0
+              ? null
+              : daysAway > 0
+              ? `in ${daysAway}d`
+              : `${Math.abs(daysAway)}d ago`;
+
+          return (
+            <div key={group.dateKey} className="space-y-2.5">
+              {/* Date marker */}
+              <div className="flex items-center gap-3">
+                <div className={`relative z-10 flex h-[14px] w-[14px] items-center justify-center rounded-full ${
+                  isToday(group.date) ? "bg-amber-500 ring-4 ring-amber-500/20" : "bg-muted-foreground/30"
+                } ml-[16px]`}>
+                  {isToday(group.date) && (
+                    <span className="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-40" />
+                  )}
+                </div>
+                <span className={`text-[12px] font-bold uppercase tracking-wider ${
+                  isToday(group.date) ? "text-amber-600" : "text-muted-foreground"
+                }`}>
+                  {dateLabel}
+                </span>
+                {daysLabel && (
+                  <span className="text-[11px] text-muted-foreground/60">{daysLabel}</span>
+                )}
+              </div>
+
+              {/* Flight cards */}
+              {group.entries.map((flight) => {
+                const config = DIRECTION_CONFIG[flight.direction];
+                const DirIcon = config.icon;
+
+                return (
+                  <div key={flight.id} className="flex items-start gap-3 ml-[10px]">
+                    {/* Timeline node */}
+                    <div className="flex flex-col items-center pt-3.5">
+                      <div className={`h-[10px] w-[10px] rounded-full border-2 border-background ${config.dot} ring-2 ring-background z-10`} />
+                    </div>
+
+                    {/* Card */}
+                    <div className={`flex-1 rounded-xl border ${config.border} ${config.bg} p-3.5 space-y-2 transition-all`}>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-[10px] font-semibold bg-muted">
+                            {getInitials(flight.memberName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold truncate">{flight.memberName}</p>
+                          <div className="flex items-center gap-1">
+                            <DirIcon className={`h-3 w-3 ${config.text}`} />
+                            <span className={`text-[11px] font-medium ${config.text}`}>{config.label}</span>
+                          </div>
+                        </div>
+                        {flight.time && (
+                          <span className="text-[13px] font-bold tabular-nums">{flight.time}</span>
+                        )}
+                      </div>
+
+                      {/* Route visualization */}
+                      {(flight.departure || flight.destination) && (
+                        <div className="flex items-center gap-2 px-1">
+                          {flight.departure && (
+                            <span className="text-[12px] font-medium bg-background/80 px-2 py-0.5 rounded-md border">
+                              {flight.departure}
+                            </span>
+                          )}
+                          {flight.departure && flight.destination && (
+                            <div className="flex-1 flex items-center gap-1 min-w-0">
+                              <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
+                              <Plane className={`h-3 w-3 ${config.text} shrink-0`} />
+                              <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
+                            </div>
+                          )}
+                          {flight.destination && (
+                            <span className="text-[12px] font-medium bg-background/80 px-2 py-0.5 rounded-md border">
+                              {flight.destination}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Status badge */}
+                      {flight.status === "past" && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                          ✓ Completed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function ArrivalsSection({ attachments, compact = false }: Props) {
+  const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
+
+  const flights = useMemo(() => extractFlights(attachments), [attachments]);
+
+  const upcomingCount = flights.filter((f) => f.status !== "past").length;
+  const todayCount = flights.filter((f) => f.status === "today").length;
+  const nextFlight = flights.find((f) => f.status !== "past");
+
+  if (flights.length === 0) return null;
+
+  // Compact mode for dashboard card
   if (compact) {
-    const nextArrivals = arrivals.filter((a) => a.status !== "arrived").slice(0, 2);
-    if (nextArrivals.length === 0 && arrivals.every((a) => a.status === "arrived")) {
-      return null;
-    }
+    const nextFlights = flights.filter((a) => a.status !== "past").slice(0, 2);
+    if (nextFlights.length === 0) return null;
 
     return (
       <div className="space-y-2">
-        {nextArrivals.map((a) => (
-          <div key={a.id} className="flex items-center gap-3">
-            <Avatar className="h-7 w-7">
-              <AvatarFallback className="text-[10px] font-medium bg-muted">
-                {getInitials(a.memberName)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate">{a.memberName}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{a.route}</p>
+        {nextFlights.map((a) => {
+          const config = DIRECTION_CONFIG[a.direction];
+          const DirIcon = config.icon;
+          return (
+            <div key={a.id} className="flex items-center gap-3">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="text-[10px] font-medium bg-muted">
+                  {getInitials(a.memberName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium truncate">{a.memberName}</p>
+                <div className="flex items-center gap-1">
+                  <DirIcon className={`h-2.5 w-2.5 ${config.text}`} />
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {a.departure && a.destination ? `${a.departure} → ${a.destination}` : (a.destination || a.departure)}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-[11px] font-medium">{format(a.date, "MMM d")}</p>
+                <p className={`text-[10px] ${config.text}`}>
+                  {formatDistanceToNow(a.date, { addSuffix: true })}
+                </p>
+              </div>
             </div>
-            <div className="text-right shrink-0">
-              <p className="text-[11px] font-medium">{format(a.arrivalDate, "MMM d")}</p>
-              <p className={`text-[10px] ${STATUS_STYLES[a.status].text}`}>
-                {formatDistanceToNow(a.arrivalDate, { addSuffix: true })}
-              </p>
-            </div>
-          </div>
-        ))}
-        {arrivals.filter((a) => a.status !== "arrived").length > 2 && (
+          );
+        })}
+        {flights.filter((a) => a.status !== "past").length > 2 && (
           <p className="text-[11px] text-muted-foreground text-center">
-            +{arrivals.filter((a) => a.status !== "arrived").length - 2} more
+            +{flights.filter((a) => a.status !== "past").length - 2} more
           </p>
         )}
       </div>
     );
   }
 
-  return (
-    <div className="space-y-1">
-      {/* Header */}
-      <button
-        type="button"
-        onClick={() => setCollapsed((p) => !p)}
-        className="flex items-center gap-2 w-full text-left py-2"
-      >
-        <Plane className="h-4 w-4 text-[#0D9488]" />
-        <span className="text-sm font-semibold flex-1">Arrivals</span>
-        <span className="text-[11px] text-muted-foreground mr-1">{summaryLine}</span>
-        {collapsed ? (
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-        ) : (
-          <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+  // Banner button
+  const banner = (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="w-full flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-all hover:shadow-sm active:scale-[0.98] group"
+    >
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0D9488]/20 to-[#E07A5F]/10">
+        <Plane className="h-5 w-5 text-[#0D9488]" />
+        {todayCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white ring-2 ring-background">
+            {todayCount}
+          </span>
         )}
-      </button>
+      </div>
+      <div className="flex-1 min-w-0 text-left">
+        <p className="text-[13px] font-semibold">Flight Overview</p>
+        <p className="text-[11px] text-muted-foreground truncate">
+          {todayCount > 0
+            ? `${todayCount} flight${todayCount > 1 ? "s" : ""} today`
+            : upcomingCount > 0
+            ? `${upcomingCount} upcoming · Next: ${nextFlight?.memberName}, ${format(nextFlight!.date, "MMM d")}`
+            : `${flights.length} flight${flights.length > 1 ? "s" : ""} tracked`}
+        </p>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground transition-colors" />
+    </button>
+  );
 
-      {!collapsed && (
-        <div className="space-y-4 pb-2">
-          {grouped.map((group) => (
-            <div key={group.dateKey}>
-              {/* Day header */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  {isToday(group.date)
-                    ? "Today"
-                    : format(group.date, "EEEE, MMM d")}
-                </span>
-                {group.entries.length > 1 && (
-                  <span className="text-[10px] text-muted-foreground">
-                    — {group.entries.length} arriving
-                  </span>
-                )}
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
-              {/* Arrival cards */}
-              <div className="space-y-2">
-                {group.entries.map((entry) => {
-                  const style = STATUS_STYLES[entry.status];
-                  return (
-                    <div
-                      key={entry.id}
-                      className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 ${style.bg} ${style.border}`}
-                    >
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="text-xs font-medium bg-muted">
-                          {getInitials(entry.memberName)}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium truncate">{entry.memberName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{entry.route}</p>
-                      </div>
-
-                      <div className="text-right shrink-0 space-y-0.5">
-                        <div className="flex items-center gap-1.5 justify-end">
-                          {entry.status === "arrived" ? (
-                            <Check className="h-3 w-3 text-emerald-500" />
-                          ) : (
-                            <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-                          )}
-                          <span className={`text-[11px] font-medium ${style.text}`}>
-                            {entry.status === "arrived"
-                              ? "Arrived"
-                              : entry.status === "today"
-                              ? "Today"
-                              : formatDistanceToNow(entry.arrivalDate, { addSuffix: true })}
-                          </span>
-                        </div>
-                        {entry.arrivalTime && (
-                          <p className="text-[11px] text-muted-foreground">{entry.arrivalTime}</p>
-                        )}
-                        {!isToday(entry.arrivalDate) && (
-                          <p className="text-[11px] text-muted-foreground">
-                            {format(entry.arrivalDate, "MMM d, h:mm a")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+  const drawerContent = (
+    <div className="pb-6 px-2">
+      <FlightTimeline flights={flights} />
     </div>
+  );
+
+  const modal = isMobile ? (
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerContent className="max-h-[85vh]">
+        <DrawerHeader>
+          <DrawerTitle className="flex items-center gap-2">
+            <Plane className="h-4 w-4 text-[#0D9488]" />
+            Flight Overview
+          </DrawerTitle>
+        </DrawerHeader>
+        <div className="overflow-y-auto px-4">
+          {drawerContent}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  ) : (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plane className="h-4 w-4 text-[#0D9488]" />
+            Flight Overview
+          </DialogTitle>
+        </DialogHeader>
+        {drawerContent}
+      </DialogContent>
+    </Dialog>
+  );
+
+  return (
+    <>
+      {banner}
+      {modal}
+    </>
   );
 }

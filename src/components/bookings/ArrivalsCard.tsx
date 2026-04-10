@@ -32,13 +32,12 @@ export function ArrivalsCard({ tripId }: Props) {
 
   if (!flightAttachments || flightAttachments.length === 0) return null;
 
-  // Check if any have arrival data
-  const hasArrivalData = flightAttachments.some((a) => {
+  const hasFlightData = flightAttachments.some((a) => {
     const bd = a.booking_data as Record<string, unknown> | null;
-    return bd?.destination && bd?.check_in;
+    return bd?.destination || bd?.departure;
   });
 
-  if (!hasArrivalData) return null;
+  if (!hasFlightData) return null;
 
   return (
     <button
@@ -47,7 +46,7 @@ export function ArrivalsCard({ tripId }: Props) {
     >
       <div className="flex items-center gap-2">
         <Plane className="h-4 w-4 text-[#0D9488]" />
-        <span className="text-sm font-semibold flex-1">Arrivals</span>
+        <span className="text-sm font-semibold flex-1">Flights</span>
         <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
       <ArrivalsSection attachments={flightAttachments} compact />
