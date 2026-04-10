@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { MessageSquareText, ListChecks, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { JuntoAIChat } from "./JuntoAIChat";
 
 type Props = {
   onStepByStep: () => void;
@@ -10,44 +9,14 @@ type Props = {
 };
 
 export function StepEntryChoice({ onStepByStep, onFreeText }: Props) {
-  const [mode, setMode] = useState<"choice" | "freetext">("choice");
-  const [text, setText] = useState("");
+  const [mode, setMode] = useState<"choice" | "chat">("choice");
 
-  if (mode === "freetext") {
+  if (mode === "chat") {
     return (
-      <div className="flex flex-col h-full px-6 pt-8 pb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-2">
-          Tell us about your dream trip ✈️
-        </h2>
-        <p className="text-sm text-muted-foreground mb-6">
-          Describe everything — we'll fill in the details for you to review.
-        </p>
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="We're 4 friends going to Southeast Asia for 10 days in July, we love food and nightlife, budget is around €100/day, one of us is vegetarian..."
-          className="flex-1 min-h-[160px] rounded-xl text-base bg-card border-border resize-none"
-          autoFocus
-        />
-        <div className="flex gap-3 mt-6">
-          <Button
-            variant="outline"
-            className="flex-1 h-12 rounded-xl"
-            onClick={() => setMode("choice")}
-          >
-            Back
-          </Button>
-          <Button
-            className="flex-1 h-12 rounded-xl text-primary-foreground font-semibold"
-            style={{ background: "var(--gradient-primary)" }}
-            disabled={text.trim().length < 10}
-            onClick={() => onFreeText(text.trim())}
-          >
-            Continue
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
-      </div>
+      <JuntoAIChat
+        onSubmit={onFreeText}
+        onBack={() => setMode("choice")}
+      />
     );
   }
 
@@ -57,12 +26,12 @@ export function StepEntryChoice({ onStepByStep, onFreeText }: Props) {
         How would you like to start? ✨
       </h2>
       <p className="text-sm text-muted-foreground mb-8">
-        We'll build your perfect itinerary with AI
+        We'll build your perfect itinerary with Junto AI
       </p>
 
       <div className="flex flex-col gap-4 flex-1">
         <button
-          onClick={() => setMode("freetext")}
+          onClick={() => setMode("chat")}
           className={cn(
             "flex items-start gap-4 p-5 rounded-2xl border border-border bg-card",
             "hover:border-primary/40 hover:shadow-md transition-all text-left active:scale-[0.98]"
@@ -71,12 +40,12 @@ export function StepEntryChoice({ onStepByStep, onFreeText }: Props) {
           <div className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: "var(--gradient-primary)" }}
           >
-            <MessageSquareText className="h-6 w-6 text-primary-foreground" />
+            <Sparkles className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <p className="font-semibold text-foreground text-[15px]">Tell us about your dream trip</p>
+            <p className="font-semibold text-foreground text-[15px]">Chat with Junto AI</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Describe it in your own words and we'll do the rest
+              Describe your dream trip and we'll plan it for you
             </p>
           </div>
         </button>
