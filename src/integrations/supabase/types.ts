@@ -1236,6 +1236,10 @@ export type Database = {
     }
     Functions: {
       check_error_spike: { Args: never; Returns: undefined }
+      create_expense_line_items_with_claims: {
+        Args: { _assignments?: Json; _expense_id: string; _items: Json }
+        Returns: undefined
+      }
       generate_trip_code: { Args: never; Returns: string }
       get_date_option_vote_counts: {
         Args: { _trip_id: string }
