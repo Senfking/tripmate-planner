@@ -4,16 +4,20 @@ import { Textarea } from "@/components/ui/textarea";
 type Props = {
   dietary: string[];
   notes: string;
+  prefilledFromFreeText?: boolean;
   onToggleDietary: (v: string) => void;
   onNotesChange: (v: string) => void;
 };
 
 const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Halal", "Gluten-free", "No restrictions"];
 
-export function StepExtras({ dietary, notes, onToggleDietary, onNotesChange }: Props) {
+export function StepExtras({ dietary, notes, prefilledFromFreeText, onToggleDietary, onNotesChange }: Props) {
   return (
     <div className="flex flex-col h-full px-6 pt-12 sm:pt-16">
       <h2 className="text-2xl font-bold text-foreground mb-1">Anything else we should know?</h2>
+      {prefilledFromFreeText && (
+        <p className="text-xs text-primary/70 mb-1">Pre-filled from your description</p>
+      )}
       <p className="text-sm text-muted-foreground mb-5">Optional — you can skip this</p>
 
       <div className="mb-6">

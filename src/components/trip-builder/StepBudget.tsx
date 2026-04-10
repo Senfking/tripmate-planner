@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 type Props = {
   value: BudgetLevel;
   source: string | null;
+  prefilledFromFreeText?: boolean;
   onChange: (v: BudgetLevel) => void;
 };
 
@@ -15,14 +16,17 @@ const OPTIONS: { key: BudgetLevel; icon: LucideIcon; label: string; desc: string
   { key: "premium", icon: Gem, label: "Premium", desc: "Fine dining, luxury stays, private transfers" },
 ];
 
-export function StepBudget({ value, source, onChange }: Props) {
+export function StepBudget({ value, source, prefilledFromFreeText, onChange }: Props) {
   return (
     <div className="flex flex-col h-full px-6 pt-12 sm:pt-16">
       <h2 className="text-2xl font-bold text-foreground mb-1">What's your budget style?</h2>
-      {source && (
+      {prefilledFromFreeText && (
+        <p className="text-xs text-primary/70 mb-4">Pre-filled from your description</p>
+      )}
+      {source && !prefilledFromFreeText && (
         <p className="text-xs text-muted-foreground mb-4">{source}</p>
       )}
-      {!source && <div className="mb-4" />}
+      {!source && !prefilledFromFreeText && <div className="mb-4" />}
 
       <div className="flex flex-col gap-3">
         {OPTIONS.map((opt) => {
