@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useAttachments, type AttachmentRow } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { AttachmentCard } from "./AttachmentCard";
 import { ArrivalsSection } from "./ArrivalsSection";
 import { BookingCrossLinkDrawer, extractBookingFields } from "./BookingCrossLinkDrawer";
