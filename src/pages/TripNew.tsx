@@ -316,7 +316,7 @@ export default function TripNew() {
           </button>
 
           <p className="text-center text-xs text-muted-foreground mt-4">
-            💡 After creating your trip, use <strong>Plan with AI ✨</strong> on the dashboard to generate a full itinerary
+            Tip: After creating your trip, use <strong>Plan with AI</strong> on the dashboard to generate a full itinerary
           </p>
         </form>
 

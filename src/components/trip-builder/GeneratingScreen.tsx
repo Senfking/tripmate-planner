@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Check, Loader2, AlertTriangle } from "lucide-react";
+import { Check, Loader2, AlertTriangle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -111,7 +111,7 @@ export function GeneratingScreen({ destination, error, onRetry }: Props) {
               className="h-9 w-9 rounded-full flex items-center justify-center shrink-0"
               style={{ background: "var(--gradient-primary)" }}
             >
-              <span className="text-sm">✨</span>
+              <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
             <div>
               <p className="font-semibold text-foreground text-[15px]">Junto AI is working</p>
@@ -175,10 +175,11 @@ export function GeneratingScreen({ destination, error, onRetry }: Props) {
               </div>
               <Button
                 onClick={onRetry}
-                className="w-full h-10 rounded-xl font-semibold text-primary-foreground text-sm"
+                className="w-full h-10 rounded-xl font-semibold text-primary-foreground text-sm gap-2"
                 style={{ background: "var(--gradient-primary)" }}
               >
-                Try again ✨
+                <Sparkles className="h-3.5 w-3.5" />
+                Try again
               </Button>
             </div>
           )}

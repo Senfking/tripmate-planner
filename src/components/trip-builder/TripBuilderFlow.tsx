@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { DateRange } from "react-day-picker";
 import { parseISO } from "date-fns";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   const [genError, setGenError] = useState<string | null>(null);
   const [results, setResults] = useState<AITripResult | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
+  const pendingGenerate = useRef(false);
 
   const [answers, setAnswers] = useState<Answers>({
     destination: "",
@@ -93,6 +94,16 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
     setAnswers((prev) => ({ ...prev, [key]: val }));
   }, []);
 
+  // Determine which steps still need input given current answers
+  const findFirstIncompleteStep = useCallback((ans: Answers): number => {
+    // Step 1: destination
+    if (!ans.surpriseMe && !ans.destination.trim()) return 1;
+    // Step 2: dates
+    if (!ans.flexible && !ans.dateRange?.from) return 2;
+    // Steps 3-6 always have defaults, so skip to generate
+    return -1; // All required info present
+  }, []);
+
   const handleFreeText = useCallback((text: string) => {
     const parsed = parseFreeText(text);
     const updates: Partial<Answers> = { freeText: text, notes: text };
@@ -106,9 +117,18 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       updates.flexibleDuration = parsed.durationDays;
     }
 
-    setAnswers((prev) => ({ ...prev, ...updates }));
-    setStep(1); // Go to first questionnaire step to review
-  }, [answers.destination, answers.vibes, answers.dietary]);
+    const merged = { ...answers, ...updates };
+    setAnswers(merged as Answers);
+
+    // Skip to first step that still needs input, or generate directly
+    const nextStep = findFirstIncompleteStep(merged as Answers);
+    if (nextStep === -1) {
+      // All required info filled — flag for auto-generation
+      pendingGenerate.current = true;
+    } else {
+      setStep(nextStep);
+    }
+  }, [answers, findFirstIncompleteStep]);
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
@@ -147,6 +167,14 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       setGenerating(false);
     }
   }, [tripId, answers, defaults.groupSize, onSuccess, onClose]);
+
+  // Auto-generate after free text fills all required fields
+  useEffect(() => {
+    if (pendingGenerate.current && !generating) {
+      pendingGenerate.current = false;
+      handleGenerate();
+    }
+  }, [answers, generating, handleGenerate]);
 
   const toggleVibe = useCallback((v: string) => {
     setAnswers((prev) => ({
@@ -309,11 +337,12 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
                   Back
                 </Button>
                 <Button
-                  className="flex-1 sm:flex-none sm:px-8 h-12 rounded-xl font-semibold text-primary-foreground text-[15px]"
+                  className="flex-1 sm:flex-none sm:px-8 h-12 rounded-xl font-semibold text-primary-foreground text-[15px] gap-2"
                   style={{ background: "var(--gradient-primary)" }}
                   onClick={handleGenerate}
                 >
-                  Generate my trip ✨
+                  <Sparkles className="h-4 w-4" />
+                  Generate my trip
                 </Button>
               </div>
             ) : (
@@ -324,7 +353,9 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
                   disabled={!canAdvance}
                   onClick={() => setStep((s) => s + 1)}
                 >
-                  {step === 6 ? "Generate my trip ✨" : "Continue"}
+                  {step === 6 ? (
+                    <><Sparkles className="h-4 w-4 mr-1.5" />Generate my trip</>
+                  ) : "Continue"}
                 </Button>
               </div>
             )}

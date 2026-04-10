@@ -34,7 +34,7 @@ export function StepDestination({ value, source, surpriseMe, onChange, onSurpris
             onClick={() => onSurpriseMe(true)}
           >
             <Sparkles className="h-4 w-4" />
-            Surprise me ✨
+            Surprise me
           </Button>
           <p className="text-xs text-muted-foreground mt-2">
             Let AI pick based on your other answers

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { ArrowLeft, RefreshCw, Package } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -111,19 +111,19 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
             onClick={onRegenerate}
             className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Regenerate ✨
+            <RefreshCw className="h-3.5 w-3.5" /> Regenerate
           </Button>
         </div>
         {/* Info pills */}
         <div className="flex items-center gap-2 mt-1.5 overflow-x-auto scrollbar-hide pb-1">
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130]">
-            📍 {destinationNames}
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130] inline-flex items-center gap-1">
+            <MapPin className="h-2.5 w-2.5" /> {destinationNames}
           </span>
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130]">
-            📅 {dateRange}
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130] inline-flex items-center gap-1">
+            <CalendarDays className="h-2.5 w-2.5" /> {dateRange}
           </span>
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130]">
-            💳 ~{result.currency || "€"}{result.daily_budget_estimate}/day
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130] inline-flex items-center gap-1">
+            <CreditCard className="h-2.5 w-2.5" /> ~{result.currency || "€"}{result.daily_budget_estimate}/day
           </span>
         </div>
       </div>

@@ -63,7 +63,7 @@ export function JuntoAIChat({ onSubmit, onBack }: Props) {
             </span>
             <div className="rounded-2xl rounded-tl-sm bg-card border border-border px-4 py-3 shadow-sm">
               <p className="text-[15px] text-foreground leading-relaxed">
-                Hey! ✨ Tell me about your dream trip — where you want to go, how many people, 
+                Hey! Tell me about your dream trip — where you want to go, how many people, 
                 what kind of vibe you're after, budget… anything! I'll plan the whole thing for you.
               </p>
             </div>

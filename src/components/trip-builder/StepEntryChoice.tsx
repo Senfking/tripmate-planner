@@ -136,12 +136,19 @@ export function StepEntryChoice({ onStepByStep, onFreeText }: Props) {
             {/* Quick hint chips */}
             {text.length === 0 && (
               <div className="px-5 pb-2 flex flex-wrap gap-1.5">
-                {["📍 Destination", "📅 Dates", "👥 Group size", "💰 Budget", "✨ Vibes"].map((chip) => (
+                {[
+                  { icon: MapPin, label: "Destination" },
+                  { icon: Calendar, label: "Dates" },
+                  { icon: Users, label: "Group size" },
+                  { icon: Sparkles, label: "Budget" },
+                  { icon: Sparkles, label: "Vibes" },
+                ].map((chip) => (
                   <span
-                    key={chip}
-                    className="text-[11px] text-muted-foreground/50 px-2 py-0.5 rounded-full bg-muted/50"
+                    key={chip.label}
+                    className="text-[11px] text-muted-foreground/50 px-2 py-0.5 rounded-full bg-muted/50 inline-flex items-center gap-1"
                   >
-                    {chip}
+                    <chip.icon className="h-2.5 w-2.5" />
+                    {chip.label}
                   </span>
                 ))}
               </div>

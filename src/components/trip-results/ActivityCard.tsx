@@ -101,7 +101,8 @@ export function ActivityCard({
           {activity.tips && (
             <div className="ml-10 border-l-2 border-[#0D9488]/60 pl-3 py-1.5 bg-[#0D9488]/5 rounded-r-lg">
               <p className="text-[11px] text-muted-foreground">
-                💡 <span className="text-foreground/80">{activity.tips}</span>
+                <span className="font-semibold text-primary mr-1">Tip:</span>
+                <span className="text-foreground/80">{activity.tips}</span>
               </p>
             </div>
           )}
@@ -109,7 +110,7 @@ export function ActivityCard({
           {activity.dietary_notes && (
             <div className="ml-10">
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">
-                🥬 {activity.dietary_notes}
+                Dietary: {activity.dietary_notes}
               </span>
             </div>
           )}

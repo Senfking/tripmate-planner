@@ -51,7 +51,7 @@ export function StepVibes({ selected, source, hasVibeBoard, onToggle }: Props) {
 
       {hasVibeBoard && (
         <p className="text-xs text-muted-foreground mt-6 bg-muted/50 rounded-lg px-3 py-2">
-          💡 We'll also use your group's Vibe Board preferences when generating the itinerary
+          Your group's Vibe Board preferences will also be used when generating the itinerary
         </p>
       )}
     </div>
