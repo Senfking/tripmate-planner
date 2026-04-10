@@ -439,7 +439,9 @@ export function useExpenses(tripId: string) {
     refreshRates,
     cachedCurrencyCodes: cachedCodesQuery.data || [],
     itineraryItems: itineraryQuery.data || [],
-    isLoading: expensesQuery.isPending || membersQuery.isPending || settlementQuery.isPending,
+    // data is undefined until first successful fetch; invalidateQueries()
+    // never clears it, so this is the most reliable loading signal.
+    isLoading: expensesQuery.data === undefined || membersQuery.data === undefined || settlementQuery.data === undefined,
     isFetchingExpenses: expensesQuery.isFetching,
     isExpensesSuccess: expensesQuery.isSuccess,
     ratesLoading: ratesQuery.isLoading,
