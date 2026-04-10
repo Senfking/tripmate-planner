@@ -274,17 +274,16 @@ export function AttachmentCard({ attachment, canDelete, isMine, isExtracting, is
               </button>
             )}
 
-            {/* Metadata line — only show other person's name, not "You" */}
+            {/* Metadata line — show ownership clearly */}
             <div className="flex items-center gap-1.5 pt-0.5">
               {offlineCached && hasFile && (
                 <span className="inline-flex items-center gap-0.5 rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-[10px] font-medium leading-none">
                   <WifiOff className="h-2.5 w-2.5" /> Offline
                 </span>
               )}
-              {!isMine && (
-                <span className="text-[11px] text-muted-foreground">{addedBy} ·</span>
-              )}
-              <span className="text-[11px] text-muted-foreground">{timeAgo}</span>
+              <span className="text-[11px] text-muted-foreground">
+                {isMine ? "You" : addedBy} · {timeAgo}
+              </span>
             </div>
           </div>
 
