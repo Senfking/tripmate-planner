@@ -20,7 +20,7 @@ const VIBES = [
 
 export function StepVibes({ selected, source, hasVibeBoard, onToggle }: Props) {
   return (
-    <div className="flex flex-col h-full px-6 pt-8">
+    <div className="flex flex-col h-full px-6 pt-12 sm:pt-16">
       <h2 className="text-2xl font-bold text-foreground mb-1">What's the vibe?</h2>
       {source && (
         <p className="text-xs text-muted-foreground mb-2">{source}</p>

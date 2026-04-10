@@ -12,7 +12,7 @@ type Props = {
 
 export function StepDestination({ value, source, surpriseMe, onChange, onSurpriseMe }: Props) {
   return (
-    <div className="flex flex-col h-full px-6 pt-8">
+    <div className="flex flex-col h-full px-6 pt-12 sm:pt-16">
       <h2 className="text-2xl font-bold text-foreground mb-1">Where are you going?</h2>
       {source && (
         <p className="text-xs text-muted-foreground mb-4">{source}</p>

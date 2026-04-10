@@ -18,7 +18,7 @@ const DURATIONS = [3, 5, 7, 10, 14];
 
 export function StepDates({ dateRange, source, flexible, flexibleDuration, onDateChange, onFlexibleChange, onDurationChange }: Props) {
   return (
-    <div className="flex flex-col h-full px-6 pt-8">
+    <div className="flex flex-col h-full px-6 pt-12 sm:pt-16">
       <h2 className="text-2xl font-bold text-foreground mb-1">When are you going?</h2>
       {source && (
         <p className="text-xs text-muted-foreground mb-4">{source}</p>

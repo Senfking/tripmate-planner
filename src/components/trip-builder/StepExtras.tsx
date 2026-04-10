@@ -12,7 +12,7 @@ const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Halal", "Gluten-free", "No rest
 
 export function StepExtras({ dietary, notes, onToggleDietary, onNotesChange }: Props) {
   return (
-    <div className="flex flex-col h-full px-6 pt-8">
+    <div className="flex flex-col h-full px-6 pt-12 sm:pt-16">
       <h2 className="text-2xl font-bold text-foreground mb-1">Anything else we should know?</h2>
       <p className="text-sm text-muted-foreground mb-5">Optional — you can skip this</p>
 
