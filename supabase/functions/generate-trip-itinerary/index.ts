@@ -644,7 +644,7 @@ Generate the itinerary JSON for these days only. Use day_number starting from ${
       // Single API call for trips ≤ 10 days
       let result: AnthropicResult;
       try {
-        result = await callAnthropicApi(anthropicKey, systemPrompt, userPrompt, 8000);
+        result = await callAnthropicApi(anthropicKey, systemPrompt, userPrompt, 16000);
       } catch (apiErr) {
         console.error("Anthropic API error:", (apiErr as Error).message);
         return jsonResponse(
@@ -670,7 +670,13 @@ Generate the itinerary JSON for these days only. Use day_number starting from ${
       // Try to parse, with truncation handling
       const parsed = parseAiResponse(result);
 
-      if (!parsed && result.stopReason === "max_tokens") {
+      if (!parsed) {
+        // Try salvage regardless of stop_reason — response may be truncated
+        console.log("[DIAG] Parsing failed, attempting salvage. stop_reason:", result.stopReason);
+        const salvagedFallback = salvageTruncatedJson(result.textContent);
+        if (salvagedFallback) {
+          itinerary = salvagedFallback;
+        } else if (result.stopReason === "max_tokens") {
         // Retry with condensed prompt
         console.log("[DIAG] Retrying with condensed prompt after max_tokens truncation");
         const condensedUserPrompt = `Plan a ${numDays}-day group trip to ${destination.trim()} for ${clampedGroupSize} people.
@@ -685,7 +691,7 @@ ${notes ? `Notes: ${notes}` : ""}
 IMPORTANT: Generate a CONDENSED itinerary — max 3 activities per day, 1-sentence descriptions, minimal tips. Keep the JSON compact.`;
 
         try {
-          const retryResult = await callAnthropicApi(anthropicKey, systemPrompt, condensedUserPrompt, 8000);
+          const retryResult = await callAnthropicApi(anthropicKey, systemPrompt, condensedUserPrompt, 16000);
           totalInputTokens += retryResult.inputTokens;
           totalOutputTokens += retryResult.outputTokens;
           console.log("[DIAG] Retry — stop_reason:", retryResult.stopReason,
@@ -706,11 +712,12 @@ IMPORTANT: Generate a CONDENSED itinerary — max 3 activities per day, 1-senten
             500,
           );
         }
-      } else if (!parsed) {
+      } else {
         return jsonResponse(
           { success: false, error: "Failed to parse AI-generated itinerary" },
           500,
         );
+      }
       } else {
         itinerary = parsed;
       }
