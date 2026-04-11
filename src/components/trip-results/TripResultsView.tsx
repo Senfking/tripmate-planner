@@ -38,7 +38,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
   const [costOpen, setCostOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapFullscreen, setMapFullscreen] = useState(false);
-  const [refinedCoords] = useState(() => new Map<string, { lat: number; lng: number }>());
+  const [refinedCoords] = useState<Map<string, { lat: number; lng: number }>>(() => new Map());
   const [coordsVersion, setCoordsVersion] = useState(0);
 
   const handleCoordsRefined = useCallback((dayDate: string, activityIndex: number, lat: number, lng: number) => {
