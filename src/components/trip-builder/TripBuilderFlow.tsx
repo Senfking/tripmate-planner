@@ -250,14 +250,14 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData?.user?.id;
         if (userId) {
-          const { data: inserted, error: insertError } = await supabase
-            .from("ai_trip_plans")
+          const { data: inserted, error: insertError } = await (supabase
+            .from("ai_trip_plans" as any)
             .insert({
               trip_id: tripId,
               created_by: userId,
               prompt: payload,
               result: normalized,
-            })
+            }) as any)
             .select("id")
             .single();
 
