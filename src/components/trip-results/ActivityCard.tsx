@@ -47,7 +47,7 @@ export function ActivityCard({
   const IconComponent = getCategoryIcon(activity.category);
 
   const { photos, reviews, rating, totalRatings, googleMapsUrl, isLoading } =
-    useGooglePlaceDetails(activity.title || "", activity.location_name || day.destination || "");
+    useGooglePlaceDetails(activity.title || "", activity.location_name || "");
 
   const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
   const descIsLong = (activity.description?.length || 0) > 120;
