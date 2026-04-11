@@ -25,11 +25,11 @@ export function ActivityCard({
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const color = getCategoryColor(activity.category);
-  const icon = getCategoryIcon(activity.category);
+  const IconComponent = getCategoryIcon(activity.category);
 
   return (
     <div
-      className="mx-4 mb-2 rounded-xl border border-border/30 bg-[#161920] overflow-hidden transition-all duration-200 animate-fade-in"
+      className="mx-4 mb-2 rounded-xl border border-border bg-card overflow-hidden transition-all duration-200 animate-fade-in"
       style={{
         animationDelay: `${animDelay}ms`,
         borderLeftColor: isAdded ? "#0D9488" : undefined,
@@ -75,13 +75,13 @@ export function ActivityCard({
           </div>
         </div>
 
-        {/* Photo placeholder + chevron */}
+        {/* Icon placeholder + chevron */}
         <div className="flex flex-col items-end gap-1">
           <div
-            className="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center text-lg"
-            style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}
+            className="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center"
+            style={{ background: `linear-gradient(135deg, ${color}20, ${color}08)` }}
           >
-            {icon}
+            <IconComponent className="h-6 w-6" style={{ color }} />
           </div>
           {expanded ? (
             <ChevronUp className="h-3 w-3 text-muted-foreground" />
@@ -99,7 +99,7 @@ export function ActivityCard({
           </p>
 
           {activity.tips && (
-            <div className="ml-10 border-l-2 border-[#0D9488]/60 pl-3 py-1.5 bg-[#0D9488]/5 rounded-r-lg">
+            <div className="ml-10 border-l-2 border-primary/60 pl-3 py-1.5 bg-primary/5 rounded-r-lg">
               <p className="text-[11px] text-muted-foreground">
                 <span className="font-semibold text-primary mr-1">Tip:</span>
                 <span className="text-foreground/80">{activity.tips}</span>
@@ -109,7 +109,7 @@ export function ActivityCard({
 
           {activity.dietary_notes && (
             <div className="ml-10">
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-green-500/10 text-green-700">
                 Dietary: {activity.dietary_notes}
               </span>
             </div>
@@ -121,7 +121,7 @@ export function ActivityCard({
                 href={activity.google_maps_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
+                className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
               >
                 View on Google Maps <ExternalLink className="h-2.5 w-2.5" />
               </a>
@@ -131,7 +131,7 @@ export function ActivityCard({
                 href={activity.booking_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
+                className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
               >
                 Book on Viator <ExternalLink className="h-2.5 w-2.5" />
               </a>
@@ -141,7 +141,7 @@ export function ActivityCard({
       )}
 
       {/* Actions row */}
-      <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
+      <div className="flex items-center justify-between px-3 py-2 border-t border-border">
         <div className="flex items-center gap-2">
           <button
             onClick={(e) => {
@@ -175,8 +175,8 @@ export function ActivityCard({
             }}
             className={`text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all ${
               isAdded
-                ? "bg-[#0D9488]/20 text-[#0D9488]"
-                : "bg-[#1e2130] text-muted-foreground hover:text-foreground hover:bg-[#252836]"
+                ? "bg-primary/15 text-primary"
+                : "bg-accent text-muted-foreground hover:text-foreground hover:bg-accent/80"
             }`}
           >
             {isAdded ? (
@@ -184,7 +184,7 @@ export function ActivityCard({
                 <Check className="h-3 w-3" /> Added
               </span>
             ) : (
-              "Add ✓"
+              "Add"
             )}
           </button>
         </div>

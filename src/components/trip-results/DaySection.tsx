@@ -31,7 +31,7 @@ export const DaySection = forwardRef<HTMLDivElement, Props>(
         {/* Day Header */}
         <button
           onClick={() => setOpen(!open)}
-          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1a1d28] transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors"
         >
           {open ? (
             <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />

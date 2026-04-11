@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -23,9 +23,9 @@ function createNumberedIcon(num: number, color: string) {
       background:${color};
       display:flex;align-items:center;justify-content:center;
       color:#fff;font-size:12px;font-weight:700;
-      border:2px solid rgba(255,255,255,0.3);
-      box-shadow:0 2px 8px rgba(0,0,0,0.4);
-      font-family:'IBM Plex Mono',monospace;
+      border:2px solid rgba(255,255,255,0.8);
+      box-shadow:0 2px 6px rgba(0,0,0,0.2);
+      font-family:Inter,sans-serif;
     ">${num}</div>`,
   });
 }
@@ -104,9 +104,8 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }
   );
 
   if (!hasValidCenter) {
-    return <div className="h-full w-full bg-muted/40" />;
+    return <div className="h-full w-full bg-accent" />;
   }
-
 
   return (
     <MapContainer
@@ -115,10 +114,10 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }
       className="h-full w-full"
       zoomControl={false}
       attributionControl={false}
-      style={{ background: "#0f1115" }}
+      style={{ background: "hsl(var(--accent))" }}
     >
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
       />
       <MapController
@@ -133,8 +132,8 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }
           positions={polylinePositions}
           pathOptions={{
             color: "#0D9488",
-            weight: 2,
-            opacity: 0.5,
+            weight: 2.5,
+            opacity: 0.6,
             dashArray: "6 4",
           }}
         />

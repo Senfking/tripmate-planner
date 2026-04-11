@@ -1,3 +1,10 @@
+import {
+  Utensils, Coffee, Landmark, TreePine, Moon,
+  Mountain, Dumbbell, Waves, Sparkles, Car,
+  Hotel, ShoppingBag, Camera, MapPin,
+  type LucideIcon
+} from "lucide-react";
+
 export const CATEGORY_COLORS: Record<string, string> = {
   food: "#F97316",
   restaurant: "#F97316",
@@ -22,34 +29,34 @@ export const CATEGORY_COLORS: Record<string, string> = {
   activity: "#22C55E",
 };
 
-export const CATEGORY_ICONS: Record<string, string> = {
-  food: "🍜",
-  restaurant: "🍜",
-  cafe: "☕",
-  culture: "🏛️",
-  museum: "🏛️",
-  history: "🏛️",
-  nature: "🌿",
-  park: "🌿",
-  nightlife: "🌙",
-  bar: "🌙",
-  adventure: "⛰️",
-  sport: "⛰️",
-  relaxation: "🧘",
-  wellness: "🧘",
-  spa: "🧘",
-  transport: "🚗",
-  accommodation: "🏨",
-  hotel: "🏨",
-  shopping: "🛍️",
-  attraction: "🏛️",
-  activity: "🌿",
+export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  food: Utensils,
+  restaurant: Utensils,
+  cafe: Coffee,
+  culture: Landmark,
+  museum: Landmark,
+  history: Landmark,
+  nature: TreePine,
+  park: TreePine,
+  nightlife: Moon,
+  bar: Moon,
+  adventure: Mountain,
+  sport: Dumbbell,
+  relaxation: Waves,
+  wellness: Sparkles,
+  spa: Sparkles,
+  transport: Car,
+  accommodation: Hotel,
+  hotel: Hotel,
+  shopping: ShoppingBag,
+  attraction: Camera,
+  activity: TreePine,
 };
 
 export function getCategoryColor(category: string): string {
   return CATEGORY_COLORS[category?.toLowerCase()] || "#6B7280";
 }
 
-export function getCategoryIcon(category: string): string {
-  return CATEGORY_ICONS[category?.toLowerCase()] || "📍";
+export function getCategoryIcon(category: string): LucideIcon {
+  return CATEGORY_ICONS[category?.toLowerCase()] || MapPin;
 }

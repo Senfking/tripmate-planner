@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
@@ -11,7 +11,6 @@ import { AccommodationCard } from "./AccommodationCard";
 import { AlternativesSheet } from "./AlternativesSheet";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
-import { useState } from "react";
 
 interface Props {
   tripId: string;
@@ -27,7 +26,6 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
   const dayRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [packingOpen, setPackingOpen] = useState(false);
 
-  // Flatten all days for map and scroll-spy
   const allDays = useMemo(() => {
     const days: AIDay[] = [];
     let dayNum = 1;
@@ -46,7 +44,6 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
 
   const remainingCount = totalActivities - state.addedCount;
 
-  // Scroll-spy with IntersectionObserver
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -70,17 +67,13 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
     return () => observer.disconnect();
   }, [allDays]);
 
-  // Scroll to a card when map pin is clicked
   const scrollToActivity = useCallback((dayDate: string, _actIdx: number) => {
     const el = dayRefs.current.get(dayDate);
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  const handleRemoveActivity = useCallback((_dayDate: string, _index: number) => {
-    // For now just a visual removal — would need result state mutation
-  }, []);
+  const handleRemoveActivity = useCallback((_dayDate: string, _index: number) => {}, []);
 
-  // Date range display
   const dateRange = useMemo(() => {
     if (result.destinations.length === 0) return "";
     const first = result.destinations[0].start_date;
@@ -95,11 +88,11 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
   const destinationNames = result.destinations.map((d) => d.name).join(" · ");
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0f1115] flex flex-col" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Top Bar */}
-      <div className="sticky top-0 z-20 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-2 bg-[rgba(15,17,21,0.85)] backdrop-blur-xl border-b border-border/20">
+      <div className="sticky top-0 z-20 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-2 bg-background/90 backdrop-blur-xl border-b border-border">
         <div className="flex items-center justify-between gap-2">
-          <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-[#1e2130] transition-colors">
+          <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors">
             <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
           <h1 className="flex-1 text-center text-sm font-semibold text-foreground truncate leading-tight">
@@ -116,13 +109,13 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
         </div>
         {/* Info pills */}
         <div className="flex items-center gap-2 mt-1.5 overflow-x-auto scrollbar-hide pb-1">
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130] inline-flex items-center gap-1">
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
             <MapPin className="h-2.5 w-2.5" /> {destinationNames}
           </span>
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130] inline-flex items-center gap-1">
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
             <CalendarDays className="h-2.5 w-2.5" /> {dateRange}
           </span>
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-[#1e2130] inline-flex items-center gap-1">
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
             <CreditCard className="h-2.5 w-2.5" /> ~{result.currency || "€"}{result.daily_budget_estimate}/day
           </span>
         </div>
@@ -131,7 +124,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
       {/* Main Content */}
       <div className={`flex-1 flex ${isMobile ? "flex-col" : "flex-row"} overflow-hidden`}>
         {/* Map */}
-        <div className={isMobile ? "h-[40vh] flex-shrink-0" : "w-[45%] sticky top-0 h-full"}>
+        <div className={isMobile ? "h-[35vh] flex-shrink-0" : "w-[45%] sticky top-0 h-full"}>
           <ResultsMap
             result={result}
             activeDayIndex={state.activeDayIndex}
@@ -144,12 +137,12 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
         {/* Content Panel */}
         <div
           ref={contentRef}
-          className={`flex-1 overflow-y-auto ${isMobile ? "" : "w-[55%]"}`}
+          className={`flex-1 overflow-y-auto bg-background ${isMobile ? "" : "w-[55%]"}`}
           style={{ paddingBottom: 100 }}
         >
           {/* Trip summary */}
           <div className="px-4 pt-4 pb-2">
-            <p className="text-sm text-muted-foreground/70 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {result.trip_summary}
             </p>
           </div>
@@ -214,7 +207,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
             <div className="mx-4 mt-4 mb-6">
               <button
                 onClick={() => setPackingOpen(!packingOpen)}
-                className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-[#161920] border border-border/20 text-left"
+                className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left"
               >
                 <Package className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-foreground font-medium flex-1">
@@ -225,7 +218,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
                 </span>
               </button>
               {packingOpen && (
-                <div className="mt-2 px-4 py-3 rounded-xl bg-[#161920] border border-border/20 animate-fade-in">
+                <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in">
                   <ul className="space-y-1">
                     {result.packing_suggestions.map((item, i) => (
                       <li key={i} className="text-xs text-muted-foreground flex items-center gap-2">
@@ -242,7 +235,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="sticky bottom-0 z-20 px-4 py-3 bg-[rgba(15,17,21,0.85)] backdrop-blur-xl border-t border-border/20 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
+      <div className="sticky bottom-0 z-20 px-4 py-3 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
         <div className="flex items-center justify-between gap-3">
           <div className="text-[11px] text-muted-foreground font-mono">
             {totalActivities} activities · ~{result.currency || "€"}{result.daily_budget_estimate}/day
@@ -250,14 +243,14 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
           <Button
             onClick={() => state.addAllActivities(result)}
             disabled={state.isAddingAll || remainingCount === 0}
-            className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
+            className="h-9 px-4 rounded-xl font-semibold text-[13px]"
           >
             {state.isAddingAll
               ? "Adding..."
               : remainingCount === totalActivities
               ? "Add all to itinerary"
               : remainingCount === 0
-              ? "All added ✓"
+              ? "All added"
               : `Add remaining ${remainingCount}`}
           </Button>
         </div>
@@ -270,7 +263,6 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
           alternatives={state.alternatives}
           loading={state.loadingAlternatives}
           onSelect={(alt) => {
-            // Swap activity — for now just close
             state.setAlternativesFor(null);
           }}
           onClose={() => state.setAlternativesFor(null)}
