@@ -32,6 +32,16 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
   const dayRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [packingOpen, setPackingOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
+  const [refinedCoords] = useState(() => new Map<string, { lat: number; lng: number }>());
+  const [coordsVersion, setCoordsVersion] = useState(0);
+
+  const handleCoordsRefined = useCallback((dayDate: string, activityIndex: number, lat: number, lng: number) => {
+    const key = `${dayDate}-${activityIndex}`;
+    if (!refinedCoords.has(key)) {
+      refinedCoords.set(key, { lat, lng });
+      setCoordsVersion((v) => v + 1);
+    }
+  }, [refinedCoords]);
 
   const allDays = useMemo(() => {
     const days: AIDay[] = [];
