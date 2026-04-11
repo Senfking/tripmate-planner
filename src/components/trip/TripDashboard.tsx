@@ -1,15 +1,49 @@
-import { useState } from "react";
+import { useState, Component, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInCalendarDays, isWithinInterval, parseISO } from "date-fns";
-import { Compass, CalendarDays, Plane, Wallet, Users, Sparkles } from "lucide-react";
+import { Compass, CalendarDays, Plane, Wallet, Users, Sparkles, AlertTriangle } from "lucide-react";
 import { SectionCard } from "./SectionCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
 import { SharedItemsSection } from "./SharedItemsSection";
 import { ArrivalsCard } from "@/components/bookings/ArrivalsCard";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
+import { Button } from "@/components/ui/button";
+
+// Error boundary for the trip builder
+class BuilderErrorBoundary extends Component<{ children: ReactNode; onClose: () => void }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; onClose: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err: Error) { console.error("TripBuilder crashed:", err); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-6">
+          <div className="text-center max-w-sm space-y-4">
+            <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
+            <h2 className="text-lg font-semibold">Something went wrong</h2>
+            <p className="text-sm text-muted-foreground">The trip builder encountered an error.</p>
+            <Button onClick={this.props.onClose} className="rounded-xl">Close</Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function BuilderWrapper({ tripId, onClose }: { tripId: string; onClose: () => void }) {
+  return (
+    <BuilderErrorBoundary onClose={onClose}>
+      <TripBuilderFlow tripId={tripId} onClose={onClose} />
+    </BuilderErrorBoundary>
+  );
+}
 
 type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
 
