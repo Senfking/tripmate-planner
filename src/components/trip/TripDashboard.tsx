@@ -54,14 +54,20 @@ interface TripDashboardProps {
   myRole: string | undefined;
   startDate: string | null;
   endDate: string | null;
+  onBuilderToggle?: (open: boolean) => void;
 }
 
-export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate }: TripDashboardProps) {
+export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate, onBuilderToggle }: TripDashboardProps) {
   const { user } = useAuth();
   const userId = user?.id;
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
   const [builderOpen, setBuilderOpen] = useState(false);
+
+  const toggleBuilder = (open: boolean) => {
+    setBuilderOpen(open);
+    onBuilderToggle?.(open);
+  };
 
   const tripEnded = endDate ? new Date(endDate) < new Date(todayStr) : false;
   const endedBadge: BadgeState = { label: "Trip ended", color: "grey" };
