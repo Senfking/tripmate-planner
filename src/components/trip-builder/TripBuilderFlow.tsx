@@ -324,7 +324,14 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         onClose={onClose}
         onRegenerate={() => {
           setResults(null);
+          setSavedPlanId(null);
           handleGenerate();
+        }}
+        onAdjust={() => {
+          // Go back to questionnaire with answers pre-filled (they're already in state)
+          setResults(null);
+          setSavedPlanId(null);
+          setStep(1); // Start at destination step
         }}
       />
     );
