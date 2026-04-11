@@ -68,7 +68,9 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
     const numDays = allDays.length || 1;
     const dailyAvg = Math.round(total / numDays);
     const sorted = Object.entries(categories).sort((a, b) => b[1] - a[1]);
-    return { total: Math.round(total), dailyAvg, categories: sorted };
+    const breakdown = { total: Math.round(total), dailyAvg, categories: sorted };
+    console.log("costBreakdown", breakdown);
+    return breakdown;
   }, [allDays, result]);
 
   useEffect(() => {
