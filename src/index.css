@@ -419,3 +419,67 @@ html.dark, html.dark body, html.dark #root {
     pointer-events: none;
   }
 }
+
+/* Fix #1: Force light text inside the glassmorphic dark panel on desktop */
+.trip-results-dark-panel {
+  --foreground: 0 0% 95%;
+  --card-foreground: 0 0% 95%;
+  --muted-foreground: 0 0% 65%;
+  --card: 0 0% 100% / 0.06;
+  --accent: 0 0% 100% / 0.08;
+  --border: 0 0% 100% / 0.12;
+  --popover: 0 0% 12%;
+  --popover-foreground: 0 0% 95%;
+  color: hsl(0 0% 95%);
+}
+.trip-results-dark-panel .text-foreground {
+  color: hsl(0 0% 95%) !important;
+}
+.trip-results-dark-panel .text-muted-foreground {
+  color: hsl(0 0% 65%) !important;
+}
+.trip-results-dark-panel .bg-card {
+  background-color: rgba(255 255 255 / 0.06) !important;
+}
+.trip-results-dark-panel .bg-accent {
+  background-color: rgba(255 255 255 / 0.08) !important;
+}
+.trip-results-dark-panel .bg-accent\/50 {
+  background-color: rgba(255 255 255 / 0.04) !important;
+}
+.trip-results-dark-panel .bg-accent\/20 {
+  background-color: rgba(255 255 255 / 0.04) !important;
+}
+.trip-results-dark-panel .border-border {
+  border-color: rgba(255 255 255 / 0.12) !important;
+}
+.trip-results-dark-panel .border-border\/50 {
+  border-color: rgba(255 255 255 / 0.08) !important;
+}
+.trip-results-dark-panel .bg-muted {
+  background-color: rgba(255 255 255 / 0.06) !important;
+}
+.trip-results-dark-panel .hover\:bg-accent:hover {
+  background-color: rgba(255 255 255 / 0.12) !important;
+}
+.trip-results-dark-panel .text-foreground\/80 {
+  color: rgba(255 255 255 / 0.8) !important;
+}
+.trip-results-dark-panel .text-muted-foreground\/30 {
+  color: rgba(255 255 255 / 0.3) !important;
+}
+.trip-results-dark-panel .text-muted-foreground\/70 {
+  color: rgba(255 255 255 / 0.55) !important;
+}
+.trip-results-dark-panel .bg-primary\/5 {
+  background-color: rgba(224 122 95 / 0.1) !important;
+}
+.trip-results-dark-panel .bg-primary\/10 {
+  background-color: rgba(224 122 95 / 0.15) !important;
+}
+.trip-results-dark-panel .bg-green-500\/10 {
+  background-color: rgba(34 197 94 / 0.12) !important;
+}
+.trip-results-dark-panel .text-green-700 {
+  color: hsl(142 70% 60%) !important;
+}
