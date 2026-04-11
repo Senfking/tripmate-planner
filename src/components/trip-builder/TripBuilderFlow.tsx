@@ -233,16 +233,11 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         body: payload,
       });
 
-      console.log("[TripBuilder] Raw edge function response:", JSON.stringify(data, null, 2)?.slice(0, 2000));
-      console.log("[TripBuilder] Edge function error:", error);
-      console.log("[TripBuilder] data type:", typeof data, "| keys:", data ? Object.keys(data) : "null");
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data) throw new Error("No data returned from generate-trip-itinerary");
 
       const normalized = normalizeAIResponse(data);
-      console.log("[TripBuilder] Normalized result — destinations:", normalized.destinations?.length, "| map_center:", normalized.map_center);
 
       setResults(normalized);
       onSuccess?.(normalized);

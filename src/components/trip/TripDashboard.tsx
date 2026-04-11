@@ -397,7 +397,10 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     stopsLoading || proposalsLoading || pollsLoading ||
     itineraryLoading || attachmentsLoading || expensesLoading || memberCountLoading;
 
-  if (isLoading) {
+  // Don't show skeleton while builder is open — it's a full-screen overlay so the
+  // dashboard isn't visible, and returning the skeleton would unmount the builder
+  // mid-generation, silently killing the AI request.
+  if (isLoading && !builderOpen) {
     return <DashboardSkeleton />;
   }
 
