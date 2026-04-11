@@ -319,6 +319,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
                       onToggleAdd={(d, a) => state.toggleActivity(d, a)}
                       onRequestChange={(dd, i, a) => state.requestAlternatives(dd, i, a, tripId)}
                       onRemoveActivity={handleRemoveActivity}
+                      onCoordsRefined={handleCoordsRefined}
                     />
                   ))}
                   {dest.transport_to_next && (
