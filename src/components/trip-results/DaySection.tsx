@@ -13,10 +13,11 @@ interface Props {
   onRequestChange: (dayDate: string, index: number, activity: AIActivity) => void;
   onRemoveActivity: (dayDate: string, index: number) => void;
   onActivityClick?: (activity: AIActivity) => void;
+  onCoordsRefined?: (dayDate: string, activityIndex: number, lat: number, lng: number) => void;
 }
 
 export const DaySection = forwardRef<HTMLDivElement, Props>(
-  ({ day, defaultExpanded = false, isAdded, onToggleAdd, onRequestChange, onRemoveActivity, onActivityClick }, ref) => {
+  ({ day, defaultExpanded = false, isAdded, onToggleAdd, onRequestChange, onRemoveActivity, onActivityClick, onCoordsRefined }, ref) => {
     const [open, setOpen] = useState(defaultExpanded);
     const dateStr = (() => {
       try {
@@ -75,6 +76,7 @@ export const DaySection = forwardRef<HTMLDivElement, Props>(
                     onToggleAdd={() => onToggleAdd(day, activity)}
                     onRequestChange={() => onRequestChange(day.date, i, activity)}
                     onRemove={() => onRemoveActivity(day.date, i)}
+                    onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
                     animDelay={i * 50}
                   />
                 </div>
