@@ -269,14 +269,34 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
               <h1 className="flex-1 text-center text-sm font-semibold text-foreground truncate leading-tight">
                 {result.trip_title}
               </h1>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onRegenerate}
-                className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8"
-              >
-                <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRegenerate}
+                  className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+                {onAdjust && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onAdjust}
+                    className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleShare}
+                  className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
             <div className="flex items-center gap-2 mt-1.5 overflow-x-auto scrollbar-hide pb-1">
               <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
