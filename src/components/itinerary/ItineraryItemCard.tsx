@@ -152,10 +152,10 @@ export function ItineraryItemCard({
         )}
         style={{ borderLeftWidth: 3, borderLeftColor: s.fg }}
       >
-        {/* ━━ COLLAPSED: Rows 1–4 ━━ */}
+        {/* ━━ COMPACT: 2 rows always visible ━━ */}
         <div className="cursor-pointer" onClick={handleCardClick}>
           {/* Row 1: Title + Status pill */}
-          <div className="flex items-center justify-between gap-2 px-3 pt-2.5 pb-0.5">
+          <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-0.5">
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               {isDraggable && (
                 <button
@@ -167,7 +167,7 @@ export function ItineraryItemCard({
                   <GripVertical className="h-3.5 w-3.5" />
                 </button>
               )}
-              <h3 className="text-[14px] font-bold leading-snug text-foreground truncate">
+              <h3 className="text-[13px] font-bold leading-snug text-foreground truncate">
                 {item.title}
               </h3>
               {overlapTitles?.length ? (
@@ -192,84 +192,87 @@ export function ItineraryItemCard({
               )}
             </div>
             <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+              className="shrink-0 rounded-full px-1.5 py-px text-[8px] font-semibold uppercase tracking-wide"
               style={{ color: s.fg, backgroundColor: s.bg }}
             >
               {s.label}
             </span>
           </div>
 
-          {/* Row 2: Time + Location */}
-          <div className="flex items-center gap-3 px-3 pb-1.5 text-[11px] text-muted-foreground/60">
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-2.5 w-2.5 opacity-50" />
-              {timeDisplay || "TBC"}
-            </span>
-            {item.location_text && (
-              <span className="inline-flex items-center gap-1 truncate">
-                <MapPin className="h-2.5 w-2.5 opacity-50" />
-                <span className="truncate">{item.location_text}</span>
+          {/* Row 2: Time · Location · Comments · Expense | Actions + Chevron */}
+          <div className="flex items-center justify-between gap-2 px-3 pb-2">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 min-w-0 flex-1 overflow-hidden">
+              <span className="inline-flex items-center gap-0.5 shrink-0">
+                <Clock className="h-2.5 w-2.5 opacity-50" />
+                {timeDisplay || "TBC"}
               </span>
-            )}
-          </div>
-        </div>
-
-        {/* Row 3: Avatars (left) + RSVP control (right) */}
-        {user && members.length > 0 && (
-          <div className="flex items-center justify-between gap-2 px-3 pb-1.5">
-            <AttendanceRow
-              members={members}
-              attendance={attendance}
-              itemId={item.id}
-              currentUserId={user.id}
-              onCycle={onCycleAttendance}
-              compact
-            />
-          </div>
-        )}
-
-        {/* Row 4: Comment count + actions - tappable to expand */}
-        <div className="flex items-center justify-between px-3 pb-2 cursor-pointer" onClick={handleCardClick}>
-          <div className="flex items-center gap-3 text-muted-foreground/50">
-            <div className="flex items-center gap-1.5">
-              <MessageCircle className="h-3 w-3" />
-              <span className="text-[10px] font-medium">
-                {commentCount > 0 ? commentCount : 0}
-              </span>
+              {item.location_text && (
+                <span className="inline-flex items-center gap-0.5 truncate">
+                  <MapPin className="h-2.5 w-2.5 opacity-50 shrink-0" />
+                  <span className="truncate">{item.location_text}</span>
+                </span>
+              )}
+              {commentCount > 0 && (
+                <span className="inline-flex items-center gap-0.5 shrink-0">
+                  <MessageCircle className="h-2.5 w-2.5" />
+                  {commentCount}
+                </span>
+              )}
+              {expenseTotal && (
+                <button
+                  className="inline-flex items-center gap-0.5 shrink-0 hover:text-muted-foreground transition-colors"
+                  data-action
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/app/trips/${tripId}/expenses`);
+                  }}
+                >
+                  <Receipt className="h-2.5 w-2.5" />
+                  {expenseTotal.currency
+                    ? formatCurrency(expenseTotal.total, expenseTotal.currency)
+                    : `${expenseTotal.count}`}
+                </button>
+              )}
             </div>
-            {expenseTotal && (
-              <button
-                className="flex items-center gap-1 rounded-full bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted transition-colors"
-                data-action
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/app/trips/${tripId}/expenses`);
-                }}
-              >
-                <Receipt className="h-2.5 w-2.5" />
-                {expenseTotal.currency
-                  ? formatCurrency(expenseTotal.total, expenseTotal.currency)
-                  : `${expenseTotal.count} expense${expenseTotal.count > 1 ? "s" : ""}`}
+            <div className="flex items-center gap-0.5 shrink-0" data-action>
+              <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-5 w-5 inline-flex items-center justify-center rounded text-muted-foreground/30 hover:text-foreground/70 hover:bg-muted/40 transition-colors">
+                <Pencil className="h-2.5 w-2.5" />
               </button>
-            )}
-            <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", expanded && "rotate-180")} />
-          </div>
-          <div className="flex items-center gap-0.5" data-action>
-            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground/35 hover:text-foreground/70 hover:bg-muted/40 transition-colors">
-              <Pencil className="h-3 w-3" />
-            </button>
-            {canDelete && (
-              <button onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }} className="h-6 w-6 inline-flex items-center justify-center rounded-md text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors ml-1">
-                <Trash2 className="h-3 w-3" />
-              </button>
-            )}
+              {canDelete && (
+                <button onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }} className="h-5 w-5 inline-flex items-center justify-center rounded text-destructive/50 hover:text-destructive hover:bg-destructive/10 transition-colors">
+                  <Trash2 className="h-2.5 w-2.5" />
+                </button>
+              )}
+              <ChevronDown className={cn("h-3 w-3 text-muted-foreground/30 transition-transform duration-200 ml-0.5", expanded && "rotate-180")} />
+            </div>
           </div>
         </div>
 
-        {/* ━━ EXPANDED: Comments ━━ */}
-        {expanded && user && (
-          <div className="border-t border-border/40 px-3 py-2.5">
-            <ItemComments tripId={tripId} itemId={item.id} />
+        {/* ━━ EXPANDED: Attendance + Comments ━━ */}
+        {expanded && (
+          <div className="border-t border-border/40">
+            {user && members.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5">
+                <AttendanceRow
+                  members={members}
+                  attendance={attendance}
+                  itemId={item.id}
+                  currentUserId={user.id}
+                  onCycle={onCycleAttendance}
+                  compact
+                />
+              </div>
+            )}
+            {item.notes && (
+              <p className="px-3 pb-1.5 text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-3">
+                {item.notes}
+              </p>
+            )}
+            {user && (
+              <div className="px-3 py-2">
+                <ItemComments tripId={tripId} itemId={item.id} />
+              </div>
+            )}
           </div>
         )}
       </div>
