@@ -196,25 +196,69 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
     );
   }
 
+  const hasItems = items.length > 0;
+  const isEmpty = allDays.length === 0 && !hasItems;
+
   return (
     <div className="space-y-6">
-      {/* Import with AI */}
-      <button
-        onClick={() => setImportOpen(true)}
-        className="w-full rounded-xl border border-dashed border-[#0D9488]/30 py-3 text-center text-[13px] font-medium text-[#0D9488]/70 hover:border-[#0D9488]/60 hover:text-[#0D9488] transition-colors flex items-center justify-center gap-1.5"
-      >
-        <Sparkles className="h-4 w-4" />
-        Import with Junto AI
-      </button>
-
-      {allDays.length === 0 && (
-        <div className="text-center py-12 space-y-3">
-          <p className="text-muted-foreground">No itinerary days yet.</p>
-          <p className="text-sm text-muted-foreground">
-            Add a day to start planning activities, or confirm route stops to auto-generate days.
-          </p>
-        </div>
+      {/* Builder overlay */}
+      {builderOpen && (
+        <BuilderBoundary onClose={() => setBuilderOpen(false)}>
+          <TripBuilderFlow tripId={tripId} onClose={() => setBuilderOpen(false)} />
+        </BuilderBoundary>
       )}
+
+      {/* Empty state: AI Builder as primary CTA */}
+      {isEmpty ? (
+        <div className="flex flex-col items-center justify-center pt-12 pb-6 text-center px-4">
+          <div
+            className="h-14 w-14 rounded-2xl flex items-center justify-center mb-5"
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            <Sparkles className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <h2 className="text-lg font-bold text-foreground">Plan your trip with AI</h2>
+          <p className="mt-2 max-w-[280px] text-sm text-muted-foreground leading-relaxed">
+            Tell us your destination and preferences — we'll generate a complete day-by-day itinerary.
+          </p>
+          <Button
+            className="mt-6 h-12 px-8 rounded-xl font-semibold text-primary-foreground gap-2"
+            style={{ background: "var(--gradient-primary)" }}
+            onClick={() => setBuilderOpen(true)}
+          >
+            <Sparkles className="h-4 w-4" />
+            Generate itinerary
+          </Button>
+          <button
+            onClick={() => {
+              setNewDayDate(format(new Date(), "yyyy-MM-dd"));
+              setNewDayFormOpen(true);
+            }}
+            className="mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            or add manually
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* AI Builder + Import buttons when items exist */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setBuilderOpen(true)}
+              className="flex-1 rounded-xl border border-primary/20 bg-primary/5 py-3 text-center text-[13px] font-medium text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              AI Builder
+            </button>
+            <button
+              onClick={() => setImportOpen(true)}
+              className="flex-1 rounded-xl border border-dashed border-muted-foreground/20 py-3 text-center text-[13px] font-medium text-muted-foreground/70 hover:border-primary/40 hover:text-foreground transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Import
+            </button>
+          </div>
 
       {allDays.map((day, idx) => (
         <DaySection
