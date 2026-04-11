@@ -22,6 +22,7 @@ const TripNew = lazy(() => import("./pages/TripNew"));
 const TripOnboarding = lazy(() => import("./pages/TripOnboarding"));
 const TripHome = lazy(() => import("./pages/TripHome"));
 const TripSection = lazy(() => import("./pages/TripSection"));
+const AIPlan = lazy(() => import("./pages/AIPlan"));
 const Decisions = lazy(() => import("./pages/Decisions"));
 const Itinerary = lazy(() => import("./pages/Itinerary"));
 const Expenses = lazy(() => import("./pages/Expenses"));
@@ -142,6 +143,7 @@ function AppInner() {
                 <Route path="/app/trips/new" element={<TripNew />} />
                 <Route path="/app/trips/:tripId" element={<TripHome />} />
                 <Route path="/app/trips/:tripId/onboarding" element={<TripOnboarding />} />
+                <Route path="/app/trips/:tripId/ai-plan/:planId" element={<AIPlan />} />
                 <Route path="/app/trips/:tripId/:section" element={<TripSection />} />
                 <Route path="/app/decisions" element={<Decisions />} />
                 <Route path="/app/itinerary" element={<Itinerary />} />

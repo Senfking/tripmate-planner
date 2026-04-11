@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 import { parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -109,11 +110,13 @@ type Answers = {
 const TOTAL_STEPS = 7; // 0=entry, 1=dest, 2=dates, 3=budget, 4=vibes, 5=pace, 6=extras
 
 export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
+  const navigate = useNavigate();
   const defaults = useTripBuilderDefaults(tripId);
   const [step, setStep] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [results, setResults] = useState<AITripResult | null>(null);
+  const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [prefilledSteps, setPrefilledSteps] = useState<Set<number>>(new Set());
 
@@ -245,35 +248,41 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       // referenced later. We do this client-side rather than in the Edge
       // Function so the insert runs under the user's auth context and
       // RLS naturally enforces trip membership.
-      let savedPlanId: string | null = null;
+      let planId: string | null = null;
       try {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData?.user?.id;
         if (userId) {
-          const { data: inserted, error: insertError } = await supabase
-            .from("ai_trip_plans")
+          const { data: inserted, error: insertError } = await (supabase
+            .from("ai_trip_plans" as any)
             .insert({
               trip_id: tripId,
               created_by: userId,
               prompt: payload,
               result: normalized,
-            })
+            }) as any)
             .select("id")
             .single();
 
           if (insertError) {
             console.error("[TripBuilder] Failed to save AI plan:", insertError);
           } else {
-            savedPlanId = inserted?.id ?? null;
+            planId = inserted?.id ?? null;
           }
         }
       } catch (saveErr) {
-        // Saving the plan is best-effort — don't block the UI on failure.
         console.error("[TripBuilder] Unexpected error saving AI plan:", saveErr);
       }
 
+      setSavedPlanId(planId);
       setResults(normalized);
-      onSuccess?.(normalized, savedPlanId ?? undefined);
+
+      // Update URL to shareable plan link without full reload
+      if (planId) {
+        navigate(`/app/trips/${tripId}/ai-plan/${planId}`, { replace: true });
+      }
+
+      onSuccess?.(normalized, planId ?? undefined);
     } catch (err: any) {
       console.error("[TripBuilder] Generation failed:", err);
       setGenError(err?.message || "Failed to generate itinerary. Please try again.");
@@ -315,7 +324,14 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         onClose={onClose}
         onRegenerate={() => {
           setResults(null);
+          setSavedPlanId(null);
           handleGenerate();
+        }}
+        onAdjust={() => {
+          // Go back to questionnaire with answers pre-filled (they're already in state)
+          setResults(null);
+          setSavedPlanId(null);
+          setStep(1); // Start at destination step
         }}
       />
     );

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ResultsMap } from "./ResultsMap";
 import { DestinationSection } from "./DestinationSection";
@@ -18,6 +19,7 @@ interface Props {
   result: AITripResult;
   onClose: () => void;
   onRegenerate: () => void;
+  onAdjust?: () => void;
 }
 
 /** Capitalize first letter of each word */
@@ -25,7 +27,14 @@ function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props) {
+export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjust }: Props) {
+  const handleShare = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).then(
+      () => toast.success("Plan link copied!"),
+      () => toast.error("Failed to copy link")
+    );
+  }, []);
+
   const isMobile = useIsMobile();
   const state = useResultsState(tripId);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -221,6 +230,24 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
             >
               <RefreshCw className="h-3 w-3" /> Regenerate
             </Button>
+            {onAdjust && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onAdjust}
+                className="text-[11px] text-white/70 hover:text-white hover:bg-white/10 gap-1 h-8 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg"
+              >
+                <SlidersHorizontal className="h-3 w-3" /> Adjust
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleShare}
+              className="text-[11px] text-white/70 hover:text-white hover:bg-white/10 gap-1 h-8 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg"
+            >
+              <Share2 className="h-3 w-3" /> Share
+            </Button>
           </div>
           {/* Fix #4: Condensed stats row */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg w-fit">
@@ -242,14 +269,34 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
               <h1 className="flex-1 text-center text-sm font-semibold text-foreground truncate leading-tight">
                 {result.trip_title}
               </h1>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onRegenerate}
-                className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8"
-              >
-                <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRegenerate}
+                  className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+                {onAdjust && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onAdjust}
+                    className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleShare}
+                  className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
             <div className="flex items-center gap-2 mt-1.5 overflow-x-auto scrollbar-hide pb-1">
               <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
