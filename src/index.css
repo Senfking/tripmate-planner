@@ -1,5 +1,35 @@
 @tailwind base;
 
+/* Elegant thin scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 50% / 0.25);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 50% / 0.4);
+}
+.trip-results-dark-panel::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 100% / 0.15);
+}
+.trip-results-dark-panel::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 100% / 0.25);
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(0 0% 50% / 0.25) transparent;
+}
+.trip-results-dark-panel {
+  scrollbar-color: hsl(0 0% 100% / 0.15) transparent;
+}
+
 /* Ensure date input calendar icon isn't clipped on mobile */
 input[type="date"] {
   min-width: 0;
