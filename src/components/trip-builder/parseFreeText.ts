@@ -107,13 +107,15 @@ export function parseFreeText(text: string): ParsedFreeText {
     }
   }
 
-  // Destination: look for "to X" or "in X" patterns, grab capitalized words
+  // Destination: look for "to X" or "in X" patterns — case-insensitive capture
   let destination: string | null = null;
-  const destMatch = text.match(/(?:to|in|visiting|going to|headed to|trip to)\s+([A-Z][a-zA-Z\s]+?)(?:\s+for|\s+in|\s+with|\s+over|\s*,|\s*\.|\s*$)/);
+  const destMatch = text.match(/(?:to|in|visiting|going to|headed to|trip to)\s+([A-Za-z][A-Za-z\s]+?)(?:\s+for|\s+in|\s+with|\s+over|\s+on|\s+\d|\s*,|\s*\.|\s*&|\s*$)/i);
   if (destMatch) {
     destination = destMatch[1].trim();
     // Remove trailing common words
-    destination = destination.replace(/\s+(for|in|with|over|and|the|our|my)$/i, "").trim();
+    destination = destination.replace(/\s+(for|in|with|over|and|the|our|my|a)$/i, "").trim();
+    // Capitalize first letter of each word
+    destination = destination.replace(/\b\w/g, (c) => c.toUpperCase());
     if (destination.length < 2) destination = null;
   }
 
