@@ -58,135 +58,10 @@ function buildCacheKey(r: TripBuilderRequest, dest: string, numDays: number): st
   return parts.join("|");
 }
 
-function estimateCostUsd(inputTokens: number, outputTokens: number): number {
-  return (inputTokens * 3 + outputTokens * 15) / 1_000_000;
-}
-
-interface AnthropicResult {
-  textContent: string;
-  stopReason: string;
-  inputTokens: number;
-  outputTokens: number;
-}
-
-// ---------------------------------------------------------------------------
-// JSON extraction & salvage helpers
-// ---------------------------------------------------------------------------
-
-/** Try to extract valid JSON from an AI response that may contain preamble,
- *  code fences, or trailing text. */
-function extractJsonString(text: string): string {
-  // 1. Try ```json ... ``` code fence
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenceMatch) {
-    console.log("[DIAG] extractJsonString: found code fence block");
-    return fenceMatch[1].trim();
-  }
-
-  // 2. Find the first "{" and last "}" — handles preamble and trailing text
-  const firstBrace = text.indexOf("{");
-  const lastBrace = text.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace > firstBrace) {
-    const extracted = text.slice(firstBrace, lastBrace + 1);
-    if (firstBrace > 0) {
-      console.log("[DIAG] extractJsonString: stripped preamble —", JSON.stringify(text.slice(0, firstBrace).trim().slice(0, 100)));
-    }
-    return extracted;
-  }
-
-  // 3. Last resort: return trimmed text as-is
-  console.log("[DIAG] extractJsonString: no braces found, returning raw text");
-  return text.trim();
-}
-
-/** Attempt to salvage truncated JSON by closing open structures.
- *  Looks for the last complete day object and closes the JSON. */
-function salvageTruncatedJson(text: string): Record<string, unknown> | null {
-  const raw = extractJsonString(text);
-  console.log("[DIAG] Attempting to salvage truncated JSON, length:", raw.length);
-
-  // Strategy: find the last occurrence of a pattern that indicates a complete
-  // activity block, then close all open structures.
-  // Look for the last complete activity: ends with }
-  // within a complete day: "activities": [...]
-  // We search backwards for the last `}]` that closes an activities array,
-  // then close the remaining open structures.
-
-  // Find the last "}]" which likely closes an activities array
-  const lastActivitiesClose = raw.lastIndexOf("}]");
-  if (lastActivitiesClose === -1) return null;
-
-  // Take everything up to and including that "}]"
-  let salvaged = raw.slice(0, lastActivitiesClose + 2);
-
-  // Count open structures (skip characters inside JSON strings)
-  let openBraces = 0;
-  let openBrackets = 0;
-  let inString = false;
-  let escaped = false;
-  for (const ch of salvaged) {
-    if (escaped) { escaped = false; continue; }
-    if (ch === "\\") { escaped = true; continue; }
-    if (ch === '"') { inString = !inString; continue; }
-    if (inString) continue;
-    if (ch === "{") openBraces++;
-    else if (ch === "}") openBraces--;
-    else if (ch === "[") openBrackets++;
-    else if (ch === "]") openBrackets--;
-  }
-
-  // Close the remaining structures: each open day/destination/root object
-  // Typical nesting after activities: }] closes activities, then we need:
-  //   } close day, ] close days array, } close destination, ] close destinations,
-  //   then close root with remaining fields
-  // We'll add minimal closers and dummy required fields for a valid root.
-  // Close any remaining open arrays/objects
-  while (openBrackets > 0) { salvaged += "]"; openBrackets--; }
-  while (openBraces > 0) { salvaged += "}"; openBraces--; }
-
-  try {
-    const parsed = JSON.parse(salvaged);
-    console.log("[DIAG] Salvage succeeded — parsed truncated JSON");
-    parsed._truncated = true;
-    return parsed;
-  } catch (e) {
-    console.error("[DIAG] Salvage failed:", (e as Error).message);
-    return null;
-  }
-}
-
-/** Parse an AI response into a JSON object, handling preamble, code fences,
- *  and truncation from max_tokens. Returns null if all extraction fails. */
-function parseAiResponse(result: AnthropicResult): Record<string, unknown> | null {
-  const { textContent, stopReason } = result;
-
-  // 1. Try robust JSON extraction + parse
-  const raw = extractJsonString(textContent);
-  console.log("[DIAG] parseAiResponse — raw first 300 chars:", raw.slice(0, 300));
-  console.log("[DIAG] parseAiResponse — raw last 200 chars:", raw.slice(-200));
-
-  try {
-    return JSON.parse(raw);
-  } catch (parseErr) {
-    console.error("[DIAG] JSON.parse failed:", (parseErr as Error).message);
-  }
-
-  // 2. If truncated, try to salvage
-  if (stopReason === "max_tokens") {
-    console.warn("[DIAG] Response truncated (max_tokens). Attempting salvage...");
-    const salvaged = salvageTruncatedJson(textContent);
-    if (salvaged) return salvaged;
-  }
-
-  console.error("[DIAG] All parsing strategies failed. stop_reason:", stopReason,
-    "output_tokens:", result.outputTokens);
-  return null;
-}
-
 /** Generate fake start/end dates for flexible trips */
 function generateFlexDates(durationDays: number): { start: string; end: string } {
   const start = new Date();
-  start.setDate(start.getDate() + 30); // 30 days from now
+  start.setDate(start.getDate() + 30);
   const end = new Date(start);
   end.setDate(end.getDate() + durationDays - 1);
   const fmt = (d: Date) => d.toISOString().split("T")[0];
@@ -194,89 +69,201 @@ function generateFlexDates(durationDays: number): { start: string; end: string }
 }
 
 // ---------------------------------------------------------------------------
-// Anthropic API call helper
+// Lovable AI Gateway call
 // ---------------------------------------------------------------------------
 
-async function callAnthropicApi(
+interface AIResult {
+  itinerary: Record<string, unknown> | null;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+async function callLovableAI(
   apiKey: string,
   systemPrompt: string,
   userPrompt: string,
-  maxTokens: number,
-): Promise<AnthropicResult> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  toolSchema: Record<string, unknown>,
+): Promise<AIResult> {
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: toolSchema,
+        },
+      ],
+      tool_choice: { type: "function", function: { name: toolSchema.name } },
     }),
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Anthropic API error ${res.status}: ${errText}`);
+    console.error("AI Gateway error:", res.status, errText);
+    if (res.status === 429) {
+      throw new Error("AI rate limit exceeded. Please try again in a moment.");
+    }
+    if (res.status === 402) {
+      throw new Error("AI credits exhausted. Please add funds.");
+    }
+    throw new Error(`AI gateway error ${res.status}`);
   }
 
   const data = await res.json();
-  return {
-    textContent: data.content?.find((c: { type: string }) => c.type === "text")?.text || "",
-    stopReason: data.stop_reason ?? "unknown",
-    inputTokens: data.usage?.input_tokens ?? 0,
-    outputTokens: data.usage?.output_tokens ?? 0,
-  };
-}
+  const usage = data.usage || {};
+  const choice = data.choices?.[0];
 
-/** Merge two partial itineraries (from split API calls) into one. */
-function mergeItineraries(
-  first: Record<string, unknown>,
-  second: Record<string, unknown>,
-): Record<string, unknown> {
-  const merged = { ...first };
-
-  // Merge destination days
-  const firstDests = (first.destinations || []) as Array<Record<string, unknown>>;
-  const secondDests = (second.destinations || []) as Array<Record<string, unknown>>;
-
-  if (firstDests.length > 0 && secondDests.length > 0) {
-    const lastFirst = firstDests[firstDests.length - 1];
-    const firstSecond = secondDests[0];
-
-    // If they're the same destination, merge days
-    if (lastFirst.name === firstSecond.name) {
-      const mergedDays = [
-        ...((lastFirst.days || []) as unknown[]),
-        ...((firstSecond.days || []) as unknown[]),
-      ];
-      lastFirst.days = mergedDays;
-      lastFirst.end_date = firstSecond.end_date;
-      // Append any remaining destinations from the second half
-      merged.destinations = [...firstDests, ...secondDests.slice(1)];
-    } else {
-      merged.destinations = [...firstDests, ...secondDests];
+  // Extract from tool call
+  const toolCall = choice?.message?.tool_calls?.[0];
+  if (toolCall?.function?.arguments) {
+    try {
+      const parsed = JSON.parse(toolCall.function.arguments);
+      return {
+        itinerary: parsed,
+        inputTokens: usage.prompt_tokens || 0,
+        outputTokens: usage.completion_tokens || 0,
+      };
+    } catch (e) {
+      console.error("Failed to parse tool call arguments:", (e as Error).message);
     }
   }
 
-  // Sum totals
-  const firstTotal = (first.total_activities as number) || 0;
-  const secondTotal = (second.total_activities as number) || 0;
-  merged.total_activities = firstTotal + secondTotal;
+  // Fallback: try content as JSON
+  const content = choice?.message?.content;
+  if (content) {
+    try {
+      const firstBrace = content.indexOf("{");
+      const lastBrace = content.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        const parsed = JSON.parse(content.slice(firstBrace, lastBrace + 1));
+        return {
+          itinerary: parsed,
+          inputTokens: usage.prompt_tokens || 0,
+          outputTokens: usage.completion_tokens || 0,
+        };
+      }
+    } catch {
+      console.error("Fallback content parse failed");
+    }
+  }
 
-  // Merge packing suggestions
-  const firstPacking = (first.packing_suggestions || []) as string[];
-  const secondPacking = (second.packing_suggestions || []) as string[];
-  merged.packing_suggestions = [...new Set([...firstPacking, ...secondPacking])];
+  return { itinerary: null, inputTokens: usage.prompt_tokens || 0, outputTokens: usage.completion_tokens || 0 };
+}
 
-  // Use the second half's title/summary only if first didn't have one
-  if (!merged.trip_title && second.trip_title) merged.trip_title = second.trip_title;
-  if (!merged.trip_summary && second.trip_summary) merged.trip_summary = second.trip_summary;
+// ---------------------------------------------------------------------------
+// Tool schema for structured output
+// ---------------------------------------------------------------------------
 
-  return merged;
+function buildToolSchema(hasDietary: boolean) {
+  const activityProps: Record<string, unknown> = {
+    title: { type: "string", description: "Specific real venue name" },
+    description: { type: "string", description: "1-2 sentence description" },
+    category: { type: "string", enum: ["food", "culture", "nature", "nightlife", "adventure", "relaxation", "transport", "accommodation"] },
+    start_time: { type: "string", description: "HH:MM format" },
+    duration_minutes: { type: "number" },
+    estimated_cost_per_person: { type: "number" },
+    currency: { type: "string" },
+    location_name: { type: "string" },
+    latitude: { type: "number" },
+    longitude: { type: "number" },
+    google_maps_url: { type: "string" },
+    booking_url: { type: ["string", "null"] },
+    photo_query: { type: "string" },
+    tips: { type: "string" },
+    travel_time_from_previous: { type: "string" },
+    travel_mode_from_previous: { type: "string" },
+  };
+
+  if (hasDietary) {
+    activityProps.dietary_notes = { type: "string", description: "How this venue handles dietary needs" };
+  }
+
+  return {
+    name: "generate_itinerary",
+    description: "Generate a complete trip itinerary as structured data",
+    parameters: {
+      type: "object",
+      properties: {
+        trip_title: { type: "string" },
+        trip_summary: { type: "string" },
+        destinations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              start_date: { type: "string" },
+              end_date: { type: "string" },
+              intro: { type: "string" },
+              days: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    date: { type: "string" },
+                    day_number: { type: "number" },
+                    theme: { type: "string" },
+                    activities: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: activityProps,
+                        required: ["title", "category", "start_time", "duration_minutes", "latitude", "longitude"],
+                      },
+                    },
+                  },
+                  required: ["date", "day_number", "theme", "activities"],
+                },
+              },
+              accommodation: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  stars: { type: "number" },
+                  price_per_night: { type: "number" },
+                  currency: { type: "string" },
+                  booking_url: { type: "string" },
+                },
+              },
+              transport_to_next: {
+                type: ["object", "null"],
+                properties: {
+                  mode: { type: "string" },
+                  duration: { type: "string" },
+                  from: { type: "string" },
+                  to: { type: "string" },
+                },
+              },
+            },
+            required: ["name", "start_date", "end_date", "days"],
+          },
+        },
+        map_center: {
+          type: "object",
+          properties: {
+            lat: { type: "number" },
+            lng: { type: "number" },
+          },
+          required: ["lat", "lng"],
+        },
+        map_zoom: { type: "number" },
+        daily_budget_estimate: { type: "number" },
+        currency: { type: "string" },
+        packing_suggestions: { type: "array", items: { type: "string" } },
+        total_activities: { type: "number" },
+      },
+      required: ["trip_title", "trip_summary", "destinations", "map_center", "daily_budget_estimate", "currency"],
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -310,9 +297,7 @@ Deno.serve(async (req) => {
     // ---- Parse & validate input ----
     const body: TripBuilderRequest = await req.json();
 
-    // Handle alternatives mode separately
     if (body.alternatives_mode) {
-      // TODO: implement alternatives generation
       return jsonResponse({ success: true, alternatives: [] });
     }
 
@@ -334,13 +319,11 @@ Deno.serve(async (req) => {
       free_text = null,
     } = body;
 
-    // Resolve destination
     const destination = surprise_me ? "a surprise destination (you choose an amazing, underrated destination)" : (rawDest || "").trim();
     if (!destination) {
       return jsonResponse({ success: false, error: "destination is required (or set surprise_me=true)" }, 400);
     }
 
-    // Resolve dates
     let startDate: string;
     let endDate: string;
 
@@ -366,19 +349,15 @@ Deno.serve(async (req) => {
     }
 
     const clampedGroupSize = Math.max(1, Math.min(group_size, 20));
-
     const validBudgets: BudgetLevel[] = ["budget", "mid-range", "premium"];
     const safeBudget = validBudgets.includes(budget_level) ? budget_level : "mid-range";
-
     const validPaces: Pace[] = ["packed", "balanced", "relaxed"];
     const safePace = validPaces.includes(pace) ? pace : "balanced";
-
-    // Merge vibes and interests
     const allInterests = [...new Set([...vibes, ...rawInterests])].filter(Boolean);
 
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!anthropicKey) {
-      return jsonResponse({ success: false, error: "ANTHROPIC_API_KEY not configured" }, 500);
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) {
+      return jsonResponse({ success: false, error: "LOVABLE_API_KEY not configured" }, 500);
     }
 
     const svcClient = createClient(
@@ -461,46 +440,6 @@ Deno.serve(async (req) => {
     if (free_text) notesSection.push(`FREE-TEXT DESCRIPTION FROM USER: "${free_text}"`);
     const accessibilityNote = notesSection.length > 0 ? `\n\n${notesSection.join("\n\n")}. Factor these into every recommendation.` : "";
 
-    // Conditionally include dietary_notes in schema only when user has dietary reqs
-    const activitySchema = hasDietaryReqs
-      ? `{
-              "title": "Specific Real Venue Name",
-              "description": "1-2 sentence description",
-              "category": "food|culture|nature|nightlife|adventure|relaxation|transport|accommodation",
-              "start_time": "HH:MM",
-              "duration_minutes": 60,
-              "estimated_cost_per_person": 15,
-              "currency": "USD",
-              "location_name": "Exact venue name",
-              "latitude": -8.65,
-              "longitude": 115.16,
-              "google_maps_url": "https://www.google.com/maps/search/?api=1&query=...",
-              "booking_url": null,
-              "photo_query": "search query for photo",
-              "tips": "One short tip",
-              "dietary_notes": "How this venue handles dietary needs",
-              "travel_time_from_previous": "15 min walk",
-              "travel_mode_from_previous": "walk"
-            }`
-      : `{
-              "title": "Specific Real Venue Name",
-              "description": "1-2 sentence description",
-              "category": "food|culture|nature|nightlife|adventure|relaxation|transport|accommodation",
-              "start_time": "HH:MM",
-              "duration_minutes": 60,
-              "estimated_cost_per_person": 15,
-              "currency": "USD",
-              "location_name": "Exact venue name",
-              "latitude": -8.65,
-              "longitude": 115.16,
-              "google_maps_url": "https://www.google.com/maps/search/?api=1&query=...",
-              "booking_url": null,
-              "photo_query": "search query for photo",
-              "tips": "One short tip",
-              "travel_time_from_previous": "15 min walk",
-              "travel_mode_from_previous": "walk"
-            }`;
-
     const systemPrompt = `You are an expert travel planner for Junto, a group trip planning app. You create detailed, realistic, map-ready itineraries using REAL venues and places that actually exist.
 
 CRITICAL RULES:
@@ -509,7 +448,7 @@ CRITICAL RULES:
 3. Schedule realistically: include travel time between locations, proper meal times.
 4. Each day should flow naturally: morning activity -> lunch -> afternoon -> dinner -> optional evening.
 5. Balance different group interests across the trip.
-6. The google_maps_url must be a valid Google Maps search URL: https://www.google.com/maps/search/?api=1&query=<URL-encoded query>
+6. The google_maps_url must be a valid Google Maps search URL.
 7. Keep descriptions to 1-2 sentences max. Keep tips to one short sentence. Be concise.
 
 PACE: ${paceGuide[safePace]}
@@ -518,49 +457,7 @@ BUDGET LEVEL (${safeBudget}): ${budgetGuide[safeBudget]}
 
 GROUP SIZE: ${clampedGroupSize} people.
 
-INTERESTS: ${allInterests.length > 0 ? allInterests.join(", ") : "general sightseeing"}.${dietaryNote}${accessibilityNote}${vibeContext}
-
-OUTPUT FORMAT: Return ONLY valid JSON — no markdown, no code fences, no preamble text. Start your response with { and end with }.
-
-{
-  "trip_title": "Catchy trip title",
-  "trip_summary": "2-3 sentence overview",
-  "destinations": [
-    {
-      "name": "Destination Name",
-      "start_date": "YYYY-MM-DD",
-      "end_date": "YYYY-MM-DD",
-      "intro": "1-2 sentences about this destination",
-      "days": [
-        {
-          "date": "YYYY-MM-DD",
-          "day_number": 1,
-          "theme": "Creative theme for the day",
-          "activities": [
-            ${activitySchema}
-          ]
-        }
-      ],
-      "accommodation": {
-        "name": "Hotel Name",
-        "stars": 4,
-        "price_per_night": 120,
-        "currency": "USD",
-        "booking_url": "https://www.booking.com/search.html?ss=..."
-      },
-      "transport_to_next": null
-    }
-  ],
-  "map_center": { "lat": -8.65, "lng": 115.16 },
-  "map_zoom": 12,
-  "daily_budget_estimate": 85,
-  "currency": "USD",
-  "packing_suggestions": ["item1", "item2"],
-  "total_activities": 24
-}
-
-For multi-city trips, include transport_to_next between destinations:
-"transport_to_next": { "mode": "flight", "duration": "1h 30m", "from": "City A", "to": "City B" }`;
+INTERESTS: ${allInterests.length > 0 ? allInterests.join(", ") : "general sightseeing"}.${dietaryNote}${accessibilityNote}${vibeContext}`;
 
     const userPrompt = `Plan a ${numDays}-day group trip to ${destination.trim()} for ${clampedGroupSize} people.
 
@@ -572,169 +469,36 @@ Dietary: ${dietary.length > 0 ? dietary.join(", ") : "none"}
 ${notes ? `Notes: ${notes}` : ""}
 ${free_text ? `User description: ${free_text}` : ""}
 
-Generate the complete itinerary as JSON.`;
+Generate the complete itinerary.`;
 
-    // ---- Call Anthropic API (with split for long trips) ----
-    let itinerary: Record<string, unknown>;
-    let totalInputTokens = 0;
-    let totalOutputTokens = 0;
-
-    const shouldSplit = numDays > 10;
-
-    if (shouldSplit) {
-      // Split into two halves to stay within token limits
-      const midDay = Math.ceil(numDays / 2);
-      const midDate = new Date(startDate);
-      midDate.setDate(midDate.getDate() + midDay);
-      const midDateStr = midDate.toISOString().split("T")[0];
-      const midDateMinus1 = new Date(midDate);
-      midDateMinus1.setDate(midDateMinus1.getDate() - 1);
-      const midDateMinus1Str = midDateMinus1.toISOString().split("T")[0];
-
-      console.log(`[DIAG] Splitting ${numDays}-day trip: days 1-${midDay} and days ${midDay + 1}-${numDays}`);
-
-      const firstHalfPrompt = `Plan days 1–${midDay} of a ${numDays}-day group trip to ${destination.trim()} for ${clampedGroupSize} people.
-
-Dates for THIS PART: ${startDate} to ${midDateMinus1Str}${flexible ? " (flexible)" : ""}
-Budget: ${safeBudget}
-Pace: ${safePace}
-Interests: ${allInterests.length > 0 ? allInterests.join(", ") : "general"}
-Dietary: ${dietary.length > 0 ? dietary.join(", ") : "none"}
-${notes ? `Notes: ${notes}` : ""}
-
-Generate the itinerary JSON for these days only. Use day_number starting from 1.`;
-
-      const secondHalfPrompt = `Plan days ${midDay + 1}–${numDays} of a ${numDays}-day group trip to ${destination.trim()} for ${clampedGroupSize} people.
-
-Dates for THIS PART: ${midDateStr} to ${endDate}${flexible ? " (flexible)" : ""}
-Budget: ${safeBudget}
-Pace: ${safePace}
-Interests: ${allInterests.length > 0 ? allInterests.join(", ") : "general"}
-Dietary: ${dietary.length > 0 ? dietary.join(", ") : "none"}
-${notes ? `Notes: ${notes}` : ""}
-
-Generate the itinerary JSON for these days only. Use day_number starting from ${midDay + 1}. Include trip_title and trip_summary as if for the full trip.`;
-
-      // Run both API calls in parallel
-      const [firstResult, secondResult] = await Promise.all([
-        callAnthropicApi(anthropicKey, systemPrompt, firstHalfPrompt, 12000),
-        callAnthropicApi(anthropicKey, systemPrompt, secondHalfPrompt, 12000),
-      ]);
-
-      totalInputTokens = firstResult.inputTokens + secondResult.inputTokens;
-      totalOutputTokens = firstResult.outputTokens + secondResult.outputTokens;
-
-      console.log("[DIAG] Split call 1 — stop_reason:", firstResult.stopReason,
-        "tokens:", firstResult.outputTokens, "len:", firstResult.textContent.length);
-      console.log("[DIAG] Split call 2 — stop_reason:", secondResult.stopReason,
-        "tokens:", secondResult.outputTokens, "len:", secondResult.textContent.length);
-
-      const firstItinerary = parseAiResponse(firstResult);
-      const secondItinerary = parseAiResponse(secondResult);
-
-      if (!firstItinerary || !secondItinerary) {
-        return jsonResponse(
-          { success: false, error: "Failed to parse AI-generated itinerary (split mode)" },
-          500,
-        );
-      }
-
-      itinerary = mergeItineraries(firstItinerary, secondItinerary);
-    } else {
-      // Single API call for trips ≤ 10 days
-      let result: AnthropicResult;
-      try {
-        result = await callAnthropicApi(anthropicKey, systemPrompt, userPrompt, 16000);
-      } catch (apiErr) {
-        console.error("Anthropic API error:", (apiErr as Error).message);
-        return jsonResponse(
-          { success: false, error: `AI generation failed` },
-          500,
-        );
-      }
-
-      totalInputTokens = result.inputTokens;
-      totalOutputTokens = result.outputTokens;
-
-      // ---- DIAGNOSTIC LOGGING (temporary) ----
-      console.log("[DIAG] AI response stop_reason:", result.stopReason);
-      console.log("[DIAG] AI response token usage — input:", result.inputTokens, "output:", result.outputTokens);
-      console.log("[DIAG] AI response text length:", result.textContent.length, "chars");
-      console.log("[DIAG] AI response first 500 chars:", result.textContent.slice(0, 500));
-      console.log("[DIAG] AI response last 200 chars:", result.textContent.slice(-200));
-      const startsWithBrace = result.textContent.trimStart().startsWith("{");
-      const startsWithCodeFence = result.textContent.trimStart().startsWith("```");
-      console.log("[DIAG] Starts with '{':", startsWithBrace, "| Starts with code fence:", startsWithCodeFence);
-      // ---- END DIAGNOSTIC LOGGING ----
-
-      // Try to parse, with truncation handling
-      const parsed = parseAiResponse(result);
-
-      if (!parsed) {
-        // Try salvage regardless of stop_reason — response may be truncated
-        console.log("[DIAG] Parsing failed, attempting salvage. stop_reason:", result.stopReason);
-        const salvagedFallback = salvageTruncatedJson(result.textContent);
-        if (salvagedFallback) {
-          itinerary = salvagedFallback;
-        } else if (result.stopReason === "max_tokens") {
-        // Retry with condensed prompt
-        console.log("[DIAG] Retrying with condensed prompt after max_tokens truncation");
-        const condensedUserPrompt = `Plan a ${numDays}-day group trip to ${destination.trim()} for ${clampedGroupSize} people.
-
-Dates: ${startDate} to ${endDate}${flexible ? " (flexible)" : ""}
-Budget: ${safeBudget}
-Pace: ${safePace}
-Interests: ${allInterests.length > 0 ? allInterests.join(", ") : "general"}
-Dietary: ${dietary.length > 0 ? dietary.join(", ") : "none"}
-${notes ? `Notes: ${notes}` : ""}
-
-IMPORTANT: Generate a CONDENSED itinerary — max 3 activities per day, 1-sentence descriptions, minimal tips. Keep the JSON compact.`;
-
-        try {
-          const retryResult = await callAnthropicApi(anthropicKey, systemPrompt, condensedUserPrompt, 16000);
-          totalInputTokens += retryResult.inputTokens;
-          totalOutputTokens += retryResult.outputTokens;
-          console.log("[DIAG] Retry — stop_reason:", retryResult.stopReason,
-            "tokens:", retryResult.outputTokens);
-          const retryParsed = parseAiResponse(retryResult);
-          if (retryParsed) {
-            itinerary = retryParsed;
-          } else {
-            return jsonResponse(
-              { success: false, error: "Failed to parse AI-generated itinerary after retry" },
-              500,
-            );
-          }
-        } catch (retryErr) {
-          console.error("Retry API call failed:", (retryErr as Error).message);
-          return jsonResponse(
-            { success: false, error: "AI generation failed on retry" },
-            500,
-          );
-        }
-      } else {
-        return jsonResponse(
-          { success: false, error: "Failed to parse AI-generated itinerary" },
-          500,
-        );
-      }
-      } else {
-        itinerary = parsed;
-      }
+    // ---- Call Lovable AI Gateway ----
+    const toolSchema = buildToolSchema(hasDietaryReqs);
+    
+    let aiResult: AIResult;
+    try {
+      aiResult = await callLovableAI(lovableApiKey, systemPrompt, userPrompt, toolSchema);
+    } catch (apiErr) {
+      console.error("AI Gateway error:", (apiErr as Error).message);
+      return jsonResponse({ success: false, error: (apiErr as Error).message }, 500);
     }
 
-    const inputTokens = totalInputTokens;
-    const outputTokens = totalOutputTokens;
+    if (!aiResult.itinerary) {
+      return jsonResponse({ success: false, error: "Failed to parse AI-generated itinerary" }, 500);
+    }
+
+    const itinerary = aiResult.itinerary;
+    const inputTokens = aiResult.inputTokens;
+    const outputTokens = aiResult.outputTokens;
 
     // ---- Log request ----
     try {
       await svcClient.from("ai_request_log").insert({
         user_id: user.id,
         feature: "trip_builder",
-        model: "claude-sonnet-4-20250514",
+        model: "google/gemini-2.5-flash",
         input_tokens: inputTokens,
         output_tokens: outputTokens,
-        cost_usd: estimateCostUsd(inputTokens, outputTokens),
+        cost_usd: 0, // Lovable AI pricing handled externally
       });
     } catch {
       console.log("ai_request_log insert skipped");

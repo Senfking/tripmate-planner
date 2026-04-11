@@ -173,39 +173,41 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       updates.flexibleDuration = parsed.durationDays;
     }
 
-    const merged = { ...answers, ...updates };
-    setAnswers(merged as Answers);
+    setAnswers(prev => {
+      const merged = { ...prev, ...updates };
+      
+      // Track which steps were pre-filled from free text (for UI indicator)
+      const ftFilled = new Set<number>();
+      if (parsed.destination) ftFilled.add(1);
+      if (parsed.durationDays) ftFilled.add(2);
+      if (parsed.budgetLevel) ftFilled.add(3);
+      if (parsed.vibes.length > 0) ftFilled.add(4);
+      if (parsed.dietary.length > 0) ftFilled.add(6);
+      setPrefilledSteps(ftFilled);
 
-    // Track which steps were pre-filled from free text (for UI indicator)
-    const ftFilled = new Set<number>();
-    if (parsed.destination) ftFilled.add(1);
-    if (parsed.durationDays) ftFilled.add(2);
-    if (parsed.budgetLevel) ftFilled.add(3);
-    if (parsed.vibes.length > 0) ftFilled.add(4);
-    if (parsed.dietary.length > 0) ftFilled.add(6);
-    setPrefilledSteps(ftFilled);
+      // Jump to first step that still needs input
+      const isStepAnswered = (s: number): boolean => {
+        switch (s) {
+          case 1: return !!(merged.surpriseMe || merged.destination?.trim());
+          case 2: return !!(merged.flexible || merged.dateRange?.from);
+          case 3: return !!(parsed.budgetLevel || defaults.budgetLevel);
+          case 4: return (merged.vibes?.length ?? 0) > 0;
+          case 5: return false;
+          default: return false;
+        }
+      };
 
-    // Jump to first step that still needs input, or step 6 for final review
-    const isStepAnswered = (s: number): boolean => {
-      switch (s) {
-        case 1: return !!(merged.surpriseMe || merged.destination?.trim());
-        case 2: return !!(merged.flexible || merged.dateRange?.from);
-        case 3: return !!(parsed.budgetLevel || defaults.budgetLevel);
-        case 4: return (merged.vibes?.length ?? 0) > 0;
-        case 5: return false; // Free text rarely specifies pace
-        default: return false;
+      for (let s = 1; s <= 5; s++) {
+        if (!isStepAnswered(s)) {
+          setStep(s);
+          return merged;
+        }
       }
-    };
+      setStep(6);
+      return merged;
+    });
 
-    for (let s = 1; s <= 5; s++) {
-      if (!isStepAnswered(s)) {
-        setStep(s);
-        return;
-      }
-    }
-    // All steps 1–5 answered → go to extras for final review
-    setStep(6);
-  }, [answers, defaults.budgetLevel]);
+  }, [defaults.budgetLevel]);
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);

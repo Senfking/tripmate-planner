@@ -423,10 +423,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       </div>
 
       {builderOpen && (
-        <TripBuilderFlow
-          tripId={tripId}
-          onClose={() => setBuilderOpen(false)}
-        />
+        <BuilderWrapper tripId={tripId} onClose={() => setBuilderOpen(false)} />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 px-4 md:max-w-[900px] md:mx-auto md:px-8">
