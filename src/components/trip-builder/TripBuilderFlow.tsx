@@ -248,7 +248,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       // referenced later. We do this client-side rather than in the Edge
       // Function so the insert runs under the user's auth context and
       // RLS naturally enforces trip membership.
-      let savedPlanId: string | null = null;
+      let planId: string | null = null;
       try {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData?.user?.id;
@@ -267,16 +267,22 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           if (insertError) {
             console.error("[TripBuilder] Failed to save AI plan:", insertError);
           } else {
-            savedPlanId = inserted?.id ?? null;
+            planId = inserted?.id ?? null;
           }
         }
       } catch (saveErr) {
-        // Saving the plan is best-effort — don't block the UI on failure.
         console.error("[TripBuilder] Unexpected error saving AI plan:", saveErr);
       }
 
+      setSavedPlanId(planId);
       setResults(normalized);
-      onSuccess?.(normalized, savedPlanId ?? undefined);
+
+      // Update URL to shareable plan link without full reload
+      if (planId) {
+        navigate(`/app/trips/${tripId}/ai-plan/${planId}`, { replace: true });
+      }
+
+      onSuccess?.(normalized, planId ?? undefined);
     } catch (err: any) {
       console.error("[TripBuilder] Generation failed:", err);
       setGenError(err?.message || "Failed to generate itinerary. Please try again.");
