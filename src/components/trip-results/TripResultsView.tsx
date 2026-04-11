@@ -117,42 +117,90 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
   const destinationNames = result.destinations.map((d) => d.name).join(" · ");
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
-      {/* Top Bar */}
-      <div className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-2 bg-background/90 backdrop-blur-xl border-b border-border">
-        <div className="flex items-center justify-between gap-2">
-          <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors">
-            <ArrowLeft className="h-5 w-5 text-foreground" />
+    <div className="fixed inset-0 z-50 bg-background">
+      {/* Map — true full screen on desktop */}
+      {!isMobile && (
+        <div className="absolute inset-0 z-0">
+          <ResultsMap
+            result={result}
+            activeDayIndex={state.activeDayIndex}
+            allDays={allDays}
+            mode={state.mapMode}
+            onPinClick={scrollToActivity}
+          />
+        </div>
+      )}
+
+      {/* Floating top-left controls on desktop */}
+      {!isMobile && (
+        <div className="absolute top-4 left-4 z-[1001] flex items-center gap-2">
+          <button
+            onClick={onClose}
+            className="p-2.5 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 hover:bg-black/60 transition-colors shadow-lg"
+          >
+            <ArrowLeft className="h-4 w-4 text-white" />
           </button>
-          <h1 className="flex-1 text-center text-sm font-semibold text-foreground truncate leading-tight">
-            {result.trip_title}
-          </h1>
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg">
+            <span className="text-[11px] text-white/80 whitespace-nowrap font-mono inline-flex items-center gap-1">
+              <MapPin className="h-2.5 w-2.5" /> {destinationNames}
+            </span>
+            <span className="text-white/30">·</span>
+            <span className="text-[11px] text-white/80 whitespace-nowrap font-mono inline-flex items-center gap-1">
+              <CalendarDays className="h-2.5 w-2.5" /> {dateRange}
+            </span>
+          </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={onRegenerate}
-            className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8"
+            className="text-[11px] text-white/70 hover:text-white hover:bg-white/10 gap-1 h-8 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+            <RefreshCw className="h-3 w-3" /> Regenerate
           </Button>
         </div>
-        {/* Info pills */}
-        <div className="flex items-center gap-2 mt-1.5 overflow-x-auto scrollbar-hide pb-1">
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
-            <MapPin className="h-2.5 w-2.5" /> {destinationNames}
-          </span>
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
-            <CalendarDays className="h-2.5 w-2.5" /> {dateRange}
-          </span>
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
-            <CreditCard className="h-2.5 w-2.5" /> ~{result.currency || "€"}{result.daily_budget_estimate}/day
-          </span>
-        </div>
-      </div>
+      )}
 
-      {/* Main Content */}
-      <div className={`flex-1 overflow-hidden ${isMobile ? "flex flex-col" : "relative"}`}>
-        {/* Map — full width on desktop, partial on mobile */}
+      {/* Mobile: stacked layout with header */}
+      {isMobile && (
+        <div className="flex flex-col h-full">
+          <div className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-2 bg-background/90 backdrop-blur-xl border-b border-border">
+            <div className="flex items-center justify-between gap-2">
+              <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors">
+                <ArrowLeft className="h-5 w-5 text-foreground" />
+              </button>
+              <h1 className="flex-1 text-center text-sm font-semibold text-foreground truncate leading-tight">
+                {result.trip_title}
+              </h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRegenerate}
+                className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 mt-1.5 overflow-x-auto scrollbar-hide pb-1">
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
+                <MapPin className="h-2.5 w-2.5" /> {destinationNames}
+              </span>
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
+                <CalendarDays className="h-2.5 w-2.5" /> {dateRange}
+              </span>
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono px-2 py-0.5 rounded-full bg-accent inline-flex items-center gap-1">
+                <CreditCard className="h-2.5 w-2.5" /> ~{result.currency || "€"}{result.daily_budget_estimate}/day
+              </span>
+            </div>
+          </div>
+          <div className="h-[35vh] flex-shrink-0">
+            <ResultsMap
+              result={result}
+              activeDayIndex={state.activeDayIndex}
+              allDays={allDays}
+              mode={state.mapMode}
+              onPinClick={scrollToActivity}
+            />
+          </div>
         <div className={isMobile ? "h-[35vh] flex-shrink-0" : "absolute inset-0 z-0"}>
           <ResultsMap
             result={result}
