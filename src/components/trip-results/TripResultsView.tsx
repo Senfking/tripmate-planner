@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map, Maximize2, X } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -232,7 +232,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
                     onClick={() => setMapOpen(!mapOpen)}
                     className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
                   >
-                    <Map className="h-4 w-4 text-primary" />
+                    <MapIcon className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium flex-1 text-foreground">
                       {mapOpen ? "Hide map" : "Show map"}
                     </span>
