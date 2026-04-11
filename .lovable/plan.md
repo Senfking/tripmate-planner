@@ -1,41 +1,42 @@
 
 
-## Diagnosis
+# AI Trip Results — Layla-Inspired Redesign
 
-The app crashes with `TypeError: r is not a function` during React rendering when the user triggers AI trip generation from the TripHome page. Based on extensive code analysis:
+## Layout (top to bottom, centered ~700px column)
 
-1. **The edge function uses Anthropic API directly** (`ANTHROPIC_API_KEY`) and is timing out (confirmed by test calls returning "context canceled"). This means the generation fails, but the crash is a separate frontend rendering issue.
+1. **Header**: Back button + trip title + Share button
+2. **Stat pills**: "14 days · 1 city · 44 experiences · 1 hotel"
+3. **Trip summary**: 2-3 sentence AI description
+4. **Destination section**: Name, date range, intro text with timeline icon
+5. **Accommodation card**: Google Places photo, name, stars, price, booking link
+6. **Cost summary bar**: Expandable — total + per-day, category breakdown on expand
+7. **Day cards** (collapsed by default): Thumbnail + "Day 1 · May 9 · 3 Experiences" + theme + chevron. On expand: full activity list + 200px embedded mini-map for that day's pins. **On expand, `scrollIntoView({ behavior: 'smooth', block: 'start' })` on the day card ref.**
+8. **Sticky bottom bar**: "Add all to itinerary" + Adjust + Regenerate
 
-2. **The frontend crash** occurs in the TripBuilderFlow component tree during step transitions after free-text submission. The minified error makes exact tracing difficult, but the most likely cause is a rendering issue when the GeneratingScreen or TripResultsView mounts — potentially from the `react-leaflet` map components or a stale component reference in the bundle.
+## Files Changed
 
-## Plan
+### `src/components/trip-results/TripResultsView.tsx` — Major rewrite
+- Remove fullscreen `ResultsMap` background and floating side panel
+- Single centered column: `max-w-[700px] mx-auto`, glassmorphic dark bg
+- Render: header → stat pills → summary → per-destination (DestinationSection + AccommodationCard + cost bar + DaySection cards) → bottom bar
+- Move Share/Adjust/Regenerate to bottom bar
+- Remove IntersectionObserver / scroll-to-map-sync logic
 
-### 1. Migrate edge function from Anthropic to Lovable AI Gateway
-The `generate-trip-itinerary` edge function calls Anthropic directly with `ANTHROPIC_API_KEY`. This should use the Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`) with `LOVABLE_API_KEY` (already provisioned). This fixes the timeout issue and removes the need for a separate API key.
+### `src/components/trip-results/DaySection.tsx` — Redesign
+- **Collapsed**: Horizontal card with 80×80 thumbnail (first activity's Google Places photo via `useGooglePlaceDetails`), teal "Day N" pill, experience count + date, theme subtitle, chevron
+- **Expanded**: Full activity list + 200px `DayMiniMap`
+- Add `useRef` + `useEffect` on expand to call `ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })`
 
-**File:** `supabase/functions/generate-trip-itinerary/index.ts`
-- Replace `callAnthropicApi` with a call to the Lovable AI Gateway
-- Use `google/gemini-2.5-flash` model for speed (itinerary generation is structured output)
-- Use tool calling for structured JSON output instead of asking the model to return raw JSON
-- Keep the same prompt structure and response normalization
+### `src/components/trip-results/DayMiniMap.tsx` — New
+- Wrapper around `ResultsMap` at 200px height, receives only that day's activities
 
-### 2. Add error boundary around TripBuilderFlow
-Wrap the builder in its own error boundary so a crash in the builder doesn't take down the entire TripHome page.
+### `src/components/trip-results/AccommodationCard.tsx` — Enhance
+- Add Google Places photo lookup via `useGooglePlaceDetails`
+- Photo thumbnail on left, name/stars/price/booking on right
 
-**File:** `src/components/trip/TripDashboard.tsx`
-- Wrap `<TripBuilderFlow>` in an error boundary with a "Try again" fallback that closes the builder
+### `src/components/trip-results/DestinationSection.tsx` — Minor
+- Add timeline-style location pin icon, destination name, date range
 
-### 3. Add defensive rendering in GeneratingScreen and TripResultsView
-Add null checks and try-catch around potentially failing renders.
-
-**Files:**
-- `src/components/trip-builder/GeneratingScreen.tsx` — add safe defaults for all props
-- `src/components/trip-results/TripResultsView.tsx` — wrap map rendering in error boundary, add fallback for when `react-leaflet` fails to load
-- `src/components/trip-results/ResultsMap.tsx` — add try-catch wrapper
-
-### 4. Fix handleFreeText to use functional state update
-The current `handleFreeText` reads from a stale `answers` closure. Switch to functional update to prevent race conditions with the defaults `useEffect`.
-
-**File:** `src/components/trip-builder/TripBuilderFlow.tsx`
-- Change `setAnswers(merged as Answers)` to use `setAnswers(prev => ({ ...prev, ...updates }))`
+### Unchanged
+- `ActivityCard.tsx`, `ResultsMap.tsx`, `useResultsState.ts`, `AlternativesSheet.tsx`, `TransportCard.tsx`, `TravelTimeConnector.tsx`
 
