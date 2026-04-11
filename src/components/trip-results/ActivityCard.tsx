@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
-import { Star, ExternalLink, Trash2, X, Check, ChevronDown, MapPin } from "lucide-react";
+import { useState } from "react";
+import { Star, ExternalLink, Trash2, X, Check, MapPin } from "lucide-react";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
+import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { AIActivity, AIDay } from "./useResultsState";
 
 interface Props {
@@ -12,62 +14,6 @@ interface Props {
   onRequestChange: () => void;
   onRemove: () => void;
   animDelay?: number;
-}
-
-function activityImageUrl(activity: AIActivity): string {
-  const query = activity.photo_query || `${activity.title} ${activity.location_name || ""}`.trim() || activity.category;
-  return `https://source.unsplash.com/600x300/?${encodeURIComponent(query)}`;
-}
-
-// Generate plausible review snippets from activity data
-const REVIEWER_NAMES = [
-  "Sarah M.", "James L.", "Elena K.", "David R.", "Mia T.",
-  "Carlos P.", "Yuki N.", "Anna W.", "Raj S.", "Olivia F.",
-  "Marco B.", "Lena H.", "Tom C.", "Priya G.", "Lucas V.",
-];
-
-const POSITIVE_TEMPLATES = [
-  "Absolutely loved this place! {detail}",
-  "One of the highlights of our trip. {detail}",
-  "Really worth the visit. {detail}",
-  "Can't recommend enough — {detail}",
-  "Such a wonderful experience. {detail}",
-  "We had an amazing time here. {detail}",
-  "Exceeded our expectations! {detail}",
-];
-
-const DETAIL_BY_CATEGORY: Record<string, string[]> = {
-  food: ["The flavors were incredible.", "Best meal we had on the trip.", "Great atmosphere and service.", "Perfect for a group dinner."],
-  cafe: ["Cozy vibes and great coffee.", "The pastries were delicious.", "Perfect spot to recharge."],
-  culture: ["So much history in one place.", "The exhibits were fascinating.", "A must-see for culture lovers."],
-  nature: ["The views were breathtaking.", "Stunning natural beauty.", "Perfect for photos."],
-  adventure: ["Such an adrenaline rush!", "Well-organized and safe.", "An unforgettable experience."],
-  nightlife: ["Great energy and music.", "The cocktails were amazing.", "Perfect night out."],
-  relaxation: ["So peaceful and rejuvenating.", "Exactly what we needed.", "Beautifully maintained."],
-  transport: ["Smooth and efficient.", "Easy to navigate.", "Good value for money."],
-  shopping: ["Found some great souvenirs.", "Unique local products.", "Fun to browse around."],
-  sightseeing: ["The architecture was stunning.", "Great panoramic views.", "A photographer's dream."],
-};
-
-function generateReviews(activity: AIActivity, seed: number) {
-  const rng = (n: number) => ((seed * 9301 + 49297) % 233280) / 233280 * n | 0;
-  const cat = (activity.category || "sightseeing").toLowerCase();
-  const details = DETAIL_BY_CATEGORY[cat] || DETAIL_BY_CATEGORY.sightseeing;
-  const rating = 4 + (rng(3) * 0.5); // 4.0-5.0
-
-  const idx1 = rng(REVIEWER_NAMES.length);
-  let idx2 = (idx1 + 3 + rng(5)) % REVIEWER_NAMES.length;
-  if (idx2 === idx1) idx2 = (idx1 + 1) % REVIEWER_NAMES.length;
-
-  const tpl1 = POSITIVE_TEMPLATES[rng(POSITIVE_TEMPLATES.length)];
-  const tpl2 = POSITIVE_TEMPLATES[(rng(POSITIVE_TEMPLATES.length) + 3) % POSITIVE_TEMPLATES.length];
-  const det1 = details[rng(details.length)];
-  const det2 = details[(rng(details.length) + 1) % details.length];
-
-  return [
-    { name: REVIEWER_NAMES[idx1], rating: Math.min(5, rating), text: tpl1.replace("{detail}", det1) },
-    { name: REVIEWER_NAMES[idx2], rating: Math.min(5, rating - 0.5 + rng(2) * 0.5), text: tpl2.replace("{detail}", det2) },
-  ];
 }
 
 function MiniStars({ rating }: { rating: number }) {
@@ -100,12 +46,14 @@ export function ActivityCard({
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
 
-  const reviews = useMemo(
-    () => generateReviews(activity, index * 7 + (activity.title?.charCodeAt(0) || 0)),
-    [activity, index]
-  );
+  const { photos, reviews, rating, totalRatings, googleMapsUrl, isLoading } =
+    useGooglePlaceDetails(activity.title || "", activity.location_name || "");
 
+  const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
   const descIsLong = (activity.description?.length || 0) > 120;
+  const mapsLink = googleMapsUrl || activity.google_maps_url;
+  const displayRating = rating ?? (typeof (activity as any).rating === "number" ? (activity as any).rating : null);
+  const displayTotalRatings = totalRatings;
 
   return (
     <div
@@ -118,9 +66,11 @@ export function ActivityCard({
     >
       {/* Hero image */}
       <div className="relative w-full h-[140px] overflow-hidden bg-muted">
-        {!imgError ? (
+        {isLoading ? (
+          <Skeleton className="w-full h-full rounded-none" />
+        ) : heroSrc ? (
           <img
-            src={activityImageUrl(activity)}
+            src={heroSrc}
             alt={activity.title}
             className="w-full h-full object-cover"
             loading="lazy"
@@ -162,11 +112,16 @@ export function ActivityCard({
         </h4>
 
         <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
-          <span className="flex items-center gap-0.5">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-            <span className="font-medium text-foreground/80">4.5</span>
-          </span>
-          <span className="text-muted-foreground/30">·</span>
+          {displayRating != null && (
+            <span className="flex items-center gap-0.5">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <span className="font-medium text-foreground/80">{displayRating.toFixed(1)}</span>
+              {displayTotalRatings != null && (
+                <span className="text-muted-foreground">({displayTotalRatings.toLocaleString()})</span>
+              )}
+            </span>
+          )}
+          {displayRating != null && <span className="text-muted-foreground/30">·</span>}
           <span className="font-mono">{activity.duration_minutes} min</span>
           {activity.start_time && (
             <>
@@ -222,35 +177,46 @@ export function ActivityCard({
         </div>
       )}
 
-      {/* Review snippets */}
-      <div className="px-3.5 pb-2.5 space-y-1.5">
-        {reviews.map((review, i) => (
-          <div key={i} className="flex gap-2 p-2 rounded-lg bg-accent/50 border border-border/50">
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
-              style={{ backgroundColor: `hsl(${(review.name.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}
-            >
-              {review.name.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-medium text-foreground">{review.name}</span>
-                <MiniStars rating={review.rating} />
+      {/* Google Reviews */}
+      {isLoading ? (
+        <div className="px-3.5 pb-2.5 space-y-1.5">
+          <Skeleton className="h-14 w-full rounded-lg" />
+          <Skeleton className="h-14 w-full rounded-lg" />
+        </div>
+      ) : reviews.length > 0 ? (
+        <div className="px-3.5 pb-1 space-y-1.5">
+          {reviews.map((review, i) => (
+            <div key={i} className="flex gap-2 p-2 rounded-lg bg-accent/50 border border-border/50">
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
+                style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}
+              >
+                {review.author.charAt(0) || "?"}
               </div>
-              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
-                {review.text}
-              </p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-medium text-foreground">{review.author}</span>
+                  <MiniStars rating={review.rating} />
+                  {review.time && (
+                    <span className="text-[10px] text-muted-foreground">{review.time}</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                  {review.text}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+          <p className="text-[9px] text-muted-foreground/60 pb-1">Photos & reviews from Google</p>
+        </div>
+      ) : null}
 
       {/* Links */}
-      {(activity.google_maps_url || activity.booking_url) && (
+      {(mapsLink || activity.booking_url) && (
         <div className="px-3.5 pb-2 flex flex-wrap gap-3 text-[11px]">
-          {activity.google_maps_url && (
+          {mapsLink && (
             <a
-              href={activity.google_maps_url}
+              href={mapsLink}
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"

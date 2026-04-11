@@ -138,18 +138,13 @@ Deno.serve(async (req) => {
     );
 
     // 4. Extract up to 2 reviews
-    const reviewsRaw: unknown[] = Array.isArray(place.reviews) ? place.reviews.slice(0, 2) : [];
-    const reviews = reviewsRaw.map((r: {
-      authorAttribution?: { displayName?: string };
-      rating?: number;
-      text?: { text?: string };
-      originalText?: { text?: string };
-      relativePublishTimeDescription?: string;
-    }) => ({
-      author: r.authorAttribution?.displayName ?? "",
-      rating: typeof r.rating === "number" ? r.rating : 0,
-      text: r.text?.text ?? r.originalText?.text ?? "",
-      time: r.relativePublishTimeDescription ?? "",
+    const reviewsRaw = Array.isArray(place.reviews) ? place.reviews.slice(0, 2) : [];
+    // deno-lint-ignore no-explicit-any
+    const reviews = reviewsRaw.map((r: any) => ({
+      author: r?.authorAttribution?.displayName ?? "",
+      rating: typeof r?.rating === "number" ? r.rating : 0,
+      text: r?.text?.text ?? r?.originalText?.text ?? "",
+      time: r?.relativePublishTimeDescription ?? "",
     }));
 
     const response: PlaceDetailsResponse = {
