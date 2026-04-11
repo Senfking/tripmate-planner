@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map, Maximize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { DaySection } from "./DaySection";
 import { TransportCard } from "./TransportCard";
 import { AccommodationCard } from "./AccommodationCard";
 import { AlternativesSheet } from "./AlternativesSheet";
+import { ResultsMap } from "./ResultsMap";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 
@@ -35,6 +36,8 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
   const state = useResultsState(tripId);
   const [packingOpen, setPackingOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
   const [refinedCoords] = useState(() => new Map<string, { lat: number; lng: number }>());
   const [coordsVersion, setCoordsVersion] = useState(0);
 
@@ -136,17 +139,17 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
         {/* Stat pills */}
         <div className="px-4 pt-4 pb-2">
           <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent text-xs text-muted-foreground font-mono">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary font-mono">
               <CalendarDays className="h-3 w-3" /> {allDays.length} days
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent text-xs text-muted-foreground font-mono">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary font-mono">
               <MapPin className="h-3 w-3" /> {uniqueCities} {uniqueCities === 1 ? "city" : "cities"}
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent text-xs text-muted-foreground font-mono">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary font-mono">
               <Sparkles className="h-3 w-3" /> {totalActivities} experiences
             </span>
             {totalHotels > 0 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent text-xs text-muted-foreground font-mono">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary font-mono">
                 <Hotel className="h-3 w-3" /> {totalHotels} {totalHotels === 1 ? "hotel" : "hotels"}
               </span>
             )}
@@ -216,6 +219,41 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
                         <span className="text-xs font-semibold text-foreground">Total per person</span>
                         <span className="text-xs font-mono font-semibold text-primary">~{currency}{costBreakdown.total}</span>
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Map overview — collapsible, after accommodation/cost, before day cards */}
+              {destIdx === 0 && (
+                <div className="mx-4 mb-4">
+                  <button
+                    onClick={() => setMapOpen(!mapOpen)}
+                    className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
+                  >
+                    <Map className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium flex-1 text-foreground">
+                      {mapOpen ? "Hide map" : "Show map"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{totalActivities} pins</span>
+                  </button>
+                  {mapOpen && (
+                    <div className="mt-2 rounded-xl overflow-hidden border border-border relative animate-fade-in">
+                      <div className="h-[300px]">
+                        <ResultsMap
+                          result={result}
+                          activeDayIndex={-1}
+                          allDays={allDays}
+                          mode="overview"
+                          refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
+                        />
+                      </div>
+                      <button
+                        onClick={() => setMapFullscreen(true)}
+                        className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
+                      >
+                        <Maximize2 className="h-4 w-4 text-foreground" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -328,6 +366,27 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
           </Button>
         </div>
       </div>
+
+      {/* Fullscreen map overlay */}
+      {mapFullscreen && (
+        <div className="fixed inset-0 z-[10000] bg-background">
+          <div className="absolute top-4 left-4 z-10">
+            <button
+              onClick={() => setMapFullscreen(false)}
+              className="p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
+            >
+              <X className="h-5 w-5 text-foreground" />
+            </button>
+          </div>
+          <ResultsMap
+            result={result}
+            activeDayIndex={-1}
+            allDays={allDays}
+            mode="overview"
+            refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
+          />
+        </div>
+      )}
 
       {/* Alternatives Sheet */}
       {state.alternativesFor && (
