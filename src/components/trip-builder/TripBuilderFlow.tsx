@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 import { parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -109,11 +110,13 @@ type Answers = {
 const TOTAL_STEPS = 7; // 0=entry, 1=dest, 2=dates, 3=budget, 4=vibes, 5=pace, 6=extras
 
 export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
+  const navigate = useNavigate();
   const defaults = useTripBuilderDefaults(tripId);
   const [step, setStep] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [results, setResults] = useState<AITripResult | null>(null);
+  const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [prefilledSteps, setPrefilledSteps] = useState<Set<number>>(new Set());
 
