@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ResultsMap } from "./ResultsMap";
 import { DestinationSection } from "./DestinationSection";
@@ -18,6 +19,7 @@ interface Props {
   result: AITripResult;
   onClose: () => void;
   onRegenerate: () => void;
+  onAdjust?: () => void;
 }
 
 /** Capitalize first letter of each word */
@@ -25,7 +27,7 @@ function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props) {
+export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjust }: Props) {
   const isMobile = useIsMobile();
   const state = useResultsState(tripId);
   const contentRef = useRef<HTMLDivElement>(null);
