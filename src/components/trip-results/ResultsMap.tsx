@@ -70,12 +70,10 @@ function MapController({
 }
 
 export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }: Props) {
-  // Defensive: bail if result is missing map data
-  if (!result?.map_center || typeof result.map_center.lat !== "number") {
-    return <div className="h-full w-full bg-muted/40" />;
-  }
+  const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
 
   const activitiesForMap = useMemo(() => {
+    if (!hasValidCenter) return [];
     try {
       if (mode === "day" && activeDayIndex >= 0 && allDays[activeDayIndex]) {
         return allDays[activeDayIndex].activities
@@ -95,7 +93,7 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }
     } catch {
       return [];
     }
-  }, [mode, activeDayIndex, allDays]);
+  }, [mode, activeDayIndex, allDays, hasValidCenter]);
 
   const polylinePositions = useMemo(
     () =>
@@ -104,6 +102,11 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }
         .map((a) => [a.latitude!, a.longitude!] as [number, number]),
     [activitiesForMap]
   );
+
+  if (!hasValidCenter) {
+    return <div className="h-full w-full bg-muted/40" />;
+  }
+
 
   return (
     <MapContainer
