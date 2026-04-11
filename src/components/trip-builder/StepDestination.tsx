@@ -5,19 +5,23 @@ import { Sparkles } from "lucide-react";
 type Props = {
   value: string;
   source: string | null;
+  prefilledFromFreeText?: boolean;
   surpriseMe: boolean;
   onChange: (v: string) => void;
   onSurpriseMe: (v: boolean) => void;
 };
 
-export function StepDestination({ value, source, surpriseMe, onChange, onSurpriseMe }: Props) {
+export function StepDestination({ value, source, prefilledFromFreeText, surpriseMe, onChange, onSurpriseMe }: Props) {
   return (
     <div className="flex flex-col h-full px-6 pt-12 sm:pt-16">
       <h2 className="text-2xl font-bold text-foreground mb-1">Where are you going?</h2>
-      {source && (
+      {prefilledFromFreeText && (
+        <p className="text-xs text-primary/70 mb-4">Pre-filled from your description</p>
+      )}
+      {source && !prefilledFromFreeText && (
         <p className="text-xs text-muted-foreground mb-4">{source}</p>
       )}
-      {!source && <div className="mb-4" />}
+      {!source && !prefilledFromFreeText && <div className="mb-4" />}
 
       {!surpriseMe ? (
         <>

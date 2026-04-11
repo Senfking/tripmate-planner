@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 import { parseISO } from "date-fns";
 import { ArrowLeft, X, Sparkles } from "lucide-react";
@@ -115,7 +115,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   const [genError, setGenError] = useState<string | null>(null);
   const [results, setResults] = useState<AITripResult | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
-  const pendingGenerate = useRef(false);
+  const [prefilledSteps, setPrefilledSteps] = useState<Set<number>>(new Set());
 
   const [answers, setAnswers] = useState<Answers>({
     destination: "",
@@ -160,16 +160,6 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
     setAnswers((prev) => ({ ...prev, [key]: val }));
   }, []);
 
-  // Determine which steps still need input given current answers
-  const findFirstIncompleteStep = useCallback((ans: Answers): number => {
-    // Step 1: destination
-    if (!ans.surpriseMe && !ans.destination.trim()) return 1;
-    // Step 2: dates
-    if (!ans.flexible && !ans.dateRange?.from) return 2;
-    // Steps 3-6 always have defaults, so skip to generate
-    return -1; // All required info present
-  }, []);
-
   const handleFreeText = useCallback((text: string) => {
     const parsed = parseFreeText(text);
     const updates: Partial<Answers> = { freeText: text, notes: text };
@@ -186,15 +176,36 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
     const merged = { ...answers, ...updates };
     setAnswers(merged as Answers);
 
-    // Skip to first step that still needs input, or generate directly
-    const nextStep = findFirstIncompleteStep(merged as Answers);
-    if (nextStep === -1) {
-      // All required info filled — flag for auto-generation
-      pendingGenerate.current = true;
-    } else {
-      setStep(nextStep);
+    // Track which steps were pre-filled from free text (for UI indicator)
+    const ftFilled = new Set<number>();
+    if (parsed.destination) ftFilled.add(1);
+    if (parsed.durationDays) ftFilled.add(2);
+    if (parsed.budgetLevel) ftFilled.add(3);
+    if (parsed.vibes.length > 0) ftFilled.add(4);
+    if (parsed.dietary.length > 0) ftFilled.add(6);
+    setPrefilledSteps(ftFilled);
+
+    // Jump to first step that still needs input, or step 6 for final review
+    const isStepAnswered = (s: number): boolean => {
+      switch (s) {
+        case 1: return !!(merged.surpriseMe || merged.destination?.trim());
+        case 2: return !!(merged.flexible || merged.dateRange?.from);
+        case 3: return !!(parsed.budgetLevel || defaults.budgetLevel);
+        case 4: return (merged.vibes?.length ?? 0) > 0;
+        case 5: return false; // Free text rarely specifies pace
+        default: return false;
+      }
+    };
+
+    for (let s = 1; s <= 5; s++) {
+      if (!isStepAnswered(s)) {
+        setStep(s);
+        return;
+      }
     }
-  }, [answers, findFirstIncompleteStep]);
+    // All steps 1–5 answered → go to extras for final review
+    setStep(6);
+  }, [answers, defaults.budgetLevel]);
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
@@ -242,14 +253,6 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       setGenerating(false);
     }
   }, [tripId, answers, defaults.groupSize, onSuccess, onClose]);
-
-  // Auto-generate after free text fills all required fields
-  useEffect(() => {
-    if (pendingGenerate.current && !generating) {
-      pendingGenerate.current = false;
-      handleGenerate();
-    }
-  }, [answers, generating, handleGenerate]);
 
   const toggleVibe = useCallback((v: string) => {
     setAnswers((prev) => ({
@@ -349,6 +352,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           <StepDestination
             value={answers.destination}
             source={defaults.destinationSource}
+            prefilledFromFreeText={prefilledSteps.has(1)}
             surpriseMe={answers.surpriseMe}
             onChange={(v) => update("destination", v)}
             onSurpriseMe={(v) => update("surpriseMe", v)}
@@ -358,6 +362,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           <StepDates
             dateRange={answers.dateRange}
             source={defaults.dateSource}
+            prefilledFromFreeText={prefilledSteps.has(2)}
             flexible={answers.flexible}
             flexibleDuration={answers.flexibleDuration}
             onDateChange={(r) => update("dateRange", r)}
@@ -369,6 +374,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           <StepBudget
             value={answers.budgetLevel}
             source={defaults.budgetSource}
+            prefilledFromFreeText={prefilledSteps.has(3)}
             onChange={(v) => update("budgetLevel", v)}
           />
         )}
@@ -376,6 +382,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           <StepVibes
             selected={answers.vibes}
             source={defaults.vibeSource}
+            prefilledFromFreeText={prefilledSteps.has(4)}
             hasVibeBoard={hasVibeBoard}
             onToggle={toggleVibe}
           />
@@ -391,6 +398,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           <StepExtras
             dietary={answers.dietary}
             notes={answers.notes}
+            prefilledFromFreeText={prefilledSteps.has(6)}
             onToggleDietary={toggleDietary}
             onNotesChange={(v) => update("notes", v)}
           />

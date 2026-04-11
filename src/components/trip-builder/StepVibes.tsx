@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 type Props = {
   selected: string[];
   source: string | null;
+  prefilledFromFreeText?: boolean;
   hasVibeBoard: boolean;
   onToggle: (v: string) => void;
 };
@@ -18,11 +19,14 @@ const VIBES = [
   { emoji: "📸", label: "Sightseeing" },
 ];
 
-export function StepVibes({ selected, source, hasVibeBoard, onToggle }: Props) {
+export function StepVibes({ selected, source, prefilledFromFreeText, hasVibeBoard, onToggle }: Props) {
   return (
     <div className="flex flex-col h-full px-6 pt-12 sm:pt-16">
       <h2 className="text-2xl font-bold text-foreground mb-1">What's the vibe?</h2>
-      {source && (
+      {prefilledFromFreeText && (
+        <p className="text-xs text-primary/70 mb-2">Pre-filled from your description</p>
+      )}
+      {source && !prefilledFromFreeText && (
         <p className="text-xs text-muted-foreground mb-2">{source}</p>
       )}
       <p className="text-sm text-muted-foreground mb-5">Select all that apply</p>
