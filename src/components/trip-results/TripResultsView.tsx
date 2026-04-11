@@ -315,7 +315,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
             className={
               isMobile
                 ? "sticky bottom-0 z-20 px-4 py-3 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+12px)]"
-                : "sticky bottom-0 z-20 px-4 py-3 bg-[rgba(11,14,14,0.98)] backdrop-blur-xl border-t border-border rounded-b-2xl"
+                : "sticky bottom-0 z-20 px-4 py-3 bg-[rgba(11,14,14,0.6)] backdrop-blur-xl border-t border-white/10 rounded-b-2xl"
             }
           >
             <div className="flex items-center justify-between gap-3">
