@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Component, type ReactNode } from "react";
 import { useItinerary } from "@/hooks/useItinerary";
 import { useRouteStops } from "@/hooks/useRouteStops";
 import { useItineraryAttendance } from "@/hooks/useItineraryAttendance";
@@ -8,13 +8,39 @@ import { DaySection } from "./DaySection";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarPlus, Download, Loader2, Sparkles } from "lucide-react";
+import { CalendarPlus, Download, Loader2, Sparkles, AlertTriangle, SlidersHorizontal } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
 import { ImportItineraryModal } from "./ImportItineraryModal";
+import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { useNavigate } from "react-router-dom";
+
+// Error boundary so the builder never crashes the itinerary page
+class BuilderBoundary extends Component<{ children: ReactNode; onClose: () => void }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; onClose: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err: Error) { console.error("TripBuilder crashed:", err); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-6">
+          <div className="text-center max-w-sm space-y-4">
+            <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
+            <h2 className="text-lg font-semibold">Something went wrong</h2>
+            <p className="text-sm text-muted-foreground">The trip builder encountered an error.</p>
+            <Button onClick={this.props.onClose} className="rounded-xl">Close</Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
 function timeToMinutes(t: string): number {
@@ -40,6 +66,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
   const [newDayFormOpen, setNewDayFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [icsLoading, setIcsLoading] = useState(false);
+  const [builderOpen, setBuilderOpen] = useState(false);
   const [lastVisitItemIds, setLastVisitItemIds] = useState<Set<string>>(new Set());
   const [prevLastSeen, setPrevLastSeen] = useState<string | undefined>(undefined);
 
@@ -169,25 +196,69 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
     );
   }
 
+  const hasItems = items.length > 0;
+  const isEmpty = allDays.length === 0 && !hasItems;
+
   return (
     <div className="space-y-6">
-      {/* Import with AI */}
-      <button
-        onClick={() => setImportOpen(true)}
-        className="w-full rounded-xl border border-dashed border-[#0D9488]/30 py-3 text-center text-[13px] font-medium text-[#0D9488]/70 hover:border-[#0D9488]/60 hover:text-[#0D9488] transition-colors flex items-center justify-center gap-1.5"
-      >
-        <Sparkles className="h-4 w-4" />
-        Import with Junto AI
-      </button>
-
-      {allDays.length === 0 && (
-        <div className="text-center py-12 space-y-3">
-          <p className="text-muted-foreground">No itinerary days yet.</p>
-          <p className="text-sm text-muted-foreground">
-            Add a day to start planning activities, or confirm route stops to auto-generate days.
-          </p>
-        </div>
+      {/* Builder overlay */}
+      {builderOpen && (
+        <BuilderBoundary onClose={() => setBuilderOpen(false)}>
+          <TripBuilderFlow tripId={tripId} onClose={() => setBuilderOpen(false)} />
+        </BuilderBoundary>
       )}
+
+      {/* Empty state: AI Builder as primary CTA */}
+      {isEmpty ? (
+        <div className="flex flex-col items-center justify-center pt-12 pb-6 text-center px-4">
+          <div
+            className="h-14 w-14 rounded-2xl flex items-center justify-center mb-5"
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            <Sparkles className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <h2 className="text-lg font-bold text-foreground">Plan your trip with AI</h2>
+          <p className="mt-2 max-w-[280px] text-sm text-muted-foreground leading-relaxed">
+            Tell us your destination and preferences — we'll generate a complete day-by-day itinerary.
+          </p>
+          <Button
+            className="mt-6 h-12 px-8 rounded-xl font-semibold text-primary-foreground gap-2"
+            style={{ background: "var(--gradient-primary)" }}
+            onClick={() => setBuilderOpen(true)}
+          >
+            <Sparkles className="h-4 w-4" />
+            Generate itinerary
+          </Button>
+          <button
+            onClick={() => {
+              setNewDayDate(format(new Date(), "yyyy-MM-dd"));
+              setNewDayFormOpen(true);
+            }}
+            className="mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            or add manually
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* AI Builder + Import buttons when items exist */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setBuilderOpen(true)}
+              className="flex-1 rounded-xl border border-primary/20 bg-primary/5 py-3 text-center text-[13px] font-medium text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              AI Builder
+            </button>
+            <button
+              onClick={() => setImportOpen(true)}
+              className="flex-1 rounded-xl border border-dashed border-muted-foreground/20 py-3 text-center text-[13px] font-medium text-muted-foreground/70 hover:border-primary/40 hover:text-foreground transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Import
+            </button>
+          </div>
 
       {allDays.map((day, idx) => (
         <DaySection
@@ -294,6 +365,8 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           {icsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
           Add to Calendar
         </Button>
+      )}
+        </>
       )}
     </div>
   );
