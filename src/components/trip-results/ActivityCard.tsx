@@ -14,6 +14,11 @@ interface Props {
   animDelay?: number;
 }
 
+function activityImageUrl(activity: AIActivity): string {
+  const query = activity.photo_query || activity.title || activity.category;
+  return `https://source.unsplash.com/400x300/?${encodeURIComponent(query)}`;
+}
+
 export function ActivityCard({
   activity,
   index,
@@ -24,6 +29,7 @@ export function ActivityCard({
   animDelay = 0,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
 
@@ -75,18 +81,23 @@ export function ActivityCard({
           </div>
         </div>
 
-        {/* Icon placeholder + chevron */}
-        <div className="flex flex-col items-end gap-1">
-          <div
-            className="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center"
-            style={{ background: `linear-gradient(135deg, ${color}20, ${color}08)` }}
-          >
-            <IconComponent className="h-6 w-6" style={{ color }} />
-          </div>
-          {expanded ? (
-            <ChevronUp className="h-3 w-3 text-muted-foreground" />
+        {/* Activity image */}
+        <div className="w-14 h-14 rounded-lg flex-shrink-0 overflow-hidden">
+          {!imgError ? (
+            <img
+              src={activityImageUrl(activity)}
+              alt={activity.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
           ) : (
-            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${color}20, ${color}08)` }}
+            >
+              <IconComponent className="h-6 w-6" style={{ color }} />
+            </div>
           )}
         </div>
       </button>

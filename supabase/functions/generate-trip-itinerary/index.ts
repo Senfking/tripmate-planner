@@ -298,7 +298,59 @@ Deno.serve(async (req) => {
     const body: TripBuilderRequest = await req.json();
 
     if (body.alternatives_mode) {
-      return jsonResponse({ success: true, alternatives: [] });
+      const altNotes = body.notes || "";
+      const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+      if (!lovableApiKey) {
+        return jsonResponse({ success: false, error: "LOVABLE_API_KEY not configured" }, 500);
+      }
+
+      const altToolSchema = {
+        name: "suggest_alternatives",
+        description: "Return 3 alternative activities",
+        parameters: {
+          type: "object",
+          properties: {
+            alternatives: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  category: { type: "string" },
+                  start_time: { type: "string" },
+                  duration_minutes: { type: "number" },
+                  estimated_cost_per_person: { type: "number" },
+                  currency: { type: "string" },
+                  location_name: { type: "string" },
+                  latitude: { type: "number" },
+                  longitude: { type: "number" },
+                  google_maps_url: { type: "string" },
+                  booking_url: { type: ["string", "null"] },
+                  photo_query: { type: "string" },
+                  tips: { type: "string" },
+                },
+                required: ["title", "category", "start_time", "duration_minutes", "latitude", "longitude"],
+              },
+            },
+          },
+          required: ["alternatives"],
+        },
+      };
+
+      try {
+        const altResult = await callLovableAI(
+          lovableApiKey,
+          "You are an expert travel planner. Suggest 3 real alternative activities. Use REAL venue names that actually exist. Include realistic coordinates.",
+          altNotes,
+          altToolSchema,
+        );
+        const alts = (altResult.itinerary as any)?.alternatives || [];
+        return jsonResponse({ success: true, alternatives: alts });
+      } catch (e) {
+        console.error("Alternatives generation failed:", e);
+        return jsonResponse({ success: true, alternatives: [] });
+      }
     }
 
     const {
