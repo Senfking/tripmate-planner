@@ -13,6 +13,7 @@ interface Props {
   onToggleAdd: () => void;
   onRequestChange: () => void;
   onRemove: () => void;
+  onCoordsRefined?: (lat: number, lng: number) => void;
   animDelay?: number;
 }
 
