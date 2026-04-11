@@ -366,6 +366,8 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           Add to Calendar
         </Button>
       )}
+        </>
+      )}
     </div>
   );
 }
