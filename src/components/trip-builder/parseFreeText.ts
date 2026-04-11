@@ -72,6 +72,9 @@ export function parseFreeText(text: string): ParsedFreeText {
   if (durMatch) durationDays = parseInt(durMatch[1], 10);
   const weekMatch = lower.match(/(\d+)\s*weeks?/i);
   if (weekMatch) durationDays = parseInt(weekMatch[1], 10) * 7;
+  // "a week" / "a long weekend"
+  if (!durationDays && /\ba\s+week\b/i.test(lower)) durationDays = 7;
+  if (!durationDays && /\bweekend\b/i.test(lower)) durationDays = 3;
 
   // Budget
   let budgetLevel: BudgetLevel | null = null;
