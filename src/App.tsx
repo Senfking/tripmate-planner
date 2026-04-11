@@ -144,6 +144,7 @@ function AppInner() {
                 <Route path="/app/trips/:tripId" element={<TripHome />} />
                 <Route path="/app/trips/:tripId/onboarding" element={<TripOnboarding />} />
                 <Route path="/app/trips/:tripId/:section" element={<TripSection />} />
+                <Route path="/app/trips/:tripId/ai-plan/:planId" element={<AIPlan />} />
                 <Route path="/app/decisions" element={<Decisions />} />
                 <Route path="/app/itinerary" element={<Itinerary />} />
                 <Route path="/app/expenses" element={<Expenses />} />
