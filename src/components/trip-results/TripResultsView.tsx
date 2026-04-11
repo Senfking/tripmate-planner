@@ -138,9 +138,28 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
     return () => observer.disconnect();
   }, [allDays]);
 
-  const scrollToActivity = useCallback((dayDate: string, _actIdx: number) => {
-    const el = dayRefs.current.get(dayDate);
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollToActivity = useCallback((dayDate: string, actIdx: number) => {
+    // First, expand the day section if collapsed by scrolling to it
+    const dayEl = dayRefs.current.get(dayDate);
+    if (dayEl) {
+      // Click the day header to expand if collapsed
+      const btn = dayEl.querySelector("button");
+      const isCollapsed = dayEl.querySelector("[class*='pb-2']") === null;
+      if (isCollapsed && btn) btn.click();
+    }
+
+    // Then scroll to the specific activity card
+    setTimeout(() => {
+      const actEl = contentRef.current?.querySelector(`[data-activity-id="${dayDate}-${actIdx}"]`);
+      if (actEl) {
+        actEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Brief highlight
+        actEl.classList.add("ring-2", "ring-primary");
+        setTimeout(() => actEl.classList.remove("ring-2", "ring-primary"), 2000);
+      } else {
+        dayEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
   }, []);
 
   const handleRemoveActivity = useCallback((_dayDate: string, _index: number) => {}, []);
