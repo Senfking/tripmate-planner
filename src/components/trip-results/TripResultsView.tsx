@@ -115,8 +115,8 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
 
   const destinationNames = result.destinations.map((d) => d.name).join(" · ");
 
-  return (
-    <div className="fixed inset-0 z-[60] bg-background">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-background">
       {/* Map — true full screen on desktop */}
       {!isMobile && (
         <div className="absolute inset-0 z-0">
@@ -571,6 +571,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
           onClose={() => state.setAlternativesFor(null)}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
