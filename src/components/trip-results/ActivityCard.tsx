@@ -75,53 +75,65 @@ export function ActivityCard({
         borderLeftWidth: isAdded ? 3 : undefined,
       }}
     >
-      {/* Compact row: image + summary — always visible */}
-      <div className="flex gap-0 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
-        {/* Thumbnail */}
-        <div className="relative w-[100px] h-[80px] shrink-0 overflow-hidden bg-muted">
-          {isLoading ? (
-            <Skeleton className="w-full h-full rounded-none" />
-          ) : heroSrc ? (
-            <img
-              src={heroSrc}
-              alt={activity.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div
-              className="w-full h-full flex items-center justify-center"
-              style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}
-            >
-              <IconComponent className="h-6 w-6 opacity-40" style={{ color }} />
-            </div>
-          )}
-          {/* Category badge */}
-          <div className="absolute top-1.5 left-1.5">
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[8px] uppercase tracking-wider font-bold text-white backdrop-blur-sm"
-              style={{ backgroundColor: `${color}cc` }}
-            >
-              <IconComponent className="h-2.5 w-2.5" />
-              {activity.category}
-            </span>
-          </div>
-          {/* Pin number */}
+      {/* Hero image — always visible */}
+      <div className="relative w-full h-[120px] overflow-hidden bg-muted cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+        {isLoading ? (
+          <Skeleton className="w-full h-full rounded-none" />
+        ) : heroSrc ? (
+          <img
+            src={heroSrc}
+            alt={activity.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        ) : (
           <div
-            className="absolute bottom-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow-md"
-            style={{ backgroundColor: color }}
+            className="w-full h-full flex items-center justify-center"
+            style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}
           >
-            {index + 1}
+            <IconComponent className="h-8 w-8 opacity-40" style={{ color }} />
           </div>
+        )}
+        {/* Category badge */}
+        <div className="absolute top-2 left-2">
+          <span
+            className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[8px] uppercase tracking-wider font-bold text-white backdrop-blur-sm"
+            style={{ backgroundColor: `${color}cc` }}
+          >
+            <IconComponent className="h-2.5 w-2.5" />
+            {activity.category}
+          </span>
         </div>
+        {/* Pin number */}
+        <div
+          className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow-md"
+          style={{ backgroundColor: color }}
+        >
+          {index + 1}
+        </div>
+        {/* Add button overlay */}
+        <div className="absolute top-2 right-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleAdd(); }}
+            className={`text-[10px] font-medium px-2.5 py-1 rounded-lg transition-all backdrop-blur-sm ${
+              isAdded
+                ? "bg-primary/15 text-primary"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+            }`}
+          >
+            {isAdded ? <Check className="h-3 w-3" /> : "Add"}
+          </button>
+        </div>
+      </div>
 
-        {/* Summary */}
-        <div className="flex-1 min-w-0 px-3 py-2 flex flex-col justify-center">
+      {/* Summary row — always visible */}
+      <div className="flex items-center justify-between px-3 py-2 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+        <div className="flex-1 min-w-0">
           <h4 className="text-[13px] font-semibold text-foreground leading-snug truncate">
             {activity.title}
           </h4>
-          <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground flex-wrap">
             {displayRating != null && (
               <span className="flex items-center gap-0.5">
                 <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
@@ -132,25 +144,11 @@ export function ActivityCard({
             {activity.start_time && <span className="font-mono">{activity.start_time}</span>}
           </div>
         </div>
-
-        {/* Right side: cost + add */}
-        <div className="flex items-center gap-2 pr-3 shrink-0">
-          <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">
-            {activity.estimated_cost_per_person
-              ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}`
-              : "Free"}
-          </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleAdd(); }}
-            className={`text-[10px] font-medium px-2.5 py-1 rounded-lg transition-all ${
-              isAdded
-                ? "bg-primary/15 text-primary"
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
-            }`}
-          >
-            {isAdded ? <Check className="h-3 w-3" /> : "Add"}
-          </button>
-        </div>
+        <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap ml-2">
+          {activity.estimated_cost_per_person
+            ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}`
+            : "Free"}
+        </span>
       </div>
 
       {/* Expanded details */}
