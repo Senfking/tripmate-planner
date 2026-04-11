@@ -70,24 +70,30 @@ function MapController({
 }
 
 export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }: Props) {
-  const activitiesForMap = useMemo(() => {
-    if (mode === "day" && activeDayIndex >= 0 && allDays[activeDayIndex]) {
-      return allDays[activeDayIndex].activities
-        .map((a, i) => ({ ...a, _dayDate: allDays[activeDayIndex].date, _idx: i }))
-        .filter((a) => a.latitude != null && a.longitude != null);
-    }
+  const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
 
-    // Overview: show all with coords
-    const all: (AIActivity & { _dayDate: string; _idx: number })[] = [];
-    for (const day of allDays) {
-      day.activities.forEach((a, i) => {
-        if (a.latitude != null && a.longitude != null) {
-          all.push({ ...a, _dayDate: day.date, _idx: i });
-        }
-      });
+  const activitiesForMap = useMemo(() => {
+    if (!hasValidCenter) return [];
+    try {
+      if (mode === "day" && activeDayIndex >= 0 && allDays[activeDayIndex]) {
+        return allDays[activeDayIndex].activities
+          .map((a, i) => ({ ...a, _dayDate: allDays[activeDayIndex].date, _idx: i }))
+          .filter((a) => a.latitude != null && a.longitude != null);
+      }
+
+      const all: (AIActivity & { _dayDate: string; _idx: number })[] = [];
+      for (const day of allDays) {
+        day.activities.forEach((a, i) => {
+          if (a.latitude != null && a.longitude != null) {
+            all.push({ ...a, _dayDate: day.date, _idx: i });
+          }
+        });
+      }
+      return all;
+    } catch {
+      return [];
     }
-    return all;
-  }, [mode, activeDayIndex, allDays]);
+  }, [mode, activeDayIndex, allDays, hasValidCenter]);
 
   const polylinePositions = useMemo(
     () =>
@@ -96,6 +102,11 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }
         .map((a) => [a.latitude!, a.longitude!] as [number, number]),
     [activitiesForMap]
   );
+
+  if (!hasValidCenter) {
+    return <div className="h-full w-full bg-muted/40" />;
+  }
+
 
   return (
     <MapContainer
