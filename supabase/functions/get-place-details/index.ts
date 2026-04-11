@@ -1,4 +1,6 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+console.log("[get-place-details] module loaded");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,14 +8,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type PlaceDetailsResponse = {
+interface PlaceDetailsResponse {
   photos: string[];
   reviews: { author: string; rating: number; text: string; time: string }[];
   rating: number | null;
   totalRatings: number | null;
   googleMapsUrl: string | null;
   address: string | null;
-};
+}
 
 const FIELD_MASK =
   "places.id,places.displayName,places.rating,places.userRatingCount,places.reviews,places.photos,places.googleMapsUri,places.formattedAddress";
@@ -99,14 +101,14 @@ Deno.serve(async (req) => {
     });
 
     if (!searchRes.ok) {
-      const errText = await searchRes.text();
+      const errText = await searchRes.text().catch(() => "");
       return new Response(
         JSON.stringify({ error: "Places API error", status: searchRes.status, details: errText }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const searchData = await searchRes.json();
+    const searchData = await searchRes.json().catch(() => null);
     const place = searchData?.places?.[0];
     if (!place) {
       const empty: PlaceDetailsResponse = {
@@ -130,22 +132,28 @@ Deno.serve(async (req) => {
     }
 
     // 3. Build photo URLs (up to 3)
-    const photoNames: string[] = Array.isArray(place.photos)
-      ? place.photos.slice(0, 3).map((p: { name: string }) => p.name).filter(Boolean)
-      : [];
+    const photoNames: string[] = [];
+    if (Array.isArray(place.photos)) {
+      for (const p of place.photos.slice(0, 3)) {
+        if (p && typeof p.name === "string" && p.name) photoNames.push(p.name);
+      }
+    }
     const photos: string[] = photoNames.map(
       (name) => `https://places.googleapis.com/v1/${name}/media?maxWidthPx=800&key=${apiKey}`,
     );
 
     // 4. Extract up to 2 reviews
-    const reviewsRaw = Array.isArray(place.reviews) ? place.reviews.slice(0, 2) : [];
-    // deno-lint-ignore no-explicit-any
-    const reviews = reviewsRaw.map((r: any) => ({
-      author: r?.authorAttribution?.displayName ?? "",
-      rating: typeof r?.rating === "number" ? r.rating : 0,
-      text: r?.text?.text ?? r?.originalText?.text ?? "",
-      time: r?.relativePublishTimeDescription ?? "",
-    }));
+    const reviews: PlaceDetailsResponse["reviews"] = [];
+    if (Array.isArray(place.reviews)) {
+      for (const r of place.reviews.slice(0, 2)) {
+        reviews.push({
+          author: r?.authorAttribution?.displayName ?? "",
+          rating: typeof r?.rating === "number" ? r.rating : 0,
+          text: r?.text?.text ?? r?.originalText?.text ?? "",
+          time: r?.relativePublishTimeDescription ?? "",
+        });
+      }
+    }
 
     const response: PlaceDetailsResponse = {
       photos,
