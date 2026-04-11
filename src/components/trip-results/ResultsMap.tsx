@@ -10,6 +10,7 @@ interface Props {
   activeDayIndex: number;
   allDays: AIDay[];
   mode: "overview" | "day";
+  refinedCoords?: Map<string, { lat: number; lng: number }>;
   onPinClick?: (dayDate: string, activityIndex: number) => void;
 }
 
