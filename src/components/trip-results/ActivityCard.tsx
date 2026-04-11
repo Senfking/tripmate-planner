@@ -40,6 +40,7 @@ export function ActivityCard({
   onToggleAdd,
   onRequestChange,
   onRemove,
+  onCoordsRefined,
   animDelay = 0,
 }: Props) {
   const [descExpanded, setDescExpanded] = useState(false);
