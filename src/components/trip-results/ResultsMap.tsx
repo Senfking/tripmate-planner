@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,6 +10,7 @@ interface Props {
   activeDayIndex: number;
   allDays: AIDay[];
   mode: "overview" | "day";
+  refinedCoords?: Map<string, { lat: number; lng: number }>;
   onPinClick?: (dayDate: string, activityIndex: number) => void;
 }
 
@@ -84,23 +85,37 @@ function MapController({
   return null;
 }
 
-export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }: Props) {
+export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick }: Props) {
   const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
+
+  // Helper to get best coordinates for an activity (refined > AI-generated)
+  const getCoords = useCallback((dayDate: string, idx: number, a: AIActivity) => {
+    const key = `${dayDate}-${idx}`;
+    const refined = refinedCoords?.get(key);
+    if (refined) return { lat: refined.lat, lng: refined.lng };
+    if (a.latitude != null && a.longitude != null) return { lat: a.latitude, lng: a.longitude };
+    return null;
+  }, [refinedCoords]);
 
   const activitiesForMap = useMemo(() => {
     if (!hasValidCenter) return [];
     try {
       if (mode === "day" && activeDayIndex >= 0 && allDays[activeDayIndex]) {
         return allDays[activeDayIndex].activities
-          .map((a, i) => ({ ...a, _dayDate: allDays[activeDayIndex].date, _idx: i }))
-          .filter((a) => a.latitude != null && a.longitude != null);
+          .map((a, i) => {
+            const coords = getCoords(allDays[activeDayIndex].date, i, a);
+            if (!coords) return null;
+            return { ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: allDays[activeDayIndex].date, _idx: i };
+          })
+          .filter(Boolean) as (AIActivity & { _dayDate: string; _idx: number })[];
       }
 
       const all: (AIActivity & { _dayDate: string; _idx: number })[] = [];
       for (const day of allDays) {
         day.activities.forEach((a, i) => {
-          if (a.latitude != null && a.longitude != null) {
-            all.push({ ...a, _dayDate: day.date, _idx: i });
+          const coords = getCoords(day.date, i, a);
+          if (coords) {
+            all.push({ ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: day.date, _idx: i });
           }
         });
       }
@@ -108,7 +123,7 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, onPinClick }
     } catch {
       return [];
     }
-  }, [mode, activeDayIndex, allDays, hasValidCenter]);
+  }, [mode, activeDayIndex, allDays, hasValidCenter, getCoords]);
 
   const polylinePositions = useMemo(
     () =>

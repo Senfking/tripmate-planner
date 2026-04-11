@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Star, ExternalLink, Trash2, X, Check, MapPin } from "lucide-react";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
@@ -13,6 +13,7 @@ interface Props {
   onToggleAdd: () => void;
   onRequestChange: () => void;
   onRemove: () => void;
+  onCoordsRefined?: (lat: number, lng: number) => void;
   animDelay?: number;
 }
 
@@ -39,6 +40,7 @@ export function ActivityCard({
   onToggleAdd,
   onRequestChange,
   onRemove,
+  onCoordsRefined,
   animDelay = 0,
 }: Props) {
   const [descExpanded, setDescExpanded] = useState(false);
@@ -46,8 +48,15 @@ export function ActivityCard({
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
 
-  const { photos, reviews, rating, totalRatings, googleMapsUrl, isLoading } =
+  const { photos, reviews, rating, totalRatings, googleMapsUrl, latitude: refinedLat, longitude: refinedLng, isLoading } =
     useGooglePlaceDetails(activity.title || "", activity.location_name || "");
+
+  // Report refined coordinates from Google Places back to parent for map accuracy
+  useEffect(() => {
+    if (refinedLat != null && refinedLng != null && onCoordsRefined) {
+      onCoordsRefined(refinedLat, refinedLng);
+    }
+  }, [refinedLat, refinedLng, onCoordsRefined]);
 
   const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
   const descIsLong = (activity.description?.length || 0) > 120;
@@ -57,6 +66,7 @@ export function ActivityCard({
 
   return (
     <div
+      data-activity-id={`${day.date}-${index}`}
       className="mx-4 mb-3 rounded-2xl border border-border bg-card overflow-hidden transition-all duration-200 animate-fade-in shadow-sm"
       style={{
         animationDelay: `${animDelay}ms`,
