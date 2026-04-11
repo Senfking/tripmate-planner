@@ -292,7 +292,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
 
   if (generating || genError) {
     return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
         <GeneratingScreen
           destination={answers.surpriseMe ? "" : answers.destination}
           error={genError}
@@ -303,7 +303,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-6 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-2 max-w-2xl mx-auto w-full">
         {step > 0 ? (
