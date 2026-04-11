@@ -43,6 +43,7 @@ export function ActivityCard({
   onCoordsRefined,
   animDelay = 0,
 }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const color = getCategoryColor(activity.category);
