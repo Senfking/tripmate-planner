@@ -12,7 +12,7 @@ interface Props {
 
 export function AlternativesSheet({ activity, alternatives, loading, onSelect, onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center">
+    <div className="fixed inset-0 z-[10000] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-4 pb-8 max-h-[70vh] overflow-y-auto animate-slide-up">
         <div className="flex items-center justify-between mb-4">
