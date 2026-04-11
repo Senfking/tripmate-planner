@@ -8,6 +8,8 @@ interface PlaceDetails {
   totalRatings: number | null;
   googleMapsUrl: string | null;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export function useGooglePlaceDetails(activityName: string, location: string) {
@@ -37,6 +39,8 @@ export function useGooglePlaceDetails(activityName: string, location: string) {
     rating: data?.rating ?? null,
     totalRatings: data?.totalRatings ?? null,
     googleMapsUrl: data?.googleMapsUrl ?? null,
+    latitude: data?.latitude ?? null,
+    longitude: data?.longitude ?? null,
     isLoading: enabled && isLoading,
   };
 }

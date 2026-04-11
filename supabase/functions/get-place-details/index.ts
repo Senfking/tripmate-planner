@@ -23,13 +23,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 1: Text Search
+    // Step 1: Text Search — include location for accurate coordinates
     const searchRes = await fetch("https://places.googleapis.com/v1/places:searchText", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.userRatingCount,places.reviews,places.photos,places.googleMapsUri,places.formattedAddress",
+        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.userRatingCount,places.reviews,places.photos,places.googleMapsUri,places.formattedAddress,places.location",
       },
       body: JSON.stringify({ textQuery: query }),
     });
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const place = searchData.places?.[0];
 
     if (!place) {
-      return new Response(JSON.stringify({ photos: [], reviews: [], rating: null, totalRatings: null, googleMapsUrl: null, address: null }), {
+      return new Response(JSON.stringify({ photos: [], reviews: [], rating: null, totalRatings: null, googleMapsUrl: null, address: null, latitude: null, longitude: null }), {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       });
     }
@@ -81,6 +81,8 @@ Deno.serve(async (req) => {
       totalRatings: place.userRatingCount ?? null,
       googleMapsUrl: place.googleMapsUri ?? null,
       address: place.formattedAddress ?? null,
+      latitude: place.location?.latitude ?? null,
+      longitude: place.location?.longitude ?? null,
     };
 
     return new Response(JSON.stringify(result), {
