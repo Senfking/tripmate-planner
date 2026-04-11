@@ -48,8 +48,15 @@ export function ActivityCard({
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
 
-  const { photos, reviews, rating, totalRatings, googleMapsUrl, isLoading } =
+  const { photos, reviews, rating, totalRatings, googleMapsUrl, latitude: refinedLat, longitude: refinedLng, isLoading } =
     useGooglePlaceDetails(activity.title || "", activity.location_name || "");
+
+  // Report refined coordinates from Google Places back to parent for map accuracy
+  useEffect(() => {
+    if (refinedLat != null && refinedLng != null && onCoordsRefined) {
+      onCoordsRefined(refinedLat, refinedLng);
+    }
+  }, [refinedLat, refinedLng, onCoordsRefined]);
 
   const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
   const descIsLong = (activity.description?.length || 0) > 120;
