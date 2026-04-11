@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -25,6 +25,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
   const contentRef = useRef<HTMLDivElement>(null);
   const dayRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [packingOpen, setPackingOpen] = useState(false);
+  const [costOpen, setCostOpen] = useState(false);
 
   const allDays = useMemo(() => {
     const days: AIDay[] = [];
@@ -43,6 +44,32 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
   );
 
   const remainingCount = totalActivities - state.addedCount;
+
+  const costBreakdown = useMemo(() => {
+    const categories: Record<string, number> = {};
+    let total = 0;
+    for (const day of allDays) {
+      for (const act of day.activities) {
+        const cost = act.estimated_cost_per_person || 0;
+        total += cost;
+        const cat = act.category || "Other";
+        categories[cat] = (categories[cat] || 0) + cost;
+      }
+    }
+    // Add accommodation
+    for (const dest of result.destinations) {
+      if (dest.accommodation?.price_per_night) {
+        const nights = dest.days.length;
+        const accomTotal = dest.accommodation.price_per_night * nights;
+        total += accomTotal;
+        categories["Accommodation"] = (categories["Accommodation"] || 0) + accomTotal;
+      }
+    }
+    const numDays = allDays.length || 1;
+    const dailyAvg = Math.round(total / numDays);
+    const sorted = Object.entries(categories).sort((a, b) => b[1] - a[1]);
+    return { total: Math.round(total), dailyAvg, categories: sorted };
+  }, [allDays, result]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -145,6 +172,41 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
             <p className="text-sm text-muted-foreground leading-relaxed">
               {result.trip_summary}
             </p>
+          </div>
+
+          {/* Cost breakdown */}
+          <div className="mx-4 mb-3">
+            <button
+              onClick={() => setCostOpen(!costOpen)}
+              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-primary/20 text-left transition-colors hover:bg-accent/50"
+            >
+              <CreditCard className="h-4 w-4 text-primary" />
+              <span className="text-sm text-foreground font-medium flex-1">
+                ~{result.currency || "USD"}{costBreakdown.total}/person total
+              </span>
+              <span className="text-[11px] text-muted-foreground font-mono mr-1">
+                ~{result.currency || "USD"}{costBreakdown.dailyAvg}/day
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${costOpen ? "rotate-180" : ""}`} />
+            </button>
+            {costOpen && (
+              <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in space-y-2">
+                {costBreakdown.categories.map(([cat, amount]) => (
+                  <div key={cat} className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground capitalize">{cat}</span>
+                    <span className="text-xs font-mono text-foreground">
+                      ~{result.currency || "USD"}{Math.round(amount)}
+                    </span>
+                  </div>
+                ))}
+                <div className="border-t border-border pt-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">Total per person</span>
+                  <span className="text-xs font-mono font-semibold text-primary">
+                    ~{result.currency || "USD"}{costBreakdown.total}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {result.destinations.map((dest, destIdx) => {

@@ -254,11 +254,11 @@ export function ActivityCard({
           </button>
         </div>
         <div className="flex items-center gap-3">
-          {activity.estimated_cost_per_person != null && (
-            <span className="text-[11px] font-mono text-muted-foreground">
-              ~{activity.currency || "€"}{activity.estimated_cost_per_person}/person
-            </span>
-          )}
+          <span className="text-[11px] font-mono text-muted-foreground">
+            {activity.estimated_cost_per_person
+              ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}/person`
+              : "Free"}
+          </span>
           <button
             onClick={(e) => { e.stopPropagation(); onToggleAdd(); }}
             className={`text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all ${
