@@ -54,14 +54,20 @@ interface TripDashboardProps {
   myRole: string | undefined;
   startDate: string | null;
   endDate: string | null;
+  onBuilderToggle?: (open: boolean) => void;
 }
 
-export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate }: TripDashboardProps) {
+export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate, onBuilderToggle }: TripDashboardProps) {
   const { user } = useAuth();
   const userId = user?.id;
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
   const [builderOpen, setBuilderOpen] = useState(false);
+
+  const toggleBuilder = (open: boolean) => {
+    setBuilderOpen(open);
+    onBuilderToggle?.(open);
+  };
 
   const tripEnded = endDate ? new Date(endDate) < new Date(todayStr) : false;
   const endedBadge: BadgeState = { label: "Trip ended", color: "grey" };
@@ -443,7 +449,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       {/* Plan with AI banner */}
       <div className="px-4 md:max-w-[900px] md:mx-auto md:px-8 mb-3">
         <button
-          onClick={() => setBuilderOpen(true)}
+          onClick={() => toggleBuilder(true)}
           className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all active:scale-[0.98] text-left"
         >
           <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
@@ -457,7 +463,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       </div>
 
       {builderOpen && (
-        <BuilderWrapper tripId={tripId} onClose={() => setBuilderOpen(false)} />
+        <BuilderWrapper tripId={tripId} onClose={() => toggleBuilder(false)} />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 px-4 md:max-w-[900px] md:mx-auto md:px-8">

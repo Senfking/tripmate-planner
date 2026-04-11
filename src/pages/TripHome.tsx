@@ -220,6 +220,7 @@ export default function TripHome() {
   const [dateEditorOpen, setDateEditorOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [builderOpen, setBuilderOpen] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const updateTripDates = useMutation({
@@ -461,34 +462,36 @@ export default function TripHome() {
           My Trips
         </button>
 
-        <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
-          <LiveIndicator status={connectionStatus} />
-          <button
-            onClick={() => setCoverMenuOpen(true)}
-            className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full"
-            style={{
-              background: "rgba(0,0,0,0.3)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.2)",
-            }}
-          >
-            {uploadingCover ? (
-              <Loader2 className="h-4 w-4 text-white animate-spin" />
-            ) : (
-              <Camera className="h-4 w-4 text-white" />
-            )}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleCoverUpload}
-            disabled={uploadingCover}
-          />
-          <HeroAvatar />
-        </div>
+        {!builderOpen && (
+          <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
+            <LiveIndicator status={connectionStatus} />
+            <button
+              onClick={() => setCoverMenuOpen(true)}
+              className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full"
+              style={{
+                background: "rgba(0,0,0,0.3)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+              }}
+            >
+              {uploadingCover ? (
+                <Loader2 className="h-4 w-4 text-white animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4 text-white" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverUpload}
+              disabled={uploadingCover}
+            />
+            <HeroAvatar />
+          </div>
+        )}
 
 
         <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
@@ -580,6 +583,7 @@ export default function TripHome() {
           myRole={myRole}
           startDate={trip.tentative_start_date}
           endDate={trip.tentative_end_date}
+          onBuilderToggle={setBuilderOpen}
         />
       </div>
 
