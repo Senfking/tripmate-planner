@@ -232,7 +232,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
                     onClick={() => setMapOpen(!mapOpen)}
                     className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
                   >
-                    <Map className="h-4 w-4 text-primary" />
+                    <MapIcon className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium flex-1 text-foreground">
                       {mapOpen ? "Hide map" : "Show map"}
                     </span>
