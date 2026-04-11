@@ -153,7 +153,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
       {/* Main Content */}
       <div className={`flex-1 overflow-hidden ${isMobile ? "flex flex-col" : "relative"}`}>
         {/* Map — full width on desktop, partial on mobile */}
-        <div className={isMobile ? "h-[35vh] flex-shrink-0" : "absolute inset-0"}>
+        <div className={isMobile ? "h-[35vh] flex-shrink-0" : "absolute inset-0 z-0"}>
           <ResultsMap
             result={result}
             activeDayIndex={state.activeDayIndex}
@@ -169,12 +169,12 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
           className={
             isMobile
               ? "flex-1 overflow-y-auto bg-background"
-              : "absolute top-4 right-4 bottom-4 w-[450px] z-10 overflow-y-auto rounded-2xl shadow-2xl flex flex-col"
+              : "absolute top-4 right-4 bottom-4 w-[450px] z-[1000] rounded-2xl shadow-2xl flex flex-col border border-white/10 backdrop-blur-xl"
           }
           style={
             isMobile
               ? { paddingBottom: 100 }
-              : { backgroundColor: "rgba(11, 14, 14, 0.95)" }
+              : { backgroundColor: "rgba(11, 14, 14, 0.75)" }
           }
         >
           {/* Scrollable content area */}
@@ -315,7 +315,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
             className={
               isMobile
                 ? "sticky bottom-0 z-20 px-4 py-3 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+12px)]"
-                : "sticky bottom-0 z-20 px-4 py-3 bg-[rgba(11,14,14,0.98)] backdrop-blur-xl border-t border-border rounded-b-2xl"
+                : "sticky bottom-0 z-20 px-4 py-3 bg-[rgba(11,14,14,0.6)] backdrop-blur-xl border-t border-white/10 rounded-b-2xl"
             }
           >
             <div className="flex items-center justify-between gap-3">
