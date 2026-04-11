@@ -22,15 +22,15 @@ export function TransportCard({ from, to, mode, duration }: Props) {
 
   return (
     <div className="mx-4 my-4">
-      <div className="flex items-center gap-3 rounded-xl border border-dashed border-border/50 px-4 py-3 bg-[#161920]/60">
+      <div className="flex items-center gap-3 rounded-xl border border-dashed border-border px-4 py-3 bg-accent/50">
         <span className="text-xs text-muted-foreground font-medium truncate">{from}</span>
         <div className="flex-1 flex items-center gap-2">
-          <div className="flex-1 border-t border-dashed border-border/60" />
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1e2130] text-xs text-muted-foreground">
+          <div className="flex-1 border-t border-dashed border-border" />
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-card border border-border text-xs text-muted-foreground">
             <Icon className="h-3 w-3" />
             <span className="font-mono">{duration}</span>
           </div>
-          <div className="flex-1 border-t border-dashed border-border/60" />
+          <div className="flex-1 border-t border-dashed border-border" />
         </div>
         <span className="text-xs text-muted-foreground font-medium truncate">{to}</span>
       </div>
