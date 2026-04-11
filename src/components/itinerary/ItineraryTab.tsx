@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Component, type ReactNode } from "react";
 import { useItinerary } from "@/hooks/useItinerary";
 import { useRouteStops } from "@/hooks/useRouteStops";
 import { useItineraryAttendance } from "@/hooks/useItineraryAttendance";
@@ -8,13 +8,39 @@ import { DaySection } from "./DaySection";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarPlus, Download, Loader2, Sparkles } from "lucide-react";
+import { CalendarPlus, Download, Loader2, Sparkles, AlertTriangle, SlidersHorizontal } from "lucide-react";
 import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { ItemFormModal } from "./ItemFormModal";
 import { ImportItineraryModal } from "./ImportItineraryModal";
+import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { useNavigate } from "react-router-dom";
+
+// Error boundary so the builder never crashes the itinerary page
+class BuilderBoundary extends Component<{ children: ReactNode; onClose: () => void }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; onClose: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err: Error) { console.error("TripBuilder crashed:", err); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-6">
+          <div className="text-center max-w-sm space-y-4">
+            <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
+            <h2 className="text-lg font-semibold">Something went wrong</h2>
+            <p className="text-sm text-muted-foreground">The trip builder encountered an error.</p>
+            <Button onClick={this.props.onClose} className="rounded-xl">Close</Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /** Convert "HH:MM" or "HH:MM:SS" to minutes since midnight */
 function timeToMinutes(t: string): number {
