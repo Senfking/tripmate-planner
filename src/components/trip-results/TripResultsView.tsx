@@ -28,6 +28,13 @@ function titleCase(s: string) {
 }
 
 export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjust }: Props) {
+  const handleShare = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).then(
+      () => toast.success("Plan link copied!"),
+      () => toast.error("Failed to copy link")
+    );
+  }, []);
+
   const isMobile = useIsMobile();
   const state = useResultsState(tripId);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -222,6 +229,24 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
               className="text-[11px] text-white/70 hover:text-white hover:bg-white/10 gap-1 h-8 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg"
             >
               <RefreshCw className="h-3 w-3" /> Regenerate
+            </Button>
+            {onAdjust && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onAdjust}
+                className="text-[11px] text-white/70 hover:text-white hover:bg-white/10 gap-1 h-8 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg"
+              >
+                <SlidersHorizontal className="h-3 w-3" /> Adjust
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleShare}
+              className="text-[11px] text-white/70 hover:text-white hover:bg-white/10 gap-1 h-8 rounded-xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg"
+            >
+              <Share2 className="h-3 w-3" /> Share
             </Button>
           </div>
           {/* Fix #4: Condensed stats row */}
