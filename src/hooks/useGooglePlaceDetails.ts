@@ -8,18 +8,20 @@ interface PlaceDetails {
   totalRatings: number | null;
   googleMapsUrl: string | null;
   address: string | null;
-  cached?: boolean;
 }
 
 export function useGooglePlaceDetails(activityName: string, location: string) {
   const query = `${activityName} ${location}`.trim();
   const enabled = !!activityName && activityName.length > 2;
-  console.log("useGooglePlaceDetails", { activityName, location, enabled });
 
   const { data, isLoading } = useQuery<PlaceDetails>({
     queryKey: ["place-details", activityName, location],
     enabled,
-    staleTime: 24 * 60 * 60 * 1000, // 24h
+    staleTime: 24 * 60 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-place-details", {
         body: { query },
