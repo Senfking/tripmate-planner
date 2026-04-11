@@ -160,6 +160,75 @@ async function callLovableAI(
 }
 
 // ---------------------------------------------------------------------------
+// Post-processing / normalization
+// ---------------------------------------------------------------------------
+
+const MAX_ACTIVITY_DURATION = 480;
+
+const DURATION_DEFAULTS_BY_CATEGORY: Record<string, number> = {
+  accommodation: 60,
+  food: 90,
+  culture: 120,
+  nightlife: 180,
+  relaxation: 180,
+  transport: 30,
+};
+
+function defaultDurationForCategory(category: unknown): number {
+  if (typeof category === "string" && category in DURATION_DEFAULTS_BY_CATEGORY) {
+    return DURATION_DEFAULTS_BY_CATEGORY[category];
+  }
+  return 120;
+}
+
+function normalizeActivity(activity: Record<string, unknown>): Record<string, unknown> {
+  const rawDuration = activity.duration_minutes;
+  const duration = typeof rawDuration === "number" && Number.isFinite(rawDuration) ? rawDuration : NaN;
+  if (!Number.isFinite(duration) || duration <= 0 || duration > MAX_ACTIVITY_DURATION) {
+    activity.duration_minutes = defaultDurationForCategory(activity.category);
+  }
+
+  const rawCost = activity.estimated_cost_per_person;
+  if (typeof rawCost !== "number" || !Number.isFinite(rawCost)) {
+    activity.estimated_cost_per_person = 0;
+  }
+
+  return activity;
+}
+
+function normalizeAIResponse(itinerary: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!itinerary) return itinerary;
+
+  const destinations = (itinerary as any).destinations;
+  if (Array.isArray(destinations)) {
+    for (const dest of destinations) {
+      const days = dest?.days;
+      if (!Array.isArray(days)) continue;
+      for (const day of days) {
+        const activities = day?.activities;
+        if (!Array.isArray(activities)) continue;
+        for (const activity of activities) {
+          if (activity && typeof activity === "object") {
+            normalizeActivity(activity as Record<string, unknown>);
+          }
+        }
+      }
+    }
+  }
+
+  const alternatives = (itinerary as any).alternatives;
+  if (Array.isArray(alternatives)) {
+    for (const activity of alternatives) {
+      if (activity && typeof activity === "object") {
+        normalizeActivity(activity as Record<string, unknown>);
+      }
+    }
+  }
+
+  return itinerary;
+}
+
+// ---------------------------------------------------------------------------
 // Tool schema for structured output
 // ---------------------------------------------------------------------------
 
@@ -345,7 +414,8 @@ Deno.serve(async (req) => {
           altNotes,
           altToolSchema,
         );
-        const alts = (altResult.itinerary as any)?.alternatives || [];
+        const normalizedAlt = normalizeAIResponse(altResult.itinerary);
+        const alts = (normalizedAlt as any)?.alternatives || [];
         return jsonResponse({ success: true, alternatives: alts });
       } catch (e) {
         console.error("Alternatives generation failed:", e);
@@ -503,6 +573,8 @@ CRITICAL RULES:
 6. The google_maps_url must be a valid Google Maps search URL.
 7. Keep descriptions to 1-2 sentences max. Keep tips to one short sentence. Be concise.
 
+DURATION GUIDANCE: duration_minutes should be the time spent AT the activity, not the total stay. Hotel check-in: 30-60 min. Restaurant meal: 60-120 min. Museum visit: 90-180 min. Bar/club: 120-180 min. Walking tour: 120-240 min. Beach/pool: 120-240 min. Never exceed 480 minutes for a single activity.
+
 PACE: ${paceGuide[safePace]}
 
 BUDGET LEVEL (${safeBudget}): ${budgetGuide[safeBudget]}
@@ -538,7 +610,7 @@ Generate the complete itinerary.`;
       return jsonResponse({ success: false, error: "Failed to parse AI-generated itinerary" }, 500);
     }
 
-    const itinerary = aiResult.itinerary;
+    const itinerary = normalizeAIResponse(aiResult.itinerary)!;
     const inputTokens = aiResult.inputTokens;
     const outputTokens = aiResult.outputTokens;
 
