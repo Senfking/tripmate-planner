@@ -40,11 +40,26 @@ function MapController({
 
   useEffect(() => {
     if (mode === "overview" || activeDayIndex < 0) {
-      map.setView(
-        [result.map_center.lat, result.map_center.lng],
-        result.map_zoom || 6,
-        { animate: true }
-      );
+      // Show all markers across all days
+      const points = allDays
+        .flatMap((d) => d.activities)
+        .filter((a) => a.latitude != null && a.longitude != null)
+        .map((a) => [a.latitude!, a.longitude!] as [number, number]);
+
+      if (points.length > 1) {
+        map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
+          padding: [50, 50],
+          animate: true,
+        });
+      } else if (points.length === 1) {
+        map.setView(points[0], 12, { animate: true });
+      } else {
+        map.setView(
+          [result.map_center.lat, result.map_center.lng],
+          result.map_zoom || 6,
+          { animate: true }
+        );
+      }
       return;
     }
 
