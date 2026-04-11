@@ -116,6 +116,44 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_trip_plans: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_public: boolean
+          prompt: Json
+          result: Json
+          trip_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_public?: boolean
+          prompt: Json
+          result: Json
+          trip_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_public?: boolean
+          prompt?: Json
+          result?: Json
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_trip_plans_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           created_at: string | null
