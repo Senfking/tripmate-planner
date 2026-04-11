@@ -115,7 +115,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
   const destinationNames = result.destinations.map((d) => d.name).join(" · ");
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div className="fixed inset-0 z-[60] bg-background">
       {/* Map — true full screen on desktop */}
       {!isMobile && (
         <div className="absolute inset-0 z-0">
@@ -395,7 +395,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
           ref={contentRef}
           className="absolute top-4 right-4 bottom-4 w-[450px] z-[1001] rounded-2xl shadow-2xl flex flex-col border border-white/[0.12] overflow-hidden"
           style={{
-            backgroundColor: "rgba(11, 14, 14, 0.65)",
+            backgroundColor: "rgba(11, 14, 14, 0.88)",
             backdropFilter: "blur(24px) saturate(1.4)",
             WebkitBackdropFilter: "blur(24px) saturate(1.4)",
           }}
