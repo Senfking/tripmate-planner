@@ -188,6 +188,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
             activeDayIndex={state.activeDayIndex}
             allDays={allDays}
             mode={state.mapMode}
+            refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
             onPinClick={scrollToActivity}
           />
         </div>
