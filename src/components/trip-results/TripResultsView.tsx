@@ -149,7 +149,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate }: Props
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className={`flex-1 overflow-hidden ${isMobile ? "flex flex-col" : "relative"}`}>
         {/* Map — full width on desktop, partial on mobile */}
         <div className={isMobile ? "h-[35vh] flex-shrink-0" : "absolute inset-0"}>
           <ResultsMap
