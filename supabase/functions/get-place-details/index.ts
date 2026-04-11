@@ -138,8 +138,9 @@ Deno.serve(async (req) => {
     );
 
     // 4. Extract up to 2 reviews
-    const reviewsRaw: unknown[] = Array.isArray(place.reviews) ? place.reviews.slice(0, 2) : [];
-    const reviews = reviewsRaw.map((r: {
+    const reviewsRaw = Array.isArray(place.reviews) ? place.reviews.slice(0, 2) : [];
+    // deno-lint-ignore no-explicit-any
+    const reviews = reviewsRaw.map((r: any) => r as {
       authorAttribution?: { displayName?: string };
       rating?: number;
       text?: { text?: string };
