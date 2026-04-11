@@ -66,6 +66,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
   const [newDayFormOpen, setNewDayFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [icsLoading, setIcsLoading] = useState(false);
+  const [builderOpen, setBuilderOpen] = useState(false);
   const [lastVisitItemIds, setLastVisitItemIds] = useState<Set<string>>(new Set());
   const [prevLastSeen, setPrevLastSeen] = useState<string | undefined>(undefined);
 
