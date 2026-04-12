@@ -131,27 +131,32 @@ export function ActivityCard({
         <div className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-primary-foreground shadow-md bg-primary">
           {index + 1}
         </div>
-        {/* Add button — solid teal, clearly visible */}
+        {/* Add button — solid teal, prominent */}
         <div className="absolute top-2 right-2">
           <button
             onClick={(e) => { e.stopPropagation(); onToggleAdd(); }}
-            className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all shadow-md ${
+            className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all shadow-lg ${
               isAdded
-                ? "bg-primary/20 text-primary border border-primary/40"
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                ? "bg-[#0D9488]/20 text-[#0D9488] border border-[#0D9488]/40"
+                : "bg-[#0D9488] text-white hover:bg-[#0D9488]/90"
             }`}
           >
-            {isAdded ? <Check className="h-3.5 w-3.5" /> : "Add"}
+            {isAdded ? <Check className="h-4 w-4" /> : "Add"}
           </button>
         </div>
       </div>
 
       {/* Summary row */}
-      <div className="flex items-center justify-between px-3 py-2 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+      <div className="flex items-start justify-between px-3 py-2 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
         <div className="flex-1 min-w-0">
           <h4 className="text-[13px] font-semibold text-foreground leading-snug truncate">
             {activity.title}
           </h4>
+          {activity.description && (
+            <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-1">
+              {activity.description}
+            </p>
+          )}
           <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground flex-wrap">
             {displayRating != null && (
               <span className="flex items-center gap-0.5">
@@ -163,7 +168,7 @@ export function ActivityCard({
             {activity.start_time && <span className="font-mono">{activity.start_time}</span>}
           </div>
         </div>
-        <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap ml-2">
+        <span className="text-[11px] font-mono font-medium text-foreground whitespace-nowrap ml-3 mt-0.5">
           {activity.estimated_cost_per_person
             ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}`
             : "Free"}
@@ -200,7 +205,7 @@ export function ActivityCard({
 
           {activity.dietary_notes && (
             <div className="px-3.5 pb-2">
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-green-500/10 text-green-700">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0D9488]/10 text-[#0D9488]">
                 🥗 {activity.dietary_notes}
               </span>
             </div>

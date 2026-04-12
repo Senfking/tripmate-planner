@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -37,7 +37,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const state = useResultsState(tripId);
   const [packingOpen, setPackingOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
+  const [mapVisible, setMapVisible] = useState(true);
   const [mapFullscreen, setMapFullscreen] = useState(false);
   type CoordsMap = Map<string, { lat: number; lng: number }>;
   const refinedCoords = useRef<CoordsMap>(new (Map as any)()).current as CoordsMap;
@@ -121,7 +121,6 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] bg-background overflow-y-auto">
-      {/* Centered single-column layout */}
       <div className="max-w-[700px] mx-auto min-h-full flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
@@ -141,17 +140,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* Stat pills */}
         <div className="px-4 pt-4 pb-2">
           <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary font-mono">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#0D9488]/15 border border-[#0D9488]/25 text-xs text-[#0D9488] font-mono">
               <CalendarDays className="h-3 w-3" /> {allDays.length} days
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary font-mono">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#0D9488]/15 border border-[#0D9488]/25 text-xs text-[#0D9488] font-mono">
               <MapPin className="h-3 w-3" /> {uniqueCities} {uniqueCities === 1 ? "city" : "cities"}
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary font-mono">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#0D9488]/15 border border-[#0D9488]/25 text-xs text-[#0D9488] font-mono">
               <Sparkles className="h-3 w-3" /> {totalActivities} experiences
             </span>
             {totalHotels > 0 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary font-mono">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#0D9488]/15 border border-[#0D9488]/25 text-xs text-[#0D9488] font-mono">
                 <Hotel className="h-3 w-3" /> {totalHotels} {totalHotels === 1 ? "hotel" : "hotels"}
               </span>
             )}
@@ -163,6 +162,47 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           <p className="text-sm leading-relaxed text-muted-foreground">
             {result.trip_summary}
           </p>
+        </div>
+
+        {/* Divider */}
+        <div className="mx-4 border-t border-border" />
+
+        {/* Overview map — default visible at 250px */}
+        <div className="mx-4 mt-4 mb-4">
+          {mapVisible ? (
+            <div className="rounded-xl overflow-hidden border border-[#0D9488]/20 relative animate-fade-in">
+              <div className="h-[250px]">
+                <ResultsMap
+                  result={result}
+                  activeDayIndex={-1}
+                  allDays={allDays}
+                  mode="overview"
+                  refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
+                />
+              </div>
+              <button
+                onClick={() => setMapFullscreen(true)}
+                className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
+              >
+                <Maximize2 className="h-4 w-4 text-foreground" />
+              </button>
+              <button
+                onClick={() => setMapVisible(false)}
+                className="absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm border border-border text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Hide map
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setMapVisible(true)}
+              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
+            >
+              <MapIcon className="h-4 w-4 text-[#0D9488]" />
+              <span className="text-sm font-medium flex-1 text-foreground">Show map</span>
+              <span className="text-xs text-muted-foreground">{totalActivities} pins</span>
+            </button>
+          )}
         </div>
 
         {/* Per-destination content */}
@@ -184,6 +224,33 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 dayRange={dayRange2}
               />
 
+              {/* ✈️ Flights placeholder — first destination only */}
+              {destIdx === 0 && (
+                <div className="px-4 mb-4">
+                  <h3 className="text-lg font-semibold text-foreground mb-3">✈️ Flights</h3>
+                  <div className="rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
+                    <Plane className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-foreground">Flight search coming soon</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      We're working on finding the best flights for your trip
+                    </p>
+                    <button
+                      onClick={() => toast.success("We'll let you know when flights are available!")}
+                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0D9488]/15 border border-[#0D9488]/25 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/25 transition-colors"
+                    >
+                      <Bell className="h-3 w-3" />
+                      Notify me
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 🏨 Accommodation */}
+              {dest.accommodation && (
+                <div className="px-4">
+                  <h3 className="text-lg font-semibold text-foreground mb-3">🏨 Where you'll stay</h3>
+                </div>
+              )}
               {dest.accommodation && (
                 <AccommodationCard
                   name={dest.accommodation.name}
@@ -195,14 +262,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 />
               )}
 
-              {/* Cost summary bar */}
+              {/* 💰 Cost summary */}
               {destIdx === 0 && (
                 <div className="mx-4 mb-4">
+                  <h3 className="text-lg font-semibold text-foreground mb-3">💰 Trip budget</h3>
                   <button
                     onClick={() => setCostOpen(!costOpen)}
                     className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
                   >
-                    <CreditCard className="h-4 w-4 text-primary" />
+                    <CreditCard className="h-4 w-4 text-[#0D9488]" />
                     <span className="flex-1 text-sm font-medium text-foreground">
                       ~{currency}{costBreakdown.total} total
                       <span className="text-muted-foreground font-normal"> · ~{currency}{costBreakdown.dailyAvg}/day</span>
@@ -219,47 +287,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                       ))}
                       <div className="border-t border-border pt-1.5 flex items-center justify-between">
                         <span className="text-xs font-semibold text-foreground">Total per person</span>
-                        <span className="text-xs font-mono font-semibold text-primary">~{currency}{costBreakdown.total}</span>
+                        <span className="text-xs font-mono font-semibold text-[#0D9488]">~{currency}{costBreakdown.total}</span>
                       </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Map overview — collapsible, after accommodation/cost, before day cards */}
-              {destIdx === 0 && (
-                <div className="mx-4 mb-4">
-                  <button
-                    onClick={() => setMapOpen(!mapOpen)}
-                    className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-                  >
-                    <MapIcon className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium flex-1 text-foreground">
-                      {mapOpen ? "Hide map" : "Show map"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{totalActivities} pins</span>
-                  </button>
-                  {mapOpen && (
-                    <div className="mt-2 rounded-xl overflow-hidden border border-border relative animate-fade-in">
-                      <div className="h-[300px]">
-                        <ResultsMap
-                          result={result}
-                          activeDayIndex={-1}
-                          allDays={allDays}
-                          mode="overview"
-                          refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
-                        />
-                      </div>
-                      <button
-                        onClick={() => setMapFullscreen(true)}
-                        className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
-                      >
-                        <Maximize2 className="h-4 w-4 text-foreground" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* 📅 Itinerary */}
+              <div className="px-4 mb-3">
+                <h3 className="text-lg font-semibold text-foreground">📅 Your itinerary</h3>
+              </div>
 
               {/* Day cards */}
               <div className="space-y-2 px-4 pb-4">
@@ -319,7 +357,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
-        {/* Bottom spacer for sticky bar */}
+        {/* Bottom spacer */}
         <div className="h-24" />
       </div>
 
@@ -357,7 +395,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           <Button
             onClick={() => state.addAllActivities(result)}
             disabled={state.isAddingAll || remainingCount === 0}
-            className="h-9 px-4 rounded-xl font-semibold text-[13px]"
+            className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
           >
             {state.isAddingAll
               ? "Adding..."
