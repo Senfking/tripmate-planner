@@ -74,7 +74,7 @@ const codeToCity: Record<string, string> = {
 function SortableSection({ id, children }: { id: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transform: transform ? `translate3d(0px, ${transform.y}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 10 : undefined,
