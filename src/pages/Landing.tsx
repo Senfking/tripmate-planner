@@ -77,7 +77,7 @@ export default function Landing() {
       <Header />
 
       {/* ─── HERO ─── */}
-      <section className="relative min-h-dvh flex flex-col justify-center overflow-hidden">
+      <section className="relative h-dvh flex flex-col justify-start overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80&auto=format&fit=crop"
           alt="Tropical beach destination"
@@ -86,7 +86,7 @@ export default function Landing() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 via-40% to-black/80" />
 
-        <div className="relative z-10 mx-auto max-w-3xl w-full px-5 -mt-[12vh] text-center">
+        <div className="relative z-10 mx-auto max-w-3xl w-full px-5 pt-[18vh] sm:pt-[20vh] text-center">
           <div className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium text-white/90 backdrop-blur-md mb-6"
             style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)" }}>
             <Sparkles className="h-3.5 w-3.5 text-[#2dd4bf]" />
@@ -121,14 +121,14 @@ export default function Landing() {
       </section>
 
       {/* ─── PLAN PREVIEW ─── */}
-      <section className="py-12 sm:py-20 px-5 bg-[#fafaf9]">
+      <section className="py-20 sm:py-28 px-5 bg-[#fafaf9]">
         <Reveal>
           <PlanPreviewMockup onCTA={openBuilder} />
         </Reveal>
       </section>
 
       {/* ─── TRIP CAROUSELS ─── */}
-      <section className="py-12 sm:py-20">
+      <section className="py-20 sm:py-28">
         <Reveal>
           <TripCarousels />
         </Reveal>
@@ -138,20 +138,20 @@ export default function Landing() {
       <FeatureCards />
 
       {/* ─── HOW IT WORKS ─── */}
-      <section className="py-12 sm:py-20 px-5 bg-[#fafaf9]">
+      <section className="py-20 sm:py-28 px-5 bg-[#fafaf9]">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mb-10">How it works</h2>
+            <h2 className="text-2xl sm:text-4xl font-bold text-[#1a1a1a] mb-12">How it works</h2>
           </Reveal>
           <div className="grid sm:grid-cols-3 gap-8 sm:gap-6">
             {HOW_STEPS.map((s, i) => (
               <Reveal key={s.num} delay={`${i * 0.1}s`}>
                 <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4"
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4"
                     style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)" }}>
                     {s.num}
                   </div>
-                  <h3 className="font-semibold text-[#1a1a1a] text-[15px] mb-1">{s.title}</h3>
+                  <h3 className="font-semibold text-[#1a1a1a] text-[16px] mb-1">{s.title}</h3>
                   <p className="text-sm text-[#9ca3af]">{s.desc}</p>
                 </div>
               </Reveal>
@@ -161,12 +161,12 @@ export default function Landing() {
       </section>
 
       {/* ─── BOTTOM CTA ─── */}
-      <section className="py-12 sm:py-20 px-5 bg-white">
+      <section className="py-20 sm:py-28 px-5 bg-white">
         <div className="mx-auto max-w-md text-center">
           <Reveal>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mb-2">Your next trip starts here</h2>
-            <p className="text-sm text-[#9ca3af] mb-8">Plan smarter. Travel better. No spreadsheets required.</p>
-            <ShimmerButton onClick={openBuilder} className="w-full sm:w-auto sm:px-12 mx-auto rounded-2xl py-4 text-[16px]">
+            <h2 className="text-2xl sm:text-4xl font-bold text-[#1a1a1a] mb-3">Your next trip starts here</h2>
+            <p className="text-[15px] text-[#9ca3af] mb-10">Plan smarter. Travel better. No spreadsheets required.</p>
+            <ShimmerButton onClick={openBuilder} className="w-full sm:w-auto sm:px-14 mx-auto rounded-2xl py-4 text-[16px]">
               Start planning
             </ShimmerButton>
           </Reveal>
