@@ -907,7 +907,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 z-40 animate-fade-in" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/40 z-[59] animate-fade-in" onClick={onClose} />
 
       {/* Full-screen overlay */}
       <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-slide-up overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
