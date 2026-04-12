@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   X, Utensils, Wine, Music, Compass, Waves, Dumbbell,
-  CalendarHeart, Sparkles, Star, MapPin, Clock, ThumbsUp,
+  CalendarHeart, Sparkles, Star, MapPin, Clock,
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
-  Dice5, Gem, Plus, Check,
+  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useConcierge, type ConciergeSuggestion, type StructuredFilters } from "@/hooks/useConcierge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AITripResult, AIActivity } from "@/components/trip-results/useResultsState";
@@ -112,6 +113,29 @@ interface RecentSearch {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Saved spots helpers (localStorage per trip)                        */
+/* ------------------------------------------------------------------ */
+
+function getSavedSpots(tripId: string): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(`concierge-saved-${tripId}`) || "[]");
+  } catch { return []; }
+}
+
+function toggleSavedSpot(tripId: string, name: string): boolean {
+  const saved = getSavedSpots(tripId);
+  const idx = saved.indexOf(name);
+  if (idx >= 0) {
+    saved.splice(idx, 1);
+    localStorage.setItem(`concierge-saved-${tripId}`, JSON.stringify(saved));
+    return false;
+  }
+  saved.push(name);
+  localStorage.setItem(`concierge-saved-${tripId}`, JSON.stringify(saved));
+  return true;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -128,10 +152,11 @@ function resolveDestination(
   return "";
 }
 
-function buildConciergeContext(destination: string, tripResult?: AITripResult | null, memberCount?: number) {
+function buildConciergeContext(destination: string, location: string, tripResult?: AITripResult | null, memberCount?: number) {
   const dest = tripResult?.destinations?.[0];
   return {
     destination: destination || "Unknown",
+    location: location || undefined,
     group_size: memberCount || 2,
     budget_level: dest?.cost_profile ? "mid-range" : undefined,
     hotel_location: dest?.accommodation
@@ -139,6 +164,7 @@ function buildConciergeContext(destination: string, tripResult?: AITripResult | 
       : undefined,
   } as {
     destination: string;
+    location?: string;
     date?: string;
     time_of_day?: string;
     group_size?: number;
@@ -203,14 +229,13 @@ function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (ke
 /* ------------------------------------------------------------------ */
 
 function SuggestionCard({
-  suggestion, messageId, index, getReactionInfo, onToggleReaction, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge,
+  suggestion, messageId, index, tripId, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge,
 }: {
   suggestion: ConciergeSuggestion;
   messageId: string;
   index: number;
-  getReactionInfo: (msgId: string, idx: number) => { count: number; hasReacted: boolean; isGroupPick: boolean };
-  onToggleReaction: (msgId: string, idx: number) => void;
-  tripDays?: { date: string; dayNumber: number }[];
+  tripId: string;
+  tripDays?: { date: string; dayNumber: number; label: string }[];
   onAddToPlan?: (dayDate: string, activity: AIActivity) => void;
   animDelay?: number;
   isLucky?: boolean;
@@ -218,33 +243,87 @@ function SuggestionCard({
 }) {
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const { count, hasReacted, isGroupPick } = getReactionInfo(messageId, index);
+  const [added, setAdded] = useState(false);
+  const [addingDate, setAddingDate] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(() => getSavedSpots(tripId).includes(suggestion.name));
 
-  const handleAddToPlan = (dayDate: string) => {
-    if (!onAddToPlan) return;
-    const activity: AIActivity = {
-      title: suggestion.name,
-      description: suggestion.why || "",
-      category: suggestion.category || "experience",
-      start_time: suggestion.best_time?.split("-")[0] || "12:00",
-      duration_minutes: 60,
-      estimated_cost_per_person: suggestion.estimated_cost_per_person,
-      currency: suggestion.currency || "USD",
-      location_name: suggestion.address || "",
-      latitude: suggestion.lat,
-      longitude: suggestion.lng,
-      google_maps_url: suggestion.googleMapsUrl,
-      booking_url: null,
-      photo_query: null,
-      tips: null,
-      dietary_notes: null,
-    };
-    onAddToPlan(dayDate, activity);
-    setShowDayPicker(false);
-    toast.success(`Added "${suggestion.name}" to plan`);
+  const handleAddToPlan = async (dayDate: string) => {
+    setAddingDate(dayDate);
+    try {
+      if (onAddToPlan) {
+        // Use parent handler (TripResultsView with AI plan)
+        const activity: AIActivity = {
+          title: suggestion.name,
+          description: suggestion.why || "",
+          category: suggestion.category || "experience",
+          start_time: suggestion.best_time?.split("-")[0] || "12:00",
+          duration_minutes: 60,
+          estimated_cost_per_person: suggestion.estimated_cost_per_person,
+          currency: suggestion.currency || "USD",
+          location_name: suggestion.address || "",
+          latitude: suggestion.lat,
+          longitude: suggestion.lng,
+          google_maps_url: suggestion.googleMapsUrl,
+          booking_url: null,
+          photo_query: null,
+          tips: null,
+          dietary_notes: null,
+        };
+        onAddToPlan(dayDate, activity);
+      } else {
+        // Fallback: insert into itinerary_items directly
+        const notes = [
+          suggestion.why,
+          suggestion.address ? `📍 ${suggestion.address}` : null,
+          suggestion.estimated_cost_per_person != null
+            ? `💰 ~${suggestion.currency || "USD"} ${suggestion.estimated_cost_per_person}/pp`
+            : null,
+        ].filter(Boolean).join("\n");
+
+        const { error } = await supabase.from("itinerary_items").insert({
+          trip_id: tripId,
+          title: suggestion.name,
+          day_date: dayDate,
+          start_time: suggestion.best_time?.split("-")[0]?.trim() || null,
+          location_text: suggestion.address || null,
+          notes,
+          status: "idea",
+        });
+        if (error) throw error;
+      }
+
+      setAdded(true);
+      setShowDayPicker(false);
+      const dayLabel = tripDays?.find(d => d.date === dayDate)?.label || dayDate;
+      toast.success(`Added "${suggestion.name}" to ${dayLabel}`, {
+        action: {
+          label: "View in plan",
+          onClick: () => {
+            // Navigate to itinerary
+            window.location.hash = "";
+            window.location.pathname = `/trips/${tripId}/itinerary`;
+          },
+        },
+      });
+    } catch (err) {
+      console.error("Failed to add to plan:", err);
+      toast.error("Failed to add to plan");
+    } finally {
+      setAddingDate(null);
+    }
+  };
+
+  const handleSave = () => {
+    const nowSaved = toggleSavedSpot(tripId, suggestion.name);
+    setIsSaved(nowSaved);
+    toast.success(nowSaved ? "Saved for later" : "Removed from saved");
   };
 
   const s = suggestion as any;
+
+  // Build booking URL
+  const bookingUrl = s.booking_url || null;
+  const googleSearchBookUrl = `https://www.google.com/search?q=book+${encodeURIComponent(suggestion.name + " " + (suggestion.address || ""))}`;
 
   return (
     <div
@@ -259,11 +338,6 @@ function SuggestionCard({
           <div className="w-full h-full flex items-center justify-center bg-accent/30">
             <MapPin className="h-8 w-8 text-muted-foreground/30" />
           </div>
-        )}
-        {isGroupPick && (
-          <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#0D9488] px-2 py-0.5 rounded-full shadow-sm">
-            <Users className="h-3 w-3" /> Group pick
-          </span>
         )}
         {luckyBadge ? (
           <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 text-white backdrop-blur-sm shadow-sm">
@@ -354,7 +428,7 @@ function SuggestionCard({
             {s.full_description && (
               <p className="text-xs text-muted-foreground leading-relaxed">{s.full_description}</p>
             )}
-            <div className="flex gap-2 pt-1">
+            <div className="flex gap-2 pt-1 flex-wrap">
               {suggestion.googleMapsUrl && (
                 <a
                   href={suggestion.googleMapsUrl}
@@ -362,7 +436,26 @@ function SuggestionCard({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent text-foreground hover:bg-accent/80 transition-colors"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" /> View on Google Maps
+                  <ExternalLink className="h-3.5 w-3.5" /> Google Maps
+                </a>
+              )}
+              {bookingUrl ? (
+                <a
+                  href={bookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#0D9488]/10 text-[#0D9488] hover:bg-[#0D9488]/20 transition-colors"
+                >
+                  <Globe className="h-3.5 w-3.5" /> Visit website
+                </a>
+              ) : (
+                <a
+                  href={googleSearchBookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent text-foreground hover:bg-accent/80 transition-colors"
+                >
+                  <Search className="h-3.5 w-3.5" /> Book
                 </a>
               )}
             </div>
@@ -373,11 +466,11 @@ function SuggestionCard({
         <div className="flex items-center justify-between pt-2 border-t border-border/50">
           <div className="flex items-center gap-1">
             <button
-              onClick={() => onToggleReaction(messageId, index)}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${hasReacted ? "bg-[#0D9488]/10 text-[#0D9488]" : "text-muted-foreground hover:bg-accent"}`}
+              onClick={handleSave}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isSaved ? "bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" : "text-muted-foreground hover:bg-accent"}`}
             >
-              <ThumbsUp className={`h-3.5 w-3.5 ${hasReacted ? "fill-current" : ""}`} />
-              {count > 0 && count}
+              <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-current" : ""}`} />
+              {isSaved ? "Saved" : "Save"}
             </button>
             <button
               onClick={() => setExpanded(!expanded)}
@@ -399,17 +492,31 @@ function SuggestionCard({
               </a>
             )}
             <div className="relative">
-              <button
-                onClick={() => setShowDayPicker(!showDayPicker)}
-                className="text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 px-2.5 py-1.5 rounded-lg transition-colors"
-              >
-                + Add to plan
-              </button>
+              {added ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20">
+                  <Check className="h-3.5 w-3.5" /> Added
+                </span>
+              ) : (
+                <button
+                  onClick={() => setShowDayPicker(!showDayPicker)}
+                  disabled={!!addingDate}
+                  className="text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {addingDate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "+ Add to plan"}
+                </button>
+              )}
               {showDayPicker && tripDays && tripDays.length > 0 && (
-                <div className="absolute bottom-full right-0 mb-1 bg-card border border-border rounded-lg shadow-lg p-1 z-30 min-w-[140px] animate-fade-in">
+                <div className="absolute bottom-full right-0 mb-1 bg-card border border-border rounded-xl shadow-lg p-2 z-30 min-w-[180px] max-h-[200px] overflow-y-auto animate-fade-in">
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-2 pb-1.5">Add to which day?</p>
                   {tripDays.map((d) => (
-                    <button key={d.date} onClick={() => handleAddToPlan(d.date)} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors">
-                      Day {d.dayNumber} — {d.date}
+                    <button
+                      key={d.date}
+                      onClick={() => handleAddToPlan(d.date)}
+                      disabled={addingDate === d.date}
+                      className="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-accent transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {addingDate === d.date ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarHeart className="h-3 w-3 text-muted-foreground" />}
+                      {d.label}
                     </button>
                   ))}
                 </div>
@@ -484,6 +591,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [isLucky, setIsLucky] = useState(false);
   const [locationInput, setLocationInput] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [extraResults, setExtraResults] = useState<ConciergeSuggestion[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const placeholder = useRotatingPlaceholder();
 
@@ -491,7 +601,19 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [manualLocation, setManualLocation] = useState("");
   const destination = manualLocation || resolvedDest;
 
-  const conciergeContext = buildConciergeContext(destination, tripResult, memberCount);
+  // Trip destinations for quick-select
+  const tripDestinations = useMemo(() => {
+    const dests: string[] = [];
+    if (tripResult?.destinations) {
+      tripResult.destinations.forEach(d => { if (d.name) dests.push(d.name); });
+    }
+    if (destinationProp && destinationProp !== "Unknown" && !dests.includes(destinationProp)) {
+      dests.unshift(destinationProp);
+    }
+    return dests;
+  }, [tripResult, destinationProp]);
+
+  const conciergeContext = buildConciergeContext(destination, manualLocation || resolvedDest, tripResult, memberCount);
   const {
     messages,
     activeResult,
@@ -502,9 +624,34 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     getReactionInfo,
   } = useConcierge(tripId, conciergeContext);
 
-  const tripDays = tripResult?.destinations?.flatMap(d =>
-    d.days.map(day => ({ date: day.date, dayNumber: day.day_number }))
-  ) || [];
+  // Build trip days with nice labels
+  const tripDays = useMemo(() => {
+    const days: { date: string; dayNumber: number; label: string }[] = [];
+    // From AI plan
+    if (tripResult?.destinations) {
+      tripResult.destinations.forEach(d => {
+        d.days.forEach(day => {
+          const dateObj = new Date(day.date + "T12:00:00");
+          const label = `Day ${day.day_number} · ${dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+          days.push({ date: day.date, dayNumber: day.day_number, label });
+        });
+      });
+    }
+    // Always add Today as first option
+    const today = new Date().toISOString().split("T")[0];
+    if (!days.find(d => d.date === today)) {
+      days.unshift({ date: today, dayNumber: 0, label: "Today" });
+    } else {
+      // Move today to top
+      const todayIdx = days.findIndex(d => d.date === today);
+      if (todayIdx > 0) {
+        const [todayItem] = days.splice(todayIdx, 1);
+        todayItem.label = `Today · ${todayItem.label}`;
+        days.unshift(todayItem);
+      }
+    }
+    return days;
+  }, [tripResult]);
 
   const latestResults = useMemo(() =>
     [...messages].reverse().find(
@@ -544,6 +691,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         setFreeText("");
         setSearchStartedAt(null);
         setIsLucky(false);
+        setShowLocationPicker(false);
+        setExtraResults([]);
+        setLoadingMore(false);
       }, 300);
       return () => clearTimeout(t);
     }
@@ -573,6 +723,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     setSearchStartedAt(Date.now());
     setIsLucky(!!lucky);
     setStage("results");
+    setExtraResults([]);
     try {
       if (text) {
         await sendMessage(text);
@@ -589,6 +740,34 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       toast.error("Couldn't find suggestions. Try again.");
     }
   }, [sendMessage, sendStructuredRequest]);
+
+  const handleShowMore = useCallback(async () => {
+    if (loadingMore || !displayedResults?.suggestions) return;
+    setLoadingMore(true);
+    try {
+      const existingNames = [
+        ...(displayedResults.suggestions || []).map(s => s.name),
+        ...extraResults.map(s => s.name),
+      ];
+      // Send a new request with exclusion list
+      const excludeNote = `Do NOT suggest these (already shown): ${existingNames.join(", ")}. Suggest DIFFERENT spots.`;
+      
+      if (selectedCategory) {
+        // Use free-text with context for "show more"
+        const filterSummary = Object.entries(selectedFilters)
+          .flatMap(([, vals]) => vals)
+          .join(", ");
+        const query = `More ${selectedCategory.label.toLowerCase()} suggestions${filterSummary ? ` (${filterSummary})` : ""}. ${excludeNote}`;
+        await sendMessage(query);
+      } else {
+        await sendMessage(`More suggestions like these. ${excludeNote}`);
+      }
+    } catch {
+      toast.error("Couldn't load more suggestions");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, displayedResults, extraResults, selectedCategory, selectedFilters, sendMessage]);
 
   const handleCategorySelect = (cat: Category) => {
     setSelectedCategory(cat);
@@ -655,6 +834,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     setSelectedFilters({});
     setSearchStartedAt(null);
     setIsLucky(false);
+    setExtraResults([]);
   };
 
   const handleUseLocation = () => {
@@ -666,11 +846,14 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&zoom=10`);
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&zoom=14`);
           const data = await res.json();
-          const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "your area";
-          setManualLocation(city);
-          setLocationInput(city);
+          const locality = data.address?.village || data.address?.suburb || data.address?.town || data.address?.city || data.address?.county || "your area";
+          const country = data.address?.country || "";
+          const loc = country ? `${locality}, ${country}` : locality;
+          setManualLocation(loc);
+          setLocationInput(loc);
+          setShowLocationPicker(false);
         } catch {
           toast.error("Could not determine location");
         } finally {
@@ -683,6 +866,13 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       },
       { timeout: 10000 }
     );
+  };
+
+  const handleLocationSubmit = () => {
+    if (locationInput.trim()) {
+      setManualLocation(locationInput.trim());
+      setShowLocationPicker(false);
+    }
   };
 
   const currentFilters = selectedCategory ? (CATEGORY_FILTERS[selectedCategory.id] || []) : [];
@@ -722,38 +912,83 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           </div>
         </div>
 
+        {/* Location bar */}
+        <div className="shrink-0 px-4 py-2 border-b border-border/50 bg-background/80">
+          <button
+            onClick={() => setShowLocationPicker(!showLocationPicker)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              destination
+                ? "bg-[#0D9488]/10 text-[#0D9488] hover:bg-[#0D9488]/20"
+                : "bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/30"
+            }`}
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            {destination || "Set your location"}
+            <ChevronDown className="h-3 w-3" />
+          </button>
+
+          {showLocationPicker && (
+            <div className="mt-2 p-3 rounded-xl border border-border bg-card shadow-lg animate-fade-in space-y-3">
+              {/* GPS */}
+              <button
+                onClick={handleUseLocation}
+                disabled={geoLoading}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                {geoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4 text-[#0D9488]" />}
+                {geoLoading ? "Getting location..." : "Use GPS"}
+              </button>
+
+              {/* Trip destinations */}
+              {tripDestinations.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Trip destinations</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tripDestinations.map(d => (
+                      <button
+                        key={d}
+                        onClick={() => { setManualLocation(d); setLocationInput(d); setShowLocationPicker(false); }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          destination === d
+                            ? "bg-[#0D9488] text-white"
+                            : "bg-accent text-foreground hover:bg-accent/80"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Manual input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleLocationSubmit(); }}
+                  placeholder="Or type a location..."
+                  className="flex-1 text-xs bg-accent/30 rounded-lg px-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
+                />
+                <button
+                  onClick={handleLocationSubmit}
+                  disabled={!locationInput.trim()}
+                  className="px-3 py-2.5 rounded-lg bg-[#0D9488] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+                >
+                  Set
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Content area */}
         <div className="flex-1 overflow-y-auto" style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
             <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in">
-              {/* Location input when no destination */}
-              {!resolvedDest && (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-medium text-muted-foreground">Where are you?</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={locationInput}
-                      onChange={(e) => setLocationInput(e.target.value)}
-                      onBlur={() => { if (locationInput.trim()) setManualLocation(locationInput.trim()); }}
-                      onKeyDown={(e) => { if (e.key === "Enter" && locationInput.trim()) setManualLocation(locationInput.trim()); }}
-                      placeholder="e.g. Canggu, Bali"
-                      className="flex-1 text-sm bg-accent/30 rounded-xl px-3 py-2 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
-                    />
-                    <button
-                      onClick={handleUseLocation}
-                      disabled={geoLoading}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50"
-                    >
-                      {geoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
-                      {geoLoading ? "..." : "📍 Locate me"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Category grid — 7 regular + 1 full-width surprise */}
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => (
@@ -783,7 +1018,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   className="col-span-2 relative flex items-center justify-center gap-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02]"
                   style={{ minHeight: "72px" }}
                 >
-                  {/* Animated shimmer gradient */}
                   <div
                     className="absolute inset-0"
                     style={{
@@ -886,7 +1120,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         </button>
                       ))
                     }
-                    {/* + Custom pill */}
                     <CustomFilterInput filterKey={section.key} onAdd={addCustomFilter} />
                   </div>
                 </div>
@@ -963,7 +1196,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                 </div>
               )}
 
-              {sending ? (
+              {sending && !loadingMore ? (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-2 py-6">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isLucky ? "bg-amber-100 dark:bg-amber-900/20" : "bg-[#0D9488]/10"}`}>
@@ -1001,8 +1234,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         suggestion={s}
                         messageId={displayedResults.id}
                         index={i}
-                        getReactionInfo={getReactionInfo}
-                        onToggleReaction={toggleReaction}
+                        tripId={tripId}
                         tripDays={tripDays}
                         onAddToPlan={onAddToPlan}
                         animDelay={i * 50}
@@ -1014,6 +1246,19 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
                   {/* Bottom actions */}
                   <div className="px-4 pt-3 space-y-2 pb-6">
+                    {/* Show more */}
+                    <button
+                      onClick={handleShowMore}
+                      disabled={loadingMore || sending}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[#0D9488]/30 text-sm font-medium text-[#0D9488] hover:bg-[#0D9488]/5 transition-colors disabled:opacity-50"
+                    >
+                      {loadingMore ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Loading more...</>
+                      ) : (
+                        <><Plus className="h-4 w-4" /> Show more suggestions</>
+                      )}
+                    </button>
+
                     {!isLucky && (
                       <button
                         onClick={() => setStage("refine")}
