@@ -417,7 +417,7 @@ Deno.serve(async (req) => {
 
     // ---- Build system prompt ----
     const groupSize = context.group_size ?? 2;
-    const budgetLevel = structBudget || context.budget_level || "mid-range";
+    const budgetLevel = budgetArr.length ? budgetArr.join(" or ") : context.budget_level || "mid-range";
     const vibes =
       context.preferences && context.preferences.length > 0
         ? context.preferences.join(", ")
@@ -433,12 +433,13 @@ Deno.serve(async (req) => {
     let dayOfWeek: string;
     let whenLabel: string;
 
-    if (isStructured && structWhen) {
-      const resolved = resolveWhen(structWhen);
+    if (isStructured && whenArr.length > 0) {
+      // Use first "when" for date resolution, but pass all for labeling
+      const resolved = resolveWhen(whenArr[0]);
       dateStr = resolved.date;
       timeOfDay = resolved.timeOfDay;
       dayOfWeek = resolved.dayOfWeek;
-      whenLabel = structWhen.toLowerCase();
+      whenLabel = whenArr.join(" or ").toLowerCase();
     } else {
       dateStr = context.date ?? new Date().toISOString().split("T")[0];
       timeOfDay = context.time_of_day ?? "any time";
