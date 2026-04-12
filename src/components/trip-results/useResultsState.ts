@@ -82,6 +82,10 @@ export function useResultsState(tripId: string) {
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [alternatives, setAlternatives] = useState<AIActivity[]>([]);
 
+  // Local mutations for optimistic edits
+  const [removedActivities, setRemovedActivities] = useState<Set<string>>(new Set());
+  const [addedActivities, setAddedActivities] = useState<Map<string, AIActivity[]>>(new Map());
+
   const isAdded = useCallback(
     (dayDate: string, title: string) => addedIds.has(activityKey(dayDate, title)),
     [addedIds]
@@ -96,6 +100,52 @@ export function useResultsState(tripId: string) {
     const em = totalMin % 60;
     return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
   }
+
+  const removeActivity = useCallback(
+    (dayDate: string, index: number, activity: AIActivity) => {
+      const key = `${dayDate}::${index}::${activity.title}`;
+      setRemovedActivities((prev) => new Set(prev).add(key));
+
+      const toastId = toast("Activity removed", {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            setRemovedActivities((prev) => {
+              const next = new Set(prev);
+              next.delete(key);
+              return next;
+            });
+          },
+        },
+        duration: 5000,
+      });
+    },
+    []
+  );
+
+  const isActivityRemoved = useCallback(
+    (dayDate: string, index: number, title: string) =>
+      removedActivities.has(`${dayDate}::${index}::${title}`),
+    [removedActivities]
+  );
+
+  const addLocalActivity = useCallback(
+    (dayDate: string, activity: AIActivity) => {
+      setAddedActivities((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(dayDate) || [];
+        next.set(dayDate, [...existing, activity]);
+        return next;
+      });
+      toast.success(`Added "${activity.title}"`);
+    },
+    []
+  );
+
+  const getLocalAdditions = useCallback(
+    (dayDate: string): AIActivity[] => addedActivities.get(dayDate) || [],
+    [addedActivities]
+  );
 
   const toggleActivity = useCallback(
     async (day: AIDay, activity: AIActivity) => {
@@ -240,5 +290,10 @@ export function useResultsState(tripId: string) {
     alternatives,
     requestAlternatives,
     isAddingAll: batchAddItems.isPending,
+    // Local edits
+    removeActivity,
+    isActivityRemoved,
+    addLocalActivity,
+    getLocalAdditions,
   };
 }
