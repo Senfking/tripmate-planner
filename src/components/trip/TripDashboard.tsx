@@ -105,6 +105,42 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const [builderOpen, setBuilderOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
 
+  // ─── Sortable section ordering (hooks must be before early returns) ───
+  const STORAGE_KEY = `dashboard-order-${tripId}`;
+  const DEFAULT_ORDER = ["expenses", "flights", "decisions-bookings", "itinerary", "packing"];
+
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[];
+        const merged = parsed.filter((s) => DEFAULT_ORDER.includes(s));
+        for (const s of DEFAULT_ORDER) {
+          if (!merged.includes(s)) merged.push(s);
+        }
+        return merged;
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_ORDER;
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setSectionOrder((prev) => {
+      const oldIdx = prev.indexOf(active.id as string);
+      const newIdx = prev.indexOf(over.id as string);
+      const next = arrayMove(prev, oldIdx, newIdx);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [STORAGE_KEY]);
+
   const { data: hasPlan } = useQuery({
     queryKey: ["trip-has-plan", tripId],
     queryFn: async () => {
