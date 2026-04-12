@@ -346,17 +346,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     return <DashboardSkeleton />;
   }
 
-  const dest = stops?.[0]?.destination || "travel";
-  const thumbQuery = (q: string) =>
-    `https://source.unsplash.com/200x200/?${encodeURIComponent(q)}`;
-
-  const SECTION_THUMBS: Record<string, string> = {
-    decisions: thumbQuery(`${dest} compass signpost`),
-    itinerary: thumbQuery(`${dest} scenery landscape`),
-    bookings: thumbQuery(`${dest} airport airplane`),
-    expenses: thumbQuery(`${dest} market currency`),
-  };
-
   const sections: {
     key: string;
     icon: typeof Vote;
@@ -366,7 +355,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     to: string;
     iconBg: string;
     iconColor: string;
-    thumb: string;
   }[] = [
     {
       key: "decisions",
@@ -375,9 +363,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       summary: decisionsSummary,
       badge: decisionsBadge,
       to: `/app/trips/${tripId}/decisions`,
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-500",
-      thumb: SECTION_THUMBS.decisions,
+      iconBg: "bg-amber-100",
+      iconColor: "text-amber-600",
     },
     ...(!hasPlan ? [{
       key: "itinerary",
@@ -386,9 +373,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       summary: itinerarySummary,
       badge: itineraryBadge,
       to: `/app/trips/${tripId}/itinerary`,
-      iconBg: "bg-purple-50",
-      iconColor: "text-purple-500",
-      thumb: SECTION_THUMBS.itinerary,
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-600",
     }] : []),
     {
       key: "bookings",
@@ -397,9 +383,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       summary: bookingsSummary,
       badge: bookingsBadge,
       to: `/app/trips/${tripId}/bookings`,
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-500",
-      thumb: SECTION_THUMBS.bookings,
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
     },
     {
       key: "expenses",
@@ -408,9 +393,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       summary: expensesSummary,
       badge: expensesBadge,
       to: `/app/trips/${tripId}/expenses`,
-      iconBg: "bg-emerald-50",
+      iconBg: "bg-emerald-100",
       iconColor: "text-emerald-600",
-      thumb: SECTION_THUMBS.expenses,
     },
   ];
 
@@ -484,33 +468,26 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             onClick={() => navigate(s.to)}
             className="w-full bg-card rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
           >
-            <div className={`h-9 w-9 rounded-lg ${s.iconBg} flex items-center justify-center shrink-0`}>
-              <s.icon className={`h-[18px] w-[18px] ${s.iconColor}`} />
+            <div className={`h-11 w-11 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
+              <s.icon className={`h-5 w-5 ${s.iconColor}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[15px] text-card-foreground">{s.title}</p>
-              <p className="text-[13px] text-muted-foreground mt-0.5 truncate">{s.summary}</p>
-            </div>
-            {/* Badge */}
-            <div className="flex items-center gap-2 shrink-0">
-              <div
-                className="flex items-center gap-1.5 rounded-full px-2 py-0.5"
-                style={{ background: "hsl(var(--muted))", fontSize: 11, fontWeight: 500, color: "hsl(var(--muted-foreground))" }}
-              >
-                <span
-                  className={s.badge.pulse ? "animate-pulse" : ""}
-                  style={{ width: 6, height: 6, borderRadius: "50%", background: DOT_COLORS[s.badge.color], flexShrink: 0 }}
-                />
-                {s.badge.label}
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-[15px] text-card-foreground">{s.title}</p>
+                <div
+                  className="flex items-center gap-1.5 rounded-full px-2 py-0.5 shrink-0"
+                  style={{ background: "hsl(var(--muted))", fontSize: 11, fontWeight: 500, color: "hsl(var(--muted-foreground))" }}
+                >
+                  <span
+                    className={s.badge.pulse ? "animate-pulse" : ""}
+                    style={{ width: 6, height: 6, borderRadius: "50%", background: DOT_COLORS[s.badge.color], flexShrink: 0 }}
+                  />
+                  {s.badge.label}
+                </div>
               </div>
+              <p className="text-[13px] text-muted-foreground mt-0.5">{s.summary}</p>
             </div>
-            {/* Thumbnail */}
-            <img
-              src={s.thumb}
-              alt=""
-              className="h-[60px] w-[60px] rounded-xl object-cover shrink-0 shadow-sm"
-              loading="lazy"
-            />
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
         ))}
 
