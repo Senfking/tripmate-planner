@@ -436,7 +436,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               <div className="relative p-4 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{
-                    color: myBalance < -0.01 ? "#fca5a5" : myBalance > 0.01 ? "#6ee7b7" : "rgba(255,255,255,0.5)",
+                    color: myBalance < -0.01 ? "#ff6b6b" : myBalance > 0.01 ? "#2dd4a0" : "rgba(255,255,255,0.5)",
                   }}>
                     {myBalance < -0.01 ? "You owe" : myBalance > 0.01 ? "You're owed" : "All settled"}
                   </p>
