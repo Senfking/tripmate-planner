@@ -1298,7 +1298,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         />
                       ))}
                     </div>
-                  )
+                  )}
+
 
                   {/* Bottom actions */}
                   <div className="px-4 pt-3 space-y-2 pb-6">
