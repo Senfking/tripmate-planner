@@ -1279,6 +1279,27 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     ))}
                   </div>
 
+                  {/* Extra results from "Show more" */}
+                  {extraResults.length > 0 && (
+                    <div className="space-y-3 px-4 pt-1">
+                      <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">More picks</p>
+                      {extraResults.map((s, i) => (
+                        <SuggestionCard
+                          key={`extra-${i}`}
+                          suggestion={s}
+                          messageId={`extra-${i}`}
+                          index={i}
+                          tripId={tripId}
+                          tripDays={tripDays}
+                          onAddToPlan={onAddToPlan}
+                          animDelay={i * 50}
+                          isLucky={isLucky}
+                          luckyBadge={isLucky ? LUCKY_BADGES[(displayedResults!.suggestions!.length + i) % LUCKY_BADGES.length] : undefined}
+                        />
+                      ))}
+                    </div>
+                  )
+
                   {/* Bottom actions */}
                   <div className="px-4 pt-3 space-y-2 pb-6">
                     {/* Show more */}
