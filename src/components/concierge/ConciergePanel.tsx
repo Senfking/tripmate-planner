@@ -1140,7 +1140,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                 </button>
               </div>
 
-              {/* Saved spots section */}
+              {/* Saved spots section — full cards */}
               {savedCount > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
@@ -1148,21 +1148,36 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     <span className="text-xs font-semibold text-foreground">Saved spots</span>
                     <span className="text-[10px] text-muted-foreground">({savedCount})</span>
                   </div>
-                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                    {getSavedSpots(tripId).map(name => (
-                      <div
-                        key={name}
-                        className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setFreeText(name);
-                          doSearch(null, {}, name);
-                        }}
-                      >
-                        <Bookmark className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
-                        <span className="text-xs font-medium text-foreground whitespace-nowrap">{name}</span>
-                      </div>
+                  <div className="space-y-3">
+                    {(savedExpanded ? savedSpots : savedSpots.slice(0, 2)).map((spot, i) => (
+                      <SuggestionCard
+                        key={spot.name}
+                        suggestion={spot}
+                        messageId={`saved-${i}`}
+                        index={i}
+                        tripId={tripId}
+                        tripDays={tripDays}
+                        onAddToPlan={onAddToPlan}
+                        onSaveChange={() => setSavedVersion(v => v + 1)}
+                      />
                     ))}
                   </div>
+                  {savedCount > 2 && !savedExpanded && (
+                    <button
+                      onClick={() => setSavedExpanded(true)}
+                      className="text-xs font-medium text-[#0D9488] hover:underline"
+                    >
+                      Show all {savedCount} saved
+                    </button>
+                  )}
+                  {savedExpanded && savedCount > 2 && (
+                    <button
+                      onClick={() => setSavedExpanded(false)}
+                      className="text-xs font-medium text-muted-foreground hover:underline"
+                    >
+                      Show less
+                    </button>
+                  )}
                 </div>
               )}
 
