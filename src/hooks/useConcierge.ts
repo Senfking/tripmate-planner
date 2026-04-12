@@ -28,6 +28,7 @@ export interface StructuredFilters {
   when?: string[];
   vibe?: string[];
   budget?: string[];
+  feeling_lucky?: boolean;
 }
 
 export interface ConciergeMessage {
@@ -225,6 +226,7 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
             when: filters.when,
             vibe: filters.vibe,
             budget: filters.budget,
+            feeling_lucky: filters.feeling_lucky || false,
             context: {
               ...context,
               date: context.date || new Date().toISOString().split("T")[0],

@@ -5,6 +5,7 @@ import {
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
+  Dice5, Gem,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useConcierge, type ConciergeSuggestion, type StructuredFilters } from "@/hooks/useConcierge";
@@ -96,7 +97,9 @@ const CATEGORY_FILTERS: Record<string, FilterSection[]> = {
 // Add budget row to eat
 CATEGORY_FILTERS.eat.push({ key: "price", label: "Budget", icon: <Wallet className="h-4 w-4" />, options: ["Under $10", "Worth the splurge", "Treat ourselves"] });
 
-type Stage = "what" | "refine" | "results";
+const LUCKY_BADGES = ["Hidden gem", "Off-script", "Local secret", "Insider only", "Wild card"];
+
+type Stage = "what" | "refine" | "results" | "lucky-intro";
 
 interface RecentSearch {
   label: string;
@@ -146,7 +149,7 @@ function buildConciergeContext(destination: string, tripResult?: AITripResult | 
 /* ------------------------------------------------------------------ */
 
 function SuggestionCard({
-  suggestion, messageId, index, getReactionInfo, onToggleReaction, tripDays, onAddToPlan, animDelay,
+  suggestion, messageId, index, getReactionInfo, onToggleReaction, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge,
 }: {
   suggestion: ConciergeSuggestion;
   messageId: string;
@@ -156,6 +159,8 @@ function SuggestionCard({
   tripDays?: { date: string; dayNumber: number }[];
   onAddToPlan?: (dayDate: string, activity: AIActivity) => void;
   animDelay?: number;
+  isLucky?: boolean;
+  luckyBadge?: string;
 }) {
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -189,7 +194,7 @@ function SuggestionCard({
 
   return (
     <div
-      className="rounded-xl border border-border bg-card overflow-hidden shadow-sm"
+      className={`rounded-xl border overflow-hidden shadow-sm ${isLucky ? "border-amber-200 dark:border-amber-700/30" : "border-border"} bg-card`}
       style={{ animation: `fade-in 0.3s ease-out ${(animDelay || 0)}ms both` }}
     >
       {/* Photo */}
@@ -206,7 +211,11 @@ function SuggestionCard({
             <Users className="h-3 w-3" /> Group pick
           </span>
         )}
-        {suggestion.is_event ? (
+        {luckyBadge ? (
+          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 text-white backdrop-blur-sm shadow-sm">
+            <Gem className="h-3 w-3" /> {luckyBadge}
+          </span>
+        ) : suggestion.is_event ? (
           <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-amber-500/90 text-white backdrop-blur-sm animate-pulse">
             <CalendarHeart className="h-3 w-3" /> Live Event
           </span>
@@ -406,6 +415,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const [freeText, setFreeText] = useState("");
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
+  const [isLucky, setIsLucky] = useState(false);
   const [locationInput, setLocationInput] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -466,6 +476,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         setSelectedFilters({});
         setFreeText("");
         setSearchStartedAt(null);
+        setIsLucky(false);
       }, 300);
       return () => clearTimeout(t);
     }
@@ -482,8 +493,10 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     category: Category | null,
     filters: Record<string, string[]>,
     text?: string,
+    lucky?: boolean,
   ) => {
     setSearchStartedAt(Date.now());
+    setIsLucky(!!lucky);
     setStage("results");
     try {
       if (text) {
@@ -494,6 +507,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           when: filters.when?.length ? filters.when : undefined,
           vibe: [...(filters.vibe || []), ...(filters.scene || []), ...(filters.energy || [])].length ? [...(filters.vibe || []), ...(filters.scene || []), ...(filters.energy || [])] : undefined,
           budget: [...(filters.budget || []), ...(filters.price || [])].length ? [...(filters.budget || []), ...(filters.price || [])] : undefined,
+          feeling_lucky: lucky,
         });
       }
     } catch {
@@ -502,6 +516,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   }, [sendMessage, sendStructuredRequest]);
 
   const handleCategorySelect = (cat: Category) => {
+    if (cat.id === "surprise") {
+      // Surprise me goes directly to lucky intro
+      setSelectedCategory(cat);
+      setIsLucky(true);
+      setStage("lucky-intro");
+      // Start the search immediately
+      setTimeout(() => {
+        doSearch(cat, {}, undefined, true);
+      }, 1500);
+      return;
+    }
     setSelectedCategory(cat);
     setSelectedFilters({});
     setStage("refine");
@@ -516,6 +541,14 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     doSearch(selectedCategory, selectedFilters);
   };
 
+  const handleFeelingLucky = () => {
+    setIsLucky(true);
+    setStage("lucky-intro");
+    setTimeout(() => {
+      doSearch(selectedCategory, selectedFilters, undefined, true);
+    }, 1500);
+  };
+
   const handleRecentSearch = (_search: RecentSearch) => {
     setSearchStartedAt(null);
     setStage("results");
@@ -523,7 +556,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const handleBack = () => {
     if (stage === "results") {
-      setStage(selectedCategory ? "refine" : "what");
+      if (isLucky) {
+        setStage("what");
+        setSelectedCategory(null);
+        setIsLucky(false);
+      } else {
+        setStage(selectedCategory ? "refine" : "what");
+      }
+    } else if (stage === "lucky-intro") {
+      setStage("what");
+      setSelectedCategory(null);
+      setIsLucky(false);
     } else if (stage === "refine") {
       setStage("what");
       setSelectedCategory(null);
@@ -538,6 +581,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     setSelectedCategory(null);
     setSelectedFilters({});
     setSearchStartedAt(null);
+    setIsLucky(false);
   };
 
   const handleUseLocation = () => {
@@ -748,14 +792,50 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               >
                 Skip filters — show me everything
               </button>
+
+              {/* Feeling lucky */}
+              <div className="border-t border-border pt-4">
+                <button
+                  onClick={handleFeelingLucky}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors"
+                >
+                  <Dice5 className="h-4 w-4" />
+                  Surprise me instead
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =================== LUCKY INTRO =================== */}
+          {stage === "lucky-intro" && (
+            <div className="flex-1 flex items-center justify-center animate-fade-in">
+              <div className="text-center space-y-4 px-8">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center mx-auto shadow-lg">
+                  <Sparkles className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-lg font-semibold text-foreground animate-pulse">
+                  Finding something you'd never think to try...
+                </p>
+                <p className="text-xs text-muted-foreground">Digging into our local secrets</p>
+              </div>
             </div>
           )}
 
           {/* =================== STAGE 3: RESULTS =================== */}
           {stage === "results" && (
             <div className="py-3 animate-fade-in">
+              {/* Lucky badge header */}
+              {isLucky && !sending && displayedResults && (
+                <div className="flex items-center gap-2 px-4 pb-3">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/20 dark:to-amber-800/10 border border-amber-200 dark:border-amber-700/30">
+                    <Gem className="h-3.5 w-3.5 text-amber-500" />
+                    <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Feeling Lucky</span>
+                  </div>
+                </div>
+              )}
+
               {/* Breadcrumb pills */}
-              {(selectedCategory || anyFiltersSelected) && (
+              {!isLucky && (selectedCategory || anyFiltersSelected) && (
                 <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto scrollbar-hide">
                   {selectedCategory && (
                     <FilterPill label={selectedCategory.label} onClick={resetToWhat} />
@@ -774,22 +854,32 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               {sending ? (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-2 py-6">
-                    <div className="w-10 h-10 rounded-full bg-[#0D9488]/10 flex items-center justify-center">
-                      <Compass className="h-5 w-5 text-[#0D9488] animate-spin" style={{ animationDuration: "3s" }} />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isLucky ? "bg-amber-100 dark:bg-amber-900/20" : "bg-[#0D9488]/10"}`}>
+                      {isLucky ? (
+                        <Sparkles className="h-5 w-5 text-amber-500 animate-spin" style={{ animationDuration: "3s" }} />
+                      ) : (
+                        <Compass className="h-5 w-5 text-[#0D9488] animate-spin" style={{ animationDuration: "3s" }} />
+                      )}
                     </div>
-                    <span className="text-sm font-medium text-foreground">Consulting our local sources...</span>
-                    <span className="text-[10px] text-muted-foreground animate-pulse">Finding insider picks just for you</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {isLucky ? "Uncovering hidden gems..." : "Consulting our local sources..."}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground animate-pulse">
+                      {isLucky ? "The ones we don't tell everyone about" : "Finding insider picks just for you"}
+                    </span>
                   </div>
                   <LoadingSkeleton />
                 </div>
               ) : displayedResults ? (
                 <div className="space-y-3">
                   {displayedResults.content && (
-                    <p className="text-sm text-muted-foreground px-4">{displayedResults.content}</p>
+                    <p className={`text-sm px-4 ${isLucky ? "text-amber-700 dark:text-amber-400 font-medium italic" : "text-muted-foreground"}`}>
+                      {displayedResults.content}
+                    </p>
                   )}
 
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
-                    Insider picks
+                  <p className="text-[10px] uppercase tracking-wider font-semibold px-4" style={{ color: isLucky ? "#D97706" : undefined }}>
+                    {isLucky ? "Hidden gems & local secrets" : "Insider picks"}
                   </p>
 
                   <div className="space-y-3 px-4">
@@ -804,18 +894,22 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         tripDays={tripDays}
                         onAddToPlan={onAddToPlan}
                         animDelay={i * 50}
+                        isLucky={isLucky}
+                        luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
                       />
                     ))}
                   </div>
 
                   {/* Bottom actions */}
                   <div className="px-4 pt-3 space-y-2 pb-6">
-                    <button
-                      onClick={() => setStage("refine")}
-                      className="w-full py-2.5 rounded-xl text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
-                    >
-                      Try different filters
-                    </button>
+                    {!isLucky && (
+                      <button
+                        onClick={() => setStage("refine")}
+                        className="w-full py-2.5 rounded-xl text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
+                      >
+                        Try different filters
+                      </button>
+                    )}
                     <button
                       onClick={resetToWhat}
                       className="w-full py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-accent/50 transition-colors"

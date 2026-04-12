@@ -319,6 +319,7 @@ Deno.serve(async (req) => {
     const structWhen: string | string[] | undefined = body.when;
     const structVibe: string | string[] | undefined = body.vibe;
     const structBudget: string | string[] | undefined = body.budget;
+    const feelingLucky: boolean = !!body.feeling_lucky;
     // Normalize to arrays for multi-select support
     const whenArr = Array.isArray(structWhen) ? structWhen : structWhen ? [structWhen] : [];
     const vibeArr = Array.isArray(structVibe) ? structVibe : structVibe ? [structVibe] : [];
@@ -466,7 +467,35 @@ Deno.serve(async (req) => {
 
     let systemPrompt: string;
 
-    if (isStructured) {
+    if (feelingLucky) {
+      // -- Feeling Lucky mode: go wild with unexpected suggestions --
+      const categoryHint = structCategory && structCategory !== "surprise"
+        ? `The user is interested in ${CATEGORY_DESCRIPTIONS[structCategory] || structCategory}, but wants the UNUSUAL and UNEXPECTED variety.`
+        : "The user wants completely unexpected, off-the-beaten-path experiences.";
+
+      systemPrompt = `You are Junto's secret insider concierge for a group of ${groupSize} traveling in ${context.destination}.
+
+${categoryHint}
+
+Your job: suggest 3-5 genuinely surprising, unusual, hidden-gem experiences that most tourists would NEVER find. Think:
+- Places only locals know about
+- Weird, wonderful, one-of-a-kind experiences
+- Secret spots, underground scenes, off-script adventures
+- Things that make great stories
+
+Do NOT suggest popular tourist attractions or well-known chains. Every suggestion should make someone say "wait, what? Let's do THAT."
+
+${hotelNote}
+
+Your summary should be playful and confident, like: "Okay, trust me on these..." or "You probably haven't heard of these..." or "These are the ones we don't tell everyone about..."
+
+Each suggestion MUST have a pro_tip with a genuine insider hack.
+
+Respond in this exact JSON format:
+${suggestionJsonSchema(context.destination)}
+
+Return ONLY valid JSON, no other text.`;
+    } else if (isStructured) {
       // -- Structured request: skip interpretation, use filters directly --
       const categoryDesc =
         CATEGORY_DESCRIPTIONS[structCategory!] || structCategory;
