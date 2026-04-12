@@ -12,6 +12,7 @@ import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances } from "@/lib/settlementCalc";
 import { fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { SharedItemsSection } from "./SharedItemsSection";
+import { resolvePhoto } from "@/lib/tripPhoto";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
