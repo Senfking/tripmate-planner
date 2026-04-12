@@ -1441,8 +1441,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     {isLucky ? "Hidden gems & local secrets" : "Insider picks"}
                   </p>
 
-                  {/* Results — responsive grid */}
-                  <div className="space-y-3 px-3 md:px-0 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+                  {/* Results — mobile: vertical stack, desktop: horizontal carousel */}
+                  <div className="space-y-3 px-3 md:hidden">
                     {displayedResults.suggestions!.map((s, i) => (
                       <SuggestionCard
                         key={`${displayedResults.id}-${i}`}
@@ -1459,6 +1459,43 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       />
                     ))}
                   </div>
+                  {displayedResults.suggestions!.length >= 3 ? (
+                    <HorizontalCarousel cardWidth={380}>
+                      {displayedResults.suggestions!.map((s, i) => (
+                        <SuggestionCard
+                          key={`${displayedResults.id}-${i}`}
+                          suggestion={s}
+                          messageId={displayedResults.id}
+                          index={i}
+                          tripId={tripId}
+                          tripDays={tripDays}
+                          onAddToPlan={onAddToPlan}
+                          animDelay={i * 50}
+                          isLucky={isLucky}
+                          luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
+                          onSaveChange={() => setSavedVersion(v => v + 1)}
+                        />
+                      ))}
+                    </HorizontalCarousel>
+                  ) : (
+                    <div className="hidden md:grid md:grid-cols-2 md:gap-3 md:px-0">
+                      {displayedResults.suggestions!.map((s, i) => (
+                        <SuggestionCard
+                          key={`${displayedResults.id}-${i}`}
+                          suggestion={s}
+                          messageId={displayedResults.id}
+                          index={i}
+                          tripId={tripId}
+                          tripDays={tripDays}
+                          onAddToPlan={onAddToPlan}
+                          animDelay={i * 50}
+                          isLucky={isLucky}
+                          luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
+                          onSaveChange={() => setSavedVersion(v => v + 1)}
+                        />
+                      ))}
+                    </div>
+                  )
 
                   {/* Extra results from "Show more" */}
                   {extraResults.length > 0 && (
