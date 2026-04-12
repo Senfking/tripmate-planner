@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getCategoryColor } from "./categoryColors";
+import { getCategoryColor, getCategoryIcon } from "./categoryColors";
+import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MapPin, Clock, ExternalLink } from "lucide-react";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 
 interface Props {
@@ -14,64 +17,108 @@ interface Props {
   onPinClick?: (dayDate: string, activityIndex: number) => void;
 }
 
-function createPinIcon(num: number, title: string, color: string) {
-  const shortTitle = title.length > 14 ? title.slice(0, 13) + "…" : title;
-
+/* ── Minimal premium pin ── */
+function createPinIcon(num: number, color: string) {
   return L.divIcon({
     className: "",
-    iconSize: [32, 44],
-    iconAnchor: [16, 44],
-    popupAnchor: [0, -40],
-    html: `<div style="position:relative;width:32px;height:44px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));cursor:pointer;">
-      <svg width="32" height="44" viewBox="0 0 32 44" fill="none">
-        <path d="M16 43C16 43 2 26 2 15C2 7.3 8.3 1 16 1C23.7 1 30 7.3 30 15C30 26 16 43 16 43Z" fill="${color}" stroke="white" stroke-width="2"/>
-      </svg>
-      <span style="position:absolute;top:7px;left:0;right:0;text-align:center;font-size:12px;font-weight:800;color:white;font-family:Inter,system-ui,sans-serif;text-shadow:0 1px 2px rgba(0,0,0,0.2);">${num}</span>
-      <div style="position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(15,23,42,0.85);color:white;font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;font-family:Inter,system-ui,sans-serif;pointer-events:none;">${shortTitle}</div>
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -16],
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">
+      <span style="font-size:11px;font-weight:700;color:white;font-family:Inter,system-ui,sans-serif;">${num}</span>
     </div>`,
   });
 }
 
-function ActivityPopup({ act }: { act: AIActivity & { _dayDate: string; _idx: number } }) {
-  const color = getCategoryColor(act.category);
+/* ── React popup with real Google images ── */
+function PopupContent({ activity }: { activity: AIActivity }) {
+  const { photos, rating, isLoading } = useGooglePlaceDetails(
+    activity.title || "",
+    activity.location_name || ""
+  );
+  const color = getCategoryColor(activity.category);
+  const IconComponent = getCategoryIcon(activity.category);
+  const heroSrc = photos.length > 0 ? photos[0] : null;
+  const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activity.title || '') + ' ' + (activity.location_name || ''))}`;
 
   return (
-    <div style={{ width: 220, fontFamily: "Inter, system-ui, sans-serif" }}>
-      <div style={{ padding: "10px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-          <span style={{ background: color, color: "white", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            {act.category}
-          </span>
-          <span style={{ fontSize: 10, color: "#9ca3af" }}>{act.start_time}</span>
+    <div className="w-[240px] font-sans overflow-hidden">
+      {/* Hero image */}
+      {isLoading ? (
+        <Skeleton className="w-full h-[110px] rounded-none" />
+      ) : heroSrc ? (
+        <img
+          src={heroSrc}
+          alt={activity.title}
+          className="w-full h-[110px] object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+      ) : (
+        <div className="w-full h-[60px] flex items-center justify-center" style={{ background: `${color}15` }}>
+          <IconComponent className="h-6 w-6" style={{ color }} />
         </div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#1f2937", lineHeight: 1.3 }}>{act.title}</div>
-        {act.location_name && (
-          <div style={{ fontSize: 11, color: "#6b7280", marginTop: 3 }}>📍 {act.location_name}</div>
+      )}
+
+      <div className="p-3 space-y-2">
+        {/* Category + time */}
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
+            style={{ background: color }}
+          >
+            {activity.category}
+          </span>
+          {activity.start_time && (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+              <Clock className="h-2.5 w-2.5" />
+              {activity.start_time}
+            </span>
+          )}
+          {rating != null && (
+            <span className="text-[10px] text-amber-600 font-semibold ml-auto">★ {rating.toFixed(1)}</span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h4 className="text-[13px] font-bold text-foreground leading-tight">{activity.title}</h4>
+
+        {/* Location */}
+        {activity.location_name && (
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-2.5 w-2.5 shrink-0" />
+            {activity.location_name}
+          </p>
         )}
-        {act.description && (
-          <div style={{ fontSize: 11, color: "#4b5563", marginTop: 6, lineHeight: 1.5 }}>
-            {act.description.length > 120 ? act.description.slice(0, 120) + "…" : act.description}
-          </div>
+
+        {/* Description */}
+        {activity.description && (
+          <p className="text-[10px] text-muted-foreground/80 leading-relaxed line-clamp-3">
+            {activity.description}
+          </p>
         )}
-        {act.estimated_cost_per_person != null && (
-          <div style={{ fontSize: 11, color: "#059669", fontWeight: 600, marginTop: 6 }}>
-            ~{act.currency}{Math.round(act.estimated_cost_per_person)}/person
-          </div>
-        )}
-        {act.google_maps_url && (
+
+        {/* Cost + link */}
+        <div className="flex items-center justify-between pt-1 border-t border-border/40">
+          {activity.estimated_cost_per_person != null ? (
+            <span className="text-[10px] font-semibold text-emerald-600">
+              ~{activity.currency}{Math.round(activity.estimated_cost_per_person)}/person
+            </span>
+          ) : <span />}
           <a
-            href={act.google_maps_url}
+            href={mapsLink}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ fontSize: 11, color: "#3b82f6", textDecoration: "none", display: "inline-block", marginTop: 6, fontWeight: 600 }}
+            className="text-[10px] font-semibold text-primary hover:underline flex items-center gap-0.5"
           >
-            Open in Maps →
+            Maps <ExternalLink className="h-2.5 w-2.5" />
           </a>
-        )}
+        </div>
       </div>
     </div>
   );
 }
+
+/* ── Map controller ── */
 function MapController({
   result,
   activeDayIndex,
@@ -125,6 +172,7 @@ function MapController({
   return null;
 }
 
+/* ── Main component ── */
 export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick }: Props) {
   const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
 
@@ -200,9 +248,9 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
         <Polyline
           positions={polylinePositions}
           pathOptions={{
-            color: "#0D9488",
+            color: "hsl(var(--primary))",
             weight: 2.5,
-            opacity: 0.6,
+            opacity: 0.5,
             dashArray: "6 4",
           }}
         />
@@ -212,13 +260,10 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
         <Marker
           key={`${act._dayDate}-${act._idx}`}
           position={[act.latitude!, act.longitude!]}
-          icon={createPinIcon(act._idx + 1, act.title, getCategoryColor(act.category))}
-          eventHandlers={{
-            click: () => onPinClick?.(act._dayDate, act._idx),
-          }}
+          icon={createPinIcon(act._idx + 1, getCategoryColor(act.category))}
         >
-          <Popup closeButton={false} className="premium-map-popup" maxWidth={240} minWidth={220}>
-            <ActivityPopup act={act} />
+          <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
+            <PopupContent activity={act} />
           </Popup>
         </Marker>
       ))}
