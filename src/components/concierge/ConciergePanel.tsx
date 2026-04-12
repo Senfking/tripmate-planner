@@ -5,7 +5,7 @@ import {
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
-  Dice5, Gem,
+  Dice5, Gem, Plus, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useConcierge, type ConciergeSuggestion, type StructuredFilters } from "@/hooks/useConcierge";
@@ -51,42 +51,41 @@ const CATEGORIES: Category[] = [
   { id: "relax", label: "Relax", tagline: "Your reset button", icon: <Waves className="h-7 w-7" />, gradient: "from-emerald-400/80 to-green-500/80", query: "Relaxation and wellness spots" },
   { id: "workout", label: "Workout", tagline: "Don't skip travel day", icon: <Dumbbell className="h-7 w-7" />, gradient: "from-slate-400/80 to-slate-500/80", query: "Gyms and fitness activities" },
   { id: "events", label: "Events", tagline: "Happening right now", icon: <CalendarHeart className="h-7 w-7" />, gradient: "from-red-400/80 to-orange-400/80", query: "Events and things happening" },
-  { id: "surprise", label: "Surprise me", tagline: "Trust us on this one", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", query: "Surprise us with something unexpected" },
 ];
 
 const CATEGORY_FILTERS: Record<string, FilterSection[]> = {
   eat: [
     { key: "when", label: "When", icon: <Clock className="h-4 w-4" />, options: ["Breakfast", "Brunch", "Lunch", "Dinner", "Late night munchies"] },
-    { key: "vibe", label: "Cuisine", icon: <ChefHat className="h-4 w-4" />, options: ["Local must-try", "Seafood", "Asian fusion", "Mediterranean", "Healthy", "Street food", "Fine dining", "Vegan friendly"] },
+    { key: "vibe", label: "Cuisine", icon: <ChefHat className="h-4 w-4" />, options: ["Local must-try", "Seafood", "Asian fusion", "Italian", "Indian", "Thai", "Korean", "Mediterranean", "BBQ", "Brunch spot", "Bakery / pastry", "Coffee & cake", "Healthy", "Street food", "Fine dining", "Vegan friendly"] },
     { key: "budget", label: "Setting", icon: <Armchair className="h-4 w-4" />, options: ["Ocean view", "Rice paddy views", "Jungle setting", "Hidden alley gem", "Instagrammable", "Authentic no-frills", "Chef's table"] },
-    // We'll use a 4th row for actual budget
+    { key: "price", label: "Budget", icon: <Wallet className="h-4 w-4" />, options: ["Under $10", "Worth the splurge", "Treat ourselves"] },
   ],
   drink: [
     { key: "when", label: "When", icon: <Clock className="h-4 w-4" />, options: ["Right now", "Golden hour", "After dinner", "Late night", "Tomorrow"] },
-    { key: "vibe", label: "Style", icon: <Palette className="h-4 w-4" />, options: ["Beach club", "Speakeasy", "Rooftop", "Pool bar", "Craft cocktails", "Natural wine", "Local spot", "Tiki bar"] },
+    { key: "vibe", label: "Style", icon: <Palette className="h-4 w-4" />, options: ["Beach club", "Speakeasy", "Rooftop", "Pool bar", "Craft cocktails", "Natural wine", "Brewery", "Sake / Japanese bar", "Sports bar", "Mezcal / tequila", "Gin bar", "Local spot", "Tiki bar"] },
     { key: "scene", label: "Scene", icon: <Users className="h-4 w-4" />, options: ["Solo exploring", "Couple", "Squad night", "Meet locals"] },
     { key: "budget", label: "Budget", icon: <Wallet className="h-4 w-4" />, options: ["Cheap & cheerful", "Worth the spend", "Go all out"] },
   ],
   party: [
     { key: "when", label: "When", icon: <Clock className="h-4 w-4" />, options: ["Pre-drinks now", "Tonight", "Best night this week", "This weekend"] },
-    { key: "vibe", label: "Style", icon: <Disc3 className="h-4 w-4" />, options: ["Beach club day party", "Sunset → club", "Live music", "Underground/techno", "Pool party", "Hip-hop & R&B", "Reggae chill", "Full moon / themed"] },
+    { key: "vibe", label: "Style", icon: <Disc3 className="h-4 w-4" />, options: ["Beach club day party", "Sunset → club", "Live music", "Underground/techno", "Pool party", "Hip-hop & R&B", "Reggae chill", "Full moon / themed", "Karaoke", "Pub crawl", "Jazz club", "Latin / salsa night", "Acoustic / singer-songwriter"] },
     { key: "energy", label: "Energy", icon: <Zap className="h-4 w-4" />, options: ["Warm up first", "Ready to go", "Dancing till sunrise", "Plan the whole night"] },
   ],
   explore: [
     { key: "when", label: "When", icon: <Clock className="h-4 w-4" />, options: ["Sunrise mission", "Morning", "Full day", "Afternoon", "Golden hour"] },
-    { key: "vibe", label: "Type", icon: <Map className="h-4 w-4" />, options: ["Hidden waterfall", "Secret beach", "Temple nobody visits", "Local market", "Motorbike adventure", "Photography spots", "Cultural deep dive", "Viewpoint"] },
+    { key: "vibe", label: "Type", icon: <Map className="h-4 w-4" />, options: ["Hidden waterfall", "Secret beach", "Temple nobody visits", "Local market", "Motorbike adventure", "Photography spots", "Cultural deep dive", "Viewpoint", "Snorkeling / diving", "Cooking class", "Art gallery", "Street art walk", "Boat trip", "Cycling tour"] },
   ],
   relax: [
     { key: "when", label: "When", icon: <Clock className="h-4 w-4" />, options: ["This morning", "Afternoon reset", "Full day off"] },
-    { key: "vibe", label: "Type", icon: <Heart className="h-4 w-4" />, options: ["Traditional spa", "Beach club", "Yoga", "Sound healing", "Hot springs", "Quiet beach", "Float therapy", "Meditation"] },
+    { key: "vibe", label: "Type", icon: <Heart className="h-4 w-4" />, options: ["Traditional spa", "Massage", "Sauna / steam", "Reflexology", "Beach club", "Yoga", "Sound healing", "Hot springs", "Quiet beach", "Float therapy", "Meditation"] },
   ],
   workout: [
     { key: "when", label: "When", icon: <Clock className="h-4 w-4" />, options: ["Early morning", "Anytime"] },
-    { key: "vibe", label: "Type", icon: <Activity className="h-4 w-4" />, options: ["CrossFit box", "Muay Thai", "Surf lesson", "Yoga flow", "Outdoor bootcamp", "Proper gym", "BJJ / martial arts", "Rock climbing"] },
+    { key: "vibe", label: "Type", icon: <Activity className="h-4 w-4" />, options: ["CrossFit box", "Muay Thai", "Surf lesson", "Yoga flow", "Outdoor bootcamp", "Proper gym", "BJJ / martial arts", "Rock climbing", "Swimming", "Tennis", "Running route", "Dance class", "Pilates"] },
   ],
   events: [
     { key: "when", label: "When", icon: <Clock className="h-4 w-4" />, options: ["Tonight", "Tomorrow", "This weekend", "This week", "Coming up"] },
-    { key: "vibe", label: "Type", icon: <Ticket className="h-4 w-4" />, options: ["DJ / electronic", "Live band", "Art / exhibition", "Food market", "Full moon", "Cultural ceremony", "Pop-up", "Sports screening"] },
+    { key: "vibe", label: "Type", icon: <Ticket className="h-4 w-4" />, options: ["DJ / electronic", "Live band", "Art / exhibition", "Food market", "Full moon", "Cultural ceremony", "Pop-up", "Sports screening", "Workshop / class", "Charity event", "Networking / social", "Comedy night", "Film screening"] },
   ],
   surprise: [
     { key: "when", label: "When", icon: <Clock className="h-4 w-4" />, options: ["Now", "Tonight", "Tomorrow", "This weekend"] },
@@ -94,10 +93,15 @@ const CATEGORY_FILTERS: Record<string, FilterSection[]> = {
   ],
 };
 
-// Add budget row to eat
-CATEGORY_FILTERS.eat.push({ key: "price", label: "Budget", icon: <Wallet className="h-4 w-4" />, options: ["Under $10", "Worth the splurge", "Treat ourselves"] });
-
 const LUCKY_BADGES = ["Hidden gem", "Off-script", "Local secret", "Insider only", "Wild card"];
+
+const PLACEHOLDER_PROMPTS = [
+  "Try: 'best sunset cocktail spot nobody knows about'",
+  "Try: 'where do locals actually eat around here?'",
+  "Try: 'planning a birthday dinner for 6 people'",
+  "Try: 'secret beach with no tourists'",
+  "Try: 'late night street food worth the trip'",
+];
 
 type Stage = "what" | "refine" | "results" | "lucky-intro";
 
@@ -142,6 +146,56 @@ function buildConciergeContext(destination: string, tripResult?: AITripResult | 
     preferences?: string[];
     hotel_location?: { name: string; lat: number; lng: number };
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Custom Filter Input                                                */
+/* ------------------------------------------------------------------ */
+
+function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (key: string, value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const submit = () => {
+    const v = value.trim();
+    if (v) {
+      onAdd(filterKey, v);
+      setValue("");
+      setOpen(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="px-3 py-2 rounded-full text-xs font-medium border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-[#0D9488]/50 hover:text-[#0D9488] transition-all active:scale-95 flex items-center gap-1"
+      >
+        <Plus className="h-3 w-3" /> Custom
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false); }}
+        placeholder="Type..."
+        className="w-24 text-xs bg-accent/30 rounded-full px-3 py-2 border border-[#0D9488]/40 focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
+      />
+      <button onClick={submit} className="p-1.5 rounded-full bg-[#0D9488] text-white hover:opacity-90 transition-opacity">
+        <Check className="h-3 w-3" />
+      </button>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -405,13 +459,25 @@ function FilterPill({ label, onClick }: { label: string; onClick?: () => void })
 }
 
 /* ------------------------------------------------------------------ */
+/*  Rotating placeholder hook                                          */
+/* ------------------------------------------------------------------ */
+
+function useRotatingPlaceholder() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % PLACEHOLDER_PROMPTS.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+  return PLACEHOLDER_PROMPTS[idx];
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
 export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, destination: destinationProp, tripName, onAddToPlan }: Props) {
   const [stage, setStage] = useState<Stage>("what");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  // Multi-select filters stored as Record<filterKey, string[]>
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const [freeText, setFreeText] = useState("");
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
@@ -419,6 +485,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [locationInput, setLocationInput] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const placeholder = useRotatingPlaceholder();
 
   const resolvedDest = resolveDestination(destinationProp, tripResult, tripName);
   const [manualLocation, setManualLocation] = useState("");
@@ -460,7 +527,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       if (msg.role === "user" && msg.content) {
         const next = messages[i + 1];
         if (next?.role === "assistant" && next.suggestions?.length) {
-          const label = msg.content.length > 25 ? msg.content.slice(0, 25) + "…" : msg.content;
+          const label = msg.content.length > 30 ? msg.content.slice(0, 30) + "…" : msg.content;
           searches.push({ label, query: msg.content, messageId: next.id });
         }
       }
@@ -486,6 +553,14 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     setSelectedFilters(prev => {
       const arr = prev[key] || [];
       return { ...prev, [key]: arr.includes(value) ? arr.filter(x => x !== value) : [...arr, value] };
+    });
+  };
+
+  const addCustomFilter = (key: string, value: string) => {
+    setSelectedFilters(prev => {
+      const arr = prev[key] || [];
+      if (arr.includes(value)) return prev;
+      return { ...prev, [key]: [...arr, value] };
     });
   };
 
@@ -516,20 +591,18 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   }, [sendMessage, sendStructuredRequest]);
 
   const handleCategorySelect = (cat: Category) => {
-    if (cat.id === "surprise") {
-      // Surprise me goes directly to lucky intro
-      setSelectedCategory(cat);
-      setIsLucky(true);
-      setStage("lucky-intro");
-      // Start the search immediately
-      setTimeout(() => {
-        doSearch(cat, {}, undefined, true);
-      }, 1500);
-      return;
-    }
     setSelectedCategory(cat);
     setSelectedFilters({});
     setStage("refine");
+  };
+
+  const handleSurpriseMe = () => {
+    setSelectedCategory({ id: "surprise", label: "Surprise me", tagline: "Trust us", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", query: "Surprise" });
+    setIsLucky(true);
+    setStage("lucky-intro");
+    setTimeout(() => {
+      doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", query: "" }, {}, undefined, true);
+    }, 1500);
   };
 
   const handleFreeTextSubmit = () => {
@@ -624,7 +697,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
       {/* Full-screen overlay */}
       <div className="fixed inset-0 z-50 flex flex-col bg-background animate-slide-up overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-        {/* Header with animated gradient */}
+        {/* Header */}
         <div className="relative shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-[#0D9488]/5 via-[#0EA5E9]/5 to-[#0D9488]/5" style={{ backgroundSize: "200% 100%", animation: "gradient-shift 8s ease infinite" }} />
           <div className="relative flex items-center justify-between px-4 py-3 border-b border-border">
@@ -654,7 +727,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="px-4 pt-3 pb-4 space-y-3 animate-fade-in">
+            <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in">
               {/* Location input when no destination */}
               {!resolvedDest && (
                 <div className="space-y-1.5">
@@ -681,13 +754,14 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                 </div>
               )}
 
-              {/* Category grid — compact cards */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {/* Category grid — 7 regular + 1 full-width surprise */}
+              <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => handleCategorySelect(cat)}
                     className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
+                    style={{ minHeight: "60px" }}
                   >
                     <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient}`} />
                     <div className="relative z-10 w-9 h-9 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
@@ -702,9 +776,35 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     )}
                   </button>
                 ))}
+
+                {/* Surprise Me — full width across both columns */}
+                <button
+                  onClick={handleSurpriseMe}
+                  className="col-span-2 relative flex items-center justify-center gap-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02]"
+                  style={{ minHeight: "72px" }}
+                >
+                  {/* Animated shimmer gradient */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(135deg, #0D9488 0%, #D97706 25%, #0D9488 50%, #D97706 75%, #0D9488 100%)",
+                      backgroundSize: "400% 400%",
+                      animation: "shimmer-gradient 4s ease infinite",
+                    }}
+                  />
+                  <div className="relative z-10 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Sparkles className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <span className="text-[15px] font-bold text-white block leading-tight">Surprise me</span>
+                      <span className="text-[10px] text-white/80 leading-tight block">Hidden gems & unexpected experiences</span>
+                    </div>
+                  </div>
+                </button>
               </div>
 
-              {/* Free text — inline */}
+              {/* Free text input with rotating placeholder */}
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -713,15 +813,15 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     type="text"
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
-                    placeholder="Or just describe what you want…"
-                    className="w-full text-[13px] bg-accent/30 rounded-xl pl-8 pr-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
+                    placeholder={placeholder}
+                    className="w-full text-[13px] bg-accent/30 rounded-xl pl-8 pr-3 py-3 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
                     onKeyDown={(e) => { if (e.key === "Enter") handleFreeTextSubmit(); }}
                   />
                 </div>
                 <button
                   onClick={handleFreeTextSubmit}
                   disabled={!freeText.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
+                  className="px-4 py-3 rounded-xl bg-gradient-primary text-white text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
                 >
                   Go
                 </button>
@@ -729,14 +829,14 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
               {/* Recent searches */}
               {recentSearches.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Recent</p>
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Recent</p>
+                  <div className="flex flex-wrap gap-2">
                     {recentSearches.map((s, i) => (
                       <button
                         key={i}
                         onClick={() => handleRecentSearch(s)}
-                        className="text-[11px] px-2.5 py-1 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
+                        className="text-xs px-3 py-1.5 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
                       >
                         {s.label}
                       </button>
@@ -749,7 +849,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
           {/* =================== STAGE 2: REFINE =================== */}
           {stage === "refine" && selectedCategory && (
-            <div className="px-4 py-6 space-y-5 animate-fade-in">
+            <div className="px-4 py-5 space-y-5 animate-fade-in">
               {currentFilters.map((section) => (
                 <div key={section.key} className="space-y-2.5">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -763,7 +863,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         <button
                           key={opt}
                           onClick={() => toggleFilter(section.key, opt)}
-                          className={`px-4 py-2.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                          className={`px-3.5 py-2 rounded-full text-xs font-medium transition-all active:scale-95 ${
                             isSelected
                               ? "bg-[#0D9488] text-white shadow-md border border-[#0D9488]"
                               : "bg-white dark:bg-card border border-gray-200 dark:border-border text-gray-700 dark:text-foreground hover:border-[#0D9488]/40"
@@ -773,6 +873,21 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         </button>
                       );
                     })}
+                    {/* Custom filter values that were added */}
+                    {(selectedFilters[section.key] || [])
+                      .filter(v => !section.options.includes(v))
+                      .map(v => (
+                        <button
+                          key={v}
+                          onClick={() => toggleFilter(section.key, v)}
+                          className="px-3.5 py-2 rounded-full text-xs font-medium bg-[#0D9488] text-white shadow-md border border-[#0D9488] transition-all active:scale-95"
+                        >
+                          {v}
+                        </button>
+                      ))
+                    }
+                    {/* + Custom pill */}
+                    <CustomFilterInput filterKey={section.key} onAdd={addCustomFilter} />
                   </div>
                 </div>
               ))}
@@ -799,15 +914,21 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
           {/* =================== LUCKY INTRO =================== */}
           {stage === "lucky-intro" && (
-            <div className="flex-1 flex items-center justify-center animate-fade-in">
-              <div className="text-center space-y-4 px-8">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center mx-auto shadow-lg">
-                  <Sparkles className="h-8 w-8 text-white" />
+            <div className="flex-1 flex items-center justify-center animate-fade-in min-h-[60vh]">
+              <div
+                className="fixed inset-0 z-0"
+                style={{
+                  background: "radial-gradient(ellipse at center, rgba(13,148,136,0.15) 0%, rgba(217,119,6,0.08) 50%, transparent 80%)",
+                }}
+              />
+              <div className="relative z-10 text-center space-y-5 px-8">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center mx-auto shadow-xl">
+                  <Sparkles className="h-10 w-10 text-white animate-spin" style={{ animationDuration: "4s" }} />
                 </div>
-                <p className="text-lg font-semibold text-foreground animate-pulse">
-                  Finding something you'd never think to try...
+                <p className="text-xl font-bold text-foreground">
+                  Finding something special...
                 </p>
-                <p className="text-xs text-muted-foreground">Digging into our local secrets</p>
+                <p className="text-sm text-muted-foreground animate-pulse">Digging into our local secrets</p>
               </div>
             </div>
           )}
@@ -938,6 +1059,15 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           </div>
         )}
       </div>
+
+      {/* Shimmer gradient keyframes */}
+      <style>{`
+        @keyframes shimmer-gradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
     </>
   );
 }
