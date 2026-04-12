@@ -9,8 +9,11 @@ import { BookingsTab } from "@/components/bookings/BookingsTab";
 import { ExpensesTab } from "@/components/expenses/ExpensesTab";
 import { AdminTab } from "@/components/admin/AdminTab";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
+import { TripResultsView } from "@/components/trip-results/TripResultsView";
+import type { AITripResult } from "@/components/trip-results/useResultsState";
 
 const SECTION_TITLES: Record<string, string> = {
+  plan: "AI Plan",
   decisions: "Decisions",
   itinerary: "Itinerary",
   bookings: "Bookings & Docs",
