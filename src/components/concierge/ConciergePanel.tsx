@@ -194,7 +194,7 @@ function SuggestionCard({
 
   return (
     <div
-      className="rounded-xl border border-border bg-card overflow-hidden shadow-sm"
+      className={`rounded-xl border overflow-hidden shadow-sm ${isLucky ? "border-amber-200 dark:border-amber-700/30" : "border-border"} bg-card`}
       style={{ animation: `fade-in 0.3s ease-out ${(animDelay || 0)}ms both` }}
     >
       {/* Photo */}
@@ -211,7 +211,11 @@ function SuggestionCard({
             <Users className="h-3 w-3" /> Group pick
           </span>
         )}
-        {suggestion.is_event ? (
+        {luckyBadge ? (
+          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 text-white backdrop-blur-sm shadow-sm">
+            <Gem className="h-3 w-3" /> {luckyBadge}
+          </span>
+        ) : suggestion.is_event ? (
           <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-amber-500/90 text-white backdrop-blur-sm animate-pulse">
             <CalendarHeart className="h-3 w-3" /> Live Event
           </span>
