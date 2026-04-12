@@ -545,3 +545,12 @@ html.dark, html.dark body, html.dark #root {
   text-align: center !important;
   padding: 0 !important;
 }
+
+/* Hide scrollbar but allow scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
