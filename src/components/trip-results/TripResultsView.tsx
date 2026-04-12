@@ -501,10 +501,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {planId && (
         <button
           onClick={() => setGroupActivityOpen(true)}
-          className="fixed bottom-20 right-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center"
+          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground shadow-xl hover:bg-primary/90 hover:scale-105 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
           title="Group activity"
         >
           <Users className="h-4 w-4" />
+          <span className="text-xs font-semibold">Group Chat</span>
+          <span className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />
         </button>
       )}
 
