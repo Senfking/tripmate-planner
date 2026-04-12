@@ -54,6 +54,12 @@ function getSectionId(key: string, allDays: AIDay[]): string {
     const day = allDays[parsed.dayIndex];
     return day ? `section-day-${day.day_number}` : "";
   }
+  // Handle day-level keys like "day-3"
+  const dayMatch = key.match(/^day-(\d+)$/);
+  if (dayMatch) {
+    const day = allDays[parseInt(dayMatch[1])];
+    return day ? `section-day-${day.day_number}` : "";
+  }
   return "";
 }
 
@@ -366,25 +372,28 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
   }, [thread.reactions]);
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden">
       {/* Thread header — activity label */}
-      <button
+      <div
         onClick={onScrollTo}
-        className="w-full text-left px-3 py-2 bg-accent/30 hover:bg-accent/50 transition-colors border-b border-border"
+        role="button"
+        className="flex items-center justify-between px-3 py-2 bg-muted/40 cursor-pointer hover:bg-muted/60 transition-colors"
       >
-        <span className="text-[11px] font-medium text-primary">{thread.activityLabel}</span>
-        <span className="text-[9px] text-muted-foreground/60 ml-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[11px] font-semibold text-primary truncate">{thread.activityLabel}</span>
+        </div>
+        <span className="text-[9px] text-muted-foreground/50 whitespace-nowrap ml-2">
           {formatDistanceToNow(thread.latestAt, { addSuffix: true })}
         </span>
-      </button>
+      </div>
 
       {/* Reactions summary */}
       {reactionSummary.length > 0 && (
-        <div className="px-3 py-1.5 flex items-center gap-2 border-b border-border/50">
+        <div className="px-3 py-1.5 flex items-center gap-2.5 border-t border-border/30">
           {reactionSummary.map(([emoji, count]) => {
             const info = EMOJI_MAP[emoji];
             return info ? (
-              <span key={emoji} className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <span key={emoji} className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <info.Icon className="h-3 w-3" /> {count}
               </span>
             ) : null;
@@ -394,19 +403,19 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
 
       {/* First comment (root) */}
       {firstComment && (
-        <div className="px-3 py-2">
+        <div className="px-3 py-2.5 border-t border-border/30">
           <CommentRow
             comment={firstComment}
             isOwn={firstComment.userId === currentUserId}
             onDelete={() => onDelete(firstComment.id)}
           />
-          <div className="flex items-center gap-3 mt-1 ml-7">
-            <button onClick={onReply} className="text-[9px] text-muted-foreground hover:text-foreground flex items-center gap-0.5">
-              <MessageSquare className="h-2.5 w-2.5" /> Reply
+          <div className="flex items-center gap-3 mt-1.5 ml-7">
+            <button onClick={onReply} className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+              <MessageSquare className="h-3 w-3" /> Reply
             </button>
             {hasReplies && (
-              <button onClick={onToggle} className="text-[9px] text-primary hover:text-primary/80 flex items-center gap-0.5 font-medium">
-                {isExpanded ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+              <button onClick={onToggle} className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors">
+                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                 {replies.length} {replies.length === 1 ? "reply" : "replies"}
               </button>
             )}
@@ -414,20 +423,20 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
         </div>
       )}
 
-      {/* No comments, only reactions — show reply button */}
+      {/* No comments, only reactions */}
       {!firstComment && (
-        <div className="px-3 py-2">
-          <button onClick={onReply} className="text-[9px] text-muted-foreground hover:text-foreground flex items-center gap-0.5">
-            <MessageSquare className="h-2.5 w-2.5" /> Comment
+        <div className="px-3 py-2 border-t border-border/30">
+          <button onClick={onReply} className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+            <MessageSquare className="h-3 w-3" /> Comment
           </button>
         </div>
       )}
 
       {/* Threaded replies */}
       {isExpanded && hasReplies && (
-        <div className="border-t border-border/50">
-          {replies.map((reply) => (
-            <div key={reply.id} className="pl-7 pr-3 py-1.5 border-l-2 border-primary/20 ml-5 relative">
+        <div className="border-t border-border/30 bg-muted/20">
+          {replies.map((reply, i) => (
+            <div key={reply.id} className={`pl-8 pr-3 py-2 ml-4 border-l-2 border-primary/15 ${i > 0 ? "border-t border-t-border/20" : ""}`}>
               <CommentRow
                 comment={reply}
                 isOwn={reply.userId === currentUserId}
