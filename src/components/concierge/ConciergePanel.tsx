@@ -613,20 +613,20 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           {stage === "results" && (
             <div className="py-3 animate-fade-in">
               {/* Breadcrumb pills */}
-              {(selectedCategory || selectedWhen || selectedVibe || selectedBudget) && (
+              {(selectedCategory || selectedWhen.length > 0 || selectedVibe.length > 0 || selectedBudget.length > 0) && (
                 <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto scrollbar-hide">
                   {selectedCategory && (
-                    <FilterPill label={selectedCategory.label} onClick={() => { setStage("what"); setSelectedCategory(null); setSelectedWhen(null); setSelectedVibe(null); setSelectedBudget(null); }} />
+                    <FilterPill label={selectedCategory.label} onClick={() => { setStage("what"); setSelectedCategory(null); setSelectedWhen([]); setSelectedVibe([]); setSelectedBudget([]); }} />
                   )}
-                  {selectedWhen && (
-                    <FilterPill label={selectedWhen} onClick={() => { setStage("refine"); setSelectedWhen(null); }} />
-                  )}
-                  {selectedVibe && (
-                    <FilterPill label={selectedVibe} onClick={() => { setStage("refine"); setSelectedVibe(null); }} />
-                  )}
-                  {selectedBudget && (
-                    <FilterPill label={selectedBudget} onClick={() => { setStage("refine"); setSelectedBudget(null); }} />
-                  )}
+                  {selectedWhen.map(w => (
+                    <FilterPill key={w} label={w} onClick={() => { setStage("refine"); setSelectedWhen(prev => prev.filter(x => x !== w)); }} />
+                  ))}
+                  {selectedVibe.map(v => (
+                    <FilterPill key={v} label={v} onClick={() => { setStage("refine"); setSelectedVibe(prev => prev.filter(x => x !== v)); }} />
+                  ))}
+                  {selectedBudget.map(b => (
+                    <FilterPill key={b} label={b} onClick={() => { setStage("refine"); setSelectedBudget(prev => prev.filter(x => x !== b)); }} />
+                  ))}
                 </div>
               )}
 
