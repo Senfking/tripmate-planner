@@ -1117,7 +1117,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   style={{ minHeight: "62px" }}
                 >
                   <img
-                    src={`https://picsum.photos/seed/${encodeURIComponent(destination + '-surprise')}/800/200`}
+                    src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&h=200&fit=crop&q=80"
                     alt=""
                     className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
