@@ -1,11 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Sparkles, Send, ThumbsUp, Star, MapPin, Clock, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  X, Utensils, Wine, Music, Compass, Waves, Dumbbell,
+  Calendar, Sparkles, Star, MapPin, Clock, ThumbsUp,
+  Users, Search, ArrowLeft, Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useConcierge, type ConciergeSuggestion, type ConciergeMessage } from "@/hooks/useConcierge";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { AITripResult, AIActivity } from "@/components/trip-results/useResultsState";
+
+/* ------------------------------------------------------------------ */
+/*  Types & constants                                                  */
+/* ------------------------------------------------------------------ */
 
 interface Props {
   tripId: string;
@@ -16,44 +22,52 @@ interface Props {
   onAddToPlan?: (dayDate: string, activity: AIActivity) => void;
 }
 
-const QUICK_PILLS = [
-  { label: "Tonight", query: "What should we do tonight?" },
-  { label: "Tomorrow", query: "What should we do tomorrow?" },
-  { label: "Restaurants", query: "Best restaurants nearby" },
-  { label: "Nightlife", query: "Best nightlife and bars" },
-  { label: "Beach", query: "Best beach spots and activities" },
-  { label: "Wellness", query: "Spa, yoga, and wellness options" },
-  { label: "Culture", query: "Cultural attractions and museums" },
-  { label: "Events", query: "What events are happening this week?" },
+interface Category {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  query: string;
+  vibes: string[];
+}
+
+const CATEGORIES: Category[] = [
+  { id: "eat", label: "Eat", icon: <Utensils className="h-5 w-5" />, query: "Best places to eat", vibes: ["Casual", "Date night", "Group", "Local gem", "Instagrammable"] },
+  { id: "drink", label: "Drink", icon: <Wine className="h-5 w-5" />, query: "Best bars and drinks", vibes: ["Chill", "Rooftop", "Cocktails", "Wine bar", "Dive bar"] },
+  { id: "party", label: "Party", icon: <Music className="h-5 w-5" />, query: "Best nightlife and parties", vibes: ["Dance club", "Live music", "Beach party", "Underground", "Upscale"] },
+  { id: "explore", label: "Explore", icon: <Compass className="h-5 w-5" />, query: "Things to explore and see", vibes: ["Walking tour", "Hidden gem", "Markets", "Architecture", "Nature"] },
+  { id: "relax", label: "Relax", icon: <Waves className="h-5 w-5" />, query: "Relaxation and wellness spots", vibes: ["Spa", "Beach", "Pool", "Yoga", "Quiet café"] },
+  { id: "workout", label: "Workout", icon: <Dumbbell className="h-5 w-5" />, query: "Gyms and fitness activities", vibes: ["Gym", "Running", "CrossFit", "Surf", "Hike"] },
+  { id: "events", label: "Events", icon: <Calendar className="h-5 w-5" />, query: "Events and things happening", vibes: ["Festivals", "Markets", "Concerts", "Sports", "Pop-ups"] },
+  { id: "surprise", label: "Surprise me", icon: <Sparkles className="h-5 w-5" />, query: "Surprise us with something unexpected", vibes: ["Weird", "Unique", "Adventurous", "Budget-friendly", "Luxury"] },
 ];
+
+const WHEN_OPTIONS = ["Now", "Tonight", "Tomorrow", "This weekend"];
+
+type Stage = "what" | "refine" | "results";
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
 
 function buildContext(tripResult?: AITripResult | null, memberCount?: number) {
   const dest = tripResult?.destinations?.[0];
-  const ctx: any = {
+  const ctx: Record<string, unknown> = {
     destination: dest?.name || tripResult?.trip_title || "Unknown",
     group_size: memberCount || 2,
   };
-  if (dest?.cost_profile) {
-    ctx.budget_level = "mid-range";
-  }
+  if (dest?.cost_profile) ctx.budget_level = "mid-range";
   if (dest?.accommodation) {
-    ctx.hotel_location = {
-      name: dest.accommodation.name,
-      lat: 0,
-      lng: 0,
-    };
+    ctx.hotel_location = { name: dest.accommodation.name, lat: 0, lng: 0 };
   }
   return ctx;
 }
 
+/* ------------------------------------------------------------------ */
+/*  SuggestionCard (reused from previous, refined)                     */
+/* ------------------------------------------------------------------ */
+
 function SuggestionCard({
-  suggestion,
-  messageId,
-  index,
-  getReactionInfo,
-  onToggleReaction,
-  tripDays,
-  onAddToPlan,
+  suggestion, messageId, index, getReactionInfo, onToggleReaction, tripDays, onAddToPlan,
 }: {
   suggestion: ConciergeSuggestion;
   messageId: string;
@@ -91,100 +105,75 @@ function SuggestionCard({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm min-w-[260px] max-w-[300px] shrink-0">
+    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm animate-fade-in">
       {/* Photo */}
-      <div className="w-full h-[100px] bg-muted overflow-hidden">
+      <div className="w-full h-36 bg-muted overflow-hidden relative">
         {suggestion.photo_url ? (
-          <img
-            src={suggestion.photo_url}
-            alt={suggestion.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+          <img src={suggestion.photo_url} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-accent/30">
-            <MapPin className="h-6 w-6 text-muted-foreground/40" />
+            <MapPin className="h-8 w-8 text-muted-foreground/30" />
           </div>
         )}
+        {isGroupPick && (
+          <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#0D9488] px-2 py-0.5 rounded-full">
+            <Users className="h-3 w-3" /> Group pick
+          </span>
+        )}
+        <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
+          {suggestion.category}
+        </span>
       </div>
 
-      <div className="p-2.5 space-y-1.5">
-        {/* Name + category */}
-        <div className="flex items-start justify-between gap-1">
-          <h4 className="text-xs font-semibold text-foreground leading-snug line-clamp-1">{suggestion.name}</h4>
-          <span className="text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary whitespace-nowrap shrink-0">
-            {suggestion.category}
-          </span>
+      <div className="p-3 space-y-2">
+        {/* Name + rating */}
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-1">{suggestion.name}</h4>
+          {suggestion.rating != null && (
+            <div className="flex items-center gap-0.5 text-xs shrink-0">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <span className="font-medium">{suggestion.rating.toFixed(1)}</span>
+            </div>
+          )}
         </div>
-
-        {isGroupPick && (
-          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#0D9488] bg-[#0D9488]/10 px-1.5 py-0.5 rounded-full">
-            <Users className="h-2.5 w-2.5" /> Group pick
-          </span>
-        )}
-
-        {/* Rating */}
-        {suggestion.rating != null && (
-          <div className="flex items-center gap-1 text-[10px]">
-            <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
-            <span className="font-medium">{suggestion.rating.toFixed(1)}</span>
-            {suggestion.totalRatings && (
-              <span className="text-muted-foreground">({suggestion.totalRatings})</span>
-            )}
-          </div>
-        )}
 
         {/* Why */}
         {suggestion.why && (
-          <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">{suggestion.why}</p>
+          <p className="text-xs text-muted-foreground leading-snug line-clamp-2">{suggestion.why}</p>
         )}
 
-        {/* Meta row */}
-        <div className="flex items-center gap-2 text-[9px] text-muted-foreground flex-wrap">
+        {/* Meta */}
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
           {suggestion.best_time && (
-            <span className="flex items-center gap-0.5">
-              <Clock className="h-2.5 w-2.5" /> {suggestion.best_time}
-            </span>
+            <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {suggestion.best_time}</span>
           )}
           {suggestion.estimated_cost_per_person != null && (
-            <span className="font-mono">
-              ~{suggestion.currency || "USD"}{suggestion.estimated_cost_per_person}/pp
-            </span>
+            <span className="font-mono">~{suggestion.currency || "USD"}{suggestion.estimated_cost_per_person}/pp</span>
           )}
-          {suggestion.distance_km != null && (
-            <span>{suggestion.distance_km}km away</span>
-          )}
+          {suggestion.distance_km != null && <span>{suggestion.distance_km}km</span>}
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-1 border-t border-border/50">
+        <div className="flex items-center justify-between pt-2 border-t border-border/50">
           <button
             onClick={() => onToggleReaction(messageId, index)}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
-              hasReacted
-                ? "bg-[#0D9488]/10 text-[#0D9488]"
-                : "text-muted-foreground hover:bg-accent"
-            }`}
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${hasReacted ? "bg-[#0D9488]/10 text-[#0D9488]" : "text-muted-foreground hover:bg-accent"}`}
           >
-            <ThumbsUp className={`h-3 w-3 ${hasReacted ? "fill-current" : ""}`} />
+            <ThumbsUp className={`h-3.5 w-3.5 ${hasReacted ? "fill-current" : ""}`} />
             {count > 0 && count}
           </button>
 
           <div className="relative">
             <button
               onClick={() => setShowDayPicker(!showDayPicker)}
-              className="text-[10px] font-medium text-[#0D9488] hover:bg-[#0D9488]/10 px-2 py-1 rounded-lg transition-colors"
+              className="text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 px-2.5 py-1.5 rounded-lg transition-colors"
             >
-              Add to plan
+              + Add to plan
             </button>
             {showDayPicker && tripDays && tripDays.length > 0 && (
               <div className="absolute bottom-full right-0 mb-1 bg-card border border-border rounded-lg shadow-lg p-1 z-30 min-w-[140px] animate-fade-in">
                 {tripDays.map((d) => (
-                  <button
-                    key={d.date}
-                    onClick={() => handleAddToPlan(d.date)}
-                    className="w-full text-left px-2 py-1.5 text-[10px] rounded hover:bg-accent transition-colors"
-                  >
+                  <button key={d.date} onClick={() => handleAddToPlan(d.date)} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors">
                     Day {d.dayNumber} — {d.date}
                   </button>
                 ))}
@@ -197,16 +186,20 @@ function SuggestionCard({
   );
 }
 
-function LoadingSuggestions() {
+/* ------------------------------------------------------------------ */
+/*  Loading skeleton for results                                       */
+/* ------------------------------------------------------------------ */
+
+function LoadingSkeleton() {
   return (
-    <div className="flex gap-2 overflow-x-auto px-3 pb-2 scrollbar-hide">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl border border-border bg-card overflow-hidden min-w-[260px] shrink-0">
-          <Skeleton className="w-full h-[100px] rounded-none" />
-          <div className="p-2.5 space-y-2">
-            <Skeleton className="h-3 w-3/4" />
-            <Skeleton className="h-2.5 w-full" />
-            <Skeleton className="h-2.5 w-1/2" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-4 py-3">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
+          <Skeleton className="w-full h-36 rounded-none" />
+          <div className="p-3 space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-1/2" />
           </div>
         </div>
       ))}
@@ -214,181 +207,304 @@ function LoadingSuggestions() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Main component                                                     */
+/* ------------------------------------------------------------------ */
+
 export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, onAddToPlan }: Props) {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [input, setInput] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [stage, setStage] = useState<Stage>("what");
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedWhen, setSelectedWhen] = useState<string | null>(null);
+  const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
+  const [freeText, setFreeText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const context = buildContext(tripResult, memberCount);
-  const { messages, loadingMessages, sending, sendMessage, toggleReaction, getReactionInfo } = useConcierge(tripId, context);
+  const contextRaw = buildContext(tripResult, memberCount);
+  const destination = (contextRaw.destination as string) || "Unknown";
+  const conciergeContext = { ...contextRaw, destination } as { destination: string; date?: string; time_of_day?: string; group_size?: number; budget_level?: string; preferences?: string[]; hotel_location?: { name: string; lat: number; lng: number } };
+  const { messages, sending, sendMessage, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
 
-  const destination = context.destination;
-
-  // Derive trip days from result
   const tripDays = tripResult?.destinations?.flatMap(d =>
     d.days.map(day => ({ date: day.date, dayNumber: day.day_number }))
   ) || [];
 
-  // Auto-scroll on new messages
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, sending]);
+  // Get the latest assistant message with suggestions (our results)
+  const latestResults = [...messages].reverse().find(
+    m => m.role === "assistant" && m.suggestions && m.suggestions.length > 0
+  );
 
-  // Focus input on open
+  // Reset on close
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+    if (!open) {
+      // Delay reset so close animation finishes
+      const t = setTimeout(() => {
+        setStage("what");
+        setSelectedCategory(null);
+        setSelectedWhen(null);
+        setSelectedVibe(null);
+        setFreeText("");
+      }, 300);
+      return () => clearTimeout(t);
     }
   }, [open]);
 
-  const handleSend = useCallback(async () => {
-    if (!input.trim() || sending) return;
-    const q = input.trim();
-    setInput("");
-    try {
-      await sendMessage(q);
-    } catch {
-      toast.error("Failed to get suggestions. Try again.");
+  // Auto-submit when vibe is selected (or when is selected without vibes)
+  const doSearch = useCallback(async (category: Category | null, when: string | null, vibe: string | null, text?: string) => {
+    let query: string;
+    if (text) {
+      query = text;
+    } else if (category) {
+      const parts = [category.query];
+      if (when) parts.push(`for ${when.toLowerCase()}`);
+      if (vibe) parts.push(`— ${vibe.toLowerCase()} vibe`);
+      parts.push(`in ${destination}`);
+      query = parts.join(" ");
+    } else {
+      return;
     }
-  }, [input, sending, sendMessage]);
 
-  const handlePill = useCallback(async (query: string) => {
+    setStage("results");
     try {
       await sendMessage(query);
     } catch {
-      toast.error("Failed to get suggestions.");
+      toast.error("Couldn't find suggestions. Try again.");
     }
-  }, [sendMessage]);
+  }, [destination, sendMessage]);
+
+  const handleCategorySelect = (cat: Category) => {
+    setSelectedCategory(cat);
+    setStage("refine");
+  };
+
+  const handleFreeTextSubmit = () => {
+    if (!freeText.trim()) return;
+    doSearch(null, null, null, freeText.trim());
+  };
+
+  const handleWhenSelect = (when: string) => {
+    setSelectedWhen(when);
+    // If "Surprise me" has no vibes, go straight to results
+    if (selectedCategory?.id === "surprise") {
+      doSearch(selectedCategory, when, null);
+    }
+  };
+
+  const handleVibeSelect = (vibe: string) => {
+    setSelectedVibe(vibe);
+    doSearch(selectedCategory, selectedWhen, vibe);
+  };
+
+  const handleSkipVibe = () => {
+    doSearch(selectedCategory, selectedWhen, null);
+  };
+
+  const handleBack = () => {
+    if (stage === "results") {
+      setStage("refine");
+      setSelectedVibe(null);
+    } else if (stage === "refine") {
+      setStage("what");
+      setSelectedCategory(null);
+      setSelectedWhen(null);
+      setSelectedVibe(null);
+    } else {
+      onClose();
+    }
+  };
 
   if (!open) return null;
-
-  const panelContent = (
-    <div
-      className={`flex flex-col bg-background ${
-        isDesktop
-          ? "fixed top-0 right-0 h-full w-[400px] border-l border-border shadow-2xl z-50 animate-slide-in-right"
-          : "fixed bottom-0 left-0 right-0 h-[70vh] rounded-t-2xl border-t border-border shadow-2xl z-50 animate-slide-up"
-      }`}
-      style={isDesktop ? { backdropFilter: "blur(12px)", background: "hsl(var(--background) / 0.95)" } : undefined}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <div>
-          <h3 className="text-sm font-semibold flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4 text-[#0D9488]" />
-            Ask Junto
-          </h3>
-          <p className="text-[10px] text-muted-foreground">What do you want to do?</p>
-        </div>
-        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Quick pills */}
-      <div className="flex gap-1.5 overflow-x-auto px-3 py-2 border-b border-border/50 shrink-0 scrollbar-hide">
-        {QUICK_PILLS.map((pill) => (
-          <button
-            key={pill.label}
-            onClick={() => handlePill(pill.query)}
-            disabled={sending}
-            className="shrink-0 text-[10px] font-medium px-2.5 py-1 rounded-full border border-border bg-accent/30 text-foreground hover:bg-accent transition-colors disabled:opacity-50"
-          >
-            {pill.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Messages area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-        {loadingMessages ? (
-          <div className="flex items-center justify-center h-32">
-            <Skeleton className="h-4 w-32" />
-          </div>
-        ) : messages.length === 0 ? (
-          /* Empty state */
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <div className="w-14 h-14 rounded-full bg-[#0D9488]/10 flex items-center justify-center mb-3">
-              <Sparkles className="h-7 w-7 text-[#0D9488]" />
-            </div>
-            <h4 className="text-sm font-semibold text-foreground">I'm your trip concierge</h4>
-            <p className="text-xs text-muted-foreground mt-1">
-              Ask me anything about what to do in {destination}
-            </p>
-          </div>
-        ) : (
-          messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              {msg.role === "user" ? (
-                <div className="max-w-[85%] bg-[#0D9488] text-white px-3 py-2 rounded-2xl rounded-br-md">
-                  <p className="text-xs">{msg.content}</p>
-                </div>
-              ) : (
-                <div className="max-w-full space-y-2">
-                  {msg.content && (
-                    <div className="bg-accent/50 px-3 py-2 rounded-2xl rounded-bl-md">
-                      <p className="text-xs text-foreground">{msg.content}</p>
-                    </div>
-                  )}
-                  {msg.suggestions && msg.suggestions.length > 0 && (
-                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                      {msg.suggestions.map((s, i) => (
-                        <SuggestionCard
-                          key={`${msg.id}-${i}`}
-                          suggestion={s}
-                          messageId={msg.id}
-                          index={i}
-                          getReactionInfo={getReactionInfo}
-                          onToggleReaction={toggleReaction}
-                          tripDays={tripDays}
-                          onAddToPlan={onAddToPlan}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))
-        )}
-
-        {sending && <LoadingSuggestions />}
-      </div>
-
-      {/* Input */}
-      <div className="shrink-0 border-t border-border px-3 py-2 flex items-center gap-2">
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Where should we eat? What's fun tonight?"
-          className="flex-1 text-xs bg-accent/30 rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
-          onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
-          disabled={sending}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || sending}
-          className="p-2.5 rounded-xl bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors disabled:opacity-50"
-        >
-          <Send className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
 
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/30 z-40 animate-fade-in"
-        onClick={onClose}
-      />
-      {panelContent}
+      <div className="fixed inset-0 bg-black/40 z-40 animate-fade-in" onClick={onClose} />
+
+      {/* Full-screen overlay */}
+      <div className="fixed inset-0 z-50 flex flex-col bg-background animate-slide-up-full overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+          <div className="flex items-center gap-3">
+            {stage !== "what" && (
+              <button onClick={handleBack} className="p-1.5 -ml-1.5 rounded-lg hover:bg-accent transition-colors">
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            )}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Discover in {destination}</h2>
+              {stage === "refine" && selectedCategory && (
+                <p className="text-[10px] text-muted-foreground">{selectedCategory.label}</p>
+              )}
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Content area */}
+        <div className="flex-1 overflow-y-auto">
+          {/* STAGE 1: WHAT */}
+          {stage === "what" && (
+            <div className="px-4 py-6 space-y-6 animate-fade-in">
+              <h3 className="text-xl font-bold text-foreground text-center">What are you looking for?</h3>
+
+              {/* Category grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategorySelect(cat)}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-[#0D9488]/30 transition-all active:scale-95"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center">
+                      {cat.icon}
+                    </div>
+                    <span className="text-xs font-medium text-foreground">{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 border-t border-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="flex-1 border-t border-border" />
+              </div>
+
+              {/* Free text */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value)}
+                    placeholder="Describe what you want..."
+                    className="w-full text-sm bg-accent/30 rounded-xl pl-9 pr-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
+                    onKeyDown={(e) => { if (e.key === "Enter") handleFreeTextSubmit(); }}
+                  />
+                </div>
+                <button
+                  onClick={handleFreeTextSubmit}
+                  disabled={!freeText.trim()}
+                  className="px-4 py-2.5 rounded-xl bg-[#0D9488] text-white text-sm font-medium hover:bg-[#0D9488]/90 transition-colors disabled:opacity-40"
+                >
+                  Go
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STAGE 2: REFINE */}
+          {stage === "refine" && selectedCategory && (
+            <div className="px-4 py-6 space-y-6 animate-fade-in">
+              {/* When */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-foreground">When?</h3>
+                <div className="flex flex-wrap gap-2">
+                  {WHEN_OPTIONS.map((w) => (
+                    <button
+                      key={w}
+                      onClick={() => handleWhenSelect(w)}
+                      className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
+                        selectedWhen === w
+                          ? "bg-[#0D9488] text-white border-[#0D9488]"
+                          : "border-border bg-card text-foreground hover:bg-accent/50"
+                      }`}
+                    >
+                      {w}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Vibe (show after when is selected) */}
+              {selectedWhen && (
+                <div className="space-y-2 animate-fade-in">
+                  <h3 className="text-sm font-semibold text-foreground">Vibe?</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCategory.vibes.map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => handleVibeSelect(v)}
+                        className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
+                          selectedVibe === v
+                            ? "bg-[#0D9488] text-white border-[#0D9488]"
+                            : "border-border bg-card text-foreground hover:bg-accent/50"
+                        }`}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={handleSkipVibe}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
+                  >
+                    Skip — any vibe
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STAGE 3: RESULTS */}
+          {stage === "results" && (
+            <div className="py-3 animate-fade-in">
+              {sending ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-2 py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#0D9488]" />
+                    <span className="text-sm text-muted-foreground">Finding the best spots...</span>
+                  </div>
+                  <LoadingSkeleton />
+                </div>
+              ) : latestResults ? (
+                <div className="space-y-3">
+                  {latestResults.content && (
+                    <p className="text-sm text-muted-foreground px-4">{latestResults.content}</p>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-4">
+                    {latestResults.suggestions!.map((s, i) => (
+                      <SuggestionCard
+                        key={`${latestResults.id}-${i}`}
+                        suggestion={s}
+                        messageId={latestResults.id}
+                        index={i}
+                        getReactionInfo={getReactionInfo}
+                        onToggleReaction={toggleReaction}
+                        tripDays={tripDays}
+                        onAddToPlan={onAddToPlan}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Search again */}
+                  <div className="px-4 pt-3">
+                    <button
+                      onClick={() => { setStage("what"); setSelectedCategory(null); setSelectedWhen(null); setSelectedVibe(null); }}
+                      className="w-full py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-accent/50 transition-colors"
+                    >
+                      Search something else
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                  <p className="text-sm text-muted-foreground">No results found. Try a different search.</p>
+                  <button
+                    onClick={() => setStage("what")}
+                    className="mt-3 text-sm font-medium text-[#0D9488] hover:underline"
+                  >
+                    Start over
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 }
