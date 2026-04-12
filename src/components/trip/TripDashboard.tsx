@@ -17,7 +17,7 @@ import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import {
-  DndContext, closestCenter, PointerSensor, TouchSensor,
+  DndContext, rectIntersection, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -831,33 +831,24 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
 
         {/* ─── REORDERABLE SECTIONS ─── */}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={handleDragEnd}>
           <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
-            {(() => {
-              const PAIR = new Set(["decisions", "bookings"]);
-              const rendered: ReactNode[] = [];
-              let i = 0;
-              while (i < visibleOrder.length) {
-                const id = visibleOrder[i];
-                const nextId = visibleOrder[i + 1];
-                // If decisions & bookings are adjacent, render side by side
-                if (PAIR.has(id) && nextId && PAIR.has(nextId) && id !== nextId) {
-                  rendered.push(
-                    <div key={`${id}-${nextId}`} className="grid grid-cols-2 gap-3">
-                      <SortableSection id={id}>{renderSection(id)}</SortableSection>
-                      <SortableSection id={nextId}>{renderSection(nextId)}</SortableSection>
-                    </div>
-                  );
-                  i += 2;
-                } else {
-                  rendered.push(
-                    <SortableSection key={id} id={id}>{renderSection(id)}</SortableSection>
-                  );
-                  i++;
-                }
+            {visibleOrder.map((id) => {
+              if (id === "decisions" || id === "bookings") {
+                const otherId = id === "decisions" ? "bookings" : "decisions";
+                const isFirst = visibleOrder.indexOf(id) < visibleOrder.indexOf(otherId);
+                if (!isFirst) return null; // second card rendered by the first
+                return (
+                  <div key="decisions-bookings-row" className="grid grid-cols-2 gap-3">
+                    <SortableSection id={id}>{renderSection(id)}</SortableSection>
+                    <SortableSection id={otherId}>{renderSection(otherId)}</SortableSection>
+                  </div>
+                );
               }
-              return rendered;
-            })()}
+              return (
+                <SortableSection key={id} id={id}>{renderSection(id)}</SortableSection>
+              );
+            })}
           </SortableContext>
         </DndContext>
       </div>
