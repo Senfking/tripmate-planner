@@ -93,11 +93,12 @@ interface TripDashboardProps {
   startDate: string | null;
   endDate: string | null;
   tripName?: string;
+  coverPhoto?: string;
   onBuilderToggle?: (open: boolean) => void;
   onShareOpen?: () => void;
 }
 
-export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate, tripName, onBuilderToggle, onShareOpen }: TripDashboardProps) {
+export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate, tripName, coverPhoto, onBuilderToggle, onShareOpen }: TripDashboardProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const userId = user?.id;
@@ -312,7 +313,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const { data: attachments, isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments-summary", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("attachments").select("id, type, created_by, booking_data").eq("trip_id", tripId);
+      const { data, error } = await supabase.from("attachments").select("id, type, created_by, booking_data, og_image_url").eq("trip_id", tripId);
       if (error) throw error;
       return data;
     },
@@ -399,10 +400,32 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     }, 0);
   }
 
-  // Flight card data
+  // Flight card data — find the next upcoming flight by date
   const flights = (attachments ?? []).filter((a) => a.type === "flight");
-  const nextFlight = flights.length > 0 ? flights[0] : null;
-  const flightBookingData = nextFlight?.booking_data as any;
+  const sortedFlights = flights
+    .map((f) => ({ ...f, bd: f.booking_data as any }))
+    .filter((f) => f.bd?.flight_date || f.bd?.departure)
+    .sort((a, b) => {
+      const dateA = a.bd?.flight_date || "";
+      const dateB = b.bd?.flight_date || "";
+      return dateA.localeCompare(dateB);
+    });
+  const upcomingFlight = sortedFlights.find((f) => {
+    const d = f.bd?.flight_date;
+    return d ? new Date(d) >= today : true;
+  }) ?? sortedFlights[0] ?? null;
+  const nextFlight = upcomingFlight || (flights.length > 0 ? flights[0] : null);
+  const flightBookingData = (nextFlight as any)?.bd ?? (nextFlight?.booking_data as any);
+
+  // Extract airport codes from text like "Dubai (DXB)"
+  const extractCode = (text: string | undefined) => {
+    if (!text) return null;
+    const m = text.match(/\(([A-Z]{3})\)/);
+    return m ? m[1] : null;
+  };
+
+  // OG image for bookings card
+  const firstOgImage = (attachments ?? []).find((a) => a.og_image_url)?.og_image_url;
 
   const isLoading = stopsLoading || proposalsLoading || pollsLoading || itineraryLoading || attachmentsLoading || expensesLoading;
 
@@ -492,22 +515,43 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         );
       }
 
-      case "flights":
+      case "flights": {
         if (!nextFlight) return null;
+        const depCode = extractCode(flightBookingData?.departure) || flightBookingData?.origin_code || "DEP";
+        const arrCode = extractCode(flightBookingData?.destination) || flightBookingData?.destination_code || "ARR";
+        const depCity = flightBookingData?.departure?.replace(/\s*\([A-Z]{3}\)/, "") || "Origin";
+        const arrCity = flightBookingData?.destination?.replace(/\s*\([A-Z]{3}\)/, "") || "Destination";
+        const flightDateStr = flightBookingData?.flight_date || flightBookingData?.date;
+        const flightDate = flightDateStr ? new Date(flightDateStr) : null;
+        const flightCountdown = flightDate ? Math.ceil((flightDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
+        const provider = flightBookingData?.provider;
+
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
             className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
           >
             <div className="grid grid-cols-2 h-[90px]">
-              <div className="relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }}>
-                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[15px] font-bold tracking-widest">
-                  {flightBookingData?.origin_code || "DEP"}
+              <div className="relative overflow-hidden">
+                {coverPhoto ? (
+                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }} />
+                )}
+                <div className="absolute inset-0 bg-black/40" />
+                <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
+                  {depCode}
                 </span>
               </div>
-              <div className="relative" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }}>
-                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[15px] font-bold tracking-widest">
-                  {flightBookingData?.destination_code || "ARR"}
+              <div className="relative overflow-hidden">
+                {coverPhoto ? (
+                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "right center" }} />
+                ) : (
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }} />
+                )}
+                <div className="absolute inset-0 bg-black/50" />
+                <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
+                  {arrCode}
                 </span>
               </div>
             </div>
@@ -516,32 +560,40 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                 <div className="flex items-center gap-1.5">
                   <Plane className="h-3.5 w-3.5 text-muted-foreground" />
                   <p className="font-semibold text-[14px] text-foreground truncate">
-                    {flightBookingData?.origin || "Origin"} → {flightBookingData?.destination || "Destination"}
+                    {depCity} → {arrCity}
                   </p>
                 </div>
                 <p className="text-[12px] text-muted-foreground mt-0.5">
-                  {flightBookingData?.date ? format(new Date(flightBookingData.date), "MMM d") : "Date TBD"}
-                  {flightBookingData?.traveler && ` · ${flightBookingData.traveler}`}
+                  {flightDate ? format(flightDate, "MMM d") : "Date TBD"}
+                  {provider && ` · ${provider}`}
                 </p>
               </div>
-              {tripCountdown && (
+              {flightCountdown && flightCountdown > 0 && (
                 <span className="text-[12px] font-medium text-[#0D9488] border border-[#0D9488]/20 bg-[#0D9488]/5 rounded-full px-2.5 py-0.5 shrink-0">
-                  in {tripCountdown} day{tripCountdown > 1 ? "s" : ""}
+                  in {flightCountdown}d
                 </span>
               )}
             </div>
           </button>
         );
+      }
 
-      case "decisions-bookings":
+      case "decisions-bookings": {
+        const bookingsImage = firstOgImage || coverPhoto;
         return (
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
-              <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }}>
-                <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
+              <div className="h-[80px] relative overflow-hidden">
+                {coverPhoto ? (
+                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }} />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
               </div>
               <div className="p-3">
                 <p className="font-semibold text-[14px] text-foreground">Decisions</p>
@@ -554,8 +606,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
-              <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }}>
-                <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
+              <div className="h-[80px] relative overflow-hidden">
+                {bookingsImage ? (
+                  <img src={bookingsImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }} />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
               </div>
               <div className="p-3">
                 <p className="font-semibold text-[14px] text-foreground">Bookings</p>
@@ -564,6 +622,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             </button>
           </div>
         );
+      }
 
       case "itinerary":
         if (!showItinerary) return null;
