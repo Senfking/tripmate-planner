@@ -272,9 +272,9 @@ function FilterPill({ label, onClick }: { label: string; onClick?: () => void })
 export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, destination: destinationProp, onAddToPlan }: Props) {
   const [stage, setStage] = useState<Stage>("what");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedWhen, setSelectedWhen] = useState<string | null>(null);
-  const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
-  const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
+  const [selectedWhen, setSelectedWhen] = useState<string[]>([]);
+  const [selectedVibe, setSelectedVibe] = useState<string[]>([]);
+  const [selectedBudget, setSelectedBudget] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
