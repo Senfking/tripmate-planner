@@ -516,7 +516,7 @@ Return ONLY valid JSON, no other text.`;
 
     // ---- Call Lovable AI Gateway ----
     const userMessage = isStructured
-      ? `Find me ${CATEGORY_DESCRIPTIONS[structCategory!] || structCategory}${structWhen ? ` for ${structWhen.toLowerCase()}` : ""}${structVibe ? `, ${structVibe.toLowerCase()} vibe` : ""} in ${context.destination}`
+      ? `Find me ${CATEGORY_DESCRIPTIONS[structCategory!] || structCategory}${whenArr.length ? ` for ${whenArr.join(" or ").toLowerCase()}` : ""}${vibeArr.length ? `, ${vibeArr.join(" or ").toLowerCase()} vibe` : ""} in ${context.destination}`
       : query;
 
     const aiBody: Record<string, unknown> = {
