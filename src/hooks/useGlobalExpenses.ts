@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calcNetBalances } from "@/lib/settlementCalc";
+import { fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { resolvePhoto } from "@/lib/tripPhoto";
 
 export interface TripBalance {
@@ -19,44 +20,7 @@ export interface GlobalExpensesResult {
   trips: TripBalance[];
 }
 
-function parseRates(raw: unknown): Record<string, number> | null {
-  if (!raw) return null;
-  let obj: Record<string, unknown>;
-  if (typeof raw === "string") {
-    try { obj = JSON.parse(raw); } catch { return null; }
-  } else if (typeof raw === "object" && !Array.isArray(raw)) {
-    obj = raw as Record<string, unknown>;
-  } else {
-    return null;
-  }
-  return Object.keys(obj).length > 0 ? (obj as Record<string, number>) : null;
-}
-
-// Returns plain Record<string, number> - the same shape and queryKey that
-// useExpenses uses via qc.fetchQuery(["exchange-rates", "EUR"]).
-// Both hooks share a single cache entry and can never diverge.
-async function fetchEurRates(): Promise<Record<string, number>> {
-  const { data: eurRow } = await supabase
-    .from("exchange_rate_cache")
-    .select("rates")
-    .eq("base_currency", "EUR")
-    .maybeSingle();
-
-  const parsed = parseRates(eurRow?.rates);
-  if (parsed) return parsed;
-
-  try {
-    const res = await fetch("https://open.er-api.com/v6/latest/EUR");
-    const json = await res.json();
-    if (json.result === "success" && json.rates) {
-      return json.rates as Record<string, number>;
-    }
-  } catch {
-    // ignore
-  }
-
-  return {};
-}
+// fetchEurRates and crossCalculateRates imported from @/lib/fetchCrossRates
 
 export function useGlobalExpenses() {
   const { user } = useAuth();
@@ -157,14 +121,7 @@ export function useGlobalExpenses() {
 
         // Cross-calculate from EUR rates to this trip's settlement currency -
         // identical math to what useExpenses does in its ratesQuery.
-        let ratesForTrip = eurRates;
-        if (sc !== "EUR" && eurRates[sc]) {
-          const cross: Record<string, number> = {};
-          for (const [code, rate] of Object.entries(eurRates)) {
-            cross[code] = rate / eurRates[sc];
-          }
-          ratesForTrip = cross;
-        }
+        const ratesForTrip = crossCalculateRates(eurRates, sc);
 
         const expensesForTrip = (expenses ?? []).filter((e) => e.trip_id === tripId);
         const splitsForTrip = allSplits.filter(

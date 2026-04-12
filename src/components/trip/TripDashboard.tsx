@@ -6,7 +6,8 @@ import { format, differenceInCalendarDays, isWithinInterval, parseISO } from "da
 import { Compass, CalendarDays, Plane, Wallet, Users, Sparkles, AlertTriangle } from "lucide-react";
 import { SectionCard } from "./SectionCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
-import { calcNetBalances, type Rates } from "@/lib/settlementCalc";
+import { calcNetBalances } from "@/lib/settlementCalc";
+import { fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { SharedItemsSection } from "./SharedItemsSection";
 import { ArrivalsCard } from "@/components/bookings/ArrivalsCard";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
@@ -389,16 +390,12 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const { data: rates } = useQuery({
-    queryKey: ["exchange-rates", settlementCurrency],
+    queryKey: ["exchange-rates-cross", settlementCurrency],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exchange_rate_cache")
-        .select("rates")
-        .eq("base_currency", settlementCurrency)
-        .single();
-      if (error) return {};
-      return (data?.rates ?? {}) as Rates;
+      const eurRates = await fetchEurRates();
+      return crossCalculateRates(eurRates, settlementCurrency);
     },
+    staleTime: 1000 * 60 * 60,
     enabled: !!userId,
   });
 
