@@ -14,121 +14,47 @@ interface Props {
   onPinClick?: (dayDate: string, activityIndex: number) => void;
 }
 
-const UNSPLASH_THUMB = "https://source.unsplash.com/120x120/?";
-
-function createImagePin(num: number, title: string, color: string, photoQuery?: string | null) {
-  const imgSrc = photoQuery
-    ? `${UNSPLASH_THUMB}${encodeURIComponent(photoQuery)}`
-    : `${UNSPLASH_THUMB}${encodeURIComponent(title)}`;
-  const shortTitle = title.length > 18 ? title.slice(0, 17) + "…" : title;
+function createPinIcon(num: number, title: string, color: string) {
+  const shortTitle = title.length > 14 ? title.slice(0, 13) + "…" : title;
 
   return L.divIcon({
     className: "",
-    iconSize: [56, 68],
-    iconAnchor: [28, 68],
-    popupAnchor: [0, -62],
-    html: `<div style="position:relative;width:56px;height:68px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.25));cursor:pointer;">
-      <!-- Card body -->
-      <div style="width:56px;height:56px;border-radius:14px;overflow:hidden;border:2.5px solid white;background:${color};position:relative;">
-        <img src="${imgSrc}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />
-        <!-- Number badge -->
-        <div style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:1.5px solid white;">
-          <span style="font-size:9px;font-weight:800;color:white;font-family:Inter,system-ui,sans-serif;">${num}</span>
-        </div>
-      </div>
-      <!-- Pointer -->
-      <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid white;"></div>
-      <!-- Title label -->
-      <div style="position:absolute;top:58px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(0,0,0,0.7);color:white;font-size:8px;font-weight:600;padding:1px 5px;border-radius:4px;font-family:Inter,system-ui,sans-serif;pointer-events:none;max-width:90px;overflow:hidden;text-overflow:ellipsis;">${shortTitle}</div>
+    iconSize: [32, 44],
+    iconAnchor: [16, 44],
+    popupAnchor: [0, -40],
+    html: `<div style="position:relative;width:32px;height:44px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));cursor:pointer;">
+      <svg width="32" height="44" viewBox="0 0 32 44" fill="none">
+        <path d="M16 43C16 43 2 26 2 15C2 7.3 8.3 1 16 1C23.7 1 30 7.3 30 15C30 26 16 43 16 43Z" fill="${color}" stroke="white" stroke-width="2"/>
+      </svg>
+      <span style="position:absolute;top:7px;left:0;right:0;text-align:center;font-size:12px;font-weight:800;color:white;font-family:Inter,system-ui,sans-serif;text-shadow:0 1px 2px rgba(0,0,0,0.2);">${num}</span>
+      <div style="position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(15,23,42,0.85);color:white;font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;font-family:Inter,system-ui,sans-serif;pointer-events:none;">${shortTitle}</div>
     </div>`,
   });
 }
 
-function MapController({
-  result,
-  activeDayIndex,
-  allDays,
-  mode,
-}: Omit<Props, "onPinClick">) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (mode === "overview" || activeDayIndex < 0) {
-      const points = allDays
-        .flatMap((d) => d.activities)
-        .filter((a) => a.latitude != null && a.longitude != null)
-        .map((a) => [a.latitude!, a.longitude!] as [number, number]);
-
-      if (points.length > 1) {
-        map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
-          padding: [50, 50],
-          animate: true,
-        });
-      } else if (points.length === 1) {
-        map.setView(points[0], 12, { animate: true });
-      } else {
-        map.setView(
-          [result.map_center.lat, result.map_center.lng],
-          result.map_zoom || 6,
-          { animate: true }
-        );
-      }
-      return;
-    }
-
-    const day = allDays[activeDayIndex];
-    if (!day) return;
-
-    const points = day.activities
-      .filter((a) => a.latitude != null && a.longitude != null)
-      .map((a) => [a.latitude!, a.longitude!] as [number, number]);
-
-    if (points.length === 0) return;
-    if (points.length === 1) {
-      map.setView(points[0], 14, { animate: true });
-    } else {
-      map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
-        padding: [40, 40],
-        animate: true,
-      });
-    }
-  }, [mode, activeDayIndex, allDays, result, map]);
-
-  return null;
-}
-
 function ActivityPopup({ act }: { act: AIActivity & { _dayDate: string; _idx: number } }) {
-  const imgSrc = act.photo_query
-    ? `${UNSPLASH_THUMB}${encodeURIComponent(act.photo_query)}`
-    : `${UNSPLASH_THUMB}${encodeURIComponent(act.title)}`;
   const color = getCategoryColor(act.category);
 
   return (
     <div style={{ width: 220, fontFamily: "Inter, system-ui, sans-serif" }}>
-      <img
-        src={imgSrc}
-        alt={act.title}
-        style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: "8px 8px 0 0" }}
-        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-      />
-      <div style={{ padding: "8px 10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-          <span style={{ background: color, color: "white", fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 4, textTransform: "uppercase" }}>
+      <div style={{ padding: "10px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <span style={{ background: color, color: "white", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.5px" }}>
             {act.category}
           </span>
-          <span style={{ fontSize: 9, color: "#9ca3af" }}>{act.start_time}</span>
+          <span style={{ fontSize: 10, color: "#9ca3af" }}>{act.start_time}</span>
         </div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#1f2937", lineHeight: 1.3 }}>{act.title}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#1f2937", lineHeight: 1.3 }}>{act.title}</div>
         {act.location_name && (
-          <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>{act.location_name}</div>
+          <div style={{ fontSize: 11, color: "#6b7280", marginTop: 3 }}>📍 {act.location_name}</div>
         )}
         {act.description && (
-          <div style={{ fontSize: 10, color: "#4b5563", marginTop: 4, lineHeight: 1.4 }}>
-            {act.description.length > 100 ? act.description.slice(0, 100) + "…" : act.description}
+          <div style={{ fontSize: 11, color: "#4b5563", marginTop: 6, lineHeight: 1.5 }}>
+            {act.description.length > 120 ? act.description.slice(0, 120) + "…" : act.description}
           </div>
         )}
         {act.estimated_cost_per_person != null && (
-          <div style={{ fontSize: 10, color: "#059669", fontWeight: 600, marginTop: 4 }}>
+          <div style={{ fontSize: 11, color: "#059669", fontWeight: 600, marginTop: 6 }}>
             ~{act.currency}{Math.round(act.estimated_cost_per_person)}/person
           </div>
         )}
@@ -137,9 +63,9 @@ function ActivityPopup({ act }: { act: AIActivity & { _dayDate: string; _idx: nu
             href={act.google_maps_url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ fontSize: 10, color: "#3b82f6", textDecoration: "none", display: "block", marginTop: 4, fontWeight: 500 }}
+            style={{ fontSize: 11, color: "#3b82f6", textDecoration: "none", display: "inline-block", marginTop: 6, fontWeight: 600 }}
           >
-            Open in Google Maps →
+            Open in Maps →
           </a>
         )}
       </div>
