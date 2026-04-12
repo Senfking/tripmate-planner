@@ -654,11 +654,11 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="px-4 py-6 space-y-6 animate-fade-in">
+            <div className="px-4 pt-3 pb-4 space-y-3 animate-fade-in">
               {/* Location input when no destination */}
               {!resolvedDest && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Where are you?</p>
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground">Where are you?</p>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -667,70 +667,61 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       onBlur={() => { if (locationInput.trim()) setManualLocation(locationInput.trim()); }}
                       onKeyDown={(e) => { if (e.key === "Enter" && locationInput.trim()) setManualLocation(locationInput.trim()); }}
                       placeholder="e.g. Canggu, Bali"
-                      className="flex-1 text-sm bg-accent/30 rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
+                      className="flex-1 text-sm bg-accent/30 rounded-xl px-3 py-2 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
                     />
                     <button
                       onClick={handleUseLocation}
                       disabled={geoLoading}
-                      className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50"
                     >
                       {geoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
-                      {geoLoading ? "..." : "Use my location"}
+                      {geoLoading ? "..." : "📍 Locate me"}
                     </button>
                   </div>
                 </div>
               )}
 
-              <h3 className="text-xl font-bold text-foreground text-center">
-                What are you looking for?
-              </h3>
-
-              {/* Category grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {/* Category grid — compact cards */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => handleCategorySelect(cat)}
-                    className="relative flex flex-col items-center justify-center gap-2 p-4 h-[120px] rounded-xl overflow-hidden transition-transform active:scale-95 hover:scale-[1.02]"
+                    className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient} opacity-90`} />
-                    <div className="relative z-10 text-white">
-                      {cat.icon}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient}`} />
+                    <div className="relative z-10 w-9 h-9 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+                      <div className="text-white">{cat.icon}</div>
                     </div>
-                    <span className="relative z-10 text-sm font-semibold text-white">{cat.label}</span>
-                    <span className="relative z-10 text-[10px] text-white/80 leading-tight text-center">{cat.tagline}</span>
+                    <div className="relative z-10 min-w-0">
+                      <span className="text-[13px] font-bold text-white block leading-tight">{cat.label}</span>
+                      <span className="text-[9px] text-white/70 leading-tight block truncate">{cat.tagline}</span>
+                    </div>
                     {cat.id === "events" && (
-                      <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-white animate-pulse z-10" />
+                      <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse z-10" />
                     )}
                   </button>
                 ))}
               </div>
 
-              {/* Divider */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 border-t border-border" />
-                <span className="text-xs text-muted-foreground">or</span>
-                <div className="flex-1 border-t border-border" />
-              </div>
-
-              {/* Free text */}
+              {/* Free text — inline */}
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <input
                     ref={inputRef}
                     type="text"
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
-                    placeholder="Or describe what you want..."
-                    className="w-full text-sm bg-accent/30 rounded-xl pl-9 pr-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
+                    placeholder="Or just describe what you want…"
+                    className="w-full text-[13px] bg-accent/30 rounded-xl pl-8 pr-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
                     onKeyDown={(e) => { if (e.key === "Enter") handleFreeTextSubmit(); }}
                   />
                 </div>
                 <button
                   onClick={handleFreeTextSubmit}
                   disabled={!freeText.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
                 >
                   Go
                 </button>
@@ -738,14 +729,14 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
               {/* Recent searches */}
               {recentSearches.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Recent searches</p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-1.5">
+                  <p className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Recent</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {recentSearches.map((s, i) => (
                       <button
                         key={i}
                         onClick={() => handleRecentSearch(s)}
-                        className="text-xs px-3 py-1.5 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
+                        className="text-[11px] px-2.5 py-1 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
                       >
                         {s.label}
                       </button>
