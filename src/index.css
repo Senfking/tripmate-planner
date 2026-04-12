@@ -513,3 +513,19 @@ html.dark, html.dark body, html.dark #root {
 .trip-results-dark-panel .text-green-700 {
   color: hsl(142 70% 60%) !important;
 }
+
+/* Premium map popups */
+.premium-map-popup .leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18) !important;
+  border: none !important;
+}
+.premium-map-popup .leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+.premium-map-popup .leaflet-popup-tip {
+  box-shadow: none !important;
+}
