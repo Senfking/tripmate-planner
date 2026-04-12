@@ -50,6 +50,8 @@ export interface ConciergeReaction {
 
 interface ConciergeContext {
   destination: string;
+  location?: string;
+  user_location?: { lat: number; lng: number };
   date?: string;
   time_of_day?: string;
   group_size?: number;
