@@ -248,7 +248,7 @@ export function useResultsState(tripId: string) {
   );
 
   const requestAlternatives = useCallback(
-    async (dayDate: string, activityIndex: number, activity: AIActivity, tripId: string) => {
+    async (dayDate: string, activityIndex: number, activity: AIActivity, tripId: string, userDescription?: string) => {
       setAlternativesFor({ dayDate, activityIndex, activity });
       setLoadingAlternatives(true);
       setAlternatives([]);
@@ -259,6 +259,7 @@ export function useResultsState(tripId: string) {
             trip_id: tripId,
             notes: `Suggest 3 alternative activities to replace "${activity.title}" at ${activity.start_time} in ${activity.location_name}. Same category (${activity.category}), same time slot. Return only the alternatives array.`,
             alternatives_mode: true,
+            ...(userDescription ? { user_description: userDescription } : {}),
           },
         });
 

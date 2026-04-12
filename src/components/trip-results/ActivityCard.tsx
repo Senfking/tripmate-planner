@@ -16,7 +16,7 @@ interface Props {
   activityIndex?: number;
   isAdded: boolean;
   onToggleAdd: () => void;
-  onRequestChange: () => void;
+  onRequestChange: (userDescription?: string) => void;
   onRemove: () => void;
   onCoordsRefined?: (lat: number, lng: number) => void;
   animDelay?: number;
@@ -353,7 +353,7 @@ export function ActivityCard({
                   className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && swapText.trim()) {
-                      onRequestChange();
+                      onRequestChange(swapText.trim());
                       setSwapMode(null);
                       setSwapText("");
                     }
@@ -373,7 +373,7 @@ export function ActivityCard({
                   <button
                     onClick={() => {
                       if (swapText.trim()) {
-                        onRequestChange();
+                        onRequestChange(swapText.trim());
                         setSwapMode(null);
                         setSwapText("");
                       }

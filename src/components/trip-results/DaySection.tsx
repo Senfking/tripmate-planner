@@ -22,7 +22,7 @@ interface Props {
   refinedCoords?: Map<string, { lat: number; lng: number }>;
   isAdded: (dayDate: string, title: string) => boolean;
   onToggleAdd: (day: AIDay, activity: AIActivity) => void;
-  onRequestChange: (dayDate: string, index: number, activity: AIActivity) => void;
+  onRequestChange: (dayDate: string, index: number, activity: AIActivity, userDescription?: string) => void;
   onRemoveActivity: (dayDate: string, index: number, activity: AIActivity) => void;
   isActivityRemoved: (dayDate: string, index: number, title: string) => boolean;
   onAddLocalActivity: (dayDate: string, activity: AIActivity) => void;
@@ -188,7 +188,7 @@ export function DaySection({
                     activityIndex={i}
                     isAdded={isAdded(day.date, activity.title)}
                     onToggleAdd={() => onToggleAdd(day, activity)}
-                    onRequestChange={() => onRequestChange(day.date, i, activity)}
+                    onRequestChange={(desc?: string) => onRequestChange(day.date, i, activity, desc)}
                     onRemove={() => onRemoveActivity(day.date, i, activity)}
                     onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
                     animDelay={i * 50}

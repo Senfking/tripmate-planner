@@ -344,7 +344,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
                     isAdded={state.isAdded}
                     onToggleAdd={(d, a) => state.toggleActivity(d, a)}
-                    onRequestChange={(dd, i, a) => state.requestAlternatives(dd, i, a, tripId)}
+                    onRequestChange={(dd, i, a, desc) => state.requestAlternatives(dd, i, a, tripId, desc)}
                     onRemoveActivity={(dd, i, a) => state.removeActivity(dd, i, a)}
                     isActivityRemoved={state.isActivityRemoved}
                     onAddLocalActivity={(dd, a) => state.addLocalActivity(dd, a)}
