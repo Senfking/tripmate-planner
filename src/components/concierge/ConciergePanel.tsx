@@ -332,9 +332,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       const t = setTimeout(() => {
         setStage("what");
         setSelectedCategory(null);
-        setSelectedWhen(null);
-        setSelectedVibe(null);
-        setSelectedBudget(null);
+        setSelectedWhen([]);
+        setSelectedVibe([]);
+        setSelectedBudget([]);
         setFreeText("");
         setSearchStartedAt(null);
       }, 300);
