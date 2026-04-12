@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export type GooglePriceLevel =
+  | "PRICE_LEVEL_FREE"
+  | "PRICE_LEVEL_INEXPENSIVE"
+  | "PRICE_LEVEL_MODERATE"
+  | "PRICE_LEVEL_EXPENSIVE"
+  | "PRICE_LEVEL_VERY_EXPENSIVE";
+
 interface PlaceDetails {
   photos: string[];
   reviews: { author: string; rating: number; text: string; time: string }[];
@@ -10,6 +17,7 @@ interface PlaceDetails {
   address: string | null;
   latitude: number | null;
   longitude: number | null;
+  priceLevel: GooglePriceLevel | null;
 }
 
 export function useGooglePlaceDetails(activityName: string, location: string) {
@@ -41,6 +49,7 @@ export function useGooglePlaceDetails(activityName: string, location: string) {
     googleMapsUrl: data?.googleMapsUrl ?? null,
     latitude: data?.latitude ?? null,
     longitude: data?.longitude ?? null,
+    priceLevel: (data?.priceLevel as GooglePriceLevel) ?? null,
     isLoading: enabled && isLoading,
   };
 }

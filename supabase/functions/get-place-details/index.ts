@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.userRatingCount,places.reviews,places.photos,places.googleMapsUri,places.formattedAddress,places.location",
+        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.userRatingCount,places.reviews,places.photos,places.googleMapsUri,places.formattedAddress,places.location,places.priceLevel",
       },
       body: JSON.stringify({ textQuery: query }),
     });
@@ -83,6 +83,7 @@ Deno.serve(async (req) => {
       address: place.formattedAddress ?? null,
       latitude: place.location?.latitude ?? null,
       longitude: place.location?.longitude ?? null,
+      priceLevel: place.priceLevel ?? null,
     };
 
     return new Response(JSON.stringify(result), {

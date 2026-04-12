@@ -56,6 +56,7 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
       : [],
     accommodation: dest?.accommodation || undefined,
     transport_to_next: dest?.transport_to_next || undefined,
+    cost_profile: dest?.cost_profile || undefined,
   }));
 
   // map_center: the AI might omit it, use `center`, or use lat/longitude keys
