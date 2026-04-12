@@ -37,6 +37,8 @@ interface Category {
   tagline: string;
   icon: React.ReactNode;
   gradient: string;
+  gradientColor: string;
+  photoSuffix: string;
   query: string;
 }
 
@@ -48,13 +50,13 @@ interface FilterSection {
 }
 
 const CATEGORIES: Category[] = [
-  { id: "eat", label: "Eat", tagline: "From street food to fine dining", icon: <Utensils className="h-7 w-7" />, gradient: "from-orange-400/80 to-amber-500/80", query: "Best places to eat" },
-  { id: "drink", label: "Drink", tagline: "Hidden bars to sunset spots", icon: <Wine className="h-7 w-7" />, gradient: "from-purple-500/80 to-violet-600/80", query: "Best bars and drinks" },
-  { id: "party", label: "Party", tagline: "Where the night takes you", icon: <Music className="h-7 w-7" />, gradient: "from-pink-500/80 to-rose-500/80", query: "Best nightlife and parties" },
-  { id: "explore", label: "Explore", tagline: "Beyond the guidebook", icon: <Compass className="h-7 w-7" />, gradient: "from-sky-500/80 to-blue-500/80", query: "Things to explore and see" },
-  { id: "relax", label: "Relax", tagline: "Your reset button", icon: <Waves className="h-7 w-7" />, gradient: "from-emerald-400/80 to-green-500/80", query: "Relaxation and wellness spots" },
-  { id: "workout", label: "Workout", tagline: "Don't skip travel day", icon: <Dumbbell className="h-7 w-7" />, gradient: "from-slate-400/80 to-slate-500/80", query: "Gyms and fitness activities" },
-  { id: "events", label: "Events", tagline: "Happening right now", icon: <CalendarHeart className="h-7 w-7" />, gradient: "from-red-400/80 to-orange-400/80", query: "Events and things happening" },
+  { id: "eat", label: "Eat", tagline: "From street food to fine dining", icon: <Utensils className="h-7 w-7" />, gradient: "from-orange-400/80 to-amber-500/80", gradientColor: "rgba(251,146,60,0.82)", photoSuffix: "food", query: "Best places to eat" },
+  { id: "drink", label: "Drink", tagline: "Hidden bars to sunset spots", icon: <Wine className="h-7 w-7" />, gradient: "from-purple-500/80 to-violet-600/80", gradientColor: "rgba(168,85,247,0.82)", photoSuffix: "cocktail bar", query: "Best bars and drinks" },
+  { id: "party", label: "Party", tagline: "Where the night takes you", icon: <Music className="h-7 w-7" />, gradient: "from-pink-500/80 to-rose-500/80", gradientColor: "rgba(236,72,153,0.82)", photoSuffix: "nightclub party", query: "Best nightlife and parties" },
+  { id: "explore", label: "Explore", tagline: "Beyond the guidebook", icon: <Compass className="h-7 w-7" />, gradient: "from-sky-500/80 to-blue-500/80", gradientColor: "rgba(14,165,233,0.82)", photoSuffix: "landscape", query: "Things to explore and see" },
+  { id: "relax", label: "Relax", tagline: "Your reset button", icon: <Waves className="h-7 w-7" />, gradient: "from-emerald-400/80 to-green-500/80", gradientColor: "rgba(52,211,153,0.82)", photoSuffix: "spa wellness", query: "Relaxation and wellness spots" },
+  { id: "workout", label: "Workout", tagline: "Don't skip travel day", icon: <Dumbbell className="h-7 w-7" />, gradient: "from-slate-400/80 to-slate-500/80", gradientColor: "rgba(148,163,184,0.82)", photoSuffix: "fitness gym", query: "Gyms and fitness activities" },
+  { id: "events", label: "Events", tagline: "Happening right now", icon: <CalendarHeart className="h-7 w-7" />, gradient: "from-red-400/80 to-orange-400/80", gradientColor: "rgba(248,113,113,0.82)", photoSuffix: "festival concert", query: "Events and things happening" },
 ];
 
 const CATEGORY_FILTERS: Record<string, FilterSection[]> = {
@@ -867,10 +869,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   };
 
   const handleSurpriseMe = () => {
-    setSelectedCategory({ id: "surprise", label: "Surprise me", tagline: "Trust us", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", query: "Surprise" });
+    setSelectedCategory({ id: "surprise", label: "Surprise me", tagline: "Trust us", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", gradientColor: "rgba(45,212,191,0.82)", photoSuffix: "hidden gem", query: "Surprise" });
     setIsLucky(true);
-    // Go directly to results — no intermediate screen
-    doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", query: "" }, {}, undefined, true);
+    doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", gradientColor: "", photoSuffix: "", query: "" }, {}, undefined, true);
   };
 
   const handleFreeTextSubmit = () => {
@@ -1077,13 +1078,29 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
                     style={{ minHeight: "62px" }}
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient}`} />
+                    {/* Photo background */}
+                    <img
+                      src={`https://source.unsplash.com/400x200/?${encodeURIComponent(destination + ' ' + cat.photoSuffix)}`}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    {/* Gradient overlay */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: `linear-gradient(to right, ${cat.gradientColor} 0%, ${cat.gradientColor.replace('0.82', '0.6')} 55%, transparent 100%)`,
+                      }}
+                    />
+                    {/* Fallback gradient (visible if image fails) */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient} -z-10`} />
                     <div className="relative z-10 w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
                       <div className="text-white [&>svg]:h-5 [&>svg]:w-5">{cat.icon}</div>
                     </div>
                     <div className="relative z-10 min-w-0">
-                      <span className="text-[14px] font-bold text-white block leading-tight">{cat.label}</span>
-                      <span className="text-[11px] text-white/70 leading-tight block truncate">{cat.tagline}</span>
+                      <span className="text-[14px] font-bold text-white block leading-tight drop-shadow-sm">{cat.label}</span>
+                      <span className="text-[11px] text-white/80 leading-tight block truncate drop-shadow-sm">{cat.tagline}</span>
                     </div>
                     {cat.id === "events" && (
                       <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse z-10" />
@@ -1097,8 +1114,21 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   className="col-span-2 relative flex items-center justify-center gap-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02]"
                   style={{ minHeight: "62px" }}
                 >
+                  <img
+                    src={`https://source.unsplash.com/800x200/?${encodeURIComponent(destination + ' hidden gem')}`}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
                   <div
                     className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(13,148,136,0.85) 0%, rgba(217,119,6,0.7) 50%, transparent 100%)",
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0 -z-10"
                     style={{
                       background: "linear-gradient(135deg, #0D9488 0%, #D97706 25%, #0D9488 50%, #D97706 75%, #0D9488 100%)",
                       backgroundSize: "400% 400%",
@@ -1110,8 +1140,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       <Sparkles className="h-5 w-5 text-white" />
                     </div>
                     <div className="text-left">
-                      <span className="text-[14px] font-bold text-white block leading-tight">Surprise me</span>
-                      <span className="text-[11px] text-white/80 leading-tight block">Hidden gems & unexpected experiences</span>
+                      <span className="text-[14px] font-bold text-white block leading-tight drop-shadow-sm">Surprise me</span>
+                      <span className="text-[11px] text-white/80 leading-tight block drop-shadow-sm">Hidden gems & unexpected experiences</span>
                     </div>
                   </div>
                 </button>
