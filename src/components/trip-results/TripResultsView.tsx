@@ -130,13 +130,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-background overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] bg-background overflow-y-auto" data-results-scroll-root="true">
       {/* Timeline (desktop only) */}
       <ResultsTimeline nodes={timelineNodes} />
 
       <div className="max-w-[700px] mx-auto min-h-full flex flex-col lg:pl-[60px]">
         {/* Header */}
-        <div className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
+        <div data-results-header="true" className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
           <div className="flex items-center gap-3">
             <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors">
               <ArrowLeft className="h-5 w-5 text-foreground" />
