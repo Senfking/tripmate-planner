@@ -37,6 +37,7 @@ interface TripBuilderRequest {
   notes?: string | null;
   free_text?: string | null;
   alternatives_mode?: boolean;
+  user_description?: string | null;
 }
 
 function daysBetween(start: string, end: string): number {
@@ -368,6 +369,7 @@ Deno.serve(async (req) => {
 
     if (body.alternatives_mode) {
       const altNotes = body.notes || "";
+      const userDescription = body.user_description?.trim() || "";
       const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
       if (!lovableApiKey) {
         return jsonResponse({ success: false, error: "LOVABLE_API_KEY not configured" }, 500);
@@ -407,11 +409,19 @@ Deno.serve(async (req) => {
         },
       };
 
+      const altSystemPrompt = userDescription
+        ? "You are an expert travel planner. Suggest 3 real alternative activities that match the user's description. Use REAL venue names that actually exist. Include realistic coordinates."
+        : "You are an expert travel planner. Suggest 3 real alternative activities. Use REAL venue names that actually exist. Include realistic coordinates.";
+
+      const altUserPrompt = userDescription
+        ? `${altNotes}\n\nThe user wants alternatives matching this description: '${userDescription}'. Suggest 3 alternative activities that match the user's description while fitting the day's schedule.`
+        : altNotes;
+
       try {
         const altResult = await callLovableAI(
           lovableApiKey,
-          "You are an expert travel planner. Suggest 3 real alternative activities. Use REAL venue names that actually exist. Include realistic coordinates.",
-          altNotes,
+          altSystemPrompt,
+          altUserPrompt,
           altToolSchema,
         );
         const normalizedAlt = normalizeAIResponse(altResult.itinerary);

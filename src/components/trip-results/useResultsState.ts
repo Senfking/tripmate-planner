@@ -284,6 +284,7 @@ export function useResultsState(tripId: string) {
             trip_id: tripId,
             notes: notesPrompt,
             alternatives_mode: true,
+            ...(userDescription ? { user_description: userDescription } : {}),
           },
         });
 
