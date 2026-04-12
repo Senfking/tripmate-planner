@@ -220,9 +220,9 @@ Deno.serve(async (req) => {
     }
 
     // ---- API keys ----
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!anthropicKey) {
-      return jsonResponse({ error: "ANTHROPIC_API_KEY not configured" }, 500);
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableKey) {
+      return jsonResponse({ error: "LOVABLE_API_KEY not configured" }, 500);
     }
     const googleKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
 
