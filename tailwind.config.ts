@@ -101,6 +101,10 @@ export default {
           from: { transform: "translateX(-100%)" },
           to: { transform: "translateX(0)" },
         },
+        "slide-in-right": {
+          from: { transform: "translateX(100%)" },
+          to: { transform: "translateX(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -112,6 +116,7 @@ export default {
         "fade-in": "fade-in 300ms ease-out both",
         "slide-up": "slide-up 300ms ease-out",
         "slide-in-left": "slide-in-left 300ms ease-out",
+        "slide-in-right": "slide-in-right 300ms ease-out",
       },
     },
   },

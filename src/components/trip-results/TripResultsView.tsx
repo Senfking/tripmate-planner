@@ -412,17 +412,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
-        {/* Trip-level group discussion */}
-        {planId && (
-          <div className="mx-4 mt-2 mb-6 p-4 rounded-xl bg-card border border-border">
-            <TripDiscussion
-              planId={planId}
-              activityKey="trip-general"
-              placeholder="Discuss this plan with your group..."
-              maxShown={3}
-            />
-          </div>
-        )}
+        {/* Trip-level discussion moved into Group Activity panel */}
 
         {/* Bottom spacer */}
         <div className="h-24" />
@@ -502,7 +492,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {planId && (
         <button
           onClick={() => setGroupActivityOpen(true)}
-          className="fixed bottom-20 left-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center"
+          className="fixed bottom-20 right-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center"
           title="Group activity"
         >
           <Users className="h-4 w-4" />
