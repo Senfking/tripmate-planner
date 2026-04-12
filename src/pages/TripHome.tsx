@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -133,6 +133,23 @@ export default function TripHome() {
         .single();
       if (error) throw error;
       return data;
+    },
+    enabled: !!tripId && !!user,
+  });
+
+  // Check if trip has a linked AI plan — redirect to plan view if so
+  const { data: hasAIPlan, isLoading: planCheckLoading } = useQuery({
+    queryKey: ["trip-has-ai-plan", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_trip_plans")
+        .select("id")
+        .eq("trip_id", tripId!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      return data?.id ?? null;
     },
     enabled: !!tripId && !!user,
   });
