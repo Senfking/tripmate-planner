@@ -203,9 +203,10 @@ export function FeatureCards() {
 
         <div
           ref={ref}
-          className="flex gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-          style={{ paddingLeft: 40, paddingRight: 0 }}
+          className="flex gap-5 overflow-x-auto scrollbar-hide"
         >
+          {/* Left spacer for initial padding */}
+          <div className="shrink-0 w-5 sm:w-[30px]" />
           {FEATURES.map((f, i) => (
             <div
               key={i}
