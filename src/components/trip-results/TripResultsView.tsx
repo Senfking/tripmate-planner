@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell, Lightbulb, Bed, Wallet } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell, Lightbulb, Bed, Wallet, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -12,6 +12,8 @@ import { AlternativesSheet } from "./AlternativesSheet";
 import { ResultsMap } from "./ResultsMap";
 import { ResultsTimeline, buildTimelineNodes } from "./ResultsTimeline";
 import { TripDiscussion } from "./TripDiscussion";
+import { CostBottomPanel } from "./CostBottomPanel";
+import { EditTripSheet } from "./EditTripSheet";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 
@@ -41,6 +43,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const [costOpen, setCostOpen] = useState(false);
   const [mapVisible, setMapVisible] = useState(true);
   const [mapFullscreen, setMapFullscreen] = useState(false);
+  const [editTripOpen, setEditTripOpen] = useState(false);
   type CoordsMap = Map<string, { lat: number; lng: number }>;
   const refinedCoords = useRef<CoordsMap>(new (Map as any)()).current as CoordsMap;
   const [coordsVersion, setCoordsVersion] = useState(0);
@@ -97,8 +100,6 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     return { total: Math.round(total), dailyAvg, categories: sorted };
   }, [allDays, result]);
 
-  const handleRemoveActivity = useCallback((_dayDate: string, _index: number) => {}, []);
-
   const dateRange = useMemo(() => {
     if (result.destinations.length === 0) return "";
     const first = result.destinations[0].start_date;
@@ -146,6 +147,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               </h1>
               <p className="text-xs text-muted-foreground font-mono">{dateRange}</p>
             </div>
+            <button
+              onClick={() => setEditTripOpen(true)}
+              className="p-2 rounded-full hover:bg-accent transition-colors"
+              title="Edit trip"
+            >
+              <PenLine className="h-4 w-4 text-muted-foreground" />
+            </button>
           </div>
         </div>
 
@@ -179,7 +187,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* Divider */}
         <div className="mx-4 border-t border-border" />
 
-        {/* Overview map — default visible at 250px */}
+        {/* Overview map */}
         <div className="mx-4 mt-4 mb-4">
           {mapVisible ? (
             <div className="rounded-xl overflow-hidden border border-[#0D9488]/20 relative animate-fade-in">
@@ -192,7 +200,6 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
                 />
               </div>
-              {/* Controls overlay above Leaflet z-index */}
               <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1000 }}>
                 <button
                   onClick={() => setMapFullscreen(true)}
@@ -338,7 +345,10 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     isAdded={state.isAdded}
                     onToggleAdd={(d, a) => state.toggleActivity(d, a)}
                     onRequestChange={(dd, i, a) => state.requestAlternatives(dd, i, a, tripId)}
-                    onRemoveActivity={handleRemoveActivity}
+                    onRemoveActivity={(dd, i, a) => state.removeActivity(dd, i, a)}
+                    isActivityRemoved={state.isActivityRemoved}
+                    onAddLocalActivity={(dd, a) => state.addLocalActivity(dd, a)}
+                    getLocalAdditions={state.getLocalAdditions}
                     onCoordsRefined={handleCoordsRefined}
                   />
                 ))}
@@ -400,48 +410,49 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
-        <div className="max-w-[700px] mx-auto flex items-center justify-between gap-3 px-4 py-3">
-          <div className="flex items-center gap-2">
+        <div className="max-w-[700px] mx-auto relative">
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRegenerate}
+                  className="text-xs text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleShare}
+                  className="text-xs text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <CostBottomPanel
+                totalActivities={totalActivities}
+                total={costBreakdown.total}
+                dailyAvg={costBreakdown.dailyAvg}
+                currency={currency}
+                categories={costBreakdown.categories}
+              />
+            </div>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRegenerate}
-              className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
+              onClick={() => state.addAllActivities(result)}
+              disabled={state.isAddingAll || remainingCount === 0}
+              className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shrink-0"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </Button>
-            {onAdjust && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onAdjust}
-                className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleShare}
-              className="text-xs text-muted-foreground hover:text-foreground gap-1 h-8 px-2"
-            >
-              <Share2 className="h-3.5 w-3.5" />
+              {state.isAddingAll
+                ? "Adding..."
+                : remainingCount === totalActivities
+                ? "Add all to itinerary"
+                : remainingCount === 0
+                ? "All added ✓"
+                : `Add remaining ${remainingCount}`}
             </Button>
           </div>
-          <Button
-            onClick={() => state.addAllActivities(result)}
-            disabled={state.isAddingAll || remainingCount === 0}
-            className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
-          >
-            {state.isAddingAll
-              ? "Adding..."
-              : remainingCount === totalActivities
-              ? "Add all to itinerary"
-              : remainingCount === 0
-              ? "All added ✓"
-              : `Add remaining ${remainingCount}`}
-          </Button>
         </div>
       </div>
 
@@ -476,6 +487,19 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             state.setAlternativesFor(null);
           }}
           onClose={() => state.setAlternativesFor(null)}
+        />
+      )}
+
+      {/* Edit Trip Sheet */}
+      {editTripOpen && (
+        <EditTripSheet
+          result={result}
+          onRegenerate={(prompt) => {
+            setEditTripOpen(false);
+            toast.info("Regenerating plan...");
+            onRegenerate();
+          }}
+          onClose={() => setEditTripOpen(false)}
         />
       )}
     </div>,
