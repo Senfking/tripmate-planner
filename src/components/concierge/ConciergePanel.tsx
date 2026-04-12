@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   X, Utensils, Wine, Music, Compass, Waves, Dumbbell,
@@ -6,7 +6,7 @@ import {
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
-  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown,
+  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -251,8 +251,77 @@ function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (ke
 }
 
 /* ------------------------------------------------------------------ */
-/*  SuggestionCard                                                     */
+/*  HorizontalCarousel (desktop only)                                  */
 /* ------------------------------------------------------------------ */
+
+function HorizontalCarousel({ children, cardWidth = 350 }: { children: ReactNode; cardWidth?: number }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", checkScroll); ro.disconnect(); };
+  }, [checkScroll, children]);
+
+  const scroll = (dir: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === "left" ? -cardWidth : cardWidth, behavior: "smooth" });
+  };
+
+  return (
+    <div className="hidden md:block relative group/carousel">
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto pl-0 pr-0 snap-x snap-mandatory scrollbar-hide"
+        style={{
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          marginRight: "calc(-1 * (100vw - 100%) / 2 - 2rem)",
+          paddingRight: "max(2rem, calc((100vw - 100%) / 2))",
+        }}
+      >
+        {Array.isArray(children) ? children.map((child, i) => (
+          <div key={i} className="shrink-0 snap-start" style={{ width: cardWidth }}>
+            {child}
+          </div>
+        )) : <div className="shrink-0 snap-start" style={{ width: cardWidth }}>{children}</div>}
+      </div>
+      {/* Left arrow */}
+      {canScrollLeft && (
+        <button
+          onClick={() => scroll("left")}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 h-9 w-9 rounded-full bg-[#0D9488] text-white shadow-lg flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-[#0D9488]/90"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      )}
+      {/* Right arrow */}
+      {canScrollRight && (
+        <button
+          onClick={() => scroll("right")}
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-[#0D9488] text-white shadow-lg flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-[#0D9488]/90"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 
 function SuggestionCard({
   suggestion, messageId, index, tripId, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge, onSaveChange,
@@ -1181,7 +1250,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     <span className="text-xs font-semibold text-foreground">Saved spots</span>
                     <span className="text-[10px] text-muted-foreground">({savedCount})</span>
                   </div>
-                  <div className="space-y-3">
+                  {/* Mobile: vertical stack */}
+                  <div className="md:hidden space-y-3">
                     {(savedExpanded ? savedSpots : savedSpots.slice(0, 2)).map((spot, i) => (
                       <SuggestionCard
                         key={spot.name}
@@ -1194,23 +1264,38 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         onSaveChange={() => setSavedVersion(v => v + 1)}
                       />
                     ))}
+                    {savedCount > 2 && !savedExpanded && (
+                      <button
+                        onClick={() => setSavedExpanded(true)}
+                        className="text-xs font-medium text-[#0D9488] hover:underline"
+                      >
+                        Show all {savedCount} saved
+                      </button>
+                    )}
+                    {savedExpanded && savedCount > 2 && (
+                      <button
+                        onClick={() => setSavedExpanded(false)}
+                        className="text-xs font-medium text-muted-foreground hover:underline"
+                      >
+                        Show less
+                      </button>
+                    )}
                   </div>
-                  {savedCount > 2 && !savedExpanded && (
-                    <button
-                      onClick={() => setSavedExpanded(true)}
-                      className="text-xs font-medium text-[#0D9488] hover:underline"
-                    >
-                      Show all {savedCount} saved
-                    </button>
-                  )}
-                  {savedExpanded && savedCount > 2 && (
-                    <button
-                      onClick={() => setSavedExpanded(false)}
-                      className="text-xs font-medium text-muted-foreground hover:underline"
-                    >
-                      Show less
-                    </button>
-                  )}
+                  {/* Desktop: horizontal carousel */}
+                  <HorizontalCarousel cardWidth={350}>
+                    {savedSpots.map((spot, i) => (
+                      <SuggestionCard
+                        key={spot.name}
+                        suggestion={spot}
+                        messageId={`saved-${i}`}
+                        index={i}
+                        tripId={tripId}
+                        tripDays={tripDays}
+                        onAddToPlan={onAddToPlan}
+                        onSaveChange={() => setSavedVersion(v => v + 1)}
+                      />
+                    ))}
+                  </HorizontalCarousel>
                 </div>
               )}
 
@@ -1356,8 +1441,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     {isLucky ? "Hidden gems & local secrets" : "Insider picks"}
                   </p>
 
-                  {/* Results — responsive grid */}
-                  <div className="space-y-3 px-3 md:px-0 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+                  {/* Results — mobile: vertical stack, desktop: horizontal carousel */}
+                  <div className="space-y-3 px-3 md:hidden">
                     {displayedResults.suggestions!.map((s, i) => (
                       <SuggestionCard
                         key={`${displayedResults.id}-${i}`}
@@ -1374,6 +1459,43 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       />
                     ))}
                   </div>
+                  {displayedResults.suggestions!.length >= 3 ? (
+                    <HorizontalCarousel cardWidth={380}>
+                      {displayedResults.suggestions!.map((s, i) => (
+                        <SuggestionCard
+                          key={`${displayedResults.id}-${i}`}
+                          suggestion={s}
+                          messageId={displayedResults.id}
+                          index={i}
+                          tripId={tripId}
+                          tripDays={tripDays}
+                          onAddToPlan={onAddToPlan}
+                          animDelay={i * 50}
+                          isLucky={isLucky}
+                          luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
+                          onSaveChange={() => setSavedVersion(v => v + 1)}
+                        />
+                      ))}
+                    </HorizontalCarousel>
+                  ) : (
+                    <div className="hidden md:grid md:grid-cols-2 md:gap-3 md:px-0">
+                      {displayedResults.suggestions!.map((s, i) => (
+                        <SuggestionCard
+                          key={`${displayedResults.id}-${i}`}
+                          suggestion={s}
+                          messageId={displayedResults.id}
+                          index={i}
+                          tripId={tripId}
+                          tripDays={tripDays}
+                          onAddToPlan={onAddToPlan}
+                          animDelay={i * 50}
+                          isLucky={isLucky}
+                          luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
+                          onSaveChange={() => setSavedVersion(v => v + 1)}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   {/* Extra results from "Show more" */}
                   {extraResults.length > 0 && (
