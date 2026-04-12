@@ -590,3 +590,15 @@ html.dark, html.dark body, html.dark #root {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* Plan preview auto-scroll */
+.plan-auto-scroll {
+  animation: plan-scroll 18s linear infinite;
+}
+@keyframes plan-scroll {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-45%); }
+  50% { transform: translateY(-45%); }
+  90% { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}

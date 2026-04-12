@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, ArrowLeft } from "lucide-react";
-import { SECTIONS } from "@/components/landing/TripCarousel";
+import { ALL_CARDS, SECTIONS } from "@/components/landing/TripCarousel";
 
-const ALL_CARDS = SECTIONS.flatMap(s => s.cards.map(c => ({ ...c, category: s.title })));
 const CATEGORIES = ["All", ...SECTIONS.map(s => s.title)];
+
+// Map cards to their category
+const cardCategoryMap = new Map<string, string>();
+SECTIONS.forEach(s => s.cards.forEach(c => cardCategoryMap.set(c.slug, s.title)));
 
 export default function Templates() {
   const [filter, setFilter] = useState("All");
-  const filtered = filter === "All" ? ALL_CARDS : ALL_CARDS.filter(c => c.category === filter);
+  const filtered = filter === "All" ? ALL_CARDS : ALL_CARDS.filter(c => cardCategoryMap.get(c.slug) === filter);
 
   return (
     <div className="min-h-screen bg-white">
@@ -20,7 +23,6 @@ export default function Templates() {
       </header>
 
       <div className="max-w-[1200px] mx-auto px-5 py-6">
-        {/* Filters */}
         <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-8">
           {CATEGORIES.map(c => (
             <button
@@ -37,15 +39,14 @@ export default function Templates() {
           ))}
         </div>
 
-        {/* Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
           {filtered.map(c => (
             <Link
               key={c.slug}
               to={`/templates/${c.slug}`}
-              className="group rounded-2xl overflow-hidden border border-[#e5e5e5] bg-white shadow-sm hover:shadow-lg transition-shadow"
+              className="group rounded-[20px] overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow"
             >
-              <div className="relative h-[180px] sm:h-[220px] overflow-hidden">
+              <div className="relative h-[200px] sm:h-[260px] overflow-hidden">
                 <img src={c.img} alt={c.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 <h3 className="absolute bottom-3 left-3 text-white font-bold text-lg drop-shadow-lg">{c.name}</h3>
