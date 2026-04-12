@@ -14,6 +14,7 @@ import { ResultsTimeline, buildTimelineNodes } from "./ResultsTimeline";
 import { TripDiscussion } from "./TripDiscussion";
 import { CostBottomPanel } from "./CostBottomPanel";
 import { EditTripSheet } from "./EditTripSheet";
+import { GroupActivityPanel } from "./GroupActivityPanel";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 
@@ -44,7 +45,20 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const [mapVisible, setMapVisible] = useState(true);
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
+  const [groupActivityOpen, setGroupActivityOpen] = useState(false);
   type CoordsMap = Map<string, { lat: number; lng: number }>;
+  const scrollToSection = useCallback((id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const scrollRoot = document.querySelector<HTMLElement>("[data-results-scroll-root='true']") ?? document.documentElement;
+    const header = document.querySelector<HTMLElement>("[data-results-header='true']");
+    const headerOffset = (header?.getBoundingClientRect().height ?? 0) + 12;
+    const rootRect = scrollRoot.getBoundingClientRect();
+    const elementRect = el.getBoundingClientRect();
+    const targetTop = Math.max(0, scrollRoot.scrollTop + (elementRect.top - rootRect.top) - headerOffset);
+    scrollRoot.scrollTo({ top: targetTop, behavior: "smooth" });
+  }, []);
+
   const refinedCoords = useRef<CoordsMap>(new (Map as any)()).current as CoordsMap;
   const [coordsVersion, setCoordsVersion] = useState(0);
 
@@ -483,12 +497,41 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       )}
 
       {/* Alternatives Sheet */}
+      {/* Group Activity floating button */}
+      {planId && (
+        <button
+          onClick={() => setGroupActivityOpen(true)}
+          className="fixed bottom-20 left-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center"
+          title="Group activity"
+        >
+          <Users className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* Group Activity Panel */}
+      {groupActivityOpen && planId && (
+        <GroupActivityPanel
+          planId={planId}
+          result={result}
+          allDays={allDays}
+          onScrollTo={scrollToSection}
+          onClose={() => setGroupActivityOpen(false)}
+        />
+      )}
+
       {state.alternativesFor && (
         <AlternativesSheet
           activity={state.alternativesFor.activity}
           alternatives={state.alternatives}
           loading={state.loadingAlternatives}
-          onSelect={() => {
+          destinationName={result.destinations.find(d => {
+            const dDays = allDays.filter(day => day.date >= d.start_date && day.date <= d.end_date);
+            return dDays.some(day => day.date === state.alternativesFor?.dayDate);
+          })?.name || ""}
+          onSelect={(alt) => {
+            if (state.alternativesFor) {
+              state.replaceActivity(state.alternativesFor.dayDate, state.alternativesFor.activityIndex, alt);
+            }
             state.setAlternativesFor(null);
           }}
           onClose={() => state.setAlternativesFor(null)}
