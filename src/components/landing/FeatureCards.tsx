@@ -179,7 +179,7 @@ export function FeatureCards() {
 
   return (
     <section className="py-16 sm:py-24 bg-[#111114]">
-      <div className="px-10 lg:px-[calc((100vw-1160px)/2+2.5rem)] mb-8">
+      <div className="px-5 sm:px-10 max-w-[1280px] mb-8">
         <h2 className="text-2xl sm:text-4xl font-bold text-white">Get to know Junto</h2>
       </div>
 
@@ -203,7 +203,7 @@ export function FeatureCards() {
 
         <div
           ref={ref}
-          className="flex gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory pl-10 sm:pl-10 lg:pl-[calc((100vw-1160px)/2+2.5rem)]"
+          className="flex gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory pl-5 sm:pl-10"
           style={{ paddingRight: 0 }}
         >
           {FEATURES.map((f, i) => (
