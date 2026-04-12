@@ -726,21 +726,32 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
     const body = document.body;
     const html = document.documentElement;
+    const scrollY = window.scrollY;
     const previousBodyOverflow = body.style.overflow;
     const previousBodyTouchAction = body.style.touchAction;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyWidth = body.style.width;
     const previousHtmlOverflow = html.style.overflow;
     const previousHtmlOverscrollBehavior = html.style.overscrollBehavior;
 
     body.style.overflow = "hidden";
     body.style.touchAction = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
     html.style.overflow = "hidden";
     html.style.overscrollBehavior = "none";
 
     return () => {
       body.style.overflow = previousBodyOverflow;
       body.style.touchAction = previousBodyTouchAction;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.width = previousBodyWidth;
       html.style.overflow = previousHtmlOverflow;
       html.style.overscrollBehavior = previousHtmlOverscrollBehavior;
+      window.scrollTo(0, scrollY);
     };
   }, [open]);
 
