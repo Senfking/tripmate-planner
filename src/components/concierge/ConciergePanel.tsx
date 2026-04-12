@@ -1171,10 +1171,19 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               <div className="border-t border-border pt-4">
                 <button
                   onClick={handleFeelingLucky}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors"
+                  className="w-full relative flex items-center justify-center gap-2.5 py-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97]"
                 >
-                  <Dice5 className="h-4 w-4" />
-                  Surprise me instead
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(135deg, #0D9488 0%, #D97706 25%, #0D9488 50%, #D97706 75%, #0D9488 100%)",
+                      backgroundSize: "400% 400%",
+                      animation: "shimmer-gradient 4s ease infinite",
+                      opacity: 0.12,
+                    }}
+                  />
+                  <Sparkles className="h-4 w-4 text-amber-500 relative z-10" />
+                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 relative z-10">Surprise me instead</span>
                 </button>
               </div>
             </div>
