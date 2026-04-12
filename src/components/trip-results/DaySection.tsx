@@ -138,6 +138,9 @@ export function DaySection({
                   activity={activity}
                   day={day}
                   index={i}
+                  planId={planId || null}
+                  dayIndex={dayIndex}
+                  activityIndex={i}
                   isAdded={isAdded(day.date, activity.title)}
                   onToggleAdd={() => onToggleAdd(day, activity)}
                   onRequestChange={() => onRequestChange(day.date, i, activity)}
