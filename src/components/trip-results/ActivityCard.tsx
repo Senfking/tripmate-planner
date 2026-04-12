@@ -3,12 +3,17 @@ import { Star, ExternalLink, Trash2, ArrowLeftRight, Check, MapPin, Sparkles, Me
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ActivityReactions } from "./ActivityReactions";
+import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
 
 interface Props {
   activity: AIActivity;
   day: AIDay;
   index: number;
+  planId?: string | null;
+  dayIndex?: number;
+  activityIndex?: number;
   isAdded: boolean;
   onToggleAdd: () => void;
   onRequestChange: () => void;
