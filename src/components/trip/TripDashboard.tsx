@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import {
   Sparkles, AlertTriangle, Vote, FileText, Receipt, ChevronRight,
-  Plane, GripVertical,
+  Plane,
 } from "lucide-react";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances } from "@/lib/settlementCalc";
@@ -60,7 +60,7 @@ function BuilderWrapper({ tripId, onClose }: { tripId: string; onClose: () => vo
 }
 
 function SortableSection({ id, children }: { id: string; children: ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -69,17 +69,8 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group flex items-stretch gap-1">
-      {/* Drag handle — always visible */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="flex items-center justify-center w-5 shrink-0 touch-none cursor-grab active:cursor-grabbing rounded-lg opacity-30 hover:opacity-60 active:opacity-80 transition-opacity"
-        style={{ WebkitTouchCallout: "none" }}
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </div>
-      <div className="flex-1 min-w-0">{children}</div>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
+      {children}
     </div>
   );
 }
