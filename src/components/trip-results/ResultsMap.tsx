@@ -41,78 +41,122 @@ function PopupContent({ activity }: { activity: AIActivity }) {
   const heroSrc = photos.length > 0 ? photos[0] : null;
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activity.title || '') + ' ' + (activity.location_name || ''))}`;
 
+  const durationHrs = activity.duration_minutes ? Math.floor(activity.duration_minutes / 60) : 0;
+  const durationMins = activity.duration_minutes ? activity.duration_minutes % 60 : 0;
+  const durationLabel = activity.duration_minutes
+    ? (durationHrs > 0 ? `${durationHrs}h` : "") + (durationMins > 0 ? ` ${durationMins}m` : "")
+    : null;
+
   return (
-    <div className="w-[240px] font-sans overflow-hidden">
+    <div className="w-[260px] max-h-[380px] overflow-y-auto font-sans">
       {/* Hero image */}
       {isLoading ? (
-        <Skeleton className="w-full h-[110px] rounded-none" />
+        <Skeleton className="w-full h-[120px] rounded-none" />
       ) : heroSrc ? (
         <img
           src={heroSrc}
           alt={activity.title}
-          className="w-full h-[110px] object-cover"
+          className="w-full h-[120px] object-cover"
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
       ) : (
-        <div className="w-full h-[60px] flex items-center justify-center" style={{ background: `${color}15` }}>
-          <IconComponent className="h-6 w-6" style={{ color }} />
+        <div className="w-full h-[50px] flex items-center justify-center" style={{ background: `${color}15` }}>
+          <IconComponent className="h-5 w-5" style={{ color }} />
         </div>
       )}
 
-      <div className="p-3 space-y-2">
-        {/* Category + time */}
-        <div className="flex items-center gap-2">
+      <div className="p-3 space-y-2.5">
+        {/* Category badge + rating */}
+        <div className="flex items-center gap-2 flex-wrap">
           <span
-            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
+            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white shrink-0"
             style={{ background: color }}
           >
             {activity.category}
           </span>
-          {activity.start_time && (
-            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-              <Clock className="h-2.5 w-2.5" />
-              {activity.start_time}
-            </span>
-          )}
           {rating != null && (
             <span className="text-[10px] text-amber-600 font-semibold ml-auto">★ {rating.toFixed(1)}</span>
           )}
         </div>
 
         {/* Title */}
-        <h4 className="text-[13px] font-bold text-foreground leading-tight">{activity.title}</h4>
+        <h4 className="text-sm font-bold text-foreground leading-snug">{activity.title}</h4>
 
         {/* Location */}
         {activity.location_name && (
-          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-            <MapPin className="h-2.5 w-2.5 shrink-0" />
-            {activity.location_name}
+          <p className="text-[11px] text-muted-foreground flex items-start gap-1">
+            <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
+            <span>{activity.location_name}</span>
           </p>
         )}
 
-        {/* Description */}
+        {/* Time & duration row */}
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          {activity.start_time && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {activity.start_time}
+            </span>
+          )}
+          {durationLabel && (
+            <span className="flex items-center gap-1">
+              ⏱ {durationLabel.trim()}
+            </span>
+          )}
+        </div>
+
+        {/* Description — full text, no clamp */}
         {activity.description && (
-          <p className="text-[10px] text-muted-foreground/80 leading-relaxed line-clamp-3">
+          <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
             {activity.description}
           </p>
         )}
 
-        {/* Cost + link */}
-        <div className="flex items-center justify-between pt-1 border-t border-border/40">
+        {/* Tips */}
+        {activity.tips && (
+          <p className="text-[10px] text-primary/70 leading-relaxed italic">
+            💡 {activity.tips}
+          </p>
+        )}
+
+        {/* Dietary notes */}
+        {activity.dietary_notes && (
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            🍽 {activity.dietary_notes}
+          </p>
+        )}
+
+        {/* Cost + Maps link */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/40">
           {activity.estimated_cost_per_person != null ? (
-            <span className="text-[10px] font-semibold text-emerald-600">
-              ~{activity.currency}{Math.round(activity.estimated_cost_per_person)}/person
+            <span className="text-[11px] font-semibold text-emerald-600">
+              ~{activity.currency}{Math.round(activity.estimated_cost_per_person).toLocaleString()}/person
             </span>
-          ) : <span />}
+          ) : (
+            <span className="text-[10px] text-muted-foreground/50">No cost estimate</span>
+          )}
           <a
             href={mapsLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] font-semibold text-primary hover:underline flex items-center gap-0.5"
+            className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-0.5"
           >
-            Maps <ExternalLink className="h-2.5 w-2.5" />
+            Maps <ExternalLink className="h-3 w-3" />
           </a>
         </div>
+
+        {/* Booking link */}
+        {activity.booking_url && (
+          <a
+            href={activity.booking_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center text-[11px] font-semibold text-white py-1.5 rounded-lg mt-1"
+            style={{ background: color }}
+          >
+            Book this →
+          </a>
+        )}
       </div>
     </div>
   );
