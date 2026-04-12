@@ -99,7 +99,7 @@ export default function TripSection() {
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data as { id: string; result: AITripResult } | null;
+      return data as unknown as { id: string; result: AITripResult } | null;
     },
     enabled: !!tripId && !!user && section === "plan",
   });
