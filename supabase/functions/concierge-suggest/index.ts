@@ -55,15 +55,18 @@ function isTimeSensitiveWhen(when?: string): boolean {
 function buildQueryFromFilters(
   category: string,
   destination: string,
-  when?: string,
-  vibe?: string,
-  budget?: string,
+  when?: string | string[],
+  vibe?: string | string[],
+  budget?: string | string[],
 ): string {
   const parts = [category];
-  if (vibe) parts.push(vibe);
-  if (when) parts.push(when.toLowerCase());
+  const vibeArr = Array.isArray(vibe) ? vibe : vibe ? [vibe] : [];
+  const whenArr = Array.isArray(when) ? when : when ? [when] : [];
+  const budgetArr = Array.isArray(budget) ? budget : budget ? [budget] : [];
+  if (vibeArr.length) parts.push(vibeArr.join(" or "));
+  if (whenArr.length) parts.push(whenArr.join(" or ").toLowerCase());
   parts.push(`in ${destination}`);
-  if (budget) parts.push(`(${budget})`);
+  if (budgetArr.length) parts.push(`(${budgetArr.join(" or ")})`);
   return parts.join(" ");
 }
 
