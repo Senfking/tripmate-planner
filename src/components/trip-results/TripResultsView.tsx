@@ -287,35 +287,60 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         )}
 
         {/* Trip budget */}
-        <div id="section-budget" className="mx-4 mb-4">
-          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-[#0D9488]" /> Trip budget
+        <div id="section-budget" className="mx-4 mb-6">
+          <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-primary" /> Estimated budget
           </h3>
-          <button
-            onClick={() => setCostOpen(!costOpen)}
-            className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-          >
-            <CreditCard className="h-4 w-4 text-[#0D9488]" />
-            <span className="flex-1 text-sm font-medium text-foreground">
-              ~{currency}{costBreakdown.total} total
-              <span className="text-muted-foreground font-normal"> · ~{currency}{costBreakdown.dailyAvg}/day</span>
-            </span>
-            {costOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-          </button>
-          {costOpen && (
-            <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in space-y-1.5">
-              {costBreakdown.categories.map(([cat, amount]) => (
-                <div key={cat} className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{cat}</span>
-                  <span className="text-xs font-mono text-foreground">~{currency}{Math.round(amount)}</span>
-                </div>
-              ))}
-              <div className="border-t border-border pt-1.5 flex items-center justify-between">
-                <span className="text-xs font-semibold text-foreground">Total per person</span>
-                <span className="text-xs font-mono font-semibold text-[#0D9488]">~{currency}{costBreakdown.total}</span>
+          <p className="text-[11px] text-muted-foreground/70 mb-3 ml-7">Based on typical prices · actual costs may vary</p>
+
+          <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card to-muted/20 shadow-sm overflow-hidden">
+            {/* Summary header */}
+            <button
+              onClick={() => setCostOpen(!costOpen)}
+              className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-accent/30 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <CreditCard className="h-4.5 w-4.5 text-primary" />
               </div>
-            </div>
-          )}
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-semibold text-foreground">
+                  ~{currency}{costBreakdown.total.toLocaleString()}
+                  <span className="text-sm font-normal text-muted-foreground"> per person</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  ~{currency}{costBreakdown.dailyAvg.toLocaleString()}/day · {costBreakdown.categories.length} categories
+                </div>
+              </div>
+              <div className={`p-1.5 rounded-lg bg-muted/50 transition-transform duration-200 ${costOpen ? "rotate-180" : ""}`}>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </button>
+
+            {/* Category breakdown */}
+            {costOpen && (
+              <div className="px-5 pb-4 animate-fade-in">
+                <div className="space-y-0">
+                  {costBreakdown.categories.map(([cat, amount], i) => {
+                    const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
+                    return (
+                      <div key={cat} className={`flex items-center gap-3 py-2.5 ${i > 0 ? "border-t border-border/30" : ""}`}>
+                        <span className="text-xs text-muted-foreground flex-1">{cat}</span>
+                        <div className="w-20 h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                          <div className="h-full rounded-full bg-primary/40" style={{ width: `${Math.min(pct, 100)}%` }} />
+                        </div>
+                        <span className="text-xs font-mono text-foreground w-24 text-right">~{currency}{Math.round(amount).toLocaleString()}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-border mt-1 pt-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">Total per person</span>
+                  <span className="text-sm font-mono font-bold text-primary">~{currency}{costBreakdown.total.toLocaleString()}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground/50 mt-2 italic">Estimates based on average local prices. Actual costs depend on season, availability, and personal choices.</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Divider before destinations */}
