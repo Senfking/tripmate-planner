@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { LandingCarouselNav, useLandingCarousel } from "@/components/landing/useLandingCarousel";
 
 export interface TripCard {
   name: string;
@@ -68,83 +68,46 @@ const SECTIONS: CarouselSection[] = [
 
 const ALL_CARDS = [...TRENDING, ...EUROPE, ...ADVENTURE, ...BEACH];
 
-/* ── Reusable carousel row ── */
-function CarouselRow({ title, cards, seeAll }: { title: string; cards: TripCard[]; seeAll?: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [canLeft, setCanLeft] = useState(false);
-  const [canRight, setCanRight] = useState(true);
-
-  const updateArrows = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    setCanLeft(el.scrollLeft > 4);
-    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    updateArrows();
-    const el = ref.current;
-    if (!el) return;
-    el.addEventListener("scroll", updateArrows, { passive: true });
-    window.addEventListener("resize", updateArrows);
-    return () => {
-      el.removeEventListener("scroll", updateArrows);
-      window.removeEventListener("resize", updateArrows);
-    };
-  }, [updateArrows]);
-
-  const scroll = (dir: number) => {
-    ref.current?.scrollBy({ left: dir * 340, behavior: "smooth" });
-  };
+function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: TripCard[]; seeAll?: boolean }) {
+  const { containerRef, canLeft, canRight, scrollPrev, scrollNext } = useLandingCarousel();
 
   return (
     <div className="mb-12">
-      <div className="flex items-center justify-between mb-5 px-5 sm:px-10 lg:px-16">
-        <h3 className="text-xl sm:text-2xl font-bold text-[#1a1a1a]">{title}</h3>
-        {seeAll && <Link to="/templates" className="text-sm font-medium text-[#0D9488] hover:underline">See all</Link>}
+      <div className="mb-5 flex items-center justify-between px-5 sm:px-10 lg:px-16">
+        <h3 className="text-xl font-bold text-foreground sm:text-2xl">{title}</h3>
+        {seeAll ? <Link to="/templates" className="text-sm font-medium text-primary hover:underline">See all</Link> : null}
       </div>
 
-      <div className="relative group">
-        {canLeft && (
-          <button
-            onClick={() => scroll(-1)}
-            className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg border border-[#e5e5e5] items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <ChevronLeft className="h-5 w-5 text-[#1a1a1a]" />
-          </button>
-        )}
-        {canRight && (
-          <button
-            onClick={() => scroll(1)}
-            className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg border border-[#e5e5e5] items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <ChevronRight className="h-5 w-5 text-[#1a1a1a]" />
-          </button>
-        )}
+      <div className="group/carousel relative">
+        <LandingCarouselNav canLeft={canLeft} canRight={canRight} onPrev={scrollPrev} onNext={scrollNext} />
 
-        <div ref={ref} className="flex gap-4 overflow-x-auto scrollbar-hide px-5 sm:px-10 lg:px-16">
-          {cards.map((c) => (
+        <div
+          ref={containerRef}
+          className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth overscroll-x-contain pl-5 pr-3 sm:pl-10 sm:pr-4 lg:pl-16 lg:pr-6"
+        >
+          {cards.map((card) => (
             <Link
-              key={c.slug}
-              to={`/templates/${c.slug}`}
-              className="shrink-0 w-[260px] sm:w-[300px] group/card"
+              key={card.slug}
+              to={`/templates/${card.slug}`}
+              data-carousel-card="true"
+              className="group/card w-[280px] shrink-0 snap-start sm:w-[320px]"
             >
-              <div className="rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
-                <div className="relative h-[280px] sm:h-[320px] overflow-hidden">
+              <div className="overflow-hidden rounded-[1.5rem] border border-border/60 bg-card shadow-[0_18px_44px_-28px_hsl(var(--foreground)/0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_54px_-26px_hsl(var(--foreground)/0.28)]">
+                <div className="relative h-[300px] overflow-hidden sm:h-[340px]">
                   <img
-                    src={c.img}
-                    alt={c.name}
-                    className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-700"
+                    src={card.img}
+                    alt={card.name}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-[1.03]"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  <h4 className="absolute bottom-3 left-3 text-white font-bold text-xl drop-shadow-lg">{c.name}</h4>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/12 to-transparent" />
+                  <h4 className="absolute bottom-4 left-4 text-2xl font-bold text-white drop-shadow-lg">{card.name}</h4>
                 </div>
-                <div className="px-3.5 py-3">
-                  <p className="text-[12px] text-[#6b7280]">{c.duration} · {c.vibe}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Sparkles className="h-2.5 w-2.5 text-[#0D9488]" />
-                    <span className="text-[10px] font-medium text-[#0D9488]">Junto AI plan</span>
+                <div className="px-4 py-3.5">
+                  <p className="text-[13px] text-muted-foreground">{card.duration} · {card.vibe}</p>
+                  <div className="mt-1.5 flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    <span className="text-[11px] font-medium text-primary">Junto AI plan</span>
                   </div>
                 </div>
               </div>
@@ -159,12 +122,13 @@ function CarouselRow({ title, cards, seeAll }: { title: string; cards: TripCard[
 export function TripCarousels() {
   return (
     <div>
-      <div className="flex items-center justify-between mb-8 px-5 sm:px-10 lg:px-16">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a]">Explore trip plans</h2>
-        <Link to="/templates" className="text-sm font-medium text-[#0D9488] hover:underline">See all</Link>
+      <div className="mb-8 flex items-center justify-between px-5 sm:px-10 lg:px-16">
+        <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Explore trip plans</h2>
+        <Link to="/templates" className="text-sm font-medium text-primary hover:underline">See all</Link>
       </div>
-      {SECTIONS.map((s) => (
-        <CarouselRow key={s.title} title={s.title} cards={s.cards} />
+
+      {SECTIONS.map((section, index) => (
+        <CarouselRow key={section.title} title={section.title} cards={section.cards} seeAll={index === 0} />
       ))}
     </div>
   );
