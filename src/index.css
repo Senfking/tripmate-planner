@@ -584,7 +584,7 @@ html.dark, html.dark body, html.dark #root {
     transparent 70%
   );
   background-size: 250% 100%;
-  animation: landing-shimmer-sweep 3s ease-in-out infinite;
+  animation: landing-shimmer-sweep 5s ease-in-out infinite;
 }
 @keyframes landing-shimmer-sweep {
   0% { background-position: 200% 0; }
