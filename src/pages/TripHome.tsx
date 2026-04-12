@@ -438,54 +438,7 @@ export default function TripHome() {
       </div>
 
       {/* ─── TRIP INFO (below photo, on white background) ─── */}
-      <div className="px-4 pt-4 pb-2 md:max-w-[700px] md:mx-auto md:px-8 space-y-2">
-        {/* Trip name */}
-        {editingName ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const trimmed = nameDraft.trim();
-              if (trimmed && trimmed !== trip.name) {
-                supabase.from("trips").update({ name: trimmed }).eq("id", tripId!).then(({ error }) => {
-                  if (error) { toast.error("Failed to rename trip"); return; }
-                  qc.invalidateQueries({ queryKey: ["trip", tripId] });
-                  qc.invalidateQueries({ queryKey: ["trips", user?.id] });
-                  toast.success("Trip renamed");
-                });
-              }
-              setEditingName(false);
-            }}
-          >
-            <input
-              ref={nameInputRef}
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              onBlur={() => setEditingName(false)}
-              className="bg-transparent text-2xl font-bold text-foreground leading-tight border-b border-border outline-none w-full"
-              autoFocus
-            />
-          </form>
-        ) : (
-          <button
-            onClick={() => { if (isAdmin) { setNameDraft(trip.name); setEditingName(true); } }}
-            className="flex items-center gap-2 group text-left"
-          >
-            <h1 className="text-2xl font-bold text-foreground leading-tight">{trip.name}</h1>
-            {isAdmin && <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
-          </button>
-        )}
-
-        {/* Date range */}
-        <button
-          onClick={() => { if (isAdmin) setDateEditorOpen(true); }}
-          className="flex items-center gap-1.5 group"
-        >
-          <p className="text-sm text-muted-foreground">
-            {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
-          </p>
-          {isAdmin && <Pencil className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
-        </button>
-
+      <div className="px-4 pt-3 pb-2 md:max-w-[700px] md:mx-auto md:px-8">
         {/* Members + attendance badge row */}
         <div className="flex items-center gap-3">
           <button
