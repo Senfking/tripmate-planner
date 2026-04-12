@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -61,8 +61,8 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [sending, setSending] = useState(false);
+  const [activeResult, setActiveResult] = useState<ConciergeMessage | null>(null);
 
-  // Fetch messages
   const { data: messages = [], isLoading: loadingMessages } = useQuery({
     queryKey: ["concierge-messages", tripId],
     queryFn: async () => {
@@ -78,11 +78,10 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
     enabled: !!tripId,
   });
 
-  // Fetch reactions
   const { data: reactions = [] } = useQuery({
     queryKey: ["concierge-reactions", tripId],
     queryFn: async () => {
-      const messageIds = messages.filter(m => m.role === "assistant").map(m => m.id);
+      const messageIds = messages.filter((m) => m.role === "assistant").map((m) => m.id);
       if (messageIds.length === 0) return [];
       const { data, error } = await supabase
         .from("concierge_reactions")
@@ -94,30 +93,37 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
     enabled: messages.length > 0,
   });
 
-  // Realtime subscriptions
   useEffect(() => {
     if (!tripId) return;
     const msgChannel = supabase
       .channel(`concierge-msgs-${tripId}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "concierge_messages",
-        filter: `trip_id=eq.${tripId}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
-      })
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "concierge_messages",
+          filter: `trip_id=eq.${tripId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
+        }
+      )
       .subscribe();
 
     const rxnChannel = supabase
       .channel(`concierge-rxns-${tripId}`)
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "concierge_reactions",
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ["concierge-reactions", tripId] });
-      })
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "concierge_reactions",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["concierge-reactions", tripId] });
+        }
+      )
       .subscribe();
 
     return () => {
@@ -126,128 +132,156 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
     };
   }, [tripId, queryClient]);
 
-  // Send message
-  const sendMessage = useCallback(async (query: string) => {
-    if (!query.trim() || sending) return;
-    setSending(true);
+  const buildTransientResult = useCallback(
+    (summary: string | null | undefined, suggestions: ConciergeSuggestion[] | null | undefined): ConciergeMessage | null => {
+      if (!suggestions?.length) return null;
+      return {
+        id: `transient-${Date.now()}`,
+        trip_id: tripId,
+        user_id: null,
+        role: "assistant",
+        content: summary ?? null,
+        suggestions,
+        created_at: new Date().toISOString(),
+      };
+    },
+    [tripId]
+  );
 
-    try {
-      // Infer date/time from query
-      const now = new Date();
-      let date = context.date;
-      let time_of_day = context.time_of_day;
+  const sendMessage = useCallback(
+    async (query: string) => {
+      if (!query.trim() || sending) return;
+      setSending(true);
+      setActiveResult(null);
 
-      const q = query.toLowerCase();
-      if (q.includes("tonight") || q.includes("this evening")) {
-        date = now.toISOString().split("T")[0];
-        time_of_day = "evening";
-      } else if (q.includes("tomorrow")) {
-        const tom = new Date(now);
-        tom.setDate(tom.getDate() + 1);
-        date = tom.toISOString().split("T")[0];
-      } else if (q.includes("breakfast") || q.includes("morning")) {
-        time_of_day = "morning";
-      } else if (q.includes("lunch") || q.includes("afternoon")) {
-        time_of_day = "afternoon";
-      } else if (q.includes("dinner") || q.includes("evening")) {
-        time_of_day = "evening";
-      } else if (q.includes("night") || q.includes("party") || q.includes("club")) {
-        time_of_day = "night";
-      }
+      try {
+        const now = new Date();
+        let date = context.date;
+        let time_of_day = context.time_of_day;
 
-      if (!date) date = now.toISOString().split("T")[0];
-      if (!time_of_day) {
-        const hour = now.getHours();
-        if (hour < 11) time_of_day = "morning";
-        else if (hour < 14) time_of_day = "afternoon";
-        else if (hour < 18) time_of_day = "evening";
-        else time_of_day = "night";
-      }
+        const q = query.toLowerCase();
+        if (q.includes("tonight") || q.includes("this evening")) {
+          date = now.toISOString().split("T")[0];
+          time_of_day = "evening";
+        } else if (q.includes("tomorrow")) {
+          const tom = new Date(now);
+          tom.setDate(tom.getDate() + 1);
+          date = tom.toISOString().split("T")[0];
+        } else if (q.includes("breakfast") || q.includes("morning")) {
+          time_of_day = "morning";
+        } else if (q.includes("lunch") || q.includes("afternoon")) {
+          time_of_day = "afternoon";
+        } else if (q.includes("dinner") || q.includes("evening")) {
+          time_of_day = "evening";
+        } else if (q.includes("night") || q.includes("party") || q.includes("club")) {
+          time_of_day = "night";
+        }
 
-      const { data, error } = await supabase.functions.invoke("concierge-suggest", {
-        body: {
-          trip_id: tripId,
-          query,
-          context: {
-            ...context,
-            date,
-            time_of_day,
+        if (!date) date = now.toISOString().split("T")[0];
+        if (!time_of_day) {
+          const hour = now.getHours();
+          if (hour < 11) time_of_day = "morning";
+          else if (hour < 14) time_of_day = "afternoon";
+          else if (hour < 18) time_of_day = "evening";
+          else time_of_day = "night";
+        }
+
+        const { data, error } = await supabase.functions.invoke("concierge-suggest", {
+          body: {
+            trip_id: tripId,
+            query,
+            context: {
+              ...context,
+              date,
+              time_of_day,
+            },
           },
-        },
-      });
+        });
 
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
-    } catch (err) {
-      console.error("Concierge error:", err);
-      throw err;
-    } finally {
-      setSending(false);
-    }
-  }, [tripId, context, sending, queryClient]);
+        if (error) throw error;
+        setActiveResult(buildTransientResult(data?.summary, data?.suggestions));
+        queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
+      } catch (err) {
+        console.error("Concierge error:", err);
+        throw err;
+      } finally {
+        setSending(false);
+      }
+    },
+    [tripId, context, sending, queryClient, buildTransientResult]
+  );
 
-  // Send structured filter request (category + when + vibe + budget)
-  const sendStructuredRequest = useCallback(async (filters: StructuredFilters) => {
-    if (sending) return;
-    setSending(true);
+  const sendStructuredRequest = useCallback(
+    async (filters: StructuredFilters) => {
+      if (sending) return;
+      setSending(true);
+      setActiveResult(null);
 
-    try {
-      const { data, error } = await supabase.functions.invoke("concierge-suggest", {
-        body: {
-          trip_id: tripId,
-          category: filters.category,
-          when: filters.when,
-          vibe: filters.vibe,
-          budget: filters.budget,
-          context: {
-            ...context,
-            date: context.date || new Date().toISOString().split("T")[0],
+      try {
+        const { data, error } = await supabase.functions.invoke("concierge-suggest", {
+          body: {
+            trip_id: tripId,
+            category: filters.category,
+            when: filters.when,
+            vibe: filters.vibe,
+            budget: filters.budget,
+            context: {
+              ...context,
+              date: context.date || new Date().toISOString().split("T")[0],
+            },
           },
-        },
-      });
+        });
 
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
-    } catch (err) {
-      console.error("Concierge error:", err);
-      throw err;
-    } finally {
-      setSending(false);
-    }
-  }, [tripId, context, sending, queryClient]);
+        if (error) throw error;
+        setActiveResult(buildTransientResult(data?.summary, data?.suggestions));
+        queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
+      } catch (err) {
+        console.error("Concierge error:", err);
+        throw err;
+      } finally {
+        setSending(false);
+      }
+    },
+    [tripId, context, sending, queryClient, buildTransientResult]
+  );
 
-  // Toggle reaction
-  const toggleReaction = useCallback(async (messageId: string, suggestionIndex: number) => {
-    if (!user) return;
-    const existing = reactions.find(
-      r => r.message_id === messageId && r.suggestion_index === suggestionIndex && r.user_id === user.id
-    );
-    if (existing) {
-      await supabase.from("concierge_reactions").delete().eq("id", existing.id);
-    } else {
-      await supabase.from("concierge_reactions").insert({
-        message_id: messageId,
-        suggestion_index: suggestionIndex,
-        user_id: user.id,
-      });
-    }
-    queryClient.invalidateQueries({ queryKey: ["concierge-reactions", tripId] });
-  }, [user, reactions, tripId, queryClient]);
+  const toggleReaction = useCallback(
+    async (messageId: string, suggestionIndex: number) => {
+      if (!user) return;
+      const existing = reactions.find(
+        (r) => r.message_id === messageId && r.suggestion_index === suggestionIndex && r.user_id === user.id
+      );
+      if (existing) {
+        await supabase.from("concierge_reactions").delete().eq("id", existing.id);
+      } else {
+        await supabase.from("concierge_reactions").insert({
+          message_id: messageId,
+          suggestion_index: suggestionIndex,
+          user_id: user.id,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["concierge-reactions", tripId] });
+    },
+    [user, reactions, tripId, queryClient]
+  );
 
-  // Get reaction count and user state for a suggestion
-  const getReactionInfo = useCallback((messageId: string, suggestionIndex: number) => {
-    const msgReactions = reactions.filter(
-      r => r.message_id === messageId && r.suggestion_index === suggestionIndex
-    );
-    return {
-      count: msgReactions.length,
-      hasReacted: !!user && msgReactions.some(r => r.user_id === user.id),
-      isGroupPick: msgReactions.length >= 2,
-    };
-  }, [reactions, user]);
+  const getReactionInfo = useCallback(
+    (messageId: string, suggestionIndex: number) => {
+      const msgReactions = reactions.filter(
+        (r) => r.message_id === messageId && r.suggestion_index === suggestionIndex
+      );
+      return {
+        count: msgReactions.length,
+        hasReacted: !!user && msgReactions.some((r) => r.user_id === user.id),
+        isGroupPick: msgReactions.length >= 2,
+      };
+    },
+    [reactions, user]
+  );
 
   return {
     messages,
+    activeResult,
     loadingMessages,
     sending,
     sendMessage,
