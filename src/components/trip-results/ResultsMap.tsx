@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getCategoryColor } from "./categoryColors";
+import { getCategoryColor, CATEGORY_ICONS } from "./categoryColors";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
+import { renderToStaticMarkup } from "react-dom/server";
 
 interface Props {
   result: AITripResult;
@@ -14,20 +15,37 @@ interface Props {
   onPinClick?: (dayDate: string, activityIndex: number) => void;
 }
 
-function createNumberedIcon(num: number, color: string) {
+function createPremiumIcon(num: number, color: string, category: string, photo?: string) {
+  const IconComponent = CATEGORY_ICONS[category?.toLowerCase()];
+  const iconSvg = IconComponent
+    ? renderToStaticMarkup(
+        // @ts-ignore
+        <IconComponent size={12} color="white" strokeWidth={2.5} />
+      )
+    : "";
+
+  const photoClip = photo
+    ? `<img src="${photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;position:absolute;inset:0;" onerror="this.style.display='none'" />`
+    : "";
+
   return L.divIcon({
     className: "",
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    html: `<div style="
-      width:28px;height:28px;border-radius:50%;
-      background:${color};
-      display:flex;align-items:center;justify-content:center;
-      color:#fff;font-size:12px;font-weight:700;
-      border:2px solid rgba(255,255,255,0.8);
-      box-shadow:0 2px 6px rgba(0,0,0,0.2);
-      font-family:Inter,sans-serif;
-    ">${num}</div>`,
+    iconSize: [40, 48],
+    iconAnchor: [20, 48],
+    popupAnchor: [0, -48],
+    html: `<div style="position:relative;width:40px;height:48px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.25));">
+      <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 47L5.36 30.5C-1.12 22.5-1.12 10.5 5.36 4.5C11.84-1.5 28.16-1.5 34.64 4.5C41.12 10.5 41.12 22.5 34.64 30.5L20 47Z" fill="${color}" />
+        <circle cx="20" cy="18" r="14" fill="${color}" />
+        <circle cx="20" cy="18" r="13" fill="white" fill-opacity="0.15" />
+      </svg>
+      <div style="position:absolute;top:4px;left:4px;width:32px;height:32px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.2);">
+        ${photoClip}
+        <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+          <span style="font-size:13px;font-weight:800;color:white;font-family:Inter,system-ui,sans-serif;text-shadow:0 1px 2px rgba(0,0,0,0.3);${photo ? 'display:none' : ''}">${num}</span>
+        </div>
+      </div>
+    </div>`,
   });
 }
 

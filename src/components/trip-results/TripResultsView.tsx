@@ -517,12 +517,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {/* Fullscreen map overlay */}
       {mapFullscreen && (
         <div className="fixed inset-0 z-[10000] bg-background">
-          <div className="absolute top-4 left-4 z-10">
+          <div className="absolute top-4 left-4 z-[10001]">
             <button
               onClick={() => setMapFullscreen(false)}
-              className="p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-card text-foreground shadow-xl border border-border hover:bg-accent transition-colors"
             >
-              <X className="h-5 w-5 text-foreground" />
+              <X className="h-4 w-4" />
+              <span className="text-xs font-medium">Close map</span>
             </button>
           </div>
           <ResultsMap
