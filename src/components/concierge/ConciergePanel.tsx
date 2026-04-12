@@ -19,6 +19,7 @@ interface Props {
   onClose: () => void;
   tripResult?: AITripResult | null;
   memberCount?: number;
+  destination?: string;
   onAddToPlan?: (dayDate: string, activity: AIActivity) => void;
 }
 
@@ -255,7 +256,7 @@ function FilterPill({ label, onClick }: { label: string; onClick?: () => void })
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
-export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, onAddToPlan }: Props) {
+export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, destination: destinationProp, onAddToPlan }: Props) {
   const [stage, setStage] = useState<Stage>("what");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedWhen, setSelectedWhen] = useState<string | null>(null);
@@ -265,7 +266,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const inputRef = useRef<HTMLInputElement>(null);
 
   const conciergeContext = buildConciergeContext(tripResult, memberCount);
-  const destination = conciergeContext.destination;
+  const destination = destinationProp || conciergeContext.destination;
+  conciergeContext.destination = destination;
   const { messages, sending, sendMessage, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
 
   const tripDays = tripResult?.destinations?.flatMap(d =>
