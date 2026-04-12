@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { saveLineItems } from "@/hooks/useLineItemClaims";
+import { parseRates, fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 
 export interface ExpenseRow {
   id: string;
@@ -132,22 +133,6 @@ export function useExpenses(tripId: string) {
   // Exchange rates: DB cache first, then live API fallback
   const settlementCurrency = settlementQuery.data || "EUR";
 
-  // Safely parse jsonb rates from Supabase (could be string, object, or null)
-  const parseRates = (raw: unknown): Record<string, number> | null => {
-    if (!raw) return null;
-    let obj: Record<string, unknown>;
-    if (typeof raw === "string") {
-      try { obj = JSON.parse(raw); } catch { return null; }
-    } else if (typeof raw === "object" && !Array.isArray(raw)) {
-      obj = raw as Record<string, unknown>;
-    } else {
-      return null;
-    }
-    const entries = Object.entries(obj);
-    if (entries.length === 0) return null;
-    return obj as Record<string, number>;
-  };
-
   const ratesQuery = useQuery({
     queryKey: ["exchange-rates-trip", settlementCurrency],
     queryFn: async (): Promise<{
@@ -157,29 +142,7 @@ export function useExpenses(tripId: string) {
     }> => {
       const eurRates = await qc.fetchQuery({
         queryKey: ["exchange-rates", "EUR"],
-        queryFn: async (): Promise<Record<string, number>> => {
-          const { data: eurRow } = await supabase
-            .from("exchange_rate_cache")
-            .select("rates")
-            .eq("base_currency", "EUR")
-            .maybeSingle();
-
-          const parsed = parseRates(eurRow?.rates);
-          if (parsed) return parsed;
-
-          try {
-            const res = await fetch("https://open.er-api.com/v6/latest/EUR");
-            const json = await res.json();
-            if (json.result === "success" && json.rates) {
-              supabase.functions.invoke("refresh-exchange-rates").catch(() => {});
-              return json.rates as Record<string, number>;
-            }
-          } catch {
-            // API also failed
-          }
-
-          return {};
-        },
+        queryFn: fetchEurRates,
         staleTime: 1000 * 60 * 60,
       });
 
@@ -193,20 +156,9 @@ export function useExpenses(tripId: string) {
       const source: "cache" | "live" | "none" =
         Object.keys(eurRates).length === 0 ? "none" : fetchedAt ? "cache" : "live";
 
-      if (settlementCurrency === "EUR") {
-        return { rates: eurRates, fetchedAt, source };
-      }
-
-      const eurToSettlement = eurRates[settlementCurrency];
-      if (eurToSettlement && eurToSettlement > 0) {
-        const crossRates: Record<string, number> = {};
-        for (const [code, eurRate] of Object.entries(eurRates)) {
-          crossRates[code] = (eurRate as number) / eurToSettlement;
-        }
-        return { rates: crossRates, fetchedAt, source };
-      }
-
-      return { rates: {}, fetchedAt, source: "none" };
+      const rates = crossCalculateRates(eurRates, settlementCurrency);
+      const effectiveSource = Object.keys(rates).length === 0 ? "none" : source;
+      return { rates, fetchedAt, source: effectiveSource };
     },
     // No staleTime here - the expensive DB call is already cached for 1hr by
     // the inner qc.fetchQuery(["exchange-rates", "EUR"]).  The outer query is
