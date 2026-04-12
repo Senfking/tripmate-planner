@@ -412,42 +412,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   // Itinerary card visibility: hide if AI plan exists OR no items exist
   const showItinerary = !hasPlan && (itineraryItems?.length ?? 0) > 0;
 
-  // ─── Sortable section ordering ───
-  const STORAGE_KEY = `dashboard-order-${tripId}`;
-  const DEFAULT_ORDER = ["expenses", "flights", "decisions-bookings", "itinerary", "packing"];
-
-  const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as string[];
-        // Merge: keep saved order, append any new sections
-        const merged = parsed.filter((s) => DEFAULT_ORDER.includes(s));
-        for (const s of DEFAULT_ORDER) {
-          if (!merged.includes(s)) merged.push(s);
-        }
-        return merged;
-      }
-    } catch { /* ignore */ }
-    return DEFAULT_ORDER;
-  });
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
-  );
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setSectionOrder((prev) => {
-      const oldIdx = prev.indexOf(active.id as string);
-      const newIdx = prev.indexOf(over.id as string);
-      const next = arrayMove(prev, oldIdx, newIdx);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
-  }, [STORAGE_KEY]);
 
   // Section renderers
   const renderSection = (id: string) => {
