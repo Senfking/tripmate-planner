@@ -267,6 +267,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   <DaySection
                     key={day.date}
                     day={day}
+                    planId={planId || null}
                     destinationName={dest.name}
                     result={result}
                     allDays={allDays}
