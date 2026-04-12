@@ -37,6 +37,8 @@ interface Category {
   tagline: string;
   icon: React.ReactNode;
   gradient: string;
+  gradientColor: string;
+  photoSuffix: string;
   query: string;
 }
 
@@ -48,13 +50,13 @@ interface FilterSection {
 }
 
 const CATEGORIES: Category[] = [
-  { id: "eat", label: "Eat", tagline: "From street food to fine dining", icon: <Utensils className="h-7 w-7" />, gradient: "from-orange-400/80 to-amber-500/80", query: "Best places to eat" },
-  { id: "drink", label: "Drink", tagline: "Hidden bars to sunset spots", icon: <Wine className="h-7 w-7" />, gradient: "from-purple-500/80 to-violet-600/80", query: "Best bars and drinks" },
-  { id: "party", label: "Party", tagline: "Where the night takes you", icon: <Music className="h-7 w-7" />, gradient: "from-pink-500/80 to-rose-500/80", query: "Best nightlife and parties" },
-  { id: "explore", label: "Explore", tagline: "Beyond the guidebook", icon: <Compass className="h-7 w-7" />, gradient: "from-sky-500/80 to-blue-500/80", query: "Things to explore and see" },
-  { id: "relax", label: "Relax", tagline: "Your reset button", icon: <Waves className="h-7 w-7" />, gradient: "from-emerald-400/80 to-green-500/80", query: "Relaxation and wellness spots" },
-  { id: "workout", label: "Workout", tagline: "Don't skip travel day", icon: <Dumbbell className="h-7 w-7" />, gradient: "from-slate-400/80 to-slate-500/80", query: "Gyms and fitness activities" },
-  { id: "events", label: "Events", tagline: "Happening right now", icon: <CalendarHeart className="h-7 w-7" />, gradient: "from-red-400/80 to-orange-400/80", query: "Events and things happening" },
+  { id: "eat", label: "Eat", tagline: "From street food to fine dining", icon: <Utensils className="h-7 w-7" />, gradient: "from-orange-400/80 to-amber-500/80", gradientColor: "rgba(251,146,60,0.82)", photoSuffix: "food", query: "Best places to eat" },
+  { id: "drink", label: "Drink", tagline: "Hidden bars to sunset spots", icon: <Wine className="h-7 w-7" />, gradient: "from-purple-500/80 to-violet-600/80", gradientColor: "rgba(168,85,247,0.82)", photoSuffix: "cocktail bar", query: "Best bars and drinks" },
+  { id: "party", label: "Party", tagline: "Where the night takes you", icon: <Music className="h-7 w-7" />, gradient: "from-pink-500/80 to-rose-500/80", gradientColor: "rgba(236,72,153,0.82)", photoSuffix: "nightclub party", query: "Best nightlife and parties" },
+  { id: "explore", label: "Explore", tagline: "Beyond the guidebook", icon: <Compass className="h-7 w-7" />, gradient: "from-sky-500/80 to-blue-500/80", gradientColor: "rgba(14,165,233,0.82)", photoSuffix: "landscape", query: "Things to explore and see" },
+  { id: "relax", label: "Relax", tagline: "Your reset button", icon: <Waves className="h-7 w-7" />, gradient: "from-emerald-400/80 to-green-500/80", gradientColor: "rgba(52,211,153,0.82)", photoSuffix: "spa wellness", query: "Relaxation and wellness spots" },
+  { id: "workout", label: "Workout", tagline: "Don't skip travel day", icon: <Dumbbell className="h-7 w-7" />, gradient: "from-slate-400/80 to-slate-500/80", gradientColor: "rgba(148,163,184,0.82)", photoSuffix: "fitness gym", query: "Gyms and fitness activities" },
+  { id: "events", label: "Events", tagline: "Happening right now", icon: <CalendarHeart className="h-7 w-7" />, gradient: "from-red-400/80 to-orange-400/80", gradientColor: "rgba(248,113,113,0.82)", photoSuffix: "festival concert", query: "Events and things happening" },
 ];
 
 const CATEGORY_FILTERS: Record<string, FilterSection[]> = {
