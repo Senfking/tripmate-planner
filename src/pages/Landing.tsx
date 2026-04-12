@@ -467,10 +467,6 @@ export default function Landing() {
           <span className="text-xs">&copy; {new Date().getFullYear()} Junto</span>
         </div>
       </footer>
-
-    </div>
-  );
-}
     </div>
   );
 }
