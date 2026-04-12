@@ -15,7 +15,7 @@ import { SharedItemsSection } from "./SharedItemsSection";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
-import { Progress } from "@/components/ui/progress";
+
 
 // Error boundary for the trip builder
 class BuilderErrorBoundary extends Component<{ children: ReactNode; onClose: () => void }, { hasError: boolean }> {
