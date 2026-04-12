@@ -764,25 +764,37 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         ...(displayedResults.suggestions || []).map(s => s.name),
         ...extraResults.map(s => s.name),
       ];
-      // Send a new request with exclusion list
       const excludeNote = `Do NOT suggest these (already shown): ${existingNames.join(", ")}. Suggest DIFFERENT spots.`;
       
+      let query: string;
       if (selectedCategory) {
-        // Use free-text with context for "show more"
         const filterSummary = Object.entries(selectedFilters)
           .flatMap(([, vals]) => vals)
           .join(", ");
-        const query = `More ${selectedCategory.label.toLowerCase()} suggestions${filterSummary ? ` (${filterSummary})` : ""}. ${excludeNote}`;
-        await sendMessage(query);
+        query = `More ${selectedCategory.label.toLowerCase()} suggestions${filterSummary ? ` (${filterSummary})` : ""}. ${excludeNote}`;
       } else {
-        await sendMessage(`More suggestions like these. ${excludeNote}`);
+        query = `More suggestions like these. ${excludeNote}`;
+      }
+
+      const { data, error } = await supabase.functions.invoke("concierge-suggest", {
+        body: {
+          trip_id: tripId,
+          query,
+          context: conciergeContext,
+        },
+      });
+      if (error) throw error;
+      if (data?.suggestions?.length) {
+        setExtraResults(prev => [...prev, ...data.suggestions]);
+      } else {
+        toast("No more suggestions found");
       }
     } catch {
       toast.error("Couldn't load more suggestions");
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, displayedResults, extraResults, selectedCategory, selectedFilters, sendMessage]);
+  }, [loadingMore, displayedResults, extraResults, selectedCategory, selectedFilters, tripId, conciergeContext]);
 
   const handleCategorySelect = (cat: Category) => {
     setSelectedCategory(cat);
@@ -1159,10 +1171,19 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               <div className="border-t border-border pt-4">
                 <button
                   onClick={handleFeelingLucky}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors"
+                  className="w-full relative flex items-center justify-center gap-2.5 py-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97]"
                 >
-                  <Dice5 className="h-4 w-4" />
-                  Surprise me instead
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(135deg, #0D9488 0%, #D97706 25%, #0D9488 50%, #D97706 75%, #0D9488 100%)",
+                      backgroundSize: "400% 400%",
+                      animation: "shimmer-gradient 4s ease infinite",
+                      opacity: 0.12,
+                    }}
+                  />
+                  <Sparkles className="h-4 w-4 text-amber-500 relative z-10" />
+                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 relative z-10">Surprise me instead</span>
                 </button>
               </div>
             </div>
@@ -1266,6 +1287,28 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       />
                     ))}
                   </div>
+
+                  {/* Extra results from "Show more" */}
+                  {extraResults.length > 0 && (
+                    <div className="space-y-3 px-4 pt-1">
+                      <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">More picks</p>
+                      {extraResults.map((s, i) => (
+                        <SuggestionCard
+                          key={`extra-${i}`}
+                          suggestion={s}
+                          messageId={`extra-${i}`}
+                          index={i}
+                          tripId={tripId}
+                          tripDays={tripDays}
+                          onAddToPlan={onAddToPlan}
+                          animDelay={i * 50}
+                          isLucky={isLucky}
+                          luckyBadge={isLucky ? LUCKY_BADGES[(displayedResults!.suggestions!.length + i) % LUCKY_BADGES.length] : undefined}
+                        />
+                      ))}
+                    </div>
+                  )}
+
 
                   {/* Bottom actions */}
                   <div className="px-4 pt-3 space-y-2 pb-6">
