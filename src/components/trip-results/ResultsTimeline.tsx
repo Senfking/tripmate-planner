@@ -21,15 +21,17 @@ export function buildTimelineNodes(
 ): TimelineNode[] {
   const nodes: TimelineNode[] = [];
 
+  // Overall summary sections first
   nodes.push({ id: "section-flights", icon: Plane, label: "Flights" });
 
   const hasAccommodation = destinations.some(d => d.accommodation);
   if (hasAccommodation) {
-    nodes.push({ id: `section-stay-${destinations[0]?.name}`, icon: Bed, label: "Stay" });
+    nodes.push({ id: "section-stays-overview", icon: Bed, label: "Stays" });
   }
 
   nodes.push({ id: "section-budget", icon: Wallet, label: "Budget" });
 
+  // Then per-destination with days
   for (const dest of destinations) {
     nodes.push({ id: `section-dest-${dest.name}`, icon: MapPin, label: dest.name });
     const destDays = allDays.filter(d => d.date >= dest.start_date && d.date <= dest.end_date);
