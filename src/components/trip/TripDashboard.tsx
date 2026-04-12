@@ -435,13 +435,12 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             {expenses && expenses.length > 0 && userId ? (
               <div className="relative p-4 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{
+                    color: myBalance < -0.01 ? "#fca5a5" : myBalance > 0.01 ? "#6ee7b7" : "rgba(255,255,255,0.5)",
+                  }}>
                     {myBalance < -0.01 ? "You owe" : myBalance > 0.01 ? "You're owed" : "All settled"}
                   </p>
-                  <p className="text-[26px] font-extrabold tracking-tight leading-none mt-1" style={{
-                    color: myBalance < -0.01 ? "#ef4444" : myBalance > 0.01 ? "#10b981" : "#ffffff",
-                    textShadow: myBalance < -0.01 ? "0 1px 12px rgba(239,68,68,0.5)" : myBalance > 0.01 ? "0 1px 12px rgba(16,185,129,0.5)" : "none",
-                  }}>
+                  <p className="text-[26px] font-extrabold tracking-tight leading-none mt-1 text-white">
                     {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
                   </p>
                   {myBalance < -0.01 && creditorName && (
