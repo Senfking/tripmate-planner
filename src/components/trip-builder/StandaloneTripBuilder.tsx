@@ -100,16 +100,19 @@ const TOTAL_STEPS = 7;
 interface Props {
   onClose: () => void;
   initialDestination?: string;
+  /** Pre-loaded draft — skips generation, goes straight to results */
+  draftPlanId?: string;
+  draftResult?: AITripResult;
 }
 
-export function StandaloneTripBuilder({ onClose, initialDestination }: Props) {
+export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult }: Props) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState(initialDestination ? 1 : 0);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [results, setResults] = useState<AITripResult | null>(null);
-  const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
+  const [results, setResults] = useState<AITripResult | null>(draftResult ?? null);
+  const [savedPlanId, setSavedPlanId] = useState<string | null>(draftPlanId ?? null);
   const [creatingTrip, setCreatingTrip] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [prefilledSteps, setPrefilledSteps] = useState<Set<number>>(new Set());

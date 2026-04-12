@@ -4,7 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Users, Plus, Plane, Calendar, Radio, Hash, ChevronRight, X, Copy } from "lucide-react";
+import { Loader2, Users, Plus, Plane, Calendar, Radio, Hash, ChevronRight, X, Copy, Sparkles, Trash2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +20,8 @@ import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
+import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
+import type { AITripResult } from "@/components/trip-results/useResultsState";
 
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
