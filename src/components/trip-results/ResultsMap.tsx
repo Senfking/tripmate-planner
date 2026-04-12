@@ -44,7 +44,7 @@ function createPinIcon(label: string, color: string) {
 }
 
 /* ── React popup with real Google images ── */
-function PopupContent({ activity }: { activity: AIActivity }) {
+function PopupContent({ activity, dayLabel }: { activity: AIActivity; dayLabel?: string }) {
   const { photos, rating, isLoading } = useGooglePlaceDetails(
     activity.title || "",
     activity.location_name || ""
@@ -91,6 +91,14 @@ function PopupContent({ activity }: { activity: AIActivity }) {
             <span className="text-[10px] text-amber-600 font-semibold ml-auto">★ {rating.toFixed(1)}</span>
           )}
         </div>
+
+        {/* Day label */}
+        {dayLabel && (
+          <p className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {dayLabel}
+          </p>
+        )}
 
         {/* Title */}
         <h4 className="text-sm font-bold text-foreground leading-snug">{activity.title}</h4>
@@ -245,21 +253,22 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
     if (!hasValidCenter) return [];
     try {
       if (mode === "day" && activeDayIndex >= 0 && allDays[activeDayIndex]) {
-        return allDays[activeDayIndex].activities
+        const day = allDays[activeDayIndex];
+        return day.activities
           .map((a, i) => {
-            const coords = getCoords(allDays[activeDayIndex].date, i, a);
+            const coords = getCoords(day.date, i, a);
             if (!coords) return null;
-            return { ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: allDays[activeDayIndex].date, _idx: i };
+            return { ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: day.date, _idx: i, _dayNumber: day.day_number };
           })
-          .filter(Boolean) as (AIActivity & { _dayDate: string; _idx: number })[];
+          .filter(Boolean) as (AIActivity & { _dayDate: string; _idx: number; _dayNumber: number })[];
       }
 
-      const all: (AIActivity & { _dayDate: string; _idx: number })[] = [];
+      const all: (AIActivity & { _dayDate: string; _idx: number; _dayNumber: number })[] = [];
       for (const day of allDays) {
         day.activities.forEach((a, i) => {
           const coords = getCoords(day.date, i, a);
           if (coords) {
-            all.push({ ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: day.date, _idx: i });
+            all.push({ ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: day.date, _idx: i, _dayNumber: day.day_number });
           }
         });
       }
@@ -313,16 +322,24 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
         />
       )}
 
-      {activitiesForMap.map((act) => (
-        <Marker
-          key={`${act._dayDate}-${act._idx}`}
-          position={[act.latitude!, act.longitude!]}
-          icon={createPinIcon(act._idx + 1, getCategoryColor(act.category))}
-        >
-          <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
-            <PopupContent activity={act} />
-          </Popup>
-        </Marker>
+      {activitiesForMap.map((act) => {
+        // In day mode show just activity number (1, 2, 3...)
+        // In overview show D1.1, D1.2, D2.1 etc. so user knows day + order
+        const pinLabel = mode === "day"
+          ? String(act._idx + 1)
+          : `D${act._dayNumber}.${act._idx + 1}`;
+        const dayLabel = formatDayLabel(act._dayDate, act._dayNumber);
+
+        return (
+          <Marker
+            key={`${act._dayDate}-${act._idx}`}
+            position={[act.latitude!, act.longitude!]}
+            icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
+          >
+            <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
+              <PopupContent activity={act} dayLabel={dayLabel} />
+            </Popup>
+          </Marker>
       ))}
     </MapContainer>
   );
