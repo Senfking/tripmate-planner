@@ -87,6 +87,23 @@ export default function TripSection() {
     enabled: !!tripId && !!user,
   });
 
+  // Query linked AI plan for this trip
+  const { data: linkedPlan } = useQuery({
+    queryKey: ["trip-ai-plan", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_trip_plans" as any)
+        .select("id, result")
+        .eq("trip_id", tripId!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; result: AITripResult } | null;
+    },
+    enabled: !!tripId && !!user && section === "plan",
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -103,6 +120,21 @@ export default function TripSection() {
         <button onClick={() => navigate("/app/trips")} className="text-primary underline text-sm">
           Back to My Trips
         </button>
+      </div>
+    );
+  }
+
+  // Plan section renders full-screen TripResultsView
+  if (section === "plan" && linkedPlan) {
+    return (
+      <div className="flex flex-col min-h-dvh animate-slide-in bg-background">
+        <TripResultsView
+          tripId={trip.id}
+          planId={linkedPlan.id}
+          result={linkedPlan.result}
+          onClose={() => navigate(`/app/trips/${tripId}`)}
+          onRegenerate={() => {}}
+        />
       </div>
     );
   }
