@@ -407,6 +407,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const [freeText, setFreeText] = useState("");
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
+  const [isLucky, setIsLucky] = useState(false);
   const [locationInput, setLocationInput] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
