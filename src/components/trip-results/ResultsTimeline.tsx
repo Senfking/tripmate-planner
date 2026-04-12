@@ -49,8 +49,10 @@ export function ResultsTimeline({ nodes }: Props) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [activeId, setActiveId] = useState<string | null>(null);
   const isClickScrolling = useRef(false);
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
 
-  // Robust scroll-spy: find the topmost section in the viewport
+  // Scroll-spy: use a ref for activeId to avoid re-registering the listener
   useEffect(() => {
     if (!isDesktop) return;
 
@@ -60,46 +62,41 @@ export function ResultsTimeline({ nodes }: Props) {
       if (isClickScrolling.current) return;
 
       let bestId: string | null = null;
-      let bestTop = Infinity;
+      let bestTop = -Infinity;
 
       for (const id of nodeIds) {
         const el = document.getElementById(id);
         if (!el) continue;
         const rect = el.getBoundingClientRect();
-        // Find the element whose top is closest to (but not far below) the viewport top
-        // Allow elements that are up to 40% of viewport height below the top
+        // Element is at least partially scrolled past the top 40% of viewport
         if (rect.top <= window.innerHeight * 0.4 && rect.top > -rect.height) {
-          // Pick the one with the largest top (closest to viewport top from above)
-          if (bestId === null || rect.top > bestTop) {
+          if (rect.top > bestTop) {
             bestTop = rect.top;
             bestId = id;
           }
         }
       }
 
-      if (bestId && bestId !== activeId) {
+      if (bestId && bestId !== activeIdRef.current) {
         setActiveId(bestId);
       }
     };
 
-    // Use passive scroll listener for performance
     window.addEventListener("scroll", findTopmost, { passive: true });
-    findTopmost(); // initial
+    findTopmost();
 
     return () => window.removeEventListener("scroll", findTopmost);
-  }, [nodes, isDesktop, activeId]);
+  }, [nodes, isDesktop]);
 
   const scrollTo = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
 
-    // Immediately set active to avoid flicker
     setActiveId(id);
     isClickScrolling.current = true;
 
     el.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // Re-enable scroll-spy after animation settles
     setTimeout(() => {
       isClickScrolling.current = false;
     }, 800);
@@ -108,11 +105,12 @@ export function ResultsTimeline({ nodes }: Props) {
   if (!isDesktop) return null;
 
   return (
-    <div className="fixed left-[max(12px,calc(50%-420px))] top-[72px] bottom-[72px] w-[56px] z-40 flex flex-col items-center py-6 overflow-visible scrollbar-none">
+    <div className="fixed left-[max(12px,calc(50%-420px))] top-[72px] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none">
       {/* Thin vertical line */}
-      <div className="absolute left-1/2 top-4 bottom-4 w-px bg-[#0D9488]/15 -translate-x-1/2" />
+      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-[#0D9488]/15 -translate-x-1/2" />
 
-      <div className="relative flex flex-col gap-0.5 items-center overflow-visible">
+      {/* Spread nodes across the full height with justify-between */}
+      <div className="relative flex flex-col justify-between items-center overflow-visible h-full py-2">
         {nodes.map((node) => {
           const Icon = node.icon;
           const isActive = activeId === node.id;
@@ -122,7 +120,7 @@ export function ResultsTimeline({ nodes }: Props) {
               <button
                 key={node.id}
                 onClick={() => scrollTo(node.id)}
-                className="group relative flex items-center justify-center py-1 z-10 overflow-visible"
+                className="group relative flex items-center justify-center z-10 overflow-visible"
                 title={node.label}
               >
                 <div
@@ -149,7 +147,7 @@ export function ResultsTimeline({ nodes }: Props) {
             <button
               key={node.id}
               onClick={() => scrollTo(node.id)}
-              className="group relative flex items-center justify-center py-2 z-10 overflow-visible"
+              className="group relative flex items-center justify-center z-10 overflow-visible"
               title={node.sublabel ? `${node.label}: ${node.sublabel}` : node.label}
             >
               <div
