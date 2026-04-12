@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
     // ---- Check cache for non-time-sensitive queries ----
     const timeSensitive =
       isTimeSensitiveQuery(query) ||
-      isTimeSensitiveWhen(structWhen) ||
+      whenArr.some(w => isTimeSensitiveWhen(w)) ||
       structCategory === "events";
 
     if (!timeSensitive) {
