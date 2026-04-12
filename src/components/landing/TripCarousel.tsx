@@ -68,7 +68,7 @@ export function TripCarousels() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 px-5 max-w-[1200px] mx-auto">
+      <div className="flex items-center justify-between mb-6 px-10 lg:px-[calc((100vw-1160px)/2+2.5rem)]">
         <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a]">Explore trip plans</h2>
         <Link to="/templates" className="text-sm font-medium text-[#0D9488] hover:underline">See all</Link>
       </div>

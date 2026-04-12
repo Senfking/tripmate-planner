@@ -179,7 +179,7 @@ export function FeatureCards() {
 
   return (
     <section className="py-16 sm:py-24 bg-[#111114]">
-      <div className="px-5 max-w-[1200px] mx-auto mb-8">
+      <div className="px-10 lg:px-[calc((100vw-1160px)/2+2.5rem)] mb-8">
         <h2 className="text-2xl sm:text-4xl font-bold text-white">Get to know Junto</h2>
       </div>
 
