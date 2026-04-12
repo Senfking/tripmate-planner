@@ -1,18 +1,15 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  Sparkles,
-  Search,
-  DollarSign,
-  CheckSquare,
-  Compass,
-  ArrowRight,
-} from "lucide-react";
+import { Sparkles, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
+import { ShimmerButton } from "@/components/landing/ShimmerButton";
+import { PlanPreviewMockup } from "@/components/landing/PlanPreviewMockup";
+import { TripCarousels } from "@/components/landing/TripCarousel";
+import { FeatureCards } from "@/components/landing/FeatureCards";
+import { useState } from "react";
 
-/* ------------------------------------------------------------------ */
-/*  Scroll-reveal hook                                                 */
-/* ------------------------------------------------------------------ */
+/* Scroll-reveal */
 function useReveal() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -37,94 +34,12 @@ function Reveal({ children, className = "", delay = "" }: { children: React.Reac
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Data                                                               */
-/* ------------------------------------------------------------------ */
-const QUICK_DESTINATIONS = ["Bali", "Japan", "Italy", "Thailand", "Greece", "Mexico"];
-
-const SAMPLE_PLAN = {
-  stats: ["7 days", "3 cities", "14 activities", "~$1,200"],
-  days: [
-    { label: "Day 1 · Ubud", activities: "Tegallalang Rice Terraces, Tirta Empul Temple, Ubud Monkey Forest" },
-    { label: "Day 2 · Ubud", activities: "Mount Batur sunrise trek, Luwak coffee, Campuhan Ridge Walk" },
-    { label: "Day 3 · Canggu", activities: "Echo Beach surf lesson, La Brisa sunset, night market" },
-    { label: "Day 4-7", activities: "Nusa Penida island hop, snorkeling, Kelingking Beach, Uluwatu Temple..." },
-  ],
-};
-
-const TRIP_TEMPLATES = [
-  { name: "Bali 7 days", vibe: "Culture + beaches",
-    img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=80&auto=format&fit=crop" },
-  { name: "Japan 10 days", vibe: "Tokyo to Kyoto",
-    img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&q=80&auto=format&fit=crop" },
-  { name: "Greece 5 days", vibe: "Island hopping",
-    img: "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=600&q=80&auto=format&fit=crop" },
-  { name: "Thailand 8 days", vibe: "Bangkok + islands",
-    img: "https://images.unsplash.com/photo-1528181304800-259b08848526?w=600&q=80&auto=format&fit=crop" },
-  { name: "Italy 10 days", vibe: "Rome to Amalfi",
-    img: "https://images.unsplash.com/photo-1515859005217-8a1f08870f59?w=600&q=80&auto=format&fit=crop" },
-  { name: "Portugal 7 days", vibe: "Lisbon + Porto",
-    img: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=600&q=80&auto=format&fit=crop" },
-  { name: "Colombia 9 days", vibe: "Cartagena to Medellín",
-    img: "https://images.unsplash.com/photo-1518638150340-f706e86654de?w=600&q=80&auto=format&fit=crop" },
-  { name: "Morocco 6 days", vibe: "Marrakech + desert",
-    img: "https://images.unsplash.com/photo-1489749798305-4fea3ae63d43?w=600&q=80&auto=format&fit=crop" },
-];
-
-const FEATURES = [
-  {
-    icon: Sparkles,
-    headline: "Junto plans your entire trip",
-    description: "Just tell Junto where you're going, when, and what your group is into. You'll get a full day-by-day plan with real places, photos, reviews, and cost estimates. Send it to your group and let everyone weigh in.",
-  },
-  {
-    icon: CheckSquare,
-    headline: "Everyone gets a say",
-    description: "No more guessing what people want. Throw up a vote on where to go, when to fly, what vibe you're after. Everyone picks, Junto tallies. The group decides together.",
-  },
-  {
-    icon: DollarSign,
-    headline: "Money stuff, sorted",
-    description: "Snap a photo of the receipt, Junto reads it. Track everything in whatever currency you're spending in. At the end of the trip, everyone knows exactly who owes what.",
-  },
-  {
-    icon: Compass,
-    headline: "Ask Junto, not the group chat",
-    description: "It's 8pm, everyone's hungry, nobody can pick a place. Ask Junto and get actual suggestions nearby with photos, ratings, and what to order. Works wherever you are.",
-  },
-];
-
 const HOW_STEPS = [
   { num: 1, title: "Tell Junto your vibe", desc: "Where, when, how adventurous" },
   { num: 2, title: "Loop in your group", desc: "Everyone votes and customizes the plan" },
   { num: 3, title: "Just travel", desc: "Expenses tracked, concierge on demand, zero drama" },
 ];
 
-/* ------------------------------------------------------------------ */
-/*  Phone mockup placeholder                                           */
-/* ------------------------------------------------------------------ */
-function PhoneMockup() {
-  return (
-    <div className="mx-auto w-[200px] sm:w-[220px]">
-      <div className="rounded-[1.8rem] border-[4px] border-[#2a2a2e] bg-[#18181b] p-1.5 shadow-2xl shadow-black/40">
-        <div className="absolute left-1/2 top-1 -translate-x-1/2 w-16 h-3 bg-[#1e1e21] rounded-b-xl z-10" />
-        <div className="rounded-[1.4rem] bg-gradient-to-br from-[#1a1a1f] to-[#111114] aspect-[9/19] flex items-center justify-center">
-          <div className="space-y-2 px-3 w-full">
-            <div className="h-2 w-3/4 rounded bg-white/[0.06]" />
-            <div className="h-2 w-1/2 rounded bg-white/[0.04]" />
-            <div className="h-8 w-full rounded-lg bg-primary/10 mt-3" />
-            <div className="h-8 w-full rounded-lg bg-white/[0.04]" />
-            <div className="h-8 w-full rounded-lg bg-white/[0.03]" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Header                                                             */
-/* ------------------------------------------------------------------ */
 function Header() {
   return (
     <div
@@ -142,9 +57,6 @@ function Header() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Main landing page                                                  */
-/* ------------------------------------------------------------------ */
 export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -154,23 +66,18 @@ export default function Landing() {
     if (!loading && user) navigate("/app/trips", { replace: true });
   }, [loading, user, navigate]);
 
-  const openBuilder = useCallback((dest?: string) => {
+  const openBuilder = useCallback(() => {
     navigate("/ref");
   }, [navigate]);
 
-  const handleGetStarted = useCallback(() => {
-    navigate("/ref");
-  }, [navigate]);
-
-  if (loading) return null;
-  if (user) return null;
+  if (loading || user) return null;
 
   return (
     <div className="bg-white text-[#1a1a1a] min-h-screen overflow-x-hidden">
       <Header />
 
       {/* ─── HERO ─── */}
-      <section className="relative min-h-dvh flex flex-col justify-end overflow-hidden">
+      <section className="relative min-h-dvh flex flex-col justify-center overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80&auto=format&fit=crop"
           alt="Tropical beach destination"
@@ -179,7 +86,7 @@ export default function Landing() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 via-40% to-black/80" />
 
-        <div className="relative z-10 mx-auto max-w-3xl w-full px-5 pb-8 pt-24 text-center">
+        <div className="relative z-10 mx-auto max-w-3xl w-full px-5 -mt-[12vh] text-center">
           <div className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium text-white/90 backdrop-blur-md mb-6"
             style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)" }}>
             <Sparkles className="h-3.5 w-3.5 text-[#2dd4bf]" />
@@ -194,182 +101,48 @@ export default function Landing() {
             You plan everything. They show up. Sound familiar? Junto gives your whole group one place to plan, decide, and travel together.
           </p>
 
-          {/* Frosted glass card */}
+          {/* Search module */}
           <div className="mt-8 rounded-2xl p-5 text-left backdrop-blur-xl mx-auto max-w-lg"
             style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)" }}>
             <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-3">
               <Search className="h-4 w-4 text-gray-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Where do you want to go?"
+              <RotatingPlaceholder
                 value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && searchValue.trim()) openBuilder(searchValue.trim()); }}
-                className="flex-1 bg-transparent text-[#1a1a1a] placeholder:text-gray-400 text-[15px] outline-none"
+                onChange={setSearchValue}
+                onKeyDown={(e) => { if (e.key === "Enter") openBuilder(); }}
               />
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-3">
-              {QUICK_DESTINATIONS.map((d) => (
-                <button
-                  key={d}
-                  onClick={() => openBuilder(d)}
-                  className="text-[13px] font-medium text-white/90 rounded-full px-3 py-1.5 transition-colors hover:bg-white/20"
-                  style={{ background: "rgba(255,255,255,0.15)" }}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => openBuilder(searchValue.trim() || undefined)}
-              className="w-full mt-4 flex items-center justify-center gap-2 text-white font-semibold rounded-xl py-3.5 text-[15px] transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)", boxShadow: "0 4px 20px rgba(13,148,136,0.35)" }}
-            >
-              <Sparkles className="h-4 w-4" />
+            <ShimmerButton onClick={openBuilder} className="w-full mt-4">
               Plan with Junto AI
-            </button>
+            </ShimmerButton>
           </div>
         </div>
       </section>
 
       {/* ─── PLAN PREVIEW ─── */}
-      <section className="py-16 sm:py-24 px-5 bg-[#fafaf9]">
-        <div className="mx-auto max-w-lg">
-          <Reveal>
-            <p className="text-center text-sm font-medium text-[#9ca3af] mb-6">See what Junto AI generates</p>
-          </Reveal>
-
-          <Reveal delay="0.1s">
-            <div className="rounded-2xl border border-[#e5e5e5] bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-4 w-4 text-[#0D9488]" />
-                <span className="text-sm font-semibold text-[#0D9488]">Junto AI plan preview</span>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-5">
-                {SAMPLE_PLAN.stats.map((s) => (
-                  <span key={s} className="text-xs font-medium px-2.5 py-1 rounded-full border border-[#0D9488]/20 text-[#0D9488] bg-[#0D9488]/5">
-                    {s}
-                  </span>
-                ))}
-              </div>
-
-              <div className="space-y-4 relative">
-                {SAMPLE_PLAN.days.map((day, i) => (
-                  <div
-                    key={i}
-                    className="border-l-[3px] border-[#0D9488] pl-4 relative"
-                    style={{
-                      opacity: i >= 3 ? 0.25 : i >= 2 ? 0.5 : 1,
-                      filter: i >= 3 ? "blur(3px)" : i >= 2 ? "blur(1.5px)" : "none",
-                    }}
-                  >
-                    <p className="text-sm font-semibold text-[#0D9488]">{day.label}</p>
-                    <p className="text-sm text-[#6b7280] mt-0.5">{day.activities}</p>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={handleGetStarted}
-                className="w-full mt-6 flex items-center justify-center gap-2 text-white font-semibold rounded-xl py-3 text-[14px] transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)" }}
-              >
-                Sign up free to unlock full plan
-              </button>
-            </div>
-          </Reveal>
-
-          {/* Group callout */}
-          <Reveal delay="0.2s">
-            <p className="mt-6 text-center text-sm text-[#6b7280] leading-relaxed max-w-md mx-auto">
-              Share this plan with your group → they vote, react, and customize it together. No more 47-message WhatsApp threads.
-            </p>
-          </Reveal>
-        </div>
+      <section className="py-12 sm:py-20 px-5 bg-[#fafaf9]">
+        <Reveal>
+          <PlanPreviewMockup onCTA={openBuilder} />
+        </Reveal>
       </section>
 
-      {/* ─── TRIP TEMPLATES ─── */}
-      <section className="py-16 sm:py-24 px-5">
-        <div className="mx-auto max-w-5xl">
-          <Reveal>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-[#1a1a1a]">Popular trip plans</h2>
-              <button className="text-sm font-medium text-[#0D9488] hover:underline">See all</button>
-            </div>
-          </Reveal>
-
-          <Reveal delay="0.1s">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-              {TRIP_TEMPLATES.map((t) => (
-                <button
-                  key={t.name}
-                  onClick={() => openBuilder(t.name.split(" ")[0])}
-                  className="group rounded-xl overflow-hidden border border-[#e5e5e5] bg-white shadow-sm hover:shadow-md transition-shadow text-left"
-                >
-                  <div className="aspect-[4/3] relative overflow-hidden">
-                    <img
-                      src={t.img}
-                      alt={t.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <p className="font-semibold text-sm text-[#1a1a1a]">{t.name}</p>
-                    <p className="text-xs text-[#9ca3af] mt-0.5">{t.vibe}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </Reveal>
-        </div>
+      {/* ─── TRIP CAROUSELS ─── */}
+      <section className="py-12 sm:py-20">
+        <Reveal>
+          <TripCarousels />
+        </Reveal>
       </section>
 
-      {/* ─── FEATURES (dark cards) ─── */}
-      <section className="py-16 sm:py-24 px-5 bg-[#0f1115]">
-        <div className="mx-auto max-w-3xl space-y-6">
-          {FEATURES.map((f, i) => {
-            const phoneOnRight = i % 2 === 0;
-            return (
-              <Reveal key={i} delay={`${i * 0.1}s`}>
-                <div
-                  className="rounded-2xl p-5 sm:p-7 relative overflow-hidden"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    boxShadow: "0 0 40px rgba(13,148,136,0.03)",
-                  }}
-                >
-                  <div className={`flex flex-col sm:flex-row sm:items-center gap-5 ${!phoneOnRight ? "sm:flex-row-reverse" : ""}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3"
-                        style={{ background: "rgba(13,148,136,0.15)" }}>
-                        <f.icon className="h-5 w-5 text-[#2dd4bf]" />
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{f.headline}</h3>
-                      <p className="text-sm sm:text-[15px] text-[#9ca3af] leading-relaxed">{f.description}</p>
-                    </div>
-                    <div className="sm:shrink-0">
-                      <PhoneMockup />
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            );
-          })}
-        </div>
-      </section>
+      {/* ─── FEATURE CARDS ─── */}
+      <FeatureCards />
 
       {/* ─── HOW IT WORKS ─── */}
-      <section className="py-16 sm:py-24 px-5 bg-[#fafaf9]">
+      <section className="py-12 sm:py-20 px-5 bg-[#fafaf9]">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mb-12">How it works</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mb-10">How it works</h2>
           </Reveal>
-
           <div className="grid sm:grid-cols-3 gap-8 sm:gap-6">
             {HOW_STEPS.map((s, i) => (
               <Reveal key={s.num} delay={`${i * 0.1}s`}>
@@ -388,19 +161,14 @@ export default function Landing() {
       </section>
 
       {/* ─── BOTTOM CTA ─── */}
-      <section className="py-16 sm:py-24 px-5 bg-white">
+      <section className="py-12 sm:py-20 px-5 bg-white">
         <div className="mx-auto max-w-md text-center">
           <Reveal>
             <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mb-2">Your next trip starts here</h2>
             <p className="text-sm text-[#9ca3af] mb-8">Plan smarter. Travel better. No spreadsheets required.</p>
-            <button
-              onClick={handleGetStarted}
-              className="w-full sm:w-auto sm:px-12 flex items-center justify-center gap-2 text-white font-semibold rounded-2xl py-4 text-[16px] mx-auto transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)", boxShadow: "0 4px 24px rgba(13,148,136,0.35)" }}
-            >
-              <Sparkles className="h-4 w-4" />
+            <ShimmerButton onClick={openBuilder} className="w-full sm:w-auto sm:px-12 mx-auto rounded-2xl py-4 text-[16px]">
               Start planning
-            </button>
+            </ShimmerButton>
           </Reveal>
         </div>
       </section>
