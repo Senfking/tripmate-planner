@@ -64,22 +64,22 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 10 : undefined,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group">
-      {/* Drag handle — appears on touch/hover */}
+    <div ref={setNodeRef} style={style} className="relative group flex items-stretch gap-1">
+      {/* Drag handle — always visible */}
       <div
         {...attributes}
         {...listeners}
-        className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 p-1 rounded-md opacity-0 group-hover:opacity-60 transition-opacity touch-none cursor-grab active:cursor-grabbing"
+        className="flex items-center justify-center w-5 shrink-0 touch-none cursor-grab active:cursor-grabbing rounded-lg opacity-30 hover:opacity-60 active:opacity-80 transition-opacity"
         style={{ WebkitTouchCallout: "none" }}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
-      {children}
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
   );
 }
