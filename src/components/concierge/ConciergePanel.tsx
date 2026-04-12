@@ -1107,8 +1107,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse z-10" />
                       )}
                     </button>
-                  );
-                })}
+                ))}
+
 
                 {/* Surprise Me — full width */}
                 <button
