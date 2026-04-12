@@ -231,6 +231,8 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
             vibe: filters.vibe,
             budget: filters.budget,
             feeling_lucky: filters.feeling_lucky || false,
+            location: context.location,
+            user_location: context.user_location,
             context: {
               ...context,
               date: context.date || new Date().toISOString().split("T")[0],
