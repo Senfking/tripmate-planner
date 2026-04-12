@@ -314,6 +314,76 @@ export type Database = {
           },
         ]
       }
+      concierge_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          role: string
+          suggestions: Json | null
+          trip_id: string
+          user_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          role?: string
+          suggestions?: Json | null
+          trip_id: string
+          user_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          role?: string
+          suggestions?: Json | null
+          trip_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concierge_messages_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concierge_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          suggestion_index: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          suggestion_index: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          suggestion_index?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concierge_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "concierge_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       date_option_votes: {
         Row: {
           date_option_id: string
