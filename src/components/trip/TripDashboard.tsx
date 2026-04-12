@@ -456,7 +456,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground text-[14px]">Plan with AI ✨</p>
+            <p className="font-semibold text-foreground text-[14px]">Plan with Junto AI ✨</p>
             <p className="text-xs text-muted-foreground">Generate a day-by-day itinerary in seconds</p>
           </div>
         </button>

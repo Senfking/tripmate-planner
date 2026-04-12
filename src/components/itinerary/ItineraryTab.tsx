@@ -217,7 +217,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           >
             <Sparkles className="h-7 w-7 text-primary-foreground" />
           </div>
-          <h2 className="text-lg font-bold text-foreground">Plan your trip with AI</h2>
+          <h2 className="text-lg font-bold text-foreground">Plan with Junto AI</h2>
           <p className="mt-2 max-w-[280px] text-sm text-muted-foreground leading-relaxed">
             Tell us your destination and preferences — we'll generate a complete day-by-day itinerary.
           </p>
