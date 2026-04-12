@@ -1495,7 +1495,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         />
                       ))}
                     </div>
-                  )
+                  )}
 
                   {/* Extra results from "Show more" */}
                   {extraResults.length > 0 && (
