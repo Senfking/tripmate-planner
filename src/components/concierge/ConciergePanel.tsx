@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   X, Utensils, Wine, Music, Compass, Waves, Dumbbell,
@@ -6,7 +6,7 @@ import {
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
-  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown,
+  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
