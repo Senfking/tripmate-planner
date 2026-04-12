@@ -548,6 +548,15 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         <ArrivalsCard tripId={tripId} />
       </div>
       <SharedItemsSection tripId={tripId} />
+
+      {/* Concierge */}
+      <ConciergeButton onClick={() => setConciergeOpen(true)} />
+      <ConciergePanel
+        tripId={tripId}
+        open={conciergeOpen}
+        onClose={() => setConciergeOpen(false)}
+        memberCount={memberCount ?? undefined}
+      />
     </div>
   );
 }
