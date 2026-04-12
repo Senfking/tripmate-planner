@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   X, Utensils, Wine, Music, Compass, Waves, Dumbbell,
   CalendarHeart, Sparkles, Star, MapPin, Clock,
@@ -720,6 +721,40 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const body = document.body;
+    const html = document.documentElement;
+    const scrollY = window.scrollY;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyTouchAction = body.style.touchAction;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyWidth = body.style.width;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlOverscrollBehavior = html.style.overscrollBehavior;
+
+    body.style.overflow = "hidden";
+    body.style.touchAction = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      body.style.touchAction = previousBodyTouchAction;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.width = previousBodyWidth;
+      html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscrollBehavior;
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+
   const toggleFilter = (key: string, value: string) => {
     setSelectedFilters(prev => {
       const arr = prev[key] || [];
@@ -904,13 +939,13 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/40 z-[59] animate-fade-in" onClick={onClose} />
 
       {/* Full-screen overlay */}
-      <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-slide-up overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+      <div className="fixed inset-0 z-[60] flex h-dvh flex-col bg-background animate-slide-up overflow-hidden overscroll-none" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         {/* Header — clean: back + title + X only */}
         <div className="relative shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-[#0D9488]/5 via-[#0EA5E9]/5 to-[#0D9488]/5" style={{ backgroundSize: "200% 100%", animation: "gradient-shift 8s ease infinite" }} />
@@ -1005,11 +1040,11 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         </div>
 
         {/* Content area */}
-        <div className={`flex-1 ${stage === "what" ? "overflow-hidden" : "overflow-y-auto"}`} style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
+        <div className={`min-h-0 flex-1 ${stage === "what" ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`} style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8">
+            <div className="h-full overflow-hidden px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8">
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => (
@@ -1357,6 +1392,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           100% { background-position: 0% 50%; }
         }
       `}</style>
-    </>
+    </>,
+    document.body
   );
 }
