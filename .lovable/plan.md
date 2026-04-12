@@ -1,42 +1,35 @@
 
 
-# AI Trip Results — Layla-Inspired Redesign
+# Trip Dashboard Redesign + Concierge Button Scoping
 
-## Layout (top to bottom, centered ~700px column)
+## Summary
+Complete redesign of `TripDashboard.tsx` and `TripHome.tsx` hero section as previously planned, plus ensuring the "What to do?" concierge button is properly positioned and scoped.
 
-1. **Header**: Back button + trip title + Share button
-2. **Stat pills**: "14 days · 1 city · 44 experiences · 1 hotel"
-3. **Trip summary**: 2-3 sentence AI description
-4. **Destination section**: Name, date range, intro text with timeline icon
-5. **Accommodation card**: Google Places photo, name, stars, price, booking link
-6. **Cost summary bar**: Expandable — total + per-day, category breakdown on expand
-7. **Day cards** (collapsed by default): Thumbnail + "Day 1 · May 9 · 3 Experiences" + theme + chevron. On expand: full activity list + 200px embedded mini-map for that day's pins. **On expand, `scrollIntoView({ behavior: 'smooth', block: 'start' })` on the day card ref.**
-8. **Sticky bottom bar**: "Add all to itinerary" + Adjust + Regenerate
+## Changes
 
-## Files Changed
+### 1. TripHome.tsx — Hero Restructure
+- Cover photo: full width, 200px, `rounded-b-2xl`, NO text/avatar overlay
+- Move trip name, dates, member avatars, attendance pill to white area below photo
+- Keep only: back arrow (top-left), Live indicator (top-right), Camera button (top-right)
+- Remove `HeroAvatar` from the hero image area
 
-### `src/components/trip-results/TripResultsView.tsx` — Major rewrite
-- Remove fullscreen `ResultsMap` background and floating side panel
-- Single centered column: `max-w-[700px] mx-auto`, glassmorphic dark bg
-- Render: header → stat pills → summary → per-destination (DestinationSection + AccommodationCard + cost bar + DaySection cards) → bottom bar
-- Move Share/Adjust/Regenerate to bottom bar
-- Remove IntersectionObserver / scroll-to-map-sync logic
+### 2. TripDashboard.tsx — Full Redesign
+- **Quick Actions Row**: 4 circular buttons (Share, Invite, Discover, Settings) — 48px, `bg-gray-100`, `text-[11px]` labels
+- **AI Plan Card**: White card with thumbnail + stats if plan exists, or Sparkles + CTA if not
+- **Section Cards**: Unified white cards (`rounded-2xl shadow-sm border border-gray-100`) with tinted icon squares — Decisions (amber), Bookings (blue), Expenses (emerald), Itinerary (purple, only if no plan)
+- Remove Admin card (moved to Settings quick action)
+- Remove `SectionCard` usage, replace with inline card components
+- **ArrivalsCard** + **SharedItemsSection** get matching wrapper styling
+- Layout: `px-4`, `gap-3`, desktop `max-w-[700px] mx-auto`
 
-### `src/components/trip-results/DaySection.tsx` — Redesign
-- **Collapsed**: Horizontal card with 80×80 thumbnail (first activity's Google Places photo via `useGooglePlaceDetails`), teal "Day N" pill, experience count + date, theme subtitle, chevron
-- **Expanded**: Full activity list + 200px `DayMiniMap`
-- Add `useRef` + `useEffect` on expand to call `ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })`
+### 3. Concierge Button Positioning & Scoping
+- **Already correct**: Button only renders in `TripDashboard.tsx` and `TripResultsView.tsx` (plan view) — no changes needed for scoping
+- **Position fix**: Update `ConciergeButton.tsx` to `bottom-[calc(5rem+env(safe-area-inset-bottom))]` so it sits above the bottom nav with safe area respect, preventing overlap with dashboard cards
+- Keep `fixed bottom-right z-30` positioning
 
-### `src/components/trip-results/DayMiniMap.tsx` — New
-- Wrapper around `ResultsMap` at 200px height, receives only that day's activities
-
-### `src/components/trip-results/AccommodationCard.tsx` — Enhance
-- Add Google Places photo lookup via `useGooglePlaceDetails`
-- Photo thumbnail on left, name/stars/price/booking on right
-
-### `src/components/trip-results/DestinationSection.tsx` — Minor
-- Add timeline-style location pin icon, destination name, date range
-
-### Unchanged
-- `ActivityCard.tsx`, `ResultsMap.tsx`, `useResultsState.ts`, `AlternativesSheet.tsx`, `TransportCard.tsx`, `TravelTimeConnector.tsx`
+### Files Modified
+1. `src/pages/TripHome.tsx` — Hero restructure
+2. `src/components/trip/TripDashboard.tsx` — Full redesign
+3. `src/components/concierge/ConciergeButton.tsx` — Bottom position adjustment for safe area
+4. `src/components/trip/DashboardSkeleton.tsx` — Update to match new card layout
 
