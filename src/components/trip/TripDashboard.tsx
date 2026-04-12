@@ -59,6 +59,17 @@ function BuilderWrapper({ tripId, onClose }: { tripId: string; onClose: () => vo
   );
 }
 
+const codeToCity: Record<string, string> = {
+  DPS: "Bali", DXB: "Dubai", JFK: "New York", LAX: "Los Angeles", LHR: "London",
+  CDG: "Paris", NRT: "Tokyo", SIN: "Singapore", BKK: "Bangkok", FCO: "Rome",
+  BCN: "Barcelona", AMS: "Amsterdam", IST: "Istanbul", HKG: "Hong Kong",
+  SYD: "Sydney", SFO: "San Francisco", MIA: "Miami", ORD: "Chicago",
+  ATL: "Atlanta", SEA: "Seattle", BOS: "Boston", ICN: "Seoul", DEL: "Delhi",
+  BOM: "Mumbai", KUL: "Kuala Lumpur", MEX: "Mexico City", GRU: "São Paulo",
+  EZE: "Buenos Aires", CPT: "Cape Town", CAI: "Cairo", DOH: "Doha",
+  LIS: "Lisbon", ATH: "Athens", VIE: "Vienna", PRG: "Prague", ZRH: "Zurich",
+};
+
 function SortableSection({ id, children }: { id: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
@@ -509,12 +520,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         if (!nextFlight) return null;
         const depCode = extractCode(flightBookingData?.departure) || flightBookingData?.origin_code || "DEP";
         const arrCode = extractCode(flightBookingData?.destination) || flightBookingData?.destination_code || "ARR";
-        const depCity = flightBookingData?.departure?.replace(/\s*\([A-Z]{3}\)/, "") || "Origin";
-        const arrCity = flightBookingData?.destination?.replace(/\s*\([A-Z]{3}\)/, "") || "Destination";
+        const depCity = flightBookingData?.departure?.replace(/\s*\([A-Z]{3}\)/, "") || codeToCity[depCode] || "Origin";
+        const arrCity = flightBookingData?.destination?.replace(/\s*\([A-Z]{3}\)/, "") || codeToCity[arrCode] || "Destination";
         const flightDateStr = flightBookingData?.flight_date || flightBookingData?.date;
         const flightDate = flightDateStr ? new Date(flightDateStr) : null;
         const flightCountdown = flightDate ? Math.ceil((flightDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
         const provider = flightBookingData?.provider;
+        const depImgQuery = encodeURIComponent(depCity.split(",")[0].trim() + " city skyline");
+        const arrImgQuery = encodeURIComponent(arrCity.split(",")[0].trim() + " city skyline");
 
         return (
           <button
@@ -523,22 +536,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           >
             <div className="grid grid-cols-2 h-[90px]">
               <div className="relative overflow-hidden">
-                {coverPhoto ? (
-                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }} />
-                )}
+                <img src={`https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=200&fit=crop&q=80&auto=format`} alt={depCity} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/40" />
                 <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
                   {depCode}
                 </span>
               </div>
               <div className="relative overflow-hidden">
-                {coverPhoto ? (
-                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "right center" }} />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }} />
-                )}
+                <img src={`https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=200&fit=crop&q=80&auto=format`} alt={arrCity} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/50" />
                 <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
                   {arrCode}
@@ -569,7 +574,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       }
 
       case "decisions-bookings": {
-        const bookingsImage = firstOgImage || coverPhoto;
         return (
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -577,11 +581,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
               <div className="h-[80px] relative overflow-hidden">
-                {coverPhoto ? (
-                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }} />
-                )}
+                <img src="https://images.unsplash.com/photo-1553729459-uj8bt0unpick?w=400&h=200&fit=crop&q=80&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
               </div>
@@ -597,11 +597,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
               <div className="h-[80px] relative overflow-hidden">
-                {bookingsImage ? (
-                  <img src={bookingsImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }} />
-                )}
+                <img src="https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=400&h=200&fit=crop&q=80&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
               </div>
