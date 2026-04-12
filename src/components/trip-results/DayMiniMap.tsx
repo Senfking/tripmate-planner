@@ -11,13 +11,11 @@ interface Props {
 }
 
 export function DayMiniMap({ result, allDays, dayIndex, refinedCoords }: Props) {
-  const day = allDays[dayIndex];
-  if (!day) return null;
-
-  const hasCoords = day.activities.some((a) => a.latitude != null && a.longitude != null);
-  if (!hasCoords) return null;
-
   const [expanded, setExpanded] = useState(false);
+  const day = allDays[dayIndex];
+
+  const hasCoords = day?.activities.some((a) => a.latitude != null && a.longitude != null);
+  if (!day || !hasCoords) return null;
 
   return (
     <div className={`rounded-xl overflow-hidden border border-border relative ${expanded ? "h-[400px]" : "h-[200px]"} transition-all`}>
