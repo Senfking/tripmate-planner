@@ -520,22 +520,27 @@ Return ONLY valid JSON, no other text.`;
       max_tokens: 2048,
     };
 
-    // Enable web search grounding for time-sensitive requests
     if (timeSensitive) {
       aiBody.tools = [{ google_search: {} }];
     }
 
-    const aiRes = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
+    const callAiGateway = (body: Record<string, unknown>) =>
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${lovableKey}`,
         },
-        body: JSON.stringify(aiBody),
-      },
-    );
+        body: JSON.stringify(body),
+      });
+
+    let aiRes = await callAiGateway(aiBody);
+
+    if (!aiRes.ok && timeSensitive && "tools" in aiBody) {
+      const fallbackBody = { ...aiBody };
+      delete fallbackBody.tools;
+      aiRes = await callAiGateway(fallbackBody);
+    }
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();

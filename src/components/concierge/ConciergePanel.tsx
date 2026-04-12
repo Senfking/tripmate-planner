@@ -276,30 +276,45 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
   const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
   const [freeText, setFreeText] = useState("");
+  const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const conciergeContext = buildConciergeContext(tripResult, memberCount);
   const destination = destinationProp || conciergeContext.destination;
   conciergeContext.destination = destination;
-  const { messages, sending, sendMessage, sendStructuredRequest, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
+  const {
+    messages,
+    activeResult,
+    sending,
+    sendMessage,
+    sendStructuredRequest,
+    toggleReaction,
+    getReactionInfo,
+  } = useConcierge(tripId, conciergeContext);
 
   const tripDays = tripResult?.destinations?.flatMap(d =>
     d.days.map(day => ({ date: day.date, dayNumber: day.day_number }))
   ) || [];
 
-  // Get the latest assistant message with suggestions
   const latestResults = useMemo(() =>
     [...messages].reverse().find(
       m => m.role === "assistant" && m.suggestions && m.suggestions.length > 0
     ), [messages]);
 
-  // Build recent searches from message history (last 3 user messages that got results)
+  const displayedResults = useMemo(() => {
+    if (activeResult) return activeResult;
+    if (!searchStartedAt) return latestResults ?? null;
+    if (!latestResults) return null;
+    return new Date(latestResults.created_at).getTime() >= searchStartedAt
+      ? latestResults
+      : null;
+  }, [activeResult, latestResults, searchStartedAt]);
+
   const recentSearches = useMemo<RecentSearch[]>(() => {
     const searches: RecentSearch[] = [];
     for (let i = messages.length - 1; i >= 0 && searches.length < 3; i--) {
       const msg = messages[i];
       if (msg.role === "user" && msg.content) {
-        // Find the next assistant message with suggestions
         const next = messages[i + 1];
         if (next?.role === "assistant" && next.suggestions?.length) {
           const label = msg.content.length > 25
@@ -312,7 +327,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     return searches;
   }, [messages]);
 
-  // Reset on close
   useEffect(() => {
     if (!open) {
       const t = setTimeout(() => {
@@ -322,6 +336,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         setSelectedVibe(null);
         setSelectedBudget(null);
         setFreeText("");
+        setSearchStartedAt(null);
       }, 300);
       return () => clearTimeout(t);
     }
@@ -334,13 +349,12 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     budget: string | null,
     text?: string,
   ) => {
+    setSearchStartedAt(Date.now());
     setStage("results");
     try {
       if (text) {
-        // Free text search — AI interprets intent
         await sendMessage(text);
       } else if (category) {
-        // Structured filter search — skip AI interpretation
         await sendStructuredRequest({
           category: category.id,
           when: when || undefined,
@@ -379,8 +393,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     doSearch(selectedCategory, selectedWhen, selectedVibe, selectedBudget);
   };
 
-  const handleRecentSearch = (search: RecentSearch) => {
-    // Just show results stage — the messages are already cached
+  const handleRecentSearch = (_search: RecentSearch) => {
+    setSearchStartedAt(null);
     setStage("results");
   };
 
@@ -404,6 +418,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     setSelectedWhen(null);
     setSelectedVibe(null);
     setSelectedBudget(null);
+    setSearchStartedAt(null);
   };
 
   if (!open) return null;
