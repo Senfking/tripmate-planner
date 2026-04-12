@@ -248,6 +248,11 @@
   </div>
 
   <div class="sidebar-group">
+    <div class="sidebar-label">Phase 5 — Landing Page</div>
+    <div class="sidebar-item" onclick="show('landingpage',this)"><span class="sidebar-dot dot-teal"></span> Landing Page & Discovery</div>
+  </div>
+
+  <div class="sidebar-group">
     <div class="sidebar-label">Deferred</div>
     <div class="sidebar-item" onclick="show('step16',this)"><span class="sidebar-dot dot-muted"></span> Step 16 · Lock Rates</div>
     <div class="sidebar-item" onclick="show('step17',this)"><span class="sidebar-dot dot-muted"></span> Step 17 · Admin</div>
@@ -2726,6 +2731,248 @@ Diagnose first: what CI/CD is currently available? Is there a GitHub Actions wor
     </div>
   </div>
 </div>
+
+<!-- ══════════ PHASE 5: LANDING PAGE & TRIP DISCOVERY ══════════ -->
+<div id="landingpage" class="section">
+  <div class="section-header">
+    <h2>Landing Page &amp; Trip Discovery — Phase 5</h2>
+    <p>The most important entry point for Junto. The landing page IS the product hook — no marketing fluff, the product is the landing page.</p>
+  </div>
+
+  <div class="callout callout-green">Junto follows the Airbnb model: users land directly on a functional interface where they can generate a trip immediately or browse existing trip templates. The AI trip builder is the hook — zero friction from landing to value.</div>
+
+  <h3>1. Hero / Trip Generator (above the fold)</h3>
+  <ul>
+    <li><strong>Full-width hero</strong> with a rotating background of destination photos</li>
+    <li><strong>Centered search/generator bar</strong> (Airbnb-style):
+      <ul>
+        <li>"Where to?" — destination input with autocomplete</li>
+        <li>"When?" — date range picker</li>
+        <li>"Who?" — group size selector</li>
+        <li>"Vibe" — quick toggle pills (Adventure, Relaxation, Nightlife, Culture, Food, Workation)</li>
+        <li>Big teal CTA button: "✨ Generate trip"</li>
+      </ul>
+    </li>
+    <li><strong>Unauthenticated users:</strong> clicking "Generate trip" immediately generates a preview (no login required). To save/share/edit, prompt signup (Google OAuth, one tap)</li>
+    <li><strong>Subtitle:</strong> "AI-powered group trip planning. Plan together, travel better."</li>
+    <li><strong>No feature explanations, no "How it works"</strong> — the UI IS the explanation</li>
+  </ul>
+
+  <h3>2. Trip Library (below the fold)</h3>
+  <p>Horizontally scrollable category rows (Airbnb-style cards):</p>
+  <ul>
+    <li><strong>"Popular trips near you"</strong> — geo-based suggestions (use browser location)</li>
+    <li><strong>"Weekend getaways"</strong> — 2–3 day trips</li>
+    <li><strong>"Workation picks"</strong> — digital nomad focused (coworking + fun)</li>
+    <li><strong>"Group favorites"</strong> — most-saved trips by groups</li>
+    <li><strong>"Adventure &amp; outdoors"</strong> — hiking, diving, surfing</li>
+    <li><strong>"City &amp; nightlife"</strong> — party/urban trips</li>
+    <li><strong>"Beach &amp; relaxation"</strong> — resort/chill trips</li>
+    <li><strong>"Budget-friendly"</strong> — under $50/day trips</li>
+    <li><strong>"Luxury escapes"</strong> — premium tier</li>
+  </ul>
+
+  <h4>Card content</h4>
+  <ul>
+    <li>Hero photo (from Google Places or user-uploaded)</li>
+    <li>Trip title (e.g. "5 Days in Bali — Surf, Eat, Repeat")</li>
+    <li>Destination · Duration · Budget level</li>
+    <li>Rating (stars + count, once ratings exist)</li>
+    <li>Creator avatar + name (or "By Junto AI")</li>
+    <li>"Preview" button → opens read-only trip view</li>
+  </ul>
+
+  <h3>3. Data Model for Trip Library</h3>
+
+  <h4>trip_templates</h4>
+  <div class="code-block"><span class="code-label">SQL</span>
+create table trip_templates (
+  id uuid primary key default gen_random_uuid(),
+  source_plan_id uuid references ai_trip_plans(id),
+  creator_id uuid references auth.users(id),
+  title text not null,
+  description text,
+  destination text not null,
+  duration_days integer not null,
+  budget_level text, -- budget / mid-range / premium / luxury
+  categories text[], -- adventure, nightlife, culture, food, workation, beach, etc.
+  hero_image_url text,
+  plan_data jsonb not null, -- snapshot of the full itinerary
+  is_published boolean default false,
+  view_count integer default 0,
+  save_count integer default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <h4>template_ratings</h4>
+  <div class="code-block"><span class="code-label">SQL</span>
+create table template_ratings (
+  id uuid primary key default gen_random_uuid(),
+  template_id uuid references trip_templates(id) on delete cascade,
+  user_id uuid references auth.users(id),
+  rating integer check (rating between 1 and 5),
+  review_text text, -- optional, max 1000 chars
+  created_at timestamptz default now(),
+  unique (template_id, user_id)
+);<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <h4>template_saves (bookmarks)</h4>
+  <div class="code-block"><span class="code-label">SQL</span>
+create table template_saves (
+  user_id uuid references auth.users(id),
+  template_id uuid references trip_templates(id) on delete cascade,
+  created_at timestamptz default now(),
+  primary key (user_id, template_id)
+);<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <h4>template_images (community photos)</h4>
+  <div class="code-block"><span class="code-label">SQL</span>
+create table template_images (
+  id uuid primary key default gen_random_uuid(),
+  template_id uuid references trip_templates(id) on delete cascade,
+  uploaded_by uuid references auth.users(id),
+  image_url text not null,
+  caption text,
+  created_at timestamptz default now()
+);<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <h4>RLS policies</h4>
+  <table>
+    <thead><tr><th>Table</th><th>SELECT</th><th>INSERT</th><th>UPDATE</th><th>DELETE</th></tr></thead>
+    <tbody>
+      <tr><td><strong>trip_templates</strong></td><td>Everyone (published)</td><td>Creator</td><td>Creator</td><td>Creator</td></tr>
+      <tr><td><strong>template_ratings</strong></td><td>Everyone</td><td>Authenticated</td><td>Own only</td><td>Own only</td></tr>
+      <tr><td><strong>template_saves</strong></td><td>Own user</td><td>Own user</td><td>—</td><td>Own user</td></tr>
+      <tr><td><strong>template_images</strong></td><td>Everyone</td><td>Authenticated</td><td>—</td><td>Own + template creator</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4. Publishing Flow (User → Template)</h3>
+  <p>After generating and refining an AI trip plan:</p>
+  <ul>
+    <li><strong>"Publish to community"</strong> button appears in the plan view</li>
+    <li>Opens a publish modal:
+      <ul>
+        <li>Edit title (pre-filled from AI)</li>
+        <li>Add description</li>
+        <li>Select categories (multi-select pills)</li>
+        <li>Choose hero image (from Google Places photos in the plan)</li>
+        <li>Toggle public/private</li>
+      </ul>
+    </li>
+    <li>Creates a <code>trip_template</code> record with a snapshot of the <code>plan_data</code></li>
+    <li>Published templates appear in the Trip Library</li>
+  </ul>
+
+  <h3>5. "Use this trip" Flow (Template → User's Trip)</h3>
+  <ul>
+    <li>Clicking a template card opens a <strong>read-only preview</strong> of the full itinerary (same TripResultsView, read-only mode)</li>
+    <li>CTA: <strong>"Use this trip"</strong> → prompts login if needed → creates a new trip + clones the plan into the user's <code>ai_trip_plans</code></li>
+    <li>User can then customize with Adjust, add group members, etc.</li>
+  </ul>
+
+  <h3>6. SEO &amp; Routes</h3>
+  <table>
+    <thead><tr><th>Route</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>/</code></td><td>Landing page (hero + trip library)</td></tr>
+      <tr><td><code>/trips/explore</code></td><td>Full trip library with search/filter</td></tr>
+      <tr><td><code>/trips/explore/:templateId</code></td><td>Public template view (SEO-friendly, SSR candidate)</td></tr>
+      <tr><td><code>/trips/explore/:templateId/reviews</code></td><td>Ratings &amp; reviews</td></tr>
+    </tbody>
+  </table>
+  <div class="callout">Keep existing <code>/ref</code> redirect for referral flow, but <code>/</code> is now the primary entry point.</div>
+
+  <h3>7. Implementation Phases</h3>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase 5a — Landing page MVP</span><span class="tag tag-code">Claude Code</span><span class="tag tag-lovable">Lovable</span></div>
+      <p class="task-note">Hero with trip generator bar (connects to existing AI builder). 3–4 hardcoded/seed template rows. "Generate trip" works for logged-in users, prompts signup for anonymous. No ratings/reviews yet.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Build full-width hero section with rotating destination backgrounds</li>
+          <li>Create the Airbnb-style search/generator bar with: destination autocomplete, date range picker, group size selector, vibe toggle pills</li>
+          <li>Wire "Generate trip" to existing AI trip builder flow</li>
+          <li>For unauthenticated users: generate preview → prompt signup to save</li>
+          <li>Add 3–4 hardcoded seed template rows below the fold</li>
+          <li>Responsive: hero stacks vertically on mobile, library becomes single-column scroll</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase 5b — Trip Library</span><span class="tag tag-sql">SQL</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Create trip_templates table + publishing flow. Category browsing with horizontal scrollable rows. "Use this trip" clone flow. template_saves (bookmarks).</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Create <code>trip_templates</code> and <code>template_saves</code> tables with RLS policies</li>
+          <li>"Publish to community" button in the AI trip plan view</li>
+          <li>Publish modal: edit title, add description, select categories, choose hero image, toggle visibility</li>
+          <li>Trip Library page with horizontal-scroll category rows</li>
+          <li>Template card component: hero photo, title, destination, duration, budget level, creator</li>
+          <li>"Use this trip" clones plan into user's <code>ai_trip_plans</code></li>
+          <li>Bookmark/save functionality</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase 5c — Community layer</span><span class="tag tag-sql">SQL</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Add template_ratings + reviews. template_images (community photos). Sort by rating, popularity, recency. Creator profiles.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Create <code>template_ratings</code> and <code>template_images</code> tables with RLS</li>
+          <li>Star rating component + review text (max 1000 chars)</li>
+          <li>Community photo uploads per template</li>
+          <li>Sort/filter: by rating, popularity (view_count/save_count), recency</li>
+          <li>Creator profile pages showing published templates</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase 5d — Growth</span><span class="tag tag-code">Claude Code</span><span class="tag tag-ops">Ops</span></div>
+      <p class="task-note">Anonymous trip generation (generate without login, save requires signup). SEO pages per destination. "Trips like this" recommendations. Trending/seasonal categories.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Allow anonymous users to fully generate a trip preview without login</li>
+          <li>Signup wall only when saving, sharing, or editing</li>
+          <li>SEO-friendly destination pages (<code>/trips/explore?destination=bali</code>)</li>
+          <li>"Trips like this" recommendation engine based on categories, destination, and budget</li>
+          <li>Trending and seasonal category rows (auto-updated)</li>
+          <li>Meta tags and Open Graph data for template pages (SSR candidate)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3>8. Design Notes</h3>
+  <ul>
+    <li><strong>Airbnb density:</strong> image-forward, minimal text, card grid</li>
+    <li><strong>Hero area:</strong> Junto dark theme (immersive) — light/neutral for the library grid</li>
+    <li><strong>Primary accent:</strong> Teal (<code>#0D9488</code>) throughout</li>
+    <li><strong>Cards:</strong> <code>rounded-xl</code>, subtle shadow, hover scale effect</li>
+    <li><strong>Mobile:</strong> hero stacks vertically, library becomes single-column vertical scroll</li>
+    <li><strong>Typography:</strong> IBM Plex Sans for body, clean and modern</li>
+  </ul>
+</div>
+
 <div id="softlaunch" class="section">
   <div class="section-header">
     <h2>8-Week Soft Launch Plan</h2>
