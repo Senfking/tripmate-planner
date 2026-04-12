@@ -11,6 +11,8 @@ import { SharedItemsSection } from "./SharedItemsSection";
 import { ArrivalsCard } from "@/components/bookings/ArrivalsCard";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
+import { ConciergeButton } from "@/components/concierge/ConciergeButton";
+import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 
 // Error boundary for the trip builder
 class BuilderErrorBoundary extends Component<{ children: ReactNode; onClose: () => void }, { hasError: boolean }> {
@@ -63,6 +65,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [conciergeOpen, setConciergeOpen] = useState(false);
 
   // Check if trip has a linked AI plan
   const { data: hasPlan } = useQuery({
@@ -545,6 +548,15 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         <ArrivalsCard tripId={tripId} />
       </div>
       <SharedItemsSection tripId={tripId} />
+
+      {/* Concierge */}
+      <ConciergeButton onClick={() => setConciergeOpen(true)} />
+      <ConciergePanel
+        tripId={tripId}
+        open={conciergeOpen}
+        onClose={() => setConciergeOpen(false)}
+        memberCount={memberCount ?? undefined}
+      />
     </div>
   );
 }

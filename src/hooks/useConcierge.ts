@@ -1,0 +1,218 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
+export interface ConciergeSuggestion {
+  name: string;
+  category: string;
+  why: string;
+  best_time: string;
+  estimated_cost_per_person: number | null;
+  currency: string | null;
+  photo_url: string | null;
+  rating: number | null;
+  totalRatings: number | null;
+  googleMapsUrl: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  priceLevel: string | null;
+  distance_km: number | null;
+}
+
+export interface ConciergeMessage {
+  id: string;
+  trip_id: string;
+  user_id: string | null;
+  role: "user" | "assistant";
+  content: string | null;
+  suggestions: ConciergeSuggestion[] | null;
+  created_at: string;
+}
+
+export interface ConciergeReaction {
+  id: string;
+  message_id: string;
+  suggestion_index: number;
+  user_id: string;
+}
+
+interface ConciergeContext {
+  destination: string;
+  date?: string;
+  time_of_day?: string;
+  group_size?: number;
+  budget_level?: string;
+  preferences?: string[];
+  hotel_location?: { name: string; lat: number; lng: number };
+}
+
+export function useConcierge(tripId: string, context: ConciergeContext) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [sending, setSending] = useState(false);
+
+  // Fetch messages
+  const { data: messages = [], isLoading: loadingMessages } = useQuery({
+    queryKey: ["concierge-messages", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("concierge_messages")
+        .select("*")
+        .eq("trip_id", tripId)
+        .order("created_at", { ascending: true })
+        .limit(50);
+      if (error) throw error;
+      return (data || []) as unknown as ConciergeMessage[];
+    },
+    enabled: !!tripId,
+  });
+
+  // Fetch reactions
+  const { data: reactions = [] } = useQuery({
+    queryKey: ["concierge-reactions", tripId],
+    queryFn: async () => {
+      const messageIds = messages.filter(m => m.role === "assistant").map(m => m.id);
+      if (messageIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("concierge_reactions")
+        .select("*")
+        .in("message_id", messageIds);
+      if (error) throw error;
+      return (data || []) as ConciergeReaction[];
+    },
+    enabled: messages.length > 0,
+  });
+
+  // Realtime subscriptions
+  useEffect(() => {
+    if (!tripId) return;
+    const msgChannel = supabase
+      .channel(`concierge-msgs-${tripId}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "concierge_messages",
+        filter: `trip_id=eq.${tripId}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
+      })
+      .subscribe();
+
+    const rxnChannel = supabase
+      .channel(`concierge-rxns-${tripId}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "concierge_reactions",
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ["concierge-reactions", tripId] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(rxnChannel);
+    };
+  }, [tripId, queryClient]);
+
+  // Send message
+  const sendMessage = useCallback(async (query: string) => {
+    if (!query.trim() || sending) return;
+    setSending(true);
+
+    try {
+      // Infer date/time from query
+      const now = new Date();
+      let date = context.date;
+      let time_of_day = context.time_of_day;
+
+      const q = query.toLowerCase();
+      if (q.includes("tonight") || q.includes("this evening")) {
+        date = now.toISOString().split("T")[0];
+        time_of_day = "evening";
+      } else if (q.includes("tomorrow")) {
+        const tom = new Date(now);
+        tom.setDate(tom.getDate() + 1);
+        date = tom.toISOString().split("T")[0];
+      } else if (q.includes("breakfast") || q.includes("morning")) {
+        time_of_day = "morning";
+      } else if (q.includes("lunch") || q.includes("afternoon")) {
+        time_of_day = "afternoon";
+      } else if (q.includes("dinner") || q.includes("evening")) {
+        time_of_day = "evening";
+      } else if (q.includes("night") || q.includes("party") || q.includes("club")) {
+        time_of_day = "night";
+      }
+
+      if (!date) date = now.toISOString().split("T")[0];
+      if (!time_of_day) {
+        const hour = now.getHours();
+        if (hour < 11) time_of_day = "morning";
+        else if (hour < 14) time_of_day = "afternoon";
+        else if (hour < 18) time_of_day = "evening";
+        else time_of_day = "night";
+      }
+
+      const { data, error } = await supabase.functions.invoke("concierge-suggest", {
+        body: {
+          trip_id: tripId,
+          query,
+          context: {
+            ...context,
+            date,
+            time_of_day,
+          },
+        },
+      });
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
+    } catch (err) {
+      console.error("Concierge error:", err);
+      throw err;
+    } finally {
+      setSending(false);
+    }
+  }, [tripId, context, sending, queryClient]);
+
+  // Toggle reaction
+  const toggleReaction = useCallback(async (messageId: string, suggestionIndex: number) => {
+    if (!user) return;
+    const existing = reactions.find(
+      r => r.message_id === messageId && r.suggestion_index === suggestionIndex && r.user_id === user.id
+    );
+    if (existing) {
+      await supabase.from("concierge_reactions").delete().eq("id", existing.id);
+    } else {
+      await supabase.from("concierge_reactions").insert({
+        message_id: messageId,
+        suggestion_index: suggestionIndex,
+        user_id: user.id,
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["concierge-reactions", tripId] });
+  }, [user, reactions, tripId, queryClient]);
+
+  // Get reaction count and user state for a suggestion
+  const getReactionInfo = useCallback((messageId: string, suggestionIndex: number) => {
+    const msgReactions = reactions.filter(
+      r => r.message_id === messageId && r.suggestion_index === suggestionIndex
+    );
+    return {
+      count: msgReactions.length,
+      hasReacted: !!user && msgReactions.some(r => r.user_id === user.id),
+      isGroupPick: msgReactions.length >= 2,
+    };
+  }, [reactions, user]);
+
+  return {
+    messages,
+    loadingMessages,
+    sending,
+    sendMessage,
+    toggleReaction,
+    getReactionInfo,
+  };
+}
