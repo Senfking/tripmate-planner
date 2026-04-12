@@ -416,51 +416,69 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   // Section renderers
   const renderSection = (id: string) => {
     switch (id) {
-      case "expenses":
+      case "expenses": {
+        // Find who you owe the most to
+        const oweTo = balances.filter((b) => b.userId !== userId && b.balance > 0.01);
+        const topCreditor = oweTo.length > 0 ? oweTo.sort((a, b) => b.balance - a.balance)[0] : null;
+        const creditorName = topCreditor ? members?.find((m) => m.user_id === topCreditor.userId)?.profile?.display_name : null;
+
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
-            className="w-full text-left rounded-2xl overflow-hidden transition-all active:scale-[0.98] hover:shadow-lg"
+            className="w-full text-left rounded-2xl overflow-hidden transition-all active:scale-[0.98] hover:shadow-lg relative"
             style={{
-              background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+              background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
+              boxShadow: "0 4px 16px rgba(13,148,136,0.25)",
             }}
           >
+            {/* Glass shine */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.0) 50%, rgba(255,255,255,0.04) 100%)" }}
+            />
+
             {expenses && expenses.length > 0 && userId ? (
-              <div className="p-4 flex items-center gap-4">
-                {/* Left: balance info */}
+              <div className="relative p-4 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Receipt className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-[12px] text-slate-400 font-medium uppercase tracking-wider">
-                      {myBalance < -0.01 ? "You owe" : myBalance > 0.01 ? "You're owed" : "Settled"}
-                    </span>
-                  </div>
-                  <p className={`text-[24px] font-bold tracking-tight leading-none ${
-                    myBalance < -0.01 ? "text-red-400" : myBalance > 0.01 ? "text-emerald-400" : "text-white"
-                  }`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">
+                    {myBalance < -0.01 ? "You owe" : myBalance > 0.01 ? "You're owed" : "All settled"}
+                  </p>
+                  <p className="text-[26px] font-extrabold text-white tracking-tight leading-none mt-1">
                     {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-1.5">
-                    {fmtCurrency(totalSpent, settlementCurrency)} total · {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
-                  </p>
+                  {myBalance < -0.01 && creditorName && (
+                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-orange-400/15 px-2 py-0.5 text-[10px] font-semibold text-orange-200">
+                      <span className="h-1.5 w-1.5 rounded-full bg-orange-300" />
+                      to {creditorName}
+                    </span>
+                  )}
+                  {myBalance > 0.01 && (
+                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                      {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {Math.abs(myBalance) <= 0.01 && (
+                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/60">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+                      {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
-                {/* Right: arrow */}
-                <ChevronRight className="h-4 w-4 text-slate-500 shrink-0" />
+                <ChevronRight className="h-4 w-4 text-white/40 shrink-0" />
               </div>
             ) : (
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <Receipt className="h-4 w-4 text-slate-400" />
-                  <div>
-                    <p className="font-semibold text-[14px] text-white">Expenses</p>
-                    <p className="text-[12px] text-slate-500">Track & split costs</p>
-                  </div>
+              <div className="relative p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-[14px] text-white">Expenses</p>
+                  <p className="text-[11px] text-white/50 mt-0.5">Track & split costs</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-slate-500" />
+                <ChevronRight className="h-4 w-4 text-white/40" />
               </div>
             )}
           </button>
         );
+      }
 
       case "flights":
         if (!nextFlight) return null;
