@@ -833,31 +833,26 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         {/* ─── REORDERABLE SECTIONS ─── */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
-            {(() => {
-              const PAIR = new Set(["decisions", "bookings"]);
-              const rendered: ReactNode[] = [];
-              let i = 0;
-              while (i < visibleOrder.length) {
-                const id = visibleOrder[i];
-                const nextId = visibleOrder[i + 1];
-                // If decisions & bookings are adjacent, render side by side
-                if (PAIR.has(id) && nextId && PAIR.has(nextId) && id !== nextId) {
-                  rendered.push(
-                    <div key={`${id}-${nextId}`} className="grid grid-cols-2 gap-3">
-                      <SortableSection id={id}>{renderSection(id)}</SortableSection>
-                      <SortableSection id={nextId}>{renderSection(nextId)}</SortableSection>
-                    </div>
-                  );
-                  i += 2;
-                } else {
-                  rendered.push(
-                    <SortableSection key={id} id={id}>{renderSection(id)}</SortableSection>
-                  );
-                  i++;
-                }
+            {visibleOrder.map((id) => {
+              if (id === "decisions" || id === "bookings") {
+                // Find the other card
+                const otherId = id === "decisions" ? "bookings" : "decisions";
+                const otherIdx = visibleOrder.indexOf(otherId);
+                // Only the first of the pair renders the grid row
+                if (otherIdx !== -1 && otherIdx < visibleOrder.indexOf(id)) return null;
+                return (
+                  <div key="decisions-bookings-row" className="grid grid-cols-2 gap-3">
+                    <SortableSection id={id}>{renderSection(id)}</SortableSection>
+                    {otherIdx !== -1 && (
+                      <SortableSection id={otherId}>{renderSection(otherId)}</SortableSection>
+                    )}
+                  </div>
+                );
               }
-              return rendered;
-            })()}
+              return (
+                <SortableSection key={id} id={id}>{renderSection(id)}</SortableSection>
+              );
+            })}
           </SortableContext>
         </DndContext>
       </div>
