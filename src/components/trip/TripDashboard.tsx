@@ -69,7 +69,17 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
+    <div ref={setNodeRef} style={style} className="relative">
+      {/* Drag handle — only this area activates drag */}
+      <div
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        className="absolute top-1 left-1/2 -translate-x-1/2 z-10 w-10 h-5 flex items-center justify-center cursor-grab touch-none opacity-0"
+        aria-label="Drag to reorder"
+      >
+        <div className="w-6 h-0.5 rounded-full bg-muted-foreground/30" />
+      </div>
       {children}
     </div>
   );
