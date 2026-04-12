@@ -139,7 +139,7 @@ function AppInner() {
             <Route path="/terms" element={<Terms />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
-            <Route path="/landing-preview" element={<Landing />} />
+            
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/app/admin" element={<Admin />} />
