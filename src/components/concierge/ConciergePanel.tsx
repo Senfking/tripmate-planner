@@ -119,23 +119,35 @@ interface RecentSearch {
 /*  Saved spots helpers (localStorage per trip)                        */
 /* ------------------------------------------------------------------ */
 
-function getSavedSpots(tripId: string): string[] {
+function getSavedSpots(tripId: string): ConciergeSuggestion[] {
   try {
-    return JSON.parse(localStorage.getItem(`concierge-saved-${tripId}`) || "[]");
+    const raw = JSON.parse(localStorage.getItem(`concierge-saved-${tripId}`) || "[]");
+    // Migration: if old format (string[]), return empty — they'll re-save
+    if (raw.length > 0 && typeof raw[0] === "string") return [];
+    return raw as ConciergeSuggestion[];
   } catch { return []; }
 }
 
-function toggleSavedSpot(tripId: string, name: string): boolean {
+function saveSuggestion(tripId: string, suggestion: ConciergeSuggestion): boolean {
   const saved = getSavedSpots(tripId);
-  const idx = saved.indexOf(name);
-  if (idx >= 0) {
-    saved.splice(idx, 1);
-    localStorage.setItem(`concierge-saved-${tripId}`, JSON.stringify(saved));
-    return false;
-  }
-  saved.push(name);
+  const idx = saved.findIndex(s => s.name === suggestion.name);
+  if (idx >= 0) return true; // already saved
+  saved.push(suggestion);
   localStorage.setItem(`concierge-saved-${tripId}`, JSON.stringify(saved));
   return true;
+}
+
+function unsaveSuggestion(tripId: string, name: string): boolean {
+  const saved = getSavedSpots(tripId);
+  const idx = saved.findIndex(s => s.name === name);
+  if (idx < 0) return false;
+  saved.splice(idx, 1);
+  localStorage.setItem(`concierge-saved-${tripId}`, JSON.stringify(saved));
+  return false;
+}
+
+function isSuggestionSaved(tripId: string, name: string): boolean {
+  return getSavedSpots(tripId).some(s => s.name === name);
 }
 
 /* ------------------------------------------------------------------ */
@@ -241,7 +253,7 @@ function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (ke
 /* ------------------------------------------------------------------ */
 
 function SuggestionCard({
-  suggestion, messageId, index, tripId, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge,
+  suggestion, messageId, index, tripId, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge, onSaveChange,
 }: {
   suggestion: ConciergeSuggestion;
   messageId: string;
@@ -252,12 +264,13 @@ function SuggestionCard({
   animDelay?: number;
   isLucky?: boolean;
   luckyBadge?: string;
+  onSaveChange?: () => void;
 }) {
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [added, setAdded] = useState(false);
   const [addingDate, setAddingDate] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(() => getSavedSpots(tripId).includes(suggestion.name));
+  const [isSaved, setIsSaved] = useState(() => isSuggestionSaved(tripId, suggestion.name));
 
   const handleAddToPlan = async (dayDate: string) => {
     setAddingDate(dayDate);
@@ -323,9 +336,16 @@ function SuggestionCard({
   };
 
   const handleSave = () => {
-    const nowSaved = toggleSavedSpot(tripId, suggestion.name);
-    setIsSaved(nowSaved);
-    toast.success(nowSaved ? "Saved for later" : "Removed from saved");
+    if (isSaved) {
+      unsaveSuggestion(tripId, suggestion.name);
+      setIsSaved(false);
+      toast.success("Removed from saved");
+    } else {
+      saveSuggestion(tripId, suggestion);
+      setIsSaved(true);
+      toast.success("Saved for later");
+    }
+    onSaveChange?.();
   };
 
   const s = suggestion as any;
@@ -613,7 +633,10 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [manualLocation, setManualLocation] = useState("");
   const destination = manualLocation || resolvedDest;
 
-  const savedCount = useMemo(() => getSavedSpots(tripId).length, [tripId, stage]);
+  const [savedVersion, setSavedVersion] = useState(0);
+  const savedSpots = useMemo(() => getSavedSpots(tripId), [tripId, stage, savedVersion]);
+  const savedCount = savedSpots.length;
+  const [savedExpanded, setSavedExpanded] = useState(false);
 
   // Trip destinations for quick-select
   const tripDestinations = useMemo(() => {
@@ -1040,11 +1063,11 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         </div>
 
         {/* Content area */}
-        <div className={`min-h-0 flex-1 ${stage === "what" ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`} style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
+        <div className={`min-h-0 flex-1 ${stage === "what" && savedCount === 0 ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`} style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="h-full overflow-hidden px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8">
+            <div className={`${savedCount === 0 ? "h-full overflow-hidden" : ""} px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8`}>
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => (
@@ -1117,7 +1140,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                 </button>
               </div>
 
-              {/* Saved spots section */}
+              {/* Saved spots section — full cards */}
               {savedCount > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
@@ -1125,21 +1148,36 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     <span className="text-xs font-semibold text-foreground">Saved spots</span>
                     <span className="text-[10px] text-muted-foreground">({savedCount})</span>
                   </div>
-                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                    {getSavedSpots(tripId).map(name => (
-                      <div
-                        key={name}
-                        className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setFreeText(name);
-                          doSearch(null, {}, name);
-                        }}
-                      >
-                        <Bookmark className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
-                        <span className="text-xs font-medium text-foreground whitespace-nowrap">{name}</span>
-                      </div>
+                  <div className="space-y-3">
+                    {(savedExpanded ? savedSpots : savedSpots.slice(0, 2)).map((spot, i) => (
+                      <SuggestionCard
+                        key={spot.name}
+                        suggestion={spot}
+                        messageId={`saved-${i}`}
+                        index={i}
+                        tripId={tripId}
+                        tripDays={tripDays}
+                        onAddToPlan={onAddToPlan}
+                        onSaveChange={() => setSavedVersion(v => v + 1)}
+                      />
                     ))}
                   </div>
+                  {savedCount > 2 && !savedExpanded && (
+                    <button
+                      onClick={() => setSavedExpanded(true)}
+                      className="text-xs font-medium text-[#0D9488] hover:underline"
+                    >
+                      Show all {savedCount} saved
+                    </button>
+                  )}
+                  {savedExpanded && savedCount > 2 && (
+                    <button
+                      onClick={() => setSavedExpanded(false)}
+                      className="text-xs font-medium text-muted-foreground hover:underline"
+                    >
+                      Show less
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1299,6 +1337,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         animDelay={i * 50}
                         isLucky={isLucky}
                         luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
+                        onSaveChange={() => setSavedVersion(v => v + 1)}
                       />
                     ))}
                   </div>
@@ -1319,6 +1358,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                           animDelay={i * 50}
                           isLucky={isLucky}
                           luckyBadge={isLucky ? LUCKY_BADGES[(displayedResults!.suggestions!.length + i) % LUCKY_BADGES.length] : undefined}
+                          onSaveChange={() => setSavedVersion(v => v + 1)}
                         />
                       ))}
                     </div>
