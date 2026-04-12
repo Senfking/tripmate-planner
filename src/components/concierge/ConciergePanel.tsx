@@ -107,27 +107,42 @@ interface RecentSearch {
   messageId: string;
 }
 
+interface LocationState {
+  name: string;
+  lat?: number;
+  lng?: number;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function resolveDestination(
+function resolveDefaultLocation(
   destinationProp?: string,
   tripResult?: AITripResult | null,
   tripName?: string,
-): string {
-  if (destinationProp && destinationProp !== "Unknown") return destinationProp;
+): LocationState | null {
+  // Try first destination from AI plan
   const dest = tripResult?.destinations?.[0];
-  if (dest?.name) return dest.name;
-  if (tripResult?.trip_title) return tripResult.trip_title;
-  if (tripName) return tripName;
-  return "";
+  if (dest?.name) return { name: dest.name };
+  if (destinationProp && destinationProp !== "Unknown") return { name: destinationProp };
+  if (tripResult?.trip_title) return { name: tripResult.trip_title };
+  if (tripName) return { name: tripName };
+  return null;
 }
 
-function buildConciergeContext(destination: string, tripResult?: AITripResult | null, memberCount?: number) {
+function getTripDestinations(tripResult?: AITripResult | null): string[] {
+  if (!tripResult?.destinations) return [];
+  return tripResult.destinations.map(d => d.name).filter(Boolean);
+}
+
+function buildConciergeContext(location: LocationState | null, tripResult?: AITripResult | null, memberCount?: number) {
   const dest = tripResult?.destinations?.[0];
+  const locationName = location?.name || "Unknown";
   return {
-    destination: destination || "Unknown",
+    destination: locationName,
+    location: locationName,
+    user_location: location?.lat != null && location?.lng != null ? { lat: location.lat, lng: location.lng } : undefined,
     group_size: memberCount || 2,
     budget_level: dest?.cost_profile ? "mid-range" : undefined,
     hotel_location: dest?.accommodation
@@ -135,6 +150,8 @@ function buildConciergeContext(destination: string, tripResult?: AITripResult | 
       : undefined,
   } as {
     destination: string;
+    location?: string;
+    user_location?: { lat: number; lng: number };
     date?: string;
     time_of_day?: string;
     group_size?: number;
@@ -411,20 +428,30 @@ function FilterPill({ label, onClick }: { label: string; onClick?: () => void })
 export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, destination: destinationProp, tripName, onAddToPlan }: Props) {
   const [stage, setStage] = useState<Stage>("what");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  // Multi-select filters stored as Record<filterKey, string[]>
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const [freeText, setFreeText] = useState("");
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
   const [isLucky, setIsLucky] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [locationInput, setLocationInput] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const resolvedDest = resolveDestination(destinationProp, tripResult, tripName);
-  const [manualLocation, setManualLocation] = useState("");
-  const destination = manualLocation || resolvedDest;
+  // Location state — persists across concierge open/close
+  const defaultLoc = useMemo(() => resolveDefaultLocation(destinationProp, tripResult, tripName), [destinationProp, tripResult, tripName]);
+  const [currentLocation, setCurrentLocation] = useState<LocationState | null>(null);
 
-  const conciergeContext = buildConciergeContext(destination, tripResult, memberCount);
+  // Initialize location from trip data on first open
+  useEffect(() => {
+    if (open && !currentLocation && defaultLoc) {
+      setCurrentLocation(defaultLoc);
+    }
+  }, [open, defaultLoc]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tripDestinations = useMemo(() => getTripDestinations(tripResult), [tripResult]);
+  const destination = currentLocation?.name || "";
+
+  const conciergeContext = buildConciergeContext(currentLocation, tripResult, memberCount);
   const {
     messages,
     activeResult,
@@ -477,6 +504,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         setFreeText("");
         setSearchStartedAt(null);
         setIsLucky(false);
+        setShowLocationPicker(false);
       }, 300);
       return () => clearTimeout(t);
     }
@@ -517,11 +545,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const handleCategorySelect = (cat: Category) => {
     if (cat.id === "surprise") {
-      // Surprise me goes directly to lucky intro
       setSelectedCategory(cat);
       setIsLucky(true);
       setStage("lucky-intro");
-      // Start the search immediately
       setTimeout(() => {
         doSearch(cat, {}, undefined, true);
       }, 1500);
@@ -584,7 +610,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     setIsLucky(false);
   };
 
-  const handleUseLocation = () => {
+  const handleUseGPS = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported");
       return;
@@ -593,11 +619,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&zoom=10`);
+          // Use zoom=14 for neighborhood-level specificity
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&zoom=14&addressdetails=1`);
           const data = await res.json();
-          const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "your area";
-          setManualLocation(city);
-          setLocationInput(city);
+          const addr = data.address || {};
+          // Prefer suburb/village/town for neighborhood-level names like "Canggu"
+          const area = addr.suburb || addr.village || addr.town || addr.city_district || addr.city || addr.county || "your area";
+          const country = addr.state || addr.country || "";
+          const specificName = country ? `${area}, ${country}` : area;
+          setCurrentLocation({ name: specificName, lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setShowLocationPicker(false);
+          setLocationInput("");
         } catch {
           toast.error("Could not determine location");
         } finally {
@@ -608,8 +640,22 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         toast.error("Location access denied");
         setGeoLoading(false);
       },
-      { timeout: 10000 }
+      { timeout: 10000, enableHighAccuracy: true }
     );
+  };
+
+  const handleSelectDestination = (dest: string) => {
+    setCurrentLocation({ name: dest });
+    setShowLocationPicker(false);
+    setLocationInput("");
+  };
+
+  const handleManualLocation = () => {
+    if (locationInput.trim()) {
+      setCurrentLocation({ name: locationInput.trim() });
+      setShowLocationPicker(false);
+      setLocationInput("");
+    }
   };
 
   const currentFilters = selectedCategory ? (CATEGORY_FILTERS[selectedCategory.id] || []) : [];
@@ -649,37 +695,83 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           </div>
         </div>
 
+        {/* Location bar — always visible below header */}
+        <div className="shrink-0 px-4 py-2 border-b border-border bg-card/50">
+          <button
+            onClick={() => setShowLocationPicker(!showLocationPicker)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+              currentLocation
+                ? "bg-[#0D9488]/10 text-[#0D9488] border border-[#0D9488]/20"
+                : "bg-destructive/10 text-destructive border border-destructive/20"
+            }`}
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            {currentLocation ? currentLocation.name : "Set your location"}
+          </button>
+
+          {/* Location picker dropdown */}
+          {showLocationPicker && (
+            <div className="mt-2 p-3 rounded-xl border border-border bg-card shadow-lg space-y-3 animate-fade-in">
+              {/* GPS button */}
+              <button
+                onClick={handleUseGPS}
+                disabled={geoLoading}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                {geoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4 text-[#0D9488]" />}
+                {geoLoading ? "Finding your location..." : "Use GPS"}
+              </button>
+
+              {/* Trip destination pills */}
+              {tripDestinations.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Trip destinations</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tripDestinations.map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => handleSelectDestination(d)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                          currentLocation?.name === d
+                            ? "bg-[#0D9488] text-white shadow-sm"
+                            : "bg-accent/50 text-foreground border border-border hover:border-[#0D9488]/40"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Manual text input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleManualLocation(); }}
+                  placeholder="Or type a location..."
+                  className="flex-1 text-sm bg-accent/30 rounded-xl px-3 py-2 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
+                />
+                <button
+                  onClick={handleManualLocation}
+                  disabled={!locationInput.trim()}
+                  className="px-3 py-2 rounded-xl bg-[#0D9488] text-white text-xs font-medium disabled:opacity-40 transition-opacity"
+                >
+                  Set
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Content area */}
         <div className="flex-1 overflow-y-auto" style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
             <div className="px-4 pt-3 pb-4 space-y-3 animate-fade-in">
-              {/* Location input when no destination */}
-              {!resolvedDest && (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-medium text-muted-foreground">Where are you?</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={locationInput}
-                      onChange={(e) => setLocationInput(e.target.value)}
-                      onBlur={() => { if (locationInput.trim()) setManualLocation(locationInput.trim()); }}
-                      onKeyDown={(e) => { if (e.key === "Enter" && locationInput.trim()) setManualLocation(locationInput.trim()); }}
-                      placeholder="e.g. Canggu, Bali"
-                      className="flex-1 text-sm bg-accent/30 rounded-xl px-3 py-2 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
-                    />
-                    <button
-                      onClick={handleUseLocation}
-                      disabled={geoLoading}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50"
-                    >
-                      {geoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
-                      {geoLoading ? "..." : "📍 Locate me"}
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Category grid — compact cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">

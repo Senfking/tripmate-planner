@@ -50,6 +50,8 @@ export interface ConciergeReaction {
 
 interface ConciergeContext {
   destination: string;
+  location?: string;
+  user_location?: { lat: number; lng: number };
   date?: string;
   time_of_day?: string;
   group_size?: number;
@@ -191,6 +193,8 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
           body: {
             trip_id: tripId,
             query,
+            location: context.location,
+            user_location: context.user_location,
             context: {
               ...context,
               date,
@@ -227,6 +231,8 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
             vibe: filters.vibe,
             budget: filters.budget,
             feeling_lucky: filters.feeling_lucky || false,
+            location: context.location,
+            user_location: context.user_location,
             context: {
               ...context,
               date: context.date || new Date().toISOString().split("T")[0],
