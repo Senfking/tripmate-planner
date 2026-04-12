@@ -219,9 +219,10 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [freeText, setFreeText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const context = buildContext(tripResult, memberCount);
-  const destination = context.destination as string;
-  const { messages, sending, sendMessage, toggleReaction, getReactionInfo } = useConcierge(tripId, context);
+  const contextRaw = buildContext(tripResult, memberCount);
+  const destination = (contextRaw.destination as string) || "Unknown";
+  const conciergeContext = { ...contextRaw, destination } as { destination: string; date?: string; time_of_day?: string; group_size?: number; budget_level?: string; preferences?: string[]; hotel_location?: { name: string; lat: number; lng: number } };
+  const { messages, sending, sendMessage, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
 
   const tripDays = tripResult?.destinations?.flatMap(d =>
     d.days.map(day => ({ date: day.date, dayNumber: day.day_number }))
