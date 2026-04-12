@@ -1007,15 +1007,15 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in">
+            <div className="px-4 pt-3 pb-4 space-y-3 animate-fade-in">
               {/* Category grid — 7 regular + 1 full-width surprise */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => handleCategorySelect(cat)}
-                    className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
-                    style={{ minHeight: "60px" }}
+                    className="relative flex items-center gap-3 p-3.5 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
+                    style={{ minHeight: "68px" }}
                   >
                     <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient}`} />
                     <div className="relative z-10 w-9 h-9 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
@@ -1035,7 +1035,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                 <button
                   onClick={handleSurpriseMe}
                   className="col-span-2 relative flex items-center justify-center gap-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02]"
-                  style={{ minHeight: "72px" }}
+                  style={{ minHeight: "68px" }}
                 >
                   <div
                     className="absolute inset-0"
@@ -1067,36 +1067,40 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
                     placeholder={placeholder}
-                    className="w-full text-[13px] bg-accent/30 rounded-xl pl-8 pr-3 py-3 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
+                    className="w-full text-[11px] bg-accent/30 rounded-xl pl-8 pr-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground/70"
                     onKeyDown={(e) => { if (e.key === "Enter") handleFreeTextSubmit(); }}
                   />
                 </div>
                 <button
                   onClick={handleFreeTextSubmit}
                   disabled={!freeText.trim()}
-                  className="px-4 py-3 rounded-xl bg-gradient-primary text-white text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
                 >
                   Go
                 </button>
               </div>
 
-              {/* Recent searches */}
-              {recentSearches.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Recent</p>
-                  <div className="flex flex-wrap gap-2">
-                    {recentSearches.map((s, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleRecentSearch(s)}
-                        className="text-xs px-3 py-1.5 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Saved spots + Recent */}
+              <div className="flex flex-wrap gap-2 items-center">
+                {getSavedSpots(tripId).length > 0 && (
+                  <button
+                    onClick={() => { /* TODO: show saved spots view */ toast.info(`${getSavedSpots(tripId).length} saved spot${getSavedSpots(tripId).length === 1 ? "" : "s"}: ${getSavedSpots(tripId).join(", ")}`); }}
+                    className="text-[11px] px-3 py-1.5 rounded-full border border-amber-200 dark:border-amber-700/30 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-1"
+                  >
+                    <Bookmark className="h-3 w-3 fill-current" />
+                    {getSavedSpots(tripId).length} saved
+                  </button>
+                )}
+                {recentSearches.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleRecentSearch(s)}
+                    className="text-[11px] px-3 py-1.5 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
