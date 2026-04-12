@@ -12,6 +12,7 @@ import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances } from "@/lib/settlementCalc";
 import { fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { SharedItemsSection } from "./SharedItemsSection";
+import { resolvePhoto } from "@/lib/tripPhoto";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
@@ -651,8 +652,10 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         const flightDate = flightDateStr ? new Date(flightDateStr) : null;
         const flightCountdown = flightDate ? Math.ceil((flightDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
         const provider = flightBookingData?.provider;
-        const depImgQuery = encodeURIComponent(depCity.split(",")[0].trim() + " city skyline");
-        const arrImgQuery = encodeURIComponent(arrCity.split(",")[0].trim() + " city skyline");
+        const depCityClean = depCity.split(",")[0].replace(/\s*\([A-Z]{3}\)/, "").trim();
+        const arrCityClean = arrCity.split(",")[0].replace(/\s*\([A-Z]{3}\)/, "").trim();
+        const depImg = resolvePhoto(depCityClean, [depCityClean]);
+        const arrImg = resolvePhoto(arrCityClean, [arrCityClean]);
 
         return (
           <button
@@ -661,14 +664,16 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           >
             <div className="grid grid-cols-2 h-[90px]">
               <div className="relative overflow-hidden">
-                <img src={`https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=200&fit=crop&q=80&auto=format`} alt={depCity} className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }} />
+                <img src={depImg} alt={depCityClean} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className="absolute inset-0 bg-black/40" />
                 <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
                   {depCode}
                 </span>
               </div>
               <div className="relative overflow-hidden">
-                <img src={`https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=200&fit=crop&q=80&auto=format`} alt={arrCity} className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }} />
+                <img src={arrImg} alt={arrCityClean} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className="absolute inset-0 bg-black/50" />
                 <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
                   {arrCode}
@@ -706,7 +711,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
               <div className="h-[80px] relative overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1553729459-uj8bt0unpick?w=400&h=200&fit=crop&q=80&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }} />
+                <img src="https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=400&h=200&fit=crop" alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
               </div>
@@ -722,7 +728,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
               <div className="h-[80px] relative overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=400&h=200&fit=crop&q=80&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }} />
+                <img src="https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=400&h=200&fit=crop" alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
               </div>
