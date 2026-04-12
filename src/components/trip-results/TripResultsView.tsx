@@ -90,7 +90,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     [allDays]
   );
 
-  const remainingCount = totalActivities - state.addedCount;
+  // removed: remainingCount / addedCount no longer needed
 
   const costBreakdown = useMemo(() => {
     const categories: Record<string, number> = {};
@@ -417,8 +417,6 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     result={result}
                     allDays={allDays}
                     refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
-                    isAdded={state.isAdded}
-                    onToggleAdd={(d, a) => state.toggleActivity(d, a)}
                     onRequestChange={(dd, i, a) => state.requestAlternatives(dd, i, a, tripId)}
                     onRequestDescribedChange={(dd, i, a, desc) => state.requestAlternatives(dd, i, a, tripId, desc)}
                     onCustomPlaceSwap={(dd, i, name) => state.requestCustomPlaceSwap(dd, i, name, result.destinations.find(d => {
@@ -483,26 +481,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
         <div className="max-w-[700px] mx-auto relative">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onRegenerate}
-                  className="text-xs text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleShare}
-                  className="text-xs text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              {!standalone && (
+            {standalone ? (
+              <>
                 <CostBottomPanel
                   totalActivities={totalActivities}
                   total={costBreakdown.total}
@@ -510,39 +490,53 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   currency={currency}
                   categories={costBreakdown.categories}
                 />
-              )}
-            </div>
-            {standalone ? (
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  onClick={onSaveDraft}
-                  className="h-9 px-4 rounded-xl text-[13px] font-semibold"
-                >
-                  Save draft
-                </Button>
-                <Button
-                  onClick={onCreateTrip}
-                  disabled={creatingTrip}
-                  className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
-                >
-                  {creatingTrip ? "Creating..." : "Create trip"}
-                </Button>
-              </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    onClick={onSaveDraft}
+                    className="h-9 px-4 rounded-xl text-[13px] font-semibold"
+                  >
+                    Save draft
+                  </Button>
+                  <Button
+                    onClick={onCreateTrip}
+                    disabled={creatingTrip}
+                    className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
+                  >
+                    {creatingTrip ? "Creating..." : "Create trip"}
+                  </Button>
+                </div>
+              </>
             ) : (
-              <Button
-                onClick={() => state.addAllActivities(result)}
-                disabled={state.isAddingAll || remainingCount === 0}
-                className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shrink-0"
-              >
-                {state.isAddingAll
-                  ? "Adding..."
-                  : remainingCount === totalActivities
-                  ? "Add all to itinerary"
-                  : remainingCount === 0
-                  ? "All added ✓"
-                  : `Add remaining ${remainingCount}`}
-              </Button>
+              <>
+                <div className="flex-1 min-w-0">
+                  <CostBottomPanel
+                    totalActivities={totalActivities}
+                    total={costBreakdown.total}
+                    dailyAvg={costBreakdown.dailyAvg}
+                    currency={currency}
+                    categories={costBreakdown.categories}
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                    className="h-8 px-3 rounded-lg text-xs gap-1"
+                  >
+                    <Share2 className="h-3.5 w-3.5" /> Share
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onRegenerate}
+                    className="h-8 px-3 rounded-lg text-xs gap-1"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         </div>

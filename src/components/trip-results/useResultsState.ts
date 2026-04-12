@@ -1,5 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
-import { useItinerary } from "@/hooks/useItinerary";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { CostProfile } from "@/lib/calibrateCost";
@@ -67,13 +66,7 @@ export interface AITripResult {
   origin_city?: string;
 }
 
-function activityKey(dayDate: string, title: string) {
-  return `${dayDate}::${title}`;
-}
-
 export function useResultsState(tripId: string) {
-  const { addItem, batchAddItems } = useItinerary(tripId);
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [activeDayIndex, setActiveDayIndex] = useState<number>(-1);
   const [mapMode, setMapMode] = useState<"overview" | "day">("overview");
   const [alternativesFor, setAlternativesFor] = useState<{
@@ -89,27 +82,12 @@ export function useResultsState(tripId: string) {
   const [removedActivities, setRemovedActivities] = useState<Set<string>>(new Set());
   const [addedActivities, setAddedActivities] = useState<Map<string, AIActivity[]>>(new Map());
 
-  const isAdded = useCallback(
-    (dayDate: string, title: string) => addedIds.has(activityKey(dayDate, title)),
-    [addedIds]
-  );
-
-  const addedCount = addedIds.size;
-
-  function computeEndTime(startTime: string, durationMin: number): string {
-    const [h, m] = startTime.split(":").map(Number);
-    const totalMin = h * 60 + m + durationMin;
-    const eh = Math.floor(totalMin / 60) % 24;
-    const em = totalMin % 60;
-    return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
-  }
-
   const removeActivity = useCallback(
     (dayDate: string, index: number, activity: AIActivity) => {
       const key = `${dayDate}::${index}::${activity.title}`;
       setRemovedActivities((prev) => new Set(prev).add(key));
 
-      const toastId = toast("Activity removed", {
+      toast("Activity removed", {
         action: {
           label: "Undo",
           onClick: () => {
@@ -148,106 +126,6 @@ export function useResultsState(tripId: string) {
   const getLocalAdditions = useCallback(
     (dayDate: string): AIActivity[] => addedActivities.get(dayDate) || [],
     [addedActivities]
-  );
-
-  const toggleActivity = useCallback(
-    async (day: AIDay, activity: AIActivity) => {
-      const key = activityKey(day.date, activity.title);
-      if (addedIds.has(key)) {
-        setAddedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-        return;
-      }
-
-      try {
-        await addItem.mutateAsync({
-          day_date: day.date,
-          title: activity.title,
-          start_time: activity.start_time || null,
-          end_time: activity.start_time
-            ? computeEndTime(activity.start_time, activity.duration_minutes || 60)
-            : null,
-          location_text: activity.location_name || null,
-          notes: [
-            activity.description,
-            activity.tips ? `\nTip: ${activity.tips}` : "",
-            activity.estimated_cost_per_person
-              ? `\n~${activity.currency || "€"}${activity.estimated_cost_per_person}/person`
-              : "",
-            activity.dietary_notes ? `\nDietary: ${activity.dietary_notes}` : "",
-          ]
-            .filter(Boolean)
-            .join(""),
-          status: "planned",
-        });
-
-        setAddedIds((prev) => new Set(prev).add(key));
-      } catch {
-        toast.error("Failed to add activity");
-      }
-    },
-    [addedIds, addItem]
-  );
-
-  const addAllActivities = useCallback(
-    async (result: AITripResult) => {
-      const batch: Parameters<typeof batchAddItems.mutateAsync>[0] = [];
-
-      for (const dest of result.destinations) {
-        for (const day of dest.days) {
-          for (const act of day.activities) {
-            const key = activityKey(day.date, act.title);
-            if (addedIds.has(key)) continue;
-
-            batch.push({
-              day_date: day.date,
-              title: act.title,
-              start_time: act.start_time || null,
-              end_time: act.start_time
-                ? computeEndTime(act.start_time, act.duration_minutes || 60)
-                : null,
-              location_text: act.location_name || null,
-              notes: [
-                act.description,
-                act.tips ? `\nTip: ${act.tips}` : "",
-                act.estimated_cost_per_person
-                  ? `\n~${act.currency || "€"}${act.estimated_cost_per_person}/person`
-                  : "",
-                act.dietary_notes ? `\nDietary: ${act.dietary_notes}` : "",
-              ]
-                .filter(Boolean)
-                .join(""),
-              status: "planned",
-            });
-          }
-        }
-      }
-
-      if (batch.length === 0) {
-        toast.info("All activities already added!");
-        return;
-      }
-
-      try {
-        await batchAddItems.mutateAsync(batch);
-        const allKeys = new Set(addedIds);
-        for (const dest of result.destinations) {
-          for (const day of dest.days) {
-            for (const act of day.activities) {
-              allKeys.add(activityKey(day.date, act.title));
-            }
-          }
-        }
-        setAddedIds(allKeys);
-        toast.success(`Added ${batch.length} activities to your itinerary! 🎉`);
-      } catch {
-        toast.error("Failed to add activities");
-      }
-    },
-    [addedIds, batchAddItems]
   );
 
   const replaceActivity = useCallback(
@@ -341,11 +219,6 @@ export function useResultsState(tripId: string) {
   );
 
   return {
-    addedIds,
-    addedCount,
-    isAdded,
-    toggleActivity,
-    addAllActivities,
     activeDayIndex,
     setActiveDayIndex,
     mapMode,
@@ -358,7 +231,6 @@ export function useResultsState(tripId: string) {
     requestCustomPlaceSwap,
     replaceActivity,
     getReplacedActivity,
-    isAddingAll: batchAddItems.isPending,
     // Local edits
     removeActivity,
     isActivityRemoved,
