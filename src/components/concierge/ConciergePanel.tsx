@@ -34,7 +34,7 @@ function buildContext(tripResult?: AITripResult | null, memberCount?: number) {
     group_size: memberCount || 2,
   };
   if (dest?.cost_profile) {
-    ctx.budget_level = dest.cost_profile.budget_level || "mid-range";
+    ctx.budget_level = "mid-range";
   }
   if (dest?.accommodation) {
     ctx.hotel_location = {
