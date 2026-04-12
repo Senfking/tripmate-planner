@@ -265,6 +265,14 @@ export function ActivityCard({
             </div>
           )}
 
+          {/* Reactions & Comments */}
+          {planId && actKey && (
+            <>
+              <ActivityReactions planId={planId} activityKey={actKey} />
+              <ActivityComments planId={planId} activityKey={actKey} />
+            </>
+          )}
+
           {/* Actions row */}
           <div className="flex items-center justify-between px-3.5 py-2 border-t border-border bg-accent/20 relative" ref={swapRef}>
             <div className="flex items-center gap-2.5">
