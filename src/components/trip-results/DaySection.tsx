@@ -20,8 +20,6 @@ interface Props {
   result: AITripResult;
   allDays: AIDay[];
   refinedCoords?: Map<string, { lat: number; lng: number }>;
-  isAdded: (dayDate: string, title: string) => boolean;
-  onToggleAdd: (day: AIDay, activity: AIActivity) => void;
   onRequestChange: (dayDate: string, index: number, activity: AIActivity) => void;
   onRequestDescribedChange: (dayDate: string, index: number, activity: AIActivity, description: string) => void;
   onCustomPlaceSwap: (dayDate: string, index: number, placeName: string) => Promise<any>;
@@ -64,8 +62,6 @@ export function DaySection({
   result,
   allDays,
   refinedCoords,
-  isAdded,
-  onToggleAdd,
   onRequestChange,
   onRequestDescribedChange,
   onCustomPlaceSwap,
@@ -193,8 +189,6 @@ export function DaySection({
                     planId={planId || null}
                     dayIndex={dayIndex}
                     activityIndex={i}
-                    isAdded={isAdded(day.date, activity.title)}
-                    onToggleAdd={() => onToggleAdd(day, activity)}
                     onRequestChange={() => onRequestChange(day.date, i, activity)}
                     onRequestDescribedChange={(desc) => onRequestDescribedChange(day.date, i, activity, desc)}
                     onCustomPlaceSwap={(name) => onCustomPlaceSwap(day.date, i, name)}
@@ -245,7 +239,6 @@ export function DaySection({
           onApply={(instruction) => {
             setEditDayOpen(false);
             toast.info(`Updating Day ${day.day_number}...`);
-            // TODO: call edge function with day-specific prompt
           }}
           onClose={() => setEditDayOpen(false)}
         />

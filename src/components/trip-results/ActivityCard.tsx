@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Star, ExternalLink, Trash2, ArrowLeftRight, Check, MapPin, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf, Loader2 } from "lucide-react";
+import { Star, ExternalLink, Trash2, ArrowLeftRight, MapPin, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf, Loader2 } from "lucide-react";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,8 +14,6 @@ interface Props {
   planId?: string | null;
   dayIndex?: number;
   activityIndex?: number;
-  isAdded: boolean;
-  onToggleAdd: () => void;
   onRequestChange: () => void;
   onRequestDescribedChange: (description: string) => void;
   onCustomPlaceSwap: (placeName: string) => Promise<any>;
@@ -48,8 +46,6 @@ export function ActivityCard({
   planId,
   dayIndex,
   activityIndex,
-  isAdded,
-  onToggleAdd,
   onRequestChange,
   onRequestDescribedChange,
   onCustomPlaceSwap,
@@ -118,11 +114,7 @@ export function ActivityCard({
     <div
       data-activity-id={`${day.date}-${index}`}
       className="mx-4 mb-3 rounded-2xl border border-border bg-card overflow-hidden transition-all duration-200 animate-fade-in shadow-sm"
-      style={{
-        animationDelay: `${animDelay}ms`,
-        borderLeftColor: isAdded ? "hsl(var(--primary))" : undefined,
-        borderLeftWidth: isAdded ? 3 : undefined,
-      }}
+      style={{ animationDelay: `${animDelay}ms` }}
     >
       {/* Hero image */}
       <div className="relative w-full h-[120px] overflow-hidden bg-muted cursor-pointer" onClick={() => setExpanded((e) => !e)}>
@@ -144,28 +136,28 @@ export function ActivityCard({
             <IconComponent className="h-8 w-8 opacity-40" style={{ color }} />
           </div>
         )}
-        {/* Category badge — teal themed */}
+        {/* Category badge */}
         <div className="absolute top-2 left-2">
           <span className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[8px] uppercase tracking-wider font-bold bg-primary/90 text-primary-foreground backdrop-blur-sm">
             <IconComponent className="h-2.5 w-2.5" />
             {activity.category}
           </span>
         </div>
-        {/* Pin number — teal */}
+        {/* Pin number */}
         <div className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-primary-foreground shadow-md bg-primary">
           {index + 1}
         </div>
-        {/* Add button — solid teal, prominent */}
+        {/* Swap button — top right, teal outline */}
         <div className="absolute top-2 right-2">
           <button
-            onClick={(e) => { e.stopPropagation(); onToggleAdd(); }}
-            className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all shadow-lg ${
-              isAdded
-                ? "bg-[#0D9488]/20 text-[#0D9488] border border-[#0D9488]/40"
-                : "bg-[#0D9488] text-white hover:bg-[#0D9488]/90"
-            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSwapMode(swapMode === "menu" ? null : "menu");
+              setSwapText("");
+            }}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
           >
-            {isAdded ? <Check className="h-4 w-4" /> : "Add"}
+            <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
           </button>
         </div>
       </div>
@@ -304,24 +296,22 @@ export function ActivityCard({
 
           {/* Actions row */}
           <div className="flex items-center justify-between px-3.5 py-2 border-t border-border bg-accent/20 relative" ref={swapRef}>
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSwapMode(swapMode === "menu" ? null : "menu");
-                  setSwapText("");
-                }}
-                className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-              >
-                <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
-              </button>
-            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded-lg hover:bg-destructive/10"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSwapMode(swapMode === "menu" ? null : "menu");
+                setSwapText("");
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-[#0D9488]/30 text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
+            </button>
             <span className="text-[11px] font-mono text-muted-foreground">
               {activity.estimated_cost_per_person
                 ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}/person`
@@ -393,9 +383,7 @@ export function ActivityCard({
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      handleDescribeSwap();
-                    }}
+                    onClick={() => { handleDescribeSwap(); }}
                     disabled={!swapText.trim()}
                     className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md"
                   >

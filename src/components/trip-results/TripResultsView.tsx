@@ -90,7 +90,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     [allDays]
   );
 
-  const remainingCount = totalActivities - state.addedCount;
+  // removed: remainingCount / addedCount no longer needed
 
   const costBreakdown = useMemo(() => {
     const categories: Record<string, number> = {};
