@@ -588,7 +588,35 @@ export default function TripList() {
     enabled: !!user,
   });
 
-  const postTripNudge = useMemo(() => {
+  // ── Drafts query (ai_trip_plans with no trip_id) ──
+  const { data: drafts } = useQuery({
+    queryKey: ["ai-drafts", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_trip_plans" as any)
+        .select("id, result, created_at")
+        .is("trip_id", null)
+        .eq("created_by", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      const { error } = await supabase.from("ai_trip_plans" as any).delete().eq("id", planId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+      toast.success("Draft deleted");
+    },
+    onError: () => toast.error("Failed to delete draft"),
+  });
+
     if (!trips || trips.length === 0) return null;
     const ended = trips
       .filter((t) => t.statusInfo.status === "ended" && !dismissedNudges.current.has(t.id))
