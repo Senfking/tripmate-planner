@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Users, ThumbsUp, ThumbsDown, Flame, HelpCircle, MessageSquare } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { X, Users, ThumbsUp, ThumbsDown, Flame, HelpCircle, MessageSquare, Send, Trash2 } from "lucide-react";
 import { formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import type { AITripResult, AIDay } from "./useResultsState";
 
@@ -60,6 +61,7 @@ type FeedEntry = {
   id: string;
   type: "reaction" | "comment";
   userName: string;
+  userId: string;
   activityKey: string;
   activityLabel: string;
   sectionId: string;
@@ -69,6 +71,13 @@ type FeedEntry = {
 };
 
 export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClose }: Props) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [replyTo, setReplyTo] = useState<string | null>(null); // activityKey to reply to
+  const [replyText, setReplyText] = useState("");
+  const [generalText, setGeneralText] = useState("");
+  const feedEndRef = useRef<HTMLDivElement>(null);
+
   const { data: reactions = [] } = useQuery({
     queryKey: ["all-plan-reactions", planId],
     queryFn: async () => {
@@ -95,7 +104,21 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
     enabled: !!planId,
   });
 
-  // Fetch profile names
+  // Realtime
+  useEffect(() => {
+    if (!planId) return;
+    const channel = supabase
+      .channel(`group-activity-${planId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "plan_activity_comments", filter: `plan_id=eq.${planId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["all-plan-comments", planId] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "plan_activity_reactions", filter: `plan_id=eq.${planId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["all-plan-reactions", planId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [planId, qc]);
+
   const allUserIds = useMemo(() => {
     const ids = new Set<string>();
     reactions.forEach((r: any) => ids.add(r.user_id));
@@ -123,6 +146,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
         id: (r as any).id,
         type: "reaction",
         userName: prof?.display_name || "User",
+        userId: (r as any).user_id,
         activityKey: (r as any).activity_key,
         activityLabel: getActivityLabel((r as any).activity_key, allDays),
         sectionId: getSectionId((r as any).activity_key, allDays),
@@ -136,6 +160,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
         id: c.id,
         type: "comment",
         userName: prof?.display_name || "User",
+        userId: c.user_id,
         activityKey: c.activity_key,
         activityLabel: getActivityLabel(c.activity_key, allDays),
         sectionId: getSectionId(c.activity_key, allDays),
@@ -161,12 +186,38 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
     return { today, yesterday, earlier };
   }, [feed]);
 
+  const handleSendGeneral = useCallback(async () => {
+    if (!user || !generalText.trim()) return;
+    const trimmed = generalText.trim().slice(0, 500);
+    setGeneralText("");
+    await supabase.from("plan_activity_comments" as any).insert({
+      plan_id: planId, activity_key: "trip-general", user_id: user.id, text: trimmed,
+    } as any);
+    qc.invalidateQueries({ queryKey: ["all-plan-comments", planId] });
+  }, [user, generalText, planId, qc]);
+
+  const handleReply = useCallback(async () => {
+    if (!user || !replyText.trim() || !replyTo) return;
+    const trimmed = replyText.trim().slice(0, 500);
+    setReplyText("");
+    setReplyTo(null);
+    await supabase.from("plan_activity_comments" as any).insert({
+      plan_id: planId, activity_key: replyTo, user_id: user.id, text: trimmed,
+    } as any);
+    qc.invalidateQueries({ queryKey: ["all-plan-comments", planId] });
+  }, [user, replyText, replyTo, planId, qc]);
+
+  const handleDeleteComment = useCallback(async (id: string) => {
+    await supabase.from("plan_activity_comments" as any).delete().eq("id", id);
+    qc.invalidateQueries({ queryKey: ["all-plan-comments", planId] });
+  }, [qc, planId]);
+
   return (
-    <div className="fixed inset-0 z-[10001] flex">
+    <div className="fixed inset-0 z-[10001] flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-sm bg-card border-r border-border h-full overflow-y-auto animate-slide-in-left shadow-2xl">
+      <div className="relative w-full max-w-sm bg-card border-l border-border h-full overflow-y-auto animate-slide-in-right shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border px-4 py-3">
+        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border px-4 py-3 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
@@ -176,7 +227,6 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
-          {/* Stats */}
           <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground font-mono">
             <span>{reactions.length} reactions</span>
             <span>·</span>
@@ -186,23 +236,103 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
           </div>
         </div>
 
-        {feed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <Users className="h-8 w-8 text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">No activity yet</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Reactions and comments from your group will appear here</p>
+        {/* Feed */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+          {feed.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <Users className="h-8 w-8 text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">No activity yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Reactions and comments from your group will appear here</p>
+            </div>
+          ) : (
+            <>
+              {groups.today.length > 0 && (
+                <FeedSection
+                  label="Today"
+                  entries={groups.today}
+                  currentUserId={user?.id}
+                  replyTo={replyTo}
+                  onScrollTo={onScrollTo}
+                  onClose={onClose}
+                  onReply={setReplyTo}
+                  onDelete={handleDeleteComment}
+                />
+              )}
+              {groups.yesterday.length > 0 && (
+                <FeedSection
+                  label="Yesterday"
+                  entries={groups.yesterday}
+                  currentUserId={user?.id}
+                  replyTo={replyTo}
+                  onScrollTo={onScrollTo}
+                  onClose={onClose}
+                  onReply={setReplyTo}
+                  onDelete={handleDeleteComment}
+                />
+              )}
+              {groups.earlier.length > 0 && (
+                <FeedSection
+                  label="Earlier"
+                  entries={groups.earlier}
+                  currentUserId={user?.id}
+                  replyTo={replyTo}
+                  onScrollTo={onScrollTo}
+                  onClose={onClose}
+                  onReply={setReplyTo}
+                  onDelete={handleDeleteComment}
+                />
+              )}
+            </>
+          )}
+          <div ref={feedEndRef} />
+        </div>
+
+        {/* Inline reply bar */}
+        {replyTo && (
+          <div className="px-4 pt-2 pb-1 border-t border-border bg-accent/30 shrink-0">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-muted-foreground">
+                Replying to <span className="font-medium text-foreground">{getActivityLabel(replyTo, allDays)}</span>
+              </span>
+              <button onClick={() => { setReplyTo(null); setReplyText(""); }} className="text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="flex gap-2 items-end">
+              <input
+                type="text"
+                autoFocus
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value.slice(0, 500))}
+                placeholder="Write a reply..."
+                maxLength={500}
+                className="flex-1 px-2.5 py-1.5 text-[11px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                onKeyDown={(e) => { if (e.key === "Enter" && replyText.trim()) handleReply(); }}
+              />
+              <button onClick={handleReply} disabled={!replyText.trim()} className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30">
+                <Send className="h-3 w-3" />
+              </button>
+            </div>
           </div>
-        ) : (
-          <div className="px-4 py-3 space-y-4">
-            {groups.today.length > 0 && (
-              <FeedSection label="Today" entries={groups.today} onScrollTo={onScrollTo} onClose={onClose} />
-            )}
-            {groups.yesterday.length > 0 && (
-              <FeedSection label="Yesterday" entries={groups.yesterday} onScrollTo={onScrollTo} onClose={onClose} />
-            )}
-            {groups.earlier.length > 0 && (
-              <FeedSection label="Earlier" entries={groups.earlier} onScrollTo={onScrollTo} onClose={onClose} />
-            )}
+        )}
+
+        {/* General comment input — always visible at bottom */}
+        {!replyTo && (
+          <div className="px-4 py-3 border-t border-border bg-card shrink-0">
+            <div className="flex gap-2 items-end">
+              <input
+                type="text"
+                value={generalText}
+                onChange={(e) => setGeneralText(e.target.value.slice(0, 500))}
+                placeholder="Comment on this trip..."
+                maxLength={500}
+                className="flex-1 px-2.5 py-1.5 text-[11px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                onKeyDown={(e) => { if (e.key === "Enter" && generalText.trim()) handleSendGeneral(); }}
+              />
+              <button onClick={handleSendGeneral} disabled={!generalText.trim()} className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30">
+                <Send className="h-3 w-3" />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -210,7 +340,16 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
   );
 }
 
-function FeedSection({ label, entries, onScrollTo, onClose }: { label: string; entries: FeedEntry[]; onScrollTo: (id: string) => void; onClose: () => void }) {
+function FeedSection({ label, entries, currentUserId, replyTo, onScrollTo, onClose, onReply, onDelete }: {
+  label: string;
+  entries: FeedEntry[];
+  currentUserId?: string;
+  replyTo: string | null;
+  onScrollTo: (id: string) => void;
+  onClose: () => void;
+  onReply: (activityKey: string) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">{label}</p>
@@ -218,39 +357,59 @@ function FeedSection({ label, entries, onScrollTo, onClose }: { label: string; e
         {entries.map((entry) => {
           const EmojiInfo = entry.emoji ? EMOJI_MAP[entry.emoji] : null;
           return (
-            <button
-              key={entry.id}
-              onClick={() => {
-                if (entry.sectionId) {
-                  onClose();
-                  setTimeout(() => onScrollTo(entry.sectionId), 200);
-                }
-              }}
-              className="w-full text-left flex gap-2 p-2 rounded-lg hover:bg-accent/50 transition-colors group"
-            >
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 mt-0.5"
-                style={{ backgroundColor: getInitialColor(entry.userName) }}
+            <div key={entry.id} className="group">
+              <button
+                onClick={() => {
+                  if (entry.sectionId) {
+                    onClose();
+                    setTimeout(() => onScrollTo(entry.sectionId), 200);
+                  }
+                }}
+                className="w-full text-left flex gap-2 p-2 rounded-lg hover:bg-accent/50 transition-colors"
               >
-                {entry.userName.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-foreground leading-snug">
-                  <span className="font-medium">{entry.userName}</span>
-                  {entry.type === "reaction" && EmojiInfo ? (
-                    <> reacted <EmojiInfo.Icon className="h-3 w-3 inline-block mx-0.5 text-primary" /> on <span className="text-primary font-medium">{entry.activityLabel}</span></>
-                  ) : (
-                    <> commented on <span className="text-primary font-medium">{entry.activityLabel}</span></>
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 mt-0.5"
+                  style={{ backgroundColor: getInitialColor(entry.userName) }}
+                >
+                  {entry.userName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-foreground leading-snug">
+                    <span className="font-medium">{entry.userName}</span>
+                    {entry.type === "reaction" && EmojiInfo ? (
+                      <> reacted <EmojiInfo.Icon className="h-3 w-3 inline-block mx-0.5 text-primary" /> on <span className="text-primary font-medium">{entry.activityLabel}</span></>
+                    ) : (
+                      <> commented on <span className="text-primary font-medium">{entry.activityLabel}</span></>
+                    )}
+                  </p>
+                  {entry.text && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">"{entry.text}"</p>
                   )}
-                </p>
-                {entry.text && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">"{entry.text}"</p>
-                )}
-                <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-                  {formatDistanceToNow(entry.createdAt, { addSuffix: true })}
-                </p>
-              </div>
-            </button>
+                  <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                    {formatDistanceToNow(entry.createdAt, { addSuffix: true })}
+                  </p>
+                </div>
+              </button>
+              {/* Action row */}
+              {entry.type === "comment" && (
+                <div className="ml-9 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity -mt-0.5 mb-1">
+                  <button
+                    onClick={() => onReply(entry.activityKey)}
+                    className="text-[9px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
+                  >
+                    <MessageSquare className="h-2.5 w-2.5" /> Reply
+                  </button>
+                  {entry.userId === currentUserId && (
+                    <button
+                      onClick={() => onDelete(entry.id)}
+                      className="text-[9px] text-muted-foreground hover:text-destructive flex items-center gap-0.5"
+                    >
+                      <Trash2 className="h-2.5 w-2.5" /> Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
