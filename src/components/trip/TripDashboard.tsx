@@ -400,10 +400,32 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     }, 0);
   }
 
-  // Flight card data
+  // Flight card data — find the next upcoming flight by date
   const flights = (attachments ?? []).filter((a) => a.type === "flight");
-  const nextFlight = flights.length > 0 ? flights[0] : null;
-  const flightBookingData = nextFlight?.booking_data as any;
+  const sortedFlights = flights
+    .map((f) => ({ ...f, bd: f.booking_data as any }))
+    .filter((f) => f.bd?.flight_date || f.bd?.departure)
+    .sort((a, b) => {
+      const dateA = a.bd?.flight_date || "";
+      const dateB = b.bd?.flight_date || "";
+      return dateA.localeCompare(dateB);
+    });
+  const upcomingFlight = sortedFlights.find((f) => {
+    const d = f.bd?.flight_date;
+    return d ? new Date(d) >= today : true;
+  }) ?? sortedFlights[0] ?? null;
+  const nextFlight = upcomingFlight || (flights.length > 0 ? flights[0] : null);
+  const flightBookingData = (nextFlight as any)?.bd ?? (nextFlight?.booking_data as any);
+
+  // Extract airport codes from text like "Dubai (DXB)"
+  const extractCode = (text: string | undefined) => {
+    if (!text) return null;
+    const m = text.match(/\(([A-Z]{3})\)/);
+    return m ? m[1] : null;
+  };
+
+  // OG image for bookings card
+  const firstOgImage = (attachments ?? []).find((a) => a.og_image_url)?.og_image_url;
 
   const isLoading = stopsLoading || proposalsLoading || pollsLoading || itineraryLoading || attachmentsLoading || expensesLoading;
 
