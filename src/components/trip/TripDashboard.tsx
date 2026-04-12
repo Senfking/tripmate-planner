@@ -651,8 +651,10 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         const flightDate = flightDateStr ? new Date(flightDateStr) : null;
         const flightCountdown = flightDate ? Math.ceil((flightDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
         const provider = flightBookingData?.provider;
-        const depImgQuery = encodeURIComponent(depCity.split(",")[0].trim() + " city skyline");
-        const arrImgQuery = encodeURIComponent(arrCity.split(",")[0].trim() + " city skyline");
+        const depCityClean = depCity.split(",")[0].replace(/\s*\([A-Z]{3}\)/, "").trim();
+        const arrCityClean = arrCity.split(",")[0].replace(/\s*\([A-Z]{3}\)/, "").trim();
+        const depImg = resolvePhoto(depCityClean, [depCityClean]);
+        const arrImg = resolvePhoto(arrCityClean, [arrCityClean]);
 
         return (
           <button
