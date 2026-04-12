@@ -838,11 +838,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                 const otherId = id === "decisions" ? "bookings" : "decisions";
                 const isFirst = visibleOrder.indexOf(id) < visibleOrder.indexOf(otherId);
                 if (!isFirst) return null; // second card rendered by the first
+                const pairOrder = [id, otherId];
                 return (
-                  <div key="decisions-bookings-row" className="grid grid-cols-2 gap-3">
-                    <SortableSection id={id}>{renderSection(id)}</SortableSection>
-                    <SortableSection id={otherId}>{renderSection(otherId)}</SortableSection>
-                  </div>
+                  <SortableContext key="decisions-bookings-ctx" items={pairOrder} strategy={horizontalListSortingStrategy}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <SortableSection id={id}>{renderSection(id)}</SortableSection>
+                      <SortableSection id={otherId}>{renderSection(otherId)}</SortableSection>
+                    </div>
+                  </SortableContext>
                 );
               }
               return (
