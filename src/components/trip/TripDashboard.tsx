@@ -703,93 +703,86 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         );
       }
 
-      case "decisions-bookings": {
+      case "decisions":
         return (
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
-              className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
-            >
-              <div className="h-[80px] relative overflow-hidden" style={{ background: "#f0fdfa" }}>
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 80" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-                  {/* Compass rose */}
-                  <g transform="translate(155,40)" opacity="0.12" fill="#0D9488">
-                    <polygon points="0,-18 4,-4 0,-8 -4,-4" />
-                    <polygon points="0,18 4,4 0,8 -4,4" />
-                    <polygon points="-18,0 -4,-4 -8,0 -4,4" />
-                    <polygon points="18,0 4,-4 8,0 4,4" />
-                    <circle cx="0" cy="0" r="2" />
-                  </g>
-                  {/* Map pins */}
-                  <g opacity="0.1" fill="#0D9488">
-                    <path d="M30 55 a6 6 0 1 1 0-8 a6 6 0 0 1 0 8 L30 65Z" />
-                    <path d="M70 25 a5 5 0 1 1 0-7 a5 5 0 0 1 0 7 L70 33Z" />
-                    <path d="M120 50 a4 4 0 1 1 0-5.5 a4 4 0 0 1 0 5.5 L120 56Z" />
-                  </g>
-                  {/* Dotted route path */}
-                  <path d="M25 58 Q50 20 75 28 T125 52 T160 38" fill="none" stroke="#0D9488" strokeWidth="1.5" strokeDasharray="3 4" opacity="0.15" />
-                  {/* Small dots */}
-                  <circle cx="15" cy="15" r="1.5" fill="#0D9488" opacity="0.08" />
-                  <circle cx="95" cy="12" r="2" fill="#0D9488" opacity="0.06" />
-                  <circle cx="50" cy="68" r="1.5" fill="#0D9488" opacity="0.08" />
-                  <circle cx="175" cy="65" r="2" fill="#0D9488" opacity="0.06" />
-                </svg>
-                <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-[#0D9488]/30" />
-              </div>
-              <div className="p-3">
-                <p className="font-semibold text-[14px] text-foreground">Decisions</p>
-                <p className="text-[12px] mt-0.5" style={{ color: decisionsBadge.color === "amber" ? "#D97706" : decisionsBadge.color === "teal" ? "#0D9488" : "#94A3B8" }}>
-                  {decisionsBadge.label === "Route confirmed" ? "Route confirmed" : decisionsBadge.label === "Not started" ? "Route pending" : decisionsBadge.label}
-                </p>
-              </div>
-            </button>
-            <button
-              onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
-              className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
-            >
-              <div className="h-[80px] relative overflow-hidden" style={{ background: "#f0fdfa" }}>
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 80" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-                  {/* Boarding pass shape */}
-                  <g transform="translate(140,35)" opacity="0.1">
-                    <rect x="-28" y="-16" width="56" height="32" rx="4" fill="#0D9488" />
-                    <line x1="-10" y1="-16" x2="-10" y2="16" stroke="#f0fdfa" strokeWidth="1" strokeDasharray="2 2" />
-                    <circle cx="-10" cy="-16" r="3" fill="#f0fdfa" />
-                    <circle cx="-10" cy="16" r="3" fill="#f0fdfa" />
-                    <rect x="-24" y="-8" width="10" height="2" rx="1" fill="#f0fdfa" opacity="0.6" />
-                    <rect x="-24" y="-3" width="8" height="2" rx="1" fill="#f0fdfa" opacity="0.4" />
-                    <rect x="-24" y="2" width="12" height="2" rx="1" fill="#f0fdfa" opacity="0.3" />
-                  </g>
-                  {/* Document shapes */}
-                  <g opacity="0.08" fill="#0D9488">
-                    <rect x="20" y="20" width="24" height="30" rx="2" />
-                    <rect x="24" y="26" width="12" height="1.5" rx="0.75" fill="#f0fdfa" />
-                    <rect x="24" y="30" width="16" height="1.5" rx="0.75" fill="#f0fdfa" />
-                    <rect x="24" y="34" width="10" height="1.5" rx="0.75" fill="#f0fdfa" />
-                  </g>
-                  <g opacity="0.06" fill="#0D9488">
-                    <rect x="75" y="45" width="20" height="26" rx="2" />
-                  </g>
-                  {/* Ticket stub */}
-                  <g transform="translate(100,20)" opacity="0.09" fill="#0D9488">
-                    <rect x="0" y="0" width="36" height="18" rx="3" />
-                    <circle cx="12" cy="0" r="2.5" fill="#f0fdfa" />
-                    <circle cx="12" cy="18" r="2.5" fill="#f0fdfa" />
-                  </g>
-                  {/* Small dots */}
-                  <circle cx="60" cy="15" r="1.5" fill="#0D9488" opacity="0.07" />
-                  <circle cx="170" cy="70" r="2" fill="#0D9488" opacity="0.06" />
-                  <circle cx="15" cy="65" r="1.5" fill="#0D9488" opacity="0.05" />
-                </svg>
-                <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-[#0D9488]/30" />
-              </div>
-              <div className="p-3">
-                <p className="font-semibold text-[14px] text-foreground">Bookings</p>
-                <p className="text-[12px] text-muted-foreground mt-0.5">{bookingsSummary}</p>
-              </div>
-            </button>
-          </div>
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
+            className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
+          >
+            <div className="h-[80px] relative overflow-hidden" style={{ background: "#f0fdfa" }}>
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 80" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <g transform="translate(155,40)" opacity="0.12" fill="#0D9488">
+                  <polygon points="0,-18 4,-4 0,-8 -4,-4" />
+                  <polygon points="0,18 4,4 0,8 -4,4" />
+                  <polygon points="-18,0 -4,-4 -8,0 -4,4" />
+                  <polygon points="18,0 4,-4 8,0 4,4" />
+                  <circle cx="0" cy="0" r="2" />
+                </g>
+                <g opacity="0.1" fill="#0D9488">
+                  <path d="M30 55 a6 6 0 1 1 0-8 a6 6 0 0 1 0 8 L30 65Z" />
+                  <path d="M70 25 a5 5 0 1 1 0-7 a5 5 0 0 1 0 7 L70 33Z" />
+                  <path d="M120 50 a4 4 0 1 1 0-5.5 a4 4 0 0 1 0 5.5 L120 56Z" />
+                </g>
+                <path d="M25 58 Q50 20 75 28 T125 52 T160 38" fill="none" stroke="#0D9488" strokeWidth="1.5" strokeDasharray="3 4" opacity="0.15" />
+                <circle cx="15" cy="15" r="1.5" fill="#0D9488" opacity="0.08" />
+                <circle cx="95" cy="12" r="2" fill="#0D9488" opacity="0.06" />
+                <circle cx="50" cy="68" r="1.5" fill="#0D9488" opacity="0.08" />
+                <circle cx="175" cy="65" r="2" fill="#0D9488" opacity="0.06" />
+              </svg>
+              <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-[#0D9488]/30" />
+            </div>
+            <div className="p-3">
+              <p className="font-semibold text-[14px] text-foreground">Decisions</p>
+              <p className="text-[12px] mt-0.5" style={{ color: decisionsBadge.color === "amber" ? "#D97706" : decisionsBadge.color === "teal" ? "#0D9488" : "#94A3B8" }}>
+                {decisionsBadge.label === "Route confirmed" ? "Route confirmed" : decisionsBadge.label === "Not started" ? "Route pending" : decisionsBadge.label}
+              </p>
+            </div>
+          </button>
         );
-      }
+
+      case "bookings":
+        return (
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
+            className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
+          >
+            <div className="h-[80px] relative overflow-hidden" style={{ background: "#f0fdfa" }}>
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 80" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <g transform="translate(140,35)" opacity="0.1">
+                  <rect x="-28" y="-16" width="56" height="32" rx="4" fill="#0D9488" />
+                  <line x1="-10" y1="-16" x2="-10" y2="16" stroke="#f0fdfa" strokeWidth="1" strokeDasharray="2 2" />
+                  <circle cx="-10" cy="-16" r="3" fill="#f0fdfa" />
+                  <circle cx="-10" cy="16" r="3" fill="#f0fdfa" />
+                  <rect x="-24" y="-8" width="10" height="2" rx="1" fill="#f0fdfa" opacity="0.6" />
+                  <rect x="-24" y="-3" width="8" height="2" rx="1" fill="#f0fdfa" opacity="0.4" />
+                  <rect x="-24" y="2" width="12" height="2" rx="1" fill="#f0fdfa" opacity="0.3" />
+                </g>
+                <g opacity="0.08" fill="#0D9488">
+                  <rect x="20" y="20" width="24" height="30" rx="2" />
+                  <rect x="24" y="26" width="12" height="1.5" rx="0.75" fill="#f0fdfa" />
+                  <rect x="24" y="30" width="16" height="1.5" rx="0.75" fill="#f0fdfa" />
+                  <rect x="24" y="34" width="10" height="1.5" rx="0.75" fill="#f0fdfa" />
+                </g>
+                <g opacity="0.06" fill="#0D9488">
+                  <rect x="75" y="45" width="20" height="26" rx="2" />
+                </g>
+                <g transform="translate(100,20)" opacity="0.09" fill="#0D9488">
+                  <rect x="0" y="0" width="36" height="18" rx="3" />
+                  <circle cx="12" cy="0" r="2.5" fill="#f0fdfa" />
+                  <circle cx="12" cy="18" r="2.5" fill="#f0fdfa" />
+                </g>
+                <circle cx="60" cy="15" r="1.5" fill="#0D9488" opacity="0.07" />
+                <circle cx="170" cy="70" r="2" fill="#0D9488" opacity="0.06" />
+                <circle cx="15" cy="65" r="1.5" fill="#0D9488" opacity="0.05" />
+              </svg>
+              <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-[#0D9488]/30" />
+            </div>
+            <div className="p-3">
+              <p className="font-semibold text-[14px] text-foreground">Bookings</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">{bookingsSummary}</p>
+            </div>
+          </button>
+        );
 
       case "itinerary":
         if (!showItinerary) return null;
