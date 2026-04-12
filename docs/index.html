@@ -258,6 +258,7 @@
     <div class="sidebar-item" onclick="show('phase6flow',this)"><span class="sidebar-dot dot-purple"></span> New User Flow</div>
     <div class="sidebar-item" onclick="show('phase6arch',this)"><span class="sidebar-dot dot-teal"></span> Architecture Changes</div>
     <div class="sidebar-item" onclick="show('phase6impl',this)"><span class="sidebar-dot dot-teal"></span> Implementation Phases</div>
+    <div class="sidebar-item" onclick="show('concierge',this)"><span class="sidebar-dot dot-purple"></span> Concierge — Activity Discovery</div>
   </div>
 
   <div class="sidebar-group">
@@ -3708,6 +3709,259 @@ ALTER TABLE trips ADD COLUMN active_plan_id uuid REFERENCES ai_trip_plans(id);
       </div>
     </div>
   </div>
+</div>
+
+<!-- ══════════ JUNTO CONCIERGE — ACTIVITY DISCOVERY ══════════ -->
+<div id="concierge" class="section">
+  <div class="section-header">
+    <h2>Junto Concierge — Real-Time Activity Discovery</h2>
+    <p>A lightweight, conversational activity finder for groups. Lives inside every trip as an always-accessible assistant. Ask what to do, get curated options, vote as a group, add to your plan. Build in parallel with other features.</p>
+  </div>
+
+  <div class="callout callout-purple">The Trip Builder is the full-plan mode — complete multi-day itineraries. The Concierge is the lite mode — spontaneous, single-activity suggestions via a conversational interface. They share Google Places integration, activity card components, "Add to plan" functionality, and the group reaction system. Together, they cover the full spectrum from "plan an entire trip" to "what should we do tonight?"</div>
+
+  <h3>User stories</h3>
+  <ul>
+    <li>"We're in Canggu and want to go out tonight — where?"</li>
+    <li>"What's a good restaurant for dinner, seafood, mid-range?"</li>
+    <li>"Any live music events this weekend?"</li>
+    <li>"It's raining — indoor activities near us?"</li>
+    <li>"Best gym near our hotel?"</li>
+    <li>"Where should we watch the sunset?"</li>
+  </ul>
+
+  <h3>UI integration</h3>
+  <h4>Entry point</h4>
+  <ul>
+    <li><strong>Floating "Ask Junto" button</strong> — lucide <code>MessageCircle</code> + <code>Sparkles</code> icons, bottom-right corner of every trip view</li>
+    <li><strong>Mobile:</strong> tapping opens a half-sheet overlay (chat interface)</li>
+    <li><strong>Desktop:</strong> tapping opens a side panel (chat interface)</li>
+    <li><strong>Trip dashboard card:</strong> "Ask Junto AI — What should we do?" — secondary entry point</li>
+  </ul>
+
+  <h4>Chat interface</h4>
+  <ul>
+    <li>Simple chat UI: user messages on right, Junto responses on left</li>
+    <li><strong>Quick-suggestion pills</strong> at the top: "Tonight" | "Tomorrow" | "This weekend" | "Restaurants" | "Activities" | "Nightlife" | "Wellness"</li>
+    <li>Text input at bottom: "Ask anything about what to do..."</li>
+    <li>Junto responds with <strong>structured activity cards</strong>, not just text</li>
+  </ul>
+
+  <h4>Activity cards (3–5 per query)</h4>
+  <table>
+    <thead><tr><th>Element</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Hero photo</strong> (landscape)</td><td>Google Places</td></tr>
+      <tr><td><strong>Venue name</strong> + category badge</td><td>AI + Google Places</td></tr>
+      <tr><td><strong>Rating</strong> + review count</td><td>Google Places</td></tr>
+      <tr><td><strong>One-liner description</strong></td><td>AI-generated</td></tr>
+      <tr><td><strong>Distance from hotel</strong></td><td>Calculated from accommodation coords</td></tr>
+      <tr><td><strong>Price indicator</strong></td><td>Google <code>priceLevel</code> or AI estimate</td></tr>
+      <tr><td><strong>Opening hours</strong> / "Open now" badge</td><td>Google Places</td></tr>
+      <tr><td><strong>"View on Maps"</strong> link</td><td>Google Maps deep link</td></tr>
+      <tr><td><strong>ThumbsUp reaction</strong> button</td><td>Group voting</td></tr>
+      <tr><td><strong>"Add to plan"</strong> button</td><td>Adds to today's or specified day's activities</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Group interaction</h4>
+  <ul>
+    <li>All group members see the <strong>same concierge conversation</strong> (shared per trip)</li>
+    <li>Members can react to suggestions (ThumbsUp = "I want to go")</li>
+    <li>When <strong>2+ members react</strong> to the same suggestion → highlighted as <strong>"Group pick"</strong></li>
+    <li>"Add to plan" adds it to the trip's AI plan for the relevant day</li>
+  </ul>
+
+  <h3>Technical architecture</h3>
+
+  <h4>Edge Function: concierge-suggest</h4>
+  <span class="code-label">POST body</span>
+  <div class="code-block">{
+  trip_id: string,
+  query: string,              // "good party tonight"
+  context: {
+    destination: string,      // "Canggu, Bali" (from trip data)
+    date: string,             // "2026-05-15" (today or specified)
+    time_of_day: string,      // "evening" (inferred from query or current time)
+    group_size: number,       // from trip members count
+    budget_level: string,     // from trip's AI plan if exists
+    preferences: string[],    // vibes from trip if exists
+    hotel_location: {         // from accommodation in plan
+      name: string,
+      lat: number,
+      lng: number
+    }
+  }
+}<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <span class="code-label">Processing flow</span>
+  <div class="code-block">1. Send query + context → Claude API (Sonnet)
+2. Claude returns 3–5 venue suggestions:
+   - name, category, why it's recommended, best time to go
+   - search query for Google Places lookup
+3. For each suggestion → call get-place-details to enrich:
+   - Real photos, ratings, reviews
+   - Opening hours, current open/closed status
+   - Price level
+   - Coordinates (for distance calculation)
+4. Return enriched results to frontend<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <span class="code-label">System prompt</span>
+  <div class="code-block">You are Junto's concierge for a group trip. Given the user's query and trip context,
+suggest 3–5 specific real venues or activities. Consider:
+- Time of day and day of week (nightclubs aren't relevant at 9am)
+- The group's vibe and budget from their trip
+- Proximity to their accommodation
+- Current events, festivals, or seasonal activities if relevant
+- Opening hours (don't suggest places likely to be closed)
+- Mix of popular spots and hidden gems
+For each suggestion, explain briefly WHY it fits their query.<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <h4>Real-time information</h4>
+  <p>For "what's happening tonight/this weekend" queries:</p>
+  <ul>
+    <li>Use <strong>web search tool</strong> in the Claude API call to find current events</li>
+    <li>Search for: <code>{destination} events {date}</code> / <code>{destination} what's on tonight</code></li>
+    <li>Merge event results with venue suggestions</li>
+    <li>Flag suggestions with <strong>"Event tonight"</strong> or <strong>"Live music Fridays"</strong> badges when relevant</li>
+  </ul>
+
+  <h4>Data model</h4>
+  <span class="code-label">Table: concierge_messages</span>
+  <div class="code-block">CREATE TABLE concierge_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id uuid REFERENCES trips(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id),    -- null for Junto responses
+  role text CHECK (role IN ('user', 'assistant')),
+  content text,                               -- user query or JSON response
+  suggestions jsonb,                          -- array of suggestion objects (null for user msgs)
+  created_at timestamptz DEFAULT now()
+);
+
+-- RLS: select/insert for trip members
+ALTER TABLE concierge_messages ENABLE ROW LEVEL SECURITY;<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <span class="code-label">Table: concierge_reactions</span>
+  <div class="code-block">CREATE TABLE concierge_reactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id uuid REFERENCES concierge_messages(id) ON DELETE CASCADE,
+  suggestion_index integer,                   -- which suggestion in the array
+  user_id uuid REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (message_id, suggestion_index, user_id)
+);
+
+-- RLS: select/insert/delete for trip members
+ALTER TABLE concierge_reactions ENABLE ROW LEVEL SECURITY;
+
+-- Enable realtime on both tables for live group interaction<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+  <div class="callout">Enable Supabase Realtime on both <code>concierge_messages</code> and <code>concierge_reactions</code> for live group interaction. Reactions should update in real-time so all members see "Group pick" highlights instantly.</div>
+
+  <h4>Caching strategy</h4>
+  <ul>
+    <li>Cache concierge responses for same destination + similar query — <strong>1 hour TTL</strong></li>
+    <li>Google Places data already cached in <code>place_details_cache</code> (30 days)</li>
+    <li><strong>Do not cache</strong> event/time-sensitive queries</li>
+  </ul>
+
+  <h3>Relationship to Trip Builder</h3>
+  <table>
+    <thead><tr><th></th><th>Concierge (lite)</th><th>Trip Builder (full)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Purpose</strong></td><td>Single activities, conversational</td><td>Complete multi-day itinerary</td></tr>
+      <tr><td><strong>Input</strong></td><td>Natural language query</td><td>Structured questionnaire</td></tr>
+      <tr><td><strong>Output</strong></td><td>3–5 activity cards</td><td>Full day-by-day plan on a map</td></tr>
+      <tr><td><strong>When used</strong></td><td>During the trip / spontaneous</td><td>Before the trip / planning phase</td></tr>
+    </tbody>
+  </table>
+  <p>Shared infrastructure: Google Places integration (<code>get-place-details</code>), activity card UI components, "Add to plan" functionality, group reaction system. Concierge suggestions can be added to an existing AI plan. If no AI plan exists, added suggestions create a loose "activities" list for the trip.</p>
+
+  <h3>Implementation phases</h3>
+  <div class="callout callout-green">These phases are internal milestones, not blocking dependencies. Phase A is the MVP. Each subsequent phase adds capability independently.</div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase A — MVP: Chat UI + Google Places enrichment + group reactions</span><span class="tag tag-code">Claude Code</span><span class="tag tag-sql">SQL</span></div>
+      <p class="task-note">Chat UI with text input + quick pills. Single-turn: user asks, Junto suggests 3–5 options with Google Places enrichment. Add to plan functionality. Group reactions on suggestions.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <span class="code-label">Tasks</span>
+        <ul>
+          <li>Run SQL migrations for <code>concierge_messages</code> and <code>concierge_reactions</code> tables</li>
+          <li>Build <code>concierge-suggest</code> Edge Function (Claude API + get-place-details enrichment)</li>
+          <li>Build floating "Ask Junto" button component (lucide <code>MessageCircle</code> + <code>Sparkles</code>)</li>
+          <li>Build chat UI: half-sheet (mobile) / side panel (desktop)</li>
+          <li>Build activity card component (share with Trip Builder where possible)</li>
+          <li>Implement quick-suggestion pills</li>
+          <li>Wire "Add to plan" — adds to trip's AI plan or creates loose activity list</li>
+          <li>Implement ThumbsUp reactions with Supabase Realtime</li>
+          <li>"Group pick" highlighting when 2+ members react</li>
+          <li>RLS policies for trip member access</li>
+          <li>Enable Realtime on both tables</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase B — Conversational: Multi-turn + web search for live events</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Multi-turn conversation with follow-ups ("something cheaper", "closer to our hotel"). Conversation history persisted per trip. Web search for live events via Claude API tool use.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Pass conversation history to Claude API for contextual follow-ups</li>
+          <li>Add web search tool to Claude API call for event queries</li>
+          <li>"Event tonight" / "Live music Fridays" badges on relevant cards</li>
+          <li>Scroll-to-bottom + typing indicator in chat UI</li>
+          <li>Conversation thread management (clear / new conversation)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase C — Proactive: Morning suggestions + weather-aware + time-aware</span><span class="tag tag-code">Claude Code</span><span class="tag tag-ops">Ops</span></div>
+      <p class="task-note">Morning notification: "Good morning! Here are 3 things to do in Canggu today." Weather-aware: "It's going to rain this afternoon — here are indoor options." Time-aware: automatic evening suggestions at 5pm.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Scheduled Edge Function (cron) to generate morning suggestions for active trips</li>
+          <li>Weather API integration (destination weather → indoor/outdoor filtering)</li>
+          <li>Time-of-day awareness: auto-trigger evening suggestions at 5pm local time</li>
+          <li>Push notification delivery (depends on Push Notifications — Phase 1)</li>
+          <li>Proactive suggestions appear as new messages in the concierge chat</li>
+        </ul>
+        <div class="callout callout-warn">Depends on Push Notifications (Phase 1) for delivery. Can stub with in-app notifications first.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase D — Location-aware: "Near me" + walking distance + "on the way"</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">"Near me" queries using device GPS. Walking distance calculations. "On the way" suggestions between planned activities.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Request device GPS permission (progressive — only when user taps "near me")</li>
+          <li>Pass coordinates to <code>concierge-suggest</code> Edge Function as <code>current_location</code></li>
+          <li>Distance calculations: walking/driving time from current location or hotel</li>
+          <li>"On the way" suggestions: find venues between two planned activities on the same day</li>
+          <li>Map view option: show suggestions as pins relative to user's location</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3>Monetization</h3>
+  <p>Free users get 10 concierge queries per trip. Pro gets unlimited queries + proactive suggestions + location-aware features. See AI Monetization Tiers for full breakdown.</p>
 </div>
 
 <!-- ══════════ STEP 16 ══════════ -->
