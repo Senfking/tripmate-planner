@@ -358,8 +358,18 @@ export default function TripHome() {
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
-        {/* Subtle top gradient for readability of nav buttons */}
+        {/* Top gradient for nav buttons */}
         <div className="absolute inset-x-0 top-0 h-20" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.3), transparent)" }} />
+        {/* Bottom gradient + trip name/date overlay */}
+        <div className="absolute inset-x-0 bottom-0 h-24" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent)" }} />
+        <div className="absolute bottom-0 inset-x-0 px-4 pb-3">
+          <p className="text-white text-[18px] font-bold leading-tight drop-shadow-sm truncate">
+            {trip?.destination || trip?.name}
+          </p>
+          <p className="text-white/80 text-[13px] mt-0.5 drop-shadow-sm">
+            {formatDateRange(trip?.tentative_start_date ?? null, trip?.tentative_end_date ?? null)}
+          </p>
+        </div>
 
         {/* Back button */}
         <button
