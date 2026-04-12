@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
+
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-reveal hook                                                 */
