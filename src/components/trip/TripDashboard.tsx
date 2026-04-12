@@ -117,7 +117,12 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved) as string[];
+        let parsed = JSON.parse(saved) as string[];
+        // Migrate old combined key to separate keys
+        const comboIdx = parsed.indexOf("decisions-bookings");
+        if (comboIdx !== -1) {
+          parsed.splice(comboIdx, 1, "decisions", "bookings");
+        }
         const merged = parsed.filter((s) => DEFAULT_ORDER.includes(s));
         // Insert new sections at their default position instead of appending
         for (let i = 0; i < DEFAULT_ORDER.length; i++) {
