@@ -351,6 +351,195 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   // Itinerary card visibility: hide if AI plan exists OR no items exist
   const showItinerary = !hasPlan && (itineraryItems?.length ?? 0) > 0;
 
+  // ─── Sortable section ordering ───
+  const STORAGE_KEY = `dashboard-order-${tripId}`;
+  const DEFAULT_ORDER = ["expenses", "flights", "decisions-bookings", "itinerary", "packing"];
+
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[];
+        // Merge: keep saved order, append any new sections
+        const merged = parsed.filter((s) => DEFAULT_ORDER.includes(s));
+        for (const s of DEFAULT_ORDER) {
+          if (!merged.includes(s)) merged.push(s);
+        }
+        return merged;
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_ORDER;
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setSectionOrder((prev) => {
+      const oldIdx = prev.indexOf(active.id as string);
+      const newIdx = prev.indexOf(over.id as string);
+      const next = arrayMove(prev, oldIdx, newIdx);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [STORAGE_KEY]);
+
+  // Section renderers
+  const renderSection = (id: string) => {
+    switch (id) {
+      case "expenses":
+        return (
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
+            className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-5 text-left transition-all active:scale-[0.98] hover:shadow-md"
+          >
+            {expenses && expenses.length > 0 && userId ? (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: myBalance < -0.01 ? "#FEF2F2" : myBalance > 0.01 ? "#F0FDFA" : "#F8FAFC" }}>
+                      <Receipt className="h-4 w-4" style={{ color: myBalance < -0.01 ? "#EF4444" : myBalance > 0.01 ? "#0D9488" : "#64748B" }} />
+                    </div>
+                    <span className="font-semibold text-[15px] text-foreground">Expenses</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className={`text-[28px] font-bold tracking-tight leading-none ${myBalance < -0.01 ? "text-red-600" : myBalance > 0.01 ? "text-[#0D9488]" : "text-foreground"}`}>
+                  {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
+                </p>
+                {myBalance < -0.01 && <p className="text-[13px] font-medium text-red-500 mt-1">You owe</p>}
+                {myBalance > 0.01 && <p className="text-[13px] font-medium text-[#0D9488] mt-1">You're owed</p>}
+                {Math.abs(myBalance) <= 0.01 && <p className="text-[13px] font-medium text-muted-foreground mt-1">All settled up</p>}
+                <p className="text-[12px] text-muted-foreground mt-2">
+                  {fmtCurrency(totalSpent, settlementCurrency)} total · {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
+                </p>
+              </>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-xl bg-[#F0FDFA] flex items-center justify-center">
+                    <Receipt className="h-4 w-4 text-[#0D9488]" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-[15px] text-foreground">Expenses</p>
+                    <p className="text-[13px] text-muted-foreground">No expenses logged yet</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+          </button>
+        );
+
+      case "flights":
+        if (!nextFlight) return null;
+        return (
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
+            className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
+          >
+            <div className="grid grid-cols-2 h-[90px]">
+              <div className="relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }}>
+                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[15px] font-bold tracking-widest">
+                  {flightBookingData?.origin_code || "DEP"}
+                </span>
+              </div>
+              <div className="relative" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }}>
+                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[15px] font-bold tracking-widest">
+                  {flightBookingData?.destination_code || "ARR"}
+                </span>
+              </div>
+            </div>
+            <div className="p-3.5 flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <Plane className="h-3.5 w-3.5 text-muted-foreground" />
+                  <p className="font-semibold text-[14px] text-foreground truncate">
+                    {flightBookingData?.origin || "Origin"} → {flightBookingData?.destination || "Destination"}
+                  </p>
+                </div>
+                <p className="text-[12px] text-muted-foreground mt-0.5">
+                  {flightBookingData?.date ? format(new Date(flightBookingData.date), "MMM d") : "Date TBD"}
+                  {flightBookingData?.traveler && ` · ${flightBookingData.traveler}`}
+                </p>
+              </div>
+              {tripCountdown && (
+                <span className="text-[12px] font-medium text-[#0D9488] border border-[#0D9488]/20 bg-[#0D9488]/5 rounded-full px-2.5 py-0.5 shrink-0">
+                  in {tripCountdown} day{tripCountdown > 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+          </button>
+        );
+
+      case "decisions-bookings":
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
+              className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
+            >
+              <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }}>
+                <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
+              </div>
+              <div className="p-3">
+                <p className="font-semibold text-[14px] text-foreground">Decisions</p>
+                <p className="text-[12px] mt-0.5" style={{ color: decisionsBadge.color === "amber" ? "#D97706" : decisionsBadge.color === "teal" ? "#0D9488" : "#94A3B8" }}>
+                  {decisionsBadge.label === "Route confirmed" ? "Route confirmed" : decisionsBadge.label === "Not started" ? "Route pending" : decisionsBadge.label}
+                </p>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
+              className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
+            >
+              <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }}>
+                <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
+              </div>
+              <div className="p-3">
+                <p className="font-semibold text-[14px] text-foreground">Bookings</p>
+                <p className="text-[12px] text-muted-foreground mt-0.5">{bookingsSummary}</p>
+              </div>
+            </button>
+          </div>
+        );
+
+      case "itinerary":
+        if (!showItinerary) return null;
+        return (
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}/itinerary`)}
+            className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[15px] text-foreground">Itinerary</p>
+              <p className="text-[13px] text-muted-foreground mt-0.5">
+                {itineraryItems!.length} activit{itineraryItems!.length > 1 ? "ies" : "y"} planned
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+        );
+
+      case "packing":
+        return <SharedItemsSection tripId={tripId} />;
+
+      default:
+        return null;
+    }
+  };
+
+  // Filter out sections that render null
+  const visibleOrder = sectionOrder.filter((id) => {
+    if (id === "flights" && !nextFlight) return false;
+    if (id === "itinerary" && !showItinerary) return false;
+    return true;
+  });
+
   return (
     <div className="animate-fade-in-card pb-16">
       {builderOpen && (
@@ -359,7 +548,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
       <div className="px-4 md:max-w-[700px] md:mx-auto md:px-8 flex flex-col gap-3">
 
-        {/* ─── JUNTO AI BLOCK ─── */}
+        {/* ─── JUNTO AI BLOCK (pinned) ─── */}
         <div
           className="relative overflow-hidden p-5"
           style={{
@@ -367,7 +556,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             borderRadius: 20,
           }}
         >
-          {/* Subtle scattered sparkles — ambient texture */}
           <svg className="absolute top-4 right-5 opacity-[0.12]" width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 0L13.5 9L22 6L15 12L24 12L15 14.5L22 18L13.5 15L12 24L10.5 15L2 18L9 14.5L0 12L9 12L2 6L10.5 9Z" fill="white" />
           </svg>
@@ -378,13 +566,11 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             <path d="M12 0L13.5 9L22 6L15 12L24 12L15 14.5L22 18L13.5 15L12 24L10.5 15L2 18L9 14.5L0 12L9 12L2 6L10.5 9Z" fill="white" />
           </svg>
 
-          {/* Label */}
           <div className="flex items-center gap-1.5 mb-3">
             <Sparkles className="h-4 w-4 text-white/90" />
             <span className="text-white/90 text-[13px] font-semibold tracking-wide">Junto AI</span>
           </div>
 
-          {/* Two glass sub-cards */}
           <div className="grid grid-cols-2 gap-2.5">
             <button
               onClick={() => {
@@ -426,146 +612,16 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           </div>
         </div>
 
-        {/* ─── EXPENSES CARD — Fintech style ─── */}
-        <button
-          onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
-          className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-5 text-left transition-all active:scale-[0.98] hover:shadow-md"
-        >
-          {expenses && expenses.length > 0 && userId ? (
-            <>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: myBalance < -0.01 ? "#FEF2F2" : myBalance > 0.01 ? "#F0FDFA" : "#F8FAFC" }}>
-                    <Receipt className="h-4 w-4" style={{ color: myBalance < -0.01 ? "#EF4444" : myBalance > 0.01 ? "#0D9488" : "#64748B" }} />
-                  </div>
-                  <span className="font-semibold text-[15px] text-foreground">Expenses</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-
-              {/* Hero balance */}
-              <p className={`text-[28px] font-bold tracking-tight leading-none ${myBalance < -0.01 ? "text-red-600" : myBalance > 0.01 ? "text-[#0D9488]" : "text-foreground"}`}>
-                {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
-              </p>
-              {myBalance < -0.01 && <p className="text-[13px] font-medium text-red-500 mt-1">You owe</p>}
-              {myBalance > 0.01 && <p className="text-[13px] font-medium text-[#0D9488] mt-1">You're owed</p>}
-              {Math.abs(myBalance) <= 0.01 && <p className="text-[13px] font-medium text-muted-foreground mt-1">All settled up</p>}
-
-              {/* Secondary info */}
-              <p className="text-[12px] text-muted-foreground mt-2">
-                {fmtCurrency(totalSpent, settlementCurrency)} total · {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
-              </p>
-            </>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-[#F0FDFA] flex items-center justify-center">
-                  <Receipt className="h-4 w-4 text-[#0D9488]" />
-                </div>
-                <div>
-                  <p className="font-semibold text-[15px] text-foreground">Expenses</p>
-                  <p className="text-[13px] text-muted-foreground">No expenses logged yet</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-          )}
-        </button>
-
-        {/* ─── FLIGHT CARD (contextual) ─── */}
-        {nextFlight && (
-          <button
-            onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
-            className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
-          >
-            {/* Photo strip with teal gradient */}
-            <div className="grid grid-cols-2 h-[90px]">
-              <div className="relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }}>
-                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[15px] font-bold tracking-widest">
-                  {flightBookingData?.origin_code || "DEP"}
-                </span>
-              </div>
-              <div className="relative" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }}>
-                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[15px] font-bold tracking-widest">
-                  {flightBookingData?.destination_code || "ARR"}
-                </span>
-              </div>
-            </div>
-            <div className="p-3.5 flex items-center justify-between">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <Plane className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="font-semibold text-[14px] text-foreground truncate">
-                    {flightBookingData?.origin || "Origin"} → {flightBookingData?.destination || "Destination"}
-                  </p>
-                </div>
-                <p className="text-[12px] text-muted-foreground mt-0.5">
-                  {flightBookingData?.date
-                    ? format(new Date(flightBookingData.date), "MMM d")
-                    : "Date TBD"}
-                  {flightBookingData?.traveler && ` · ${flightBookingData.traveler}`}
-                </p>
-              </div>
-              {tripCountdown && (
-                <span className="text-[12px] font-medium text-[#0D9488] border border-[#0D9488]/20 bg-[#0D9488]/5 rounded-full px-2.5 py-0.5 shrink-0">
-                  in {tripCountdown} day{tripCountdown > 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-          </button>
-        )}
-
-        {/* ─── DECISIONS & BOOKINGS — 2-column grid ─── */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Decisions card */}
-          <button
-            onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
-            className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
-          >
-            <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }}>
-              <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
-            </div>
-            <div className="p-3">
-              <p className="font-semibold text-[14px] text-foreground">Decisions</p>
-              <p className="text-[12px] mt-0.5" style={{ color: decisionsBadge.color === "amber" ? "#D97706" : decisionsBadge.color === "teal" ? "#0D9488" : "#94A3B8" }}>
-                {decisionsBadge.label === "Route confirmed" ? "Route confirmed" : decisionsBadge.label === "Not started" ? "Route pending" : decisionsBadge.label}
-              </p>
-            </div>
-          </button>
-
-          {/* Bookings card */}
-          <button
-            onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
-            className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
-          >
-            <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }}>
-              <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
-            </div>
-            <div className="p-3">
-              <p className="font-semibold text-[14px] text-foreground">Bookings</p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">{bookingsSummary}</p>
-            </div>
-          </button>
-        </div>
-
-        {/* ─── ITINERARY CARD (only if items exist and no AI plan) ─── */}
-        {showItinerary && (
-          <button
-            onClick={() => navigate(`/app/trips/${tripId}/itinerary`)}
-            className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
-          >
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[15px] text-foreground">Itinerary</p>
-              <p className="text-[13px] text-muted-foreground mt-0.5">
-                {itineraryItems!.length} activit{itineraryItems!.length > 1 ? "ies" : "y"} planned
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-          </button>
-        )}
-
-        {/* ─── PACKING LIST ─── */}
-        <SharedItemsSection tripId={tripId} />
+        {/* ─── REORDERABLE SECTIONS ─── */}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
+            {visibleOrder.map((id) => (
+              <SortableSection key={id} id={id}>
+                {renderSection(id)}
+              </SortableSection>
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* Concierge Panel */}
