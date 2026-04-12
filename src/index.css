@@ -438,6 +438,11 @@ html.dark, html.dark body, html.dark #root {
     66% { transform: translate(-20px, 15px) scale(0.95); }
   }
 
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
   .ref-hero-video::-webkit-media-controls,
   .ref-hero-video::-webkit-media-controls-enclosure,
   .ref-hero-video::-webkit-media-controls-panel,
