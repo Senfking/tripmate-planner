@@ -196,13 +196,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1000 }}>
                 <button
                   onClick={() => setMapFullscreen(true)}
-                  className="pointer-events-auto absolute top-3 right-3 p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md border border-border hover:bg-accent transition-colors"
+                  className="pointer-events-auto absolute top-3 right-3 p-2 rounded-lg bg-card text-foreground shadow-lg border border-border hover:bg-accent transition-colors"
                 >
-                  <Maximize2 className="h-4 w-4 text-foreground" />
+                  <Maximize2 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setMapVisible(false)}
-                  className="pointer-events-auto absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 shadow-md border border-border text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  className="pointer-events-auto absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-card text-foreground shadow-lg border border-border text-[11px] hover:bg-accent transition-colors"
                 >
                   Hide map
                 </button>
