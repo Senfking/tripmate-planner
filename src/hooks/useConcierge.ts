@@ -10,6 +10,8 @@ export interface ConciergeSuggestion {
   best_time: string;
   estimated_cost_per_person: number | null;
   currency: string | null;
+  is_event: boolean;
+  event_details: string | null;
   photo_url: string | null;
   rating: number | null;
   totalRatings: number | null;
@@ -19,6 +21,13 @@ export interface ConciergeSuggestion {
   lng: number | null;
   priceLevel: string | null;
   distance_km: number | null;
+}
+
+export interface StructuredFilters {
+  category: string;
+  when?: string;
+  vibe?: string;
+  budget?: string;
 }
 
 export interface ConciergeMessage {
@@ -177,6 +186,36 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
     }
   }, [tripId, context, sending, queryClient]);
 
+  // Send structured filter request (category + when + vibe + budget)
+  const sendStructuredRequest = useCallback(async (filters: StructuredFilters) => {
+    if (sending) return;
+    setSending(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("concierge-suggest", {
+        body: {
+          trip_id: tripId,
+          category: filters.category,
+          when: filters.when,
+          vibe: filters.vibe,
+          budget: filters.budget,
+          context: {
+            ...context,
+            date: context.date || new Date().toISOString().split("T")[0],
+          },
+        },
+      });
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
+    } catch (err) {
+      console.error("Concierge error:", err);
+      throw err;
+    } finally {
+      setSending(false);
+    }
+  }, [tripId, context, sending, queryClient]);
+
   // Toggle reaction
   const toggleReaction = useCallback(async (messageId: string, suggestionIndex: number) => {
     if (!user) return;
@@ -212,6 +251,7 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
     loadingMessages,
     sending,
     sendMessage,
+    sendStructuredRequest,
     toggleReaction,
     getReactionInfo,
   };

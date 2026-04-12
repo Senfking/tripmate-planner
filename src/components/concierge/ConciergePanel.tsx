@@ -5,7 +5,7 @@ import {
   Users, Search, ArrowLeft, Loader2, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useConcierge, type ConciergeSuggestion } from "@/hooks/useConcierge";
+import { useConcierge, type ConciergeSuggestion, type StructuredFilters } from "@/hooks/useConcierge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AITripResult, AIActivity } from "@/components/trip-results/useResultsState";
 
@@ -135,9 +135,15 @@ function SuggestionCard({
             <Users className="h-3 w-3" /> Group pick
           </span>
         )}
-        <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
-          {suggestion.category}
-        </span>
+        {suggestion.is_event ? (
+          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-amber-500/90 text-white backdrop-blur-sm animate-pulse">
+            <Calendar className="h-3 w-3" /> Live Event
+          </span>
+        ) : (
+          <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
+            {suggestion.category}
+          </span>
+        )}
       </div>
 
       <div className="p-3 space-y-2">
@@ -158,6 +164,13 @@ function SuggestionCard({
         {/* Why */}
         {suggestion.why && (
           <p className="text-xs text-muted-foreground leading-snug line-clamp-2">{suggestion.why}</p>
+        )}
+
+        {/* Event details */}
+        {suggestion.is_event && suggestion.event_details && (
+          <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 leading-snug">
+            {suggestion.event_details}
+          </p>
         )}
 
         {/* Meta */}
@@ -268,7 +281,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const conciergeContext = buildConciergeContext(tripResult, memberCount);
   const destination = destinationProp || conciergeContext.destination;
   conciergeContext.destination = destination;
-  const { messages, sending, sendMessage, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
+  const { messages, sending, sendMessage, sendStructuredRequest, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
 
   const tripDays = tripResult?.destinations?.flatMap(d =>
     d.days.map(day => ({ date: day.date, dayNumber: day.day_number }))
@@ -321,27 +334,24 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     budget: string | null,
     text?: string,
   ) => {
-    let query: string;
-    if (text) {
-      query = text;
-    } else if (category) {
-      const parts = [category.query];
-      if (when) parts.push(`for ${when.toLowerCase()}`);
-      if (vibe) parts.push(`— ${vibe.toLowerCase()} vibe`);
-      if (budget) parts.push(`(${budget.toLowerCase()} budget)`);
-      parts.push(`in ${destination}`);
-      query = parts.join(" ");
-    } else {
-      return;
-    }
-
     setStage("results");
     try {
-      await sendMessage(query);
+      if (text) {
+        // Free text search — AI interprets intent
+        await sendMessage(text);
+      } else if (category) {
+        // Structured filter search — skip AI interpretation
+        await sendStructuredRequest({
+          category: category.id,
+          when: when || undefined,
+          vibe: vibe || undefined,
+          budget: budget || undefined,
+        });
+      }
     } catch {
       toast.error("Couldn't find suggestions. Try again.");
     }
-  }, [destination, sendMessage]);
+  }, [sendMessage, sendStructuredRequest]);
 
   const handleCategorySelect = (cat: Category) => {
     setSelectedCategory(cat);

@@ -33,12 +33,167 @@ function haversineKm(
 }
 
 // ---------------------------------------------------------------------------
-// Check if query is time-sensitive (events, "tonight", festivals, etc.)
+// Check if free-text query is time-sensitive
 // ---------------------------------------------------------------------------
 function isTimeSensitiveQuery(query: string): boolean {
   const patterns =
     /\b(tonight|today|this week|this weekend|what'?s on|event|festival|concert|show|live music|happening now|current|opening|closing)\b/i;
   return patterns.test(query);
+}
+
+// ---------------------------------------------------------------------------
+// Check if structured "when" filter is time-sensitive
+// ---------------------------------------------------------------------------
+function isTimeSensitiveWhen(when?: string): boolean {
+  if (!when) return false;
+  return /\b(now|tonight|today|tomorrow|this weekend)\b/i.test(when);
+}
+
+// ---------------------------------------------------------------------------
+// Build a synthetic query string from structured filters (for caching/history)
+// ---------------------------------------------------------------------------
+function buildQueryFromFilters(
+  category: string,
+  destination: string,
+  when?: string,
+  vibe?: string,
+  budget?: string,
+): string {
+  const parts = [category];
+  if (vibe) parts.push(vibe);
+  if (when) parts.push(when.toLowerCase());
+  parts.push(`in ${destination}`);
+  if (budget) parts.push(`(${budget})`);
+  return parts.join(" ");
+}
+
+// ---------------------------------------------------------------------------
+// Resolve "when" filter to a concrete date, time-of-day, and day-of-week
+// ---------------------------------------------------------------------------
+function resolveWhen(
+  when: string,
+): { date: string; timeOfDay: string; dayOfWeek: string } {
+  const now = new Date();
+  let target: Date;
+  let timeOfDay: string;
+
+  switch (when.toLowerCase()) {
+    case "now":
+      target = now;
+      timeOfDay = now.getHours() < 12
+        ? "morning"
+        : now.getHours() < 17
+          ? "afternoon"
+          : "evening";
+      break;
+    case "tonight":
+      target = now;
+      timeOfDay = "night";
+      break;
+    case "tomorrow": {
+      target = new Date(now);
+      target.setDate(target.getDate() + 1);
+      timeOfDay = "any time";
+      break;
+    }
+    case "this weekend": {
+      target = new Date(now);
+      const dow = target.getDay();
+      if (dow !== 0 && dow !== 6) {
+        target.setDate(target.getDate() + (6 - dow));
+      }
+      timeOfDay = "any time";
+      break;
+    }
+    default:
+      target = now;
+      timeOfDay = "any time";
+  }
+
+  const yyyy = target.getFullYear();
+  const mm = String(target.getMonth() + 1).padStart(2, "0");
+  const dd = String(target.getDate()).padStart(2, "0");
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  return {
+    date: `${yyyy}-${mm}-${dd}`,
+    timeOfDay,
+    dayOfWeek: days[target.getDay()],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Map structured category ID to a descriptive label
+// ---------------------------------------------------------------------------
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  eat: "restaurants and food spots",
+  drink: "bars and drinking spots",
+  party: "nightlife, clubs, and party venues",
+  explore: "attractions and things to see",
+  relax: "relaxation and wellness spots",
+  workout: "gyms and fitness activities",
+  events: "events, festivals, concerts, and happenings",
+  surprise: "unique and unexpected experiences",
+};
+
+// ---------------------------------------------------------------------------
+// Suggestion JSON schema (shared between structured & free-text prompts)
+// ---------------------------------------------------------------------------
+function suggestionJsonSchema(destination: string): string {
+  return `{
+  "summary": "Brief one-liner response to their query",
+  "suggestions": [
+    {
+      "name": "Venue Name",
+      "category": "food|nightlife|culture|relaxation|activity|wellness|shopping|events",
+      "why": "One sentence why this fits their request",
+      "best_time": "7pm-11pm",
+      "search_query": "Venue Name ${destination}",
+      "estimated_cost_per_person": 150000,
+      "currency": "IDR",
+      "is_event": false,
+      "event_details": null
+    }
+  ]
+}
+
+Rules for is_event and event_details:
+- Set is_event to true ONLY for time-specific happenings (a DJ set, a festival night, a market, a concert) — NOT for permanent venues.
+- When is_event is true, event_details MUST be a short string like "DJ Set by [name], 10pm-3am, IDR 200k cover" or "Night Market, 6pm-midnight, free entry".
+- When is_event is false, event_details should be null.`;
+}
+
+// ---------------------------------------------------------------------------
+// Build event-search instructions for time-sensitive requests
+// ---------------------------------------------------------------------------
+function eventSearchInstructions(
+  destination: string,
+  category: string | undefined,
+  dateStr: string,
+  whenLabel: string,
+  dayOfWeek: string,
+): string {
+  const catLabel = category
+    ? CATEGORY_DESCRIPTIONS[category] || category
+    : "things to do";
+  return `
+
+CRITICAL — EVENT SEARCH REQUIRED:
+When the query involves a specific time, you MUST search the web for current events, parties, and happenings. Prioritize time-sensitive results (specific events happening on that date) over generic venue recommendations. Include event names, performers, times, and cover charges.
+
+Search for these specifically:
+- "${destination} events ${dateStr}"
+- "${destination} ${catLabel} ${whenLabel}"
+- "${destination} live music/DJ/party ${dayOfWeek}"
+
+At least 1-2 of your suggestions MUST be specific events happening on that date/time rather than permanent venues. Mark those with is_event: true and fill in event_details.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -81,7 +236,11 @@ async function lookupPlace(
     if (!place) return empty;
 
     let photo_url: string | null = null;
-    if (Array.isArray(place.photos) && place.photos.length > 0 && place.photos[0].name) {
+    if (
+      Array.isArray(place.photos) &&
+      place.photos.length > 0 &&
+      place.photos[0].name
+    ) {
       photo_url = `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxWidthPx=800&key=${apiKey}`;
     }
 
@@ -131,9 +290,8 @@ Deno.serve(async (req) => {
 
     // ---- Parse body ----
     const body = await req.json();
-    const { trip_id, query, context } = body as {
+    const { trip_id, context } = body as {
       trip_id: string;
-      query: string;
       context: {
         destination: string;
         date?: string;
@@ -145,9 +303,30 @@ Deno.serve(async (req) => {
       };
     };
 
-    if (!trip_id || !query || !context?.destination) {
+    // Determine request type: structured filters vs free text
+    const isStructured = !!body.category && !body.query;
+    const structCategory: string | undefined = body.category;
+    const structWhen: string | undefined = body.when;
+    const structVibe: string | undefined = body.vibe;
+    const structBudget: string | undefined = body.budget;
+
+    // Build query string (real query for free-text, synthetic for structured)
+    const query: string = isStructured
+      ? buildQueryFromFilters(
+          structCategory!,
+          context?.destination || "",
+          structWhen,
+          structVibe,
+          structBudget,
+        )
+      : body.query;
+
+    if (!trip_id || (!body.query && !isStructured) || !context?.destination) {
       return jsonResponse(
-        { error: "trip_id, query, and context.destination are required" },
+        {
+          error:
+            "trip_id, query (or category), and context.destination are required",
+        },
         400,
       );
     }
@@ -162,7 +341,11 @@ Deno.serve(async (req) => {
     }
 
     // ---- Check cache for non-time-sensitive queries ----
-    const timeSensitive = isTimeSensitiveQuery(query);
+    const timeSensitive =
+      isTimeSensitiveQuery(query) ||
+      isTimeSensitiveWhen(structWhen) ||
+      structCategory === "events";
+
     if (!timeSensitive) {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data: cached } = await supabase
@@ -181,15 +364,14 @@ Deno.serve(async (req) => {
         const normDest = normalise(context.destination);
 
         const hit = cached.find((row) => {
-          // Check if a previous assistant message answered a similar query
-          // by looking at the user message right before it
-          // Simple heuristic: check if suggestions contain the destination
           const sugStr = JSON.stringify(row.suggestions ?? "").toLowerCase();
-          return sugStr.includes(normDest) && sugStr.includes(normQuery.slice(0, 10));
+          return (
+            sugStr.includes(normDest) &&
+            sugStr.includes(normQuery.slice(0, 10))
+          );
         });
 
         if (hit) {
-          // Still save the user's question for history
           await supabase.from("concierge_messages").insert({
             trip_id,
             user_id: user.id,
@@ -228,19 +410,75 @@ Deno.serve(async (req) => {
 
     // ---- Build system prompt ----
     const groupSize = context.group_size ?? 2;
-    const budgetLevel = context.budget_level ?? "mid-range";
+    const budgetLevel = structBudget || context.budget_level || "mid-range";
     const vibes =
       context.preferences && context.preferences.length > 0
         ? context.preferences.join(", ")
         : "open to anything";
-    const dateStr = context.date ?? "upcoming";
-    const timeOfDay = context.time_of_day ?? "any time";
 
     const hotelNote = context.hotel_location
       ? `They are staying at ${context.hotel_location.name}.`
       : "";
 
-    const systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}. Budget level: ${budgetLevel}. Vibes: ${vibes}.
+    // Resolve dates for event search
+    let dateStr: string;
+    let timeOfDay: string;
+    let dayOfWeek: string;
+    let whenLabel: string;
+
+    if (isStructured && structWhen) {
+      const resolved = resolveWhen(structWhen);
+      dateStr = resolved.date;
+      timeOfDay = resolved.timeOfDay;
+      dayOfWeek = resolved.dayOfWeek;
+      whenLabel = structWhen.toLowerCase();
+    } else {
+      dateStr = context.date ?? new Date().toISOString().split("T")[0];
+      timeOfDay = context.time_of_day ?? "any time";
+      const d = new Date(dateStr + "T12:00:00");
+      const dayNames = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ];
+      dayOfWeek = dayNames[d.getDay()] || "Saturday";
+      whenLabel = timeOfDay;
+    }
+
+    let systemPrompt: string;
+
+    if (isStructured) {
+      // -- Structured request: skip interpretation, use filters directly --
+      const categoryDesc =
+        CATEGORY_DESCRIPTIONS[structCategory!] || structCategory;
+      const vibeNote = structVibe ? `- Preferred vibe: ${structVibe}` : "";
+
+      systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}.
+
+Find the best ${categoryDesc} using these exact filters:
+- Timing: ${structWhen || "any time"} (${dateStr}, ${dayOfWeek})
+- Budget: ${budgetLevel}
+${vibeNote}
+- Group vibes: ${vibes}
+${hotelNote}
+
+Suggest 3-5 specific, real venues or activities. Consider:
+- Time appropriateness for ${timeOfDay} (don't suggest nightclubs for morning, don't suggest breakfast spots for evening)
+- Their budget and vibe preferences
+- Mix popular spots with hidden gems
+- Only suggest real, existing places (not generic descriptions)
+
+Respond in this exact JSON format:
+${suggestionJsonSchema(context.destination)}
+
+Return ONLY valid JSON, no other text.`;
+    } else {
+      // -- Free-text request: AI interprets intent --
+      systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}. Budget level: ${budgetLevel}. Vibes: ${vibes}.
 
 The user is asking about activities for ${dateStr} (${timeOfDay}).
 ${hotelNote}
@@ -252,48 +490,71 @@ Suggest 3-5 specific, real venues or activities that match their query. Consider
 - Only suggest real, existing places (not generic descriptions)
 
 Respond in this exact JSON format:
-{
-  "summary": "Brief one-liner response to their query",
-  "suggestions": [
-    {
-      "name": "Venue Name",
-      "category": "food|nightlife|culture|relaxation|activity|wellness|shopping",
-      "why": "One sentence why this fits their request",
-      "best_time": "7pm-11pm",
-      "search_query": "Venue Name ${context.destination}",
-      "estimated_cost_per_person": 150000,
-      "currency": "IDR"
-    }
-  ]
-}
+${suggestionJsonSchema(context.destination)}
 
 Return ONLY valid JSON, no other text.`;
+    }
+
+    // -- Add aggressive event search instructions for time-sensitive requests --
+    if (timeSensitive) {
+      systemPrompt += eventSearchInstructions(
+        context.destination,
+        structCategory,
+        dateStr,
+        whenLabel,
+        dayOfWeek,
+      );
+    }
 
     // ---- Call Lovable AI Gateway ----
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${lovableKey}`,
+    const userMessage = isStructured
+      ? `Find me ${CATEGORY_DESCRIPTIONS[structCategory!] || structCategory}${structWhen ? ` for ${structWhen.toLowerCase()}` : ""}${structVibe ? `, ${structVibe.toLowerCase()} vibe` : ""} in ${context.destination}`
+      : query;
+
+    const aiBody: Record<string, unknown> = {
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+      max_tokens: 2048,
+    };
+
+    // Enable web search grounding for time-sensitive requests
+    if (timeSensitive) {
+      aiBody.tools = [{ google_search: {} }];
+    }
+
+    const aiRes = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${lovableKey}`,
+        },
+        body: JSON.stringify(aiBody),
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: query },
-        ],
-        max_tokens: 2048,
-      }),
-    });
+    );
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
-      console.error("[concierge-suggest] AI Gateway error:", aiRes.status, errText);
+      console.error(
+        "[concierge-suggest] AI Gateway error:",
+        aiRes.status,
+        errText,
+      );
       if (aiRes.status === 429) {
-        return jsonResponse({ error: "Rate limit exceeded, please try again shortly." }, 429);
+        return jsonResponse(
+          { error: "Rate limit exceeded, please try again shortly." },
+          429,
+        );
       }
       if (aiRes.status === 402) {
-        return jsonResponse({ error: "AI credits exhausted. Please add funds in Settings." }, 402);
+        return jsonResponse(
+          { error: "AI credits exhausted. Please add funds in Settings." },
+          402,
+        );
       }
       throw new Error(`AI Gateway error ${aiRes.status}: ${errText}`);
     }
@@ -327,8 +588,7 @@ Return ONLY valid JSON, no other text.`;
     const enriched = await Promise.all(
       parsed.suggestions.map(async (s: Record<string, unknown>) => {
         const searchQuery =
-          (s.search_query as string) ||
-          `${s.name} ${context.destination}`;
+          (s.search_query as string) || `${s.name} ${context.destination}`;
 
         let placeData: Record<string, unknown> = {
           photo_url: null,
@@ -352,14 +612,15 @@ Return ONLY valid JSON, no other text.`;
           typeof placeData.lat === "number" &&
           typeof placeData.lng === "number"
         ) {
-          distance_km = Math.round(
-            haversineKm(
-              context.hotel_location.lat,
-              context.hotel_location.lng,
-              placeData.lat as number,
-              placeData.lng as number,
-            ) * 10,
-          ) / 10; // 1 decimal place
+          distance_km =
+            Math.round(
+              haversineKm(
+                context.hotel_location.lat,
+                context.hotel_location.lng,
+                placeData.lat as number,
+                placeData.lng as number,
+              ) * 10,
+            ) / 10; // 1 decimal place
         }
 
         return {
@@ -369,6 +630,8 @@ Return ONLY valid JSON, no other text.`;
           best_time: s.best_time,
           estimated_cost_per_person: s.estimated_cost_per_person ?? null,
           currency: s.currency ?? null,
+          is_event: s.is_event ?? false,
+          event_details: s.event_details ?? null,
           // Google Places enrichment
           photo_url: placeData.photo_url,
           rating: placeData.rating,
