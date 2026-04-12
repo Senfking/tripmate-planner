@@ -420,41 +420,43 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
-            className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-5 text-left transition-all active:scale-[0.98] hover:shadow-md"
+            className="w-full text-left rounded-2xl overflow-hidden transition-all active:scale-[0.98] hover:shadow-lg"
+            style={{
+              background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+            }}
           >
             {expenses && expenses.length > 0 && userId ? (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: myBalance < -0.01 ? "#FEF2F2" : myBalance > 0.01 ? "#F0FDFA" : "#F8FAFC" }}>
-                      <Receipt className="h-4 w-4" style={{ color: myBalance < -0.01 ? "#EF4444" : myBalance > 0.01 ? "#0D9488" : "#64748B" }} />
-                    </div>
-                    <span className="font-semibold text-[15px] text-foreground">Expenses</span>
+              <div className="p-4 flex items-center gap-4">
+                {/* Left: balance info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Receipt className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="text-[12px] text-slate-400 font-medium uppercase tracking-wider">
+                      {myBalance < -0.01 ? "You owe" : myBalance > 0.01 ? "You're owed" : "Settled"}
+                    </span>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <p className={`text-[24px] font-bold tracking-tight leading-none ${
+                    myBalance < -0.01 ? "text-red-400" : myBalance > 0.01 ? "text-emerald-400" : "text-white"
+                  }`}>
+                    {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1.5">
+                    {fmtCurrency(totalSpent, settlementCurrency)} total · {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
+                  </p>
                 </div>
-                <p className={`text-[28px] font-bold tracking-tight leading-none ${myBalance < -0.01 ? "text-red-600" : myBalance > 0.01 ? "text-[#0D9488]" : "text-foreground"}`}>
-                  {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
-                </p>
-                {myBalance < -0.01 && <p className="text-[13px] font-medium text-red-500 mt-1">You owe</p>}
-                {myBalance > 0.01 && <p className="text-[13px] font-medium text-[#0D9488] mt-1">You're owed</p>}
-                {Math.abs(myBalance) <= 0.01 && <p className="text-[13px] font-medium text-muted-foreground mt-1">All settled up</p>}
-                <p className="text-[12px] text-muted-foreground mt-2">
-                  {fmtCurrency(totalSpent, settlementCurrency)} total · {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
-                </p>
-              </>
+                {/* Right: arrow */}
+                <ChevronRight className="h-4 w-4 text-slate-500 shrink-0" />
+              </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl bg-[#F0FDFA] flex items-center justify-center">
-                    <Receipt className="h-4 w-4 text-[#0D9488]" />
-                  </div>
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Receipt className="h-4 w-4 text-slate-400" />
                   <div>
-                    <p className="font-semibold text-[15px] text-foreground">Expenses</p>
-                    <p className="text-[13px] text-muted-foreground">No expenses logged yet</p>
+                    <p className="font-semibold text-[14px] text-white">Expenses</p>
+                    <p className="text-[12px] text-slate-500">Track & split costs</p>
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-slate-500" />
               </div>
             )}
           </button>
