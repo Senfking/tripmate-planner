@@ -780,7 +780,52 @@ export default function TripList() {
         <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
       </div>
 
-      <div className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 mt-4 md:mt-0 pb-[100px] md:pb-8">
+      {/* ── Drafts Section ── */}
+      {drafts && drafts.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Drafts</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            {drafts.map((draft: any) => {
+              const result = draft.result as AITripResult;
+              const destName = result?.destinations?.[0]?.name || "Draft trip";
+              const actCount = result?.total_activities || result?.destinations?.reduce((sum: number, d: any) => sum + (d.days?.reduce((ds: number, day: any) => ds + (day.activities?.length || 0), 0) || 0), 0) || 0;
+              const startDate = result?.destinations?.[0]?.start_date;
+              const endDate = result?.destinations?.[result.destinations.length - 1]?.end_date;
+              let dateLabel = "";
+              try {
+                if (startDate && endDate) dateLabel = `${format(parseISO(startDate), "MMM d")} – ${format(parseISO(endDate), "MMM d")}`;
+                else if (startDate) dateLabel = format(parseISO(startDate), "MMM d, yyyy");
+              } catch {}
+
+              return (
+                <div
+                  key={draft.id}
+                  className="relative shrink-0 w-[200px] rounded-xl border border-border bg-card p-3 shadow-sm"
+                >
+                  <button
+                    onClick={() => deleteDraftMutation.mutate(draft.id)}
+                    className="absolute top-2 right-2 h-5 w-5 flex items-center justify-center rounded-full bg-muted hover:bg-destructive/10 transition-colors"
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                  <p className="font-semibold text-foreground text-sm truncate pr-5">{destName}</p>
+                  {dateLabel && <p className="text-[11px] text-muted-foreground mt-0.5">{dateLabel}</p>}
+                  <p className="text-[11px] text-muted-foreground">{actCount} activities</p>
+                  <button
+                    onClick={() => setDraftToResume({ planId: draft.id, result })}
+                    className="mt-2 text-xs font-semibold px-3 py-1 rounded-lg"
+                    style={{ color: "#0D9488", background: "rgba(13,148,136,0.08)" }}
+                  >
+                    Continue →
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 {drafts && drafts.length > 0 ? '' : 'mt-4 md:mt-0'} pb-[100px] md:pb-8">
         {liveTrip && <div className="md:col-span-2"><HeroCard trip={liveTrip} /></div>}
         {otherTrips.map((trip, i) => (
           <div
