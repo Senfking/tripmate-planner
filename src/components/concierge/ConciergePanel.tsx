@@ -1009,7 +1009,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in max-w-xl mx-auto w-full">
+            <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8">
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => (
@@ -1237,7 +1237,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   <LoadingSkeleton />
                 </div>
               ) : displayedResults ? (
-                <div className="space-y-3 max-w-[700px] mx-auto">
+                <div className="space-y-3 md:max-w-[900px] md:mx-auto w-full md:px-8">
                   {/* Intro text — regular weight teal, not italic */}
                   {displayedResults.content && (
                     <p className="text-sm px-3 md:px-0 text-[#0D9488] font-normal">
