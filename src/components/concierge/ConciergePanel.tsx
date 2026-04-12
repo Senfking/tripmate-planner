@@ -5,6 +5,7 @@ import {
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
+  Dice5, Gem,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useConcierge, type ConciergeSuggestion, type StructuredFilters } from "@/hooks/useConcierge";
