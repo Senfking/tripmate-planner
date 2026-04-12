@@ -345,6 +345,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     isAdded={state.isAdded}
                     onToggleAdd={(d, a) => state.toggleActivity(d, a)}
                     onRequestChange={(dd, i, a) => state.requestAlternatives(dd, i, a, tripId)}
+                    onRequestDescribedChange={(dd, i, a, desc) => state.requestAlternatives(dd, i, a, tripId, desc)}
+                    onCustomPlaceSwap={(dd, i, name) => state.requestCustomPlaceSwap(dd, i, name, result.destinations.find(d => {
+                      const destDays2 = allDays.filter(day => day.date >= d.start_date && day.date <= d.end_date);
+                      return destDays2.some(day => day.date === dd);
+                    })?.name || dest.name)}
                     onRemoveActivity={(dd, i, a) => state.removeActivity(dd, i, a)}
                     isActivityRemoved={state.isActivityRemoved}
                     onAddLocalActivity={(dd, a) => state.addLocalActivity(dd, a)}
