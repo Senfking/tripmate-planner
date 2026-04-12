@@ -99,14 +99,14 @@ const CATEGORY_FILTERS: Record<string, FilterSection[]> = {
 const LUCKY_BADGES = ["Hidden gem", "Off-script", "Local secret", "Insider only", "Wild card"];
 
 const PLACEHOLDER_PROMPTS = [
-  "Try: 'best sunset cocktail spot nobody knows about'",
-  "Try: 'where do locals actually eat around here?'",
-  "Try: 'planning a birthday dinner for 6 people'",
-  "Try: 'secret beach with no tourists'",
-  "Try: 'late night street food worth the trip'",
+  "best sunset cocktail spot nobody knows about",
+  "where do locals actually eat around here?",
+  "planning a birthday dinner for 6 people",
+  "secret beach with no tourists",
+  "late night street food worth the trip",
 ];
 
-type Stage = "what" | "refine" | "results" | "lucky-intro";
+type Stage = "what" | "refine" | "results";
 
 interface RecentSearch {
   label: string;
@@ -146,12 +146,21 @@ function resolveDestination(
   tripResult?: AITripResult | null,
   tripName?: string,
 ): string {
-  if (destinationProp && destinationProp !== "Unknown") return destinationProp;
+  // Prefer AI plan destination name (specific like "Canggu"), not trip name ("Bali April 2026")
   const dest = tripResult?.destinations?.[0];
   if (dest?.name) return dest.name;
-  if (tripResult?.trip_title) return tripResult.trip_title;
-  if (tripName) return tripName;
+  if (destinationProp && destinationProp !== "Unknown") return destinationProp;
+  // Strip dates/years from trip name as fallback
+  if (tripName) {
+    const cleaned = tripName.replace(/\b(20\d{2}|january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi, "").replace(/\s+/g, " ").trim();
+    return cleaned || tripName;
+  }
   return "";
+}
+
+function buildMapsUrl(name: string, address?: string | null): string {
+  const query = address ? `${name} ${address}` : name;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 function buildConciergeContext(destination: string, location: string, tripResult?: AITripResult | null, memberCount?: number) {
@@ -253,7 +262,6 @@ function SuggestionCard({
     setAddingDate(dayDate);
     try {
       if (onAddToPlan) {
-        // Use parent handler (TripResultsView with AI plan)
         const activity: AIActivity = {
           title: suggestion.name,
           description: suggestion.why || "",
@@ -273,7 +281,6 @@ function SuggestionCard({
         };
         onAddToPlan(dayDate, activity);
       } else {
-        // Fallback: insert into itinerary_items directly
         const notes = [
           suggestion.why,
           suggestion.address ? `📍 ${suggestion.address}` : null,
@@ -301,7 +308,6 @@ function SuggestionCard({
         action: {
           label: "View in plan",
           onClick: () => {
-            // Navigate to itinerary
             window.location.hash = "";
             window.location.pathname = `/trips/${tripId}/itinerary`;
           },
@@ -322,18 +328,17 @@ function SuggestionCard({
   };
 
   const s = suggestion as any;
-
-  // Build booking URL
   const bookingUrl = s.booking_url || null;
   const googleSearchBookUrl = `https://www.google.com/search?q=book+${encodeURIComponent(suggestion.name + " " + (suggestion.address || ""))}`;
+  const mapsUrl = buildMapsUrl(suggestion.name, suggestion.address);
 
   return (
     <div
       className={`rounded-xl border overflow-hidden shadow-sm ${isLucky ? "border-amber-200 dark:border-amber-700/30" : "border-border"} bg-card`}
       style={{ animation: `fade-in 0.3s ease-out ${(animDelay || 0)}ms both` }}
     >
-      {/* Photo */}
-      <div className="w-full h-[160px] bg-muted overflow-hidden relative">
+      {/* Photo — full width */}
+      <div className="w-full h-[180px] bg-muted overflow-hidden relative">
         {suggestion.photo_url && !suggestion.not_verified ? (
           <img src={suggestion.photo_url} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
@@ -399,23 +404,24 @@ function SuggestionCard({
           {suggestion.distance_km != null && <span>{suggestion.distance_km}km away</span>}
         </div>
 
-        {/* Pro tip / What to order / Best night callouts */}
+        {/* Pro tip — elegant inline callout */}
         {s.pro_tip && (
-          <div className="flex gap-2 p-2.5 rounded-lg bg-[#0D9488]/5 border-l-2 border-[#0D9488]">
+          <div className="flex gap-2 py-2 pl-3 border-l-[3px] border-[#0D9488] bg-gray-50 dark:bg-white/5 rounded-r-md">
             <Lightbulb className="h-3.5 w-3.5 text-[#0D9488] shrink-0 mt-0.5" />
-            <p className="text-[11px] text-foreground leading-snug"><span className="font-semibold">Pro tip:</span> {s.pro_tip}</p>
+            <p className="text-[13px] text-gray-700 dark:text-gray-300 leading-snug"><span className="font-semibold">Pro tip:</span> {s.pro_tip}</p>
           </div>
         )}
+        {/* What to order — warm subtle callout */}
         {s.what_to_order && (
-          <div className="flex gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/10 border-l-2 border-amber-400">
+          <div className="flex gap-2 py-2 pl-3 border-l-[3px] border-amber-400 bg-amber-50/30 dark:bg-amber-900/5 rounded-r-md">
             <Utensils className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-foreground leading-snug"><span className="font-semibold">What to order:</span> {s.what_to_order}</p>
+            <p className="text-[13px] text-gray-700 dark:text-gray-300 leading-snug"><span className="font-semibold">What to order:</span> {s.what_to_order}</p>
           </div>
         )}
         {s.specific_night && (
-          <div className="flex gap-2 p-2.5 rounded-lg bg-purple-50 dark:bg-purple-900/10 border-l-2 border-purple-400">
+          <div className="flex gap-2 py-2 pl-3 border-l-[3px] border-purple-400 bg-purple-50/30 dark:bg-purple-900/5 rounded-r-md">
             <CalendarHeart className="h-3.5 w-3.5 text-purple-500 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-foreground leading-snug"><span className="font-semibold">Best night:</span> {s.specific_night}</p>
+            <p className="text-[13px] text-gray-700 dark:text-gray-300 leading-snug"><span className="font-semibold">Best night:</span> {s.specific_night}</p>
           </div>
         )}
 
@@ -436,16 +442,14 @@ function SuggestionCard({
               <p className="text-xs text-muted-foreground leading-relaxed">{s.full_description}</p>
             )}
             <div className="flex gap-2 pt-1 flex-wrap">
-              {suggestion.googleMapsUrl && (
-                <a
-                  href={suggestion.googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent text-foreground hover:bg-accent/80 transition-colors"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" /> Google Maps
-                </a>
-              )}
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent text-foreground hover:bg-accent/80 transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Google Maps
+              </a>
               {bookingUrl ? (
                 <a
                   href={bookingUrl}
@@ -488,9 +492,9 @@ function SuggestionCard({
           </div>
 
           <div className="flex items-center gap-1">
-            {!expanded && suggestion.googleMapsUrl && (
+            {!expanded && (
               <a
-                href={suggestion.googleMapsUrl}
+                href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent transition-colors"
@@ -542,10 +546,10 @@ function SuggestionCard({
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-3 px-4">
+    <div className="space-y-3 px-3 md:px-0">
       {[1, 2, 3].map((i) => (
         <div key={i} className="rounded-xl border border-border bg-card overflow-hidden" style={{ animation: `fade-in 0.3s ease-out ${i * 100}ms both` }}>
-          <Skeleton className="w-full h-[160px] rounded-none" />
+          <Skeleton className="w-full h-[180px] rounded-none" />
           <div className="p-3.5 space-y-2.5">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-full" />
@@ -608,6 +612,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [manualLocation, setManualLocation] = useState("");
   const destination = manualLocation || resolvedDest;
 
+  const savedCount = useMemo(() => getSavedSpots(tripId).length, [tripId, stage]);
+
   // Trip destinations for quick-select
   const tripDestinations = useMemo(() => {
     const dests: string[] = [];
@@ -627,14 +633,11 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     sending,
     sendMessage,
     sendStructuredRequest,
-    toggleReaction,
-    getReactionInfo,
   } = useConcierge(tripId, conciergeContext);
 
   // Build trip days with nice labels
   const tripDays = useMemo(() => {
     const days: { date: string; dayNumber: number; label: string }[] = [];
-    // From AI plan
     if (tripResult?.destinations) {
       tripResult.destinations.forEach(d => {
         d.days.forEach(day => {
@@ -644,7 +647,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         });
       });
     }
-    // From trip start/end dates (when no AI plan days)
     if (days.length === 0 && tripStartDate && tripEndDate) {
       const start = new Date(tripStartDate + "T12:00:00");
       const end = new Date(tripEndDate + "T12:00:00");
@@ -658,7 +660,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         dayNum++;
       }
     }
-    // Always add Today as first option
     const today = new Date().toISOString().split("T")[0];
     if (!days.find(d => d.date === today)) {
       days.unshift({ date: today, dayNumber: 0, label: "Today" });
@@ -810,10 +811,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const handleSurpriseMe = () => {
     setSelectedCategory({ id: "surprise", label: "Surprise me", tagline: "Trust us", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", query: "Surprise" });
     setIsLucky(true);
-    setStage("lucky-intro");
-    setTimeout(() => {
-      doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", query: "" }, {}, undefined, true);
-    }, 1500);
+    // Go directly to results — no intermediate screen
+    doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", query: "" }, {}, undefined, true);
   };
 
   const handleFreeTextSubmit = () => {
@@ -827,10 +826,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const handleFeelingLucky = () => {
     setIsLucky(true);
-    setStage("lucky-intro");
-    setTimeout(() => {
-      doSearch(selectedCategory, selectedFilters, undefined, true);
-    }, 1500);
+    doSearch(selectedCategory, selectedFilters, undefined, true);
   };
 
   const handleRecentSearch = (_search: RecentSearch) => {
@@ -847,10 +843,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       } else {
         setStage(selectedCategory ? "refine" : "what");
       }
-    } else if (stage === "lucky-intro") {
-      setStage("what");
-      setSelectedCategory(null);
-      setIsLucky(false);
     } else if (stage === "refine") {
       setStage("what");
       setSelectedCategory(null);
@@ -919,28 +911,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
       {/* Full-screen overlay */}
       <div className="fixed inset-0 z-50 flex flex-col bg-background animate-slide-up overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-        {/* Header */}
+        {/* Header — clean: back + title + X only */}
         <div className="relative shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-[#0D9488]/5 via-[#0EA5E9]/5 to-[#0D9488]/5" style={{ backgroundSize: "200% 100%", animation: "gradient-shift 8s ease infinite" }} />
           <div className="relative flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-3">
-              {stage !== "what" ? (
-                <button onClick={handleBack} className="p-1.5 -ml-1.5 rounded-lg hover:bg-accent transition-colors">
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
-              ) : (
-                <button onClick={onClose} className="p-1.5 -ml-1.5 rounded-lg hover:bg-accent transition-colors">
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
-              )}
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {destination ? `Discover in ${destination}` : "Discover"}
-                </h2>
-                {stage === "refine" && selectedCategory && (
-                  <p className="text-[10px] text-muted-foreground">{selectedCategory.label} · {selectedCategory.tagline}</p>
-                )}
-              </div>
+              <button onClick={handleBack} className="p-1.5 -ml-1.5 rounded-lg hover:bg-accent transition-colors">
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <h2 className="text-sm font-semibold text-foreground">
+                {destination ? `Discover in ${destination}` : "Discover"}
+              </h2>
             </div>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
               <X className="h-4 w-4" />
@@ -948,7 +929,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           </div>
         </div>
 
-        {/* Location bar */}
+        {/* Location bar — clean list style */}
         <div className="shrink-0 px-4 py-2 border-b border-border/50 bg-background/80">
           <button
             onClick={() => setShowLocationPicker(!showLocationPicker)}
@@ -964,47 +945,51 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           </button>
 
           {showLocationPicker && (
-            <div className="mt-2 p-3 rounded-xl border border-border bg-card shadow-lg animate-fade-in space-y-3">
-              {/* GPS */}
+            <div className="mt-2 rounded-xl border border-border bg-card shadow-lg animate-fade-in overflow-hidden">
+              {/* GPS row */}
               <button
                 onClick={handleUseLocation}
                 disabled={geoLoading}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-medium text-foreground hover:bg-accent/50 transition-colors disabled:opacity-50"
               >
-                {geoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4 text-[#0D9488]" />}
-                {geoLoading ? "Getting location..." : "Use GPS"}
+                {geoLoading ? <Loader2 className="h-4 w-4 animate-spin text-[#0D9488]" /> : <Navigation className="h-4 w-4 text-[#0D9488]" />}
+                {geoLoading ? "Getting location..." : "Use my current location"}
               </button>
 
               {/* Trip destinations */}
               {tripDestinations.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Trip destinations</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {tripDestinations.map(d => (
-                      <button
-                        key={d}
-                        onClick={() => { setManualLocation(d); setLocationInput(d); setShowLocationPicker(false); }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                          destination === d
-                            ? "bg-[#0D9488] text-white"
-                            : "bg-accent text-foreground hover:bg-accent/80"
-                        }`}
-                      >
-                        {d}
-                      </button>
-                    ))}
+                <>
+                  <div className="border-t border-border/50" />
+                  <div className="px-4 py-3 space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Trip destinations</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {tripDestinations.map(d => (
+                        <button
+                          key={d}
+                          onClick={() => { setManualLocation(d); setLocationInput(d); setShowLocationPicker(false); }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                            destination === d
+                              ? "bg-[#0D9488] text-white"
+                              : "bg-accent text-foreground hover:bg-accent/80"
+                          }`}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               {/* Manual input */}
-              <div className="flex gap-2">
+              <div className="border-t border-border/50" />
+              <div className="flex gap-2 px-4 py-3">
                 <input
                   type="text"
                   value={locationInput}
                   onChange={(e) => setLocationInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") handleLocationSubmit(); }}
-                  placeholder="Or type a location..."
+                  placeholder="Type a location..."
                   className="flex-1 text-xs bg-accent/30 rounded-lg px-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
                 />
                 <button
@@ -1024,23 +1009,23 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="px-4 pt-3 pb-4 space-y-3 animate-fade-in">
-              {/* Category grid — 7 regular + 1 full-width surprise */}
-              <div className="grid grid-cols-2 gap-2.5">
+            <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in max-w-xl mx-auto w-full">
+              {/* Category grid */}
+              <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => handleCategorySelect(cat)}
-                    className="relative flex items-center gap-3 p-3.5 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
-                    style={{ minHeight: "68px" }}
+                    className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
+                    style={{ minHeight: "62px" }}
                   >
                     <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient}`} />
-                    <div className="relative z-10 w-9 h-9 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-                      <div className="text-white">{cat.icon}</div>
+                    <div className="relative z-10 w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+                      <div className="text-white [&>svg]:h-5 [&>svg]:w-5">{cat.icon}</div>
                     </div>
                     <div className="relative z-10 min-w-0">
-                      <span className="text-[13px] font-bold text-white block leading-tight">{cat.label}</span>
-                      <span className="text-[9px] text-white/70 leading-tight block truncate">{cat.tagline}</span>
+                      <span className="text-[14px] font-bold text-white block leading-tight">{cat.label}</span>
+                      <span className="text-[11px] text-white/70 leading-tight block truncate">{cat.tagline}</span>
                     </div>
                     {cat.id === "events" && (
                       <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse z-10" />
@@ -1048,11 +1033,11 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   </button>
                 ))}
 
-                {/* Surprise Me — full width across both columns */}
+                {/* Surprise Me — full width */}
                 <button
                   onClick={handleSurpriseMe}
                   className="col-span-2 relative flex items-center justify-center gap-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02]"
-                  style={{ minHeight: "68px" }}
+                  style={{ minHeight: "62px" }}
                 >
                   <div
                     className="absolute inset-0"
@@ -1063,18 +1048,18 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     }}
                   />
                   <div className="relative z-10 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      <Sparkles className="h-6 w-6 text-white" />
+                    <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Sparkles className="h-5 w-5 text-white" />
                     </div>
                     <div className="text-left">
-                      <span className="text-[15px] font-bold text-white block leading-tight">Surprise me</span>
-                      <span className="text-[10px] text-white/80 leading-tight block">Hidden gems & unexpected experiences</span>
+                      <span className="text-[14px] font-bold text-white block leading-tight">Surprise me</span>
+                      <span className="text-[11px] text-white/80 leading-tight block">Hidden gems & unexpected experiences</span>
                     </div>
                   </div>
                 </button>
               </div>
 
-              {/* Free text input with rotating placeholder */}
+              {/* Free text input */}
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -1084,40 +1069,59 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
                     placeholder={placeholder}
-                    className="w-full text-[11px] bg-accent/30 rounded-xl pl-8 pr-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground/70"
+                    className="w-full text-[14px] bg-accent/30 rounded-xl pl-8 pr-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground/60 placeholder:italic"
                     onKeyDown={(e) => { if (e.key === "Enter") handleFreeTextSubmit(); }}
                   />
                 </div>
                 <button
                   onClick={handleFreeTextSubmit}
                   disabled={!freeText.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-xl bg-[#0D9488] text-white text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
                 >
                   Go
                 </button>
               </div>
 
-              {/* Saved spots + Recent */}
-              <div className="flex flex-wrap gap-2 items-center">
-                {getSavedSpots(tripId).length > 0 && (
-                  <button
-                    onClick={() => { /* TODO: show saved spots view */ toast.info(`${getSavedSpots(tripId).length} saved spot${getSavedSpots(tripId).length === 1 ? "" : "s"}: ${getSavedSpots(tripId).join(", ")}`); }}
-                    className="text-[11px] px-3 py-1.5 rounded-full border border-amber-200 dark:border-amber-700/30 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-1"
-                  >
-                    <Bookmark className="h-3 w-3 fill-current" />
-                    {getSavedSpots(tripId).length} saved
-                  </button>
-                )}
-                {recentSearches.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleRecentSearch(s)}
-                    className="text-[11px] px-3 py-1.5 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+              {/* Saved spots section */}
+              {savedCount > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Bookmark className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                    <span className="text-xs font-semibold text-foreground">Saved spots</span>
+                    <span className="text-[10px] text-muted-foreground">({savedCount})</span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                    {getSavedSpots(tripId).map(name => (
+                      <div
+                        key={name}
+                        className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setFreeText(name);
+                          doSearch(null, {}, name);
+                        }}
+                      >
+                        <Bookmark className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
+                        <span className="text-xs font-medium text-foreground whitespace-nowrap">{name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent searches */}
+              {recentSearches.length > 0 && (
+                <div className="flex flex-wrap gap-2 items-center">
+                  {recentSearches.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleRecentSearch(s)}
+                      className="text-[11px] px-3 py-1.5 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1147,7 +1151,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         </button>
                       );
                     })}
-                    {/* Custom filter values that were added */}
                     {(selectedFilters[section.key] || [])
                       .filter(v => !section.options.includes(v))
                       .map(v => (
@@ -1194,43 +1197,12 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
             </div>
           )}
 
-          {/* =================== LUCKY INTRO =================== */}
-          {stage === "lucky-intro" && (
-            <div className="flex-1 flex items-center justify-center animate-fade-in min-h-[60vh]">
-              <div
-                className="fixed inset-0 z-0"
-                style={{
-                  background: "radial-gradient(ellipse at center, rgba(13,148,136,0.15) 0%, rgba(217,119,6,0.08) 50%, transparent 80%)",
-                }}
-              />
-              <div className="relative z-10 text-center space-y-5 px-8">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center mx-auto shadow-xl">
-                  <Sparkles className="h-10 w-10 text-white animate-spin" style={{ animationDuration: "4s" }} />
-                </div>
-                <p className="text-xl font-bold text-foreground">
-                  Finding something special...
-                </p>
-                <p className="text-sm text-muted-foreground animate-pulse">Digging into our local secrets</p>
-              </div>
-            </div>
-          )}
-
           {/* =================== STAGE 3: RESULTS =================== */}
           {stage === "results" && (
             <div className="py-3 animate-fade-in">
-              {/* Lucky badge header */}
-              {isLucky && !sending && displayedResults && (
-                <div className="flex items-center gap-2 px-4 pb-3">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/20 dark:to-amber-800/10 border border-amber-200 dark:border-amber-700/30">
-                    <Gem className="h-3.5 w-3.5 text-amber-500" />
-                    <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Feeling Lucky</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Breadcrumb pills */}
+              {/* Breadcrumb pills — no "Feeling Lucky" pill */}
               {!isLucky && (selectedCategory || anyFiltersSelected) && (
-                <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-1.5 px-3 md:px-0 pb-3 overflow-x-auto scrollbar-hide">
                   {selectedCategory && (
                     <FilterPill label={selectedCategory.label} onClick={resetToWhat} />
                   )}
@@ -1265,18 +1237,21 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   <LoadingSkeleton />
                 </div>
               ) : displayedResults ? (
-                <div className="space-y-3">
+                <div className="space-y-3 max-w-[700px] mx-auto">
+                  {/* Intro text — regular weight teal, not italic */}
                   {displayedResults.content && (
-                    <p className={`text-sm px-4 ${isLucky ? "text-amber-700 dark:text-amber-400 font-medium italic" : "text-muted-foreground"}`}>
+                    <p className="text-sm px-3 md:px-0 text-[#0D9488] font-normal">
                       {displayedResults.content}
                     </p>
                   )}
 
-                  <p className="text-[10px] uppercase tracking-wider font-semibold px-4" style={{ color: isLucky ? "#D97706" : undefined }}>
+                  {/* Section label — muted, not bold orange */}
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground px-3 md:px-0 uppercase">
                     {isLucky ? "Hidden gems & local secrets" : "Insider picks"}
                   </p>
 
-                  <div className="space-y-3 px-4">
+                  {/* Results — responsive grid */}
+                  <div className="space-y-3 px-3 md:px-0 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
                     {displayedResults.suggestions!.map((s, i) => (
                       <SuggestionCard
                         key={`${displayedResults.id}-${i}`}
@@ -1295,8 +1270,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
                   {/* Extra results from "Show more" */}
                   {extraResults.length > 0 && (
-                    <div className="space-y-3 px-4 pt-1">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">More picks</p>
+                    <div className="space-y-3 px-3 md:px-0 pt-1 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase lg:col-span-2">More picks</p>
                       {extraResults.map((s, i) => (
                         <SuggestionCard
                           key={`extra-${i}`}
@@ -1314,10 +1289,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     </div>
                   )}
 
-
                   {/* Bottom actions */}
-                  <div className="px-4 pt-3 space-y-2 pb-6">
-                    {/* Show more */}
+                  <div className="px-3 md:px-0 pt-3 space-y-2 pb-6">
                     <button
                       onClick={handleShowMore}
                       disabled={loadingMore || sending}
@@ -1364,7 +1337,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
             <button
               onClick={handleFindSpots}
               disabled={sending}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-primary text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-lg"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#0D9488] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-lg"
             >
               <Sparkles className="h-4 w-4" />
               Show me the gems
