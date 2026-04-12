@@ -1063,11 +1063,11 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         </div>
 
         {/* Content area */}
-        <div className={`min-h-0 flex-1 ${stage === "what" ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`} style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
+        <div className={`min-h-0 flex-1 ${stage === "what" && savedCount === 0 ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`} style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="h-full overflow-hidden px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8">
+            <div className={`${savedCount === 0 ? "h-full overflow-hidden" : ""} px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8`}>
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => (
