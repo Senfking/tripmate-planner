@@ -502,27 +502,48 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   <Share2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              <CostBottomPanel
-                totalActivities={totalActivities}
-                total={costBreakdown.total}
-                dailyAvg={costBreakdown.dailyAvg}
-                currency={currency}
-                categories={costBreakdown.categories}
-              />
+              {!standalone && (
+                <CostBottomPanel
+                  totalActivities={totalActivities}
+                  total={costBreakdown.total}
+                  dailyAvg={costBreakdown.dailyAvg}
+                  currency={currency}
+                  categories={costBreakdown.categories}
+                />
+              )}
             </div>
-            <Button
-              onClick={() => state.addAllActivities(result)}
-              disabled={state.isAddingAll || remainingCount === 0}
-              className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shrink-0"
-            >
-              {state.isAddingAll
-                ? "Adding..."
-                : remainingCount === totalActivities
-                ? "Add all to itinerary"
-                : remainingCount === 0
-                ? "All added ✓"
-                : `Add remaining ${remainingCount}`}
-            </Button>
+            {standalone ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={onSaveDraft}
+                  className="h-9 px-4 rounded-xl text-[13px] font-semibold"
+                >
+                  Save draft
+                </Button>
+                <Button
+                  onClick={onCreateTrip}
+                  disabled={creatingTrip}
+                  className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
+                >
+                  {creatingTrip ? "Creating..." : "Create trip"}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => state.addAllActivities(result)}
+                disabled={state.isAddingAll || remainingCount === 0}
+                className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shrink-0"
+              >
+                {state.isAddingAll
+                  ? "Adding..."
+                  : remainingCount === totalActivities
+                  ? "Add all to itinerary"
+                  : remainingCount === 0
+                  ? "All added ✓"
+                  : `Add remaining ${remainingCount}`}
+              </Button>
+            )}
           </div>
         </div>
       </div>
