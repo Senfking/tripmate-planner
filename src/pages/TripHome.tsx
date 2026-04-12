@@ -3,9 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Share2, Camera, ImageOff, Move, Upload, CalendarDays, Pencil } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil } from "lucide-react";
 import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
-import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ import { MemberListSheet } from "@/components/trip/MemberListSheet";
 import { AttendanceInviteOverlay } from "@/components/trip/AttendanceInviteOverlay";
 import { TripDateEditor } from "@/components/trip/TripDateEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, parseISO, isWithinInterval, differenceInCalendarDays, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
 import { toast } from "sonner";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
@@ -47,74 +46,11 @@ function LiveIndicator({ status }: { status: ConnectionStatus }) {
   );
 }
 
-function HeroAvatar() {
-  const { profile, user } = useAuth();
-  const initials = (() => {
-    if (profile?.display_name) return profile.display_name.charAt(0).toUpperCase();
-    if (user?.email) return user.email.charAt(0).toUpperCase();
-    return "?";
-  })();
-
-  return (
-    <Link
-      to="/app/more"
-      className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full overflow-hidden md:hidden"
-      style={{
-        background: "rgba(0,0,0,0.3)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-      }}
-    >
-      {profile?.avatar_url ? (
-        <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
-      ) : (
-        <span className="text-white text-xs font-semibold">{initials}</span>
-      )}
-    </Link>
-  );
-}
-
 const ATTENDANCE_BADGE: Record<string, { label: string; className: string }> = {
   going: { label: "✓ You're going", className: "bg-[#0D9488]/10 text-[#0D9488] border-[#0D9488]/20" },
   maybe: { label: "~ Maybe", className: "bg-amber-50 text-amber-700 border-amber-200" },
   not_going: { label: "✗ Can't make it", className: "bg-muted text-muted-foreground border-border" },
 };
-
-function StatusRow({
-  onShare,
-  attendanceStatus,
-  onAttendanceTap,
-}: {
-  onShare: () => void;
-  attendanceStatus?: string;
-  onAttendanceTap?: () => void;
-}) {
-  const badge = attendanceStatus && attendanceStatus !== "pending" ? ATTENDANCE_BADGE[attendanceStatus] : null;
-
-  return (
-    <div className="flex items-center gap-2">
-      {badge && onAttendanceTap && (
-        <button
-          onClick={onAttendanceTap}
-          className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors", badge.className)}
-        >
-          {badge.label}
-        </button>
-      )}
-      <div className="flex-1" />
-      <button
-        onClick={onShare}
-        className="flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-colors shrink-0"
-        style={{ color: "#0D9488", border: "1px solid rgba(13, 148, 136, 0.4)" }}
-      >
-        <Share2 className="h-3 w-3" />
-        Share
-      </button>
-    </div>
-  );
-}
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -139,7 +75,6 @@ export default function TripHome() {
     enabled: !!tripId && !!user,
   });
 
-  // Check if trip has a linked AI plan — redirect to plan view if so
   const { data: hasAIPlan, isLoading: planCheckLoading } = useQuery({
     queryKey: ["trip-has-ai-plan", tripId],
     queryFn: async () => {
@@ -215,7 +150,6 @@ export default function TripHome() {
     enabled: !!tripId && !!user,
   });
 
-  // Route stops for photo resolution
   const { data: routeStops } = useQuery({
     queryKey: ["trip-route-stops", tripId],
     queryFn: async () => {
@@ -261,34 +195,22 @@ export default function TripHome() {
   const heroRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cover image signed URL (shared cache with trip list)
   const coverImagePath = (trip as any)?.cover_image_path as string | null;
   const { data: coverSignedUrl } = useTripCoverUrl(tripId, coverImagePath);
 
   const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !tripId) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5 MB");
-      return;
-    }
+    if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
     setUploadingCover(true);
     setCoverMenuOpen(false);
     try {
       const ext = file.name.split(".").pop() || "jpg";
       const path = `covers/${tripId}/cover.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("trip-attachments")
-        .upload(path, file, { upsert: true });
+      const { error: upErr } = await supabase.storage.from("trip-attachments").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { error: dbErr } = await supabase
-        .from("trips")
-        .update({ cover_image_path: path } as any)
-        .eq("id", tripId);
+      const { error: dbErr } = await supabase.from("trips").update({ cover_image_path: path } as any).eq("id", tripId);
       if (dbErr) throw dbErr;
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
@@ -305,10 +227,7 @@ export default function TripHome() {
     if (!tripId) return;
     setCoverMenuOpen(false);
     try {
-      const { error } = await supabase
-        .from("trips")
-        .update({ cover_image_path: null } as any)
-        .eq("id", tripId);
+      const { error } = await supabase.from("trips").update({ cover_image_path: null } as any).eq("id", tripId);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
@@ -323,14 +242,9 @@ export default function TripHome() {
     setSavingCrop(true);
     try {
       const path = `covers/${tripId}/cover.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from("trip-attachments")
-        .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      const { error: upErr } = await supabase.storage.from("trip-attachments").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
       if (upErr) throw upErr;
-      const { error: dbErr } = await supabase
-        .from("trips")
-        .update({ cover_image_path: path } as any)
-        .eq("id", tripId);
+      const { error: dbErr } = await supabase.from("trips").update({ cover_image_path: path } as any).eq("id", tripId);
       if (dbErr) throw dbErr;
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
@@ -348,15 +262,12 @@ export default function TripHome() {
     setCroppingCover(true);
   }, []);
 
-
-
   // Attendance overlay state
   const sessionKey = `junto_invite_dismissed_${tripId}`;
   const [overlayDismissed, setOverlayDismissed] = useState(false);
   const [overlayForcedOpen, setOverlayForcedOpen] = useState(false);
   const [overlayAnimating, setOverlayAnimating] = useState(false);
 
-  // When membership loads, decide overlay state based on attendance_status
   useEffect(() => {
     if (!myMembership) return;
     if (myMembership.attendance_status === "pending") {
@@ -381,13 +292,8 @@ export default function TripHome() {
   const handleOverlayRespond = useCallback(
     (status: string) => {
       updateAttendance.mutate(status);
-
-      if (status === "going") {
-        setOverlayAnimating(true);
-      }
-
+      if (status === "going") setOverlayAnimating(true);
       const delay = status === "going" ? 5500 : 400;
-
       setTimeout(() => {
         sessionStorage.removeItem(sessionKey);
         setOverlayDismissed(true);
@@ -413,7 +319,6 @@ export default function TripHome() {
     );
   }
 
-  // Redirect to plan view if trip has a linked AI plan (unless ?view=dashboard)
   if (hasAIPlan && tripId && !forceDashboard) {
     return <Navigate to={`/app/trips/${tripId}/plan`} replace />;
   }
@@ -440,13 +345,16 @@ export default function TripHome() {
     return `Until ${format(new Date(end!), "MMM d, yyyy")}`;
   };
 
-  const visibleMembers = members?.slice(0, 4) ?? [];
+  const visibleMembers = members?.slice(0, 5) ?? [];
   const memberCount = members?.length ?? 0;
   const coverPhoto = coverSignedUrl || resolvePhoto(trip.name, routeStops ?? []);
 
+  const attendanceBadge = myAttendanceStatus && myAttendanceStatus !== "pending"
+    ? ATTENDANCE_BADGE[myAttendanceStatus]
+    : null;
+
   return (
     <div className="flex flex-col min-h-dvh animate-slide-in bg-background">
-      {/* ─── HERO SECTION ─── */}
       {/* Crop overlay */}
       {croppingCover && coverSignedUrl && (
         <CoverCropOverlay
@@ -457,11 +365,11 @@ export default function TripHome() {
         />
       )}
 
-      {/* ─── HERO SECTION ─── */}
+      {/* ─── COVER PHOTO — no text overlay ─── */}
       <div
         ref={heroRef}
-        className="relative w-full overflow-hidden md:h-[320px] md:-mt-4 md:pt-4"
-        style={{ height: 220 }}
+        className="relative w-full overflow-hidden rounded-b-2xl"
+        style={{ height: 200 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
@@ -470,24 +378,22 @@ export default function TripHome() {
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.9) 100%)",
-          }}
-        />
+        {/* Subtle top gradient for readability of nav buttons */}
+        <div className="absolute inset-x-0 top-0 h-20" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.3), transparent)" }} />
 
+        {/* Back button */}
         <button
           onClick={() => navigate("/app/trips")}
           className="absolute left-4 md:hidden flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white text-sm hover:bg-black/40 transition-colors"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           My Trips
         </button>
 
+        {/* Right side: Live indicator + Camera */}
         {!builderOpen && (
-          <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
+          <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
             <LiveIndicator status={connectionStatus} />
             <button
               onClick={() => setCoverMenuOpen(true)}
@@ -513,65 +419,68 @@ export default function TripHome() {
               onChange={handleCoverUpload}
               disabled={uploadingCover}
             />
-            <HeroAvatar />
           </div>
         )}
+      </div>
 
+      {/* ─── TRIP INFO (below photo, on white background) ─── */}
+      <div className="px-4 pt-4 pb-2 md:max-w-[700px] md:mx-auto md:px-8 space-y-2">
+        {/* Trip name */}
+        {editingName ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const trimmed = nameDraft.trim();
+              if (trimmed && trimmed !== trip.name) {
+                supabase.from("trips").update({ name: trimmed }).eq("id", tripId!).then(({ error }) => {
+                  if (error) { toast.error("Failed to rename trip"); return; }
+                  qc.invalidateQueries({ queryKey: ["trip", tripId] });
+                  qc.invalidateQueries({ queryKey: ["trips", user?.id] });
+                  toast.success("Trip renamed");
+                });
+              }
+              setEditingName(false);
+            }}
+          >
+            <input
+              ref={nameInputRef}
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={() => setEditingName(false)}
+              className="bg-transparent text-2xl font-bold text-foreground leading-tight border-b border-border outline-none w-full"
+              autoFocus
+            />
+          </form>
+        ) : (
+          <button
+            onClick={() => { if (isAdmin) { setNameDraft(trip.name); setEditingName(true); } }}
+            className="flex items-center gap-2 group text-left"
+          >
+            <h1 className="text-2xl font-bold text-foreground leading-tight">{trip.name}</h1>
+            {isAdmin && <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
+          </button>
+        )}
 
-        <div className="absolute left-4 right-4 bottom-0 flex items-end justify-between gap-3" style={{ paddingBottom: '44px' }}>
-          <div className="min-w-0 flex-1">
-            {editingName ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const trimmed = nameDraft.trim();
-                  if (trimmed && trimmed !== trip.name) {
-                    supabase.from("trips").update({ name: trimmed }).eq("id", tripId!).then(({ error }) => {
-                      if (error) { toast.error("Failed to rename trip"); return; }
-                      qc.invalidateQueries({ queryKey: ["trip", tripId] });
-                      qc.invalidateQueries({ queryKey: ["trips", user?.id] });
-                      toast.success("Trip renamed");
-                    });
-                  }
-                  setEditingName(false);
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  ref={nameInputRef}
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onBlur={() => setEditingName(false)}
-                  className="bg-transparent text-2xl font-bold text-white leading-tight border-b border-white/50 outline-none w-full"
-                  autoFocus
-                />
-              </form>
-            ) : (
-              <button
-                onClick={() => { if (isAdmin) { setNameDraft(trip.name); setEditingName(true); } }}
-                className="flex items-center gap-2 group text-left"
-              >
-                <h1 className="text-2xl font-bold text-white leading-tight truncate">{trip.name}</h1>
-                {isAdmin && <Pencil className="h-3.5 w-3.5 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
-              </button>
-            )}
-            <button
-              onClick={() => { if (isAdmin) setDateEditorOpen(true); }}
-              className="flex items-center gap-1.5 group mt-0.5"
-            >
-              <p className="text-sm text-white/80">
-                {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
-              </p>
-              {isAdmin && <Pencil className="h-3 w-3 text-white/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
-            </button>
-          </div>
+        {/* Date range */}
+        <button
+          onClick={() => { if (isAdmin) setDateEditorOpen(true); }}
+          className="flex items-center gap-1.5 group"
+        >
+          <p className="text-sm text-muted-foreground">
+            {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
+          </p>
+          {isAdmin && <Pencil className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
+        </button>
+
+        {/* Members + attendance badge row */}
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setMemberSheetOpen(true)}
             className="flex items-center gap-2 shrink-0"
           >
             <div className="flex items-center -space-x-2">
               {visibleMembers.map((m) => (
-                <Avatar key={m.user_id} className="h-7 w-7 ring-2 ring-white/50">
+                <Avatar key={m.user_id} className="h-7 w-7 ring-2 ring-background">
                   {m.profile?.avatar_url && (
                     <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
                   )}
@@ -582,24 +491,25 @@ export default function TripHome() {
               ))}
             </div>
             {memberCount > 0 && (
-              <span className="text-[11px] text-white/70 font-medium whitespace-nowrap">
-                {memberCount}
+              <span className="text-[12px] text-muted-foreground whitespace-nowrap">
+                {memberCount} member{memberCount !== 1 ? "s" : ""}
               </span>
             )}
           </button>
+
+          {attendanceBadge && (
+            <button
+              onClick={handleOpenOverlay}
+              className={cn("text-[11px] font-medium px-2.5 py-0.5 rounded-full border transition-colors", attendanceBadge.className)}
+            >
+              {attendanceBadge.label}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ─── CONTENT SHEET ─── */}
-      <div className="flex-1 rounded-t-3xl -mt-6 relative z-10 bg-background">
-        <div className="px-4 pt-4 pb-2 md:max-w-[900px] md:mx-auto md:px-8">
-          <StatusRow
-            onShare={() => setShareInviteOpen(true)}
-            attendanceStatus={myAttendanceStatus}
-            onAttendanceTap={handleOpenOverlay}
-          />
-        </div>
-
+      {/* ─── DASHBOARD CONTENT ─── */}
+      <div className="flex-1">
         <TripDashboard
           tripId={trip.id}
           routeLocked={trip.route_locked ?? false}
@@ -609,10 +519,11 @@ export default function TripHome() {
           endDate={trip.tentative_end_date}
           tripName={trip.destination || trip.name}
           onBuilderToggle={setBuilderOpen}
+          onShareOpen={() => setShareInviteOpen(true)}
         />
       </div>
 
-      {/* ─── ATTENDANCE OVERLAY (peeking or full) ─── */}
+      {/* ─── ATTENDANCE OVERLAY ─── */}
       <AttendanceInviteOverlay
         tripId={trip.id}
         tripName={trip.name}
@@ -664,30 +575,18 @@ export default function TripHome() {
             <DrawerDescription className="sr-only">Change trip cover image</DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-6 space-y-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => fileInputRef.current?.click()}
-            >
+            <Button variant="outline" className="w-full justify-start gap-3 h-12" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4" />
               Upload new photo
             </Button>
             {coverImagePath && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3 h-12"
-                onClick={handleStartAdjust}
-              >
+              <Button variant="outline" className="w-full justify-start gap-3 h-12" onClick={handleStartAdjust}>
                 <Move className="h-4 w-4" />
                 Adjust position
               </Button>
             )}
             {coverImagePath && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive"
-                onClick={handleResetCover}
-              >
+              <Button variant="outline" className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive" onClick={handleResetCover}>
                 <ImageOff className="h-4 w-4" />
                 Reset to default
               </Button>
