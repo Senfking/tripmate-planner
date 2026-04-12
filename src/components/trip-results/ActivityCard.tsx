@@ -152,6 +152,7 @@ export function ActivityCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              setExpanded(true);
               setSwapMode(swapMode === "menu" ? null : "menu");
               setSwapText("");
             }}
