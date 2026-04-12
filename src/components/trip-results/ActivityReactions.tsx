@@ -5,10 +5,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ThumbsUp, ThumbsDown, Flame, HelpCircle } from "lucide-react";
 
 const REACTIONS = [
-  { key: "thumbsup", Icon: ThumbsUp, label: "Like" },
-  { key: "thumbsdown", Icon: ThumbsDown, label: "Dislike" },
-  { key: "fire", Icon: Flame, label: "Love it" },
-  { key: "thinking", Icon: HelpCircle, label: "Unsure" },
+  { key: "👍", Icon: ThumbsUp, label: "Like" },
+  { key: "👎", Icon: ThumbsDown, label: "Dislike" },
+  { key: "🔥", Icon: Flame, label: "Love it" },
+  { key: "🤔", Icon: HelpCircle, label: "Unsure" },
 ] as const;
 
 interface Props {

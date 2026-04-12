@@ -15,10 +15,10 @@ interface Props {
 }
 
 const EMOJI_MAP: Record<string, { Icon: typeof ThumbsUp; label: string }> = {
-  thumbsup: { Icon: ThumbsUp, label: "👍" },
-  thumbsdown: { Icon: ThumbsDown, label: "👎" },
-  fire: { Icon: Flame, label: "🔥" },
-  thinking: { Icon: HelpCircle, label: "🤔" },
+  "👍": { Icon: ThumbsUp, label: "👍" },
+  "👎": { Icon: ThumbsDown, label: "👎" },
+  "🔥": { Icon: Flame, label: "🔥" },
+  "🤔": { Icon: HelpCircle, label: "🤔" },
 };
 
 function getInitialColor(name: string) {

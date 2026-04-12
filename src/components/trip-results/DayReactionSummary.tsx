@@ -9,8 +9,8 @@ interface Props {
 }
 
 const REACTION_ICONS: Record<string, React.ElementType> = {
-  thumbsup: ThumbsUp,
-  fire: Flame,
+  "👍": ThumbsUp,
+  "🔥": Flame,
 };
 
 export function DayReactionSummary({ planId, dayIndex, activityCount }: Props) {
