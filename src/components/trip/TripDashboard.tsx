@@ -136,13 +136,13 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     queryKey: ["trip-ai-plan", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ai_trip_plans" as any)
+        .from("ai_trip_plans")
         .select("id, result")
         .eq("trip_id", tripId)
         .order("created_at", { ascending: false })
         .limit(1);
       if (error) throw error;
-      return data?.[0] ?? null;
+      return (data?.[0] as { id: string; result: any } | undefined) ?? null;
     },
     enabled: !!userId,
   });
