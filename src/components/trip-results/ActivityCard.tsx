@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Star, ExternalLink, Trash2, ArrowLeftRight, Check, MapPin, Sparkles, MessageSquare, PenLine } from "lucide-react";
+import { Star, ExternalLink, Trash2, ArrowLeftRight, Check, MapPin, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf } from "lucide-react";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -196,17 +196,17 @@ export function ActivityCard({
 
           {activity.tips && (
             <div className="mx-3.5 mb-2 border-l-2 border-primary/50 pl-2.5 py-1 bg-primary/5 rounded-r-lg">
-              <p className="text-[11px] text-muted-foreground">
-                <span className="font-semibold text-primary mr-1">💡 Tip:</span>
-                <span className="text-foreground/80">{activity.tips}</span>
+              <p className="text-[11px] text-muted-foreground flex items-start gap-1">
+                <Lightbulb className="h-3 w-3 text-primary shrink-0 mt-0.5" />
+                <span><span className="font-semibold text-primary mr-1">Tip:</span><span className="text-foreground/80">{activity.tips}</span></span>
               </p>
             </div>
           )}
 
           {activity.dietary_notes && (
             <div className="px-3.5 pb-2">
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0D9488]/10 text-[#0D9488]">
-                🥗 {activity.dietary_notes}
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0D9488]/10 text-[#0D9488] inline-flex items-center gap-1">
+                <Leaf className="h-2.5 w-2.5" /> {activity.dietary_notes}
               </span>
             </div>
           )}
