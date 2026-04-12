@@ -5,7 +5,7 @@ import {
   Users, Search, ArrowLeft, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useConcierge, type ConciergeSuggestion, type ConciergeMessage } from "@/hooks/useConcierge";
+import { useConcierge, type ConciergeSuggestion, type ConciergeMessage, type StructuredFilters } from "@/hooks/useConcierge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AITripResult, AIActivity } from "@/components/trip-results/useResultsState";
 
@@ -120,9 +120,15 @@ function SuggestionCard({
             <Users className="h-3 w-3" /> Group pick
           </span>
         )}
-        <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
-          {suggestion.category}
-        </span>
+        {suggestion.is_event ? (
+          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-amber-500/90 text-white backdrop-blur-sm animate-pulse">
+            <Calendar className="h-3 w-3" /> Live Event
+          </span>
+        ) : (
+          <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
+            {suggestion.category}
+          </span>
+        )}
       </div>
 
       <div className="p-3 space-y-2">
@@ -140,6 +146,13 @@ function SuggestionCard({
         {/* Why */}
         {suggestion.why && (
           <p className="text-xs text-muted-foreground leading-snug line-clamp-2">{suggestion.why}</p>
+        )}
+
+        {/* Event details */}
+        {suggestion.is_event && suggestion.event_details && (
+          <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 leading-snug">
+            {suggestion.event_details}
+          </p>
         )}
 
         {/* Meta */}
@@ -222,7 +235,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const contextRaw = buildContext(tripResult, memberCount);
   const destination = (contextRaw.destination as string) || "Unknown";
   const conciergeContext = { ...contextRaw, destination } as { destination: string; date?: string; time_of_day?: string; group_size?: number; budget_level?: string; preferences?: string[]; hotel_location?: { name: string; lat: number; lng: number } };
-  const { messages, sending, sendMessage, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
+  const { messages, sending, sendMessage, sendStructuredRequest, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
 
   const tripDays = tripResult?.destinations?.flatMap(d =>
     d.days.map(day => ({ date: day.date, dayNumber: day.day_number }))
@@ -250,26 +263,23 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   // Auto-submit when vibe is selected (or when is selected without vibes)
   const doSearch = useCallback(async (category: Category | null, when: string | null, vibe: string | null, text?: string) => {
-    let query: string;
-    if (text) {
-      query = text;
-    } else if (category) {
-      const parts = [category.query];
-      if (when) parts.push(`for ${when.toLowerCase()}`);
-      if (vibe) parts.push(`— ${vibe.toLowerCase()} vibe`);
-      parts.push(`in ${destination}`);
-      query = parts.join(" ");
-    } else {
-      return;
-    }
-
     setStage("results");
     try {
-      await sendMessage(query);
+      if (text) {
+        // Free text search — AI interprets intent
+        await sendMessage(text);
+      } else if (category) {
+        // Structured filter search — skip AI interpretation
+        await sendStructuredRequest({
+          category: category.id,
+          when: when || undefined,
+          vibe: vibe || undefined,
+        });
+      }
     } catch {
       toast.error("Couldn't find suggestions. Try again.");
     }
-  }, [destination, sendMessage]);
+  }, [sendMessage, sendStructuredRequest]);
 
   const handleCategorySelect = (cat: Category) => {
     setSelectedCategory(cat);
