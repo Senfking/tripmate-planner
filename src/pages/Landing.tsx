@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
+
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-reveal hook                                                 */
@@ -166,8 +166,6 @@ function Header({ onGetStarted }: { onGetStarted: () => void }) {
 export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [builderDestination, setBuilderDestination] = useState("");
   const [searchValue, setSearchValue] = useState("");
 
   // Redirect auth users
@@ -176,9 +174,9 @@ export default function Landing() {
   }, [loading, user, navigate]);
 
   const openBuilder = useCallback((dest?: string) => {
-    setBuilderDestination(dest || "");
-    setBuilderOpen(true);
-  }, []);
+    // Auth required for AI generation — send to signup, we'll handle post-auth redirect later
+    navigate("/ref");
+  }, [navigate]);
 
   const handleGetStarted = useCallback(() => {
     navigate("/ref");
@@ -469,14 +467,6 @@ export default function Landing() {
           <span className="text-xs">&copy; {new Date().getFullYear()} Junto</span>
         </div>
       </footer>
-
-      {/* ─── TRIP BUILDER OVERLAY ─── */}
-      {builderOpen && (
-        <StandaloneTripBuilder
-          onClose={() => setBuilderOpen(false)}
-          initialDestination={builderDestination || undefined}
-        />
-      )}
     </div>
   );
 }
