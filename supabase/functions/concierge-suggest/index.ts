@@ -463,12 +463,12 @@ Deno.serve(async (req) => {
       // -- Structured request: skip interpretation, use filters directly --
       const categoryDesc =
         CATEGORY_DESCRIPTIONS[structCategory!] || structCategory;
-      const vibeNote = structVibe ? `- Preferred vibe: ${structVibe}` : "";
+      const vibeNote = vibeArr.length ? `- Preferred vibes (match ANY): ${vibeArr.join(", ")}` : "";
 
       systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}.
 
 Find the best ${categoryDesc} using these exact filters:
-- Timing: ${structWhen || "any time"} (${dateStr}, ${dayOfWeek})
+- Timing: ${whenArr.length ? whenArr.join(" or ") : "any time"} (${dateStr}, ${dayOfWeek})
 - Budget: ${budgetLevel}
 ${vibeNote}
 - Group vibes: ${vibes}
