@@ -340,7 +340,8 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
               <PopupContent activity={act} dayLabel={dayLabel} />
             </Popup>
           </Marker>
-      ))}
+        );
+      })}
     </MapContainer>
   );
 }
