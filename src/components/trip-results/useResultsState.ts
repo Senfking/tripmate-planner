@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useItinerary } from "@/hooks/useItinerary";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { CostProfile } from "@/lib/calibrateCost";
 
 export interface AIActivity {
   id?: string;
@@ -50,6 +51,7 @@ export interface AIDestination {
     from: string;
     to: string;
   };
+  cost_profile?: CostProfile;
 }
 
 export interface AITripResult {

@@ -197,7 +197,256 @@ function normalizeActivity(activity: Record<string, unknown>): Record<string, un
   return activity;
 }
 
-function normalizeAIResponse(itinerary: Record<string, unknown> | null): Record<string, unknown> | null {
+// ---------------------------------------------------------------------------
+// Cost validation helpers (Layer 2)
+// ---------------------------------------------------------------------------
+
+interface CostRange {
+  budget: [number, number];
+  midrange: [number, number];
+  premium: [number, number];
+}
+
+interface CostProfile {
+  currency: string;
+  meal: CostRange;
+  activity: CostRange;
+  hotel_night: CostRange & { luxury: [number, number] };
+  transport: { local: [number, number]; intercity: [number, number] };
+}
+
+function isValidRange(r: unknown): r is [number, number] {
+  return Array.isArray(r) && r.length >= 2
+    && typeof r[0] === "number" && typeof r[1] === "number"
+    && Number.isFinite(r[0]) && Number.isFinite(r[1])
+    && r[0] <= r[1];
+}
+
+function parseCostProfile(raw: unknown): CostProfile | null {
+  if (!raw || typeof raw !== "object") return null;
+  const cp = raw as Record<string, any>;
+  if (typeof cp.currency !== "string" || !cp.currency) return null;
+
+  const categories = ["meal", "activity", "hotel_night", "transport"];
+  for (const cat of categories) {
+    if (!cp[cat] || typeof cp[cat] !== "object") return null;
+  }
+
+  // Validate ranges exist (we'll fix ordering issues below)
+  for (const cat of ["meal", "activity"]) {
+    for (const tier of ["budget", "midrange", "premium"]) {
+      if (!isValidRange(cp[cat]?.[tier])) return null;
+    }
+  }
+  for (const tier of ["budget", "midrange", "premium", "luxury"]) {
+    if (!isValidRange(cp.hotel_night?.[tier])) return null;
+  }
+  for (const tier of ["local", "intercity"]) {
+    if (!isValidRange(cp.transport?.[tier])) return null;
+  }
+
+  return cp as unknown as CostProfile;
+}
+
+/** Validate internal consistency: budget < midrange < premium */
+function validateCostProfileConsistency(cp: CostProfile): void {
+  for (const cat of ["meal", "activity"] as const) {
+    const ranges = cp[cat];
+    // Ensure budget.max <= midrange.min and midrange.max <= premium.min
+    if (ranges.budget[1] > ranges.midrange[0]) {
+      ranges.midrange[0] = ranges.budget[1];
+    }
+    if (ranges.midrange[1] > ranges.premium[0]) {
+      ranges.premium[0] = ranges.midrange[1];
+    }
+  }
+  const hn = cp.hotel_night;
+  if (hn.budget[1] > hn.midrange[0]) hn.midrange[0] = hn.budget[1];
+  if (hn.midrange[1] > hn.premium[0]) hn.premium[0] = hn.midrange[1];
+  if (hn.premium[1] > hn.luxury[0]) hn.luxury[0] = hn.premium[1];
+}
+
+/**
+ * Currency denomination check (Layer 2b).
+ * Detects when the AI likely generated USD-scale numbers for a high-denomination
+ * currency and applies a correction factor.
+ */
+function currencyDenominationCheck(
+  activities: Record<string, unknown>[],
+  cp: CostProfile | null,
+): number {
+  // Collect all non-zero costs
+  const costs = activities
+    .map((a) => a.estimated_cost_per_person as number)
+    .filter((c) => typeof c === "number" && c > 0);
+
+  if (costs.length === 0) return 1;
+
+  // Compute median
+  const sorted = [...costs].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+
+  // Expected order-of-magnitude thresholds by currency
+  const thresholds: Record<string, number> = {
+    IDR: 10000, VND: 10000,
+    JPY: 100, KRW: 100,
+    USD: 1, EUR: 1, GBP: 1, AUD: 1, CHF: 1, SGD: 1, CAD: 1, NZD: 1,
+    KWD: 0.1, BHD: 0.1, OMR: 0.1,
+    THB: 10, PHP: 10, MXN: 10, INR: 10, TWD: 10, CZK: 10,
+    HUF: 100, ISK: 100, CLP: 100, COP: 1000, MMK: 1000,
+    RUB: 10, BRL: 1, ZAR: 10, TRY: 10, SEK: 10, NOK: 10, DKK: 10, PLN: 1,
+    MYR: 1, AED: 1, SAR: 1, QAR: 1, HKD: 1,
+    CNY: 1, EGP: 10, MAD: 10, LKR: 100, NPR: 100, PKR: 100, BDT: 10,
+    KES: 100, NGN: 100, GHS: 1, TZS: 1000, UGX: 1000,
+    ARS: 100, PEN: 1, UYU: 10, BOB: 1, PYG: 1000, DOP: 10, CRC: 100,
+    JMD: 100, GTQ: 1, HNL: 10, NIO: 10,
+    KHR: 1000, LAK: 10000, MNT: 1000, UZS: 10000, KZT: 100,
+    GEL: 1, AMD: 100, RSD: 100, ALL: 100, MKD: 10,
+    BGN: 1, RON: 1, HRK: 1, BAM: 1,
+    XOF: 100, XAF: 100, XPF: 100,
+    FJD: 1, WST: 1, TOP: 1, PGK: 1,
+  };
+
+  const currency = cp?.currency || "";
+  const threshold = thresholds[currency];
+  if (!threshold) return 1; // Unknown currency — can't validate
+
+  if (median >= threshold) return 1; // Looks correctly denominated
+
+  // If we have a cost_profile, use meal.midrange as the reference
+  if (cp) {
+    const expectedMidMeal = (cp.meal.midrange[0] + cp.meal.midrange[1]) / 2;
+    if (expectedMidMeal > 0 && expectedMidMeal < threshold) {
+      // Cost profile is also wrong — correct both using the threshold
+      // Use ratio of expected midrange meal for this currency vs what AI gave
+      const typicalMidMeal = threshold * 10; // rough heuristic: midrange meal ~ 10x threshold
+      const factor = typicalMidMeal / expectedMidMeal;
+      console.warn(`[cost-validation] Currency ${currency}: cost_profile also appears USD-scale. Applying factor ${factor.toFixed(1)}`);
+      return factor;
+    }
+    const factor = expectedMidMeal / median;
+    if (factor > 2) {
+      console.warn(`[cost-validation] Currency ${currency}: median activity cost ${median} below threshold ${threshold}. Correction factor: ${factor.toFixed(1)}`);
+      return factor;
+    }
+  } else {
+    // No cost_profile — use threshold-based heuristic
+    const factor = threshold / median;
+    if (factor > 5) {
+      console.warn(`[cost-validation] Currency ${currency}: median ${median} far below threshold ${threshold}. Applying factor ${factor.toFixed(1)}`);
+      return factor;
+    }
+  }
+
+  return 1;
+}
+
+/** Map activity category to cost_profile field */
+function categoryToCostField(category: string): "meal" | "activity" | null {
+  switch (category) {
+    case "food": return "meal";
+    case "culture":
+    case "nature":
+    case "nightlife":
+    case "adventure":
+    case "relaxation":
+      return "activity";
+    default:
+      return null;
+  }
+}
+
+// Patterns for activities that are typically free
+const FREE_ACTIVITY_PATTERNS = /\b(beach|temple visit|walk|park|sunset|sunrise|window shopping|street art|public garden|promenade|plaza|square|boardwalk|waterfront|viewpoint|lookout)\b/i;
+
+/**
+ * Per-activity cost validation (Layer 2c).
+ * Validates and clamps individual activity costs against the cost_profile.
+ */
+function validateActivityCosts(
+  activities: Record<string, unknown>[],
+  cp: CostProfile | null,
+): void {
+  if (!cp) return;
+
+  for (const activity of activities) {
+    const cost = activity.estimated_cost_per_person;
+    if (typeof cost !== "number") continue;
+
+    const category = activity.category as string;
+    const title = (activity.title as string || "").toLowerCase();
+    const costField = categoryToCostField(category);
+
+    // If cost is 0 but category is food/nightlife/accommodation, set to budget midpoint
+    if (cost === 0 && (category === "food" || category === "nightlife")) {
+      const field = category === "food" ? "meal" : "activity";
+      const range = cp[field].budget;
+      activity.estimated_cost_per_person = Math.round((range[0] + range[1]) / 2);
+      continue;
+    }
+
+    // If cost > 0 but activity looks clearly free, set to 0
+    if (cost > 0 && FREE_ACTIVITY_PATTERNS.test(title) && category !== "food" && category !== "nightlife") {
+      activity.estimated_cost_per_person = 0;
+      continue;
+    }
+
+    // Validate against appropriate range — clamp outliers
+    if (costField && cp[costField]) {
+      const premiumMax = cp[costField].premium[1];
+      if (cost > premiumMax * 3) {
+        activity.estimated_cost_per_person = premiumMax;
+        console.warn(`[cost-validation] Clamped "${activity.title}" from ${cost} to ${premiumMax} (> 3x premium max)`);
+      }
+    }
+  }
+}
+
+/**
+ * Trip-level sanity check (Layer 2d).
+ * Verifies that total daily cost aligns with budget level.
+ */
+function tripSanityCheck(
+  destinations: any[],
+  budgetLevel: string,
+): void {
+  for (const dest of destinations) {
+    const cp = parseCostProfile(dest.cost_profile);
+    if (!cp) continue;
+
+    const days = dest.days;
+    if (!Array.isArray(days)) continue;
+
+    const midrangeMealPrice = (cp.meal.midrange[0] + cp.meal.midrange[1]) / 2;
+    if (midrangeMealPrice <= 0) continue;
+
+    for (const day of days) {
+      const activities = day?.activities;
+      if (!Array.isArray(activities)) continue;
+
+      let dailyTotal = 0;
+      for (const act of activities) {
+        dailyTotal += (act.estimated_cost_per_person as number) || 0;
+      }
+
+      if (budgetLevel === "budget" && dailyTotal > midrangeMealPrice * 5) {
+        console.warn(`[cost-validation] Budget trip sanity: day ${day.day_number} in ${dest.name} has daily total ${dailyTotal}, > 5x midrange meal (${midrangeMealPrice})`);
+      }
+      if (budgetLevel === "premium" && dailyTotal > 0 && dailyTotal < midrangeMealPrice) {
+        console.warn(`[cost-validation] Premium trip sanity: day ${day.day_number} in ${dest.name} has daily total ${dailyTotal}, < midrange meal (${midrangeMealPrice})`);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main normalization
+// ---------------------------------------------------------------------------
+
+function normalizeAIResponse(
+  itinerary: Record<string, unknown> | null,
+  budgetLevel: string = "mid-range",
+): Record<string, unknown> | null {
   if (!itinerary) return itinerary;
 
   const destinations = (itinerary as any).destinations;
@@ -205,16 +454,68 @@ function normalizeAIResponse(itinerary: Record<string, unknown> | null): Record<
     for (const dest of destinations) {
       const days = dest?.days;
       if (!Array.isArray(days)) continue;
+
+      // Collect all activities for this destination
+      const allActivities: Record<string, unknown>[] = [];
+
       for (const day of days) {
         const activities = day?.activities;
         if (!Array.isArray(activities)) continue;
         for (const activity of activities) {
           if (activity && typeof activity === "object") {
             normalizeActivity(activity as Record<string, unknown>);
+            allActivities.push(activity as Record<string, unknown>);
           }
         }
       }
+
+      // --- Layer 2a: Cost profile validation ---
+      const cp = parseCostProfile(dest.cost_profile);
+      if (cp) {
+        validateCostProfileConsistency(cp);
+
+        // --- Layer 2b: Currency denomination check ---
+        const correctionFactor = currencyDenominationCheck(allActivities, cp);
+        if (correctionFactor !== 1) {
+          // Apply correction to all activity costs
+          for (const act of allActivities) {
+            const c = act.estimated_cost_per_person;
+            if (typeof c === "number" && c > 0) {
+              act.estimated_cost_per_person = Math.round((c as number) * correctionFactor);
+            }
+          }
+          // Also correct cost_profile values
+          for (const cat of ["meal", "activity"] as const) {
+            for (const tier of ["budget", "midrange", "premium"] as const) {
+              cp[cat][tier][0] = Math.round(cp[cat][tier][0] * correctionFactor);
+              cp[cat][tier][1] = Math.round(cp[cat][tier][1] * correctionFactor);
+            }
+          }
+          for (const tier of ["budget", "midrange", "premium", "luxury"] as const) {
+            cp.hotel_night[tier][0] = Math.round(cp.hotel_night[tier][0] * correctionFactor);
+            cp.hotel_night[tier][1] = Math.round(cp.hotel_night[tier][1] * correctionFactor);
+          }
+          for (const tier of ["local", "intercity"] as const) {
+            cp.transport[tier][0] = Math.round(cp.transport[tier][0] * correctionFactor);
+            cp.transport[tier][1] = Math.round(cp.transport[tier][1] * correctionFactor);
+          }
+          // Correct accommodation price if present
+          if (dest.accommodation?.price_per_night && typeof dest.accommodation.price_per_night === "number") {
+            dest.accommodation.price_per_night = Math.round(dest.accommodation.price_per_night * correctionFactor);
+          }
+          // Write corrected profile back
+          dest.cost_profile = cp;
+        }
+
+        // --- Layer 2c: Per-activity validation ---
+        validateActivityCosts(allActivities, cp);
+      } else {
+        console.warn(`[cost-validation] No valid cost_profile for destination "${dest.name}" — using AI costs as-is`);
+      }
     }
+
+    // --- Layer 2d: Trip sanity check ---
+    tripSanityCheck(destinations, budgetLevel);
   }
 
   const alternatives = (itinerary as any).alternatives;
@@ -313,8 +614,52 @@ function buildToolSchema(hasDietary: boolean) {
                   to: { type: "string" },
                 },
               },
+              cost_profile: {
+                type: "object",
+                description: "Realistic local price ranges for this destination",
+                properties: {
+                  currency: { type: "string", description: "ISO 4217 currency code for local currency" },
+                  meal: {
+                    type: "object",
+                    properties: {
+                      budget: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                      midrange: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                      premium: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                    },
+                    required: ["budget", "midrange", "premium"],
+                  },
+                  activity: {
+                    type: "object",
+                    properties: {
+                      budget: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                      midrange: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                      premium: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                    },
+                    required: ["budget", "midrange", "premium"],
+                  },
+                  hotel_night: {
+                    type: "object",
+                    properties: {
+                      budget: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                      midrange: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                      premium: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                      luxury: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                    },
+                    required: ["budget", "midrange", "premium", "luxury"],
+                  },
+                  transport: {
+                    type: "object",
+                    properties: {
+                      local: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                      intercity: { type: "array", items: { type: "number" }, description: "[min, max]" },
+                    },
+                    required: ["local", "intercity"],
+                  },
+                },
+                required: ["currency", "meal", "activity", "hotel_night", "transport"],
+              },
             },
-            required: ["name", "start_date", "end_date", "days"],
+            required: ["name", "start_date", "end_date", "days", "cost_profile"],
           },
         },
         map_center: {
@@ -591,7 +936,29 @@ BUDGET LEVEL (${safeBudget}): ${budgetGuide[safeBudget]}
 
 GROUP SIZE: ${clampedGroupSize} people.
 
-INTERESTS: ${allInterests.length > 0 ? allInterests.join(", ") : "general sightseeing"}.${dietaryNote}${accessibilityNote}${vibeContext}`;
+INTERESTS: ${allInterests.length > 0 ? allInterests.join(", ") : "general sightseeing"}.
+
+COST ESTIMATION RULES:
+1. All costs MUST be in the user's requested currency or the local currency of the destination.
+2. Include a cost_profile per destination with realistic LOCAL price ranges (min and max, not single values):
+
+cost_profile: {
+  currency: '<LOCAL_CURRENCY_CODE>',
+  meal: { budget: [min, max], midrange: [min, max], premium: [min, max] },
+  activity: { budget: [min, max], midrange: [min, max], premium: [min, max] },
+  hotel_night: { budget: [min, max], midrange: [min, max], premium: [min, max], luxury: [min, max] },
+  transport: { local: [min, max], intercity: [min, max] }
+}
+
+3. SELF-CHECK: After generating all activities, verify:
+   - Does a 'budget meal' cost more than a 'premium meal'? Fix it.
+   - Is the daily total reasonable for the destination? A budget day in Bali should be ~IDR 500,000-1,500,000. A budget day in Zurich should be ~CHF 100-200.
+   - Are free attractions (temples, beaches, parks, walking) marked as 0 cost?
+   - Is transport priced per ride, not per day?
+
+4. Use RANGES from cost_profile when assigning estimated_cost_per_person. Pick a specific value within the appropriate range based on the venue's positioning (a casual warung at the low end of budget, a trendy cafe at the high end of midrange).
+
+5. Common free activities that should be cost 0: public beaches, temple visits (unless entry fee), walking tours (self-guided), park visits, window shopping, sunset watching, street art walks.${dietaryNote}${accessibilityNote}${vibeContext}`;
 
     const userPrompt = `Plan a ${numDays}-day group trip to ${destination.trim()} for ${clampedGroupSize} people.
 
@@ -620,7 +987,7 @@ Generate the complete itinerary.`;
       return jsonResponse({ success: false, error: "Failed to parse AI-generated itinerary" }, 500);
     }
 
-    const itinerary = normalizeAIResponse(aiResult.itinerary)!;
+    const itinerary = normalizeAIResponse(aiResult.itinerary, safeBudget)!;
     const inputTokens = aiResult.inputTokens;
     const outputTokens = aiResult.outputTokens;
 
