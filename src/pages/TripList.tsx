@@ -366,6 +366,10 @@ export default function TripList() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [emptyDestination, setEmptyDestination] = useState("");
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [builderInitDest, setBuilderInitDest] = useState("");
+  const [draftToResume, setDraftToResume] = useState<{ planId: string; result: AITripResult } | null>(null);
   const [referralDismissed, setReferralDismissed] = useState(
     () => localStorage.getItem("junto_referral_card_dismissed") === "true"
   );
