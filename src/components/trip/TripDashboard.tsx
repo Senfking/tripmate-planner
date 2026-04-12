@@ -56,10 +56,11 @@ interface TripDashboardProps {
   myRole: string | undefined;
   startDate: string | null;
   endDate: string | null;
+  tripName?: string;
   onBuilderToggle?: (open: boolean) => void;
 }
 
-export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate, onBuilderToggle }: TripDashboardProps) {
+export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate, tripName, onBuilderToggle }: TripDashboardProps) {
   const { user } = useAuth();
   const userId = user?.id;
   const today = new Date();
