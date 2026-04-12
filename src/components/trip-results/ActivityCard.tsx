@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Star, ExternalLink, Trash2, ArrowLeftRight, Check, MapPin, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Star, ExternalLink, Trash2, ArrowLeftRight, Check, MapPin, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf, Loader2 } from "lucide-react";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,8 @@ interface Props {
   isAdded: boolean;
   onToggleAdd: () => void;
   onRequestChange: () => void;
+  onRequestDescribedChange: (description: string) => void;
+  onCustomPlaceSwap: (placeName: string) => Promise<any>;
   onRemove: () => void;
   onCoordsRefined?: (lat: number, lng: number) => void;
   animDelay?: number;
@@ -49,6 +51,8 @@ export function ActivityCard({
   isAdded,
   onToggleAdd,
   onRequestChange,
+  onRequestDescribedChange,
+  onCustomPlaceSwap,
   onRemove,
   onCoordsRefined,
   animDelay = 0,
@@ -58,7 +62,27 @@ export function ActivityCard({
   const [imgError, setImgError] = useState(false);
   const [swapMode, setSwapMode] = useState<SwapMode>(null);
   const [swapText, setSwapText] = useState("");
+  const [swapLoading, setSwapLoading] = useState(false);
   const swapRef = useRef<HTMLDivElement>(null);
+  const handleCustomSwap = useCallback(async () => {
+    if (!swapText.trim() || swapLoading) return;
+    setSwapLoading(true);
+    try {
+      await onCustomPlaceSwap(swapText.trim());
+    } finally {
+      setSwapLoading(false);
+      setSwapMode(null);
+      setSwapText("");
+    }
+  }, [swapText, swapLoading, onCustomPlaceSwap]);
+
+  const handleDescribeSwap = useCallback(() => {
+    if (!swapText.trim()) return;
+    onRequestDescribedChange(swapText.trim());
+    setSwapMode(null);
+    setSwapText("");
+  }, [swapText, onRequestDescribedChange]);
+
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
   const actKey = dayIndex != null && activityIndex != null ? `day-${dayIndex}-activity-${activityIndex}` : null;
@@ -313,8 +337,8 @@ export function ActivityCard({
                 >
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
                   <div>
-                    <span className="font-medium text-foreground">Get AI alternatives</span>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Auto-suggest similar options</p>
+                    <span className="font-medium text-foreground">Get Junto AI suggestions</span>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Auto-suggest similar experiences</p>
                   </div>
                 </button>
                 <button
@@ -353,9 +377,7 @@ export function ActivityCard({
                   className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && swapText.trim()) {
-                      onRequestChange();
-                      setSwapMode(null);
-                      setSwapText("");
+                      handleDescribeSwap();
                     }
                     if (e.key === "Escape") {
                       setSwapMode(null);
@@ -372,12 +394,9 @@ export function ActivityCard({
                   </button>
                   <button
                     onClick={() => {
-                      if (swapText.trim()) {
-                        onRequestChange();
-                        setSwapMode(null);
-                        setSwapText("");
-                      }
+                      handleDescribeSwap();
                     }}
+                    disabled={!swapText.trim()}
                     className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md"
                   >
                     Find
@@ -389,18 +408,20 @@ export function ActivityCard({
             {/* Custom place input */}
             {swapMode === "custom" && (
               <div className="absolute left-2 bottom-full mb-1 w-64 bg-card border border-border rounded-xl shadow-lg p-3 z-20 animate-fade-in">
-                <p className="text-[11px] font-medium text-foreground mb-2">Enter the place name</p>
+                <p className="text-[11px] font-medium text-foreground mb-2">
+                  {swapLoading ? "Looking up place..." : "Enter the place name"}
+                </p>
                 <input
                   type="text"
                   autoFocus
                   value={swapText}
                   onChange={(e) => setSwapText(e.target.value)}
                   placeholder="e.g. Potato Head Beach Club"
+                  disabled={swapLoading}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && swapText.trim()) {
-                      setSwapMode(null);
-                      setSwapText("");
+                      handleCustomSwap();
                     }
                     if (e.key === "Escape") {
                       setSwapMode(null);
@@ -410,21 +431,18 @@ export function ActivityCard({
                 />
                 <div className="flex justify-end mt-2 gap-2">
                   <button
-                    onClick={() => { setSwapMode(null); setSwapText(""); }}
+                    onClick={() => { if (!swapLoading) { setSwapMode(null); setSwapText(""); } }}
                     className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      if (swapText.trim()) {
-                        setSwapMode(null);
-                        setSwapText("");
-                      }
-                    }}
-                    className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md"
+                    onClick={handleCustomSwap}
+                    disabled={!swapText.trim() || swapLoading}
+                    className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md disabled:opacity-50 inline-flex items-center gap-1"
                   >
-                    Replace
+                    {swapLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                    {swapLoading ? "Searching..." : "Replace"}
                   </button>
                 </div>
               </div>
