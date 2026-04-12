@@ -167,7 +167,7 @@ export default function Landing() {
 
   return (
     <div className="bg-white text-[#1a1a1a] min-h-screen overflow-x-hidden">
-      <Header onGetStarted={handleGetStarted} />
+      <Header />
 
       {/* ─── HERO ─── */}
       <section className="relative min-h-dvh flex flex-col justify-end overflow-hidden">
