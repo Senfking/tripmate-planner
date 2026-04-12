@@ -4,6 +4,8 @@ import { format, parseISO } from "date-fns";
 import { ActivityCard } from "./ActivityCard";
 import { TravelTimeConnector } from "./TravelTimeConnector";
 import { DayMiniMap } from "./DayMiniMap";
+import { DayReactionSummary } from "./DayReactionSummary";
+import { TripDiscussion } from "./TripDiscussion";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AIDay, AIActivity, AITripResult } from "./useResultsState";
@@ -83,7 +85,7 @@ export function DaySection({
   const dayIndex = allDays.findIndex((d) => d.date === day.date);
 
   return (
-    <div ref={cardRef} className="rounded-xl border border-border bg-card overflow-hidden transition-all">
+    <div ref={cardRef} id={`section-day-${day.day_number}`} className="rounded-xl border border-border bg-card overflow-hidden transition-all">
       {/* Collapsed card */}
       <button
         onClick={() => setOpen(!open)}
@@ -105,6 +107,10 @@ export function DaySection({
             <span className="text-xs text-muted-foreground font-mono">
               {dateStr} · {day.activities.length} {day.activities.length === 1 ? "Experience" : "Experiences"}
             </span>
+            {/* Inline reaction/comment summary */}
+            {planId && (
+              <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
+            )}
           </div>
           {day.theme && (
             <p className="text-[13px] font-medium text-foreground mt-1 truncate">
@@ -124,6 +130,18 @@ export function DaySection({
       {/* Expanded content */}
       {open && (
         <div className="border-t border-border animate-fade-in">
+          {/* Day-level comments */}
+          {planId && (
+            <div className="px-4 py-3 border-b border-border/50 bg-accent/20">
+              <TripDiscussion
+                planId={planId}
+                activityKey={`day-${dayIndex}`}
+                placeholder="Comment on this day..."
+                compact
+              />
+            </div>
+          )}
+
           {/* Activities */}
           <div className="py-2">
             {day.activities.map((activity, i) => (

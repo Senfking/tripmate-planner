@@ -2,8 +2,14 @@ import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThumbsUp, ThumbsDown, Flame, HelpCircle } from "lucide-react";
 
-const EMOJIS = ["👍", "👎", "🔥", "🤔"] as const;
+const REACTIONS = [
+  { key: "thumbsup", Icon: ThumbsUp },
+  { key: "thumbsdown", Icon: ThumbsDown },
+  { key: "fire", Icon: Flame },
+  { key: "thinking", Icon: HelpCircle },
+] as const;
 
 interface Props {
   planId: string;
@@ -46,15 +52,8 @@ export function ActivityReactions({ planId, activityKey }: Props) {
           .channel(`plan-reactions-${planId}`)
           .on(
             "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "plan_activity_reactions",
-              filter: `plan_id=eq.${planId}`,
-            },
-            () => {
-              qc.invalidateQueries({ queryKey: ["plan-reactions", planId] });
-            }
+            { event: "*", schema: "public", table: "plan_activity_reactions", filter: `plan_id=eq.${planId}` },
+            () => { qc.invalidateQueries({ queryKey: ["plan-reactions", planId] }); }
           )
           .subscribe();
         return () => supabase.removeChannel(channel);
@@ -63,10 +62,10 @@ export function ActivityReactions({ planId, activityKey }: Props) {
   });
 
   const toggle = useCallback(
-    async (emoji: string) => {
+    async (reactionKey: string) => {
       if (!user) return;
       const existing = reactions.find(
-        (r) => r.emoji === emoji && r.user_id === user.id
+        (r) => r.emoji === reactionKey && r.user_id === user.id
       );
       if (existing) {
         await supabase
@@ -78,7 +77,7 @@ export function ActivityReactions({ planId, activityKey }: Props) {
           plan_id: planId,
           activity_key: activityKey,
           user_id: user.id,
-          emoji,
+          emoji: reactionKey,
         } as any);
       }
       qc.invalidateQueries({ queryKey });
@@ -90,27 +89,27 @@ export function ActivityReactions({ planId, activityKey }: Props) {
 
   return (
     <div className="flex items-center gap-1.5 px-3.5 py-1.5">
-      {EMOJIS.map((emoji) => {
-        const count = reactions.filter((r) => r.emoji === emoji).length;
+      {REACTIONS.map(({ key, Icon }) => {
+        const count = reactions.filter((r) => r.emoji === key).length;
         const isActive = reactions.some(
-          (r) => r.emoji === emoji && r.user_id === user?.id
+          (r) => r.emoji === key && r.user_id === user?.id
         );
         return (
           <button
-            key={emoji}
+            key={key}
             onClick={(e) => {
               e.stopPropagation();
-              toggle(emoji);
+              toggle(key);
             }}
             className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-full text-xs transition-colors ${
               isActive
-                ? "bg-primary/20 border border-primary/40"
-                : "bg-accent/50 border border-transparent hover:bg-accent"
+                ? "bg-[#0D9488]/20 border border-[#0D9488]/40 text-[#0D9488]"
+                : "bg-accent/50 border border-transparent hover:bg-accent text-muted-foreground"
             }`}
           >
-            <span className="text-sm">{emoji}</span>
+            <Icon className="h-3 w-3" />
             {count > 0 && (
-              <span className={`text-[10px] font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+              <span className={`text-[10px] font-medium ${isActive ? "text-[#0D9488]" : "text-muted-foreground"}`}>
                 {count}
               </span>
             )}
