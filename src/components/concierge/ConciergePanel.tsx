@@ -253,7 +253,7 @@ function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (ke
 /* ------------------------------------------------------------------ */
 
 function SuggestionCard({
-  suggestion, messageId, index, tripId, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge,
+  suggestion, messageId, index, tripId, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge, onSaveChange,
 }: {
   suggestion: ConciergeSuggestion;
   messageId: string;
@@ -264,12 +264,13 @@ function SuggestionCard({
   animDelay?: number;
   isLucky?: boolean;
   luckyBadge?: string;
+  onSaveChange?: () => void;
 }) {
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [added, setAdded] = useState(false);
   const [addingDate, setAddingDate] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(() => getSavedSpots(tripId).includes(suggestion.name));
+  const [isSaved, setIsSaved] = useState(() => isSuggestionSaved(tripId, suggestion.name));
 
   const handleAddToPlan = async (dayDate: string) => {
     setAddingDate(dayDate);
@@ -335,9 +336,16 @@ function SuggestionCard({
   };
 
   const handleSave = () => {
-    const nowSaved = toggleSavedSpot(tripId, suggestion.name);
-    setIsSaved(nowSaved);
-    toast.success(nowSaved ? "Saved for later" : "Removed from saved");
+    if (isSaved) {
+      unsaveSuggestion(tripId, suggestion.name);
+      setIsSaved(false);
+      toast.success("Removed from saved");
+    } else {
+      saveSuggestion(tripId, suggestion);
+      setIsSaved(true);
+      toast.success("Saved for later");
+    }
+    onSaveChange?.();
   };
 
   const s = suggestion as any;
