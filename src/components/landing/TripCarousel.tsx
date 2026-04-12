@@ -68,7 +68,7 @@ export function TripCarousels() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 px-5 max-w-[1200px] mx-auto">
+      <div className="flex items-center justify-between mb-6 px-5 sm:px-10 max-w-[1280px]">
         <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a]">Explore trip plans</h2>
         <Link to="/templates" className="text-sm font-medium text-[#0D9488] hover:underline">See all</Link>
       </div>
@@ -93,9 +93,10 @@ export function TripCarousels() {
 
         <div
           ref={ref}
-          className="flex gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-          style={{ paddingLeft: "max(2.5rem, calc((100% - 1160px) / 2 + 2.5rem))", paddingRight: 0 }}
+          className="flex gap-5 overflow-x-auto scrollbar-hide"
         >
+          {/* Left spacer for initial padding */}
+          <div className="shrink-0 w-5 sm:w-[30px]" />
           {ALL_CARDS.map((c) => (
             <Link
               key={c.slug}
