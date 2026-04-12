@@ -414,7 +414,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       <div className="fixed inset-0 bg-black/40 z-40 animate-fade-in" onClick={onClose} />
 
       {/* Full-screen overlay */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-background animate-slide-up overflow-hidden">
+      <div className="fixed inset-0 z-50 flex flex-col bg-background animate-slide-up overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <div className="flex items-center gap-3">
