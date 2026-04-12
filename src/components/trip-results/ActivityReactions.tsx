@@ -1,14 +1,14 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThumbsUp, ThumbsDown, Flame, HelpCircle } from "lucide-react";
 
 const REACTIONS = [
-  { key: "thumbsup", Icon: ThumbsUp },
-  { key: "thumbsdown", Icon: ThumbsDown },
-  { key: "fire", Icon: Flame },
-  { key: "thinking", Icon: HelpCircle },
+  { key: "thumbsup", Icon: ThumbsUp, label: "Like" },
+  { key: "thumbsdown", Icon: ThumbsDown, label: "Dislike" },
+  { key: "fire", Icon: Flame, label: "Love it" },
+  { key: "thinking", Icon: HelpCircle, label: "Unsure" },
 ] as const;
 
 interface Props {
@@ -16,50 +16,38 @@ interface Props {
   activityKey: string;
 }
 
-interface Reaction {
-  id: string;
-  emoji: string;
-  user_id: string;
-}
-
 export function ActivityReactions({ planId, activityKey }: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const queryKey = ["plan-reactions", planId, activityKey];
 
-  const { data: reactions = [] } = useQuery<Reaction[]>({
+  const { data: reactions = [] } = useQuery({
     queryKey,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("plan_activity_reactions" as any)
+      const { data, error } = await supabase
+        .from("plan_activity_reactions")
         .select("id, emoji, user_id")
         .eq("plan_id", planId)
         .eq("activity_key", activityKey);
-      return (data as any as Reaction[]) || [];
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!planId,
   });
 
-  // Realtime subscription
-  useQuery({
-    queryKey: ["plan-reactions-rt", planId],
-    queryFn: () => null,
-    enabled: !!planId,
-    staleTime: Infinity,
-    meta: {
-      _subscribed: (() => {
-        const channel = supabase
-          .channel(`plan-reactions-${planId}`)
-          .on(
-            "postgres_changes",
-            { event: "*", schema: "public", table: "plan_activity_reactions", filter: `plan_id=eq.${planId}` },
-            () => { qc.invalidateQueries({ queryKey: ["plan-reactions", planId] }); }
-          )
-          .subscribe();
-        return () => supabase.removeChannel(channel);
-      })(),
-    },
-  });
+  // Realtime subscription via useEffect
+  useEffect(() => {
+    if (!planId) return;
+    const channel = supabase
+      .channel(`plan-reactions-${planId}-${activityKey}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "plan_activity_reactions", filter: `plan_id=eq.${planId}` },
+        () => { qc.invalidateQueries({ queryKey: ["plan-reactions", planId] }); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [planId, activityKey, qc]);
 
   const toggle = useCallback(
     async (reactionKey: string) => {
@@ -67,20 +55,27 @@ export function ActivityReactions({ planId, activityKey }: Props) {
       const existing = reactions.find(
         (r) => r.emoji === reactionKey && r.user_id === user.id
       );
+
+      // Optimistic update
       if (existing) {
-        await supabase
-          .from("plan_activity_reactions" as any)
+        qc.setQueryData(queryKey, reactions.filter((r) => r.id !== existing.id));
+        const { error } = await supabase
+          .from("plan_activity_reactions")
           .delete()
           .eq("id", existing.id);
+        if (error) qc.invalidateQueries({ queryKey });
       } else {
-        await supabase.from("plan_activity_reactions" as any).insert({
+        const optimistic = { id: `temp-${Date.now()}`, emoji: reactionKey, user_id: user.id, plan_id: planId, activity_key: activityKey, created_at: new Date().toISOString() };
+        qc.setQueryData(queryKey, [...reactions, optimistic]);
+        const { error } = await supabase.from("plan_activity_reactions").insert({
           plan_id: planId,
           activity_key: activityKey,
           user_id: user.id,
           emoji: reactionKey,
-        } as any);
+        });
+        if (error) qc.invalidateQueries({ queryKey });
+        else qc.invalidateQueries({ queryKey });
       }
-      qc.invalidateQueries({ queryKey });
     },
     [user, reactions, planId, activityKey, qc, queryKey]
   );
@@ -88,8 +83,8 @@ export function ActivityReactions({ planId, activityKey }: Props) {
   if (!planId) return null;
 
   return (
-    <div className="flex items-center gap-1.5 px-3.5 py-1.5">
-      {REACTIONS.map(({ key, Icon }) => {
+    <div className="flex items-center gap-1 px-3.5 py-2">
+      {REACTIONS.map(({ key, Icon, label }) => {
         const count = reactions.filter((r) => r.emoji === key).length;
         const isActive = reactions.some(
           (r) => r.emoji === key && r.user_id === user?.id
@@ -101,17 +96,16 @@ export function ActivityReactions({ planId, activityKey }: Props) {
               e.stopPropagation();
               toggle(key);
             }}
-            className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-full text-xs transition-colors ${
+            title={label}
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
               isActive
-                ? "bg-[#0D9488]/20 border border-[#0D9488]/40 text-[#0D9488]"
-                : "bg-accent/50 border border-transparent hover:bg-accent text-muted-foreground"
+                ? "bg-[#0D9488] text-white shadow-sm"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            <Icon className="h-3 w-3" />
+            <Icon className="h-3.5 w-3.5" strokeWidth={isActive ? 2.5 : 2} />
             {count > 0 && (
-              <span className={`text-[10px] font-medium ${isActive ? "text-[#0D9488]" : "text-muted-foreground"}`}>
-                {count}
-              </span>
+              <span className="text-[11px] tabular-nums">{count}</span>
             )}
           </button>
         );
