@@ -482,7 +482,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           <button
             key={s.key}
             onClick={() => navigate(s.to)}
-            className="w-full bg-card rounded-2xl shadow-sm border border-border p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+            className="w-full bg-card rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
           >
             <div className={`h-9 w-9 rounded-lg ${s.iconBg} flex items-center justify-center shrink-0`}>
               <s.icon className={`h-[18px] w-[18px] ${s.iconColor}`} />
@@ -503,8 +503,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                 />
                 {s.badge.label}
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
+            {/* Thumbnail */}
+            <img
+              src={s.thumb}
+              alt=""
+              className="h-[60px] w-[60px] rounded-xl object-cover shrink-0 shadow-sm"
+              loading="lazy"
+            />
           </button>
         ))}
 
