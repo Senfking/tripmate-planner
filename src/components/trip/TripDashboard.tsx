@@ -132,18 +132,22 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     });
   }, [STORAGE_KEY]);
 
-  const { data: hasPlan } = useQuery({
-    queryKey: ["trip-has-plan", tripId],
+  const { data: aiPlanData } = useQuery({
+    queryKey: ["trip-ai-plan", tripId],
     queryFn: async () => {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from("ai_trip_plans" as any)
-        .select("id", { count: "exact", head: true })
-        .eq("trip_id", tripId);
+        .select("id, result")
+        .eq("trip_id", tripId)
+        .order("created_at", { ascending: false })
+        .limit(1);
       if (error) throw error;
-      return (count ?? 0) > 0;
+      return data?.[0] ?? null;
     },
     enabled: !!userId,
   });
+
+  const hasPlan = !!aiPlanData;
 
   const toggleBuilder = (open: boolean) => {
     setBuilderOpen(open);
