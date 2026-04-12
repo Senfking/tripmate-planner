@@ -660,34 +660,97 @@ export default function TripList() {
     tripsPills.unshift({ icon: <Radio className="h-3 w-3" />, label: `${liveCount} live` });
   }
 
+  /* ── Standalone builder overlay ── */
+  if (showBuilder || draftToResume) {
+    return (
+      <StandaloneTripBuilder
+        onClose={() => {
+          setShowBuilder(false);
+          setDraftToResume(null);
+          setBuilderInitDest("");
+          queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+          queryClient.invalidateQueries({ queryKey: ["trips"] });
+        }}
+        initialDestination={builderInitDest || undefined}
+        draftPlanId={draftToResume?.planId}
+        draftResult={draftToResume?.result}
+      />
+    );
+  }
+
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
       <div className="relative min-h-dvh flex flex-col bg-background">
-        <TabHeroHeader title={greeting} subtitle="No trips yet - start planning!" pills={tripsPills} />
+        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={tripsPills} />
 
         <div className="hidden md:block pt-6 pb-4 px-4">
           <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
-          <p className="text-sm text-muted-foreground mt-1">No trips yet - start planning!</p>
+          <p className="text-sm text-muted-foreground mt-1">No trips yet — start planning!</p>
         </div>
 
-        <div className="flex flex-1 flex-col items-center px-6 pt-12 md:pt-4 mt-4 md:mt-0">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10 mb-5">
-            <Plane className="h-8 w-8 text-[#0D9488]" />
+        <div className="flex flex-1 flex-col items-center px-6 pt-12 md:pt-4 mt-4 md:mt-0 max-w-md mx-auto w-full">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10 mb-4">
+            <Sparkles className="h-8 w-8 text-[#0D9488]" />
           </div>
-          <h2 className="text-lg font-bold text-foreground">Plan your first trip</h2>
-          <p className="mt-2 max-w-[260px] text-center text-[15px] leading-relaxed text-muted-foreground">
-            Create a trip or join one with a code to get started.
+          <h2 className="text-xl font-bold text-foreground text-center">Where do you want to go?</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground text-center">
+            Describe your dream trip and let Junto AI plan it for you
           </p>
-          <Button asChild className="w-full max-w-[260px] mt-6">
-            <Link to="/app/trips/new">Start a trip</Link>
-          </Button>
+
+          {/* Destination input + Generate button */}
+          <div className="w-full mt-5 flex gap-2">
+            <Input
+              value={emptyDestination}
+              onChange={(e) => setEmptyDestination(e.target.value)}
+              placeholder="e.g. Bali, Tokyo, Barcelona..."
+              className="flex-1 h-12 rounded-xl bg-white border-border shadow-sm text-[15px]"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && emptyDestination.trim()) {
+                  setBuilderInitDest(emptyDestination.trim());
+                  setShowBuilder(true);
+                }
+              }}
+            />
+            <Button
+              onClick={() => {
+                setBuilderInitDest(emptyDestination.trim());
+                setShowBuilder(true);
+              }}
+              className="h-12 px-5 rounded-xl font-semibold text-white text-sm shrink-0"
+              style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+            >
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Generate
+            </Button>
+          </div>
+
           <button
+            onClick={() => {
+              setBuilderInitDest("");
+              setShowBuilder(true);
+            }}
             className="mt-3 text-sm font-medium bg-transparent border-none cursor-pointer"
+            style={{ color: "#0D9488" }}
+          >
+            or plan step by step
+          </button>
+
+          <button
+            onClick={() => navigate("/app/trips/new?mode=manual")}
+            className="mt-1.5 text-xs text-muted-foreground bg-transparent border-none cursor-pointer hover:text-foreground transition-colors"
+          >
+            or create trip manually
+          </button>
+
+          <div className="w-full h-px bg-border my-6" />
+
+          <button
+            className="text-sm font-medium bg-transparent border-none cursor-pointer"
             style={{ color: "#0D9488" }}
             onClick={() => setJoinOpen(true)}
           >
-            Join with a code
+            Join an existing trip with a code
           </button>
         </div>
         <JoinDrawer
