@@ -149,7 +149,7 @@ function buildConciergeContext(destination: string, tripResult?: AITripResult | 
 /* ------------------------------------------------------------------ */
 
 function SuggestionCard({
-  suggestion, messageId, index, getReactionInfo, onToggleReaction, tripDays, onAddToPlan, animDelay,
+  suggestion, messageId, index, getReactionInfo, onToggleReaction, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge,
 }: {
   suggestion: ConciergeSuggestion;
   messageId: string;
@@ -159,6 +159,8 @@ function SuggestionCard({
   tripDays?: { date: string; dayNumber: number }[];
   onAddToPlan?: (dayDate: string, activity: AIActivity) => void;
   animDelay?: number;
+  isLucky?: boolean;
+  luckyBadge?: string;
 }) {
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [expanded, setExpanded] = useState(false);
