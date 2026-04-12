@@ -633,6 +633,20 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           onClose={() => setEditTripOpen(false)}
         />
       )}
+
+      {/* Concierge */}
+      {!standalone && (
+        <>
+          <ConciergeButton onClick={() => setConciergeOpen(true)} />
+          <ConciergePanel
+            tripId={tripId}
+            open={conciergeOpen}
+            onClose={() => setConciergeOpen(false)}
+            tripResult={result}
+            onAddToPlan={(dayDate, activity) => state.addLocalActivity(dayDate, activity)}
+          />
+        </>
+      )}
     </div>,
     document.body
   );
