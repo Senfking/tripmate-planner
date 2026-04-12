@@ -539,7 +539,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       key={w}
                       onClick={() => handleWhenSelect(w)}
                       className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
-                        selectedWhen === w
+                        selectedWhen.includes(w)
                           ? "bg-[#0D9488] text-white border-[#0D9488]"
                           : "border-border bg-card text-foreground hover:bg-accent/50"
                       }`}
@@ -559,7 +559,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       key={v}
                       onClick={() => handleVibeSelect(v)}
                       className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
-                        selectedVibe === v
+                        selectedVibe.includes(v)
                           ? "bg-[#0D9488] text-white border-[#0D9488]"
                           : "border-border bg-card text-foreground hover:bg-accent/50"
                       }`}
@@ -579,7 +579,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       key={b}
                       onClick={() => handleBudgetSelect(b)}
                       className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
-                        selectedBudget === b
+                        selectedBudget.includes(b)
                           ? "bg-[#0D9488] text-white border-[#0D9488]"
                           : "border-border bg-card text-foreground hover:bg-accent/50"
                       }`}
