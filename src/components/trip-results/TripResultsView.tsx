@@ -25,6 +25,10 @@ interface Props {
   onClose: () => void;
   onRegenerate: () => void;
   onAdjust?: () => void;
+  standalone?: boolean;
+  onCreateTrip?: () => void;
+  onSaveDraft?: () => void;
+  creatingTrip?: boolean;
 }
 
 function titleCase(s: string) {

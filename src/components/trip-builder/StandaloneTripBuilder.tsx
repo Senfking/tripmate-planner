@@ -403,11 +403,11 @@ export function StandaloneTripBuilder({ onClose, initialDestination }: Props) {
       <div className="flex-1 overflow-y-auto flex justify-center">
         <div className="w-full max-w-2xl">
           {step === 0 && <StepEntryChoice onStepByStep={() => setStep(1)} onFreeText={handleFreeText} />}
-          {step === 1 && <StepDestination value={answers.destination} prefilledFromFreeText={prefilledSteps.has(1)} surpriseMe={answers.surpriseMe} onChange={(v) => update("destination", v)} onSurpriseMe={(v) => update("surpriseMe", v)} />}
-          {step === 2 && <StepDates dateRange={answers.dateRange} prefilledFromFreeText={prefilledSteps.has(2)} flexible={answers.flexible} flexibleDuration={answers.flexibleDuration} onDateChange={(r) => update("dateRange", r)} onFlexibleChange={(v) => update("flexible", v)} onDurationChange={(d) => update("flexibleDuration", d)} />}
-          {step === 3 && <StepBudget value={answers.budgetLevel} prefilledFromFreeText={prefilledSteps.has(3)} onChange={(v) => update("budgetLevel", v)} />}
-          {step === 4 && <StepVibes selected={answers.vibes} prefilledFromFreeText={prefilledSteps.has(4)} hasVibeBoard={false} onToggle={toggleVibe} />}
-          {step === 5 && <StepPace value={answers.pace} onChange={(v) => update("pace", v)} />}
+          {step === 1 && <StepDestination value={answers.destination} source={null} prefilledFromFreeText={prefilledSteps.has(1)} surpriseMe={answers.surpriseMe} onChange={(v) => update("destination", v)} onSurpriseMe={(v) => update("surpriseMe", v)} />}
+          {step === 2 && <StepDates dateRange={answers.dateRange} source={null} prefilledFromFreeText={prefilledSteps.has(2)} flexible={answers.flexible} flexibleDuration={answers.flexibleDuration} onDateChange={(r) => update("dateRange", r)} onFlexibleChange={(v) => update("flexible", v)} onDurationChange={(d) => update("flexibleDuration", d)} />}
+          {step === 3 && <StepBudget value={answers.budgetLevel} source={null} prefilledFromFreeText={prefilledSteps.has(3)} onChange={(v) => update("budgetLevel", v)} />}
+          {step === 4 && <StepVibes selected={answers.vibes} source={null} prefilledFromFreeText={prefilledSteps.has(4)} hasVibeBoard={false} onToggle={toggleVibe} />}
+          {step === 5 && <StepPace value={answers.pace} source={null} onChange={(v) => update("pace", v)} />}
           {step === 6 && <StepExtras dietary={answers.dietary} notes={answers.notes} prefilledFromFreeText={prefilledSteps.has(6)} onToggleDietary={toggleDietary} onNotesChange={(v) => update("notes", v)} />}
         </div>
       </div>
