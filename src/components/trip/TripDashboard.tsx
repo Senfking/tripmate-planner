@@ -747,11 +747,40 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
-              <div className="h-[80px] relative overflow-hidden">
-                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }} />
-                <img src="https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=400&h=200&fit=crop" alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
+              <div className="h-[80px] relative overflow-hidden" style={{ background: "#f0fdfa" }}>
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 80" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                  {/* Boarding pass shape */}
+                  <g transform="translate(140,35)" opacity="0.1">
+                    <rect x="-28" y="-16" width="56" height="32" rx="4" fill="#0D9488" />
+                    <line x1="-10" y1="-16" x2="-10" y2="16" stroke="#f0fdfa" strokeWidth="1" strokeDasharray="2 2" />
+                    <circle cx="-10" cy="-16" r="3" fill="#f0fdfa" />
+                    <circle cx="-10" cy="16" r="3" fill="#f0fdfa" />
+                    <rect x="-24" y="-8" width="10" height="2" rx="1" fill="#f0fdfa" opacity="0.6" />
+                    <rect x="-24" y="-3" width="8" height="2" rx="1" fill="#f0fdfa" opacity="0.4" />
+                    <rect x="-24" y="2" width="12" height="2" rx="1" fill="#f0fdfa" opacity="0.3" />
+                  </g>
+                  {/* Document shapes */}
+                  <g opacity="0.08" fill="#0D9488">
+                    <rect x="20" y="20" width="24" height="30" rx="2" />
+                    <rect x="24" y="26" width="12" height="1.5" rx="0.75" fill="#f0fdfa" />
+                    <rect x="24" y="30" width="16" height="1.5" rx="0.75" fill="#f0fdfa" />
+                    <rect x="24" y="34" width="10" height="1.5" rx="0.75" fill="#f0fdfa" />
+                  </g>
+                  <g opacity="0.06" fill="#0D9488">
+                    <rect x="75" y="45" width="20" height="26" rx="2" />
+                  </g>
+                  {/* Ticket stub */}
+                  <g transform="translate(100,20)" opacity="0.09" fill="#0D9488">
+                    <rect x="0" y="0" width="36" height="18" rx="3" />
+                    <circle cx="12" cy="0" r="2.5" fill="#f0fdfa" />
+                    <circle cx="12" cy="18" r="2.5" fill="#f0fdfa" />
+                  </g>
+                  {/* Small dots */}
+                  <circle cx="60" cy="15" r="1.5" fill="#0D9488" opacity="0.07" />
+                  <circle cx="170" cy="70" r="2" fill="#0D9488" opacity="0.06" />
+                  <circle cx="15" cy="65" r="1.5" fill="#0D9488" opacity="0.05" />
+                </svg>
+                <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-[#0D9488]/30" />
               </div>
               <div className="p-3">
                 <p className="font-semibold text-[14px] text-foreground">Bookings</p>
