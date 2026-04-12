@@ -339,7 +339,7 @@ function SuggestionCard({
     >
       {/* Photo — full width */}
       <div className="w-full h-[180px] bg-muted overflow-hidden relative">
-        {suggestion.photo_url ? (
+        {suggestion.photo_url && !suggestion.not_verified ? (
           <img src={suggestion.photo_url} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-accent/30">
@@ -359,13 +359,18 @@ function SuggestionCard({
             {suggestion.category}
           </span>
         )}
+        {suggestion.not_verified && (
+          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-medium px-2 py-0.5 rounded-full bg-yellow-500/80 text-white backdrop-blur-sm">
+            <Signal className="h-3 w-3" /> Not verified
+          </span>
+        )}
       </div>
 
       <div className="p-3.5 space-y-2.5">
         {/* Name + rating */}
         <div className="flex items-start justify-between gap-2">
           <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-1">{suggestion.name}</h4>
-          {suggestion.rating != null && (
+          {suggestion.rating != null && !suggestion.not_verified && (
             <div className="flex items-center gap-0.5 text-xs shrink-0">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
               <span className="font-medium">{suggestion.rating.toFixed(1)}</span>

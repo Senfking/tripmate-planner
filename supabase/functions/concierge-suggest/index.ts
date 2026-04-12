@@ -209,23 +209,164 @@ At least 1-2 of your suggestions MUST be specific events happening on that date/
 }
 
 // ---------------------------------------------------------------------------
+// Validation helpers — detect AI ↔ Google Places mismatches
+// ---------------------------------------------------------------------------
+
+/** Compute word-overlap ratio between two strings (0–1). */
+function wordOverlap(a: string, b: string): number {
+  const toWords = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .split(/\s+/)
+        .filter((w) => w.length > 1),
+    );
+  const setA = toWords(a);
+  const setB = toWords(b);
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let matches = 0;
+  for (const w of setA) {
+    if (setB.has(w)) matches++;
+  }
+  return matches / Math.max(setA.size, setB.size);
+}
+
+/** Map AI categories → sets of compatible Google Place types. */
+const CATEGORY_TYPE_MAP: Record<string, Set<string>> = {
+  food: new Set([
+    "restaurant", "food", "meal_delivery", "meal_takeaway", "bakery", "cafe",
+    "bar", "food_court", "steak_house", "seafood_restaurant", "fast_food_restaurant",
+  ]),
+  nightlife: new Set([
+    "night_club", "bar", "casino", "karaoke", "lounge", "pub",
+    "wine_bar", "cocktail_bar",
+  ]),
+  culture: new Set([
+    "museum", "art_gallery", "tourist_attraction", "church", "hindu_temple",
+    "mosque", "synagogue", "library", "cultural_center", "historical_landmark",
+    "monument", "heritage_site", "performing_arts_theater",
+  ]),
+  relaxation: new Set([
+    "spa", "beauty_salon", "hair_care", "wellness_center", "sauna",
+    "massage", "yoga_studio", "resort_hotel",
+  ]),
+  wellness: new Set([
+    "spa", "beauty_salon", "hair_care", "wellness_center", "sauna",
+    "massage", "yoga_studio",
+  ]),
+  activity: new Set([
+    "amusement_park", "aquarium", "zoo", "bowling_alley", "gym",
+    "park", "stadium", "tourist_attraction", "water_park", "hiking_area",
+    "national_park", "playground", "sports_complex", "adventure_sports_center",
+  ]),
+  shopping: new Set([
+    "shopping_mall", "store", "clothing_store", "shoe_store", "jewelry_store",
+    "market", "supermarket",
+  ]),
+  events: new Set([
+    "night_club", "bar", "stadium", "performing_arts_theater",
+    "event_venue", "convention_center", "concert_hall", "live_music_venue",
+  ]),
+};
+
+/** Types that signal a strong mismatch for most leisure categories. */
+const MISMATCH_TYPES = new Set([
+  "internet_cafe",
+  "electronics_store",
+  "car_dealer",
+  "car_repair",
+  "car_wash",
+  "dentist",
+  "doctor",
+  "hospital",
+  "insurance_agency",
+  "lawyer",
+  "real_estate_agency",
+  "funeral_home",
+  "cemetery",
+  "post_office",
+  "police",
+  "fire_station",
+  "plumber",
+  "electrician",
+  "locksmith",
+  "moving_company",
+  "storage",
+]);
+
+interface PlaceResult {
+  photo_url: string | null;
+  rating: number | null;
+  totalRatings: number | null;
+  googleMapsUrl: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  priceLevel: string | null;
+  // Fields used for validation
+  _displayName: string | null;
+  _types: string[];
+}
+
+/**
+ * Check whether the Google Place result actually matches the AI suggestion.
+ * Returns true if valid, false if it looks like a mismatch.
+ */
+function validatePlaceMatch(
+  aiName: string,
+  aiCategory: string,
+  place: PlaceResult,
+): boolean {
+  // 1) Name similarity: at least 30% word overlap
+  if (place._displayName) {
+    const overlap = wordOverlap(aiName, place._displayName);
+    if (overlap < 0.3) return false;
+  }
+
+  // 2) Hard-mismatch types (internet café when expecting nightclub, etc.)
+  if (place._types.some((t) => MISMATCH_TYPES.has(t))) return false;
+
+  // 3) Category-vs-types compatibility
+  const compatibleTypes = CATEGORY_TYPE_MAP[aiCategory.toLowerCase()];
+  if (compatibleTypes && place._types.length > 0) {
+    const hasCompatible = place._types.some((t) => compatibleTypes.has(t));
+    if (!hasCompatible) {
+      // Allow if the place types include generic "establishment" / "point_of_interest" only
+      const genericOnly = place._types.every(
+        (t) =>
+          t === "establishment" ||
+          t === "point_of_interest" ||
+          t === "premise" ||
+          t === "street_address",
+      );
+      if (!genericOnly) return false;
+    }
+  }
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // Google Places lookup — replicates get-place-details inline
 // ---------------------------------------------------------------------------
+const EMPTY_PLACE: PlaceResult = {
+  photo_url: null,
+  rating: null,
+  totalRatings: null,
+  googleMapsUrl: null,
+  address: null,
+  lat: null,
+  lng: null,
+  priceLevel: null,
+  _displayName: null,
+  _types: [],
+};
+
 async function lookupPlace(
   searchQuery: string,
   apiKey: string,
-): Promise<Record<string, unknown>> {
-  const empty = {
-    photo_url: null,
-    rating: null,
-    totalRatings: null,
-    googleMapsUrl: null,
-    address: null,
-    lat: null,
-    lng: null,
-    priceLevel: null,
-  };
-
+): Promise<PlaceResult> {
   try {
     const res = await fetch(
       "https://places.googleapis.com/v1/places:searchText",
@@ -235,17 +376,17 @@ async function lookupPlace(
           "Content-Type": "application/json",
           "X-Goog-Api-Key": apiKey,
           "X-Goog-FieldMask":
-            "places.id,places.displayName,places.rating,places.userRatingCount,places.photos,places.googleMapsUri,places.formattedAddress,places.location,places.priceLevel",
+            "places.id,places.displayName,places.types,places.rating,places.userRatingCount,places.photos,places.googleMapsUri,places.formattedAddress,places.location,places.priceLevel",
         },
         body: JSON.stringify({ textQuery: searchQuery }),
       },
     );
 
-    if (!res.ok) return empty;
+    if (!res.ok) return { ...EMPTY_PLACE };
 
     const data = await res.json();
     const place = data.places?.[0];
-    if (!place) return empty;
+    if (!place) return { ...EMPTY_PLACE };
 
     let photo_url: string | null = null;
     if (
@@ -265,9 +406,11 @@ async function lookupPlace(
       lat: place.location?.latitude ?? null,
       lng: place.location?.longitude ?? null,
       priceLevel: place.priceLevel ?? null,
+      _displayName: place.displayName?.text ?? null,
+      _types: Array.isArray(place.types) ? place.types : [],
     };
   } catch {
-    return empty;
+    return { ...EMPTY_PLACE };
   }
 }
 
@@ -442,6 +585,8 @@ Deno.serve(async (req) => {
       ? `They are staying at ${context.hotel_location.name}.`
       : "";
 
+    const locationEnforcement = `CRITICAL: Every suggestion MUST be a real, currently operating venue in or within 15 minutes of ${specificLocation || context.destination}. Do NOT invent venue names. If you're not confident a venue exists, don't include it. It's better to suggest 3 verified real places than 5 questionable ones.`;
+
     // Location-precision block: constrains suggestions to a specific area
     const locationNote = specificLocation
       ? `The user is currently in ${specificLocation} (within the broader destination of ${context.destination}). ALL suggestions must be in or very near ${specificLocation}. Do NOT suggest places in other areas — if the user is in ${specificLocation.split(",")[0].trim()}, don't suggest spots in distant neighborhoods. Only suggest spots that are within 15-20 minutes of ${specificLocation}. If the user wants suggestions elsewhere, they'll change their location.`
@@ -492,6 +637,7 @@ Deno.serve(async (req) => {
 
 ${locationNote}
 ${gpsNote}
+${locationEnforcement}
 ${categoryHint}
 
 Your job: suggest 3-5 genuinely surprising, unusual, hidden-gem experiences that most tourists would NEVER find. Think:
@@ -521,6 +667,7 @@ Return ONLY valid JSON, no other text.`;
       systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}.
 ${locationNote}
 ${gpsNote}
+${locationEnforcement}
 
 Find the best ${categoryDesc} using these exact filters:
 - Timing: ${whenArr.length ? whenArr.join(" or ") : "any time"} (${dateStr}, ${dayOfWeek})
@@ -544,6 +691,7 @@ Return ONLY valid JSON, no other text.`;
       systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}. Budget level: ${budgetLevel}. Vibes: ${vibes}.
 ${locationNote}
 ${gpsNote}
+${locationEnforcement}
 
 The user is asking about activities for ${dateStr} (${timeOfDay}).
 ${hotelNote}
@@ -654,11 +802,13 @@ Return ONLY valid JSON, no other text.`;
       throw new Error("AI response missing suggestions array");
     }
 
-    // ---- Enrich suggestions with Google Places data ----
+    // ---- Enrich suggestions with Google Places data + validation ----
     const enriched = await Promise.all(
       parsed.suggestions.map(async (s: Record<string, unknown>) => {
+        const aiName = (s.name as string) || "";
+        const aiCategory = (s.category as string) || "";
         let searchQuery =
-          (s.search_query as string) || `${s.name} ${context.destination}`;
+          (s.search_query as string) || `${aiName} ${context.destination}`;
 
         // Append specific location to improve Google Places accuracy
         if (specificLocation && !searchQuery.toLowerCase().includes(specificLocation.split(",")[0].trim().toLowerCase())) {
@@ -668,19 +818,34 @@ Return ONLY valid JSON, no other text.`;
           );
         }
 
-        let placeData: Record<string, unknown> = {
-          photo_url: null,
-          rating: null,
-          totalRatings: null,
-          googleMapsUrl: null,
-          address: null,
-          lat: null,
-          lng: null,
-          priceLevel: null,
-        };
+        let placeData: PlaceResult = { ...EMPTY_PLACE };
+        let verified = true; // assume verified unless we detect a mismatch
 
         if (googleKey) {
           placeData = await lookupPlace(searchQuery, googleKey);
+
+          // Validate: does Google's result match what the AI suggested?
+          if (placeData._displayName && !validatePlaceMatch(aiName, aiCategory, placeData)) {
+            console.log(
+              `[concierge-suggest] mismatch for "${aiName}" (${aiCategory}): Google returned "${placeData._displayName}" (types: ${placeData._types.join(",")})  — retrying`,
+            );
+
+            // Retry with a more specific query: "{name} {category} {location}"
+            const retryQuery = `${aiName} ${aiCategory} ${specificLocation || context.destination}`;
+            const retryData = await lookupPlace(retryQuery, googleKey);
+
+            if (retryData._displayName && validatePlaceMatch(aiName, aiCategory, retryData)) {
+              // Retry succeeded — use the better result
+              placeData = retryData;
+            } else {
+              // Still a mismatch — drop Google data entirely
+              console.log(
+                `[concierge-suggest] retry also mismatched for "${aiName}": "${retryData._displayName}" — marking not_verified`,
+              );
+              placeData = { ...EMPTY_PLACE };
+              verified = false;
+            }
+          }
         }
 
         // Compute distance from hotel if both positions are known
@@ -701,9 +866,14 @@ Return ONLY valid JSON, no other text.`;
             ) / 10; // 1 decimal place
         }
 
+        // Always construct maps URL as www.google.com/maps/search — never maps.google.com/?cid=
+        const mapsUrl = aiName
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(aiName + " " + (specificLocation || context.destination))}`
+          : null;
+
         return {
-          name: s.name,
-          category: s.category,
+          name: aiName,
+          category: aiCategory,
           why: s.why,
           best_time: s.best_time,
           estimated_cost_per_person: s.estimated_cost_per_person ?? null,
@@ -716,15 +886,17 @@ Return ONLY valid JSON, no other text.`;
           specific_night: s.specific_night ?? null,
           opening_hours: s.opening_hours ?? null,
           full_description: s.full_description ?? null,
-          // Google Places enrichment
+          // Google Places enrichment (dropped when not_verified)
           photo_url: placeData.photo_url,
           rating: placeData.rating,
           totalRatings: placeData.totalRatings,
-          googleMapsUrl: placeData.googleMapsUrl,
+          googleMapsUrl: mapsUrl,
           address: placeData.address,
           lat: placeData.lat,
           lng: placeData.lng,
           priceLevel: placeData.priceLevel,
+          // Validation flag
+          not_verified: !verified,
           // Computed
           distance_km,
         };
