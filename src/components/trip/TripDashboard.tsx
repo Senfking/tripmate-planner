@@ -710,11 +710,31 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
-              <div className="h-[80px] relative overflow-hidden">
-                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }} />
-                <img src="https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=400&h=200&fit=crop" alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
+              <div className="h-[80px] relative overflow-hidden" style={{ background: "#f0fdfa" }}>
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 80" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                  {/* Compass rose */}
+                  <g transform="translate(155,40)" opacity="0.12" fill="#0D9488">
+                    <polygon points="0,-18 4,-4 0,-8 -4,-4" />
+                    <polygon points="0,18 4,4 0,8 -4,4" />
+                    <polygon points="-18,0 -4,-4 -8,0 -4,4" />
+                    <polygon points="18,0 4,-4 8,0 4,4" />
+                    <circle cx="0" cy="0" r="2" />
+                  </g>
+                  {/* Map pins */}
+                  <g opacity="0.1" fill="#0D9488">
+                    <path d="M30 55 a6 6 0 1 1 0-8 a6 6 0 0 1 0 8 L30 65Z" />
+                    <path d="M70 25 a5 5 0 1 1 0-7 a5 5 0 0 1 0 7 L70 33Z" />
+                    <path d="M120 50 a4 4 0 1 1 0-5.5 a4 4 0 0 1 0 5.5 L120 56Z" />
+                  </g>
+                  {/* Dotted route path */}
+                  <path d="M25 58 Q50 20 75 28 T125 52 T160 38" fill="none" stroke="#0D9488" strokeWidth="1.5" strokeDasharray="3 4" opacity="0.15" />
+                  {/* Small dots */}
+                  <circle cx="15" cy="15" r="1.5" fill="#0D9488" opacity="0.08" />
+                  <circle cx="95" cy="12" r="2" fill="#0D9488" opacity="0.06" />
+                  <circle cx="50" cy="68" r="1.5" fill="#0D9488" opacity="0.08" />
+                  <circle cx="175" cy="65" r="2" fill="#0D9488" opacity="0.06" />
+                </svg>
+                <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-[#0D9488]/30" />
               </div>
               <div className="p-3">
                 <p className="font-semibold text-[14px] text-foreground">Decisions</p>
