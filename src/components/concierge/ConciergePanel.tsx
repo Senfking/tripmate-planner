@@ -907,8 +907,12 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           <div className="absolute inset-0 bg-gradient-to-r from-[#0D9488]/5 via-[#0EA5E9]/5 to-[#0D9488]/5" style={{ backgroundSize: "200% 100%", animation: "gradient-shift 8s ease infinite" }} />
           <div className="relative flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-3">
-              {stage !== "what" && (
+              {stage !== "what" ? (
                 <button onClick={handleBack} className="p-1.5 -ml-1.5 rounded-lg hover:bg-accent transition-colors">
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+              ) : (
+                <button onClick={onClose} className="p-1.5 -ml-1.5 rounded-lg hover:bg-accent transition-colors">
                   <ArrowLeft className="h-4 w-4" />
                 </button>
               )}
