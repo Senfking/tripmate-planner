@@ -633,7 +633,10 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [manualLocation, setManualLocation] = useState("");
   const destination = manualLocation || resolvedDest;
 
-  const savedCount = useMemo(() => getSavedSpots(tripId).length, [tripId, stage]);
+  const [savedVersion, setSavedVersion] = useState(0);
+  const savedSpots = useMemo(() => getSavedSpots(tripId), [tripId, stage, savedVersion]);
+  const savedCount = savedSpots.length;
+  const [savedExpanded, setSavedExpanded] = useState(false);
 
   // Trip destinations for quick-select
   const tripDestinations = useMemo(() => {
