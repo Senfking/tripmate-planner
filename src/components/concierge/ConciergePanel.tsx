@@ -1181,7 +1181,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     <span className="text-xs font-semibold text-foreground">Saved spots</span>
                     <span className="text-[10px] text-muted-foreground">({savedCount})</span>
                   </div>
-                  <div className="space-y-3">
+                  {/* Mobile: vertical stack */}
+                  <div className="md:hidden space-y-3">
                     {(savedExpanded ? savedSpots : savedSpots.slice(0, 2)).map((spot, i) => (
                       <SuggestionCard
                         key={spot.name}
@@ -1194,23 +1195,38 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         onSaveChange={() => setSavedVersion(v => v + 1)}
                       />
                     ))}
+                    {savedCount > 2 && !savedExpanded && (
+                      <button
+                        onClick={() => setSavedExpanded(true)}
+                        className="text-xs font-medium text-[#0D9488] hover:underline"
+                      >
+                        Show all {savedCount} saved
+                      </button>
+                    )}
+                    {savedExpanded && savedCount > 2 && (
+                      <button
+                        onClick={() => setSavedExpanded(false)}
+                        className="text-xs font-medium text-muted-foreground hover:underline"
+                      >
+                        Show less
+                      </button>
+                    )}
                   </div>
-                  {savedCount > 2 && !savedExpanded && (
-                    <button
-                      onClick={() => setSavedExpanded(true)}
-                      className="text-xs font-medium text-[#0D9488] hover:underline"
-                    >
-                      Show all {savedCount} saved
-                    </button>
-                  )}
-                  {savedExpanded && savedCount > 2 && (
-                    <button
-                      onClick={() => setSavedExpanded(false)}
-                      className="text-xs font-medium text-muted-foreground hover:underline"
-                    >
-                      Show less
-                    </button>
-                  )}
+                  {/* Desktop: horizontal carousel */}
+                  <HorizontalCarousel cardWidth={350}>
+                    {savedSpots.map((spot, i) => (
+                      <SuggestionCard
+                        key={spot.name}
+                        suggestion={spot}
+                        messageId={`saved-${i}`}
+                        index={i}
+                        tripId={tripId}
+                        tripDays={tripDays}
+                        onAddToPlan={onAddToPlan}
+                        onSaveChange={() => setSavedVersion(v => v + 1)}
+                      />
+                    ))}
+                  </HorizontalCarousel>
                 </div>
               )}
 
