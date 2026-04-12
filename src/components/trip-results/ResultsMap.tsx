@@ -5,7 +5,8 @@ import "leaflet/dist/leaflet.css";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Clock, ExternalLink } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Calendar } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 
 interface Props {
@@ -17,21 +18,33 @@ interface Props {
   onPinClick?: (dayDate: string, activityIndex: number) => void;
 }
 
-/* ── Minimal premium pin ── */
-function createPinIcon(num: number, color: string) {
+function formatDayLabel(date: string, dayNumber?: number): string {
+  try {
+    const parsed = parseISO(date);
+    const dayStr = dayNumber ? `Day ${dayNumber}` : "";
+    const dateStr = format(parsed, "EEE, MMM d");
+    return dayStr ? `${dayStr} · ${dateStr}` : dateStr;
+  } catch {
+    return dayNumber ? `Day ${dayNumber}` : date;
+  }
+}
+
+/* ── Minimal premium pin with day.activity label ── */
+function createPinIcon(label: string, color: string) {
+  const width = label.length > 2 ? 34 : 28;
   return L.divIcon({
     className: "",
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    iconSize: [width, 28],
+    iconAnchor: [width / 2, 14],
     popupAnchor: [0, -16],
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">
-      <span style="font-size:11px;font-weight:700;color:white;font-family:Inter,system-ui,sans-serif;">${num}</span>
+    html: `<div style="min-width:28px;height:28px;padding:0 ${label.length > 2 ? 6 : 0}px;border-radius:14px;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">
+      <span style="font-size:${label.length > 2 ? 9 : 11}px;font-weight:700;color:white;font-family:Inter,system-ui,sans-serif;white-space:nowrap;">${label}</span>
     </div>`,
   });
 }
 
 /* ── React popup with real Google images ── */
-function PopupContent({ activity }: { activity: AIActivity }) {
+function PopupContent({ activity, dayLabel }: { activity: AIActivity; dayLabel?: string }) {
   const { photos, rating, isLoading } = useGooglePlaceDetails(
     activity.title || "",
     activity.location_name || ""
@@ -78,6 +91,14 @@ function PopupContent({ activity }: { activity: AIActivity }) {
             <span className="text-[10px] text-amber-600 font-semibold ml-auto">★ {rating.toFixed(1)}</span>
           )}
         </div>
+
+        {/* Day label */}
+        {dayLabel && (
+          <p className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {dayLabel}
+          </p>
+        )}
 
         {/* Title */}
         <h4 className="text-sm font-bold text-foreground leading-snug">{activity.title}</h4>
@@ -232,21 +253,22 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
     if (!hasValidCenter) return [];
     try {
       if (mode === "day" && activeDayIndex >= 0 && allDays[activeDayIndex]) {
-        return allDays[activeDayIndex].activities
+        const day = allDays[activeDayIndex];
+        return day.activities
           .map((a, i) => {
-            const coords = getCoords(allDays[activeDayIndex].date, i, a);
+            const coords = getCoords(day.date, i, a);
             if (!coords) return null;
-            return { ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: allDays[activeDayIndex].date, _idx: i };
+            return { ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: day.date, _idx: i, _dayNumber: day.day_number };
           })
-          .filter(Boolean) as (AIActivity & { _dayDate: string; _idx: number })[];
+          .filter(Boolean) as (AIActivity & { _dayDate: string; _idx: number; _dayNumber: number })[];
       }
 
-      const all: (AIActivity & { _dayDate: string; _idx: number })[] = [];
+      const all: (AIActivity & { _dayDate: string; _idx: number; _dayNumber: number })[] = [];
       for (const day of allDays) {
         day.activities.forEach((a, i) => {
           const coords = getCoords(day.date, i, a);
           if (coords) {
-            all.push({ ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: day.date, _idx: i });
+            all.push({ ...a, latitude: coords.lat, longitude: coords.lng, _dayDate: day.date, _idx: i, _dayNumber: day.day_number });
           }
         });
       }
@@ -300,17 +322,26 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
         />
       )}
 
-      {activitiesForMap.map((act) => (
-        <Marker
-          key={`${act._dayDate}-${act._idx}`}
-          position={[act.latitude!, act.longitude!]}
-          icon={createPinIcon(act._idx + 1, getCategoryColor(act.category))}
-        >
-          <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
-            <PopupContent activity={act} />
-          </Popup>
-        </Marker>
-      ))}
+      {activitiesForMap.map((act) => {
+        // In day mode show just activity number (1, 2, 3...)
+        // In overview show D1.1, D1.2, D2.1 etc. so user knows day + order
+        const pinLabel = mode === "day"
+          ? String(act._idx + 1)
+          : `D${act._dayNumber}.${act._idx + 1}`;
+        const dayLabel = formatDayLabel(act._dayDate, act._dayNumber);
+
+        return (
+          <Marker
+            key={`${act._dayDate}-${act._idx}`}
+            position={[act.latitude!, act.longitude!]}
+            icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
+          >
+            <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
+              <PopupContent activity={act} dayLabel={dayLabel} />
+            </Popup>
+          </Marker>
+        );
+      })}
     </MapContainer>
   );
 }
