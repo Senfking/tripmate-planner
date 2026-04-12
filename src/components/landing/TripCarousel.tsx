@@ -93,8 +93,8 @@ export function TripCarousels() {
 
         <div
           ref={ref}
-          className="flex gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory pl-5 sm:pl-[max(1.25rem,calc((100%-1200px)/2+1.25rem))]"
-          style={{ paddingRight: 0 }}
+          className="flex gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+          style={{ paddingLeft: "max(2.5rem, calc((100% - 1160px) / 2 + 2.5rem))", paddingRight: 0 }}
         >
           {ALL_CARDS.map((c) => (
             <Link
