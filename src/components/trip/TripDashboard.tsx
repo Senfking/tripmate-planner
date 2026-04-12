@@ -835,17 +835,13 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
             {visibleOrder.map((id) => {
               if (id === "decisions" || id === "bookings") {
-                // Find the other card
                 const otherId = id === "decisions" ? "bookings" : "decisions";
-                const otherIdx = visibleOrder.indexOf(otherId);
-                // Only the first of the pair renders the grid row
-                if (otherIdx !== -1 && otherIdx < visibleOrder.indexOf(id)) return null;
+                const isFirst = visibleOrder.indexOf(id) < visibleOrder.indexOf(otherId);
+                if (!isFirst) return null; // second card rendered by the first
                 return (
                   <div key="decisions-bookings-row" className="grid grid-cols-2 gap-3">
                     <SortableSection id={id}>{renderSection(id)}</SortableSection>
-                    {otherIdx !== -1 && (
-                      <SortableSection id={otherId}>{renderSection(otherId)}</SortableSection>
-                    )}
+                    <SortableSection id={otherId}>{renderSection(otherId)}</SortableSection>
                   </div>
                 );
               }
