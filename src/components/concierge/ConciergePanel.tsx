@@ -639,12 +639,25 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         });
       });
     }
+    // From trip start/end dates (when no AI plan days)
+    if (days.length === 0 && tripStartDate && tripEndDate) {
+      const start = new Date(tripStartDate + "T12:00:00");
+      const end = new Date(tripEndDate + "T12:00:00");
+      let dayNum = 1;
+      const cur = new Date(start);
+      while (cur <= end && dayNum <= 30) {
+        const dateStr = cur.toISOString().split("T")[0];
+        const label = `Day ${dayNum} · ${cur.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+        days.push({ date: dateStr, dayNumber: dayNum, label });
+        cur.setDate(cur.getDate() + 1);
+        dayNum++;
+      }
+    }
     // Always add Today as first option
     const today = new Date().toISOString().split("T")[0];
     if (!days.find(d => d.date === today)) {
       days.unshift({ date: today, dayNumber: 0, label: "Today" });
     } else {
-      // Move today to top
       const todayIdx = days.findIndex(d => d.date === today);
       if (todayIdx > 0) {
         const [todayItem] = days.splice(todayIdx, 1);
@@ -653,7 +666,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       }
     }
     return days;
-  }, [tripResult]);
+  }, [tripResult, tripStartDate, tripEndDate]);
 
   const latestResults = useMemo(() =>
     [...messages].reverse().find(
