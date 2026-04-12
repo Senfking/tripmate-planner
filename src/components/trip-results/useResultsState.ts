@@ -81,6 +81,7 @@ export function useResultsState(tripId: string) {
   } | null>(null);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [alternatives, setAlternatives] = useState<AIActivity[]>([]);
+  const [replacedActivities, setReplacedActivities] = useState<Map<string, AIActivity>>(new Map());
 
   // Local mutations for optimistic edits
   const [removedActivities, setRemovedActivities] = useState<Set<string>>(new Set());
@@ -247,6 +248,26 @@ export function useResultsState(tripId: string) {
     [addedIds, batchAddItems]
   );
 
+  const replaceActivity = useCallback(
+    (dayDate: string, activityIndex: number, newActivity: AIActivity) => {
+      const key = `${dayDate}::${activityIndex}`;
+      setReplacedActivities((prev) => {
+        const next = new Map(prev);
+        next.set(key, newActivity);
+        return next;
+      });
+      toast.success(`Swapped to "${newActivity.title}"`);
+    },
+    []
+  );
+
+  const getReplacedActivity = useCallback(
+    (dayDate: string, activityIndex: number): AIActivity | null => {
+      return replacedActivities.get(`${dayDate}::${activityIndex}`) || null;
+    },
+    [replacedActivities]
+  );
+
   const requestAlternatives = useCallback(
     async (dayDate: string, activityIndex: number, activity: AIActivity, tripId: string, userDescription?: string) => {
       setAlternativesFor({ dayDate, activityIndex, activity });
@@ -254,10 +275,14 @@ export function useResultsState(tripId: string) {
       setAlternatives([]);
 
       try {
+        const notesPrompt = userDescription
+          ? `The user wants to replace "${activity.title}" with something matching this description: "${userDescription}". Suggest 3 alternatives that match. Same time slot (${activity.start_time}), same location area (${activity.location_name}).`
+          : `Suggest 3 alternative activities to replace "${activity.title}" at ${activity.start_time} in ${activity.location_name}. Same category (${activity.category}), same time slot. Return only the alternatives array.`;
+
         const { data, error } = await supabase.functions.invoke("generate-trip-itinerary", {
           body: {
             trip_id: tripId,
-            notes: `Suggest 3 alternative activities to replace "${activity.title}" at ${activity.start_time} in ${activity.location_name}. Same category (${activity.category}), same time slot. Return only the alternatives array.`,
+            notes: notesPrompt,
             alternatives_mode: true,
             ...(userDescription ? { user_description: userDescription } : {}),
           },
@@ -275,6 +300,44 @@ export function useResultsState(tripId: string) {
     []
   );
 
+  const requestCustomPlaceSwap = useCallback(
+    async (dayDate: string, activityIndex: number, placeName: string, destination: string) => {
+      try {
+        const { data, error } = await supabase.functions.invoke("get-place-details", {
+          body: { query: `${placeName} ${destination}` },
+        });
+        if (error) throw error;
+        if (!data || (!data.rating && !data.address && (!data.photos || data.photos.length === 0))) {
+          toast.error("Place not found, try a more specific name");
+          return null;
+        }
+        const newActivity: AIActivity = {
+          title: placeName,
+          description: data.address || "",
+          category: "experience",
+          start_time: "",
+          duration_minutes: 60,
+          estimated_cost_per_person: null,
+          currency: "USD",
+          location_name: destination,
+          latitude: data.latitude || null,
+          longitude: data.longitude || null,
+          google_maps_url: data.googleMapsUrl || null,
+          booking_url: null,
+          photo_query: null,
+          tips: null,
+          dietary_notes: null,
+        };
+        replaceActivity(dayDate, activityIndex, newActivity);
+        return newActivity;
+      } catch {
+        toast.error("Failed to find place. Try a more specific name.");
+        return null;
+      }
+    },
+    [replaceActivity]
+  );
+
   return {
     addedIds,
     addedCount,
@@ -290,6 +353,9 @@ export function useResultsState(tripId: string) {
     loadingAlternatives,
     alternatives,
     requestAlternatives,
+    requestCustomPlaceSwap,
+    replaceActivity,
+    getReplacedActivity,
     isAddingAll: batchAddItems.isPending,
     // Local edits
     removeActivity,

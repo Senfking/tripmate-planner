@@ -22,11 +22,14 @@ interface Props {
   refinedCoords?: Map<string, { lat: number; lng: number }>;
   isAdded: (dayDate: string, title: string) => boolean;
   onToggleAdd: (day: AIDay, activity: AIActivity) => void;
-  onRequestChange: (dayDate: string, index: number, activity: AIActivity, userDescription?: string) => void;
+  onRequestChange: (dayDate: string, index: number, activity: AIActivity) => void;
+  onRequestDescribedChange: (dayDate: string, index: number, activity: AIActivity, description: string) => void;
+  onCustomPlaceSwap: (dayDate: string, index: number, placeName: string) => Promise<any>;
   onRemoveActivity: (dayDate: string, index: number, activity: AIActivity) => void;
   isActivityRemoved: (dayDate: string, index: number, title: string) => boolean;
   onAddLocalActivity: (dayDate: string, activity: AIActivity) => void;
   getLocalAdditions: (dayDate: string) => AIActivity[];
+  getReplacedActivity: (dayDate: string, activityIndex: number) => AIActivity | null;
   onCoordsRefined?: (dayDate: string, activityIndex: number, lat: number, lng: number) => void;
 }
 
@@ -64,10 +67,13 @@ export function DaySection({
   isAdded,
   onToggleAdd,
   onRequestChange,
+  onRequestDescribedChange,
+  onCustomPlaceSwap,
   onRemoveActivity,
   isActivityRemoved,
   onAddLocalActivity,
   getLocalAdditions,
+  getReplacedActivity,
   onCoordsRefined,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -94,7 +100,8 @@ export function DaySection({
   const firstActivity = day.activities[0];
   const dayIndex = allDays.findIndex((d) => d.date === day.date);
   const localAdditions = getLocalAdditions(day.date);
-  const allActivities = [...day.activities, ...localAdditions];
+  const baseActivities = day.activities.map((act, i) => getReplacedActivity(day.date, i) || act);
+  const allActivities = [...baseActivities, ...localAdditions];
 
   // Filter out removed activities
   const visibleActivities = allActivities.filter(
@@ -188,7 +195,9 @@ export function DaySection({
                     activityIndex={i}
                     isAdded={isAdded(day.date, activity.title)}
                     onToggleAdd={() => onToggleAdd(day, activity)}
-                    onRequestChange={(desc?: string) => onRequestChange(day.date, i, activity, desc)}
+                    onRequestChange={() => onRequestChange(day.date, i, activity)}
+                    onRequestDescribedChange={(desc) => onRequestDescribedChange(day.date, i, activity, desc)}
+                    onCustomPlaceSwap={(name) => onCustomPlaceSwap(day.date, i, name)}
                     onRemove={() => onRemoveActivity(day.date, i, activity)}
                     onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
                     animDelay={i * 50}

@@ -50,56 +50,95 @@ export function ResultsTimeline({ nodes }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const isClickScrolling = useRef(false);
   const activeIdRef = useRef(activeId);
+  const scrollTimeoutRef = useRef<number>();
   activeIdRef.current = activeId;
 
-  // Scroll-spy: use a ref for activeId to avoid re-registering the listener
+  const getScrollRoot = useCallback(() => {
+    return document.querySelector<HTMLElement>("[data-results-scroll-root='true']") ?? document.documentElement;
+  }, []);
+
+  const getHeaderOffset = useCallback(() => {
+    const header = document.querySelector<HTMLElement>("[data-results-header='true']");
+    return (header?.getBoundingClientRect().height ?? 0) + 12;
+  }, []);
+
   useEffect(() => {
     if (!isDesktop) return;
 
     const nodeIds = nodes.map(n => n.id);
+    const scrollRoot = getScrollRoot();
 
     const findTopmost = () => {
       if (isClickScrolling.current) return;
 
-      let bestId: string | null = null;
-      let bestTop = -Infinity;
+      const rootRect = scrollRoot.getBoundingClientRect();
+      const topBoundary = rootRect.top + getHeaderOffset();
+      const bottomBoundary = rootRect.bottom - 24;
+      let passedId: string | null = null;
+      let passedTop = -Infinity;
+      let upcomingId: string | null = null;
+      let upcomingTop = Infinity;
 
       for (const id of nodeIds) {
         const el = document.getElementById(id);
         if (!el) continue;
+
         const rect = el.getBoundingClientRect();
-        // Element is at least partially scrolled past the top 40% of viewport
-        if (rect.top <= window.innerHeight * 0.4 && rect.top > -rect.height) {
-          if (rect.top > bestTop) {
-            bestTop = rect.top;
-            bestId = id;
+        if (rect.bottom <= topBoundary || rect.top >= bottomBoundary) continue;
+
+        if (rect.top <= topBoundary) {
+          if (rect.top > passedTop) {
+            passedTop = rect.top;
+            passedId = id;
           }
+        } else if (rect.top < upcomingTop) {
+          upcomingTop = rect.top;
+          upcomingId = id;
         }
       }
 
-      if (bestId && bestId !== activeIdRef.current) {
-        setActiveId(bestId);
+      const nextActiveId = passedId ?? upcomingId ?? nodeIds[0] ?? null;
+      if (nextActiveId && nextActiveId !== activeIdRef.current) {
+        setActiveId(nextActiveId);
       }
     };
 
-    window.addEventListener("scroll", findTopmost, { passive: true });
+    scrollRoot.addEventListener("scroll", findTopmost, { passive: true });
+    window.addEventListener("resize", findTopmost);
     findTopmost();
 
-    return () => window.removeEventListener("scroll", findTopmost);
-  }, [nodes, isDesktop]);
+    return () => {
+      scrollRoot.removeEventListener("scroll", findTopmost);
+      window.removeEventListener("resize", findTopmost);
+    };
+  }, [nodes, isDesktop, getHeaderOffset, getScrollRoot]);
 
   const scrollTo = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
 
+    const scrollRoot = getScrollRoot();
+    const rootRect = scrollRoot.getBoundingClientRect();
+    const elementRect = el.getBoundingClientRect();
+    const targetTop = Math.max(
+      0,
+      scrollRoot.scrollTop + (elementRect.top - rootRect.top) - getHeaderOffset()
+    );
+
     setActiveId(id);
     isClickScrolling.current = true;
 
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.clearTimeout(scrollTimeoutRef.current);
 
-    setTimeout(() => {
+    scrollRoot.scrollTo({ top: targetTop, behavior: "smooth" });
+
+    scrollTimeoutRef.current = window.setTimeout(() => {
       isClickScrolling.current = false;
-    }, 800);
+    }, 700);
+  }, [getHeaderOffset, getScrollRoot]);
+
+  useEffect(() => {
+    return () => window.clearTimeout(scrollTimeoutRef.current);
   }, []);
 
   if (!isDesktop) return null;

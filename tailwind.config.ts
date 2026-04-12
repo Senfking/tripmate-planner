@@ -97,6 +97,10 @@ export default {
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },
         },
+        "slide-in-left": {
+          from: { transform: "translateX(-100%)" },
+          to: { transform: "translateX(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -107,6 +111,7 @@ export default {
         "highlight-pulse": "highlight-pulse 1.2s ease-out 0.25s 1 both",
         "fade-in": "fade-in 300ms ease-out both",
         "slide-up": "slide-up 300ms ease-out",
+        "slide-in-left": "slide-in-left 300ms ease-out",
       },
     },
   },
