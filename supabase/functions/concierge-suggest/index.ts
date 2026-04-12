@@ -304,6 +304,8 @@ Deno.serve(async (req) => {
       trip_id: string;
       context: {
         destination: string;
+        location?: string;
+        user_location?: { lat: number; lng: number };
         date?: string;
         time_of_day?: string;
         group_size?: number;
@@ -312,6 +314,9 @@ Deno.serve(async (req) => {
         hotel_location?: { name: string; lat: number; lng: number };
       };
     };
+
+    const specificLocation = context?.location;
+    const userGps = context?.user_location;
 
     // Determine request type: structured filters vs free text
     const isStructured = !!body.category && !body.query;
@@ -435,6 +440,14 @@ Deno.serve(async (req) => {
       ? `They are staying at ${context.hotel_location.name}.`
       : "";
 
+    // Location-precision block: constrains suggestions to a specific area
+    const locationNote = specificLocation
+      ? `The user is currently in ${specificLocation} (within the broader destination of ${context.destination}). ALL suggestions must be in or very near ${specificLocation}. Do NOT suggest places in other areas — if the user is in ${specificLocation.split(",")[0].trim()}, don't suggest spots in distant neighborhoods. Only suggest spots that are within 15-20 minutes of ${specificLocation}. If the user wants suggestions elsewhere, they'll change their location.`
+      : "";
+    const gpsNote = userGps
+      ? `User's GPS coordinates: ${userGps.lat}, ${userGps.lng}. Prioritize venues closest to these coordinates.`
+      : "";
+
     // Resolve dates for event search
     let dateStr: string;
     let timeOfDay: string;
@@ -475,6 +488,8 @@ Deno.serve(async (req) => {
 
       systemPrompt = `You are Junto's secret insider concierge for a group of ${groupSize} traveling in ${context.destination}.
 
+${locationNote}
+${gpsNote}
 ${categoryHint}
 
 Your job: suggest 3-5 genuinely surprising, unusual, hidden-gem experiences that most tourists would NEVER find. Think:
@@ -502,6 +517,8 @@ Return ONLY valid JSON, no other text.`;
       const vibeNote = vibeArr.length ? `- Preferred vibes (match ANY): ${vibeArr.join(", ")}` : "";
 
       systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}.
+${locationNote}
+${gpsNote}
 
 Find the best ${categoryDesc} using these exact filters:
 - Timing: ${whenArr.length ? whenArr.join(" or ") : "any time"} (${dateStr}, ${dayOfWeek})
@@ -523,6 +540,8 @@ Return ONLY valid JSON, no other text.`;
     } else {
       // -- Free-text request: AI interprets intent --
       systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}. Budget level: ${budgetLevel}. Vibes: ${vibes}.
+${locationNote}
+${gpsNote}
 
 The user is asking about activities for ${dateStr} (${timeOfDay}).
 ${hotelNote}
@@ -636,8 +655,16 @@ Return ONLY valid JSON, no other text.`;
     // ---- Enrich suggestions with Google Places data ----
     const enriched = await Promise.all(
       parsed.suggestions.map(async (s: Record<string, unknown>) => {
-        const searchQuery =
+        let searchQuery =
           (s.search_query as string) || `${s.name} ${context.destination}`;
+
+        // Append specific location to improve Google Places accuracy
+        if (specificLocation && !searchQuery.toLowerCase().includes(specificLocation.split(",")[0].trim().toLowerCase())) {
+          searchQuery = searchQuery.replace(
+            new RegExp(`\\b${context.destination}\\b`, "i"),
+            `${specificLocation.split(",")[0].trim()} ${context.destination}`,
+          );
+        }
 
         let placeData: Record<string, unknown> = {
           photo_url: null,
