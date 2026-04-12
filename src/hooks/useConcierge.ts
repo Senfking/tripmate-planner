@@ -193,6 +193,8 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
           body: {
             trip_id: tripId,
             query,
+            location: context.location,
+            user_location: context.user_location,
             context: {
               ...context,
               date,
