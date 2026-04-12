@@ -176,9 +176,9 @@ export default function Landing() {
   }, [loading, user, navigate]);
 
   const openBuilder = useCallback((dest?: string) => {
-    setBuilderDestination(dest || "");
-    setBuilderOpen(true);
-  }, []);
+    // Auth required for AI generation — send to signup, we'll handle post-auth redirect later
+    navigate("/ref");
+  }, [navigate]);
 
   const handleGetStarted = useCallback(() => {
     navigate("/ref");
