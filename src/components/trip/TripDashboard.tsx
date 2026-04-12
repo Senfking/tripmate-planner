@@ -559,6 +559,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         destination={stops?.[0]?.destination || undefined}
         tripName={tripName}
         memberCount={memberCount ?? undefined}
+        tripStartDate={startDate || undefined}
+        tripEndDate={endDate || undefined}
       />
     </div>
   );
