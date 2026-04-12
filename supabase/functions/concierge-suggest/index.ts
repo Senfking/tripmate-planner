@@ -163,6 +163,7 @@ function suggestionJsonSchema(destination: string): string {
       "currency": "IDR",
       "is_event": false,
       "event_details": null,
+      "booking_url": "https://example.com/book (optional — venue website or booking page if known, null otherwise)",
       "pro_tip": "Insider hack or tip that makes the experience better (optional, null if none)",
       "what_to_order": "Specific dish or drink to order (optional, null if not relevant)",
       "specific_night": "If this place is best on a specific night, explain why (optional, null if any night works)",
@@ -177,7 +178,8 @@ Rules for is_event and event_details:
 - When is_event is true, event_details MUST be a short string like "DJ Set by [name], 10pm-3am, IDR 200k cover" or "Night Market, 6pm-midnight, free entry".
 - When is_event is false, event_details should be null.
 - pro_tip should be a genuine insider tip, not generic advice. Think: "Ask for the secret menu" or "Sit upstairs for the view".
-- what_to_order: specific items, not generic ("The wagyu tartare" not "try their food").`;
+- what_to_order: specific items, not generic ("The wagyu tartare" not "try their food").
+- booking_url: If you know the venue has a website, booking page, or reservation system, include the URL. For restaurants, link to their reservation page. For activities, link to GetYourGuide or the venue's booking page if known. Otherwise null.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -708,6 +710,7 @@ Return ONLY valid JSON, no other text.`;
           currency: s.currency ?? null,
           is_event: s.is_event ?? false,
           event_details: s.event_details ?? null,
+          booking_url: s.booking_url ?? null,
           pro_tip: s.pro_tip ?? null,
           what_to_order: s.what_to_order ?? null,
           specific_night: s.specific_night ?? null,
