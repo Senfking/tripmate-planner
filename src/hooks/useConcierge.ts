@@ -21,6 +21,7 @@ export interface ConciergeSuggestion {
   lng: number | null;
   priceLevel: string | null;
   distance_km: number | null;
+  not_verified?: boolean;
 }
 
 export interface StructuredFilters {
