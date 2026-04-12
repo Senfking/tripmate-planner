@@ -111,7 +111,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   // ─── Sortable section ordering (hooks must be before early returns) ───
   const STORAGE_KEY = `dashboard-order-${tripId}`;
-  const DEFAULT_ORDER = ["ai-hero", "expenses", "flights", "decisions-bookings", "itinerary", "packing"];
+  const DEFAULT_ORDER = ["ai-hero", "expenses", "flights", "decisions", "bookings", "itinerary", "packing"];
 
   const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
     try {
