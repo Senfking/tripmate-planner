@@ -253,6 +253,14 @@
   </div>
 
   <div class="sidebar-group">
+    <div class="sidebar-label">Phase 6 — AI-First</div>
+    <div class="sidebar-item" onclick="show('phase6pivot',this)"><span class="sidebar-dot dot-purple"></span> The Pivot</div>
+    <div class="sidebar-item" onclick="show('phase6flow',this)"><span class="sidebar-dot dot-purple"></span> New User Flow</div>
+    <div class="sidebar-item" onclick="show('phase6arch',this)"><span class="sidebar-dot dot-teal"></span> Architecture Changes</div>
+    <div class="sidebar-item" onclick="show('phase6impl',this)"><span class="sidebar-dot dot-teal"></span> Implementation Phases</div>
+  </div>
+
+  <div class="sidebar-group">
     <div class="sidebar-label">Deferred</div>
     <div class="sidebar-item" onclick="show('step16',this)"><span class="sidebar-dot dot-muted"></span> Step 16 · Lock Rates</div>
     <div class="sidebar-item" onclick="show('step17',this)"><span class="sidebar-dot dot-muted"></span> Step 17 · Admin</div>
@@ -3434,6 +3442,272 @@ List every file you'll change before making changes.<button class="copy-btn" onc
       <tr><td>EU users paying</td><td>EU VAT (OSS scheme) may apply — get accountant advice</td></tr>
     </tbody>
   </table>
+</div>
+
+<!-- ══════════ PHASE 6 — AI-FIRST ARCHITECTURE ══════════ -->
+<div id="phase6pivot" class="section">
+  <div class="section-header">
+    <h2>Phase 6: AI-First Architecture — The Shift</h2>
+    <p>Junto is pivoting from "trip management tool with an AI feature" to "AI trip planner with group collaboration". The AI-generated plan becomes the core object, not a bolt-on.</p>
+  </div>
+
+  <div class="callout callout-purple">This is a product-level pivot, not a feature addition. Every design and architecture decision from this point forward should ask: "Does this make the AI plan more central?" If not, defer it.</div>
+
+  <h3>Why now</h3>
+  <ul>
+    <li>The AI Trip Builder (Phase 2) proved the concept — users who generate plans have 3× higher engagement</li>
+    <li>The current flow is backwards: create trip → add stuff → maybe try AI. The AI should be the entry point</li>
+    <li>Competitors are bolting AI onto legacy planners. Junto can be AI-native from the ground up</li>
+    <li>The plan/itinerary split confuses users — "where does my trip actually live?"</li>
+  </ul>
+
+  <h3>Core principle</h3>
+  <div class="callout callout-green"><strong>The AI plan IS the trip.</strong> Not a suggestion, not a draft, not a separate tab. When you open a trip, you see the plan. When you edit the plan, you're editing the trip. One object, one view, one source of truth.</div>
+</div>
+
+<div id="phase6flow" class="section">
+  <div class="section-header">
+    <h2>Phase 6: New User Flow</h2>
+    <p>The end-to-end journey from landing to travel, with AI at every step.</p>
+  </div>
+
+  <h3>Flow overview</h3>
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">1. Entry — Home screen with generator</span></div>
+      <p class="task-note">User lands on home screen → sees the trip generator bar prominently ("Where do you want to go?"). Same generator for logged-in and landing page — consistent entry point everywhere.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">2. Generate — AI creates a full plan</span></div>
+      <p class="task-note">User fills in destination / dates / vibe → Junto AI generates a full plan with day-by-day activities, estimated costs, and map pins.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">3. Create trip — One-click from plan to trip</span></div>
+      <p class="task-note">"Create trip from this plan" button → creates the trip record AND saves the plan as the trip's itinerary in one action. No separate "create trip" wizard.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">4. Invite — Share with the group</span></div>
+      <p class="task-note">Prompt to invite group members (share link, WhatsApp, etc.). The plan is the first thing they see when they join — instant context.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">5. Collaborate — Group reacts and comments</span></div>
+      <p class="task-note">Group members see the plan, react to activities, comment, suggest changes, vote on contested items. Real-time collaboration via Supabase Realtime.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">6. Refine — Edit and regenerate</span></div>
+      <p class="task-note">Anyone can edit — swap activities, add custom ones, adjust days, regenerate sections. The plan is always a living document, never "locked".</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">7. Confirm — Group consensus</span></div>
+      <p class="task-note">Activities get confirmed status through group consensus or admin approval. Contested items auto-create a Decision (poll) for the group to vote on.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">8. Book — Link to booking platforms</span></div>
+      <p class="task-note">Confirmed activities link to booking platforms (affiliate revenue). One-click "Book this" for hotels, restaurants, experiences.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">9. Travel — Live trip support</span></div>
+      <p class="task-note">Expenses tracked during trip, real-time updates, arrival notifications, live location sharing. The plan becomes the trip dashboard.</p>
+    </div>
+  </div>
+</div>
+
+<div id="phase6arch" class="section">
+  <div class="section-header">
+    <h2>Phase 6: Architecture Changes</h2>
+    <p>What changes in the codebase, data model, and UI to support the AI-first pivot.</p>
+  </div>
+
+  <h3>Home Screen Redesign</h3>
+  <ul>
+    <li><strong>Hero:</strong> Trip generator bar (destination, dates, group size, vibe) — same as landing page but for logged-in users</li>
+    <li><strong>Below:</strong> "Your trips" grid showing existing trips</li>
+    <li><strong>Below:</strong> "Explore" section showing public trip templates (Phase 5)</li>
+    <li><strong>Remove:</strong> The current "Create trip" wizard — trips are now born from AI plans</li>
+  </ul>
+  <div class="callout">The logged-in home should feel identical to the landing page hero. Same generator bar, same momentum. No dashboard clutter.</div>
+
+  <h3>Trip Creation Flow</h3>
+  <table>
+    <thead><tr><th>Old flow</th><th>New flow</th></tr></thead>
+    <tbody>
+      <tr><td>Create trip → name it → set dates → invite → then maybe use AI builder</td><td>Generate AI plan → "Create trip" → trip is created with plan as its content → invite members</td></tr>
+      <tr><td>Trip record created empty, content added later</td><td>Trip record created pre-filled: name (from AI title), dates (from plan), destination (from plan), <code>ai_trip_plan</code> linked as active plan</td></tr>
+      <tr><td>AI builder is a feature inside the trip</td><td>AI builder is the entry point that creates the trip</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Plan = Itinerary (merge)</h3>
+  <div class="callout callout-purple"><strong>The separate Itinerary tab is removed.</strong> The AI plan view IS the trip's main content view — it's the first thing you see when opening a trip.</div>
+  <ul>
+    <li>The plan is always editable: add/remove/swap/reorder activities, edit days, regenerate sections</li>
+    <li>"Confirmed" activities (group consensus or admin approval) get a checkmark but stay in the same view</li>
+    <li>No "Add to itinerary" button needed — activities are already in the plan/itinerary</li>
+    <li>The plan view supports all existing itinerary features: time slots, locations, map pins, attendance</li>
+  </ul>
+
+  <h3>Trip Tabs (revised)</h3>
+  <table>
+    <thead><tr><th>Tab</th><th>Replaces</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Plan</strong> (default)</td><td>Trips + Itinerary</td><td>The AI-generated plan, always editable, with collaboration features (reactions, comments, status indicators)</td></tr>
+      <tr><td><strong>Decisions</strong></td><td>—</td><td>Polls for contested items (auto-created when group can't agree on an activity)</td></tr>
+      <tr><td><strong>Expenses</strong></td><td>—</td><td>Cost tracking during the trip, fed by confirmed activity costs</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Data Model Changes</h3>
+  <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">copy</button><span class="code-label">Schema changes</span>
+-- ai_trip_plans becomes the primary content table for a trip
+-- Rename consideration: trip_plans (cleaner, less "feature-y")
+
+-- Add is_active boolean — one active plan per trip (supports plan versioning)
+ALTER TABLE ai_trip_plans ADD COLUMN is_active boolean DEFAULT true;
+
+-- Add activity status tracking
+-- Values: 'draft' | 'confirmed' | 'contested' | 'removed'
+-- Applied to individual activities within the plan JSON
+
+-- Link trips to their active plan
+ALTER TABLE trips ADD COLUMN active_plan_id uuid REFERENCES ai_trip_plans(id);
+
+-- When plan is regenerated/adjusted:
+-- 1. Create new ai_trip_plan record
+-- 2. Set old plan's is_active = false
+-- 3. Update trips.active_plan_id to new plan
+-- Old versions kept for history</div>
+
+  <div class="callout callout-warn"><strong>Migration concern:</strong> The existing <code>itinerary_items</code> table becomes a legacy table. New trips won't use it. Keep <code>itinerary_items</code> working for existing trips during transition — do not drop or break.</div>
+
+  <h3>Trip Creation API Changes</h3>
+  <ul>
+    <li>New flow: POST to create trip → automatically links the <code>ai_trip_plan</code></li>
+    <li><code>trips</code> table gets: <code>active_plan_id uuid references ai_trip_plans(id)</code> column</li>
+    <li>When plan is regenerated/adjusted, a new <code>ai_trip_plan</code> is created and <code>active_plan_id</code> is updated (old versions kept for history)</li>
+    <li>Frontend: single <code>createTripFromPlan(planId)</code> mutation that creates trip + links plan in one transaction</li>
+  </ul>
+</div>
+
+<div id="phase6impl" class="section">
+  <div class="section-header">
+    <h2>Phase 6: Implementation Phases</h2>
+    <p>Four sub-phases to incrementally ship the AI-first architecture without breaking existing trips.</p>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase 6a — Home screen with generator</span><span class="tag tag-code">Claude Code</span><span class="tag tag-sql">SQL</span></div>
+      <p class="task-note">Redesign logged-in home to show generator bar + trip list. Generator creates plan → "Create trip" button creates trip + links plan. Trip opens directly to plan view.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Move the trip generator bar to the top of the logged-in home screen (reuse Phase 5 landing page component)</li>
+          <li>Wire "Generate trip" to existing AI builder flow</li>
+          <li>Add "Create trip from this plan" button to plan preview</li>
+          <li>Create <code>createTripFromPlan()</code> mutation: creates trip record, sets <code>active_plan_id</code>, copies name/dates/destination from plan</li>
+          <li>Trip opens to the plan view by default (not dashboard)</li>
+          <li>"Your trips" grid below the generator — reuse existing <code>TripList</code> component</li>
+          <li>"Explore" section below trips — connect to Phase 5 trip templates</li>
+        </ul>
+        <div class="callout">Keep the old "Create trip" button accessible during transition (e.g. "Create blank trip" link). Remove in Phase 6d.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase 6b — Merge plan and itinerary</span><span class="tag tag-code">Claude Code</span><span class="tag tag-sql">SQL</span></div>
+      <p class="task-note">Trip main view = plan view (remove Itinerary tab). Plan is always editable. Add activity status (draft/confirmed). Keep legacy itinerary support for existing trips.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Make the plan view the default tab when opening a trip</li>
+          <li>Remove the separate Itinerary tab from the trip navigation</li>
+          <li>Add activity status enum to plan activities: <code>draft</code> | <code>confirmed</code> | <code>contested</code> | <code>removed</code></li>
+          <li>Add <code>is_active</code> column to <code>ai_trip_plans</code> table</li>
+          <li>Add <code>active_plan_id</code> column to <code>trips</code> table</li>
+          <li>Plan view: always editable — add/remove/swap/reorder activities, edit days, regenerate sections</li>
+          <li>Confirmed activities show a checkmark but remain editable (unconfirm to edit)</li>
+          <li>For existing trips without an <code>active_plan_id</code>: fall back to legacy itinerary view</li>
+        </ul>
+        <div class="callout callout-warn">Do not break existing trips. If a trip has <code>itinerary_items</code> but no <code>active_plan_id</code>, show the legacy itinerary view. Migration happens in Phase 6d.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase 6c — Group workflow</span><span class="tag tag-code">Claude Code</span><span class="tag tag-sql">SQL</span></div>
+      <p class="task-note">Contested activities → auto-create Decision. Activity confirmation flow (admin approve or group vote). Activity status indicators in plan view.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>When 2+ members react negatively to an activity, auto-set status to <code>contested</code></li>
+          <li>Contested activities auto-create a Decision (poll) with alternatives</li>
+          <li>Decision outcome updates the activity in the plan (swap or confirm)</li>
+          <li>Admin can override: manually confirm or remove any activity</li>
+          <li>Status indicators in plan view: draft (default), confirmed (✓ checkmark), contested (⚡ with link to Decision), removed (strikethrough)</li>
+          <li>Activity confirmation can happen via: admin approval, unanimous thumbs-up, or Decision poll result</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Phase 6d — Cleanup</span><span class="tag tag-code">Claude Code</span><span class="tag tag-sql">SQL</span><span class="tag tag-manual">Manual</span></div>
+      <p class="task-note">Remove old trip creation wizard. Remove standalone Itinerary tab code. Migrate existing trips' itinerary_items into ai_trip_plans format. Remove "Add to itinerary" flows.</p>
+      <button class="expand-btn" onclick="toggleExpand(event,this)">▸ implementation details</button>
+      <div class="task-detail">
+        <ul>
+          <li>Remove the old "Create trip" wizard component and route</li>
+          <li>Remove standalone Itinerary tab code (components, hooks, route)</li>
+          <li>Write migration script: convert each trip's <code>itinerary_items</code> into an <code>ai_trip_plan</code> record, set as <code>active_plan_id</code></li>
+          <li>Remove "Add to itinerary" buttons and flows from AI builder, bookings, cross-linking</li>
+          <li>Remove legacy itinerary fallback from Phase 6b</li>
+          <li>Keep <code>itinerary_items</code> table (soft deprecation) — don't drop in case of rollback needs</li>
+        </ul>
+        <div class="callout callout-red">Run migration on a staging copy first. Verify all existing trips render correctly with the new plan view before deploying to production.</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════ STEP 16 ══════════ -->
