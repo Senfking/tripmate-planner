@@ -313,7 +313,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const { data: attachments, isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments-summary", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("attachments").select("id, type, created_by, booking_data").eq("trip_id", tripId);
+      const { data, error } = await supabase.from("attachments").select("id, type, created_by, booking_data, og_image_url").eq("trip_id", tripId);
       if (error) throw error;
       return data;
     },
