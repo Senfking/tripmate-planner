@@ -3,20 +3,20 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, differenceInCalendarDays, isWithinInterval, parseISO } from "date-fns";
+import { format } from "date-fns";
 import {
-  Compass, CalendarDays, Sparkles, AlertTriangle, Share2, UserPlus, Settings,
-  Vote, FileText, Receipt, ChevronRight,
+  Sparkles, AlertTriangle, Vote, FileText, Receipt, ChevronRight,
+  Plane, Package,
 } from "lucide-react";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances } from "@/lib/settlementCalc";
 import { fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { SharedItemsSection } from "./SharedItemsSection";
-import { ArrivalsCard } from "@/components/bookings/ArrivalsCard";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
-import { ConciergeButton } from "@/components/concierge/ConciergeButton";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 
 // Error boundary for the trip builder
 class BuilderErrorBoundary extends Component<{ children: ReactNode; onClose: () => void }, { hasError: boolean }> {
@@ -50,12 +50,6 @@ function BuilderWrapper({ tripId, onClose }: { tripId: string; onClose: () => vo
     </BuilderErrorBoundary>
   );
 }
-
-type BadgeState = { label: string; color: "green" | "amber" | "red" | "teal" | "grey"; pulse?: boolean };
-
-const DOT_COLORS: Record<string, string> = {
-  green: "#10B981", amber: "#F59E0B", red: "#EF4444", teal: "#0D9488", grey: "#94A3B8",
-};
 
 interface TripDashboardProps {
   tripId: string;
@@ -97,7 +91,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   };
 
   const tripEnded = endDate ? new Date(endDate) < new Date(todayStr) : false;
-  const endedBadge: BadgeState = { label: "Trip ended", color: "grey" };
 
   // Route stops
   const { data: stops, isLoading: stopsLoading } = useQuery({
@@ -206,12 +199,12 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const pendingVoteCount = Math.max(0, unreactedProposals) + Math.max(0, unvotedDateOptions) + pollsWithoutVote.length;
   const totalVoteActivity = (myReactions?.length ?? 0) + (myDateVotes?.length ?? 0) + (myPollVotes?.length ?? 0);
 
-  const decisionsBadge: BadgeState = (() => {
-    if (tripEnded) return endedBadge;
-    if ((myVibeResponses ?? 0) === 0) return { label: "Vibe pending", color: "amber" };
-    if (pendingVoteCount > 0) return { label: `${pendingVoteCount} pending`, color: "amber" };
-    if (routeLocked) return { label: "Route confirmed", color: "teal" };
-    return { label: "Not started", color: "grey" };
+  const decisionsBadge = (() => {
+    if (tripEnded) return { label: "Trip ended", color: "grey" as const };
+    if ((myVibeResponses ?? 0) === 0) return { label: "Vibe pending", color: "amber" as const };
+    if (pendingVoteCount > 0) return { label: `${pendingVoteCount} pending`, color: "amber" as const };
+    if (routeLocked) return { label: "Route confirmed", color: "teal" as const };
+    return { label: "Not started", color: "grey" as const };
   })();
 
   let decisionsSummary: string;
@@ -241,36 +234,16 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     enabled: !!userId,
   });
 
-  const itineraryBadge: BadgeState = (() => {
-    if (tripEnded) return endedBadge;
-    const itemCount = itineraryItems?.length ?? 0;
-    if (itemCount === 0) return { label: "Nothing planned", color: "grey" };
-    return { label: `${itemCount} activities`, color: "green" };
-  })();
-
-  let itinerarySummary: string;
-  if (itineraryItems && itineraryItems.length > 0) {
-    itinerarySummary = `${itineraryItems.length} activit${itineraryItems.length > 1 ? "ies" : "y"} planned`;
-  } else {
-    itinerarySummary = "Nothing planned yet";
-  }
-
   // --- BOOKINGS data ---
   const { data: attachments, isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments-summary", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("attachments").select("id, type, created_by").eq("trip_id", tripId);
+      const { data, error } = await supabase.from("attachments").select("id, type, created_by, booking_data").eq("trip_id", tripId);
       if (error) throw error;
       return data;
     },
     enabled: !!userId,
   });
-
-  const bookingsBadge: BadgeState = (() => {
-    const count = attachments?.length ?? 0;
-    if (count > 0) return { label: `${count} docs`, color: "green" };
-    return { label: "No docs yet", color: "grey" };
-  })();
 
   let bookingsSummary: string;
   if (attachments && attachments.length > 0) {
@@ -279,7 +252,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     const parts: string[] = [];
     if (typeCounts["flight"]) parts.push(`${typeCounts["flight"]} flight${typeCounts["flight"] > 1 ? "s" : ""}`);
     if (typeCounts["hotel"]) parts.push(`${typeCounts["hotel"]} hotel${typeCounts["hotel"] > 1 ? "s" : ""}`);
-    if (parts.length === 0) parts.push(`${attachments.length} doc${attachments.length > 1 ? "s" : ""}`);
+    const totalDocs = attachments.length;
+    parts.unshift(`${totalDocs} doc${totalDocs > 1 ? "s" : ""}`);
     bookingsSummary = parts.join(" · ");
   } else {
     bookingsSummary = "No documents saved yet";
@@ -306,39 +280,50 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     enabled: !!userId,
   });
 
-  let expensesSummary: string;
-  let expensesBadge: BadgeState;
+  // Members for expenses card
+  const { data: members } = useQuery({
+    queryKey: ["trip-members-full", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_members")
+        .select("user_id, role, joined_at")
+        .eq("trip_id", tripId)
+        .order("joined_at");
+      if (error) throw error;
+      const userIds = data.map((m) => m.user_id);
+      const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+      return data.map((m) => ({
+        ...m,
+        profile: profileMap.get(m.user_id) as { display_name: string | null; avatar_url?: string | null } | undefined,
+      }));
+    },
+    enabled: !!userId,
+  });
+
+  const memberCount = members?.length ?? 0;
+
+  // Compute expense balances
+  let myBalance = 0;
+  let totalSpent = 0;
+  let balances: { userId: string; balance: number }[] = [];
 
   if (expenses && expenses.length > 0 && userId) {
     const mapped = expenses.map((e) => ({
       id: e.id, payer_id: e.payer_id, amount: Number(e.amount), currency: e.currency,
       splits: (e.expense_splits ?? []).map((s) => ({ user_id: s.user_id, share_amount: Number(s.share_amount) })),
     }));
-    const { balances } = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
-    const myBalance = balances.find((b) => b.userId === userId);
-    if (!myBalance || Math.abs(myBalance.balance) < 0.01) {
-      expensesBadge = { label: "Settled up", color: "green" };
-    } else if (myBalance.balance > 0) {
-      expensesBadge = { label: `Owed ${fmtCurrency(myBalance.balance, settlementCurrency)}`, color: "green" };
-    } else {
-      expensesBadge = { label: `You owe ${fmtCurrency(Math.abs(myBalance.balance), settlementCurrency)}`, color: "red" };
-    }
-    const payerCount = new Set(mapped.map((e) => e.payer_id)).size;
-    expensesSummary = `${expenses.length} expense${expenses.length > 1 ? "s" : ""} · ${payerCount} contributor${payerCount > 1 ? "s" : ""}`;
-  } else {
-    expensesBadge = { label: "No expenses", color: "grey" };
-    expensesSummary = "No expenses logged yet";
+    const result = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
+    balances = result.balances;
+    const myBal = balances.find((b) => b.userId === userId);
+    myBalance = myBal?.balance ?? 0;
+    totalSpent = mapped.reduce((sum, e) => sum + e.amount, 0);
   }
 
-  const { data: memberCount } = useQuery({
-    queryKey: ["trip-members-count", tripId],
-    queryFn: async () => {
-      const { count, error } = await supabase.from("trip_members").select("id", { count: "exact", head: true }).eq("trip_id", tripId);
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!userId,
-  });
+  // Flight card data
+  const flights = (attachments ?? []).filter((a) => a.type === "flight");
+  const nextFlight = flights.length > 0 ? flights[0] : null;
+  const flightBookingData = nextFlight?.booking_data as any;
 
   const isLoading = stopsLoading || proposalsLoading || pollsLoading || itineraryLoading || attachmentsLoading || expensesLoading;
 
@@ -346,64 +331,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     return <DashboardSkeleton />;
   }
 
-  const sections: {
-    key: string;
-    icon: typeof Vote;
-    title: string;
-    summary: string;
-    badge: BadgeState;
-    to: string;
-    iconBg: string;
-    iconColor: string;
-  }[] = [
-    {
-      key: "decisions",
-      icon: Vote,
-      title: "Decisions",
-      summary: decisionsSummary,
-      badge: decisionsBadge,
-      to: `/app/trips/${tripId}/decisions`,
-      iconBg: "bg-amber-100",
-      iconColor: "text-amber-600",
-    },
-    ...(!hasPlan ? [{
-      key: "itinerary",
-      icon: CalendarDays,
-      title: "Itinerary",
-      summary: itinerarySummary,
-      badge: itineraryBadge,
-      to: `/app/trips/${tripId}/itinerary`,
-      iconBg: "bg-purple-100",
-      iconColor: "text-purple-600",
-    }] : []),
-    {
-      key: "bookings",
-      icon: FileText,
-      title: "Bookings & Docs",
-      summary: bookingsSummary,
-      badge: bookingsBadge,
-      to: `/app/trips/${tripId}/bookings`,
-      iconBg: "bg-blue-100",
-      iconColor: "text-blue-600",
-    },
-    {
-      key: "expenses",
-      icon: Receipt,
-      title: "Expenses",
-      summary: expensesSummary,
-      badge: expensesBadge,
-      to: `/app/trips/${tripId}/expenses`,
-      iconBg: "bg-emerald-100",
-      iconColor: "text-emerald-600",
-    },
-  ];
+  // Countdown helper
+  const daysUntil = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    const diff = Math.ceil((new Date(dateStr).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : null;
+  };
 
-  const quickActions = [
-    { icon: Share2, label: "Share", action: () => onShareOpen?.() },
-    { icon: UserPlus, label: "Invite", action: () => onShareOpen?.() },
-    { icon: Compass, label: "Discover", action: () => setConciergeOpen(true) },
-    { icon: Settings, label: "Settings", action: () => navigate(`/app/trips/${tripId}/admin`) },
-  ];
+  const tripCountdown = daysUntil(startDate);
 
   return (
     <div className="animate-fade-in-card pb-16">
@@ -412,96 +347,251 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       )}
 
       <div className="px-4 md:max-w-[700px] md:mx-auto md:px-8 flex flex-col gap-3">
-        {/* ─── QUICK ACTIONS ─── */}
-        <div className="flex items-center justify-center gap-6 py-2">
-          {quickActions.map((qa) => (
+
+        {/* ─── JUNTO AI BLOCK ─── */}
+        <div
+          className="relative overflow-hidden p-5"
+          style={{
+            background: "#0D9488",
+            borderRadius: 20,
+          }}
+        >
+          {/* Decorative sparkles */}
+          <svg className="absolute top-3 right-4 opacity-20" width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="white" />
+          </svg>
+          <svg className="absolute bottom-4 right-16 opacity-15" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="white" />
+          </svg>
+          <svg className="absolute top-12 left-2 opacity-10" width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="white" />
+          </svg>
+
+          {/* Label */}
+          <div className="flex items-center gap-1.5 mb-3">
+            <Sparkles className="h-4 w-4 text-white/90" />
+            <span className="text-white/90 text-[13px] font-semibold tracking-wide">Junto AI</span>
+          </div>
+
+          {/* Two glass sub-cards */}
+          <div className="grid grid-cols-2 gap-2.5">
             <button
-              key={qa.label}
-              onClick={qa.action}
-              className="flex flex-col items-center gap-1 group"
+              onClick={() => {
+                if (hasPlan) {
+                  navigate(`/app/trips/${tripId}/plan`);
+                } else {
+                  toggleBuilder(true);
+                }
+              }}
+              className="text-left rounded-2xl p-3.5 transition-all active:scale-[0.97]"
+              style={{
+                background: "rgba(255,255,255,0.18)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.15)",
+              }}
             >
-              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center transition-colors group-hover:bg-muted/80 group-active:scale-95">
-                <qa.icon className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <span className="text-[11px] text-muted-foreground font-medium">{qa.label}</span>
+              <p className="text-white font-semibold text-[14px] leading-tight">
+                {hasPlan ? "Your plan" : "Plan my trip"}
+              </p>
+              <p className="text-white/70 text-[12px] mt-1 leading-snug">
+                {hasPlan ? "View your AI itinerary" : "Full itinerary in seconds"}
+              </p>
             </button>
-          ))}
+
+            <button
+              onClick={() => setConciergeOpen(true)}
+              className="text-left rounded-2xl p-3.5 transition-all active:scale-[0.97]"
+              style={{
+                background: "rgba(255,255,255,0.18)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.15)",
+              }}
+            >
+              <p className="text-white font-semibold text-[14px] leading-tight">What to do?</p>
+              <p className="text-white/70 text-[12px] mt-1 leading-snug">Restaurants, bars, spots</p>
+            </button>
+          </div>
         </div>
 
-        {/* ─── AI PLAN CARD ─── */}
-        {hasPlan ? (
+        {/* ─── FLIGHT CARD (contextual) ─── */}
+        {nextFlight && (
           <button
-            onClick={() => navigate(`/app/trips/${tripId}/plan`)}
-            className="w-full bg-card rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+            onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
+            className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
           >
-            <div className="h-[80px] w-[80px] rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
-              <Sparkles className="h-7 w-7 text-primary" />
+            {/* Photo strip */}
+            <div className="grid grid-cols-2 h-[100px]">
+              <div className="relative" style={{ background: "linear-gradient(135deg, #0D9488, #0f766e)" }}>
+                <span className="absolute inset-0 flex items-center justify-center text-white/60 text-[13px] font-medium tracking-wide">
+                  {flightBookingData?.origin_code || "DEP"}
+                </span>
+              </div>
+              <div className="relative" style={{ background: "linear-gradient(135deg, #115e59, #0c4a4a)" }}>
+                <span className="absolute inset-0 flex items-center justify-center text-white/60 text-[13px] font-medium tracking-wide">
+                  {flightBookingData?.destination_code || "ARR"}
+                </span>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[15px] text-card-foreground">Your trip plan</p>
-              <p className="text-[13px] text-muted-foreground mt-0.5 truncate">AI-generated itinerary ready to explore</p>
-            </div>
-            <ChevronRight className="h-5 w-5 text-primary shrink-0" />
-          </button>
-        ) : (
-          <button
-            onClick={() => toggleBuilder(true)}
-            className="w-full bg-card rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
-          >
-            <div className="h-[80px] w-[80px] rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
-              <Sparkles className="h-7 w-7 text-primary-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[15px] text-card-foreground">Plan with Junto AI</p>
-              <p className="text-[13px] text-muted-foreground mt-0.5">Generate a complete itinerary in seconds</p>
-            </div>
-            <div className="shrink-0">
-              <span className="text-xs font-semibold text-primary">Get started →</span>
+            <div className="p-3.5 flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <Plane className="h-3.5 w-3.5 text-muted-foreground" />
+                  <p className="font-semibold text-[14px] text-foreground truncate">
+                    {flightBookingData?.origin || "Origin"} → {flightBookingData?.destination || "Destination"}
+                  </p>
+                </div>
+                <p className="text-[12px] text-muted-foreground mt-0.5">
+                  {flightBookingData?.date
+                    ? format(new Date(flightBookingData.date), "MMM d")
+                    : "Date TBD"}
+                  {flightBookingData?.traveler && ` · ${flightBookingData.traveler}`}
+                </p>
+              </div>
+              {tripCountdown && (
+                <span className="text-[12px] font-medium text-[#0D9488] border border-[#0D9488]/20 bg-[#0D9488]/5 rounded-full px-2.5 py-0.5 shrink-0">
+                  in {tripCountdown} day{tripCountdown > 1 ? "s" : ""}
+                </span>
+              )}
             </div>
           </button>
         )}
 
-        {/* ─── SECTION CARDS ─── */}
-        {sections.map((s) => (
+        {/* ─── DECISIONS & BOOKINGS — 2-column grid ─── */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Decisions card */}
           <button
-            key={s.key}
-            onClick={() => navigate(s.to)}
-            className="w-full bg-card rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+            onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
+            className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
           >
-            <div className={`h-11 w-11 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
-              <s.icon className={`h-5 w-5 ${s.iconColor}`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-[15px] text-card-foreground">{s.title}</p>
-                <div
-                  className="flex items-center gap-1.5 rounded-full px-2 py-0.5 shrink-0"
-                  style={{ background: "hsl(var(--muted))", fontSize: 11, fontWeight: 500, color: "hsl(var(--muted-foreground))" }}
-                >
-                  <span
-                    className={s.badge.pulse ? "animate-pulse" : ""}
-                    style={{ width: 6, height: 6, borderRadius: "50%", background: DOT_COLORS[s.badge.color], flexShrink: 0 }}
-                  />
-                  {s.badge.label}
-                </div>
+            <div className="h-[90px] relative" style={{ background: "linear-gradient(135deg, #d4a574, #c9a06a)" }}>
+              <div className="absolute bottom-2 left-2 right-2 flex justify-center">
+                <span className="text-white/50 text-[11px] font-medium uppercase tracking-wider">Destination</span>
               </div>
-              <p className="text-[13px] text-muted-foreground mt-0.5">{s.summary}</p>
+            </div>
+            <div className="p-3">
+              <p className="font-semibold text-[14px] text-foreground">Decisions</p>
+              <p className="text-[12px] mt-0.5" style={{ color: decisionsBadge.color === "amber" ? "#D97706" : decisionsBadge.color === "teal" ? "#0D9488" : "#94A3B8" }}>
+                {decisionsBadge.label === "Route confirmed" ? "Route confirmed" : decisionsBadge.label === "Not started" ? "Route pending" : decisionsBadge.label}
+              </p>
+            </div>
+          </button>
+
+          {/* Bookings card */}
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
+            className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
+          >
+            <div className="h-[90px] relative" style={{ background: "linear-gradient(135deg, #94a3b8, #7c8fa3)" }}>
+              <div className="absolute bottom-2 left-2 right-2 flex justify-center">
+                <span className="text-white/50 text-[11px] font-medium uppercase tracking-wider">Hotel</span>
+              </div>
+            </div>
+            <div className="p-3">
+              <p className="font-semibold text-[14px] text-foreground">Bookings</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">{bookingsSummary}</p>
+            </div>
+          </button>
+        </div>
+
+        {/* ─── ITINERARY CARD (if no AI plan) ─── */}
+        {!hasPlan && (
+          <button
+            onClick={() => navigate(`/app/trips/${tripId}/itinerary`)}
+            className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[15px] text-foreground">Itinerary</p>
+              <p className="text-[13px] text-muted-foreground mt-0.5">
+                {itineraryItems && itineraryItems.length > 0
+                  ? `${itineraryItems.length} activit${itineraryItems.length > 1 ? "ies" : "y"} planned`
+                  : "Nothing planned yet"}
+              </p>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
-        ))}
+        )}
 
-        {/* ─── ARRIVALS ─── */}
-        <ArrivalsCard tripId={tripId} />
-      </div>
+        {/* ─── EXPENSES CARD ─── */}
+        <button
+          onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
+          className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-left transition-all active:scale-[0.98] hover:shadow-md"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-semibold text-[15px] text-foreground">Expenses</p>
+            {expenses && expenses.length > 0 && (
+              <span className="text-[13px] text-muted-foreground">{expenses.length} logged</span>
+            )}
+          </div>
 
-      {/* ─── SHARED ITEMS ─── */}
-      <div className="md:max-w-[700px] md:mx-auto">
+          {expenses && expenses.length > 0 && userId ? (
+            <>
+              <p className="text-[12px] text-muted-foreground mb-0.5">Your balance</p>
+              <p className={`text-[22px] font-bold ${myBalance < -0.01 ? "text-red-600" : myBalance > 0.01 ? "text-[#0D9488]" : "text-foreground"}`}>
+                {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
+              </p>
+              {myBalance < -0.01 && <p className="text-[11px] text-red-500 -mt-0.5">You owe</p>}
+              {myBalance > 0.01 && <p className="text-[11px] text-[#0D9488] -mt-0.5">You're owed</p>}
+
+              {/* Progress bar showing split */}
+              {balances.length >= 2 && (
+                <div className="mt-3">
+                  <div className="h-2 rounded-full bg-gray-200 overflow-hidden flex">
+                    {balances.map((b, i) => {
+                      const total = balances.reduce((s, x) => s + Math.abs(x.balance), 0);
+                      const pct = total > 0 ? (Math.abs(b.balance) / total) * 100 : 100 / balances.length;
+                      return (
+                        <div
+                          key={b.userId}
+                          className="h-full"
+                          style={{
+                            width: `${pct}%`,
+                            background: b.userId === userId ? "#0D9488" : i === 1 ? "#374151" : "#94A3B8",
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between mt-1.5">
+                    {balances.slice(0, 2).map((b) => {
+                      const member = members?.find((m) => m.user_id === b.userId);
+                      return (
+                        <span key={b.userId} className="text-[11px] text-muted-foreground">
+                          {member?.profile?.display_name || "Member"}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Contributor avatars */}
+              {members && members.length > 0 && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="flex -space-x-1.5">
+                    {members.slice(0, 4).map((m) => (
+                      <Avatar key={m.user_id} className="h-6 w-6 ring-2 ring-white">
+                        {m.profile?.avatar_url && <AvatarImage src={m.profile.avatar_url} />}
+                        <AvatarFallback className="bg-primary text-primary-foreground text-[9px]">
+                          {(m.profile?.display_name || "?").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-[13px] text-muted-foreground">No expenses logged yet</p>
+          )}
+        </button>
+
+        {/* ─── PACKING LIST ─── */}
         <SharedItemsSection tripId={tripId} />
       </div>
 
-      {/* Concierge */}
-      <ConciergeButton onClick={() => setConciergeOpen(true)} />
+      {/* Concierge Panel */}
       <ConciergePanel
         tripId={tripId}
         open={conciergeOpen}

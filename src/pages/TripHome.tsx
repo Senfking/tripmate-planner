@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil, Share2, Settings } from "lucide-react";
 import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
@@ -391,10 +391,34 @@ export default function TripHome() {
           My Trips
         </button>
 
-        {/* Right side: Live indicator + Camera */}
+        {/* Right side: Share + Settings + Camera + Live */}
         {!builderOpen && (
           <div className="absolute right-4 flex items-center gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
             <LiveIndicator status={connectionStatus} />
+            <button
+              onClick={() => setShareInviteOpen(true)}
+              className="relative z-[5] flex h-9 w-9 items-center justify-center rounded-full"
+              style={{
+                background: "rgba(0,0,0,0.3)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+              }}
+            >
+              <Share2 className="h-4 w-4 text-white" />
+            </button>
+            <button
+              onClick={() => navigate(`/app/trips/${tripId}/admin`)}
+              className="relative z-[5] flex h-9 w-9 items-center justify-center rounded-full"
+              style={{
+                background: "rgba(0,0,0,0.3)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+              }}
+            >
+              <Settings className="h-4 w-4 text-white" />
+            </button>
             <button
               onClick={() => setCoverMenuOpen(true)}
               className="relative z-[5] flex h-9 w-9 items-center justify-center rounded-full"
