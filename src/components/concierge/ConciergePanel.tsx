@@ -907,10 +907,10 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 z-40 animate-fade-in" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/40 z-[59] animate-fade-in" onClick={onClose} />
 
       {/* Full-screen overlay */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-background animate-slide-up overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+      <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-slide-up overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         {/* Header — clean: back + title + X only */}
         <div className="relative shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-[#0D9488]/5 via-[#0EA5E9]/5 to-[#0D9488]/5" style={{ backgroundSize: "200% 100%", animation: "gradient-shift 8s ease infinite" }} />
@@ -1005,7 +1005,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         </div>
 
         {/* Content area */}
-        <div className="flex-1 overflow-y-auto" style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
+        <div className={`flex-1 ${stage === "what" ? "overflow-hidden" : "overflow-y-auto"}`} style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
