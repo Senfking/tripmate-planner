@@ -74,30 +74,30 @@ const TRIP_TEMPLATES = [
 const FEATURES = [
   {
     icon: Sparkles,
-    headline: "AI does the planning so you don't have to",
-    description: "Tell Junto where, when, and your group's vibe. In 30 seconds you get a full day-by-day itinerary with real venues, photos, reviews, and cost estimates. Share it with your group — they react, swap activities, and make it theirs.",
+    headline: "Junto plans your entire trip",
+    description: "Just tell Junto where you're going, when, and what your group is into. You'll get a full day-by-day plan with real places, photos, reviews, and cost estimates. Send it to your group and let everyone weigh in.",
   },
   {
     icon: CheckSquare,
-    headline: "Everyone gets a vote",
-    description: "Where to go? When to fly? Beach or mountains? Stop guessing what people want. Junto lets everyone vote on destinations, dates, and vibes. The group decides, not just the organizer.",
+    headline: "Everyone gets a say",
+    description: "No more guessing what people want. Throw up a vote on where to go, when to fly, what vibe you're after. Everyone picks, Junto tallies. The group decides together.",
   },
   {
     icon: DollarSign,
-    headline: "Split costs without the awkward math",
-    description: "Scan receipts with AI, track in any currency, see who owes what in real-time. No more end-of-trip spreadsheets or 'I'll Venmo you later' that never happens.",
+    headline: "Money stuff, sorted",
+    description: "Snap a photo of the receipt, Junto reads it. Track everything in whatever currency you're spending in. At the end of the trip, everyone knows exactly who owes what.",
   },
   {
     icon: Compass,
-    headline: "Your on-trip AI concierge",
-    description: "Day 3, 8pm, everyone's hungry and nobody can decide. Ask Junto 'where should we eat?' and get real suggestions with photos, ratings, and what to order — based on where you actually are.",
+    headline: "Ask Junto, not the group chat",
+    description: "It's 8pm, everyone's hungry, nobody can pick a place. Ask Junto and get actual suggestions nearby with photos, ratings, and what to order. Works wherever you are.",
   },
 ];
 
 const HOW_STEPS = [
-  { num: 1, title: "Describe your dream trip", desc: "Destination, dates, budget, adventure level" },
-  { num: 2, title: "Share with your crew", desc: "Everyone votes, reacts, and customizes the plan together" },
-  { num: 3, title: "Travel without the drama", desc: "Expenses auto-split, concierge on demand, everything synced" },
+  { num: 1, title: "Tell Junto your vibe", desc: "Where, when, how adventurous" },
+  { num: 2, title: "Loop in your group", desc: "Everyone votes and customizes the plan" },
+  { num: 3, title: "Just travel", desc: "Expenses tracked, concierge on demand, zero drama" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -105,7 +105,7 @@ const HOW_STEPS = [
 /* ------------------------------------------------------------------ */
 function PhoneMockup() {
   return (
-    <div className="mx-auto w-[180px] sm:w-[200px]">
+    <div className="mx-auto w-[200px] sm:w-[220px]">
       <div className="rounded-[1.8rem] border-[4px] border-[#2a2a2e] bg-[#18181b] p-1.5 shadow-2xl shadow-black/40">
         <div className="absolute left-1/2 top-1 -translate-x-1/2 w-16 h-3 bg-[#1e1e21] rounded-b-xl z-10" />
         <div className="rounded-[1.4rem] bg-gradient-to-br from-[#1a1a1f] to-[#111114] aspect-[9/19] flex items-center justify-center">
@@ -191,7 +191,7 @@ export default function Landing() {
           </h1>
 
           <p className="mt-4 text-[1rem] sm:text-lg text-white/70 max-w-xl mx-auto leading-relaxed">
-            You know the drill. You plan everything. They say "I'm down for anything" then complain about the restaurant. Junto fixes group trips — AI does the planning, everyone decides together.
+            You plan everything. They show up. Sound familiar? Junto gives your whole group one place to plan, decide, and travel together.
           </p>
 
           {/* Frosted glass card */}
@@ -331,32 +331,35 @@ export default function Landing() {
       {/* ─── FEATURES (dark cards) ─── */}
       <section className="py-16 sm:py-24 px-5 bg-[#0f1115]">
         <div className="mx-auto max-w-3xl space-y-6">
-          {FEATURES.map((f, i) => (
-            <Reveal key={i} delay={`${i * 0.1}s`}>
-              <div
-                className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
-                style={{
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  boxShadow: "0 0 40px rgba(13,148,136,0.03)",
-                }}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start gap-5">
-                  <div className="flex-1">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
-                      style={{ background: "rgba(13,148,136,0.15)" }}>
-                      <f.icon className="h-5 w-5 text-[#2dd4bf]" />
+          {FEATURES.map((f, i) => {
+            const phoneOnRight = i % 2 === 0;
+            return (
+              <Reveal key={i} delay={`${i * 0.1}s`}>
+                <div
+                  className="rounded-2xl p-5 sm:p-7 relative overflow-hidden"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    boxShadow: "0 0 40px rgba(13,148,136,0.03)",
+                  }}
+                >
+                  <div className={`flex flex-col sm:flex-row sm:items-center gap-5 ${!phoneOnRight ? "sm:flex-row-reverse" : ""}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3"
+                        style={{ background: "rgba(13,148,136,0.15)" }}>
+                        <f.icon className="h-5 w-5 text-[#2dd4bf]" />
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{f.headline}</h3>
+                      <p className="text-sm sm:text-[15px] text-[#9ca3af] leading-relaxed">{f.description}</p>
                     </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{f.headline}</h3>
-                    <p className="text-sm sm:text-[15px] text-[#9ca3af] leading-relaxed">{f.description}</p>
-                  </div>
-                  <div className="sm:shrink-0">
-                    <PhoneMockup />
+                    <div className="sm:shrink-0">
+                      <PhoneMockup />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            );
+          })}
         </div>
       </section>
 
@@ -388,15 +391,15 @@ export default function Landing() {
       <section className="py-16 sm:py-24 px-5 bg-white">
         <div className="mx-auto max-w-md text-center">
           <Reveal>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mb-2">Your next group trip, minus the chaos</h2>
-            <p className="text-sm text-[#9ca3af] mb-8">Free to use. No credit card. No more being the travel agent.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mb-2">Your next trip starts here</h2>
+            <p className="text-sm text-[#9ca3af] mb-8">Plan smarter. Travel better. No spreadsheets required.</p>
             <button
               onClick={handleGetStarted}
               className="w-full sm:w-auto sm:px-12 flex items-center justify-center gap-2 text-white font-semibold rounded-2xl py-4 text-[16px] mx-auto transition-all hover:scale-[1.02] active:scale-[0.98]"
               style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)", boxShadow: "0 4px 24px rgba(13,148,136,0.35)" }}
             >
               <Sparkles className="h-4 w-4" />
-              Start planning for free
+              Start planning
             </button>
           </Reveal>
         </div>
