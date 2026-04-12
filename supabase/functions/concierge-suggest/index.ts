@@ -304,6 +304,8 @@ Deno.serve(async (req) => {
       trip_id: string;
       context: {
         destination: string;
+        location?: string;
+        user_location?: { lat: number; lng: number };
         date?: string;
         time_of_day?: string;
         group_size?: number;
@@ -312,6 +314,15 @@ Deno.serve(async (req) => {
         hotel_location?: { name: string; lat: number; lng: number };
       };
     };
+
+    // Use the specific location field if provided, otherwise fall back to destination
+    const specificLocation: string = body.location || context?.location || context?.destination || "";
+    const userCoords: { lat: number; lng: number } | null = body.user_location || context?.user_location || null;
+
+    // Override context.destination with specific location for all downstream usage
+    if (context && specificLocation) {
+      context.destination = specificLocation;
+    }
 
     // Determine request type: structured filters vs free text
     const isStructured = !!body.category && !body.query;
@@ -329,7 +340,7 @@ Deno.serve(async (req) => {
     const query: string = isStructured
       ? buildQueryFromFilters(
           structCategory!,
-          context?.destination || "",
+          specificLocation,
           structWhen,
           structVibe,
           structBudget,
