@@ -29,6 +29,7 @@ interface Props {
   isActivityRemoved: (dayDate: string, index: number, title: string) => boolean;
   onAddLocalActivity: (dayDate: string, activity: AIActivity) => void;
   getLocalAdditions: (dayDate: string) => AIActivity[];
+  getReplacedActivity: (dayDate: string, activityIndex: number) => AIActivity | null;
   onCoordsRefined?: (dayDate: string, activityIndex: number, lat: number, lng: number) => void;
 }
 
@@ -72,6 +73,7 @@ export function DaySection({
   isActivityRemoved,
   onAddLocalActivity,
   getLocalAdditions,
+  getReplacedActivity,
   onCoordsRefined,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -98,7 +100,8 @@ export function DaySection({
   const firstActivity = day.activities[0];
   const dayIndex = allDays.findIndex((d) => d.date === day.date);
   const localAdditions = getLocalAdditions(day.date);
-  const allActivities = [...day.activities, ...localAdditions];
+  const baseActivities = day.activities.map((act, i) => getReplacedActivity(day.date, i) || act);
+  const allActivities = [...baseActivities, ...localAdditions];
 
   // Filter out removed activities
   const visibleActivities = allActivities.filter(

@@ -368,6 +368,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     isActivityRemoved={state.isActivityRemoved}
                     onAddLocalActivity={(dd, a) => state.addLocalActivity(dd, a)}
                     getLocalAdditions={state.getLocalAdditions}
+                    getReplacedActivity={state.getReplacedActivity}
                     onCoordsRefined={handleCoordsRefined}
                   />
                 ))}
