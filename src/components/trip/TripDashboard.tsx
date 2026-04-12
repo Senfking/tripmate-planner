@@ -71,10 +71,17 @@ const codeToCity: Record<string, string> = {
   LIS: "Lisbon", ATH: "Athens", VIE: "Vienna", PRG: "Prague", ZRH: "Zurich",
 };
 
+const HORIZONTAL_IDS = new Set(["decisions", "bookings"]);
+
 function SortableSection({ id, children }: { id: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const isHorizontal = HORIZONTAL_IDS.has(id);
   const style = {
-    transform: transform ? `translate3d(0px, ${transform.y}px, 0)` : undefined,
+    transform: transform
+      ? isHorizontal
+        ? `translate3d(${transform.x}px, 0px, 0)`
+        : `translate3d(0px, ${transform.y}px, 0)`
+      : undefined,
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 10 : undefined,
