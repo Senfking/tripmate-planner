@@ -745,6 +745,76 @@ export type Database = {
           },
         ]
       }
+      plan_activity_comments: {
+        Row: {
+          activity_key: string
+          created_at: string
+          id: string
+          plan_id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          activity_key: string
+          created_at?: string
+          id?: string
+          plan_id: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          activity_key?: string
+          created_at?: string
+          id?: string
+          plan_id?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_activity_comments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "ai_trip_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_activity_reactions: {
+        Row: {
+          activity_key: string
+          created_at: string
+          emoji: string
+          id: string
+          plan_id: string
+          user_id: string
+        }
+        Insert: {
+          activity_key: string
+          created_at?: string
+          emoji: string
+          id?: string
+          plan_id: string
+          user_id: string
+        }
+        Update: {
+          activity_key?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          plan_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_activity_reactions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "ai_trip_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       poll_options: {
         Row: {
           end_date: string | null

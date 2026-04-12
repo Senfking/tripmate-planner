@@ -3,12 +3,17 @@ import { Star, ExternalLink, Trash2, ArrowLeftRight, Check, MapPin, Sparkles, Me
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ActivityReactions } from "./ActivityReactions";
+import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
 
 interface Props {
   activity: AIActivity;
   day: AIDay;
   index: number;
+  planId?: string | null;
+  dayIndex?: number;
+  activityIndex?: number;
   isAdded: boolean;
   onToggleAdd: () => void;
   onRequestChange: () => void;
@@ -38,6 +43,9 @@ export function ActivityCard({
   activity,
   day,
   index,
+  planId,
+  dayIndex,
+  activityIndex,
   isAdded,
   onToggleAdd,
   onRequestChange,
@@ -53,6 +61,7 @@ export function ActivityCard({
   const swapRef = useRef<HTMLDivElement>(null);
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
+  const actKey = dayIndex != null && activityIndex != null ? `day-${dayIndex}-activity-${activityIndex}` : null;
 
   const { photos, reviews, rating, totalRatings, googleMapsUrl, latitude: refinedLat, longitude: refinedLng, isLoading } =
     useGooglePlaceDetails(activity.title || "", activity.location_name || "");
@@ -254,6 +263,14 @@ export function ActivityCard({
                 </a>
               )}
             </div>
+          )}
+
+          {/* Reactions & Comments */}
+          {planId && actKey && (
+            <>
+              <ActivityReactions planId={planId} activityKey={actKey} />
+              <ActivityComments planId={planId} activityKey={actKey} />
+            </>
           )}
 
           {/* Actions row */}

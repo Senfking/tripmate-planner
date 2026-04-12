@@ -15,6 +15,7 @@ import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 
 interface Props {
   tripId: string;
+  planId?: string | null;
   result: AITripResult;
   onClose: () => void;
   onRegenerate: () => void;
@@ -25,7 +26,7 @@ function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjust }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust }: Props) {
   const handleShare = useCallback(() => {
     navigator.clipboard.writeText(window.location.href).then(
       () => toast.success("Plan link copied!"),
@@ -266,6 +267,7 @@ export function TripResultsView({ tripId, result, onClose, onRegenerate, onAdjus
                   <DaySection
                     key={day.date}
                     day={day}
+                    planId={planId || null}
                     destinationName={dest.name}
                     result={result}
                     allDays={allDays}

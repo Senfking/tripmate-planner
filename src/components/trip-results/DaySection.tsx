@@ -10,6 +10,7 @@ import type { AIDay, AIActivity, AITripResult } from "./useResultsState";
 
 interface Props {
   day: AIDay;
+  planId?: string | null;
   destinationName: string;
   result: AITripResult;
   allDays: AIDay[];
@@ -47,6 +48,7 @@ function DayThumbnail({ activity, location }: { activity: AIActivity; location: 
 
 export function DaySection({
   day,
+  planId,
   destinationName,
   result,
   allDays,
@@ -136,6 +138,9 @@ export function DaySection({
                   activity={activity}
                   day={day}
                   index={i}
+                  planId={planId || null}
+                  dayIndex={dayIndex}
+                  activityIndex={i}
                   isAdded={isAdded(day.date, activity.title)}
                   onToggleAdd={() => onToggleAdd(day, activity)}
                   onRequestChange={() => onRequestChange(day.date, i, activity)}
