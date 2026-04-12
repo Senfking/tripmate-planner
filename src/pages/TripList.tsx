@@ -617,6 +617,7 @@ export default function TripList() {
     onError: () => toast.error("Failed to delete draft"),
   });
 
+  const postTripNudge = useMemo(() => {
     if (!trips || trips.length === 0) return null;
     const ended = trips
       .filter((t) => t.statusInfo.status === "ended" && !dismissedNudges.current.has(t.id))
