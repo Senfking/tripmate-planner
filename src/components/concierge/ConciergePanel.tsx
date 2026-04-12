@@ -97,7 +97,7 @@ const CATEGORY_FILTERS: Record<string, FilterSection[]> = {
 // Add budget row to eat
 CATEGORY_FILTERS.eat.push({ key: "price", label: "Budget", icon: <Wallet className="h-4 w-4" />, options: ["Under $10", "Worth the splurge", "Treat ourselves"] });
 
-type Stage = "what" | "refine" | "results";
+type Stage = "what" | "refine" | "results" | "lucky-intro";
 
 interface RecentSearch {
   label: string;
