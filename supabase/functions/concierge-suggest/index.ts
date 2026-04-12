@@ -319,6 +319,7 @@ Deno.serve(async (req) => {
     const structWhen: string | string[] | undefined = body.when;
     const structVibe: string | string[] | undefined = body.vibe;
     const structBudget: string | string[] | undefined = body.budget;
+    const feelingLucky: boolean = !!body.feeling_lucky;
     // Normalize to arrays for multi-select support
     const whenArr = Array.isArray(structWhen) ? structWhen : structWhen ? [structWhen] : [];
     const vibeArr = Array.isArray(structVibe) ? structVibe : structVibe ? [structVibe] : [];
