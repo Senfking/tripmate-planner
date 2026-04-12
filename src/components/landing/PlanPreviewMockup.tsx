@@ -36,7 +36,7 @@ const DAYS = [
   },
 ];
 
-function ActivityRow({ a, blurred }: { a: typeof DAYS[0]["activities"][0]; blurred?: boolean }) {
+function ActivityRow({ a, blurred }: { a: { name: string; time: string; cost: string; rating: string; img?: string }; blurred?: boolean }) {
   return (
     <div className={`flex items-center gap-3 py-2 ${blurred ? "opacity-30 blur-[2px]" : ""}`}>
       {a.img ? (
