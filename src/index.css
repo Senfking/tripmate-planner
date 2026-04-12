@@ -559,3 +559,34 @@ html.dark, html.dark body, html.dark #root {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Landing page animations */
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.landing-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Shimmer sweep for CTA buttons */
+.landing-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.15) 45%,
+    rgba(255,255,255,0.25) 50%,
+    rgba(255,255,255,0.15) 55%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: landing-shimmer-sweep 3s ease-in-out infinite;
+}
+@keyframes landing-shimmer-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
