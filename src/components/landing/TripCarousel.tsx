@@ -55,7 +55,7 @@ const BEACH: TripCard[] = [
   { name: "Phuket", slug: "phuket-5-days", duration: "5 days", vibe: "Thai beach paradise", img: "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=800&q=80&auto=format&fit=crop" },
   { name: "Fiji", slug: "fiji-7-days", duration: "7 days", vibe: "Island paradise", img: "https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=800&q=80&auto=format&fit=crop" },
   { name: "Seychelles", slug: "seychelles-6-days", duration: "6 days", vibe: "Pristine beaches", img: "https://images.unsplash.com/photo-1589979481223-deb893043163?w=800&q=80&auto=format&fit=crop" },
-  { name: "Sardinia", slug: "sardinia-7-days", duration: "7 days", vibe: "Mediterranean charm", img: "https://images.unsplash.com/photo-1586500036744-3a tried-dcf8c191b7?w=800&q=80&auto=format&fit=crop" },
+  { name: "Sardinia", slug: "sardinia-7-days", duration: "7 days", vibe: "Mediterranean charm", img: "https://images.unsplash.com/photo-1580216643062-cf460548a66a?w=800&q=80&auto=format&fit=crop" },
   { name: "Bora Bora", slug: "bora-bora-5-days", duration: "5 days", vibe: "Ultimate luxury", img: "https://images.unsplash.com/photo-1589197331516-4d84b72ebde3?w=800&q=80&auto=format&fit=crop" },
 ];
 
