@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -118,6 +118,8 @@ function StatusRow({
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
+  const [searchParams] = useSearchParams();
+  const forceDashboard = searchParams.get("view") === "dashboard";
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -133,6 +135,23 @@ export default function TripHome() {
         .single();
       if (error) throw error;
       return data;
+    },
+    enabled: !!tripId && !!user,
+  });
+
+  // Check if trip has a linked AI plan — redirect to plan view if so
+  const { data: hasAIPlan, isLoading: planCheckLoading } = useQuery({
+    queryKey: ["trip-has-ai-plan", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_trip_plans")
+        .select("id")
+        .eq("trip_id", tripId!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      return data?.id ?? null;
     },
     enabled: !!tripId && !!user,
   });
@@ -386,12 +405,17 @@ export default function TripHome() {
 
   const isAdmin = myRole === "owner" || myRole === "admin";
 
-  if (isLoading) {
+  if (isLoading || planCheckLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // Redirect to plan view if trip has a linked AI plan (unless ?view=dashboard)
+  if (hasAIPlan && tripId && !forceDashboard) {
+    return <Navigate to={`/app/trips/${tripId}/plan`} replace />;
   }
 
   if (!trip) {
