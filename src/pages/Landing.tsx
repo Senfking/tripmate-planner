@@ -166,8 +166,6 @@ function Header({ onGetStarted }: { onGetStarted: () => void }) {
 export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [builderDestination, setBuilderDestination] = useState("");
   const [searchValue, setSearchValue] = useState("");
 
   // Redirect auth users
