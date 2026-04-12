@@ -59,6 +59,17 @@ function BuilderWrapper({ tripId, onClose }: { tripId: string; onClose: () => vo
   );
 }
 
+const codeToCity: Record<string, string> = {
+  DPS: "Bali", DXB: "Dubai", JFK: "New York", LAX: "Los Angeles", LHR: "London",
+  CDG: "Paris", NRT: "Tokyo", SIN: "Singapore", BKK: "Bangkok", FCO: "Rome",
+  BCN: "Barcelona", AMS: "Amsterdam", IST: "Istanbul", HKG: "Hong Kong",
+  SYD: "Sydney", SFO: "San Francisco", MIA: "Miami", ORD: "Chicago",
+  ATL: "Atlanta", SEA: "Seattle", BOS: "Boston", ICN: "Seoul", DEL: "Delhi",
+  BOM: "Mumbai", KUL: "Kuala Lumpur", MEX: "Mexico City", GRU: "São Paulo",
+  EZE: "Buenos Aires", CPT: "Cape Town", CAI: "Cairo", DOH: "Doha",
+  LIS: "Lisbon", ATH: "Athens", VIE: "Vienna", PRG: "Prague", ZRH: "Zurich",
+};
+
 function SortableSection({ id, children }: { id: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
