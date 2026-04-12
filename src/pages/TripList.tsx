@@ -4,7 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Users, Plus, Plane, Calendar, Radio, Hash, ChevronRight, X, Copy } from "lucide-react";
+import { Loader2, Users, Plus, Plane, Calendar, Radio, Hash, ChevronRight, X, Copy, Sparkles, Trash2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +20,8 @@ import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
+import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
+import type { AITripResult } from "@/components/trip-results/useResultsState";
 
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
@@ -364,6 +366,10 @@ export default function TripList() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [emptyDestination, setEmptyDestination] = useState("");
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [builderInitDest, setBuilderInitDest] = useState("");
+  const [draftToResume, setDraftToResume] = useState<{ planId: string; result: AITripResult } | null>(null);
   const [referralDismissed, setReferralDismissed] = useState(
     () => localStorage.getItem("junto_referral_card_dismissed") === "true"
   );
@@ -582,6 +588,35 @@ export default function TripList() {
     enabled: !!user,
   });
 
+  // ── Drafts query (ai_trip_plans with no trip_id) ──
+  const { data: drafts } = useQuery({
+    queryKey: ["ai-drafts", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_trip_plans" as any)
+        .select("id, result, created_at")
+        .is("trip_id", null)
+        .eq("created_by", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      const { error } = await supabase.from("ai_trip_plans" as any).delete().eq("id", planId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+      toast.success("Draft deleted");
+    },
+    onError: () => toast.error("Failed to delete draft"),
+  });
+
   const postTripNudge = useMemo(() => {
     if (!trips || trips.length === 0) return null;
     const ended = trips
@@ -625,34 +660,97 @@ export default function TripList() {
     tripsPills.unshift({ icon: <Radio className="h-3 w-3" />, label: `${liveCount} live` });
   }
 
+  /* ── Standalone builder overlay ── */
+  if (showBuilder || draftToResume) {
+    return (
+      <StandaloneTripBuilder
+        onClose={() => {
+          setShowBuilder(false);
+          setDraftToResume(null);
+          setBuilderInitDest("");
+          queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+          queryClient.invalidateQueries({ queryKey: ["trips"] });
+        }}
+        initialDestination={builderInitDest || undefined}
+        draftPlanId={draftToResume?.planId}
+        draftResult={draftToResume?.result}
+      />
+    );
+  }
+
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
     return (
       <div className="relative min-h-dvh flex flex-col bg-background">
-        <TabHeroHeader title={greeting} subtitle="No trips yet - start planning!" pills={tripsPills} />
+        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={tripsPills} />
 
         <div className="hidden md:block pt-6 pb-4 px-4">
           <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
-          <p className="text-sm text-muted-foreground mt-1">No trips yet - start planning!</p>
+          <p className="text-sm text-muted-foreground mt-1">No trips yet — start planning!</p>
         </div>
 
-        <div className="flex flex-1 flex-col items-center px-6 pt-12 md:pt-4 mt-4 md:mt-0">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10 mb-5">
-            <Plane className="h-8 w-8 text-[#0D9488]" />
+        <div className="flex flex-1 flex-col items-center px-6 pt-12 md:pt-4 mt-4 md:mt-0 max-w-md mx-auto w-full">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10 mb-4">
+            <Sparkles className="h-8 w-8 text-[#0D9488]" />
           </div>
-          <h2 className="text-lg font-bold text-foreground">Plan your first trip</h2>
-          <p className="mt-2 max-w-[260px] text-center text-[15px] leading-relaxed text-muted-foreground">
-            Create a trip or join one with a code to get started.
+          <h2 className="text-xl font-bold text-foreground text-center">Where do you want to go?</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground text-center">
+            Describe your dream trip and let Junto AI plan it for you
           </p>
-          <Button asChild className="w-full max-w-[260px] mt-6">
-            <Link to="/app/trips/new">Start a trip</Link>
-          </Button>
+
+          {/* Destination input + Generate button */}
+          <div className="w-full mt-5 flex gap-2">
+            <Input
+              value={emptyDestination}
+              onChange={(e) => setEmptyDestination(e.target.value)}
+              placeholder="e.g. Bali, Tokyo, Barcelona..."
+              className="flex-1 h-12 rounded-xl bg-white border-border shadow-sm text-[15px]"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && emptyDestination.trim()) {
+                  setBuilderInitDest(emptyDestination.trim());
+                  setShowBuilder(true);
+                }
+              }}
+            />
+            <Button
+              onClick={() => {
+                setBuilderInitDest(emptyDestination.trim());
+                setShowBuilder(true);
+              }}
+              className="h-12 px-5 rounded-xl font-semibold text-white text-sm shrink-0"
+              style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+            >
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Generate
+            </Button>
+          </div>
+
           <button
+            onClick={() => {
+              setBuilderInitDest("");
+              setShowBuilder(true);
+            }}
             className="mt-3 text-sm font-medium bg-transparent border-none cursor-pointer"
+            style={{ color: "#0D9488" }}
+          >
+            or plan step by step
+          </button>
+
+          <button
+            onClick={() => navigate("/app/trips/new?mode=manual")}
+            className="mt-1.5 text-xs text-muted-foreground bg-transparent border-none cursor-pointer hover:text-foreground transition-colors"
+          >
+            or create trip manually
+          </button>
+
+          <div className="w-full h-px bg-border my-6" />
+
+          <button
+            className="text-sm font-medium bg-transparent border-none cursor-pointer"
             style={{ color: "#0D9488" }}
             onClick={() => setJoinOpen(true)}
           >
-            Join with a code
+            Join an existing trip with a code
           </button>
         </div>
         <JoinDrawer
@@ -682,7 +780,52 @@ export default function TripList() {
         <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
       </div>
 
-      <div className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 mt-4 md:mt-0 pb-[100px] md:pb-8">
+      {/* ── Drafts Section ── */}
+      {drafts && drafts.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Drafts</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            {drafts.map((draft: any) => {
+              const result = draft.result as AITripResult;
+              const destName = result?.destinations?.[0]?.name || "Draft trip";
+              const actCount = result?.total_activities || result?.destinations?.reduce((sum: number, d: any) => sum + (d.days?.reduce((ds: number, day: any) => ds + (day.activities?.length || 0), 0) || 0), 0) || 0;
+              const startDate = result?.destinations?.[0]?.start_date;
+              const endDate = result?.destinations?.[result.destinations.length - 1]?.end_date;
+              let dateLabel = "";
+              try {
+                if (startDate && endDate) dateLabel = `${format(parseISO(startDate), "MMM d")} – ${format(parseISO(endDate), "MMM d")}`;
+                else if (startDate) dateLabel = format(parseISO(startDate), "MMM d, yyyy");
+              } catch {}
+
+              return (
+                <div
+                  key={draft.id}
+                  className="relative shrink-0 w-[200px] rounded-xl border border-border bg-card p-3 shadow-sm"
+                >
+                  <button
+                    onClick={() => deleteDraftMutation.mutate(draft.id)}
+                    className="absolute top-2 right-2 h-5 w-5 flex items-center justify-center rounded-full bg-muted hover:bg-destructive/10 transition-colors"
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                  <p className="font-semibold text-foreground text-sm truncate pr-5">{destName}</p>
+                  {dateLabel && <p className="text-[11px] text-muted-foreground mt-0.5">{dateLabel}</p>}
+                  <p className="text-[11px] text-muted-foreground">{actCount} activities</p>
+                  <button
+                    onClick={() => setDraftToResume({ planId: draft.id, result })}
+                    className="mt-2 text-xs font-semibold px-3 py-1 rounded-lg"
+                    style={{ color: "#0D9488", background: "rgba(13,148,136,0.08)" }}
+                  >
+                    Continue →
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className={`mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 pb-[100px] md:pb-8 ${drafts && drafts.length > 0 ? '' : 'mt-4 md:mt-0'}`}>
         {liveTrip && <div className="md:col-span-2"><HeroCard trip={liveTrip} /></div>}
         {otherTrips.map((trip, i) => (
           <div

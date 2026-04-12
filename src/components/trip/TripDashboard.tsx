@@ -64,6 +64,20 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const todayStr = today.toISOString().split("T")[0];
   const [builderOpen, setBuilderOpen] = useState(false);
 
+  // Check if trip has a linked AI plan
+  const { data: hasPlan } = useQuery({
+    queryKey: ["trip-has-plan", tripId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("ai_trip_plans" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("trip_id", tripId);
+      if (error) throw error;
+      return (count ?? 0) > 0;
+    },
+    enabled: !!userId,
+  });
+
   const toggleBuilder = (open: boolean) => {
     setBuilderOpen(open);
     onBuilderToggle?.(open);
@@ -446,27 +460,41 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   return (
     <div className="animate-fade-in-card pb-12">
-      {/* Plan with AI banner */}
-      <div className="px-4 md:max-w-[900px] md:mx-auto md:px-8 mb-3">
-        <button
-          onClick={() => toggleBuilder(true)}
-          className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all active:scale-[0.98] text-left"
-        >
-          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground text-[14px]">Plan with Junto AI ✨</p>
-            <p className="text-xs text-muted-foreground">Generate a day-by-day itinerary in seconds</p>
-          </div>
-        </button>
-      </div>
+      {/* Plan with AI banner — only show if no plan exists yet */}
+      {!hasPlan && (
+        <div className="px-4 md:max-w-[900px] md:mx-auto md:px-8 mb-3">
+          <button
+            onClick={() => toggleBuilder(true)}
+            className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all active:scale-[0.98] text-left"
+          >
+            <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
+              <Sparkles className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground text-[14px]">Plan with Junto AI ✨</p>
+              <p className="text-xs text-muted-foreground">Generate a day-by-day itinerary in seconds</p>
+            </div>
+          </button>
+        </div>
+      )}
 
       {builderOpen && (
         <BuilderWrapper tripId={tripId} onClose={() => toggleBuilder(false)} />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 px-4 md:max-w-[900px] md:mx-auto md:px-8">
+        {/* Plan tab — only when a plan exists */}
+        {hasPlan && (
+          <SectionCard
+            icon={Sparkles}
+            title="Plan"
+            summary="View your AI-generated itinerary"
+            to={`/app/trips/${tripId}/plan`}
+            badge={{ label: "AI Plan", color: "teal" }}
+            imageUrl="https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80"
+            className="md:col-span-2"
+          />
+        )}
         <SectionCard
           icon={Compass}
           title="Decisions"
