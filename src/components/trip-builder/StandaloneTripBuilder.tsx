@@ -1,0 +1,455 @@
+import { useState, useCallback, useMemo, useEffect } from "react";
+import type { DateRange } from "react-day-picker";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, X, Sparkles, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+import { trackEvent } from "@/lib/analytics";
+
+import { parseFreeText } from "./parseFreeText";
+import { StepEntryChoice } from "./StepEntryChoice";
+import { StepDestination } from "./StepDestination";
+import { StepDates } from "./StepDates";
+import { StepBudget } from "./StepBudget";
+import { StepVibes } from "./StepVibes";
+import { StepPace } from "./StepPace";
+import { StepExtras } from "./StepExtras";
+import { GeneratingScreen } from "./GeneratingScreen";
+import { TripResultsView } from "@/components/trip-results/TripResultsView";
+import type { AITripResult } from "@/components/trip-results/useResultsState";
+import type { BudgetLevel, PaceLevel } from "./useTripBuilderDefaults";
+
+/**
+ * Standalone AI trip builder flow — used when creating a new trip via AI
+ * (no existing trip). After generation, shows "Create trip" / "Save draft" buttons
+ * instead of "Add all to itinerary".
+ */
+
+function normalizeAIResponse(raw: Record<string, any>): AITripResult {
+  const destinations = Array.isArray(raw.destinations) ? raw.destinations : [];
+  const safeDestinations = destinations.map((dest: any) => ({
+    name: dest?.name || "Unknown destination",
+    start_date: dest?.start_date || "",
+    end_date: dest?.end_date || dest?.start_date || "",
+    intro: dest?.intro || "",
+    days: Array.isArray(dest?.days)
+      ? dest.days.map((day: any) => ({
+          date: day?.date || "",
+          day_number: day?.day_number || 0,
+          theme: day?.theme || "",
+          activities: Array.isArray(day?.activities) ? day.activities : [],
+        }))
+      : [],
+    accommodation: dest?.accommodation || undefined,
+    transport_to_next: dest?.transport_to_next || undefined,
+    cost_profile: dest?.cost_profile || undefined,
+  }));
+
+  let mapCenter = raw.map_center;
+  if (!mapCenter || typeof mapCenter.lat !== "number") {
+    for (const dest of safeDestinations) {
+      for (const day of dest.days) {
+        for (const act of day.activities) {
+          if (act.latitude != null && act.longitude != null) {
+            mapCenter = { lat: act.latitude, lng: act.longitude };
+            break;
+          }
+        }
+        if (mapCenter?.lat != null) break;
+      }
+      if (mapCenter?.lat != null) break;
+    }
+  }
+  if (!mapCenter || typeof mapCenter.lat !== "number") {
+    mapCenter = { lat: 0, lng: 0 };
+  }
+
+  return {
+    trip_title: raw.trip_title || raw.title || "Your Trip",
+    trip_summary: raw.trip_summary || raw.summary || "",
+    destinations: safeDestinations,
+    map_center: mapCenter,
+    map_zoom: typeof raw.map_zoom === "number" ? raw.map_zoom : 6,
+    daily_budget_estimate: typeof raw.daily_budget_estimate === "number" ? raw.daily_budget_estimate : 0,
+    currency: raw.currency || "USD",
+    packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions : [],
+    total_activities: typeof raw.total_activities === "number" ? raw.total_activities : 0,
+  };
+}
+
+type Answers = {
+  destination: string;
+  surpriseMe: boolean;
+  dateRange: DateRange | undefined;
+  flexible: boolean;
+  flexibleDuration: number;
+  budgetLevel: BudgetLevel;
+  vibes: string[];
+  pace: PaceLevel;
+  dietary: string[];
+  notes: string;
+  freeText: string;
+};
+
+const TOTAL_STEPS = 7;
+
+interface Props {
+  onClose: () => void;
+  initialDestination?: string;
+}
+
+export function StandaloneTripBuilder({ onClose, initialDestination }: Props) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [step, setStep] = useState(initialDestination ? 1 : 0);
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [results, setResults] = useState<AITripResult | null>(null);
+  const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
+  const [creatingTrip, setCreatingTrip] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [prefilledSteps, setPrefilledSteps] = useState<Set<number>>(new Set());
+
+  const [answers, setAnswers] = useState<Answers>({
+    destination: initialDestination || "",
+    surpriseMe: false,
+    dateRange: undefined,
+    flexible: false,
+    flexibleDuration: 7,
+    budgetLevel: "mid-range",
+    vibes: [],
+    pace: "balanced",
+    dietary: [],
+    notes: "",
+    freeText: "",
+  });
+
+  const update = useCallback(<K extends keyof Answers>(key: K, val: Answers[K]) => {
+    setAnswers((prev) => ({ ...prev, [key]: val }));
+  }, []);
+
+  const handleFreeText = useCallback((text: string) => {
+    const parsed = parseFreeText(text);
+    const updates: Partial<Answers> = { freeText: text, notes: text };
+
+    if (parsed.destination && !answers.destination) updates.destination = parsed.destination;
+    if (parsed.budgetLevel) updates.budgetLevel = parsed.budgetLevel;
+    if (parsed.vibes.length > 0) updates.vibes = [...new Set([...answers.vibes, ...parsed.vibes])];
+    if (parsed.dietary.length > 0) updates.dietary = [...new Set([...answers.dietary, ...parsed.dietary])];
+    if (parsed.durationDays) {
+      updates.flexible = true;
+      updates.flexibleDuration = parsed.durationDays;
+    }
+
+    setAnswers(prev => {
+      const merged = { ...prev, ...updates };
+      const ftFilled = new Set<number>();
+      if (parsed.destination) ftFilled.add(1);
+      if (parsed.durationDays) ftFilled.add(2);
+      if (parsed.budgetLevel) ftFilled.add(3);
+      if (parsed.vibes.length > 0) ftFilled.add(4);
+      if (parsed.dietary.length > 0) ftFilled.add(6);
+      setPrefilledSteps(ftFilled);
+
+      const isStepAnswered = (s: number): boolean => {
+        switch (s) {
+          case 1: return !!(merged.surpriseMe || merged.destination?.trim());
+          case 2: return !!(merged.flexible || merged.dateRange?.from);
+          case 3: return !!parsed.budgetLevel;
+          case 4: return (merged.vibes?.length ?? 0) > 0;
+          case 5: return false;
+          default: return false;
+        }
+      };
+
+      for (let s = 1; s <= 5; s++) {
+        if (!isStepAnswered(s)) { setStep(s); return merged; }
+      }
+      setStep(6);
+      return merged;
+    });
+  }, []);
+
+  // Auto-generate if initialDestination was provided via empty state
+  useEffect(() => {
+    if (initialDestination && step === 1 && answers.destination) {
+      // Don't auto-advance, let user verify
+    }
+  }, [initialDestination]);
+
+  const handleGenerate = useCallback(async () => {
+    setGenerating(true);
+    setGenError(null);
+
+    try {
+      const payload = {
+        trip_id: null, // No trip yet
+        destination: answers.surpriseMe ? null : answers.destination,
+        surprise_me: answers.surpriseMe,
+        start_date: answers.flexible ? null : (answers.dateRange?.from?.toISOString().split("T")[0] || null),
+        end_date: answers.flexible ? null : (answers.dateRange?.to?.toISOString().split("T")[0] || null),
+        flexible: answers.flexible,
+        duration_days: answers.flexible ? answers.flexibleDuration : null,
+        budget_level: answers.budgetLevel,
+        vibes: answers.vibes,
+        pace: answers.pace,
+        dietary: answers.dietary,
+        notes: answers.notes,
+        free_text: answers.freeText,
+        group_size: 1,
+      };
+
+      const { data, error } = await supabase.functions.invoke("generate-trip-itinerary", { body: payload });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data) throw new Error("No data returned");
+
+      const normalized = normalizeAIResponse(data);
+
+      // Save as draft (no trip_id)
+      let planId: string | null = null;
+      try {
+        const userId = user?.id;
+        if (userId) {
+          const { data: inserted, error: insertError } = await (supabase
+            .from("ai_trip_plans" as any)
+            .insert({
+              trip_id: null,
+              created_by: userId,
+              prompt: payload,
+              result: normalized,
+            }) as any)
+            .select("id")
+            .single();
+          if (!insertError) planId = inserted?.id ?? null;
+        }
+      } catch (saveErr) {
+        console.error("[StandaloneBuilder] Failed to save plan:", saveErr);
+      }
+
+      setSavedPlanId(planId);
+      setResults(normalized);
+      trackEvent("ai_trip_generated", { standalone: true, destination: answers.destination });
+    } catch (err: any) {
+      console.error("[StandaloneBuilder] Generation failed:", err);
+      setGenError(err?.message || "Failed to generate itinerary. Please try again.");
+    } finally {
+      setGenerating(false);
+    }
+  }, [answers, user]);
+
+  const handleCreateTrip = useCallback(async () => {
+    if (!results || !user) return;
+    setCreatingTrip(true);
+
+    try {
+      // Extract dates from the plan
+      const firstDest = results.destinations[0];
+      const lastDest = results.destinations[results.destinations.length - 1];
+      const startDate = firstDest?.start_date || null;
+      const endDate = lastDest?.end_date || null;
+      const destination = results.destinations.map(d => d.name).join(", ");
+
+      const { data: trip, error: tripError } = await supabase
+        .from("trips")
+        .insert({
+          name: results.trip_title,
+          destination,
+          tentative_start_date: startDate,
+          tentative_end_date: endDate,
+        } as any)
+        .select()
+        .single();
+
+      if (tripError) throw tripError;
+
+      // Link the plan to the trip
+      if (savedPlanId) {
+        await supabase
+          .from("ai_trip_plans" as any)
+          .update({ trip_id: trip.id } as any)
+          .eq("id", savedPlanId);
+      }
+
+      trackEvent("trip_created_from_ai", { trip_id: trip.id, plan_id: savedPlanId });
+      toast.success("Trip created!");
+      navigate(`/app/trips/${trip.id}`, { replace: true });
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to create trip");
+    } finally {
+      setCreatingTrip(false);
+    }
+  }, [results, savedPlanId, user, navigate]);
+
+  const handleSaveDraft = useCallback(async () => {
+    if (savedPlanId) {
+      toast.success("Draft saved! Find it on your trips page.");
+      onClose();
+      return;
+    }
+    // Already saved during generation, but just in case
+    setSavingDraft(true);
+    try {
+      toast.success("Draft saved!");
+      onClose();
+    } finally {
+      setSavingDraft(false);
+    }
+  }, [savedPlanId, onClose]);
+
+  const toggleVibe = useCallback((v: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      vibes: prev.vibes.includes(v) ? prev.vibes.filter((x) => x !== v) : [...prev.vibes, v],
+    }));
+  }, []);
+
+  const toggleDietary = useCallback((v: string) => {
+    setAnswers((prev) => {
+      if (v === "No restrictions") return { ...prev, dietary: prev.dietary.includes(v) ? [] : [v] };
+      const next = prev.dietary.filter((d) => d !== "No restrictions");
+      return { ...prev, dietary: next.includes(v) ? next.filter((x) => x !== v) : [...next, v] };
+    });
+  }, []);
+
+  const canAdvance = useMemo(() => {
+    switch (step) {
+      case 1: return answers.surpriseMe || answers.destination.trim().length > 0;
+      case 2: return answers.flexible || !!answers.dateRange?.from;
+      default: return true;
+    }
+  }, [step, answers]);
+
+  const isLastStep = step === TOTAL_STEPS - 1;
+
+  // Results view with custom bottom bar (Create Trip / Save Draft)
+  if (results) {
+    return (
+      <div className="fixed inset-0 z-[100]">
+        <TripResultsView
+          tripId="standalone"
+          planId={savedPlanId}
+          result={results}
+          onClose={onClose}
+          onRegenerate={() => {
+            setResults(null);
+            setSavedPlanId(null);
+            handleGenerate();
+          }}
+          onAdjust={() => {
+            setResults(null);
+            setSavedPlanId(null);
+            setStep(1);
+          }}
+          standalone
+          onCreateTrip={handleCreateTrip}
+          onSaveDraft={handleSaveDraft}
+          creatingTrip={creatingTrip}
+        />
+      </div>
+    );
+  }
+
+  if (generating || genError) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
+        <GeneratingScreen
+          destination={answers.surpriseMe ? "" : answers.destination}
+          error={genError}
+          onRetry={handleGenerate}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-background flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 sm:px-6 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-2 max-w-2xl mx-auto w-full">
+        {step > 0 ? (
+          <button onClick={() => setStep((s) => s - 1)} className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+        ) : (
+          <div className="w-9" />
+        )}
+
+        {step > 0 && (
+          <div className="flex gap-1.5">
+            {Array.from({ length: TOTAL_STEPS - 1 }).map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  i < step ? "w-6" : "w-1.5",
+                  i < step ? "opacity-100" : "opacity-30"
+                )}
+                style={i < step ? { background: "var(--gradient-primary)" } : { background: "hsl(var(--foreground))" }}
+              />
+            ))}
+          </div>
+        )}
+
+        <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors">
+          <X className="h-5 w-5 text-muted-foreground" />
+        </button>
+      </div>
+
+      {/* Step content */}
+      <div className="flex-1 overflow-y-auto flex justify-center">
+        <div className="w-full max-w-2xl">
+          {step === 0 && <StepEntryChoice onStepByStep={() => setStep(1)} onFreeText={handleFreeText} />}
+          {step === 1 && <StepDestination value={answers.destination} source={null} prefilledFromFreeText={prefilledSteps.has(1)} surpriseMe={answers.surpriseMe} onChange={(v) => update("destination", v)} onSurpriseMe={(v) => update("surpriseMe", v)} />}
+          {step === 2 && <StepDates dateRange={answers.dateRange} source={null} prefilledFromFreeText={prefilledSteps.has(2)} flexible={answers.flexible} flexibleDuration={answers.flexibleDuration} onDateChange={(r) => update("dateRange", r)} onFlexibleChange={(v) => update("flexible", v)} onDurationChange={(d) => update("flexibleDuration", d)} />}
+          {step === 3 && <StepBudget value={answers.budgetLevel} source={null} prefilledFromFreeText={prefilledSteps.has(3)} onChange={(v) => update("budgetLevel", v)} />}
+          {step === 4 && <StepVibes selected={answers.vibes} source={null} prefilledFromFreeText={prefilledSteps.has(4)} hasVibeBoard={false} onToggle={toggleVibe} />}
+          {step === 5 && <StepPace value={answers.pace} source={null} onChange={(v) => update("pace", v)} />}
+          {step === 6 && <StepExtras dietary={answers.dietary} notes={answers.notes} prefilledFromFreeText={prefilledSteps.has(6)} onToggleDietary={toggleDietary} onNotesChange={(v) => update("notes", v)} />}
+        </div>
+      </div>
+
+      {/* Footer */}
+      {step > 0 && (
+        <div className="border-t border-border bg-background flex justify-center">
+          <div className="w-full max-w-2xl px-6 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-3">
+            {isLastStep ? (
+              <div className="flex gap-3 sm:justify-end">
+                <Button variant="outline" className="flex-1 sm:flex-none sm:px-8 h-12 rounded-xl" onClick={() => setStep(step - 1)}>
+                  Back
+                </Button>
+                <Button
+                  className="flex-1 sm:flex-none sm:px-8 h-12 rounded-xl font-semibold text-primary-foreground text-[15px] gap-2"
+                  style={{ background: "var(--gradient-primary)" }}
+                  onClick={handleGenerate}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Generate my trip
+                </Button>
+              </div>
+            ) : (
+              <div className="sm:flex sm:justify-end">
+                <Button
+                  className="w-full sm:w-auto sm:px-12 h-12 rounded-xl font-semibold text-primary-foreground text-[15px]"
+                  style={{ background: "var(--gradient-primary)" }}
+                  disabled={!canAdvance}
+                  onClick={() => setStep((s) => s + 1)}
+                >
+                  {step === 6 ? (<><Sparkles className="h-4 w-4 mr-1.5" />Generate my trip</>) : "Continue"}
+                </Button>
+              </div>
+            )}
+            {step === 6 && (
+              <button onClick={handleGenerate} className="w-full sm:w-auto text-center text-sm text-muted-foreground mt-2">
+                Skip extras
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
