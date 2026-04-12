@@ -309,9 +309,13 @@ Deno.serve(async (req) => {
     // Determine request type: structured filters vs free text
     const isStructured = !!body.category && !body.query;
     const structCategory: string | undefined = body.category;
-    const structWhen: string | undefined = body.when;
-    const structVibe: string | undefined = body.vibe;
-    const structBudget: string | undefined = body.budget;
+    const structWhen: string | string[] | undefined = body.when;
+    const structVibe: string | string[] | undefined = body.vibe;
+    const structBudget: string | string[] | undefined = body.budget;
+    // Normalize to arrays for multi-select support
+    const whenArr = Array.isArray(structWhen) ? structWhen : structWhen ? [structWhen] : [];
+    const vibeArr = Array.isArray(structVibe) ? structVibe : structVibe ? [structVibe] : [];
+    const budgetArr = Array.isArray(structBudget) ? structBudget : structBudget ? [structBudget] : [];
 
     // Build query string (real query for free-text, synthetic for structured)
     const query: string = isStructured
