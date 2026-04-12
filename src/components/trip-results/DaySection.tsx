@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, PenLine, Plus } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ActivityCard } from "./ActivityCard";
 import { TravelTimeConnector } from "./TravelTimeConnector";
 import { DayMiniMap } from "./DayMiniMap";
 import { DayReactionSummary } from "./DayReactionSummary";
 import { TripDiscussion } from "./TripDiscussion";
+import { EditDaySheet } from "./EditDaySheet";
+import { AddActivityForm } from "./AddActivityForm";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import type { AIDay, AIActivity, AITripResult } from "./useResultsState";
 
 interface Props {
@@ -20,7 +23,10 @@ interface Props {
   isAdded: (dayDate: string, title: string) => boolean;
   onToggleAdd: (day: AIDay, activity: AIActivity) => void;
   onRequestChange: (dayDate: string, index: number, activity: AIActivity) => void;
-  onRemoveActivity: (dayDate: string, index: number) => void;
+  onRemoveActivity: (dayDate: string, index: number, activity: AIActivity) => void;
+  isActivityRemoved: (dayDate: string, index: number, title: string) => boolean;
+  onAddLocalActivity: (dayDate: string, activity: AIActivity) => void;
+  getLocalAdditions: (dayDate: string) => AIActivity[];
   onCoordsRefined?: (dayDate: string, activityIndex: number, lat: number, lng: number) => void;
 }
 
@@ -59,9 +65,14 @@ export function DaySection({
   onToggleAdd,
   onRequestChange,
   onRemoveActivity,
+  isActivityRemoved,
+  onAddLocalActivity,
+  getLocalAdditions,
   onCoordsRefined,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [editDayOpen, setEditDayOpen] = useState(false);
+  const [addingActivity, setAddingActivity] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const dateStr = (() => {
@@ -72,7 +83,6 @@ export function DaySection({
     }
   })();
 
-  // Scroll into view on expand
   useEffect(() => {
     if (open && cardRef.current) {
       setTimeout(() => {
@@ -83,104 +93,154 @@ export function DaySection({
 
   const firstActivity = day.activities[0];
   const dayIndex = allDays.findIndex((d) => d.date === day.date);
+  const localAdditions = getLocalAdditions(day.date);
+  const allActivities = [...day.activities, ...localAdditions];
+
+  // Filter out removed activities
+  const visibleActivities = allActivities.filter(
+    (act, i) => !isActivityRemoved(day.date, i, act.title)
+  );
 
   return (
-    <div ref={cardRef} id={`section-day-${day.day_number}`} className="rounded-xl border border-border bg-card overflow-hidden transition-all">
-      {/* Collapsed card */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 p-3 text-left hover:bg-accent/50 transition-colors"
-      >
-        {/* Thumbnail */}
-        <div className="w-[72px] h-[56px] rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-          {firstActivity && (
-            <DayThumbnail activity={firstActivity} location={destinationName} />
-          )}
-        </div>
-
-        {/* Day info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/25 text-[10px] font-bold uppercase tracking-wide">
-              Day {day.day_number}
-            </span>
-            <span className="text-xs text-muted-foreground font-mono">
-              {dateStr} · {day.activities.length} {day.activities.length === 1 ? "Experience" : "Experiences"}
-            </span>
-            {/* Inline reaction/comment summary */}
-            {planId && (
-              <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
+    <>
+      <div ref={cardRef} id={`section-day-${day.day_number}`} className="rounded-xl border border-border bg-card overflow-hidden transition-all">
+        {/* Collapsed card */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center gap-3 p-3 text-left hover:bg-accent/50 transition-colors"
+        >
+          {/* Thumbnail */}
+          <div className="w-[72px] h-[56px] rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+            {firstActivity && (
+              <DayThumbnail activity={firstActivity} location={destinationName} />
             )}
           </div>
-          {day.theme && (
-            <p className="text-[13px] font-medium text-foreground mt-1 truncate">
-              {day.theme}
-            </p>
-          )}
-        </div>
 
-        {/* Chevron */}
-        {open ? (
-          <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        )}
-      </button>
-
-      {/* Expanded content */}
-      {open && (
-        <div className="border-t border-border animate-fade-in">
-          {/* Day-level comments */}
-          {planId && (
-            <div className="px-4 py-3 border-b border-border/50 bg-accent/20">
-              <TripDiscussion
-                planId={planId}
-                activityKey={`day-${dayIndex}`}
-                placeholder="Comment on this day..."
-                compact
-              />
+          {/* Day info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/25 text-[10px] font-bold uppercase tracking-wide">
+                Day {day.day_number}
+              </span>
+              <span className="text-xs text-muted-foreground font-mono">
+                {dateStr} · {visibleActivities.length} {visibleActivities.length === 1 ? "Experience" : "Experiences"}
+              </span>
+              {planId && (
+                <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
+              )}
             </div>
-          )}
+            {day.theme && (
+              <p className="text-[13px] font-medium text-foreground mt-1 truncate">
+                {day.theme}
+              </p>
+            )}
+          </div>
 
-          {/* Activities */}
-          <div className="py-2">
-            {day.activities.map((activity, i) => (
-              <div key={`${day.date}-${i}`}>
-                {i > 0 && (
-                  <TravelTimeConnector
-                    travelTime={activity.travel_time_from_previous || null}
-                    travelMode={activity.travel_mode_from_previous || null}
-                  />
-                )}
-                <ActivityCard
-                  activity={activity}
-                  day={day}
-                  index={i}
-                  planId={planId || null}
-                  dayIndex={dayIndex}
-                  activityIndex={i}
-                  isAdded={isAdded(day.date, activity.title)}
-                  onToggleAdd={() => onToggleAdd(day, activity)}
-                  onRequestChange={() => onRequestChange(day.date, i, activity)}
-                  onRemove={() => onRemoveActivity(day.date, i)}
-                  onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
-                  animDelay={i * 50}
+          {/* Chevron */}
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          )}
+        </button>
+
+        {/* Expanded content */}
+        {open && (
+          <div className="border-t border-border animate-fade-in">
+            {/* Edit day button */}
+            <div className="flex items-center justify-end px-3 py-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setEditDayOpen(true); }}
+                className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+              >
+                <PenLine className="h-3 w-3" /> Edit day
+              </button>
+            </div>
+
+            {/* Day-level comments */}
+            {planId && (
+              <div className="px-4 py-3 border-b border-border/50 bg-accent/20">
+                <TripDiscussion
+                  planId={planId}
+                  activityKey={`day-${dayIndex}`}
+                  placeholder="Comment on this day..."
+                  compact
                 />
               </div>
-            ))}
-          </div>
+            )}
 
-          {/* Embedded mini-map for this day */}
-          <div className="mx-4 mb-4">
-            <DayMiniMap
-              result={result}
-              allDays={allDays}
-              dayIndex={dayIndex}
-              refinedCoords={refinedCoords}
-            />
+            {/* Activities */}
+            <div className="py-2">
+              {visibleActivities.map((activity, i) => (
+                <div key={`${day.date}-${i}`}>
+                  {i > 0 && (
+                    <TravelTimeConnector
+                      travelTime={activity.travel_time_from_previous || null}
+                      travelMode={activity.travel_mode_from_previous || null}
+                    />
+                  )}
+                  <ActivityCard
+                    activity={activity}
+                    day={day}
+                    index={i}
+                    planId={planId || null}
+                    dayIndex={dayIndex}
+                    activityIndex={i}
+                    isAdded={isAdded(day.date, activity.title)}
+                    onToggleAdd={() => onToggleAdd(day, activity)}
+                    onRequestChange={() => onRequestChange(day.date, i, activity)}
+                    onRemove={() => onRemoveActivity(day.date, i, activity)}
+                    onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
+                    animDelay={i * 50}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Add activity */}
+            {addingActivity ? (
+              <AddActivityForm
+                dayDate={day.date}
+                onAdd={(act) => {
+                  onAddLocalActivity(day.date, act);
+                  setAddingActivity(false);
+                }}
+                onClose={() => setAddingActivity(false)}
+              />
+            ) : (
+              <button
+                onClick={() => setAddingActivity(true)}
+                className="mx-4 mb-3 w-[calc(100%-2rem)] flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#0D9488]/30 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/5 transition-colors"
+              >
+                <Plus className="h-3 w-3" /> Add activity
+              </button>
+            )}
+
+            {/* Embedded mini-map */}
+            <div className="mx-4 mb-4">
+              <DayMiniMap
+                result={result}
+                allDays={allDays}
+                dayIndex={dayIndex}
+                refinedCoords={refinedCoords}
+              />
+            </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* Edit Day Sheet */}
+      {editDayOpen && (
+        <EditDaySheet
+          day={day}
+          onApply={(instruction) => {
+            setEditDayOpen(false);
+            toast.info(`Updating Day ${day.day_number}...`);
+            // TODO: call edge function with day-specific prompt
+          }}
+          onClose={() => setEditDayOpen(false)}
+        />
       )}
-    </div>
+    </>
   );
 }
