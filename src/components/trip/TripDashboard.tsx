@@ -503,15 +503,17 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           badge={decisionsBadge}
           imageUrl="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80"
         />
-        <SectionCard
-          icon={CalendarDays}
-          title="Itinerary"
-          summary={itinerarySummary}
-          subline={itinerarySubline}
-          to={`/app/trips/${tripId}/itinerary`}
-          badge={itineraryBadge}
-          imageUrl="https://images.unsplash.com/photo-1530521954074-e64f6810b32d?w=800&q=80"
-        />
+        {!hasPlan && (
+          <SectionCard
+            icon={CalendarDays}
+            title="Itinerary"
+            summary={itinerarySummary}
+            subline={itinerarySubline}
+            to={`/app/trips/${tripId}/itinerary`}
+            badge={itineraryBadge}
+            imageUrl="https://images.unsplash.com/photo-1530521954074-e64f6810b32d?w=800&q=80"
+          />
+        )}
         <SectionCard
           icon={Plane}
           title="Bookings & Docs"
