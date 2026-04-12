@@ -281,7 +281,7 @@ Return ONLY valid JSON, no other text.`;
     if (timeSensitive) {
       anthropicBody.tools = [
         {
-          type: "web_search",
+          type: "web_search_20260209",
           name: "web_search",
           max_uses: 3,
         },
