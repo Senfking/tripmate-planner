@@ -491,7 +491,7 @@ export default function TripHome() {
             <LiveIndicator status={connectionStatus} />
             <button
               onClick={() => setCoverMenuOpen(true)}
-              className="relative z-20 flex h-9 w-9 items-center justify-center rounded-full"
+              className="relative z-[5] flex h-9 w-9 items-center justify-center rounded-full"
               style={{
                 background: "rgba(0,0,0,0.3)",
                 backdropFilter: "blur(8px)",
