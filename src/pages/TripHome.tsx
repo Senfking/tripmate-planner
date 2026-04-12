@@ -403,12 +403,17 @@ export default function TripHome() {
 
   const isAdmin = myRole === "owner" || myRole === "admin";
 
-  if (isLoading) {
+  if (isLoading || planCheckLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // Redirect to plan view if trip has a linked AI plan
+  if (hasAIPlan && tripId) {
+    return <Navigate to={`/app/trips/${tripId}/plan`} replace />;
   }
 
   if (!trip) {
