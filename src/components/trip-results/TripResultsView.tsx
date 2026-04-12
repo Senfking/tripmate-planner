@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell, Lightbulb, Bed, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -10,6 +10,8 @@ import { TransportCard } from "./TransportCard";
 import { AccommodationCard } from "./AccommodationCard";
 import { AlternativesSheet } from "./AlternativesSheet";
 import { ResultsMap } from "./ResultsMap";
+import { ResultsTimeline, buildTimelineNodes } from "./ResultsTimeline";
+import { TripDiscussion } from "./TripDiscussion";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 
@@ -119,9 +121,19 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
   const currency = result.currency || "USD";
 
+  const hasPacking = (result.packing_suggestions?.length || 0) > 0;
+
+  const timelineNodes = useMemo(
+    () => buildTimelineNodes(result.destinations, allDays, hasPacking),
+    [result.destinations, allDays, hasPacking]
+  );
+
   return createPortal(
     <div className="fixed inset-0 z-[9999] bg-background overflow-y-auto">
-      <div className="max-w-[700px] mx-auto min-h-full flex flex-col">
+      {/* Timeline (desktop only) */}
+      <ResultsTimeline nodes={timelineNodes} />
+
+      <div className="max-w-[700px] mx-auto min-h-full flex flex-col lg:ml-[72px] lg:mx-auto">
         {/* Header */}
         <div className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
           <div className="flex items-center gap-3">
@@ -216,18 +228,22 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
           return (
             <div key={destIdx}>
-              <DestinationSection
-                name={dest.name}
-                startDate={dest.start_date}
-                endDate={dest.end_date}
-                intro={dest.intro}
-                dayRange={dayRange2}
-              />
+              <div id={`section-dest-${dest.name}`}>
+                <DestinationSection
+                  name={dest.name}
+                  startDate={dest.start_date}
+                  endDate={dest.end_date}
+                  intro={dest.intro}
+                  dayRange={dayRange2}
+                />
+              </div>
 
-              {/* ✈️ Flights placeholder — first destination only */}
+              {/* Flights placeholder — first destination only */}
               {destIdx === 0 && (
-                <div className="px-4 mb-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-3">✈️ Flights</h3>
+                <div id="section-flights" className="px-4 mb-4">
+                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Plane className="h-5 w-5 text-[#0D9488]" /> Flights
+                  </h3>
                   <div className="rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
                     <Plane className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
                     <p className="text-sm font-medium text-foreground">Flight search coming soon</p>
@@ -245,10 +261,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 </div>
               )}
 
-              {/* 🏨 Accommodation */}
+              {/* Accommodation */}
               {dest.accommodation && (
-                <div className="px-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-3">🏨 Where you'll stay</h3>
+                <div id={`section-stay-${dest.name}`} className="px-4">
+                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Bed className="h-5 w-5 text-[#0D9488]" /> Where you'll stay
+                  </h3>
                 </div>
               )}
               {dest.accommodation && (
@@ -262,10 +280,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 />
               )}
 
-              {/* 💰 Cost summary */}
+              {/* Cost summary */}
               {destIdx === 0 && (
-                <div className="mx-4 mb-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-3">💰 Trip budget</h3>
+                <div id="section-budget" className="mx-4 mb-4">
+                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Wallet className="h-5 w-5 text-[#0D9488]" /> Trip budget
+                  </h3>
                   <button
                     onClick={() => setCostOpen(!costOpen)}
                     className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
@@ -294,9 +314,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 </div>
               )}
 
-              {/* 📅 Itinerary */}
+              {/* Itinerary */}
               <div className="px-4 mb-3">
-                <h3 className="text-lg font-semibold text-foreground">📅 Your itinerary</h3>
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-[#0D9488]" /> Your itinerary
+                </h3>
               </div>
 
               {/* Day cards */}
@@ -332,13 +354,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         })}
 
         {/* Packing suggestions */}
-        {result.packing_suggestions && result.packing_suggestions.length > 0 && (
-          <div className="mx-4 mt-2 mb-6">
+        {hasPacking && (
+          <div id="section-packing" className="mx-4 mt-2 mb-6">
             <button
               onClick={() => setPackingOpen(!packingOpen)}
               className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
             >
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <Package className="h-4 w-4 text-[#0D9488]" />
               <span className="text-sm font-medium flex-1 text-foreground">Packing suggestions</span>
               <span className="text-xs text-muted-foreground">{result.packing_suggestions.length} items</span>
             </button>
@@ -354,6 +376,18 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 </ul>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Trip-level group discussion */}
+        {planId && (
+          <div className="mx-4 mt-2 mb-6 p-4 rounded-xl bg-card border border-border">
+            <TripDiscussion
+              planId={planId}
+              activityKey="trip-general"
+              placeholder="Discuss this plan with your group..."
+              maxShown={3}
+            />
           </div>
         )}
 
