@@ -1071,42 +1071,45 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
             <div className={`${savedCount === 0 ? "h-full overflow-hidden" : ""} px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8`}>
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleCategorySelect(cat)}
-                    className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
-                    style={{ minHeight: "62px" }}
-                  >
-                    {/* Photo background */}
-                    <img
-                      src={`https://source.unsplash.com/400x200/?${encodeURIComponent(destination + ' ' + cat.photoSuffix)}`}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                    {/* Gradient overlay */}
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background: `linear-gradient(to right, ${cat.gradientColor} 0%, ${cat.gradientColor.replace('0.82', '0.6')} 55%, transparent 100%)`,
-                      }}
-                    />
-                    {/* Fallback gradient (visible if image fails) */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient} -z-10`} />
-                    <div className="relative z-10 w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-                      <div className="text-white [&>svg]:h-5 [&>svg]:w-5">{cat.icon}</div>
-                    </div>
-                    <div className="relative z-10 min-w-0">
-                      <span className="text-[14px] font-bold text-white block leading-tight drop-shadow-sm">{cat.label}</span>
-                      <span className="text-[11px] text-white/80 leading-tight block truncate drop-shadow-sm">{cat.tagline}</span>
-                    </div>
-                    {cat.id === "events" && (
-                      <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse z-10" />
-                    )}
-                  </button>
-                ))}
+                {CATEGORIES.map((cat) => {
+                  const seed = `${destination}-${cat.id}`.replace(/\s+/g, '-');
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => handleCategorySelect(cat)}
+                      className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
+                      style={{ minHeight: "62px" }}
+                    >
+                      {/* Photo background */}
+                      <img
+                        src={`https://picsum.photos/seed/${encodeURIComponent(seed)}/400/200`}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      {/* Gradient overlay */}
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background: `linear-gradient(to right, ${cat.gradientColor} 0%, ${cat.gradientColor.replace('0.82', '0.55')} 60%, ${cat.gradientColor.replace('0.82', '0.3')} 100%)`,
+                        }}
+                      />
+                      {/* Fallback gradient */}
+                      <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient} -z-10`} />
+                      <div className="relative z-10 w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+                        <div className="text-white [&>svg]:h-5 [&>svg]:w-5">{cat.icon}</div>
+                      </div>
+                      <div className="relative z-10 min-w-0">
+                        <span className="text-[14px] font-bold text-white block leading-tight drop-shadow-sm">{cat.label}</span>
+                        <span className="text-[11px] text-white/80 leading-tight block truncate drop-shadow-sm">{cat.tagline}</span>
+                      </div>
+                      {cat.id === "events" && (
+                        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse z-10" />
+                      )}
+                    </button>
+                  );
+                })}
 
                 {/* Surprise Me — full width */}
                 <button
@@ -1115,7 +1118,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   style={{ minHeight: "62px" }}
                 >
                   <img
-                    src={`https://source.unsplash.com/800x200/?${encodeURIComponent(destination + ' hidden gem')}`}
+                    src={`https://picsum.photos/seed/${encodeURIComponent(destination + '-surprise')}/800/200`}
                     alt=""
                     className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
@@ -1124,7 +1127,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   <div
                     className="absolute inset-0"
                     style={{
-                      background: "linear-gradient(135deg, rgba(13,148,136,0.85) 0%, rgba(217,119,6,0.7) 50%, transparent 100%)",
+                      background: "linear-gradient(135deg, rgba(13,148,136,0.8) 0%, rgba(217,119,6,0.65) 50%, rgba(13,148,136,0.4) 100%)",
                     }}
                   />
                   <div
