@@ -118,6 +118,8 @@ function StatusRow({
 
 export default function TripHome() {
   const { tripId } = useParams<{ tripId: string }>();
+  const [searchParams] = useSearchParams();
+  const forceDashboard = searchParams.get("view") === "dashboard";
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
