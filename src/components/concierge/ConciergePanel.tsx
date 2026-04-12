@@ -468,6 +468,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         setSelectedFilters({});
         setFreeText("");
         setSearchStartedAt(null);
+        setIsLucky(false);
       }, 300);
       return () => clearTimeout(t);
     }
@@ -484,8 +485,10 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     category: Category | null,
     filters: Record<string, string[]>,
     text?: string,
+    lucky?: boolean,
   ) => {
     setSearchStartedAt(Date.now());
+    setIsLucky(!!lucky);
     setStage("results");
     try {
       if (text) {
@@ -496,6 +499,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           when: filters.when?.length ? filters.when : undefined,
           vibe: [...(filters.vibe || []), ...(filters.scene || []), ...(filters.energy || [])].length ? [...(filters.vibe || []), ...(filters.scene || []), ...(filters.energy || [])] : undefined,
           budget: [...(filters.budget || []), ...(filters.price || [])].length ? [...(filters.budget || []), ...(filters.price || [])] : undefined,
+          feeling_lucky: lucky,
         });
       }
     } catch {
@@ -504,6 +508,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   }, [sendMessage, sendStructuredRequest]);
 
   const handleCategorySelect = (cat: Category) => {
+    if (cat.id === "surprise") {
+      // Surprise me goes directly to lucky intro
+      setSelectedCategory(cat);
+      setIsLucky(true);
+      setStage("lucky-intro");
+      // Start the search immediately
+      setTimeout(() => {
+        doSearch(cat, {}, undefined, true);
+      }, 1500);
+      return;
+    }
     setSelectedCategory(cat);
     setSelectedFilters({});
     setStage("refine");
@@ -516,6 +531,14 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const handleFindSpots = () => {
     doSearch(selectedCategory, selectedFilters);
+  };
+
+  const handleFeelingLucky = () => {
+    setIsLucky(true);
+    setStage("lucky-intro");
+    setTimeout(() => {
+      doSearch(selectedCategory, selectedFilters, undefined, true);
+    }, 1500);
   };
 
   const handleRecentSearch = (_search: RecentSearch) => {
