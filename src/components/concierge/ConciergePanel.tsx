@@ -1358,6 +1358,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                           animDelay={i * 50}
                           isLucky={isLucky}
                           luckyBadge={isLucky ? LUCKY_BADGES[(displayedResults!.suggestions!.length + i) % LUCKY_BADGES.length] : undefined}
+                          onSaveChange={() => setSavedVersion(v => v + 1)}
                         />
                       ))}
                     </div>
