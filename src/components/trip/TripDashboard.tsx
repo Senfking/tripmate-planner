@@ -523,7 +523,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
-              className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
+              className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
               <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }}>
                 <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
@@ -537,7 +537,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             </button>
             <button
               onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
-              className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
+              className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
               <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }}>
                 <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
