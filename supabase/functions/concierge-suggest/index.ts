@@ -55,15 +55,18 @@ function isTimeSensitiveWhen(when?: string): boolean {
 function buildQueryFromFilters(
   category: string,
   destination: string,
-  when?: string,
-  vibe?: string,
-  budget?: string,
+  when?: string | string[],
+  vibe?: string | string[],
+  budget?: string | string[],
 ): string {
   const parts = [category];
-  if (vibe) parts.push(vibe);
-  if (when) parts.push(when.toLowerCase());
+  const vibeArr = Array.isArray(vibe) ? vibe : vibe ? [vibe] : [];
+  const whenArr = Array.isArray(when) ? when : when ? [when] : [];
+  const budgetArr = Array.isArray(budget) ? budget : budget ? [budget] : [];
+  if (vibeArr.length) parts.push(vibeArr.join(" or "));
+  if (whenArr.length) parts.push(whenArr.join(" or ").toLowerCase());
   parts.push(`in ${destination}`);
-  if (budget) parts.push(`(${budget})`);
+  if (budgetArr.length) parts.push(`(${budgetArr.join(" or ")})`);
   return parts.join(" ");
 }
 
@@ -306,9 +309,13 @@ Deno.serve(async (req) => {
     // Determine request type: structured filters vs free text
     const isStructured = !!body.category && !body.query;
     const structCategory: string | undefined = body.category;
-    const structWhen: string | undefined = body.when;
-    const structVibe: string | undefined = body.vibe;
-    const structBudget: string | undefined = body.budget;
+    const structWhen: string | string[] | undefined = body.when;
+    const structVibe: string | string[] | undefined = body.vibe;
+    const structBudget: string | string[] | undefined = body.budget;
+    // Normalize to arrays for multi-select support
+    const whenArr = Array.isArray(structWhen) ? structWhen : structWhen ? [structWhen] : [];
+    const vibeArr = Array.isArray(structVibe) ? structVibe : structVibe ? [structVibe] : [];
+    const budgetArr = Array.isArray(structBudget) ? structBudget : structBudget ? [structBudget] : [];
 
     // Build query string (real query for free-text, synthetic for structured)
     const query: string = isStructured
@@ -343,7 +350,7 @@ Deno.serve(async (req) => {
     // ---- Check cache for non-time-sensitive queries ----
     const timeSensitive =
       isTimeSensitiveQuery(query) ||
-      isTimeSensitiveWhen(structWhen) ||
+      whenArr.some(w => isTimeSensitiveWhen(w)) ||
       structCategory === "events";
 
     if (!timeSensitive) {
@@ -410,7 +417,7 @@ Deno.serve(async (req) => {
 
     // ---- Build system prompt ----
     const groupSize = context.group_size ?? 2;
-    const budgetLevel = structBudget || context.budget_level || "mid-range";
+    const budgetLevel = budgetArr.length ? budgetArr.join(" or ") : context.budget_level || "mid-range";
     const vibes =
       context.preferences && context.preferences.length > 0
         ? context.preferences.join(", ")
@@ -426,12 +433,13 @@ Deno.serve(async (req) => {
     let dayOfWeek: string;
     let whenLabel: string;
 
-    if (isStructured && structWhen) {
-      const resolved = resolveWhen(structWhen);
+    if (isStructured && whenArr.length > 0) {
+      // Use first "when" for date resolution, but pass all for labeling
+      const resolved = resolveWhen(whenArr[0]);
       dateStr = resolved.date;
       timeOfDay = resolved.timeOfDay;
       dayOfWeek = resolved.dayOfWeek;
-      whenLabel = structWhen.toLowerCase();
+      whenLabel = whenArr.join(" or ").toLowerCase();
     } else {
       dateStr = context.date ?? new Date().toISOString().split("T")[0];
       timeOfDay = context.time_of_day ?? "any time";
@@ -455,12 +463,12 @@ Deno.serve(async (req) => {
       // -- Structured request: skip interpretation, use filters directly --
       const categoryDesc =
         CATEGORY_DESCRIPTIONS[structCategory!] || structCategory;
-      const vibeNote = structVibe ? `- Preferred vibe: ${structVibe}` : "";
+      const vibeNote = vibeArr.length ? `- Preferred vibes (match ANY): ${vibeArr.join(", ")}` : "";
 
       systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}.
 
 Find the best ${categoryDesc} using these exact filters:
-- Timing: ${structWhen || "any time"} (${dateStr}, ${dayOfWeek})
+- Timing: ${whenArr.length ? whenArr.join(" or ") : "any time"} (${dateStr}, ${dayOfWeek})
 - Budget: ${budgetLevel}
 ${vibeNote}
 - Group vibes: ${vibes}
@@ -508,7 +516,7 @@ Return ONLY valid JSON, no other text.`;
 
     // ---- Call Lovable AI Gateway ----
     const userMessage = isStructured
-      ? `Find me ${CATEGORY_DESCRIPTIONS[structCategory!] || structCategory}${structWhen ? ` for ${structWhen.toLowerCase()}` : ""}${structVibe ? `, ${structVibe.toLowerCase()} vibe` : ""} in ${context.destination}`
+      ? `Find me ${CATEGORY_DESCRIPTIONS[structCategory!] || structCategory}${whenArr.length ? ` for ${whenArr.join(" or ").toLowerCase()}` : ""}${vibeArr.length ? `, ${vibeArr.join(" or ").toLowerCase()} vibe` : ""} in ${context.destination}`
       : query;
 
     const aiBody: Record<string, unknown> = {

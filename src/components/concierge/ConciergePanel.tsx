@@ -272,9 +272,9 @@ function FilterPill({ label, onClick }: { label: string; onClick?: () => void })
 export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, destination: destinationProp, onAddToPlan }: Props) {
   const [stage, setStage] = useState<Stage>("what");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedWhen, setSelectedWhen] = useState<string | null>(null);
-  const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
-  const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
+  const [selectedWhen, setSelectedWhen] = useState<string[]>([]);
+  const [selectedVibe, setSelectedVibe] = useState<string[]>([]);
+  const [selectedBudget, setSelectedBudget] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -332,9 +332,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       const t = setTimeout(() => {
         setStage("what");
         setSelectedCategory(null);
-        setSelectedWhen(null);
-        setSelectedVibe(null);
-        setSelectedBudget(null);
+        setSelectedWhen([]);
+        setSelectedVibe([]);
+        setSelectedBudget([]);
         setFreeText("");
         setSearchStartedAt(null);
       }, 300);
@@ -344,9 +344,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const doSearch = useCallback(async (
     category: Category | null,
-    when: string | null,
-    vibe: string | null,
-    budget: string | null,
+    when: string[],
+    vibe: string[],
+    budget: string[],
     text?: string,
   ) => {
     setSearchStartedAt(Date.now());
@@ -357,9 +357,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       } else if (category) {
         await sendStructuredRequest({
           category: category.id,
-          when: when || undefined,
-          vibe: vibe || undefined,
-          budget: budget || undefined,
+          when: when.length ? when : undefined,
+          vibe: vibe.length ? vibe : undefined,
+          budget: budget.length ? budget : undefined,
         });
       }
     } catch {
@@ -374,19 +374,22 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const handleFreeTextSubmit = () => {
     if (!freeText.trim()) return;
-    doSearch(null, null, null, null, freeText.trim());
+    doSearch(null, [], [], [], freeText.trim());
   };
 
+  const toggleArrayItem = (arr: string[], item: string): string[] =>
+    arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
+
   const handleWhenSelect = (when: string) => {
-    setSelectedWhen(when);
+    setSelectedWhen(prev => toggleArrayItem(prev, when));
   };
 
   const handleVibeSelect = (vibe: string) => {
-    setSelectedVibe(vibe === selectedVibe ? null : vibe);
+    setSelectedVibe(prev => toggleArrayItem(prev, vibe));
   };
 
   const handleBudgetSelect = (budget: string) => {
-    setSelectedBudget(budget === selectedBudget ? null : budget);
+    setSelectedBudget(prev => toggleArrayItem(prev, budget));
   };
 
   const handleFindSpots = () => {
@@ -404,9 +407,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     } else if (stage === "refine") {
       setStage("what");
       setSelectedCategory(null);
-      setSelectedWhen(null);
-      setSelectedVibe(null);
-      setSelectedBudget(null);
+      setSelectedWhen([]);
+      setSelectedVibe([]);
+      setSelectedBudget([]);
     } else {
       onClose();
     }
@@ -415,9 +418,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const resetToWhat = () => {
     setStage("what");
     setSelectedCategory(null);
-    setSelectedWhen(null);
-    setSelectedVibe(null);
-    setSelectedBudget(null);
+    setSelectedWhen([]);
+    setSelectedVibe([]);
+    setSelectedBudget([]);
     setSearchStartedAt(null);
   };
 
@@ -536,7 +539,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       key={w}
                       onClick={() => handleWhenSelect(w)}
                       className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
-                        selectedWhen === w
+                        selectedWhen.includes(w)
                           ? "bg-[#0D9488] text-white border-[#0D9488]"
                           : "border-border bg-card text-foreground hover:bg-accent/50"
                       }`}
@@ -556,7 +559,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       key={v}
                       onClick={() => handleVibeSelect(v)}
                       className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
-                        selectedVibe === v
+                        selectedVibe.includes(v)
                           ? "bg-[#0D9488] text-white border-[#0D9488]"
                           : "border-border bg-card text-foreground hover:bg-accent/50"
                       }`}
@@ -576,7 +579,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       key={b}
                       onClick={() => handleBudgetSelect(b)}
                       className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
-                        selectedBudget === b
+                        selectedBudget.includes(b)
                           ? "bg-[#0D9488] text-white border-[#0D9488]"
                           : "border-border bg-card text-foreground hover:bg-accent/50"
                       }`}
@@ -610,20 +613,20 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           {stage === "results" && (
             <div className="py-3 animate-fade-in">
               {/* Breadcrumb pills */}
-              {(selectedCategory || selectedWhen || selectedVibe || selectedBudget) && (
+              {(selectedCategory || selectedWhen.length > 0 || selectedVibe.length > 0 || selectedBudget.length > 0) && (
                 <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto scrollbar-hide">
                   {selectedCategory && (
-                    <FilterPill label={selectedCategory.label} onClick={() => { setStage("what"); setSelectedCategory(null); setSelectedWhen(null); setSelectedVibe(null); setSelectedBudget(null); }} />
+                    <FilterPill label={selectedCategory.label} onClick={() => { setStage("what"); setSelectedCategory(null); setSelectedWhen([]); setSelectedVibe([]); setSelectedBudget([]); }} />
                   )}
-                  {selectedWhen && (
-                    <FilterPill label={selectedWhen} onClick={() => { setStage("refine"); setSelectedWhen(null); }} />
-                  )}
-                  {selectedVibe && (
-                    <FilterPill label={selectedVibe} onClick={() => { setStage("refine"); setSelectedVibe(null); }} />
-                  )}
-                  {selectedBudget && (
-                    <FilterPill label={selectedBudget} onClick={() => { setStage("refine"); setSelectedBudget(null); }} />
-                  )}
+                  {selectedWhen.map(w => (
+                    <FilterPill key={w} label={w} onClick={() => { setStage("refine"); setSelectedWhen(prev => prev.filter(x => x !== w)); }} />
+                  ))}
+                  {selectedVibe.map(v => (
+                    <FilterPill key={v} label={v} onClick={() => { setStage("refine"); setSelectedVibe(prev => prev.filter(x => x !== v)); }} />
+                  ))}
+                  {selectedBudget.map(b => (
+                    <FilterPill key={b} label={b} onClick={() => { setStage("refine"); setSelectedBudget(prev => prev.filter(x => x !== b)); }} />
+                  ))}
                 </div>
               )}
 

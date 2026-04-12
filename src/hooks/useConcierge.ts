@@ -25,9 +25,9 @@ export interface ConciergeSuggestion {
 
 export interface StructuredFilters {
   category: string;
-  when?: string;
-  vibe?: string;
-  budget?: string;
+  when?: string[];
+  vibe?: string[];
+  budget?: string[];
 }
 
 export interface ConciergeMessage {
