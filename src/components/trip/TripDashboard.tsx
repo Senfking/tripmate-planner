@@ -828,11 +828,31 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         {/* ─── REORDERABLE SECTIONS ─── */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
-            {visibleOrder.map((id) => (
-              <SortableSection key={id} id={id}>
-                {renderSection(id)}
-              </SortableSection>
-            ))}
+            {(() => {
+              const PAIR = new Set(["decisions", "bookings"]);
+              const rendered: ReactNode[] = [];
+              let i = 0;
+              while (i < visibleOrder.length) {
+                const id = visibleOrder[i];
+                const nextId = visibleOrder[i + 1];
+                // If decisions & bookings are adjacent, render side by side
+                if (PAIR.has(id) && nextId && PAIR.has(nextId) && id !== nextId) {
+                  rendered.push(
+                    <div key={`${id}-${nextId}`} className="grid grid-cols-2 gap-3">
+                      <SortableSection id={id}>{renderSection(id)}</SortableSection>
+                      <SortableSection id={nextId}>{renderSection(nextId)}</SortableSection>
+                    </div>
+                  );
+                  i += 2;
+                } else {
+                  rendered.push(
+                    <SortableSection key={id} id={id}>{renderSection(id)}</SortableSection>
+                  );
+                  i++;
+                }
+              }
+              return rendered;
+            })()}
           </SortableContext>
         </DndContext>
       </div>
