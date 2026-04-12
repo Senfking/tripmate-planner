@@ -784,6 +784,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               >
                 Skip filters — show me everything
               </button>
+
+              {/* Feeling lucky */}
+              <div className="border-t border-border pt-4">
+                <button
+                  onClick={handleFeelingLucky}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors"
+                >
+                  <Dice5 className="h-4 w-4" />
+                  Surprise me instead
+                </button>
+              </div>
             </div>
           )}
 
