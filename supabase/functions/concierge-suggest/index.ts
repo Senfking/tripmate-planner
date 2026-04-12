@@ -710,6 +710,7 @@ Return ONLY valid JSON, no other text.`;
           currency: s.currency ?? null,
           is_event: s.is_event ?? false,
           event_details: s.event_details ?? null,
+          booking_url: s.booking_url ?? null,
           pro_tip: s.pro_tip ?? null,
           what_to_order: s.what_to_order ?? null,
           specific_night: s.specific_night ?? null,
