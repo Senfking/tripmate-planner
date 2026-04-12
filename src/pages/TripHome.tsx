@@ -522,6 +522,7 @@ export default function TripHome() {
           startDate={trip.tentative_start_date}
           endDate={trip.tentative_end_date}
           tripName={trip.destination || trip.name}
+          coverPhoto={coverPhoto}
           onBuilderToggle={setBuilderOpen}
           onShareOpen={() => setShareInviteOpen(true)}
         />
