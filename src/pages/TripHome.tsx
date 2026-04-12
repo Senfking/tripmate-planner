@@ -607,6 +607,7 @@ export default function TripHome() {
           myRole={myRole}
           startDate={trip.tentative_start_date}
           endDate={trip.tentative_end_date}
+          tripName={trip.destination || trip.name}
           onBuilderToggle={setBuilderOpen}
         />
       </div>
