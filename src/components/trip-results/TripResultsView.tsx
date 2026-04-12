@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell, Lightbulb, Bed, Wallet, PenLine, Users } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell, Lightbulb, Bed, Wallet, PenLine, Users, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -29,13 +29,14 @@ interface Props {
   onCreateTrip?: () => void;
   onSaveDraft?: () => void;
   creatingTrip?: boolean;
+  onDashboard?: () => void;
 }
 
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard }: Props) {
   const handleShare = useCallback(() => {
     navigator.clipboard.writeText(window.location.href).then(
       () => toast.success("Plan link copied!"),
