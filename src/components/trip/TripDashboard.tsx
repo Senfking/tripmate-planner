@@ -556,6 +556,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         open={conciergeOpen}
         onClose={() => setConciergeOpen(false)}
         destination={stops?.[0]?.destination || undefined}
+        tripName={tripName}
         memberCount={memberCount ?? undefined}
       />
     </div>
