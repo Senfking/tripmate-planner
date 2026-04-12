@@ -742,7 +742,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             <div className="h-[80px] relative overflow-hidden">
               <img src="/images/bookings-card.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
             </div>
-            </div>
             <div className="p-3">
               <p className="font-semibold text-[14px] text-foreground">Bookings</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">{bookingsSummary}</p>
