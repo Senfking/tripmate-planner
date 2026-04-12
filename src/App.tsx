@@ -35,6 +35,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Admin = lazy(() => import("./pages/Admin"));
+const Templates = lazy(() => import("./pages/Templates"));
+const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
 const Landing = lazy(() => import("./pages/Landing"));
 
 function PageLoader() {
@@ -135,6 +137,8 @@ function AppInner() {
             <Route path="/ref" element={<ReferralLanding />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/templates" element={<Templates />} />
+            <Route path="/templates/:slug" element={<TemplateDetail />} />
             <Route path="/landing-preview" element={<Landing />} />
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
