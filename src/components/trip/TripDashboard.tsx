@@ -346,6 +346,17 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     return <DashboardSkeleton />;
   }
 
+  const dest = stops?.[0]?.destination || "travel";
+  const thumbQuery = (q: string) =>
+    `https://source.unsplash.com/200x200/?${encodeURIComponent(q)}`;
+
+  const SECTION_THUMBS: Record<string, string> = {
+    decisions: thumbQuery(`${dest} compass signpost`),
+    itinerary: thumbQuery(`${dest} scenery landscape`),
+    bookings: thumbQuery(`${dest} airport airplane`),
+    expenses: thumbQuery(`${dest} market currency`),
+  };
+
   const sections: {
     key: string;
     icon: typeof Vote;
@@ -355,6 +366,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     to: string;
     iconBg: string;
     iconColor: string;
+    thumb: string;
   }[] = [
     {
       key: "decisions",
@@ -365,6 +377,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       to: `/app/trips/${tripId}/decisions`,
       iconBg: "bg-amber-50",
       iconColor: "text-amber-500",
+      thumb: SECTION_THUMBS.decisions,
     },
     ...(!hasPlan ? [{
       key: "itinerary",
@@ -375,6 +388,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       to: `/app/trips/${tripId}/itinerary`,
       iconBg: "bg-purple-50",
       iconColor: "text-purple-500",
+      thumb: SECTION_THUMBS.itinerary,
     }] : []),
     {
       key: "bookings",
@@ -385,6 +399,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       to: `/app/trips/${tripId}/bookings`,
       iconBg: "bg-blue-50",
       iconColor: "text-blue-500",
+      thumb: SECTION_THUMBS.bookings,
     },
     {
       key: "expenses",
@@ -395,6 +410,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       to: `/app/trips/${tripId}/expenses`,
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
+      thumb: SECTION_THUMBS.expenses,
     },
   ];
 
@@ -432,7 +448,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         {hasPlan ? (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/plan`)}
-            className="w-full bg-card rounded-2xl shadow-sm border border-border p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+            className="w-full bg-card rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
           >
             <div className="h-[80px] w-[80px] rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
               <Sparkles className="h-7 w-7 text-primary" />
@@ -446,7 +462,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         ) : (
           <button
             onClick={() => toggleBuilder(true)}
-            className="w-full bg-card rounded-2xl shadow-sm border border-border p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+            className="w-full bg-card rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
           >
             <div className="h-[80px] w-[80px] rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
               <Sparkles className="h-7 w-7 text-primary-foreground" />
