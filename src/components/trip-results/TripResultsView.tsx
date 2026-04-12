@@ -166,6 +166,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               </h1>
               <p className="text-xs text-muted-foreground font-mono">{dateRange}</p>
             </div>
+            {onDashboard && (
+              <button
+                onClick={onDashboard}
+                className="p-2 rounded-full hover:bg-accent transition-colors"
+                title="Trip overview"
+              >
+                <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
             <button
               onClick={() => setEditTripOpen(true)}
               className="p-2 rounded-full hover:bg-accent transition-colors"
