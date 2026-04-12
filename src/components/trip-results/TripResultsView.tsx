@@ -241,7 +241,87 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           )}
         </div>
 
-        {/* Per-destination content */}
+        {/* ===== OVERALL SUMMARY SECTIONS ===== */}
+
+        {/* Flights */}
+        <div id="section-flights" className="px-4 mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Plane className="h-5 w-5 text-[#0D9488]" /> Flights
+          </h3>
+          <div className="rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
+            <Plane className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+            <p className="text-sm font-medium text-foreground">Flight search coming soon</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              We're working on finding the best flights for your trip
+            </p>
+            <button
+              onClick={() => toast.success("We'll let you know when flights are available!")}
+              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0D9488]/15 border border-[#0D9488]/25 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/25 transition-colors"
+            >
+              <Bell className="h-3 w-3" />
+              Notify me
+            </button>
+          </div>
+        </div>
+
+        {/* All stays overview */}
+        {result.destinations.some(d => d.accommodation) && (
+          <div id="section-stays-overview" className="px-4 mb-4">
+            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Bed className="h-5 w-5 text-[#0D9488]" /> Where you'll stay
+            </h3>
+            <div className="space-y-3">
+              {result.destinations.filter(d => d.accommodation).map((dest, i) => (
+                <AccommodationCard
+                  key={i}
+                  name={dest.accommodation!.name}
+                  stars={dest.accommodation!.stars}
+                  pricePerNight={dest.accommodation!.price_per_night}
+                  currency={dest.accommodation!.currency}
+                  bookingUrl={dest.accommodation!.booking_url}
+                  locationHint={dest.name}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Trip budget */}
+        <div id="section-budget" className="mx-4 mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-[#0D9488]" /> Trip budget
+          </h3>
+          <button
+            onClick={() => setCostOpen(!costOpen)}
+            className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
+          >
+            <CreditCard className="h-4 w-4 text-[#0D9488]" />
+            <span className="flex-1 text-sm font-medium text-foreground">
+              ~{currency}{costBreakdown.total} total
+              <span className="text-muted-foreground font-normal"> · ~{currency}{costBreakdown.dailyAvg}/day</span>
+            </span>
+            {costOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+          {costOpen && (
+            <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in space-y-1.5">
+              {costBreakdown.categories.map(([cat, amount]) => (
+                <div key={cat} className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{cat}</span>
+                  <span className="text-xs font-mono text-foreground">~{currency}{Math.round(amount)}</span>
+                </div>
+              ))}
+              <div className="border-t border-border pt-1.5 flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground">Total per person</span>
+                <span className="text-xs font-mono font-semibold text-[#0D9488]">~{currency}{costBreakdown.total}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Divider before destinations */}
+        <div className="mx-4 border-t border-border mb-2" />
+
+        {/* ===== PER-DESTINATION CONTENT ===== */}
         {result.destinations.map((dest, destIdx) => {
           const destDays = allDays.filter(
             (d) => d.date >= dest.start_date && d.date <= dest.end_date
@@ -262,88 +342,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 />
               </div>
 
-              {/* Flights placeholder — first destination only */}
-              {destIdx === 0 && (
-                <div id="section-flights" className="px-4 mb-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <Plane className="h-5 w-5 text-[#0D9488]" /> Flights
-                  </h3>
-                  <div className="rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
-                    <Plane className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-foreground">Flight search coming soon</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      We're working on finding the best flights for your trip
-                    </p>
-                    <button
-                      onClick={() => toast.success("We'll let you know when flights are available!")}
-                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0D9488]/15 border border-[#0D9488]/25 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/25 transition-colors"
-                    >
-                      <Bell className="h-3 w-3" />
-                      Notify me
-                    </button>
+              {/* Accommodation reminder per destination */}
+              {dest.accommodation && (
+                <div className="px-4 mb-3">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/50 border border-border">
+                    <Bed className="h-3.5 w-3.5 text-[#0D9488] shrink-0" />
+                    <span className="text-xs text-muted-foreground">
+                      Staying at <span className="font-medium text-foreground">{dest.accommodation.name}</span>
+                    </span>
                   </div>
                 </div>
               )}
-
-              {/* Accommodation */}
-              {dest.accommodation && (
-                <div id={`section-stay-${dest.name}`} className="px-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <Bed className="h-5 w-5 text-[#0D9488]" /> Where you'll stay
-                  </h3>
-                </div>
-              )}
-              {dest.accommodation && (
-                <AccommodationCard
-                  name={dest.accommodation.name}
-                  stars={dest.accommodation.stars}
-                  pricePerNight={dest.accommodation.price_per_night}
-                  currency={dest.accommodation.currency}
-                  bookingUrl={dest.accommodation.booking_url}
-                  locationHint={dest.name}
-                />
-              )}
-
-              {/* Cost summary */}
-              {destIdx === 0 && (
-                <div id="section-budget" className="mx-4 mb-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <Wallet className="h-5 w-5 text-[#0D9488]" /> Trip budget
-                  </h3>
-                  <button
-                    onClick={() => setCostOpen(!costOpen)}
-                    className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-                  >
-                    <CreditCard className="h-4 w-4 text-[#0D9488]" />
-                    <span className="flex-1 text-sm font-medium text-foreground">
-                      ~{currency}{costBreakdown.total} total
-                      <span className="text-muted-foreground font-normal"> · ~{currency}{costBreakdown.dailyAvg}/day</span>
-                    </span>
-                    {costOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                  </button>
-                  {costOpen && (
-                    <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in space-y-1.5">
-                      {costBreakdown.categories.map(([cat, amount]) => (
-                        <div key={cat} className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">{cat}</span>
-                          <span className="text-xs font-mono text-foreground">~{currency}{Math.round(amount)}</span>
-                        </div>
-                      ))}
-                      <div className="border-t border-border pt-1.5 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-foreground">Total per person</span>
-                        <span className="text-xs font-mono font-semibold text-[#0D9488]">~{currency}{costBreakdown.total}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Itinerary */}
-              <div className="px-4 mb-3">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5 text-[#0D9488]" /> Your itinerary
-                </h3>
-              </div>
 
               {/* Day cards */}
               <div className="space-y-2 px-4 pb-4">
