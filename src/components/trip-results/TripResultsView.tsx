@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell, Lightbulb, Bed, Wallet, PenLine, Users, LayoutDashboard } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell, Lightbulb, Bed, Wallet, PenLine, Users, LayoutDashboard, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -17,6 +17,8 @@ import { EditTripSheet } from "./EditTripSheet";
 import { GroupActivityPanel } from "./GroupActivityPanel";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
+import { ConciergeButton } from "@/components/concierge/ConciergeButton";
+import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 
 interface Props {
   tripId: string;
@@ -51,6 +53,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
   const [groupActivityOpen, setGroupActivityOpen] = useState(false);
+  const [conciergeOpen, setConciergeOpen] = useState(false);
   type CoordsMap = Map<string, { lat: number; lng: number }>;
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id);
