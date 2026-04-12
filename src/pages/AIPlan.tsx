@@ -58,6 +58,7 @@ export default function AIPlan() {
   return (
     <TripResultsView
       tripId={tripId}
+      planId={planId || null}
       result={result}
       onClose={() => navigate(`/app/trips/${tripId}`)}
       onRegenerate={() => navigate(`/app/trips/${tripId}`)}

@@ -320,6 +320,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
     return (
       <TripResultsView
         tripId={tripId}
+        planId={savedPlanId}
         result={results}
         onClose={onClose}
         onRegenerate={() => {
