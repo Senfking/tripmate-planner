@@ -2,8 +2,8 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Users, ThumbsUp, ThumbsDown, Flame, HelpCircle, MessageSquare, Send, Trash2 } from "lucide-react";
-import { formatDistanceToNow, isToday, isYesterday } from "date-fns";
+import { X, Users, ThumbsUp, ThumbsDown, Flame, HelpCircle, MessageSquare, Send, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import type { AITripResult, AIDay } from "./useResultsState";
 
 interface Props {
@@ -57,26 +57,38 @@ function getSectionId(key: string, allDays: AIDay[]): string {
   return "";
 }
 
-type FeedEntry = {
+type CommentEntry = {
   id: string;
-  type: "reaction" | "comment";
   userName: string;
   userId: string;
+  text: string;
+  createdAt: Date;
+};
+
+type ReactionEntry = {
+  id: string;
+  userName: string;
+  userId: string;
+  emoji: string;
+  createdAt: Date;
+};
+
+type Thread = {
   activityKey: string;
   activityLabel: string;
   sectionId: string;
-  emoji?: string;
-  text?: string;
-  createdAt: Date;
+  comments: CommentEntry[];
+  reactions: ReactionEntry[];
+  latestAt: Date;
 };
 
 export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClose }: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [replyTo, setReplyTo] = useState<string | null>(null); // activityKey to reply to
+  const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [generalText, setGeneralText] = useState("");
-  const feedEndRef = useRef<HTMLDivElement>(null);
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
 
   const { data: reactions = [] } = useQuery({
     queryKey: ["all-plan-reactions", planId],
@@ -85,7 +97,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
         .from("plan_activity_reactions")
         .select("id, emoji, user_id, activity_key, created_at")
         .eq("plan_id", planId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
       return data || [];
     },
     enabled: !!planId,
@@ -98,13 +110,12 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
         .from("plan_activity_comments" as any)
         .select("id, user_id, text, activity_key, created_at")
         .eq("plan_id", planId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
       return (data as any[]) || [];
     },
     enabled: !!planId,
   });
 
-  // Realtime
   useEffect(() => {
     if (!planId) return;
     const channel = supabase
@@ -138,53 +149,63 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
   const profileMap = useMemo(() => new Map(profiles.map((p: any) => [p.id, p])), [profiles]);
 
-  const feed: FeedEntry[] = useMemo(() => {
-    const entries: FeedEntry[] = [];
-    for (const r of reactions) {
-      const prof = profileMap.get((r as any).user_id);
-      entries.push({
-        id: (r as any).id,
-        type: "reaction",
-        userName: prof?.display_name || "User",
-        userId: (r as any).user_id,
-        activityKey: (r as any).activity_key,
-        activityLabel: getActivityLabel((r as any).activity_key, allDays),
-        sectionId: getSectionId((r as any).activity_key, allDays),
-        emoji: (r as any).emoji,
-        createdAt: new Date((r as any).created_at),
-      });
-    }
+  const threads: Thread[] = useMemo(() => {
+    const threadMap = new Map<string, Thread>();
+
+    const getOrCreate = (key: string): Thread => {
+      if (!threadMap.has(key)) {
+        threadMap.set(key, {
+          activityKey: key,
+          activityLabel: getActivityLabel(key, allDays),
+          sectionId: getSectionId(key, allDays),
+          comments: [],
+          reactions: [],
+          latestAt: new Date(0),
+        });
+      }
+      return threadMap.get(key)!;
+    };
+
     for (const c of comments) {
       const prof = profileMap.get(c.user_id);
-      entries.push({
+      const thread = getOrCreate(c.activity_key);
+      const d = new Date(c.created_at);
+      thread.comments.push({
         id: c.id,
-        type: "comment",
         userName: prof?.display_name || "User",
         userId: c.user_id,
-        activityKey: c.activity_key,
-        activityLabel: getActivityLabel(c.activity_key, allDays),
-        sectionId: getSectionId(c.activity_key, allDays),
         text: c.text,
-        createdAt: new Date(c.created_at),
+        createdAt: d,
       });
+      if (d > thread.latestAt) thread.latestAt = d;
     }
-    entries.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    return entries;
+
+    for (const r of reactions) {
+      const prof = profileMap.get((r as any).user_id);
+      const thread = getOrCreate((r as any).activity_key);
+      const d = new Date((r as any).created_at);
+      thread.reactions.push({
+        id: (r as any).id,
+        userName: prof?.display_name || "User",
+        userId: (r as any).user_id,
+        emoji: (r as any).emoji,
+        createdAt: d,
+      });
+      if (d > thread.latestAt) thread.latestAt = d;
+    }
+
+    return [...threadMap.values()].sort((a, b) => b.latestAt.getTime() - a.latestAt.getTime());
   }, [reactions, comments, profileMap, allDays]);
 
   const uniqueMembers = useMemo(() => new Set(allUserIds).size, [allUserIds]);
 
-  const groups = useMemo(() => {
-    const today: FeedEntry[] = [];
-    const yesterday: FeedEntry[] = [];
-    const earlier: FeedEntry[] = [];
-    for (const e of feed) {
-      if (isToday(e.createdAt)) today.push(e);
-      else if (isYesterday(e.createdAt)) yesterday.push(e);
-      else earlier.push(e);
-    }
-    return { today, yesterday, earlier };
-  }, [feed]);
+  const toggleThread = useCallback((key: string) => {
+    setExpandedThreads(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
 
   const handleSendGeneral = useCallback(async () => {
     if (!user || !generalText.trim()) return;
@@ -200,9 +221,11 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
     if (!user || !replyText.trim() || !replyTo) return;
     const trimmed = replyText.trim().slice(0, 500);
     setReplyText("");
+    const activityKey = replyTo;
     setReplyTo(null);
+    setExpandedThreads(prev => new Set(prev).add(activityKey));
     await supabase.from("plan_activity_comments" as any).insert({
-      plan_id: planId, activity_key: replyTo, user_id: user.id, text: trimmed,
+      plan_id: planId, activity_key: activityKey, user_id: user.id, text: trimmed,
     } as any);
     qc.invalidateQueries({ queryKey: ["all-plan-comments", planId] });
   }, [user, replyText, replyTo, planId, qc]);
@@ -215,7 +238,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
   return (
     <div className="fixed inset-0 z-[10001] flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-sm bg-card border-l border-border h-full overflow-y-auto animate-slide-in-right shadow-2xl flex flex-col">
+      <div className="relative w-full max-w-[420px] bg-card border-l border-border h-full overflow-y-auto animate-slide-in-right shadow-2xl flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border px-4 py-3 shrink-0">
           <div className="flex items-center justify-between">
@@ -236,55 +259,34 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
           </div>
         </div>
 
-        {/* Feed */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-          {feed.length === 0 ? (
+        {/* Threaded Feed */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {threads.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <Users className="h-8 w-8 text-muted-foreground/30 mb-3" />
               <p className="text-sm text-muted-foreground">No activity yet</p>
               <p className="text-xs text-muted-foreground/70 mt-1">Reactions and comments from your group will appear here</p>
             </div>
           ) : (
-            <>
-              {groups.today.length > 0 && (
-                <FeedSection
-                  label="Today"
-                  entries={groups.today}
-                  currentUserId={user?.id}
-                  replyTo={replyTo}
-                  onScrollTo={onScrollTo}
-                  onClose={onClose}
-                  onReply={setReplyTo}
-                  onDelete={handleDeleteComment}
-                />
-              )}
-              {groups.yesterday.length > 0 && (
-                <FeedSection
-                  label="Yesterday"
-                  entries={groups.yesterday}
-                  currentUserId={user?.id}
-                  replyTo={replyTo}
-                  onScrollTo={onScrollTo}
-                  onClose={onClose}
-                  onReply={setReplyTo}
-                  onDelete={handleDeleteComment}
-                />
-              )}
-              {groups.earlier.length > 0 && (
-                <FeedSection
-                  label="Earlier"
-                  entries={groups.earlier}
-                  currentUserId={user?.id}
-                  replyTo={replyTo}
-                  onScrollTo={onScrollTo}
-                  onClose={onClose}
-                  onReply={setReplyTo}
-                  onDelete={handleDeleteComment}
-                />
-              )}
-            </>
+            threads.map((thread) => (
+              <ThreadCard
+                key={thread.activityKey}
+                thread={thread}
+                currentUserId={user?.id}
+                isExpanded={expandedThreads.has(thread.activityKey)}
+                replyTo={replyTo}
+                onToggle={() => toggleThread(thread.activityKey)}
+                onScrollTo={() => {
+                  if (thread.sectionId) {
+                    onClose();
+                    setTimeout(() => onScrollTo(thread.sectionId), 200);
+                  }
+                }}
+                onReply={() => setReplyTo(thread.activityKey)}
+                onDelete={handleDeleteComment}
+              />
+            ))
           )}
-          <div ref={feedEndRef} />
         </div>
 
         {/* Inline reply bar */}
@@ -309,14 +311,14 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                 className="flex-1 px-2.5 py-1.5 text-[11px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 onKeyDown={(e) => { if (e.key === "Enter" && replyText.trim()) handleReply(); }}
               />
-              <button onClick={handleReply} disabled={!replyText.trim()} className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30">
+              <button onClick={handleReply} disabled={!replyText.trim()} className="p-1.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-30">
                 <Send className="h-3 w-3" />
               </button>
             </div>
           </div>
         )}
 
-        {/* General comment input — always visible at bottom */}
+        {/* General comment input */}
         {!replyTo && (
           <div className="px-4 py-3 border-t border-border bg-card shrink-0">
             <div className="flex gap-2 items-end">
@@ -329,7 +331,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                 className="flex-1 px-2.5 py-1.5 text-[11px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 onKeyDown={(e) => { if (e.key === "Enter" && generalText.trim()) handleSendGeneral(); }}
               />
-              <button onClick={handleSendGeneral} disabled={!generalText.trim()} className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30">
+              <button onClick={handleSendGeneral} disabled={!generalText.trim()} className="p-1.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-30">
                 <Send className="h-3 w-3" />
               </button>
             </div>
@@ -340,78 +342,136 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
   );
 }
 
-function FeedSection({ label, entries, currentUserId, replyTo, onScrollTo, onClose, onReply, onDelete }: {
-  label: string;
-  entries: FeedEntry[];
+/* ── Thread Card ── */
+
+function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onScrollTo, onReply, onDelete }: {
+  thread: Thread;
   currentUserId?: string;
+  isExpanded: boolean;
   replyTo: string | null;
-  onScrollTo: (id: string) => void;
-  onClose: () => void;
-  onReply: (activityKey: string) => void;
+  onToggle: () => void;
+  onScrollTo: () => void;
+  onReply: () => void;
   onDelete: (id: string) => void;
 }) {
+  const firstComment = thread.comments[0];
+  const replies = thread.comments.slice(1);
+  const hasReplies = replies.length > 0;
+  const reactionSummary = useMemo(() => {
+    const counts: Record<string, number> = {};
+    thread.reactions.forEach(r => {
+      counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+    });
+    return Object.entries(counts);
+  }, [thread.reactions]);
+
   return (
-    <div>
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">{label}</p>
-      <div className="space-y-1.5">
-        {entries.map((entry) => {
-          const EmojiInfo = entry.emoji ? EMOJI_MAP[entry.emoji] : null;
-          return (
-            <div key={entry.id} className="group">
-              <button
-                onClick={() => {
-                  if (entry.sectionId) {
-                    onClose();
-                    setTimeout(() => onScrollTo(entry.sectionId), 200);
-                  }
-                }}
-                className="w-full text-left flex gap-2 p-2 rounded-lg hover:bg-accent/50 transition-colors"
-              >
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 mt-0.5"
-                  style={{ backgroundColor: getInitialColor(entry.userName) }}
-                >
-                  {entry.userName.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-foreground leading-snug">
-                    <span className="font-medium">{entry.userName}</span>
-                    {entry.type === "reaction" && EmojiInfo ? (
-                      <> reacted <EmojiInfo.Icon className="h-3 w-3 inline-block mx-0.5 text-primary" /> on <span className="text-primary font-medium">{entry.activityLabel}</span></>
-                    ) : (
-                      <> commented on <span className="text-primary font-medium">{entry.activityLabel}</span></>
-                    )}
-                  </p>
-                  {entry.text && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">"{entry.text}"</p>
-                  )}
-                  <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-                    {formatDistanceToNow(entry.createdAt, { addSuffix: true })}
-                  </p>
-                </div>
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      {/* Thread header — activity label */}
+      <button
+        onClick={onScrollTo}
+        className="w-full text-left px-3 py-2 bg-accent/30 hover:bg-accent/50 transition-colors border-b border-border"
+      >
+        <span className="text-[11px] font-medium text-primary">{thread.activityLabel}</span>
+        <span className="text-[9px] text-muted-foreground/60 ml-2">
+          {formatDistanceToNow(thread.latestAt, { addSuffix: true })}
+        </span>
+      </button>
+
+      {/* Reactions summary */}
+      {reactionSummary.length > 0 && (
+        <div className="px-3 py-1.5 flex items-center gap-2 border-b border-border/50">
+          {reactionSummary.map(([emoji, count]) => {
+            const info = EMOJI_MAP[emoji];
+            return info ? (
+              <span key={emoji} className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                <info.Icon className="h-3 w-3" /> {count}
+              </span>
+            ) : null;
+          })}
+        </div>
+      )}
+
+      {/* First comment (root) */}
+      {firstComment && (
+        <div className="px-3 py-2">
+          <CommentRow
+            comment={firstComment}
+            isOwn={firstComment.userId === currentUserId}
+            onDelete={() => onDelete(firstComment.id)}
+          />
+          <div className="flex items-center gap-3 mt-1 ml-7">
+            <button onClick={onReply} className="text-[9px] text-muted-foreground hover:text-foreground flex items-center gap-0.5">
+              <MessageSquare className="h-2.5 w-2.5" /> Reply
+            </button>
+            {hasReplies && (
+              <button onClick={onToggle} className="text-[9px] text-primary hover:text-primary/80 flex items-center gap-0.5 font-medium">
+                {isExpanded ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+                {replies.length} {replies.length === 1 ? "reply" : "replies"}
               </button>
-              {/* Action row */}
-              {entry.type === "comment" && (
-                <div className="ml-9 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity -mt-0.5 mb-1">
-                  <button
-                    onClick={() => onReply(entry.activityKey)}
-                    className="text-[9px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
-                  >
-                    <MessageSquare className="h-2.5 w-2.5" /> Reply
-                  </button>
-                  {entry.userId === currentUserId && (
-                    <button
-                      onClick={() => onDelete(entry.id)}
-                      className="text-[9px] text-muted-foreground hover:text-destructive flex items-center gap-0.5"
-                    >
-                      <Trash2 className="h-2.5 w-2.5" /> Delete
-                    </button>
-                  )}
-                </div>
-              )}
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* No comments, only reactions — show reply button */}
+      {!firstComment && (
+        <div className="px-3 py-2">
+          <button onClick={onReply} className="text-[9px] text-muted-foreground hover:text-foreground flex items-center gap-0.5">
+            <MessageSquare className="h-2.5 w-2.5" /> Comment
+          </button>
+        </div>
+      )}
+
+      {/* Threaded replies */}
+      {isExpanded && hasReplies && (
+        <div className="border-t border-border/50">
+          {replies.map((reply) => (
+            <div key={reply.id} className="pl-7 pr-3 py-1.5 border-l-2 border-primary/20 ml-5 relative">
+              <CommentRow
+                comment={reply}
+                isOwn={reply.userId === currentUserId}
+                onDelete={() => onDelete(reply.id)}
+              />
             </div>
-          );
-        })}
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Comment Row ── */
+
+function CommentRow({ comment, isOwn, onDelete }: {
+  comment: CommentEntry;
+  isOwn: boolean;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="group flex gap-2">
+      <div
+        className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 mt-0.5"
+        style={{ backgroundColor: getInitialColor(comment.userName) }}
+      >
+        {comment.userName.charAt(0).toUpperCase()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[11px] font-medium text-foreground">{comment.userName}</span>
+          <span className="text-[9px] text-muted-foreground/60">
+            {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
+          </span>
+        </div>
+        <p className="text-[11px] text-foreground/90 mt-0.5 leading-relaxed">{comment.text}</p>
+        {isOwn && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="text-[9px] text-muted-foreground hover:text-destructive flex items-center gap-0.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Trash2 className="h-2.5 w-2.5" /> Delete
+          </button>
+        )}
       </div>
     </div>
   );
