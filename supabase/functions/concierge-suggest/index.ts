@@ -269,49 +269,37 @@ Respond in this exact JSON format:
 
 Return ONLY valid JSON, no other text.`;
 
-    // ---- Call Anthropic API ----
-    const anthropicBody: Record<string, unknown> = {
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages: [{ role: "user", content: query }],
-    };
-
-    // Enable web search for time-sensitive queries
-    if (timeSensitive) {
-      anthropicBody.tools = [
-        {
-          type: "web_search_20260209",
-          name: "web_search",
-          max_uses: 3,
-        },
-      ];
-    }
-
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+    // ---- Call Lovable AI Gateway ----
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${lovableKey}`,
       },
-      body: JSON.stringify(anthropicBody),
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: query },
+        ],
+        max_tokens: 2048,
+      }),
     });
 
-    if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text();
-      console.error("[concierge-suggest] Anthropic error:", errText);
-      throw new Error(`Anthropic API error ${anthropicRes.status}: ${errText}`);
+    if (!aiRes.ok) {
+      const errText = await aiRes.text();
+      console.error("[concierge-suggest] AI Gateway error:", aiRes.status, errText);
+      if (aiRes.status === 429) {
+        return jsonResponse({ error: "Rate limit exceeded, please try again shortly." }, 429);
+      }
+      if (aiRes.status === 402) {
+        return jsonResponse({ error: "AI credits exhausted. Please add funds in Settings." }, 402);
+      }
+      throw new Error(`AI Gateway error ${aiRes.status}: ${errText}`);
     }
 
-    const anthropicData = await anthropicRes.json();
-
-    // Extract text content (skip tool_use blocks)
-    const textContent =
-      anthropicData.content
-        ?.filter((c: { type: string }) => c.type === "text")
-        .map((c: { text: string }) => c.text)
-        .join("") || "";
+    const aiData = await aiRes.json();
+    const textContent = aiData.choices?.[0]?.message?.content || "";
 
     // Parse JSON from response (handle markdown code blocks)
     const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/) || [
