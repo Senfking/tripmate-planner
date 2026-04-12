@@ -162,7 +162,12 @@ function suggestionJsonSchema(destination: string): string {
       "estimated_cost_per_person": 150000,
       "currency": "IDR",
       "is_event": false,
-      "event_details": null
+      "event_details": null,
+      "pro_tip": "Insider hack or tip that makes the experience better (optional, null if none)",
+      "what_to_order": "Specific dish or drink to order (optional, null if not relevant)",
+      "specific_night": "If this place is best on a specific night, explain why (optional, null if any night works)",
+      "opening_hours": "Opening hours if known (optional, null if unknown)",
+      "full_description": "2-3 sentence detailed description of the place"
     }
   ]
 }
@@ -170,7 +175,9 @@ function suggestionJsonSchema(destination: string): string {
 Rules for is_event and event_details:
 - Set is_event to true ONLY for time-specific happenings (a DJ set, a festival night, a market, a concert) — NOT for permanent venues.
 - When is_event is true, event_details MUST be a short string like "DJ Set by [name], 10pm-3am, IDR 200k cover" or "Night Market, 6pm-midnight, free entry".
-- When is_event is false, event_details should be null.`;
+- When is_event is false, event_details should be null.
+- pro_tip should be a genuine insider tip, not generic advice. Think: "Ask for the secret menu" or "Sit upstairs for the view".
+- what_to_order: specific items, not generic ("The wagyu tartare" not "try their food").`;
 }
 
 // ---------------------------------------------------------------------------
