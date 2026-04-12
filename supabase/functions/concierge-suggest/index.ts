@@ -652,6 +652,11 @@ Return ONLY valid JSON, no other text.`;
           currency: s.currency ?? null,
           is_event: s.is_event ?? false,
           event_details: s.event_details ?? null,
+          pro_tip: s.pro_tip ?? null,
+          what_to_order: s.what_to_order ?? null,
+          specific_night: s.specific_night ?? null,
+          opening_hours: s.opening_hours ?? null,
+          full_description: s.full_description ?? null,
           // Google Places enrichment
           photo_url: placeData.photo_url,
           rating: placeData.rating,
