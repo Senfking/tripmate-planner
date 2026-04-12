@@ -212,7 +212,7 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
         <Marker
           key={`${act._dayDate}-${act._idx}`}
           position={[act.latitude!, act.longitude!]}
-          icon={createImagePin(act._idx + 1, act.title, getCategoryColor(act.category), act.photo_query)}
+          icon={createPinIcon(act._idx + 1, act.title, getCategoryColor(act.category))}
           eventHandlers={{
             click: () => onPinClick?.(act._dayDate, act._idx),
           }}
