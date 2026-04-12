@@ -17,7 +17,7 @@ import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import {
-  DndContext, closestCenter, PointerSensor, TouchSensor,
+  DndContext, rectIntersection, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -831,7 +831,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
 
         {/* ─── REORDERABLE SECTIONS ─── */}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={handleDragEnd}>
           <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
             {visibleOrder.map((id) => {
               if (id === "decisions" || id === "bookings") {
