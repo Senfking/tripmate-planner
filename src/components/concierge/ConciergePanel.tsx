@@ -548,7 +548,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const handleBack = () => {
     if (stage === "results") {
-      setStage(selectedCategory ? "refine" : "what");
+      if (isLucky) {
+        setStage("what");
+        setSelectedCategory(null);
+        setIsLucky(false);
+      } else {
+        setStage(selectedCategory ? "refine" : "what");
+      }
+    } else if (stage === "lucky-intro") {
+      setStage("what");
+      setSelectedCategory(null);
+      setIsLucky(false);
     } else if (stage === "refine") {
       setStage("what");
       setSelectedCategory(null);
@@ -563,6 +573,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     setSelectedCategory(null);
     setSelectedFilters({});
     setSearchStartedAt(null);
+    setIsLucky(false);
   };
 
   const handleUseLocation = () => {
