@@ -509,12 +509,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         if (!nextFlight) return null;
         const depCode = extractCode(flightBookingData?.departure) || flightBookingData?.origin_code || "DEP";
         const arrCode = extractCode(flightBookingData?.destination) || flightBookingData?.destination_code || "ARR";
-        const depCity = flightBookingData?.departure?.replace(/\s*\([A-Z]{3}\)/, "") || "Origin";
-        const arrCity = flightBookingData?.destination?.replace(/\s*\([A-Z]{3}\)/, "") || "Destination";
+        const depCity = flightBookingData?.departure?.replace(/\s*\([A-Z]{3}\)/, "") || codeToCity[depCode] || "Origin";
+        const arrCity = flightBookingData?.destination?.replace(/\s*\([A-Z]{3}\)/, "") || codeToCity[arrCode] || "Destination";
         const flightDateStr = flightBookingData?.flight_date || flightBookingData?.date;
         const flightDate = flightDateStr ? new Date(flightDateStr) : null;
         const flightCountdown = flightDate ? Math.ceil((flightDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
         const provider = flightBookingData?.provider;
+        const depImgQuery = encodeURIComponent(depCity.split(",")[0].trim() + " city skyline");
+        const arrImgQuery = encodeURIComponent(arrCity.split(",")[0].trim() + " city skyline");
 
         return (
           <button
@@ -523,22 +525,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           >
             <div className="grid grid-cols-2 h-[90px]">
               <div className="relative overflow-hidden">
-                {coverPhoto ? (
-                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }} />
-                )}
+                <img src={`https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=200&fit=crop&q=80&auto=format`} alt={depCity} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/40" />
                 <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
                   {depCode}
                 </span>
               </div>
               <div className="relative overflow-hidden">
-                {coverPhoto ? (
-                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "right center" }} />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }} />
-                )}
+                <img src={`https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=200&fit=crop&q=80&auto=format`} alt={arrCity} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/50" />
                 <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
                   {arrCode}
