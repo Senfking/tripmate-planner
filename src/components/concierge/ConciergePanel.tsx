@@ -107,27 +107,42 @@ interface RecentSearch {
   messageId: string;
 }
 
+interface LocationState {
+  name: string;
+  lat?: number;
+  lng?: number;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function resolveDestination(
+function resolveDefaultLocation(
   destinationProp?: string,
   tripResult?: AITripResult | null,
   tripName?: string,
-): string {
-  if (destinationProp && destinationProp !== "Unknown") return destinationProp;
+): LocationState | null {
+  // Try first destination from AI plan
   const dest = tripResult?.destinations?.[0];
-  if (dest?.name) return dest.name;
-  if (tripResult?.trip_title) return tripResult.trip_title;
-  if (tripName) return tripName;
-  return "";
+  if (dest?.name) return { name: dest.name };
+  if (destinationProp && destinationProp !== "Unknown") return { name: destinationProp };
+  if (tripResult?.trip_title) return { name: tripResult.trip_title };
+  if (tripName) return { name: tripName };
+  return null;
 }
 
-function buildConciergeContext(destination: string, tripResult?: AITripResult | null, memberCount?: number) {
+function getTripDestinations(tripResult?: AITripResult | null): string[] {
+  if (!tripResult?.destinations) return [];
+  return tripResult.destinations.map(d => d.name).filter(Boolean);
+}
+
+function buildConciergeContext(location: LocationState | null, tripResult?: AITripResult | null, memberCount?: number) {
   const dest = tripResult?.destinations?.[0];
+  const locationName = location?.name || "Unknown";
   return {
-    destination: destination || "Unknown",
+    destination: locationName,
+    location: locationName,
+    user_location: location?.lat != null && location?.lng != null ? { lat: location.lat, lng: location.lng } : undefined,
     group_size: memberCount || 2,
     budget_level: dest?.cost_profile ? "mid-range" : undefined,
     hotel_location: dest?.accommodation
@@ -135,6 +150,8 @@ function buildConciergeContext(destination: string, tripResult?: AITripResult | 
       : undefined,
   } as {
     destination: string;
+    location?: string;
+    user_location?: { lat: number; lng: number };
     date?: string;
     time_of_day?: string;
     group_size?: number;
