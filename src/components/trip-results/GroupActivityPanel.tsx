@@ -434,16 +434,18 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
 
       {/* Threaded replies */}
       {isExpanded && hasReplies && (
-        <div className="border-t border-border/30 bg-muted/20">
-          {replies.map((reply, i) => (
-            <div key={reply.id} className={`pl-8 pr-3 py-2 ml-4 border-l-2 border-primary/15 ${i > 0 ? "border-t border-t-border/20" : ""}`}>
-              <CommentRow
-                comment={reply}
-                isOwn={reply.userId === currentUserId}
-                onDelete={() => onDelete(reply.id)}
-              />
-            </div>
-          ))}
+        <div className="border-t border-border/30 bg-muted/10 px-3 py-1.5">
+          <div className="ml-6 border-l-[2px] border-primary/25 rounded-bl-lg">
+            {replies.map((reply, i) => (
+              <div key={reply.id} className={`pl-3 py-1.5 ${i > 0 ? "border-t border-border/15" : ""}`}>
+                <CommentRow
+                  comment={reply}
+                  isOwn={reply.userId === currentUserId}
+                  onDelete={() => onDelete(reply.id)}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
