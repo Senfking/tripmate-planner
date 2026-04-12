@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Plane, Bed, Wallet, MapPin, CalendarDays, Package } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -7,7 +7,6 @@ interface TimelineNode {
   icon?: React.ElementType;
   label: string;
   sublabel?: string;
-  /** Minor nodes render as small dots instead of full circles */
   minor?: boolean;
 }
 
@@ -24,7 +23,6 @@ export function buildTimelineNodes(
 
   nodes.push({ id: "section-flights", icon: Plane, label: "Flights" });
 
-  // Only one "Stay" node (not per-destination)
   const hasAccommodation = destinations.some(d => d.accommodation);
   if (hasAccommodation) {
     nodes.push({ id: `section-stay-${destinations[0]?.name}`, icon: Bed, label: "Stay" });
@@ -36,7 +34,7 @@ export function buildTimelineNodes(
     nodes.push({ id: `section-dest-${dest.name}`, icon: MapPin, label: dest.name });
     const destDays = allDays.filter(d => d.date >= dest.start_date && d.date <= dest.end_date);
     for (const day of destDays) {
-      nodes.push({ id: `section-day-${day.day_number}`, label: `D${day.day_number}`, minor: true });
+      nodes.push({ id: `section-day-${day.day_number}`, label: `Day ${day.day_number}`, minor: true });
     }
   }
 
@@ -50,63 +48,92 @@ export function buildTimelineNodes(
 export function ResultsTimeline({ nodes }: Props) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const isClickScrolling = useRef(false);
 
+  // Robust scroll-spy: find the topmost section in the viewport
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
+    if (!isDesktop) return;
+
+    const nodeIds = nodes.map(n => n.id);
+
+    const findTopmost = () => {
+      if (isClickScrolling.current) return;
+
+      let bestId: string | null = null;
+      let bestTop = Infinity;
+
+      for (const id of nodeIds) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        // Find the element whose top is closest to (but not far below) the viewport top
+        // Allow elements that are up to 40% of viewport height below the top
+        if (rect.top <= window.innerHeight * 0.4 && rect.top > -rect.height) {
+          // Pick the one with the largest top (closest to viewport top from above)
+          if (bestId === null || rect.top > bestTop) {
+            bestTop = rect.top;
+            bestId = id;
           }
         }
-      },
-      { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
-    );
+      }
 
-    for (const node of nodes) {
-      const el = document.getElementById(node.id);
-      if (el) observer.observe(el);
-    }
+      if (bestId && bestId !== activeId) {
+        setActiveId(bestId);
+      }
+    };
 
-    return () => observer.disconnect();
-  }, [nodes]);
+    // Use passive scroll listener for performance
+    window.addEventListener("scroll", findTopmost, { passive: true });
+    findTopmost(); // initial
+
+    return () => window.removeEventListener("scroll", findTopmost);
+  }, [nodes, isDesktop, activeId]);
 
   const scrollTo = useCallback((id: string) => {
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!el) return;
+
+    // Immediately set active to avoid flicker
+    setActiveId(id);
+    isClickScrolling.current = true;
+
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // Re-enable scroll-spy after animation settles
+    setTimeout(() => {
+      isClickScrolling.current = false;
+    }, 800);
   }, []);
 
   if (!isDesktop) return null;
 
   return (
-    <div className="fixed left-[max(12px,calc(50%-420px))] top-[72px] bottom-[72px] w-[48px] z-40 flex flex-col items-center py-6 overflow-y-auto scrollbar-none">
+    <div className="fixed left-[max(12px,calc(50%-420px))] top-[72px] bottom-[72px] w-[56px] z-40 flex flex-col items-center py-6 overflow-visible scrollbar-none">
       {/* Thin vertical line */}
       <div className="absolute left-1/2 top-4 bottom-4 w-px bg-[#0D9488]/15 -translate-x-1/2" />
 
-      <div className="relative flex flex-col gap-0.5 items-center">
+      <div className="relative flex flex-col gap-0.5 items-center overflow-visible">
         {nodes.map((node) => {
           const Icon = node.icon;
           const isActive = activeId === node.id;
 
           if (node.minor) {
-            // Day dots — minimal small circles
             return (
               <button
                 key={node.id}
                 onClick={() => scrollTo(node.id)}
-                className="group relative flex items-center justify-center py-1 z-10"
+                className="group relative flex items-center justify-center py-1 z-10 overflow-visible"
                 title={node.label}
               >
                 <div
-                  className={`rounded-full transition-all duration-300 ${
+                  className={`rounded-full transition-all duration-300 overflow-visible ${
                     isActive
-                      ? "w-2.5 h-2.5 bg-[#0D9488] shadow-[0_0_8px_rgba(13,148,136,0.4)]"
+                      ? "w-3 h-3 bg-[#0D9488] shadow-[0_0_10px_rgba(13,148,136,0.5)]"
                       : "w-1.5 h-1.5 bg-[#0D9488]/25 group-hover:bg-[#0D9488]/50"
                   }`}
                 />
-                {/* Label appears on hover or active */}
                 <span
-                  className={`absolute left-full ml-2 text-[10px] font-medium whitespace-nowrap transition-all duration-200 ${
+                  className={`absolute left-full ml-3 text-[10px] font-medium whitespace-nowrap transition-all duration-200 pointer-events-none ${
                     isActive
                       ? "opacity-100 text-[#0D9488]"
                       : "opacity-0 group-hover:opacity-100 text-muted-foreground/70"
@@ -118,16 +145,15 @@ export function ResultsTimeline({ nodes }: Props) {
             );
           }
 
-          // Major section nodes
           return (
             <button
               key={node.id}
               onClick={() => scrollTo(node.id)}
-              className="group relative flex items-center justify-center py-2 z-10"
+              className="group relative flex items-center justify-center py-2 z-10 overflow-visible"
               title={node.sublabel ? `${node.label}: ${node.sublabel}` : node.label}
             >
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 overflow-visible ${
                   isActive
                     ? "bg-[#0D9488] text-white shadow-[0_0_16px_rgba(13,148,136,0.35)] scale-105"
                     : "bg-background border border-[#0D9488]/20 text-[#0D9488]/40 group-hover:border-[#0D9488]/40 group-hover:text-[#0D9488]/70"
@@ -135,9 +161,8 @@ export function ResultsTimeline({ nodes }: Props) {
               >
                 {Icon && <Icon className="h-3.5 w-3.5" strokeWidth={isActive ? 2.5 : 1.5} />}
               </div>
-              {/* Label appears on hover or active */}
               <span
-                className={`absolute left-full ml-2 text-[10px] font-semibold whitespace-nowrap transition-all duration-200 ${
+                className={`absolute left-full ml-3 text-[10px] font-semibold whitespace-nowrap transition-all duration-200 pointer-events-none ${
                   isActive
                     ? "opacity-100 text-[#0D9488]"
                     : "opacity-0 group-hover:opacity-100 text-muted-foreground/70"
