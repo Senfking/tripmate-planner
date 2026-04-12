@@ -569,7 +569,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       }
 
       case "decisions-bookings": {
-        const bookingsImage = firstOgImage || coverPhoto;
         return (
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -577,11 +576,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
               <div className="h-[80px] relative overflow-hidden">
-                {coverPhoto ? (
-                  <img src={coverPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }} />
-                )}
+                <img src="https://images.unsplash.com/photo-1553729459-uj8bt0unpick?w=400&h=200&fit=crop&q=80&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
               </div>
@@ -597,11 +592,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               className="isolate text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
             >
               <div className="h-[80px] relative overflow-hidden">
-                {bookingsImage ? (
-                  <img src={bookingsImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }} />
-                )}
+                <img src="https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=400&h=200&fit=crop&q=80&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/50 drop-shadow" />
               </div>
