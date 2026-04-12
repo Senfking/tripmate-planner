@@ -344,9 +344,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const doSearch = useCallback(async (
     category: Category | null,
-    when: string | null,
-    vibe: string | null,
-    budget: string | null,
+    when: string[],
+    vibe: string[],
+    budget: string[],
     text?: string,
   ) => {
     setSearchStartedAt(Date.now());
@@ -357,9 +357,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       } else if (category) {
         await sendStructuredRequest({
           category: category.id,
-          when: when || undefined,
-          vibe: vibe || undefined,
-          budget: budget || undefined,
+          when: when.length ? when : undefined,
+          vibe: vibe.length ? vibe : undefined,
+          budget: budget.length ? budget : undefined,
         });
       }
     } catch {
