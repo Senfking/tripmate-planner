@@ -76,14 +76,14 @@ const HORIZONTAL_IDS = new Set(["decisions", "bookings"]);
 function SortableSection({ id, children }: { id: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const isHorizontal = HORIZONTAL_IDS.has(id);
-  const ref = React.useRef<HTMLDivElement>(null);
+  const elRef = useRef<HTMLDivElement>(null);
 
   let tx = 0;
   let ty = 0;
   if (transform) {
     if (isHorizontal) {
       // Clamp horizontal movement to the card's own width
-      const w = ref.current?.offsetWidth ?? 180;
+      const w = elRef.current?.offsetWidth ?? 180;
       tx = Math.max(-w, Math.min(w, transform.x));
     } else {
       ty = transform.y;
@@ -97,8 +97,8 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
     zIndex: isDragging ? 10 : undefined,
   };
 
-  const setRefs = React.useCallback((node: HTMLDivElement | null) => {
-    (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  const setRefs = useCallback((node: HTMLDivElement | null) => {
+    (elRef as { current: HTMLDivElement | null }).current = node;
     setNodeRef(node);
   }, [setNodeRef]);
 
