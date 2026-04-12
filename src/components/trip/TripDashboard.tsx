@@ -327,7 +327,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ["expenses-summary", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("expenses").select("id, payer_id, amount, currency, expense_splits(user_id, share_amount)").eq("trip_id", tripId);
+      const { data, error } = await supabase.from("expenses").select("id, payer_id, amount, currency, category, expense_splits(user_id, share_amount)").eq("trip_id", tripId);
       if (error) throw error;
       return data;
     },
@@ -374,14 +374,19 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   if (expenses && expenses.length > 0 && userId) {
     const mapped = expenses.map((e) => ({
-      id: e.id, payer_id: e.payer_id, amount: Number(e.amount), currency: e.currency,
+      id: e.id, payer_id: e.payer_id, amount: Number(e.amount), currency: e.currency, category: e.category,
       splits: (e.expense_splits ?? []).map((s) => ({ user_id: s.user_id, share_amount: Number(s.share_amount) })),
     }));
     const result = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
     balances = result.balances;
     const myBal = balances.find((b) => b.userId === userId);
     myBalance = myBal?.balance ?? 0;
-    totalSpent = mapped.reduce((sum, e) => sum + e.amount, 0);
+    totalSpent = mapped.reduce((sum, e) => {
+      if (e.category === "settlement") return sum;
+      if (e.currency === settlementCurrency) return sum + e.amount;
+      if (rates && rates[e.currency]) return sum + e.amount / rates[e.currency];
+      return sum;
+    }, 0);
   }
 
   // Flight card data
