@@ -93,11 +93,12 @@ interface TripDashboardProps {
   startDate: string | null;
   endDate: string | null;
   tripName?: string;
+  coverPhoto?: string;
   onBuilderToggle?: (open: boolean) => void;
   onShareOpen?: () => void;
 }
 
-export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate, tripName, onBuilderToggle, onShareOpen }: TripDashboardProps) {
+export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole, startDate, endDate, tripName, coverPhoto, onBuilderToggle, onShareOpen }: TripDashboardProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const userId = user?.id;
