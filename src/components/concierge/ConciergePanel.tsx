@@ -38,7 +38,7 @@ interface Category {
   icon: React.ReactNode;
   gradient: string;
   gradientColor: string;
-  photoSuffix: string;
+  photoUrl: string;
   query: string;
 }
 
@@ -49,14 +49,15 @@ interface FilterSection {
   options: string[];
 }
 
+// Curated Unsplash photos — specific, always-relevant, fast CDN
 const CATEGORIES: Category[] = [
-  { id: "eat", label: "Eat", tagline: "From street food to fine dining", icon: <Utensils className="h-7 w-7" />, gradient: "from-orange-400/80 to-amber-500/80", gradientColor: "rgba(251,146,60,0.82)", photoSuffix: "food", query: "Best places to eat" },
-  { id: "drink", label: "Drink", tagline: "Hidden bars to sunset spots", icon: <Wine className="h-7 w-7" />, gradient: "from-purple-500/80 to-violet-600/80", gradientColor: "rgba(168,85,247,0.82)", photoSuffix: "cocktail bar", query: "Best bars and drinks" },
-  { id: "party", label: "Party", tagline: "Where the night takes you", icon: <Music className="h-7 w-7" />, gradient: "from-pink-500/80 to-rose-500/80", gradientColor: "rgba(236,72,153,0.82)", photoSuffix: "nightclub party", query: "Best nightlife and parties" },
-  { id: "explore", label: "Explore", tagline: "Beyond the guidebook", icon: <Compass className="h-7 w-7" />, gradient: "from-sky-500/80 to-blue-500/80", gradientColor: "rgba(14,165,233,0.82)", photoSuffix: "landscape", query: "Things to explore and see" },
-  { id: "relax", label: "Relax", tagline: "Your reset button", icon: <Waves className="h-7 w-7" />, gradient: "from-emerald-400/80 to-green-500/80", gradientColor: "rgba(52,211,153,0.82)", photoSuffix: "spa wellness", query: "Relaxation and wellness spots" },
-  { id: "workout", label: "Workout", tagline: "Don't skip travel day", icon: <Dumbbell className="h-7 w-7" />, gradient: "from-slate-400/80 to-slate-500/80", gradientColor: "rgba(148,163,184,0.82)", photoSuffix: "fitness gym", query: "Gyms and fitness activities" },
-  { id: "events", label: "Events", tagline: "Happening right now", icon: <CalendarHeart className="h-7 w-7" />, gradient: "from-red-400/80 to-orange-400/80", gradientColor: "rgba(248,113,113,0.82)", photoSuffix: "festival concert", query: "Events and things happening" },
+  { id: "eat", label: "Eat", tagline: "From street food to fine dining", icon: <Utensils className="h-7 w-7" />, gradient: "from-orange-400/80 to-amber-500/80", gradientColor: "rgba(251,146,60,0.85)", photoUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop&q=80", query: "Best places to eat" },
+  { id: "drink", label: "Drink", tagline: "Hidden bars to sunset spots", icon: <Wine className="h-7 w-7" />, gradient: "from-purple-500/80 to-violet-600/80", gradientColor: "rgba(168,85,247,0.85)", photoUrl: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=200&fit=crop&q=80", query: "Best bars and drinks" },
+  { id: "party", label: "Party", tagline: "Where the night takes you", icon: <Music className="h-7 w-7" />, gradient: "from-pink-500/80 to-rose-500/80", gradientColor: "rgba(236,72,153,0.85)", photoUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=200&fit=crop&q=80", query: "Best nightlife and parties" },
+  { id: "explore", label: "Explore", tagline: "Beyond the guidebook", icon: <Compass className="h-7 w-7" />, gradient: "from-sky-500/80 to-blue-500/80", gradientColor: "rgba(14,165,233,0.85)", photoUrl: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=200&fit=crop&q=80", query: "Things to explore and see" },
+  { id: "relax", label: "Relax", tagline: "Your reset button", icon: <Waves className="h-7 w-7" />, gradient: "from-emerald-400/80 to-green-500/80", gradientColor: "rgba(52,211,153,0.85)", photoUrl: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=200&fit=crop&q=80", query: "Relaxation and wellness spots" },
+  { id: "workout", label: "Workout", tagline: "Don't skip travel day", icon: <Dumbbell className="h-7 w-7" />, gradient: "from-slate-400/80 to-slate-500/80", gradientColor: "rgba(148,163,184,0.85)", photoUrl: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop&q=80", query: "Gyms and fitness activities" },
+  { id: "events", label: "Events", tagline: "Happening right now", icon: <CalendarHeart className="h-7 w-7" />, gradient: "from-red-400/80 to-orange-400/80", gradientColor: "rgba(248,113,113,0.85)", photoUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=200&fit=crop&q=80", query: "Events and things happening" },
 ];
 
 const CATEGORY_FILTERS: Record<string, FilterSection[]> = {
@@ -938,9 +939,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   };
 
   const handleSurpriseMe = () => {
-    setSelectedCategory({ id: "surprise", label: "Surprise me", tagline: "Trust us", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", gradientColor: "rgba(45,212,191,0.82)", photoSuffix: "hidden gem", query: "Surprise" });
+    setSelectedCategory({ id: "surprise", label: "Surprise me", tagline: "Trust us", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", gradientColor: "rgba(45,212,191,0.85)", photoUrl: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&h=200&fit=crop&q=80", query: "Surprise" });
     setIsLucky(true);
-    doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", gradientColor: "", photoSuffix: "", query: "" }, {}, undefined, true);
+    doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", gradientColor: "", photoUrl: "", query: "" }, {}, undefined, true);
   };
 
   const handleFreeTextSubmit = () => {
@@ -1140,9 +1141,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
             <div className={`${savedCount === 0 ? "h-full overflow-hidden" : ""} px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8`}>
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => {
-                  const seed = `${destination}-${cat.id}`.replace(/\s+/g, '-');
-                  return (
+                {CATEGORIES.map((cat) => (
                     <button
                       key={cat.id}
                       onClick={() => handleCategorySelect(cat)}
@@ -1151,17 +1150,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     >
                       {/* Photo background */}
                       <img
-                        src={`https://picsum.photos/seed/${encodeURIComponent(seed)}/400/200`}
+                        src={cat.photoUrl}
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover"
                         loading="lazy"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
-                      {/* Gradient overlay */}
+                      {/* Gradient overlay — strong enough for text readability */}
                       <div
                         className="absolute inset-0"
                         style={{
-                          background: `linear-gradient(to right, ${cat.gradientColor} 0%, ${cat.gradientColor.replace('0.82', '0.55')} 60%, ${cat.gradientColor.replace('0.82', '0.3')} 100%)`,
+                          background: `linear-gradient(to right, ${cat.gradientColor} 0%, ${cat.gradientColor.replace('0.85', '0.65')} 55%, ${cat.gradientColor.replace('0.85', '0.35')} 100%)`,
                         }}
                       />
                       {/* Fallback gradient */}
@@ -1177,8 +1176,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse z-10" />
                       )}
                     </button>
-                  );
-                })}
+                ))}
+
 
                 {/* Surprise Me — full width */}
                 <button
@@ -1187,7 +1186,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   style={{ minHeight: "62px" }}
                 >
                   <img
-                    src={`https://picsum.photos/seed/${encodeURIComponent(destination + '-surprise')}/800/200`}
+                    src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&h=200&fit=crop&q=80"
                     alt=""
                     className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
