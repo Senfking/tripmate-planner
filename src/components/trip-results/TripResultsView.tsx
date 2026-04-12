@@ -387,7 +387,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   <button
                     type="button"
                     onClick={() => {
-                      const el = document.getElementById("section-stays");
+                      const el = document.getElementById("section-stays-overview");
                       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-accent/50 border border-border hover:bg-accent/80 hover:border-primary/20 transition-all group text-left cursor-pointer"
