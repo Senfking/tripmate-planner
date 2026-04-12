@@ -268,20 +268,34 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {result.destinations.some(d => d.accommodation) && (
           <div id="section-stays-overview" className="px-4 mb-4">
             <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Bed className="h-5 w-5 text-[#0D9488]" /> Where you'll stay
+              <Bed className="h-5 w-5 text-primary" /> Where you'll stay
             </h3>
             <div className="space-y-3">
-              {result.destinations.filter(d => d.accommodation).map((dest, i) => (
-                <AccommodationCard
-                  key={i}
-                  name={dest.accommodation!.name}
-                  stars={dest.accommodation!.stars}
-                  pricePerNight={dest.accommodation!.price_per_night}
-                  currency={dest.accommodation!.currency}
-                  bookingUrl={dest.accommodation!.booking_url}
-                  locationHint={dest.name}
-                />
-              ))}
+              {result.destinations.filter(d => d.accommodation).map((dest, i) => {
+                const destDays = allDays.filter(d => d.date >= dest.start_date && d.date <= dest.end_date);
+                const nightCount = destDays.length;
+                const firstDay = destDays[0]?.day_number || 1;
+                const lastDay = destDays[destDays.length - 1]?.day_number || firstDay;
+                const dayLabel = firstDay === lastDay ? `Day ${firstDay}` : `Days ${firstDay}–${lastDay}`;
+                return (
+                  <div key={i}>
+                    {/* Destination context line */}
+                    <div className="flex items-center gap-2 mb-1.5 ml-1">
+                      <span className="text-xs font-semibold text-foreground">{dest.name}</span>
+                      <span className="text-[10px] text-muted-foreground">·</span>
+                      <span className="text-[10px] text-muted-foreground">{dayLabel} · {nightCount} {nightCount === 1 ? "night" : "nights"}</span>
+                    </div>
+                    <AccommodationCard
+                      name={dest.accommodation!.name}
+                      stars={dest.accommodation!.stars}
+                      pricePerNight={dest.accommodation!.price_per_night}
+                      currency={dest.accommodation!.currency}
+                      bookingUrl={dest.accommodation!.booking_url}
+                      locationHint={dest.name}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
