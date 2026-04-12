@@ -5,7 +5,8 @@ import "leaflet/dist/leaflet.css";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Clock, ExternalLink } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Calendar } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 
 interface Props {
@@ -17,15 +18,27 @@ interface Props {
   onPinClick?: (dayDate: string, activityIndex: number) => void;
 }
 
-/* ── Minimal premium pin ── */
-function createPinIcon(num: number, color: string) {
+function formatDayLabel(date: string, dayNumber?: number): string {
+  try {
+    const parsed = parseISO(date);
+    const dayStr = dayNumber ? `Day ${dayNumber}` : "";
+    const dateStr = format(parsed, "EEE, MMM d");
+    return dayStr ? `${dayStr} · ${dateStr}` : dateStr;
+  } catch {
+    return dayNumber ? `Day ${dayNumber}` : date;
+  }
+}
+
+/* ── Minimal premium pin with day.activity label ── */
+function createPinIcon(label: string, color: string) {
+  const width = label.length > 2 ? 34 : 28;
   return L.divIcon({
     className: "",
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    iconSize: [width, 28],
+    iconAnchor: [width / 2, 14],
     popupAnchor: [0, -16],
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">
-      <span style="font-size:11px;font-weight:700;color:white;font-family:Inter,system-ui,sans-serif;">${num}</span>
+    html: `<div style="min-width:28px;height:28px;padding:0 ${label.length > 2 ? 6 : 0}px;border-radius:14px;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">
+      <span style="font-size:${label.length > 2 ? 9 : 11}px;font-weight:700;color:white;font-family:Inter,system-ui,sans-serif;white-space:nowrap;">${label}</span>
     </div>`,
   });
 }
