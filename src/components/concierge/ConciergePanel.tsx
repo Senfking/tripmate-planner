@@ -25,6 +25,8 @@ interface Props {
   memberCount?: number;
   destination?: string;
   tripName?: string;
+  tripStartDate?: string;
+  tripEndDate?: string;
   onAddToPlan?: (dayDate: string, activity: AIActivity) => void;
 }
 
