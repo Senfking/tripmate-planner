@@ -764,25 +764,37 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         ...(displayedResults.suggestions || []).map(s => s.name),
         ...extraResults.map(s => s.name),
       ];
-      // Send a new request with exclusion list
       const excludeNote = `Do NOT suggest these (already shown): ${existingNames.join(", ")}. Suggest DIFFERENT spots.`;
       
+      let query: string;
       if (selectedCategory) {
-        // Use free-text with context for "show more"
         const filterSummary = Object.entries(selectedFilters)
           .flatMap(([, vals]) => vals)
           .join(", ");
-        const query = `More ${selectedCategory.label.toLowerCase()} suggestions${filterSummary ? ` (${filterSummary})` : ""}. ${excludeNote}`;
-        await sendMessage(query);
+        query = `More ${selectedCategory.label.toLowerCase()} suggestions${filterSummary ? ` (${filterSummary})` : ""}. ${excludeNote}`;
       } else {
-        await sendMessage(`More suggestions like these. ${excludeNote}`);
+        query = `More suggestions like these. ${excludeNote}`;
+      }
+
+      const { data, error } = await supabase.functions.invoke("concierge-suggest", {
+        body: {
+          trip_id: tripId,
+          query,
+          context: conciergeContext,
+        },
+      });
+      if (error) throw error;
+      if (data?.suggestions?.length) {
+        setExtraResults(prev => [...prev, ...data.suggestions]);
+      } else {
+        toast("No more suggestions found");
       }
     } catch {
       toast.error("Couldn't load more suggestions");
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, displayedResults, extraResults, selectedCategory, selectedFilters, sendMessage]);
+  }, [loadingMore, displayedResults, extraResults, selectedCategory, selectedFilters, tripId, conciergeContext]);
 
   const handleCategorySelect = (cat: Category) => {
     setSelectedCategory(cat);
