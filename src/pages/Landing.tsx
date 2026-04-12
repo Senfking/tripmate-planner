@@ -468,13 +468,9 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/* ─── TRIP BUILDER OVERLAY ─── */}
-      {builderOpen && (
-        <StandaloneTripBuilder
-          onClose={() => setBuilderOpen(false)}
-          initialDestination={builderDestination || undefined}
-        />
-      )}
+    </div>
+  );
+}
     </div>
   );
 }
