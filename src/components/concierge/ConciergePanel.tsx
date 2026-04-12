@@ -407,9 +407,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     } else if (stage === "refine") {
       setStage("what");
       setSelectedCategory(null);
-      setSelectedWhen(null);
-      setSelectedVibe(null);
-      setSelectedBudget(null);
+      setSelectedWhen([]);
+      setSelectedVibe([]);
+      setSelectedBudget([]);
     } else {
       onClose();
     }
@@ -418,9 +418,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const resetToWhat = () => {
     setStage("what");
     setSelectedCategory(null);
-    setSelectedWhen(null);
-    setSelectedVibe(null);
-    setSelectedBudget(null);
+    setSelectedWhen([]);
+    setSelectedVibe([]);
+    setSelectedBudget([]);
     setSearchStartedAt(null);
   };
 
