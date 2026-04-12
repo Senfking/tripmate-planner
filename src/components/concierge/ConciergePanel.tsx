@@ -798,11 +798,36 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
             </div>
           )}
 
+          {/* =================== LUCKY INTRO =================== */}
+          {stage === "lucky-intro" && (
+            <div className="flex-1 flex items-center justify-center animate-fade-in">
+              <div className="text-center space-y-4 px-8">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center mx-auto shadow-lg">
+                  <Sparkles className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-lg font-semibold text-foreground animate-pulse">
+                  Finding something you'd never think to try...
+                </p>
+                <p className="text-xs text-muted-foreground">Digging into our local secrets</p>
+              </div>
+            </div>
+          )}
+
           {/* =================== STAGE 3: RESULTS =================== */}
           {stage === "results" && (
             <div className="py-3 animate-fade-in">
+              {/* Lucky badge header */}
+              {isLucky && !sending && displayedResults && (
+                <div className="flex items-center gap-2 px-4 pb-3">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/20 dark:to-amber-800/10 border border-amber-200 dark:border-amber-700/30">
+                    <Gem className="h-3.5 w-3.5 text-amber-500" />
+                    <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Feeling Lucky</span>
+                  </div>
+                </div>
+              )}
+
               {/* Breadcrumb pills */}
-              {(selectedCategory || anyFiltersSelected) && (
+              {!isLucky && (selectedCategory || anyFiltersSelected) && (
                 <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto scrollbar-hide">
                   {selectedCategory && (
                     <FilterPill label={selectedCategory.label} onClick={resetToWhat} />
@@ -821,22 +846,32 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               {sending ? (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-2 py-6">
-                    <div className="w-10 h-10 rounded-full bg-[#0D9488]/10 flex items-center justify-center">
-                      <Compass className="h-5 w-5 text-[#0D9488] animate-spin" style={{ animationDuration: "3s" }} />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isLucky ? "bg-amber-100 dark:bg-amber-900/20" : "bg-[#0D9488]/10"}`}>
+                      {isLucky ? (
+                        <Sparkles className="h-5 w-5 text-amber-500 animate-spin" style={{ animationDuration: "3s" }} />
+                      ) : (
+                        <Compass className="h-5 w-5 text-[#0D9488] animate-spin" style={{ animationDuration: "3s" }} />
+                      )}
                     </div>
-                    <span className="text-sm font-medium text-foreground">Consulting our local sources...</span>
-                    <span className="text-[10px] text-muted-foreground animate-pulse">Finding insider picks just for you</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {isLucky ? "Uncovering hidden gems..." : "Consulting our local sources..."}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground animate-pulse">
+                      {isLucky ? "The ones we don't tell everyone about" : "Finding insider picks just for you"}
+                    </span>
                   </div>
                   <LoadingSkeleton />
                 </div>
               ) : displayedResults ? (
                 <div className="space-y-3">
                   {displayedResults.content && (
-                    <p className="text-sm text-muted-foreground px-4">{displayedResults.content}</p>
+                    <p className={`text-sm px-4 ${isLucky ? "text-amber-700 dark:text-amber-400 font-medium italic" : "text-muted-foreground"}`}>
+                      {displayedResults.content}
+                    </p>
                   )}
 
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
-                    Insider picks
+                  <p className="text-[10px] uppercase tracking-wider font-semibold px-4" style={{ color: isLucky ? "#D97706" : undefined }}>
+                    {isLucky ? "Hidden gems & local secrets" : "Insider picks"}
                   </p>
 
                   <div className="space-y-3 px-4">
@@ -851,18 +886,22 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         tripDays={tripDays}
                         onAddToPlan={onAddToPlan}
                         animDelay={i * 50}
+                        isLucky={isLucky}
+                        luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
                       />
                     ))}
                   </div>
 
                   {/* Bottom actions */}
                   <div className="px-4 pt-3 space-y-2 pb-6">
-                    <button
-                      onClick={() => setStage("refine")}
-                      className="w-full py-2.5 rounded-xl text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
-                    >
-                      Try different filters
-                    </button>
+                    {!isLucky && (
+                      <button
+                        onClick={() => setStage("refine")}
+                        className="w-full py-2.5 rounded-xl text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
+                      >
+                        Try different filters
+                      </button>
+                    )}
                     <button
                       onClick={resetToWhat}
                       className="w-full py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-accent/50 transition-colors"
