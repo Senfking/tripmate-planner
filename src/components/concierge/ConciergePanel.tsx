@@ -1072,9 +1072,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
             <div className={`${savedCount === 0 ? "h-full overflow-hidden" : ""} px-3 pt-3 pb-4 space-y-3 animate-fade-in md:max-w-[900px] md:mx-auto w-full md:px-8`}>
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => {
-                  const seed = `${destination}-${cat.id}`.replace(/\s+/g, '-');
-                  return (
+                {CATEGORIES.map((cat) => (
                     <button
                       key={cat.id}
                       onClick={() => handleCategorySelect(cat)}
@@ -1083,17 +1081,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     >
                       {/* Photo background */}
                       <img
-                        src={`https://picsum.photos/seed/${encodeURIComponent(seed)}/400/200`}
+                        src={cat.photoUrl}
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover"
                         loading="lazy"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
-                      {/* Gradient overlay */}
+                      {/* Gradient overlay — strong enough for text readability */}
                       <div
                         className="absolute inset-0"
                         style={{
-                          background: `linear-gradient(to right, ${cat.gradientColor} 0%, ${cat.gradientColor.replace('0.82', '0.55')} 60%, ${cat.gradientColor.replace('0.82', '0.3')} 100%)`,
+                          background: `linear-gradient(to right, ${cat.gradientColor} 0%, ${cat.gradientColor.replace('0.85', '0.65')} 55%, ${cat.gradientColor.replace('0.85', '0.35')} 100%)`,
                         }}
                       />
                       {/* Fallback gradient */}
