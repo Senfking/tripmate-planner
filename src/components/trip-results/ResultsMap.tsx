@@ -72,6 +72,58 @@ function ActivityPopup({ act }: { act: AIActivity & { _dayDate: string; _idx: nu
     </div>
   );
 }
+function MapController({
+  result,
+  activeDayIndex,
+  allDays,
+  mode,
+}: Omit<Props, "onPinClick">) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (mode === "overview" || activeDayIndex < 0) {
+      const points = allDays
+        .flatMap((d) => d.activities)
+        .filter((a) => a.latitude != null && a.longitude != null)
+        .map((a) => [a.latitude!, a.longitude!] as [number, number]);
+
+      if (points.length > 1) {
+        map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
+          padding: [50, 50],
+          animate: true,
+        });
+      } else if (points.length === 1) {
+        map.setView(points[0], 12, { animate: true });
+      } else {
+        map.setView(
+          [result.map_center.lat, result.map_center.lng],
+          result.map_zoom || 6,
+          { animate: true }
+        );
+      }
+      return;
+    }
+
+    const day = allDays[activeDayIndex];
+    if (!day) return;
+
+    const points = day.activities
+      .filter((a) => a.latitude != null && a.longitude != null)
+      .map((a) => [a.latitude!, a.longitude!] as [number, number]);
+
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      map.setView(points[0], 14, { animate: true });
+    } else {
+      map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
+        padding: [40, 40],
+        animate: true,
+      });
+    }
+  }, [mode, activeDayIndex, allDays, result, map]);
+
+  return null;
+}
 
 export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick }: Props) {
   const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
