@@ -119,23 +119,35 @@ interface RecentSearch {
 /*  Saved spots helpers (localStorage per trip)                        */
 /* ------------------------------------------------------------------ */
 
-function getSavedSpots(tripId: string): string[] {
+function getSavedSpots(tripId: string): ConciergeSuggestion[] {
   try {
-    return JSON.parse(localStorage.getItem(`concierge-saved-${tripId}`) || "[]");
+    const raw = JSON.parse(localStorage.getItem(`concierge-saved-${tripId}`) || "[]");
+    // Migration: if old format (string[]), return empty — they'll re-save
+    if (raw.length > 0 && typeof raw[0] === "string") return [];
+    return raw as ConciergeSuggestion[];
   } catch { return []; }
 }
 
-function toggleSavedSpot(tripId: string, name: string): boolean {
+function saveSuggestion(tripId: string, suggestion: ConciergeSuggestion): boolean {
   const saved = getSavedSpots(tripId);
-  const idx = saved.indexOf(name);
-  if (idx >= 0) {
-    saved.splice(idx, 1);
-    localStorage.setItem(`concierge-saved-${tripId}`, JSON.stringify(saved));
-    return false;
-  }
-  saved.push(name);
+  const idx = saved.findIndex(s => s.name === suggestion.name);
+  if (idx >= 0) return true; // already saved
+  saved.push(suggestion);
   localStorage.setItem(`concierge-saved-${tripId}`, JSON.stringify(saved));
   return true;
+}
+
+function unsaveSuggestion(tripId: string, name: string): boolean {
+  const saved = getSavedSpots(tripId);
+  const idx = saved.findIndex(s => s.name === name);
+  if (idx < 0) return false;
+  saved.splice(idx, 1);
+  localStorage.setItem(`concierge-saved-${tripId}`, JSON.stringify(saved));
+  return false;
+}
+
+function isSuggestionSaved(tripId: string, name: string): boolean {
+  return getSavedSpots(tripId).some(s => s.name === name);
 }
 
 /* ------------------------------------------------------------------ */
