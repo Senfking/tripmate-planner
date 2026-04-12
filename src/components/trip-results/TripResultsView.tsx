@@ -133,7 +133,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {/* Timeline (desktop only) */}
       <ResultsTimeline nodes={timelineNodes} />
 
-      <div className="max-w-[700px] mx-auto min-h-full flex flex-col lg:ml-[72px] lg:mx-auto">
+      <div className="max-w-[700px] mx-auto min-h-full flex flex-col lg:pl-[60px]">
         {/* Header */}
         <div className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
           <div className="flex items-center gap-3">
