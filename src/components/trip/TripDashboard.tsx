@@ -340,6 +340,9 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   const tripCountdown = daysUntil(startDate);
 
+  // Itinerary card visibility: hide if AI plan exists OR no items exist
+  const showItinerary = !hasPlan && (itineraryItems?.length ?? 0) > 0;
+
   return (
     <div className="animate-fade-in-card pb-16">
       {builderOpen && (
@@ -352,19 +355,19 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         <div
           className="relative overflow-hidden p-5"
           style={{
-            background: "#0D9488",
+            background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 40%, #065f58 100%)",
             borderRadius: 20,
           }}
         >
-          {/* Decorative sparkles */}
-          <svg className="absolute top-3 right-4 opacity-20" width="32" height="32" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="white" />
+          {/* Subtle scattered sparkles — ambient texture */}
+          <svg className="absolute top-4 right-5 opacity-[0.12]" width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M12 0L13.5 9L22 6L15 12L24 12L15 14.5L22 18L13.5 15L12 24L10.5 15L2 18L9 14.5L0 12L9 12L2 6L10.5 9Z" fill="white" />
           </svg>
-          <svg className="absolute bottom-4 right-16 opacity-15" width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="white" />
+          <svg className="absolute top-10 right-20 opacity-[0.08]" width="10" height="10" viewBox="0 0 24 24" fill="none">
+            <path d="M12 0L13.5 9L22 6L15 12L24 12L15 14.5L22 18L13.5 15L12 24L10.5 15L2 18L9 14.5L0 12L9 12L2 6L10.5 9Z" fill="white" />
           </svg>
-          <svg className="absolute top-12 left-2 opacity-10" width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" fill="white" />
+          <svg className="absolute bottom-6 right-8 opacity-[0.15]" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 0L13.5 9L22 6L15 12L24 12L15 14.5L22 18L13.5 15L12 24L10.5 15L2 18L9 14.5L0 12L9 12L2 6L10.5 9Z" fill="white" />
           </svg>
 
           {/* Label */}
@@ -415,21 +418,67 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           </div>
         </div>
 
+        {/* ─── EXPENSES CARD — Fintech style ─── */}
+        <button
+          onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
+          className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-5 text-left transition-all active:scale-[0.98] hover:shadow-md"
+        >
+          {expenses && expenses.length > 0 && userId ? (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: myBalance < -0.01 ? "#FEF2F2" : myBalance > 0.01 ? "#F0FDFA" : "#F8FAFC" }}>
+                    <Receipt className="h-4 w-4" style={{ color: myBalance < -0.01 ? "#EF4444" : myBalance > 0.01 ? "#0D9488" : "#64748B" }} />
+                  </div>
+                  <span className="font-semibold text-[15px] text-foreground">Expenses</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+
+              {/* Hero balance */}
+              <p className={`text-[28px] font-bold tracking-tight leading-none ${myBalance < -0.01 ? "text-red-600" : myBalance > 0.01 ? "text-[#0D9488]" : "text-foreground"}`}>
+                {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
+              </p>
+              {myBalance < -0.01 && <p className="text-[13px] font-medium text-red-500 mt-1">You owe</p>}
+              {myBalance > 0.01 && <p className="text-[13px] font-medium text-[#0D9488] mt-1">You're owed</p>}
+              {Math.abs(myBalance) <= 0.01 && <p className="text-[13px] font-medium text-muted-foreground mt-1">All settled up</p>}
+
+              {/* Secondary info */}
+              <p className="text-[12px] text-muted-foreground mt-2">
+                {fmtCurrency(totalSpent, settlementCurrency)} total · {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
+              </p>
+            </>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-[#F0FDFA] flex items-center justify-center">
+                  <Receipt className="h-4 w-4 text-[#0D9488]" />
+                </div>
+                <div>
+                  <p className="font-semibold text-[15px] text-foreground">Expenses</p>
+                  <p className="text-[13px] text-muted-foreground">No expenses logged yet</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+        </button>
+
         {/* ─── FLIGHT CARD (contextual) ─── */}
         {nextFlight && (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
             className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
           >
-            {/* Photo strip */}
-            <div className="grid grid-cols-2 h-[100px]">
-              <div className="relative" style={{ background: "linear-gradient(135deg, #0D9488, #0f766e)" }}>
-                <span className="absolute inset-0 flex items-center justify-center text-white/60 text-[13px] font-medium tracking-wide">
+            {/* Photo strip with teal gradient */}
+            <div className="grid grid-cols-2 h-[90px]">
+              <div className="relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }}>
+                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[15px] font-bold tracking-widest">
                   {flightBookingData?.origin_code || "DEP"}
                 </span>
               </div>
-              <div className="relative" style={{ background: "linear-gradient(135deg, #115e59, #0c4a4a)" }}>
-                <span className="absolute inset-0 flex items-center justify-center text-white/60 text-[13px] font-medium tracking-wide">
+              <div className="relative" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }}>
+                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[15px] font-bold tracking-widest">
                   {flightBookingData?.destination_code || "ARR"}
                 </span>
               </div>
@@ -465,10 +514,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
             className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
           >
-            <div className="h-[90px] relative" style={{ background: "linear-gradient(135deg, #d4a574, #c9a06a)" }}>
-              <div className="absolute bottom-2 left-2 right-2 flex justify-center">
-                <span className="text-white/50 text-[11px] font-medium uppercase tracking-wider">Destination</span>
-              </div>
+            <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 50%, #065f58 100%)" }}>
+              <Vote className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
             </div>
             <div className="p-3">
               <p className="font-semibold text-[14px] text-foreground">Decisions</p>
@@ -483,10 +530,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
             className="text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
           >
-            <div className="h-[90px] relative" style={{ background: "linear-gradient(135deg, #94a3b8, #7c8fa3)" }}>
-              <div className="absolute bottom-2 left-2 right-2 flex justify-center">
-                <span className="text-white/50 text-[11px] font-medium uppercase tracking-wider">Hotel</span>
-              </div>
+            <div className="h-[80px] relative" style={{ background: "linear-gradient(135deg, #0a7c72 0%, #065f58 50%, #044e48 100%)" }}>
+              <FileText className="absolute bottom-2.5 right-2.5 h-5 w-5 text-white/20" />
             </div>
             <div className="p-3">
               <p className="font-semibold text-[14px] text-foreground">Bookings</p>
@@ -495,8 +540,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           </button>
         </div>
 
-        {/* ─── ITINERARY CARD (if no AI plan) ─── */}
-        {!hasPlan && (
+        {/* ─── ITINERARY CARD (only if items exist and no AI plan) ─── */}
+        {showItinerary && (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/itinerary`)}
             className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
@@ -504,88 +549,12 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[15px] text-foreground">Itinerary</p>
               <p className="text-[13px] text-muted-foreground mt-0.5">
-                {itineraryItems && itineraryItems.length > 0
-                  ? `${itineraryItems.length} activit${itineraryItems.length > 1 ? "ies" : "y"} planned`
-                  : "Nothing planned yet"}
+                {itineraryItems!.length} activit{itineraryItems!.length > 1 ? "ies" : "y"} planned
               </p>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
         )}
-
-        {/* ─── EXPENSES CARD ─── */}
-        <button
-          onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
-          className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-left transition-all active:scale-[0.98] hover:shadow-md"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <p className="font-semibold text-[15px] text-foreground">Expenses</p>
-            {expenses && expenses.length > 0 && (
-              <span className="text-[13px] text-muted-foreground">{expenses.length} logged</span>
-            )}
-          </div>
-
-          {expenses && expenses.length > 0 && userId ? (
-            <>
-              <p className="text-[12px] text-muted-foreground mb-0.5">Your balance</p>
-              <p className={`text-[22px] font-bold ${myBalance < -0.01 ? "text-red-600" : myBalance > 0.01 ? "text-[#0D9488]" : "text-foreground"}`}>
-                {fmtCurrency(Math.abs(myBalance), settlementCurrency)}
-              </p>
-              {myBalance < -0.01 && <p className="text-[11px] text-red-500 -mt-0.5">You owe</p>}
-              {myBalance > 0.01 && <p className="text-[11px] text-[#0D9488] -mt-0.5">You're owed</p>}
-
-              {/* Progress bar showing split */}
-              {balances.length >= 2 && (
-                <div className="mt-3">
-                  <div className="h-2 rounded-full bg-gray-200 overflow-hidden flex">
-                    {balances.map((b, i) => {
-                      const total = balances.reduce((s, x) => s + Math.abs(x.balance), 0);
-                      const pct = total > 0 ? (Math.abs(b.balance) / total) * 100 : 100 / balances.length;
-                      return (
-                        <div
-                          key={b.userId}
-                          className="h-full"
-                          style={{
-                            width: `${pct}%`,
-                            background: b.userId === userId ? "#0D9488" : i === 1 ? "#374151" : "#94A3B8",
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="flex justify-between mt-1.5">
-                    {balances.slice(0, 2).map((b) => {
-                      const member = members?.find((m) => m.user_id === b.userId);
-                      return (
-                        <span key={b.userId} className="text-[11px] text-muted-foreground">
-                          {member?.profile?.display_name || "Member"}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Contributor avatars */}
-              {members && members.length > 0 && (
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="flex -space-x-1.5">
-                    {members.slice(0, 4).map((m) => (
-                      <Avatar key={m.user_id} className="h-6 w-6 ring-2 ring-white">
-                        {m.profile?.avatar_url && <AvatarImage src={m.profile.avatar_url} />}
-                        <AvatarFallback className="bg-primary text-primary-foreground text-[9px]">
-                          {(m.profile?.display_name || "?").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-[13px] text-muted-foreground">No expenses logged yet</p>
-          )}
-        </button>
 
         {/* ─── PACKING LIST ─── */}
         <SharedItemsSection tripId={tripId} />
