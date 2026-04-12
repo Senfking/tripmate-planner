@@ -869,10 +869,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   };
 
   const handleSurpriseMe = () => {
-    setSelectedCategory({ id: "surprise", label: "Surprise me", tagline: "Trust us", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", query: "Surprise" });
+    setSelectedCategory({ id: "surprise", label: "Surprise me", tagline: "Trust us", icon: <Sparkles className="h-7 w-7" />, gradient: "from-teal-400/80 to-cyan-500/80", gradientColor: "rgba(45,212,191,0.82)", photoSuffix: "hidden gem", query: "Surprise" });
     setIsLucky(true);
-    // Go directly to results — no intermediate screen
-    doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", query: "" }, {}, undefined, true);
+    doSearch({ id: "surprise", label: "Surprise me", tagline: "", icon: null, gradient: "", gradientColor: "", photoSuffix: "", query: "" }, {}, undefined, true);
   };
 
   const handleFreeTextSubmit = () => {
