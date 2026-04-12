@@ -1078,13 +1078,29 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
                     style={{ minHeight: "62px" }}
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient}`} />
+                    {/* Photo background */}
+                    <img
+                      src={`https://source.unsplash.com/400x200/?${encodeURIComponent(destination + ' ' + cat.photoSuffix)}`}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    {/* Gradient overlay */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: `linear-gradient(to right, ${cat.gradientColor} 0%, ${cat.gradientColor.replace('0.82', '0.6')} 55%, transparent 100%)`,
+                      }}
+                    />
+                    {/* Fallback gradient (visible if image fails) */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient} -z-10`} />
                     <div className="relative z-10 w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
                       <div className="text-white [&>svg]:h-5 [&>svg]:w-5">{cat.icon}</div>
                     </div>
                     <div className="relative z-10 min-w-0">
-                      <span className="text-[14px] font-bold text-white block leading-tight">{cat.label}</span>
-                      <span className="text-[11px] text-white/70 leading-tight block truncate">{cat.tagline}</span>
+                      <span className="text-[14px] font-bold text-white block leading-tight drop-shadow-sm">{cat.label}</span>
+                      <span className="text-[11px] text-white/80 leading-tight block truncate drop-shadow-sm">{cat.tagline}</span>
                     </div>
                     {cat.id === "events" && (
                       <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse z-10" />
@@ -1098,8 +1114,21 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   className="col-span-2 relative flex items-center justify-center gap-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02]"
                   style={{ minHeight: "62px" }}
                 >
+                  <img
+                    src={`https://source.unsplash.com/800x200/?${encodeURIComponent(destination + ' hidden gem')}`}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
                   <div
                     className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(13,148,136,0.85) 0%, rgba(217,119,6,0.7) 50%, transparent 100%)",
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0 -z-10"
                     style={{
                       background: "linear-gradient(135deg, #0D9488 0%, #D97706 25%, #0D9488 50%, #D97706 75%, #0D9488 100%)",
                       backgroundSize: "400% 400%",
@@ -1111,8 +1140,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       <Sparkles className="h-5 w-5 text-white" />
                     </div>
                     <div className="text-left">
-                      <span className="text-[14px] font-bold text-white block leading-tight">Surprise me</span>
-                      <span className="text-[11px] text-white/80 leading-tight block">Hidden gems & unexpected experiences</span>
+                      <span className="text-[14px] font-bold text-white block leading-tight drop-shadow-sm">Surprise me</span>
+                      <span className="text-[11px] text-white/80 leading-tight block drop-shadow-sm">Hidden gems & unexpected experiences</span>
                     </div>
                   </div>
                 </button>
