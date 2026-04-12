@@ -584,7 +584,7 @@ function useRotatingPlaceholder() {
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
-export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, destination: destinationProp, tripName, onAddToPlan }: Props) {
+export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, destination: destinationProp, tripName, tripStartDate, tripEndDate, onAddToPlan }: Props) {
   const [stage, setStage] = useState<Stage>("what");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
