@@ -64,7 +64,7 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
         .order("created_at", { ascending: true })
         .limit(50);
       if (error) throw error;
-      return (data || []) as ConciergeMessage[];
+      return (data || []) as unknown as ConciergeMessage[];
     },
     enabled: !!tripId,
   });
