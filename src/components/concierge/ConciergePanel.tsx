@@ -266,7 +266,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const inputRef = useRef<HTMLInputElement>(null);
 
   const conciergeContext = buildConciergeContext(tripResult, memberCount);
-  const destination = conciergeContext.destination;
+  const destination = destinationProp || conciergeContext.destination;
+  conciergeContext.destination = destination;
   const { messages, sending, sendMessage, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
 
   const tripDays = tripResult?.destinations?.flatMap(d =>
