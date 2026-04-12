@@ -15,7 +15,6 @@ import { SharedItemsSection } from "./SharedItemsSection";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 
 // Error boundary for the trip builder
