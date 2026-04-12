@@ -413,8 +413,8 @@ export default function TripHome() {
     );
   }
 
-  // Redirect to plan view if trip has a linked AI plan
-  if (hasAIPlan && tripId) {
+  // Redirect to plan view if trip has a linked AI plan (unless ?view=dashboard)
+  if (hasAIPlan && tripId && !forceDashboard) {
     return <Navigate to={`/app/trips/${tripId}/plan`} replace />;
   }
 
