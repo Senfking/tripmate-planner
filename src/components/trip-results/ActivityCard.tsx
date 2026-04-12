@@ -61,6 +61,7 @@ export function ActivityCard({
   const swapRef = useRef<HTMLDivElement>(null);
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
+  const actKey = dayIndex != null && activityIndex != null ? `day-${dayIndex}-activity-${activityIndex}` : null;
 
   const { photos, reviews, rating, totalRatings, googleMapsUrl, latitude: refinedLat, longitude: refinedLng, isLoading } =
     useGooglePlaceDetails(activity.title || "", activity.location_name || "");
