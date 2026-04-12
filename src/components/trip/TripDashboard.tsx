@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, Component, type ReactNode } from "react";
+import { useState, useCallback, useMemo, useRef, Component, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
