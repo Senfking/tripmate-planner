@@ -417,8 +417,6 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     result={result}
                     allDays={allDays}
                     refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
-                    isAdded={state.isAdded}
-                    onToggleAdd={(d, a) => state.toggleActivity(d, a)}
                     onRequestChange={(dd, i, a) => state.requestAlternatives(dd, i, a, tripId)}
                     onRequestDescribedChange={(dd, i, a, desc) => state.requestAlternatives(dd, i, a, tripId, desc)}
                     onCustomPlaceSwap={(dd, i, name) => state.requestCustomPlaceSwap(dd, i, name, result.destinations.find(d => {
@@ -530,19 +528,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 </Button>
               </div>
             ) : (
-              <Button
-                onClick={() => state.addAllActivities(result)}
-                disabled={state.isAddingAll || remainingCount === 0}
-                className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shrink-0"
-              >
-                {state.isAddingAll
-                  ? "Adding..."
-                  : remainingCount === totalActivities
-                  ? "Add all to itinerary"
-                  : remainingCount === 0
-                  ? "All added ✓"
-                  : `Add remaining ${remainingCount}`}
-              </Button>
+              <CostBottomPanel
+                totalActivities={totalActivities}
+                total={costBreakdown.total}
+                dailyAvg={costBreakdown.dailyAvg}
+                currency={currency}
+                categories={costBreakdown.categories}
+              />
             )}
           </div>
         </div>
