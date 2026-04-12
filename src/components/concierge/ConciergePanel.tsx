@@ -1004,7 +1004,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
-            <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in">
+            <div className="px-3 pt-3 pb-4 space-y-3 animate-fade-in max-w-xl mx-auto w-full">
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((cat) => (
