@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   X, Utensils, Wine, Music, Compass, Waves, Dumbbell,
   Calendar, Sparkles, Star, MapPin, Clock, ThumbsUp,
-  Users, Search, ArrowLeft, Loader2,
+  Users, Search, ArrowLeft, Loader2, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useConcierge, type ConciergeSuggestion, type ConciergeMessage, type StructuredFilters } from "@/hooks/useConcierge";
+import { useConcierge, type ConciergeSuggestion, type StructuredFilters } from "@/hooks/useConcierge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AITripResult, AIActivity } from "@/components/trip-results/useResultsState";
 
@@ -19,6 +19,7 @@ interface Props {
   onClose: () => void;
   tripResult?: AITripResult | null;
   memberCount?: number;
+  destination?: string;
   onAddToPlan?: (dayDate: string, activity: AIActivity) => void;
 }
 
@@ -33,37 +34,51 @@ interface Category {
 const CATEGORIES: Category[] = [
   { id: "eat", label: "Eat", icon: <Utensils className="h-5 w-5" />, query: "Best places to eat", vibes: ["Casual", "Date night", "Group", "Local gem", "Instagrammable"] },
   { id: "drink", label: "Drink", icon: <Wine className="h-5 w-5" />, query: "Best bars and drinks", vibes: ["Chill", "Rooftop", "Cocktails", "Wine bar", "Dive bar"] },
-  { id: "party", label: "Party", icon: <Music className="h-5 w-5" />, query: "Best nightlife and parties", vibes: ["Dance club", "Live music", "Beach party", "Underground", "Upscale"] },
+  { id: "party", label: "Party", icon: <Music className="h-5 w-5" />, query: "Best nightlife and parties", vibes: ["Beach club", "Club", "Live music", "Rooftop", "Chill bar"] },
   { id: "explore", label: "Explore", icon: <Compass className="h-5 w-5" />, query: "Things to explore and see", vibes: ["Walking tour", "Hidden gem", "Markets", "Architecture", "Nature"] },
-  { id: "relax", label: "Relax", icon: <Waves className="h-5 w-5" />, query: "Relaxation and wellness spots", vibes: ["Spa", "Beach", "Pool", "Yoga", "Quiet café"] },
+  { id: "relax", label: "Relax", icon: <Waves className="h-5 w-5" />, query: "Relaxation and wellness spots", vibes: ["Spa", "Beach", "Pool club", "Yoga", "Nature"] },
   { id: "workout", label: "Workout", icon: <Dumbbell className="h-5 w-5" />, query: "Gyms and fitness activities", vibes: ["Gym", "Running", "CrossFit", "Surf", "Hike"] },
   { id: "events", label: "Events", icon: <Calendar className="h-5 w-5" />, query: "Events and things happening", vibes: ["Festivals", "Markets", "Concerts", "Sports", "Pop-ups"] },
   { id: "surprise", label: "Surprise me", icon: <Sparkles className="h-5 w-5" />, query: "Surprise us with something unexpected", vibes: ["Weird", "Unique", "Adventurous", "Budget-friendly", "Luxury"] },
 ];
 
 const WHEN_OPTIONS = ["Now", "Tonight", "Tomorrow", "This weekend"];
+const BUDGET_OPTIONS = ["Budget", "Mid-range", "Treat yourself"];
 
 type Stage = "what" | "refine" | "results";
+
+interface RecentSearch {
+  label: string;
+  query: string;
+  messageId: string;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function buildContext(tripResult?: AITripResult | null, memberCount?: number) {
+function buildConciergeContext(tripResult?: AITripResult | null, memberCount?: number) {
   const dest = tripResult?.destinations?.[0];
-  const ctx: Record<string, unknown> = {
+  return {
     destination: dest?.name || tripResult?.trip_title || "Unknown",
     group_size: memberCount || 2,
+    budget_level: dest?.cost_profile ? "mid-range" : undefined,
+    hotel_location: dest?.accommodation
+      ? { name: dest.accommodation.name, lat: 0, lng: 0 }
+      : undefined,
+  } as {
+    destination: string;
+    date?: string;
+    time_of_day?: string;
+    group_size?: number;
+    budget_level?: string;
+    preferences?: string[];
+    hotel_location?: { name: string; lat: number; lng: number };
   };
-  if (dest?.cost_profile) ctx.budget_level = "mid-range";
-  if (dest?.accommodation) {
-    ctx.hotel_location = { name: dest.accommodation.name, lat: 0, lng: 0 };
-  }
-  return ctx;
 }
 
 /* ------------------------------------------------------------------ */
-/*  SuggestionCard (reused from previous, refined)                     */
+/*  SuggestionCard                                                     */
 /* ------------------------------------------------------------------ */
 
 function SuggestionCard({
@@ -107,7 +122,7 @@ function SuggestionCard({
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm animate-fade-in">
       {/* Photo */}
-      <div className="w-full h-36 bg-muted overflow-hidden relative">
+      <div className="w-full h-[140px] bg-muted overflow-hidden relative">
         {suggestion.photo_url ? (
           <img src={suggestion.photo_url} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
@@ -116,7 +131,7 @@ function SuggestionCard({
           </div>
         )}
         {isGroupPick && (
-          <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#0D9488] px-2 py-0.5 rounded-full">
+          <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#0D9488] px-2 py-0.5 rounded-full shadow-sm">
             <Users className="h-3 w-3" /> Group pick
           </span>
         )}
@@ -139,6 +154,9 @@ function SuggestionCard({
             <div className="flex items-center gap-0.5 text-xs shrink-0">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
               <span className="font-medium">{suggestion.rating.toFixed(1)}</span>
+              {suggestion.totalRatings != null && (
+                <span className="text-muted-foreground text-[10px]">({suggestion.totalRatings})</span>
+              )}
             </div>
           )}
         </div>
@@ -156,14 +174,14 @@ function SuggestionCard({
         )}
 
         {/* Meta */}
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
           {suggestion.best_time && (
             <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {suggestion.best_time}</span>
           )}
           {suggestion.estimated_cost_per_person != null && (
-            <span className="font-mono">~{suggestion.currency || "USD"}{suggestion.estimated_cost_per_person}/pp</span>
+            <span className="font-mono">~{suggestion.currency || "USD"} {suggestion.estimated_cost_per_person}/pp</span>
           )}
-          {suggestion.distance_km != null && <span>{suggestion.distance_km}km</span>}
+          {suggestion.distance_km != null && <span>{suggestion.distance_km}km away</span>}
         </div>
 
         {/* Actions */}
@@ -176,22 +194,34 @@ function SuggestionCard({
             {count > 0 && count}
           </button>
 
-          <div className="relative">
-            <button
-              onClick={() => setShowDayPicker(!showDayPicker)}
-              className="text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 px-2.5 py-1.5 rounded-lg transition-colors"
-            >
-              + Add to plan
-            </button>
-            {showDayPicker && tripDays && tripDays.length > 0 && (
-              <div className="absolute bottom-full right-0 mb-1 bg-card border border-border rounded-lg shadow-lg p-1 z-30 min-w-[140px] animate-fade-in">
-                {tripDays.map((d) => (
-                  <button key={d.date} onClick={() => handleAddToPlan(d.date)} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors">
-                    Day {d.dayNumber} — {d.date}
-                  </button>
-                ))}
-              </div>
+          <div className="flex items-center gap-1">
+            {suggestion.googleMapsUrl && (
+              <a
+                href={suggestion.googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent transition-colors"
+              >
+                <ExternalLink className="h-3 w-3" /> Maps
+              </a>
             )}
+            <div className="relative">
+              <button
+                onClick={() => setShowDayPicker(!showDayPicker)}
+                className="text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                + Add to plan
+              </button>
+              {showDayPicker && tripDays && tripDays.length > 0 && (
+                <div className="absolute bottom-full right-0 mb-1 bg-card border border-border rounded-lg shadow-lg p-1 z-30 min-w-[140px] animate-fade-in">
+                  {tripDays.map((d) => (
+                    <button key={d.date} onClick={() => handleAddToPlan(d.date)} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors">
+                      Day {d.dayNumber} — {d.date}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -200,15 +230,15 @@ function SuggestionCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Loading skeleton for results                                       */
+/*  Loading skeleton                                                   */
 /* ------------------------------------------------------------------ */
 
 function LoadingSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-4 py-3">
-      {[1, 2, 3, 4].map((i) => (
+    <div className="space-y-3 px-4">
+      {[1, 2, 3].map((i) => (
         <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
-          <Skeleton className="w-full h-36 rounded-none" />
+          <Skeleton className="w-full h-[140px] rounded-none" />
           <div className="p-3 space-y-2">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-full" />
@@ -221,48 +251,89 @@ function LoadingSkeleton() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Breadcrumb pill                                                    */
+/* ------------------------------------------------------------------ */
+
+function FilterPill({ label, onClick }: { label: string; onClick?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="shrink-0 text-[10px] font-medium px-2.5 py-1 rounded-full bg-[#0D9488]/10 text-[#0D9488] hover:bg-[#0D9488]/20 transition-colors"
+    >
+      {label}
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
-export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, onAddToPlan }: Props) {
+export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount, destination: destinationProp, onAddToPlan }: Props) {
   const [stage, setStage] = useState<Stage>("what");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedWhen, setSelectedWhen] = useState<string | null>(null);
   const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
+  const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
   const [freeText, setFreeText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const contextRaw = buildContext(tripResult, memberCount);
-  const destination = (contextRaw.destination as string) || "Unknown";
-  const conciergeContext = { ...contextRaw, destination } as { destination: string; date?: string; time_of_day?: string; group_size?: number; budget_level?: string; preferences?: string[]; hotel_location?: { name: string; lat: number; lng: number } };
+  const conciergeContext = buildConciergeContext(tripResult, memberCount);
+  const destination = destinationProp || conciergeContext.destination;
+  conciergeContext.destination = destination;
   const { messages, sending, sendMessage, sendStructuredRequest, toggleReaction, getReactionInfo } = useConcierge(tripId, conciergeContext);
 
   const tripDays = tripResult?.destinations?.flatMap(d =>
     d.days.map(day => ({ date: day.date, dayNumber: day.day_number }))
   ) || [];
 
-  // Get the latest assistant message with suggestions (our results)
-  const latestResults = [...messages].reverse().find(
-    m => m.role === "assistant" && m.suggestions && m.suggestions.length > 0
-  );
+  // Get the latest assistant message with suggestions
+  const latestResults = useMemo(() =>
+    [...messages].reverse().find(
+      m => m.role === "assistant" && m.suggestions && m.suggestions.length > 0
+    ), [messages]);
+
+  // Build recent searches from message history (last 3 user messages that got results)
+  const recentSearches = useMemo<RecentSearch[]>(() => {
+    const searches: RecentSearch[] = [];
+    for (let i = messages.length - 1; i >= 0 && searches.length < 3; i--) {
+      const msg = messages[i];
+      if (msg.role === "user" && msg.content) {
+        // Find the next assistant message with suggestions
+        const next = messages[i + 1];
+        if (next?.role === "assistant" && next.suggestions?.length) {
+          const label = msg.content.length > 25
+            ? msg.content.slice(0, 25) + "…"
+            : msg.content;
+          searches.push({ label, query: msg.content, messageId: next.id });
+        }
+      }
+    }
+    return searches;
+  }, [messages]);
 
   // Reset on close
   useEffect(() => {
     if (!open) {
-      // Delay reset so close animation finishes
       const t = setTimeout(() => {
         setStage("what");
         setSelectedCategory(null);
         setSelectedWhen(null);
         setSelectedVibe(null);
+        setSelectedBudget(null);
         setFreeText("");
       }, 300);
       return () => clearTimeout(t);
     }
   }, [open]);
 
-  // Auto-submit when vibe is selected (or when is selected without vibes)
-  const doSearch = useCallback(async (category: Category | null, when: string | null, vibe: string | null, text?: string) => {
+  const doSearch = useCallback(async (
+    category: Category | null,
+    when: string | null,
+    vibe: string | null,
+    budget: string | null,
+    text?: string,
+  ) => {
     setStage("results");
     try {
       if (text) {
@@ -274,6 +345,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           category: category.id,
           when: when || undefined,
           vibe: vibe || undefined,
+          budget: budget || undefined,
         });
       }
     } catch {
@@ -288,38 +360,50 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const handleFreeTextSubmit = () => {
     if (!freeText.trim()) return;
-    doSearch(null, null, null, freeText.trim());
+    doSearch(null, null, null, null, freeText.trim());
   };
 
   const handleWhenSelect = (when: string) => {
     setSelectedWhen(when);
-    // If "Surprise me" has no vibes, go straight to results
-    if (selectedCategory?.id === "surprise") {
-      doSearch(selectedCategory, when, null);
-    }
   };
 
   const handleVibeSelect = (vibe: string) => {
-    setSelectedVibe(vibe);
-    doSearch(selectedCategory, selectedWhen, vibe);
+    setSelectedVibe(vibe === selectedVibe ? null : vibe);
   };
 
-  const handleSkipVibe = () => {
-    doSearch(selectedCategory, selectedWhen, null);
+  const handleBudgetSelect = (budget: string) => {
+    setSelectedBudget(budget === selectedBudget ? null : budget);
+  };
+
+  const handleFindSpots = () => {
+    doSearch(selectedCategory, selectedWhen, selectedVibe, selectedBudget);
+  };
+
+  const handleRecentSearch = (search: RecentSearch) => {
+    // Just show results stage — the messages are already cached
+    setStage("results");
   };
 
   const handleBack = () => {
     if (stage === "results") {
-      setStage("refine");
-      setSelectedVibe(null);
+      setStage(selectedCategory ? "refine" : "what");
     } else if (stage === "refine") {
       setStage("what");
       setSelectedCategory(null);
       setSelectedWhen(null);
       setSelectedVibe(null);
+      setSelectedBudget(null);
     } else {
       onClose();
     }
+  };
+
+  const resetToWhat = () => {
+    setStage("what");
+    setSelectedCategory(null);
+    setSelectedWhen(null);
+    setSelectedVibe(null);
+    setSelectedBudget(null);
   };
 
   if (!open) return null;
@@ -330,7 +414,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       <div className="fixed inset-0 bg-black/40 z-40 animate-fade-in" onClick={onClose} />
 
       {/* Full-screen overlay */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-background animate-slide-up-full overflow-hidden">
+      <div className="fixed inset-0 z-50 flex flex-col bg-background animate-slide-up overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <div className="flex items-center gap-3">
@@ -339,12 +423,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                 <ArrowLeft className="h-4 w-4" />
               </button>
             )}
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">Discover in {destination}</h2>
-              {stage === "refine" && selectedCategory && (
-                <p className="text-[10px] text-muted-foreground">{selectedCategory.label}</p>
-              )}
-            </div>
+            <h2 className="text-sm font-semibold text-foreground">Discover in {destination}</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
             <X className="h-4 w-4" />
@@ -353,10 +432,13 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
         {/* Content area */}
         <div className="flex-1 overflow-y-auto">
-          {/* STAGE 1: WHAT */}
+
+          {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
             <div className="px-4 py-6 space-y-6 animate-fade-in">
-              <h3 className="text-xl font-bold text-foreground text-center">What are you looking for?</h3>
+              <h3 className="text-xl font-bold text-foreground text-center">
+                What are you looking for?
+              </h3>
 
               {/* Category grid */}
               <div className="grid grid-cols-2 gap-3">
@@ -364,12 +446,15 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   <button
                     key={cat.id}
                     onClick={() => handleCategorySelect(cat)}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-[#0D9488]/30 transition-all active:scale-95"
+                    className="relative flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-[#0D9488]/30 transition-all active:scale-95"
                   >
                     <div className="w-10 h-10 rounded-full bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center">
                       {cat.icon}
                     </div>
                     <span className="text-xs font-medium text-foreground">{cat.label}</span>
+                    {cat.id === "events" && (
+                      <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -390,7 +475,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     type="text"
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
-                    placeholder="Describe what you want..."
+                    placeholder="Or describe what you want..."
                     className="w-full text-sm bg-accent/30 rounded-xl pl-9 pr-3 py-2.5 border border-border focus:outline-none focus:ring-1 focus:ring-[#0D9488] text-foreground placeholder:text-muted-foreground"
                     onKeyDown={(e) => { if (e.key === "Enter") handleFreeTextSubmit(); }}
                   />
@@ -403,12 +488,30 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   Go
                 </button>
               </div>
+
+              {/* Recent searches */}
+              {recentSearches.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Recent searches</p>
+                  <div className="flex flex-wrap gap-2">
+                    {recentSearches.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleRecentSearch(s)}
+                        className="text-xs px-3 py-1.5 rounded-full border border-border bg-card text-foreground hover:bg-accent/50 transition-colors"
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* STAGE 2: REFINE */}
+          {/* =================== STAGE 2: REFINE =================== */}
           {stage === "refine" && selectedCategory && (
-            <div className="px-4 py-6 space-y-6 animate-fade-in">
+            <div className="px-4 py-6 space-y-5 animate-fade-in">
               {/* When */}
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-foreground">When?</h3>
@@ -429,44 +532,91 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                 </div>
               </div>
 
-              {/* Vibe (show after when is selected) */}
-              {selectedWhen && (
-                <div className="space-y-2 animate-fade-in">
-                  <h3 className="text-sm font-semibold text-foreground">Vibe?</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedCategory.vibes.map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => handleVibeSelect(v)}
-                        className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
-                          selectedVibe === v
-                            ? "bg-[#0D9488] text-white border-[#0D9488]"
-                            : "border-border bg-card text-foreground hover:bg-accent/50"
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={handleSkipVibe}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
-                  >
-                    Skip — any vibe
-                  </button>
+              {/* Vibe */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-foreground">Vibe?</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCategory.vibes.map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => handleVibeSelect(v)}
+                      className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
+                        selectedVibe === v
+                          ? "bg-[#0D9488] text-white border-[#0D9488]"
+                          : "border-border bg-card text-foreground hover:bg-accent/50"
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+
+              {/* Budget */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-foreground">Budget?</h3>
+                <div className="flex flex-wrap gap-2">
+                  {BUDGET_OPTIONS.map((b) => (
+                    <button
+                      key={b}
+                      onClick={() => handleBudgetSelect(b)}
+                      className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
+                        selectedBudget === b
+                          ? "bg-[#0D9488] text-white border-[#0D9488]"
+                          : "border-border bg-card text-foreground hover:bg-accent/50"
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Find spots button */}
+              <button
+                onClick={handleFindSpots}
+                disabled={sending}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0D9488] text-white text-sm font-semibold hover:bg-[#0D9488]/90 transition-colors disabled:opacity-50"
+              >
+                <Search className="h-4 w-4" />
+                Find spots
+              </button>
+
+              <button
+                onClick={handleFindSpots}
+                className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Skip filters — show results
+              </button>
             </div>
           )}
 
-          {/* STAGE 3: RESULTS */}
+          {/* =================== STAGE 3: RESULTS =================== */}
           {stage === "results" && (
             <div className="py-3 animate-fade-in">
+              {/* Breadcrumb pills */}
+              {(selectedCategory || selectedWhen || selectedVibe || selectedBudget) && (
+                <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto scrollbar-hide">
+                  {selectedCategory && (
+                    <FilterPill label={selectedCategory.label} onClick={() => { setStage("what"); setSelectedCategory(null); setSelectedWhen(null); setSelectedVibe(null); setSelectedBudget(null); }} />
+                  )}
+                  {selectedWhen && (
+                    <FilterPill label={selectedWhen} onClick={() => { setStage("refine"); setSelectedWhen(null); }} />
+                  )}
+                  {selectedVibe && (
+                    <FilterPill label={selectedVibe} onClick={() => { setStage("refine"); setSelectedVibe(null); }} />
+                  )}
+                  {selectedBudget && (
+                    <FilterPill label={selectedBudget} onClick={() => { setStage("refine"); setSelectedBudget(null); }} />
+                  )}
+                </div>
+              )}
+
               {sending ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-center gap-2 py-4">
                     <Loader2 className="h-4 w-4 animate-spin text-[#0D9488]" />
-                    <span className="text-sm text-muted-foreground">Finding the best spots...</span>
+                    <span className="text-sm text-muted-foreground">Finding the best spots…</span>
                   </div>
                   <LoadingSkeleton />
                 </div>
@@ -475,7 +625,12 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   {latestResults.content && (
                     <p className="text-sm text-muted-foreground px-4">{latestResults.content}</p>
                   )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-4">
+
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                    Recommended spots
+                  </p>
+
+                  <div className="space-y-3 px-4">
                     {latestResults.suggestions!.map((s, i) => (
                       <SuggestionCard
                         key={`${latestResults.id}-${i}`}
@@ -490,11 +645,17 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     ))}
                   </div>
 
-                  {/* Search again */}
-                  <div className="px-4 pt-3">
+                  {/* Bottom actions */}
+                  <div className="px-4 pt-3 space-y-2 pb-6">
                     <button
-                      onClick={() => { setStage("what"); setSelectedCategory(null); setSelectedWhen(null); setSelectedVibe(null); }}
-                      className="w-full py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-accent/50 transition-colors"
+                      onClick={() => setStage("refine")}
+                      className="w-full py-2.5 rounded-xl text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
+                    >
+                      Try different filters
+                    </button>
+                    <button
+                      onClick={resetToWhat}
+                      className="w-full py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-accent/50 transition-colors"
                     >
                       Search something else
                     </button>
@@ -503,10 +664,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center px-4">
                   <p className="text-sm text-muted-foreground">No results found. Try a different search.</p>
-                  <button
-                    onClick={() => setStage("what")}
-                    className="mt-3 text-sm font-medium text-[#0D9488] hover:underline"
-                  >
+                  <button onClick={resetToWhat} className="mt-3 text-sm font-medium text-[#0D9488] hover:underline">
                     Start over
                   </button>
                 </div>
