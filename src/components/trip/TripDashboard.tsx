@@ -664,14 +664,16 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           >
             <div className="grid grid-cols-2 h-[90px]">
               <div className="relative overflow-hidden">
-                <img src={`https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=200&fit=crop&q=80&auto=format`} alt={depCity} className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 100%)" }} />
+                <img src={depImg} alt={depCityClean} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className="absolute inset-0 bg-black/40" />
                 <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
                   {depCode}
                 </span>
               </div>
               <div className="relative overflow-hidden">
-                <img src={`https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=200&fit=crop&q=80&auto=format`} alt={arrCity} className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #065f58 0%, #044e48 100%)" }} />
+                <img src={arrImg} alt={arrCityClean} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className="absolute inset-0 bg-black/50" />
                 <span className="absolute inset-0 flex items-center justify-center text-white text-[18px] font-bold tracking-widest drop-shadow-md">
                   {arrCode}
