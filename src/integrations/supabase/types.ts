@@ -124,7 +124,7 @@ export type Database = {
           is_public: boolean
           prompt: Json
           result: Json
-          trip_id: string
+          trip_id: string | null
         }
         Insert: {
           created_at?: string
@@ -133,7 +133,7 @@ export type Database = {
           is_public?: boolean
           prompt: Json
           result: Json
-          trip_id: string
+          trip_id?: string | null
         }
         Update: {
           created_at?: string
@@ -142,7 +142,7 @@ export type Database = {
           is_public?: boolean
           prompt?: Json
           result?: Json
-          trip_id?: string
+          trip_id?: string | null
         }
         Relationships: [
           {
