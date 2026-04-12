@@ -374,19 +374,22 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
   const handleFreeTextSubmit = () => {
     if (!freeText.trim()) return;
-    doSearch(null, null, null, null, freeText.trim());
+    doSearch(null, [], [], [], freeText.trim());
   };
 
+  const toggleArrayItem = (arr: string[], item: string): string[] =>
+    arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
+
   const handleWhenSelect = (when: string) => {
-    setSelectedWhen(when);
+    setSelectedWhen(prev => toggleArrayItem(prev, when));
   };
 
   const handleVibeSelect = (vibe: string) => {
-    setSelectedVibe(vibe === selectedVibe ? null : vibe);
+    setSelectedVibe(prev => toggleArrayItem(prev, vibe));
   };
 
   const handleBudgetSelect = (budget: string) => {
-    setSelectedBudget(budget === selectedBudget ? null : budget);
+    setSelectedBudget(prev => toggleArrayItem(prev, budget));
   };
 
   const handleFindSpots = () => {
