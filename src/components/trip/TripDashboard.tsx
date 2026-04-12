@@ -118,8 +118,15 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       if (saved) {
         const parsed = JSON.parse(saved) as string[];
         const merged = parsed.filter((s) => DEFAULT_ORDER.includes(s));
-        for (const s of DEFAULT_ORDER) {
-          if (!merged.includes(s)) merged.push(s);
+        // Insert new sections at their default position instead of appending
+        for (let i = 0; i < DEFAULT_ORDER.length; i++) {
+          const s = DEFAULT_ORDER[i];
+          if (!merged.includes(s)) {
+            // Find the best insertion point based on default order neighbors
+            const prevInDefault = DEFAULT_ORDER[i - 1];
+            const insertAfter = prevInDefault ? merged.indexOf(prevInDefault) : -1;
+            merged.splice(insertAfter + 1, 0, s);
+          }
         }
         return merged;
       }
