@@ -591,14 +591,35 @@ html.dark, html.dark body, html.dark #root {
   100% { background-position: -200% 0; }
 }
 
-/* Plan preview auto-scroll */
-.plan-auto-scroll {
-  animation: plan-scroll 18s linear infinite;
+/* Landing showcase highlights */
+.landing-spotlight {
+  animation: landing-spotlight 2.8s ease-in-out infinite;
 }
-@keyframes plan-scroll {
-  0% { transform: translateY(0); }
-  40% { transform: translateY(-45%); }
-  50% { transform: translateY(-45%); }
-  90% { transform: translateY(0); }
-  100% { transform: translateY(0); }
+
+.landing-spotlight-soft {
+  animation: landing-spotlight-soft 2.8s ease-in-out infinite;
+}
+
+@keyframes landing-spotlight {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0), 0 8px 20px -16px hsl(var(--foreground) / 0.08);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.16), 0 18px 34px -18px hsl(var(--primary) / 0.32);
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes landing-spotlight-soft {
+  0%,
+  100% {
+    box-shadow: 0 18px 36px -22px hsl(var(--primary) / 0.18);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 22px 42px -20px hsl(var(--primary) / 0.34);
+    transform: translateY(-1px);
+  }
 }

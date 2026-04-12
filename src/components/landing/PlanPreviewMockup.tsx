@@ -1,336 +1,429 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
-  Sparkles, MapPin, CalendarDays, DollarSign, Star, Clock,
-  ThumbsUp, Flame, Heart, MessageCircle, Receipt, Search, Navigation
+  CalendarDays,
+  Clock,
+  DollarSign,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Navigation,
+  Receipt,
+  Search,
+  Sparkles,
+  Star,
+  ThumbsUp,
+  Flame,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-/* ── Dots ── */
+const SCENE_INTERVAL_MS = 4800;
+
 function Dots({ active, count }: { active: number; count: number }) {
   return (
-    <div className="flex justify-center gap-1.5 mt-4">
-      {Array.from({ length: count }).map((_, i) => (
+    <div className="mt-4 flex justify-center gap-1.5">
+      {Array.from({ length: count }).map((_, index) => (
         <div
-          key={i}
-          className="h-1.5 rounded-full transition-all duration-300"
-          style={{
-            width: i === active ? 16 : 6,
-            background: i === active ? "#0D9488" : "#d1d5db",
-          }}
+          key={index}
+          className={cn(
+            "h-1.5 rounded-full transition-all duration-500",
+            index === active ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",
+          )}
         />
       ))}
     </div>
   );
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
+function StatPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[8px] font-medium px-1.5 py-0.5 rounded-full border border-[#0D9488]/20 text-[#0D9488] bg-[#0D9488]/5">
+    <span className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[8px] font-medium text-primary">
       {children}
     </span>
   );
 }
 
-function MiniAvatar({ color, letter }: { color: string; letter: string }) {
+function MiniAvatar({ label, className }: { label: string; className: string }) {
   return (
-    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold text-white shrink-0" style={{ background: color }}>
-      {letter}
+    <div className={cn("flex h-5 w-5 items-center justify-center rounded-full text-[7px] font-bold text-white", className)}>
+      {label}
     </div>
   );
 }
 
-function Stars({ rating }: { rating: number }) {
+function TinyStars({ rating }: { rating: number }) {
   return (
-    <div className="flex gap-px">
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star key={i} className={`h-2 w-2 ${i <= Math.floor(rating) ? "fill-amber-400 text-amber-400" : i - 0.5 <= rating ? "fill-amber-400/50 text-amber-400/50" : "fill-gray-200 text-gray-200"}`} />
+    <div className="flex items-center gap-px">
+      {[1, 2, 3, 4, 5].map((index) => (
+        <Star
+          key={index}
+          className={cn(
+            "h-2.5 w-2.5",
+            index <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/25",
+          )}
+        />
       ))}
     </div>
   );
 }
 
-/* ── Scene 1: Plan Overview ── */
-function ScenePlan() {
+function SceneShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-2.5">
-      {/* Hero banner */}
-      <div className="relative h-[100px] overflow-hidden">
-        <img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=70&auto=format&fit=crop" alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#fafaf9] via-transparent to-transparent" />
-        <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
-          <span className="font-bold text-[13px] text-[#1a1a1a] drop-shadow">Bali Adventure</span>
+    <div className="h-full bg-background px-3 py-3">
+      <div className="mb-2.5 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[12px] font-semibold leading-none text-foreground">{title}</p>
+          <p className="mt-1 text-[8px] leading-none text-muted-foreground">{subtitle}</p>
         </div>
+        <span className="rounded-full bg-primary/8 px-2 py-1 text-[7px] font-semibold uppercase tracking-[0.18em] text-primary">
+          Live preview
+        </span>
       </div>
-      <div className="px-3 space-y-2.5">
-        <div className="flex gap-1 flex-wrap">
-          <Pill><CalendarDays className="h-2 w-2" />7 days</Pill>
-          <Pill><MapPin className="h-2 w-2" />3 cities</Pill>
-          <Pill><Sparkles className="h-2 w-2" />14 activities</Pill>
-          <Pill><DollarSign className="h-2 w-2" />~$1,200</Pill>
-        </div>
-        {/* Activity cards with photos */}
-        {[
-          { name: "Tegallalang Rice Terraces", time: "9 AM", cost: "$5", img: "https://images.unsplash.com/photo-1558862107-d49ef2a04d72?w=120&q=70&auto=format&fit=crop" },
-          { name: "Tirta Empul Temple", time: "12 PM", cost: "$3", img: "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=120&q=70&auto=format&fit=crop" },
-          { name: "Ubud Monkey Forest", time: "3 PM", cost: "$7", img: "https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?w=120&q=70&auto=format&fit=crop" },
-        ].map((a) => (
-          <div key={a.name} className="flex gap-2 items-center bg-white rounded-lg border border-[#e8e8e8] p-2 shadow-sm">
-            <img src={a.img} alt={a.name} className="w-9 h-9 rounded-md object-cover shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-semibold text-[#1a1a1a] truncate">{a.name}</p>
-              <div className="flex items-center gap-1.5 text-[7px] text-[#9ca3af]">
-                <span>{a.time}</span><span>·</span><span className="text-[#0D9488] font-medium">{a.cost}</span>
+      {children}
+    </div>
+  );
+}
+
+function ScenePlan({ active }: { active: boolean }) {
+  const items = [
+    {
+      title: "Tegallalang Rice Terraces",
+      time: "9:00 AM",
+      price: "$5",
+      image: "https://images.unsplash.com/photo-1558862107-d49ef2a04d72?w=160&q=80&auto=format&fit=crop",
+    },
+    {
+      title: "Tirta Empul Temple",
+      time: "12:00 PM",
+      price: "$3",
+      image: "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=160&q=80&auto=format&fit=crop",
+    },
+    {
+      title: "Echo Beach Sunset",
+      time: "5:30 PM",
+      price: "Free",
+      image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=160&q=80&auto=format&fit=crop",
+    },
+  ];
+
+  return (
+    <SceneShell title="Bali Adventure" subtitle="7 days · 3 cities · 14 activities">
+      <div className="space-y-2.5">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="relative h-[88px] overflow-hidden">
+            <img
+              src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=80&auto=format&fit=crop"
+              alt="Bali destination"
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
+            <div className="absolute bottom-2 left-2.5 flex items-center gap-1.5 text-white">
+              <Sparkles className="h-3 w-3" />
+              <span className="text-[10px] font-semibold">AI itinerary overview</span>
+            </div>
+          </div>
+          <div className="space-y-2 p-2.5">
+            <div className="flex flex-wrap gap-1">
+              <StatPill><CalendarDays className="h-2.5 w-2.5" />7 days</StatPill>
+              <StatPill><MapPin className="h-2.5 w-2.5" />3 cities</StatPill>
+              <StatPill><DollarSign className="h-2.5 w-2.5" />~$1,200</StatPill>
+            </div>
+            <div className={cn("rounded-xl border border-primary/10 bg-primary/5 p-2 transition-all duration-500", active && "landing-spotlight") }>
+              <div className="mb-1.5 flex items-center gap-1 text-[8px] font-medium text-primary">
+                <Navigation className="h-2.5 w-2.5" />
+                Ubud → Canggu → Uluwatu
+              </div>
+              <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[8px] text-muted-foreground">
+                <span>Route locked with your group</span>
+                <span className="font-medium text-foreground">3 stops</span>
               </div>
             </div>
           </div>
-        ))}
-        <div className="flex items-center gap-1.5 text-[9px] font-medium text-[#6b7280]">
-          <Navigation className="h-2.5 w-2.5 text-[#0D9488]" />
-          Ubud <span className="text-[#d1d5db]">→</span> Canggu <span className="text-[#d1d5db]">→</span> Uluwatu
         </div>
-      </div>
-    </div>
-  );
-}
 
-/* ── Scene 2: Day Detail ── */
-function SceneDay() {
-  return (
-    <div className="px-3 py-2 space-y-2.5">
-      <div className="flex items-center gap-2">
-        <div className="w-5 h-5 rounded-full bg-[#0D9488] flex items-center justify-center">
-          <span className="text-[8px] font-bold text-white">3</span>
-        </div>
-        <span className="text-[11px] font-semibold text-[#1a1a1a]">Day 3</span>
-        <span className="text-[9px] text-[#9ca3af]">· Surf & Sunset</span>
-      </div>
-
-      <div className="bg-white rounded-xl border border-[#e8e8e8] overflow-hidden shadow-sm">
-        <img src="https://images.unsplash.com/photo-1502680390548-bdbac40e4a4a?w=400&q=70&auto=format&fit=crop" alt="Bali surf" className="w-full h-[90px] object-cover" />
-        <div className="p-2.5 space-y-1.5">
-          <p className="text-[11px] font-semibold text-[#1a1a1a]">Echo Beach Surf Lesson</p>
-          <div className="flex items-center gap-2 text-[8px] text-[#9ca3af]">
-            <span className="flex items-center gap-0.5"><Clock className="h-2 w-2" />8:00 AM</span>
-            <span>·</span>
-            <span className="text-[#0D9488] font-medium">$30</span>
-            <span>·</span>
-            <span className="flex items-center gap-0.5"><Star className="h-2 w-2 fill-amber-400 text-amber-400" />4.6</span>
-          </div>
-          <Stars rating={4.6} />
-          <div className="bg-[#f9fafb] rounded-lg px-2 py-1.5 border border-[#f0f0f0]">
-            <p className="text-[8px] text-[#6b7280] italic leading-snug">"Amazing instructors, perfect waves for beginners. Highly recommend the morning session!"</p>
-            <p className="text-[7px] text-[#9ca3af] mt-0.5">— Google Review</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-[#e8e8e8] p-2.5 shadow-sm">
-        <div className="flex gap-2 items-center">
-          <img src="https://images.unsplash.com/photo-1519046904884-53103b34b206?w=120&q=70&auto=format&fit=crop" alt="La Brisa" className="w-9 h-9 rounded-md object-cover shrink-0" />
-          <div>
-            <p className="text-[9px] font-semibold text-[#1a1a1a]">La Brisa Beach Club</p>
-            <p className="text-[7px] text-[#9ca3af]">4:00 PM · $25</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Scene 3: Group Collaboration ── */
-function SceneGroup() {
-  return (
-    <div className="px-3 py-2 space-y-2.5">
-      <div className="text-[9px] font-medium text-[#9ca3af]">Group activity</div>
-      <div className="bg-white rounded-xl border border-[#e8e8e8] p-2.5 shadow-sm space-y-2.5">
-        <div className="flex gap-2 items-center">
-          <img src="https://images.unsplash.com/photo-1540541338287-41700207dee6?w=120&q=70&auto=format&fit=crop" alt="Beach club" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-          <div>
-            <p className="text-[10px] font-semibold text-[#1a1a1a]">La Brisa Beach Club</p>
-            <p className="text-[8px] text-[#9ca3af]">4:00 PM · $25 · Canggu</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {[
-            { Icon: ThumbsUp, count: 3, bg: "#dbeafe", color: "#3b82f6" },
-            { Icon: Flame, count: 2, bg: "#ffedd5", color: "#f97316" },
-            { Icon: Heart, count: 1, bg: "#fce7f3", color: "#ec4899" },
-          ].map((r, i) => (
-            <div key={i} className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-medium" style={{ background: r.bg, color: r.color }}>
-              <r.Icon className="h-2 w-2" />{r.count}
+        <div className="space-y-2">
+          {items.map((item, index) => (
+            <div key={item.title} className="flex items-center gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm">
+              <img src={item.image} alt={item.title} className="h-11 w-11 rounded-xl object-cover shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10px] font-semibold text-foreground">{item.title}</p>
+                <div className="mt-0.5 flex items-center gap-1.5 text-[8px] text-muted-foreground">
+                  <span>{item.time}</span>
+                  <span>·</span>
+                  <span className="font-medium text-primary">{item.price}</span>
+                </div>
+              </div>
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+                {index + 1}
+              </div>
             </div>
           ))}
-          <div className="flex -space-x-1 ml-auto">
-            <MiniAvatar color="#0D9488" letter="S" />
-            <MiniAvatar color="#f97316" letter="M" />
-            <MiniAvatar color="#8b5cf6" letter="A" />
-          </div>
         </div>
       </div>
-
-      <div className="flex gap-1.5 items-start">
-        <MiniAvatar color="#f97316" letter="M" />
-        <div className="flex-1 bg-[#f3f4f6] rounded-xl rounded-tl-sm px-2.5 py-1.5">
-          <p className="text-[8px] font-semibold text-[#1a1a1a] mb-0.5">Maya</p>
-          <p className="text-[8px] text-[#4b5563] leading-snug">This place looks amazing! Can we go for sunset? 🌅</p>
-        </div>
-      </div>
-
-      <div className="flex gap-1.5 items-start">
-        <MiniAvatar color="#0D9488" letter="S" />
-        <div className="flex-1 bg-[#f3f4f6] rounded-xl rounded-tl-sm px-2.5 py-1.5">
-          <p className="text-[8px] font-semibold text-[#1a1a1a] mb-0.5">Sarah</p>
-          <p className="text-[8px] text-[#4b5563] leading-snug">Yes! Let's book the sunset table 🙌</p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-1.5 bg-white rounded-lg border border-[#e8e8e8] px-2.5 py-2">
-        <MessageCircle className="h-2.5 w-2.5 text-[#9ca3af]" />
-        <span className="text-[8px] text-[#9ca3af]">Reply…</span>
-      </div>
-    </div>
+    </SceneShell>
   );
 }
 
-/* ── Scene 4: Smart Expenses ── */
-function SceneExpenses() {
+function SceneDay({ active }: { active: boolean }) {
   return (
-    <div className="px-3 py-2 space-y-2.5">
-      <div className="flex items-center gap-1.5">
-        <DollarSign className="h-3.5 w-3.5 text-[#0D9488]" />
-        <span className="font-bold text-[12px] text-[#1a1a1a]">Trip expenses</span>
-      </div>
-
-      <div className="bg-gradient-to-br from-[#0D9488] to-[#0F766E] rounded-xl px-3 py-3 text-center">
-        <p className="text-[8px] text-white/70 font-medium mb-0.5">Your balance</p>
-        <p className="text-[20px] font-bold text-white">You owe $180</p>
-        <p className="text-[7px] text-white/50 mt-0.5">Settle up with Sarah</p>
-      </div>
-
-      <div className="space-y-1.5">
-        {[
-          { title: "Dinner at Locavore", who: "Sarah paid", amount: "$45", emoji: "🍽️" },
-          { title: "Surf lesson", who: "Mike paid", amount: "$30", emoji: "🏄" },
-          { title: "Scooter rental", who: "You paid", amount: "$15", emoji: "🛵" },
-        ].map((item) => (
-          <div key={item.title} className="flex items-center gap-2 bg-white rounded-lg border border-[#e8e8e8] px-2.5 py-2">
-            <span className="text-sm">{item.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-medium text-[#1a1a1a] truncate">{item.title}</p>
-              <p className="text-[7px] text-[#9ca3af]">{item.who}</p>
+    <SceneShell title="Day 3 · Surf & Sunset" subtitle="Venue details, reviews, timing and cost">
+      <div className="space-y-2.5">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <img
+            src="https://images.unsplash.com/photo-1502680390548-bdbac40e4a4a?w=600&q=80&auto=format&fit=crop"
+            alt="Surf lesson"
+            className="h-[110px] w-full object-cover"
+          />
+          <div className="space-y-2 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold text-foreground">Echo Beach Surf Lesson</p>
+                <div className="mt-1 flex items-center gap-1.5 text-[8px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />8:00 AM</span>
+                  <span>·</span>
+                  <span className="font-medium text-primary">$30</span>
+                </div>
+              </div>
+              <div className="rounded-full border border-border bg-background px-2 py-1 text-[8px] font-semibold text-foreground">
+                4.6
+              </div>
             </div>
-            <span className="text-[9px] font-semibold text-[#1a1a1a]">{item.amount}</span>
-          </div>
-        ))}
-      </div>
 
-      <div className="flex items-center gap-1.5 text-[8px] text-[#0D9488] font-medium bg-[#0D9488]/5 rounded-lg px-2.5 py-2 border border-[#0D9488]/10">
-        <Receipt className="h-2.5 w-2.5" />
-        Scan receipt to add automatically
-      </div>
-    </div>
-  );
-}
-
-/* ── Scene 5: AI Concierge ── */
-function SceneConcierge() {
-  return (
-    <div className="px-3 py-2 space-y-2.5">
-      <div className="flex items-center gap-1.5 bg-[#f3f4f6] rounded-lg px-2.5 py-2">
-        <Search className="h-3 w-3 text-[#9ca3af]" />
-        <span className="text-[9px] text-[#1a1a1a]">Where should we eat tonight?</span>
-      </div>
-
-      <div className="bg-white rounded-xl border border-[#e8e8e8] overflow-hidden shadow-sm">
-        <img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&q=70&auto=format&fit=crop" alt="Seafood restaurant" className="w-full h-[80px] object-cover" />
-        <div className="p-2.5 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-[#1a1a1a]">Fishbone Local</p>
-            <span className="flex items-center gap-0.5 text-[8px] font-medium">
-              <Star className="h-2 w-2 fill-amber-400 text-amber-400" />4.7
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[7px] font-medium px-1.5 py-0.5 rounded-full bg-[#f0fdf4] text-[#15803d]">Seafood</span>
-            <span className="text-[7px] text-[#9ca3af] flex items-center gap-0.5"><Navigation className="h-2 w-2" />350m</span>
-          </div>
-          <div className="flex items-center gap-1 bg-[#0D9488]/5 border border-[#0D9488]/10 rounded px-2 py-1">
-            <Sparkles className="h-2 w-2 text-[#0D9488]" />
-            <span className="text-[7px] font-medium text-[#0D9488]">Recommended by Junto</span>
+            <div className={cn("rounded-xl border border-border bg-muted/50 p-2.5 transition-all duration-500", active && "landing-spotlight") }>
+              <div className="mb-1 flex items-center gap-1.5">
+                <TinyStars rating={4.6} />
+                <span className="text-[8px] text-muted-foreground">Google rating</span>
+              </div>
+              <p className="text-[8px] leading-relaxed text-muted-foreground italic">
+                “Amazing instructors, perfect waves for beginners. Highly recommend the morning slot if you want calmer water.”
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-xl border border-[#e8e8e8] p-2 shadow-sm">
-        <div className="flex gap-2 items-center">
-          <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=120&q=70&auto=format&fit=crop" alt="Restaurant" className="w-9 h-9 rounded-md object-cover shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-semibold text-[#1a1a1a]">Ulu Garden</p>
-            <div className="flex items-center gap-1 text-[7px] text-[#9ca3af]">
-              <span>Vegan</span><span>·</span><span>500m</span>
-              <span>·</span><Star className="h-2 w-2 fill-amber-400 text-amber-400" /><span>4.5</span>
+        <div className="rounded-2xl border border-border bg-card p-2.5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <img
+              src="https://images.unsplash.com/photo-1519046904884-53103b34b206?w=160&q=80&auto=format&fit=crop"
+              alt="Beach club"
+              className="h-10 w-10 rounded-xl object-cover"
+            />
+            <div>
+              <p className="text-[9px] font-semibold text-foreground">Next up · La Brisa Beach Club</p>
+              <p className="text-[8px] text-muted-foreground">Sunset drinks · 4:00 PM</p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </SceneShell>
+  );
+}
+
+function SceneGroup({ active }: { active: boolean }) {
+  return (
+    <SceneShell title="Group collaboration" subtitle="Reactions, comments and live decisions">
+      <div className="space-y-2.5">
+        <div className="rounded-2xl border border-border bg-card p-2.5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <img
+              src="https://images.unsplash.com/photo-1540541338287-41700207dee6?w=160&q=80&auto=format&fit=crop"
+              alt="Beach club"
+              className="h-12 w-12 rounded-xl object-cover shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[10px] font-semibold text-foreground">La Brisa Beach Club</p>
+              <p className="text-[8px] text-muted-foreground">Sunset table · Canggu · $25</p>
+            </div>
+          </div>
+
+          <div className={cn("mt-2.5 flex items-center gap-1.5 rounded-xl border border-primary/10 bg-primary/5 px-2 py-2 transition-all duration-500", active && "landing-spotlight") }>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white px-1.5 py-0.5 text-[8px] font-medium text-sky-600"><ThumbsUp className="h-2.5 w-2.5" />3</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white px-1.5 py-0.5 text-[8px] font-medium text-orange-500"><Flame className="h-2.5 w-2.5" />2</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white px-1.5 py-0.5 text-[8px] font-medium text-pink-500"><Heart className="h-2.5 w-2.5" />1</span>
+            <div className="ml-auto flex -space-x-1">
+              <MiniAvatar label="S" className="bg-primary" />
+              <MiniAvatar label="M" className="bg-orange-500" />
+              <MiniAvatar label="A" className="bg-violet-500" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-1.5">
+          <MiniAvatar label="M" className="bg-orange-500" />
+          <div className="flex-1 rounded-2xl rounded-tl-sm bg-muted px-2.5 py-2">
+            <p className="mb-0.5 text-[8px] font-semibold text-foreground">Maya</p>
+            <p className="text-[8px] leading-relaxed text-muted-foreground">This place looks amazing! Can we go for sunset?</p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-1.5">
+          <MiniAvatar label="S" className="bg-primary" />
+          <div className="flex-1 rounded-2xl rounded-tl-sm bg-muted px-2.5 py-2">
+            <p className="mb-0.5 text-[8px] font-semibold text-foreground">Sarah</p>
+            <p className="text-[8px] leading-relaxed text-muted-foreground">Yes — adding it to the route now 🙌</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-2 text-[8px] text-muted-foreground shadow-sm">
+          <MessageCircle className="h-2.5 w-2.5" />
+          Reply to the thread…
+        </div>
+      </div>
+    </SceneShell>
+  );
+}
+
+function SceneExpenses({ active }: { active: boolean }) {
+  const rows = [
+    { title: "Dinner at Locavore", note: "Sarah paid", amount: "$45", icon: "🍽️" },
+    { title: "Surf lesson", note: "Mike paid", amount: "$30", icon: "🏄" },
+    { title: "Scooter rental", note: "You paid", amount: "$15", icon: "🛵" },
+  ];
+
+  return (
+    <SceneShell title="Trip expenses" subtitle="Balances, receipts and line items">
+      <div className="space-y-2.5">
+        <div className={cn("rounded-2xl bg-gradient-to-br from-primary to-primary/80 px-3 py-3 text-primary-foreground shadow-sm transition-all duration-500", active && "landing-spotlight-soft") }>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[8px] uppercase tracking-[0.18em] text-white/75">Your balance</p>
+              <p className="mt-1 text-[22px] font-bold leading-none">You owe $180</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/16">
+              <DollarSign className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="mt-2 text-[8px] text-white/70">Split across dinner, surf lesson and scooter rental.</p>
+        </div>
+
+        <div className="space-y-2">
+          {rows.map((row) => (
+            <div key={row.title} className="flex items-center gap-2 rounded-2xl border border-border bg-card px-2.5 py-2 shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-sm">{row.icon}</div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[9px] font-medium text-foreground">{row.title}</p>
+                <p className="text-[8px] text-muted-foreground">{row.note}</p>
+              </div>
+              <span className="text-[9px] font-semibold text-foreground">{row.amount}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-xl border border-primary/10 bg-primary/5 px-2.5 py-2 text-[8px] font-medium text-primary shadow-sm">
+          <Receipt className="h-2.5 w-2.5" />
+          Receipt scan picked up 3 items automatically
+        </div>
+      </div>
+    </SceneShell>
+  );
+}
+
+function SceneConcierge({ active }: { active: boolean }) {
+  return (
+    <SceneShell title="AI concierge" subtitle="Nearby recommendations, tailored to the group">
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-1.5 rounded-xl bg-muted px-2.5 py-2 text-[8px] text-muted-foreground">
+          <Search className="h-2.5 w-2.5" />
+          Where should we eat tonight?
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <img
+            src="https://images.unsplash.com/photo-1559339352-11d035aa65de?w=600&q=80&auto=format&fit=crop"
+            alt="Seafood restaurant"
+            className="h-[96px] w-full object-cover"
+          />
+          <div className="space-y-2 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-semibold text-foreground">Fishbone Local</p>
+                <div className="mt-1 flex items-center gap-1.5 text-[8px] text-muted-foreground">
+                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">Seafood</span>
+                  <span className="inline-flex items-center gap-0.5"><Navigation className="h-2.5 w-2.5" />350m</span>
+                </div>
+              </div>
+              <div className="inline-flex items-center gap-0.5 text-[8px] font-medium text-foreground">
+                <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />4.7
+              </div>
+            </div>
+
+            <div className={cn("inline-flex items-center gap-1 rounded-full border border-primary/10 bg-primary/5 px-2 py-1 text-[8px] font-semibold text-primary transition-all duration-500", active && "landing-spotlight") }>
+              <Sparkles className="h-2.5 w-2.5" />
+              Recommended by Junto
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-2.5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <img
+              src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=160&q=80&auto=format&fit=crop"
+              alt="Alternative restaurant"
+              className="h-10 w-10 rounded-xl object-cover"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-semibold text-foreground">Ulu Garden</p>
+              <p className="text-[8px] text-muted-foreground">Vegan · 500m · 4.5 stars</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SceneShell>
   );
 }
 
 const SCENES = [ScenePlan, SceneDay, SceneGroup, SceneExpenses, SceneConcierge];
-const LABELS = ["Plan overview", "Day detail", "Group collaboration", "Smart expenses", "AI concierge"];
 
 export function PlanPreviewMockup({ onCTA }: { onCTA: () => void }) {
   const [active, setActive] = useState(0);
-  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setActive((p) => (p + 1) % SCENES.length);
-        setVisible(true);
-      }, 400);
-    }, 3000);
-    return () => clearInterval(id);
-  }, []);
+    const id = window.setInterval(() => {
+      setActive((previous) => (previous + 1) % SCENES.length);
+    }, SCENE_INTERVAL_MS);
 
-  const Scene = SCENES[active];
+    return () => window.clearInterval(id);
+  }, []);
 
   return (
     <div className="mx-auto max-w-lg">
-      <p className="text-center text-sm font-medium text-[#9ca3af] mb-5">See what Junto AI builds for you</p>
+      <p className="mb-5 text-center text-sm font-medium text-muted-foreground">See what Junto AI builds for you</p>
 
       <div className="mx-auto max-w-[340px]">
-        <div
-          className="rounded-[2.5rem] border-[6px] border-[#1a1a1e] bg-[#fafaf9] overflow-hidden relative"
-          style={{ boxShadow: "0 25px 60px -12px rgba(0,0,0,0.3)" }}
-        >
-          {/* Status bar */}
-          <div className="bg-white px-5 pt-3 pb-2 flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-[#1a1a1a]">9:41</span>
-            <div className="w-20 h-5 bg-black rounded-full" />
-            <div className="flex gap-1"><div className="w-4 h-2 rounded-sm bg-[#1a1a1a]" /></div>
+        <div className="relative overflow-hidden rounded-[2.5rem] border-[6px] border-zinc-900 bg-background shadow-[0_32px_80px_-34px_hsl(var(--foreground)/0.4)]">
+          <div className="flex items-center justify-between bg-card px-5 pb-2 pt-3">
+            <span className="text-[11px] font-semibold text-foreground">9:41</span>
+            <div className="h-5 w-20 rounded-full bg-zinc-950" />
+            <div className="h-2 w-4 rounded-sm bg-foreground" />
           </div>
 
-          {/* Scene label */}
-          <div className="bg-white px-4 pb-2 border-b border-[#e5e5e5]">
-            <span className="text-[10px] font-medium text-[#0D9488] tracking-wide uppercase">{LABELS[active]}</span>
+          <div className="border-b border-border bg-card px-4 pb-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-primary">Product showcase</span>
           </div>
 
-          {/* Scene */}
-          <div className="h-[380px] overflow-hidden bg-[#fafaf9]">
-            <div className="h-full transition-opacity duration-400" style={{ opacity: visible ? 1 : 0 }}>
-              <Scene />
-            </div>
+          <div className="relative h-[392px] overflow-hidden bg-background">
+            {SCENES.map((Scene, index) => {
+              const isActive = index === active;
+              return (
+                <div
+                  key={index}
+                  className={cn(
+                    "absolute inset-0 transition-all duration-700 ease-out",
+                    isActive
+                      ? "translate-y-0 scale-100 opacity-100"
+                      : "pointer-events-none translate-y-2 scale-[0.985] opacity-0",
+                  )}
+                >
+                  <Scene active={isActive} />
+                </div>
+              );
+            })}
           </div>
 
-          {/* CTA */}
-          <div className="px-4 pb-4 pt-2 bg-[#fafaf9] border-t border-[#e5e5e5]">
+          <div className="border-t border-border bg-background px-4 pb-4 pt-2">
             <button
+              type="button"
               onClick={onCTA}
-              className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-xl py-2.5 text-[13px]"
-              style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)" }}
+              className="w-full rounded-xl bg-primary px-4 py-2.5 text-[13px] font-semibold text-primary-foreground shadow-[0_18px_32px_-20px_hsl(var(--primary)/0.9)] transition-transform duration-200 hover:translate-y-[-1px]"
             >
               Sign up free to unlock full plan
             </button>
@@ -340,7 +433,7 @@ export function PlanPreviewMockup({ onCTA }: { onCTA: () => void }) {
 
       <Dots active={active} count={SCENES.length} />
 
-      <p className="mt-5 text-center text-sm text-[#6b7280] leading-relaxed max-w-md mx-auto">
+      <p className="mx-auto mt-5 max-w-md text-center text-sm leading-relaxed text-muted-foreground">
         Share this plan with your group → they vote, react, and customize it together.
       </p>
     </div>
