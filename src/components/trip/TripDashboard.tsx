@@ -76,19 +76,34 @@ const HORIZONTAL_IDS = new Set(["decisions", "bookings"]);
 function SortableSection({ id, children }: { id: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const isHorizontal = HORIZONTAL_IDS.has(id);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  let tx = 0;
+  let ty = 0;
+  if (transform) {
+    if (isHorizontal) {
+      // Clamp horizontal movement to the card's own width
+      const w = ref.current?.offsetWidth ?? 180;
+      tx = Math.max(-w, Math.min(w, transform.x));
+    } else {
+      ty = transform.y;
+    }
+  }
+
   const style = {
-    transform: transform
-      ? isHorizontal
-        ? `translate3d(${transform.x}px, 0px, 0)`
-        : `translate3d(0px, ${transform.y}px, 0)`
-      : undefined,
+    transform: transform ? `translate3d(${tx}px, ${ty}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 10 : undefined,
   };
 
+  const setRefs = React.useCallback((node: HTMLDivElement | null) => {
+    (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    setNodeRef(node);
+  }, [setNodeRef]);
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
+    <div ref={setRefs} style={style} {...attributes} {...listeners} className="touch-none">
       {children}
     </div>
   );
