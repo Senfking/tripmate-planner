@@ -768,15 +768,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
 
         {/* Content area */}
         <div className="flex-1 overflow-y-auto" style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
-            </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Content area */}
-        <div className="flex-1 overflow-y-auto" style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
