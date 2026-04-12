@@ -665,18 +665,19 @@ Return ONLY valid JSON, no other text.`;
           placeData = await lookupPlace(searchQuery, googleKey);
         }
 
-        // Compute distance from hotel if both positions are known
+        // Compute distance from user's location (GPS coords preferred, then hotel)
         let distance_km: number | null = null;
+        const refPoint = userCoords || (context.hotel_location?.lat ? context.hotel_location : null);
         if (
-          context.hotel_location &&
+          refPoint &&
           typeof placeData.lat === "number" &&
           typeof placeData.lng === "number"
         ) {
           distance_km =
             Math.round(
               haversineKm(
-                context.hotel_location.lat,
-                context.hotel_location.lng,
+                refPoint.lat,
+                refPoint.lng,
                 placeData.lat as number,
                 placeData.lng as number,
               ) * 10,
