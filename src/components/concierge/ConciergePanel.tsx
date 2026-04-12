@@ -286,7 +286,7 @@ function HorizontalCarousel({ children, cardWidth = 350 }: { children: ReactNode
     <div className="hidden md:block relative group/carousel">
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto pl-0 pr-0 snap-x snap-mandatory"
+        className="flex gap-3 overflow-x-auto pl-0 pr-0 snap-x snap-mandatory scrollbar-hide"
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",
