@@ -125,35 +125,20 @@ function PhoneMockup() {
 /* ------------------------------------------------------------------ */
 /*  Header                                                             */
 /* ------------------------------------------------------------------ */
-function Header({ onGetStarted }: { onGetStarted: () => void }) {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", h, { passive: true });
-    return () => window.removeEventListener("scroll", h);
-  }, []);
-
+function Header() {
   return (
-    <nav
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "backdrop-blur-xl bg-[#0f1115]/85 border-b border-white/[0.06] shadow-lg shadow-black/20"
-          : "bg-transparent"
-      }`}
+    <div
+      className="fixed top-0 inset-x-0 z-50 text-center"
+      style={{
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
+        paddingBottom: 24,
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
+      }}
     >
-      <div className="mx-auto max-w-6xl flex items-center justify-between px-5 h-14">
-        <Link to="/" className="text-[0.95rem] font-bold tracking-[0.28em] uppercase text-white/90">
-          Junto
-        </Link>
-        <button
-          onClick={onGetStarted}
-          className="text-sm font-semibold px-5 py-2 rounded-full text-white transition-all hover:scale-105"
-          style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)" }}
-        >
-          Get started
-        </button>
-      </div>
-    </nav>
+      <span className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80">
+        Junto
+      </span>
+    </div>
   );
 }
 
