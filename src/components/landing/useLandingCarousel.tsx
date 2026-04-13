@@ -67,7 +67,16 @@ export function useLandingCarousel() {
       target = previousCard ? Math.max(0, previousCard.offsetLeft - paddingStart) : 0;
     }
 
-    el.scrollTo({ left: target, behavior: "smooth" });
+    const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+    const clampedTarget = Math.max(0, Math.min(target, maxScrollLeft));
+
+    if (Math.abs(clampedTarget - el.scrollLeft) < 4) {
+      const fallbackStep = Math.max(240, el.clientWidth * 0.78);
+      el.scrollBy({ left: direction * fallbackStep, behavior: "smooth" });
+    } else {
+      el.scrollTo({ left: clampedTarget, behavior: "smooth" });
+    }
+
     window.setTimeout(updateState, 450);
   }, [updateState]);
 
