@@ -103,7 +103,7 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   }, [setNodeRef]);
 
   return (
-    <div ref={setRefs} style={style} {...attributes} {...listeners} className="touch-none">
+    <div ref={setRefs} style={style} {...attributes} {...listeners}>
       {children}
     </div>
   );
@@ -164,7 +164,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 10 } }),
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
