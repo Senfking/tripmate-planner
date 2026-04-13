@@ -84,11 +84,11 @@ export default function Landing() {
   if (loading || user) return null;
 
   return (
-    <div className="bg-white text-[#1a1a1a] min-h-screen overflow-x-hidden">
+    <div className="bg-[#fafaf9] text-[#1a1a1a] min-h-screen overflow-x-hidden">
       <Header />
 
       {/* ─── HERO ─── */}
-      <section className="relative h-dvh flex flex-col justify-start overflow-hidden">
+      <section className="relative h-dvh flex flex-col justify-start overflow-hidden rounded-b-[2.5rem] sm:rounded-b-[3.5rem]">
         <img
           src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80&auto=format&fit=crop"
           alt="Tropical beach destination"
@@ -132,7 +132,7 @@ export default function Landing() {
       </section>
 
       {/* ─── PLAN PREVIEW ─── */}
-      <section className="py-20 sm:py-28 px-5 bg-[#fafaf9]">
+      <section className="py-20 sm:py-28 px-5">
         <Reveal>
           <PlanPreviewMockup onCTA={openBuilder} />
         </Reveal>
@@ -149,7 +149,7 @@ export default function Landing() {
       <FeatureCards />
 
       {/* ─── HOW IT WORKS ─── */}
-      <section className="py-20 sm:py-28 px-5 bg-[#fafaf9]">
+      <section className="py-20 sm:py-28 px-5">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
             <h2 className="text-2xl sm:text-4xl font-bold text-[#1a1a1a] mb-12">How it works</h2>
@@ -172,7 +172,7 @@ export default function Landing() {
       </section>
 
       {/* ─── BOTTOM CTA ─── */}
-      <section className="py-20 sm:py-28 px-5 bg-white">
+      <section className="py-20 sm:py-28 px-5">
         <div className="mx-auto max-w-md text-center">
           <Reveal>
             <h2 className="text-2xl sm:text-4xl font-bold text-[#1a1a1a] mb-3">Your next trip starts here</h2>

@@ -201,7 +201,7 @@ export function FeatureCards() {
   const { containerRef, canLeft, canRight, scrollPrev, scrollNext } = useLandingCarousel();
 
   return (
-    <section className="bg-background py-16 sm:py-24">
+    <section className="py-16 sm:py-24">
       <div className="mb-8 px-5 sm:px-10 lg:px-16">
         <h2 className="text-2xl font-bold text-foreground sm:text-4xl">Get to know Junto</h2>
       </div>
@@ -211,7 +211,7 @@ export function FeatureCards() {
 
         <div
           ref={containerRef}
-          className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth overscroll-x-contain pl-5 pr-3 sm:pl-10 sm:pr-4 lg:pl-16 lg:pr-6"
+          className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth overscroll-x-contain px-5 sm:px-10 lg:px-16"
         >
           {FEATURES.map((feature) => (
             <article
