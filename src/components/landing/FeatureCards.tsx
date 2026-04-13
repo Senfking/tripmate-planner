@@ -211,7 +211,7 @@ export function FeatureCards() {
 
         <div
           ref={containerRef}
-          className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto overflow-y-visible scroll-smooth overscroll-x-contain pb-4 pl-5 sm:pl-10 lg:pl-16"
+          className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth overscroll-x-contain pb-6 pl-5 sm:pl-10 lg:pl-16 scroll-pl-5 sm:scroll-pl-10 lg:scroll-pl-16"
         >
           {FEATURES.map((feature) => (
             <article

@@ -11,8 +11,8 @@ export function useLandingCarousel() {
     if (!el) return;
 
     const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
-    setCanLeft(el.scrollLeft > 6);
-    setCanRight(maxScrollLeft > 6 && el.scrollLeft < maxScrollLeft - 6);
+    setCanLeft(el.scrollLeft > 5);
+    setCanRight(maxScrollLeft > 5 && el.scrollLeft < maxScrollLeft - 5);
   }, []);
 
   useEffect(() => {
