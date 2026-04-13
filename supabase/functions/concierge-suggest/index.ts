@@ -470,6 +470,7 @@ Deno.serve(async (req) => {
     const structVibe: string | string[] | undefined = body.vibe;
     const structBudget: string | string[] | undefined = body.budget;
     const feelingLucky: boolean = !!body.feeling_lucky;
+    const excludeNames: string[] = Array.isArray(body.exclude_names) ? body.exclude_names : [];
     // Normalize to arrays for multi-select support
     const whenArr = Array.isArray(structWhen) ? structWhen : structWhen ? [structWhen] : [];
     const vibeArr = Array.isArray(structVibe) ? structVibe : structVibe ? [structVibe] : [];
@@ -511,7 +512,7 @@ Deno.serve(async (req) => {
       whenArr.some(w => isTimeSensitiveWhen(w)) ||
       structCategory === "events";
 
-    if (!timeSensitive) {
+    if (!timeSensitive && excludeNames.length === 0) {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data: cached } = await supabase
         .from("concierge_messages")
@@ -706,6 +707,11 @@ Respond in this exact JSON format:
 ${suggestionJsonSchema(context.destination)}
 
 Return ONLY valid JSON, no other text.`;
+    }
+
+    // -- Add exclusion list when paginating ("show more") --
+    if (excludeNames.length > 0) {
+      systemPrompt += `\n\nIMPORTANT — EXCLUSION LIST: The user has already been shown these venues. Do NOT suggest any of them again:\n${excludeNames.map((n) => `- ${n}`).join("\n")}\nSuggest DIFFERENT venues only.`;
     }
 
     // -- Add aggressive event search instructions for time-sensitive requests --
