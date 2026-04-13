@@ -89,7 +89,7 @@ export default function Landing() {
       <Header />
 
       {/* ─── HERO ─── */}
-      <section className="relative h-dvh flex flex-col justify-start overflow-hidden">
+      <section className="relative h-dvh flex flex-col justify-center overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80&auto=format&fit=crop"
           alt="Tropical beach destination"
@@ -98,25 +98,25 @@ export default function Landing() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 via-40% to-black/80" />
 
-        <div className="relative z-10 mx-auto max-w-3xl w-full px-5 pt-[18vh] sm:pt-[20vh] text-center">
-          <div className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium text-white/90 backdrop-blur-md mb-6"
+        <div className="relative z-10 mx-auto max-w-3xl w-full px-5 text-center">
+          <div className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] sm:text-[13px] font-medium text-white/90 backdrop-blur-md mb-4 sm:mb-6"
             style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)" }}>
             <Sparkles className="h-3.5 w-3.5 text-[#2dd4bf]" />
             AI-powered group travel
           </div>
 
-          <h1 className="text-[2.2rem] sm:text-5xl lg:text-6xl font-bold text-white leading-[1.1] tracking-tight">
+          <h1 className="text-[1.75rem] sm:text-5xl lg:text-6xl font-bold text-white leading-[1.12] tracking-tight">
             Stop being your group's<br />travel agent
           </h1>
 
-          <p className="mt-4 text-[1rem] sm:text-lg text-white/70 max-w-xl mx-auto leading-relaxed">
+          <p className="mt-3 sm:mt-4 text-[0.9rem] sm:text-lg text-white/70 max-w-xl mx-auto leading-relaxed">
             You plan everything. They show up. Sound familiar? Junto gives your whole group one place to plan, decide, and travel together.
           </p>
 
           {/* Search module */}
-          <div className="mt-8 rounded-[1.75rem] p-5 sm:p-6 text-left backdrop-blur-xl mx-auto max-w-lg shadow-[0_8px_60px_-20px_rgba(0,0,0,0.25)]"
+          <div className="mt-5 sm:mt-8 rounded-[1.5rem] sm:rounded-[1.75rem] p-4 sm:p-6 text-left backdrop-blur-xl mx-auto max-w-lg shadow-[0_8px_60px_-20px_rgba(0,0,0,0.25)]"
             style={{ background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(24px) saturate(1.4)" }}>
-            <div className="flex items-center gap-2.5 bg-white/95 rounded-2xl px-5 py-3.5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]">
+            <div className="flex items-center gap-2.5 bg-white/95 rounded-xl sm:rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]">
               <Search className="h-[18px] w-[18px] text-gray-400 shrink-0" />
               <RotatingPlaceholder
                 value={searchValue}
@@ -125,7 +125,7 @@ export default function Landing() {
               />
             </div>
 
-            <ShimmerButton onClick={openBuilder} className="w-full mt-4 rounded-2xl py-3.5 text-[15px]">
+            <ShimmerButton onClick={openBuilder} className="w-full mt-3 sm:mt-4 rounded-xl sm:rounded-2xl py-3 sm:py-3.5 text-[14px] sm:text-[15px]">
               Plan with Junto AI
             </ShimmerButton>
           </div>
