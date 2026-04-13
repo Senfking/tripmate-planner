@@ -89,7 +89,7 @@ export default function Landing() {
       <Header />
 
       {/* ─── HERO ─── */}
-      <section className="relative h-dvh flex flex-col justify-start overflow-hidden rounded-b-[2.5rem] sm:rounded-b-[3.5rem]">
+      <section className="relative h-dvh flex flex-col justify-start overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80&auto=format&fit=crop"
           alt="Tropical beach destination"
@@ -114,20 +114,24 @@ export default function Landing() {
           </p>
 
           {/* Search module */}
-          <div className="mt-8 rounded-2xl p-5 text-left backdrop-blur-xl mx-auto max-w-lg"
-            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)" }}>
-            <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-3">
-              <Search className="h-4 w-4 text-gray-400 shrink-0" />
-              <RotatingPlaceholder
-                value={searchValue}
-                onChange={setSearchValue}
-                onKeyDown={(e) => { if (e.key === "Enter") openBuilder(); }}
-              />
+          <div className="mt-8 mx-auto max-w-lg">
+            <div className="rounded-[1.75rem] p-1.5 backdrop-blur-xl"
+              style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
+              <div className="flex items-center gap-2.5 bg-white rounded-[1.25rem] px-5 py-3.5 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.15)]">
+                <Search className="h-[18px] w-[18px] text-gray-400 shrink-0" />
+                <RotatingPlaceholder
+                  value={searchValue}
+                  onChange={setSearchValue}
+                  onKeyDown={(e) => { if (e.key === "Enter") openBuilder(); }}
+                />
+              </div>
             </div>
 
-            <ShimmerButton onClick={openBuilder} className="w-full mt-4">
-              Plan with Junto AI
-            </ShimmerButton>
+            <div className="mt-4">
+              <ShimmerButton onClick={openBuilder} className="w-full rounded-[1.25rem] py-3.5 text-[15px]">
+                Plan with Junto AI
+              </ShimmerButton>
+            </div>
           </div>
         </div>
       </section>
