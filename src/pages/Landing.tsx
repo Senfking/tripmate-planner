@@ -54,15 +54,12 @@ function Header() {
       <span className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 text-center">
         Junto
       </span>
-      <div className="flex items-center justify-end gap-3">
-        <Link to="/login" className="text-[14px] font-medium text-white/75 hover:text-white transition-colors">
-          Log in
-        </Link>
+      <div className="flex items-center justify-end">
         <Link
-          to="/signup"
-          className="rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-4 py-1.5 text-[14px] font-semibold text-white hover:bg-white/25 transition-colors"
+          to="/login"
+          className="rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-4 py-1.5 text-[13px] font-semibold text-white hover:bg-white/25 transition-colors whitespace-nowrap"
         >
-          Get started
+          Log in
         </Link>
       </div>
     </div>
