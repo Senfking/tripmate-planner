@@ -1,74 +1,53 @@
-# TripMate Planner — Claude Code Context
-
-## Project Overview
-Group travel planning app. Users create trips, collaborate on decisions (voting/polls), itineraries, expense tracking (multi-currency), bookings, and sharing.
+# JUNTO — Claude Code Instructions
 
 ## Stack
-- **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui (Radix UI primitives)
-- **Backend:** Supabase (PostgreSQL + Auth + Edge Functions + Realtime)
-- **State:** TanStack React Query for server state, React Hook Form + Zod for forms
-- **Routing:** React Router DOM v6
-- **Package manager:** Bun (use `bun` not `npm`)
+- Frontend: React 18, Vite, TypeScript, Tailwind CSS
+- Backend: Supabase (PostgreSQL, Auth, Realtime, Storage, Edge Functions in Deno)
+- Routing: React Router v6
+- State: React Context + Supabase Realtime subscriptions
+- Icons: Lucide React only. Never mix icon libraries.
+- Supabase project ref: dwtbqomfleihcvkfoopm
 
-## Deployment & Publishing
-- **Hosting:** Lovable Cloud — deploys from `main` branch automatically
-- **Code flow:** Claude Code edits → push to feature branch → user merges to `main` via GitHub/Lovable → Lovable deploys
-- **Edge Functions:** Deployed via Lovable or Supabase CLI (not via git push alone)
-- **Database migrations:** Managed via Lovable or Supabase CLI
+## Hard Rules
 
-Do NOT push directly to `main`. Always use a feature branch.
+### Routing
+- Every route component must independently fetch its data. Never assume parent components have loaded state.
+- Use useParams() to extract tripId and query Supabase directly.
+- Wrap major route components in Error Boundaries with user-friendly fallback UI.
 
-## Supabase
-- **Project ID:** `dwtbqomfleihcvkfoopm`
-- **URL:** `https://dwtbqomfleihcvkfoopm.supabase.co`
-- **Client:** `src/integrations/supabase/client.ts`
-- **Types:** `src/integrations/supabase/types.ts` (auto-generated — do not edit manually)
-- **Auth:** Supabase Auth (email/password + OAuth), context in `src/contexts/AuthContext.tsx`
-- **Realtime:** `src/hooks/useTripRealtime.ts`
+### Supabase
+- All database triggers must use BEGIN...EXCEPTION WHEN OTHERS THEN RAISE LOG to prevent cascading failures.
+- Every new table requires RLS policies defined in the migration file.
+- pg_net http_post requires positional parameters and jsonb body type. Named parameters and text body type fail silently.
+- Use Supabase Realtime subscriptions for collaborative features.
+- Edge Functions deploy through Lovable. Secrets set in Supabase Dashboard UI.
 
-## Edge Functions (supabase/functions/)
-- `delete-account` — deletes user + ownership checks
-- `export-expenses-csv` — CSV export
-- `export-trip-ics` — iCalendar export
-- `extract-booking-info` — parses booking links
-- `fetch-link-preview` — Open Graph previews
-- `get-invite-info` — invite details
-- `public-trip-share-view` — public sharing
-- `refresh-exchange-rates` — currency rate updates
+### UI/UX
+- Destructive actions: red color, trash-2 icon, confirmation dialog.
+- Edit actions: pencil icon, neutral color, opens modal with pre-filled form.
+- Loading: skeleton components, not spinners.
+- Empty states: every list/table must have a designed empty state with a CTA.
+- All modals scrollable and usable at 375px viewport width.
 
-## Source Structure
-```
-src/
-  pages/          # Route-level components (Login, TripList, Expenses, etc.)
-  components/     # Feature components, organized by domain:
-    ui/           # shadcn/ui primitives (do not edit directly)
-    admin/        # Trip admin (members, delete)
-    trip/         # Trip dashboard & overview
-    decisions/    # Voting & polls
-    itinerary/    # Schedule & attendance
-    expenses/     # Expense tracking & settlement
-    bookings/     # Attachments & links
-    vibe/         # Vibe board / sentiment
-  hooks/          # Custom React hooks (data fetching, UI state)
-  contexts/       # React contexts (Auth)
-  integrations/   # Supabase client & generated types
-  lib/            # Utilities (settlement calc, feature flags, error formatting)
-```
+### AI Features
+- System prompts stored as constants, not inline strings.
+- All LLM responses validated against a schema before use.
+- Wrap all AI calls in try/catch with user-facing toast errors.
+- Never trust LLM to generate factual data (venue names, locations). Use external APIs as source of truth, LLM for ranking/enrichment only.
 
-## Key Conventions
-- Path alias: `@/` maps to `src/`
-- Colors via CSS custom properties (HSL variables), not hardcoded Tailwind colors
-- TypeScript is intentionally loose (`noImplicitAny: false`, `strictNullChecks: false`)
-- ESLint warnings for unused vars are disabled
-- Components use shadcn/ui patterns — prefer extending existing components over creating new ones
+### Dates
+- Store as ISO 8601 strings in UTC.
+- Use date-fns for manipulation and formatting.
+- Never use "today + N days" as fallback for trip dates.
 
-## Testing
-- **Unit:** Vitest (`bun test`)
-- **E2E:** Playwright (`playwright.config.ts`, `playwright-fixture.ts`)
-- No CI/CD pipeline yet (no `.github/` workflows)
+### Known Pitfalls
+- exchange_rate_cache only has EUR/USD/GBP bases. Cross-calculation needed for other currencies (use EUR as intermediary).
+- REPLICA IDENTITY FULL required on tables that need realtime DELETE events.
+- The /admin route 404s on Lovable hosting, use /app/admin instead.
 
-## Features & Flags
-- Feature flags in `src/lib/features.ts`
-- PWA support via `src/service-worker.ts`
-- Dark mode via `next-themes` (CSS class strategy)
-- Mobile-first with `useMobile` hook and `BottomNav` component
+## Common Commands
+- npm run dev — start local dev server
+- npm run build — production build
+
+## Diagnosis First
+Always diagnose before fixing. Read the relevant code, understand the current state, then propose changes. Don't assume the build doc or any external description reflects the current codebase accurately.
