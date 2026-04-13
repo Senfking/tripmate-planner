@@ -43,17 +43,18 @@ const HOW_STEPS = [
 function Header() {
   return (
     <div
-      className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-5 sm:px-10 lg:px-16"
+      className="fixed top-0 inset-x-0 z-50 grid grid-cols-3 items-center px-5 sm:px-10 lg:px-16"
       style={{
         paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
         paddingBottom: 24,
         background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
       }}
     >
-      <span className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80">
+      <div />
+      <span className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 text-center">
         Junto
       </span>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-end gap-3">
         <Link to="/login" className="text-[14px] font-medium text-white/75 hover:text-white transition-colors">
           Log in
         </Link>
