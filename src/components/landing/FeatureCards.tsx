@@ -209,28 +209,27 @@ export function FeatureCards() {
       <div className="group/carousel relative">
         <LandingCarouselNav canLeft={canLeft} canRight={canRight} onPrev={scrollPrev} onNext={scrollNext} />
 
-        <div className={`overflow-x-clip overflow-y-visible transition-[padding-right] duration-300 ease-out ${isAtStart ? "pr-5 sm:pr-10 lg:pr-16" : "pr-0"}`}>
-          <div
-            ref={containerRef}
-            className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth overscroll-x-contain px-5 sm:px-10 lg:px-16"
-          >
-            {FEATURES.map((feature) => (
-              <article
-                key={feature.headline}
-                data-carousel-card="true"
-                className="flex min-h-[440px] w-[288px] shrink-0 snap-start flex-col overflow-hidden rounded-[1.6rem] border border-primary/15 bg-[hsl(173_34%_9%)] shadow-[0_24px_56px_-30px_hsl(var(--foreground)/0.28)] sm:w-[330px]"
-              >
-                <div className="flex flex-1 flex-col p-6">
-                  <span className="mb-3 text-[12px] font-medium text-primary">{feature.category}</span>
-                  <h3 className="mb-3 text-xl font-bold leading-tight text-white sm:text-2xl">{feature.headline}</h3>
-                  <p className="text-[14px] leading-relaxed text-white/62">{feature.description}</p>
-                </div>
-                <div className="px-6 pb-6 pt-1">
-                  <PhoneMockup variant={feature.variant} />
-                </div>
-              </article>
-            ))}
-          </div>
+        <div
+          ref={containerRef}
+          className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto overflow-y-visible scroll-smooth overscroll-x-contain pb-4 pl-5 sm:pl-10 lg:pl-16"
+        >
+          {FEATURES.map((feature) => (
+            <article
+              key={feature.headline}
+              data-carousel-card="true"
+              className="flex min-h-[440px] w-[288px] shrink-0 snap-start flex-col overflow-hidden rounded-[1.6rem] border border-primary/15 bg-[hsl(173_34%_9%)] shadow-[0_24px_56px_-30px_hsl(var(--foreground)/0.28)] sm:w-[330px]"
+            >
+              <div className="flex flex-1 flex-col p-6">
+                <span className="mb-3 text-[12px] font-medium text-primary">{feature.category}</span>
+                <h3 className="mb-3 text-xl font-bold leading-tight text-white sm:text-2xl">{feature.headline}</h3>
+                <p className="text-[14px] leading-relaxed text-white/62">{feature.description}</p>
+              </div>
+              <div className="px-6 pb-6 pt-1">
+                <PhoneMockup variant={feature.variant} />
+              </div>
+            </article>
+          ))}
+          <div className="shrink-0 w-5 sm:w-10 lg:w-16" aria-hidden="true" />
         </div>
       </div>
     </section>

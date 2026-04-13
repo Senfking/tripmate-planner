@@ -81,40 +81,40 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
       <div className="group/carousel relative">
         <LandingCarouselNav canLeft={canLeft} canRight={canRight} onPrev={scrollPrev} onNext={scrollNext} />
 
-        <div className={`overflow-x-clip overflow-y-visible transition-[padding-right] duration-300 ease-out ${isAtStart ? "pr-5 sm:pr-10 lg:pr-16" : "pr-0"}`}>
-          <div
-            ref={containerRef}
-            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth overscroll-x-contain px-5 sm:px-10 lg:px-16"
-          >
-            {cards.map((card) => (
-              <Link
-                key={card.slug}
-                to={`/templates/${card.slug}`}
-                data-carousel-card="true"
-                className="group/card w-[280px] shrink-0 snap-start sm:w-[320px]"
-              >
-                <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
-                  <div className="relative h-[300px] overflow-hidden sm:h-[340px]">
-                    <img
-                      src={card.img}
-                      alt={card.name}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-[1.03]"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/12 to-transparent" />
-                    <h4 className="absolute bottom-4 left-4 text-2xl font-bold text-white drop-shadow-lg">{card.name}</h4>
-                  </div>
-                  <div className="px-4 py-3.5">
-                    <p className="text-[13px] text-muted-foreground">{card.duration} · {card.vibe}</p>
-                    <div className="mt-1.5 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-primary" />
-                      <span className="text-[11px] font-medium text-primary">Junto AI plan</span>
-                    </div>
+        <div
+          ref={containerRef}
+          className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-visible scroll-smooth overscroll-x-contain pb-4 pl-5 sm:pl-10 lg:pl-16"
+        >
+          {cards.map((card) => (
+            <Link
+              key={card.slug}
+              to={`/templates/${card.slug}`}
+              data-carousel-card="true"
+              className="group/card w-[280px] shrink-0 snap-start sm:w-[320px]"
+            >
+              <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
+                <div className="relative h-[300px] overflow-hidden sm:h-[340px]">
+                  <img
+                    src={card.img}
+                    alt={card.name}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-[1.03]"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/12 to-transparent" />
+                  <h4 className="absolute bottom-4 left-4 text-2xl font-bold text-white drop-shadow-lg">{card.name}</h4>
+                </div>
+                <div className="px-4 py-3.5">
+                  <p className="text-[13px] text-muted-foreground">{card.duration} · {card.vibe}</p>
+                  <div className="mt-1.5 flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    <span className="text-[11px] font-medium text-primary">Junto AI plan</span>
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
+              </div>
+            </Link>
+          ))}
+          {/* Right spacer so last card has padding at initial position */}
+          <div className="shrink-0 w-5 sm:w-10 lg:w-16" aria-hidden="true" />
         </div>
       </div>
     </div>
