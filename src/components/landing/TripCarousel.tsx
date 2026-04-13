@@ -83,7 +83,7 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
 
         <div
           ref={containerRef}
-          className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth overscroll-x-contain pl-5 pr-3 sm:pl-10 sm:pr-4 lg:pl-16 lg:pr-6"
+          className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth overscroll-x-contain px-5 sm:px-10 lg:px-16"
         >
           {cards.map((card) => (
             <Link
@@ -92,7 +92,7 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
               data-carousel-card="true"
               className="group/card w-[280px] shrink-0 snap-start sm:w-[320px]"
             >
-              <div className="overflow-hidden rounded-[1.5rem] border border-border/60 bg-card shadow-[0_18px_44px_-28px_hsl(var(--foreground)/0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_54px_-26px_hsl(var(--foreground)/0.28)]">
+              <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
                 <div className="relative h-[300px] overflow-hidden sm:h-[340px]">
                   <img
                     src={card.img}

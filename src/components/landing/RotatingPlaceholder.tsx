@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 
 const PLACEHOLDERS = [
-  "Bali with friends, 7 days",
-  "Weekend in Barcelona for two",
-  "Japan adventure, 2 weeks",
-  "Girls trip to Tulum",
-  "Bachelor party in Lisbon",
-  "Family holiday in Thailand",
-  "Island hopping in Greece",
-  "Road trip through Portugal",
+  "Bali with 4 friends, 7 days in August",
+  "Weekend in Barcelona for two, late September",
+  "Japan with my partner, 2 weeks in April",
+  "Girls trip to Tulum, 5 days over NYE",
+  "Bachelor party in Lisbon, long weekend in June",
+  "Family holiday in Thailand, 10 days over Christmas",
+  "Island hopping in Greece with 6 friends, July",
+  "Road trip through Portugal, 8 days with 3 mates",
 ];
 
 export function RotatingPlaceholder({
