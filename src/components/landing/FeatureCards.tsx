@@ -209,7 +209,7 @@ export function FeatureCards() {
       <div className="group/carousel relative">
         <LandingCarouselNav canLeft={canLeft} canRight={canRight} onPrev={scrollPrev} onNext={scrollNext} />
 
-        <div className={`overflow-hidden transition-[padding-right] duration-300 ease-out ${isAtStart ? "pr-5 sm:pr-10 lg:pr-16" : "pr-0"}`}>
+        <div className={`overflow-x-clip overflow-y-visible transition-[padding-right] duration-300 ease-out ${isAtStart ? "pr-5 sm:pr-10 lg:pr-16" : "pr-0"}`}>
           <div
             ref={containerRef}
             className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth overscroll-x-contain px-5 sm:px-10 lg:px-16"
