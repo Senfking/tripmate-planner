@@ -698,6 +698,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [extraResults, setExtraResults] = useState<ConciergeSuggestion[]>([]);
+  const lastRequestBodyRef = useRef<Record<string, unknown> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const placeholder = useRotatingPlaceholder();
 
@@ -811,6 +812,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         setShowLocationPicker(false);
         setExtraResults([]);
         setLoadingMore(false);
+        lastRequestBodyRef.current = null;
       }, 300);
       return () => clearTimeout(t);
     }
@@ -877,46 +879,58 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     setExtraResults([]);
     try {
       if (text) {
+        // Free-text request — store body for "show more" re-use
+        lastRequestBodyRef.current = {
+          trip_id: tripId,
+          query: text,
+          context: conciergeContext,
+        };
         await sendMessage(text);
       } else if (category) {
-        await sendStructuredRequest({
+        const structuredFilters: StructuredFilters = {
           category: category.id,
           when: filters.when?.length ? filters.when : undefined,
           vibe: [...(filters.vibe || []), ...(filters.scene || []), ...(filters.energy || [])].length ? [...(filters.vibe || []), ...(filters.scene || []), ...(filters.energy || [])] : undefined,
           budget: [...(filters.budget || []), ...(filters.price || [])].length ? [...(filters.budget || []), ...(filters.price || [])] : undefined,
           feeling_lucky: lucky,
-        });
+        };
+        // Store the full structured body for "show more" re-use
+        lastRequestBodyRef.current = {
+          trip_id: tripId,
+          category: structuredFilters.category,
+          when: structuredFilters.when,
+          vibe: structuredFilters.vibe,
+          budget: structuredFilters.budget,
+          feeling_lucky: structuredFilters.feeling_lucky || false,
+          context: conciergeContext,
+        };
+        await sendStructuredRequest(structuredFilters);
       }
     } catch {
       toast.error("Couldn't find suggestions. Try again.");
     }
-  }, [sendMessage, sendStructuredRequest]);
+  }, [sendMessage, sendStructuredRequest, tripId, conciergeContext]);
 
   const handleShowMore = useCallback(async () => {
     if (loadingMore || !displayedResults?.suggestions) return;
     setLoadingMore(true);
     try {
-      const existingNames = [
+      const excludeNames = [
         ...(displayedResults.suggestions || []).map(s => s.name),
         ...extraResults.map(s => s.name),
       ];
-      const excludeNote = `Do NOT suggest these (already shown): ${existingNames.join(", ")}. Suggest DIFFERENT spots.`;
-      
-      let query: string;
-      if (selectedCategory) {
-        const filterSummary = Object.entries(selectedFilters)
-          .flatMap(([, vals]) => vals)
-          .join(", ");
-        query = `More ${selectedCategory.label.toLowerCase()} suggestions${filterSummary ? ` (${filterSummary})` : ""}. ${excludeNote}`;
-      } else {
-        query = `More suggestions like these. ${excludeNote}`;
-      }
+
+      // Re-send the original request body with exclusion list
+      const baseBody = lastRequestBodyRef.current ?? {
+        trip_id: tripId,
+        query: `More suggestions in ${destination}`,
+        context: conciergeContext,
+      };
 
       const { data, error } = await supabase.functions.invoke("concierge-suggest", {
         body: {
-          trip_id: tripId,
-          query,
-          context: conciergeContext,
+          ...baseBody,
+          exclude_names: excludeNames,
         },
       });
       if (error) throw error;
@@ -930,7 +944,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, displayedResults, extraResults, selectedCategory, selectedFilters, tripId, conciergeContext]);
+  }, [loadingMore, displayedResults, extraResults, tripId, destination, conciergeContext]);
 
   const handleCategorySelect = (cat: Category) => {
     setSelectedCategory(cat);
