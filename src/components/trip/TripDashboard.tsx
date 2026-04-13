@@ -74,7 +74,7 @@ const codeToCity: Record<string, string> = {
 const HORIZONTAL_IDS = new Set(["decisions", "bookings"]);
 
 function SortableSection({ id, children }: { id: string; children: ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
   const isHorizontal = HORIZONTAL_IDS.has(id);
   const elRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +82,6 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   let ty = 0;
   if (transform) {
     if (isHorizontal) {
-      // Clamp horizontal movement to the card's own width
       const w = elRef.current?.offsetWidth ?? 180;
       tx = Math.max(-w, Math.min(w, transform.x));
     } else {
@@ -103,7 +102,17 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   }, [setNodeRef]);
 
   return (
-    <div ref={setRefs} style={style} {...attributes} {...listeners}>
+    <div ref={setRefs} style={style} className="relative group/sortable" {...attributes}>
+      {/* Drag handle — only this triggers drag */}
+      <div
+        ref={setActivatorNodeRef}
+        {...listeners}
+        className="absolute top-1 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover/sortable:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
+        style={{ padding: "4px 12px" }}
+        aria-label="Drag to reorder"
+      >
+        <div className="w-8 h-1 rounded-full bg-white/40" />
+      </div>
       {children}
     </div>
   );
@@ -163,8 +172,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 10 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
