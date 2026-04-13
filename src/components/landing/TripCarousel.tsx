@@ -69,7 +69,7 @@ const SECTIONS: CarouselSection[] = [
 const ALL_CARDS = [...TRENDING, ...EUROPE, ...ADVENTURE, ...BEACH];
 
 function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: TripCard[]; seeAll?: boolean }) {
-  const { containerRef, canLeft, canRight, scrollPrev, scrollNext } = useLandingCarousel();
+  const { containerRef, canLeft, canRight, isAtStart, scrollPrev, scrollNext } = useLandingCarousel();
 
   return (
     <div className="mb-12">
@@ -83,7 +83,7 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
 
         <div
           ref={containerRef}
-          className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth overscroll-x-contain pl-5 sm:pl-10 lg:pl-16"
+          className={`scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth overscroll-x-contain pl-5 sm:pl-10 lg:pl-16 ${isAtStart ? "pr-5 sm:pr-10 lg:pr-16" : "pr-0"}`}
         >
           {cards.map((card) => (
             <Link

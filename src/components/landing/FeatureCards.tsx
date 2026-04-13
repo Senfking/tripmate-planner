@@ -198,7 +198,7 @@ function PhoneMockup({ variant }: { variant: number }) {
 }
 
 export function FeatureCards() {
-  const { containerRef, canLeft, canRight, scrollPrev, scrollNext } = useLandingCarousel();
+  const { containerRef, canLeft, canRight, isAtStart, scrollPrev, scrollNext } = useLandingCarousel();
 
   return (
     <section className="py-16 sm:py-24">
@@ -211,7 +211,7 @@ export function FeatureCards() {
 
         <div
           ref={containerRef}
-          className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth overscroll-x-contain pl-5 sm:pl-10 lg:pl-16"
+          className={`scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth overscroll-x-contain pl-5 sm:pl-10 lg:pl-16 ${isAtStart ? "pr-5 sm:pr-10 lg:pr-16" : "pr-0"}`}
         >
           {FEATURES.map((feature) => (
             <article
