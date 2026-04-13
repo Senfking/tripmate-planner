@@ -114,24 +114,20 @@ export default function Landing() {
           </p>
 
           {/* Search module */}
-          <div className="mt-8 mx-auto max-w-lg">
-            <div className="rounded-[1.75rem] p-1.5 backdrop-blur-xl"
-              style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
-              <div className="flex items-center gap-2.5 bg-white rounded-[1.25rem] px-5 py-3.5 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.15)]">
-                <Search className="h-[18px] w-[18px] text-gray-400 shrink-0" />
-                <RotatingPlaceholder
-                  value={searchValue}
-                  onChange={setSearchValue}
-                  onKeyDown={(e) => { if (e.key === "Enter") openBuilder(); }}
-                />
-              </div>
+          <div className="mt-8 rounded-[1.75rem] p-5 sm:p-6 text-left backdrop-blur-xl mx-auto max-w-lg shadow-[0_8px_60px_-20px_rgba(0,0,0,0.25)]"
+            style={{ background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(24px) saturate(1.4)" }}>
+            <div className="flex items-center gap-2.5 bg-white/95 rounded-2xl px-5 py-3.5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]">
+              <Search className="h-[18px] w-[18px] text-gray-400 shrink-0" />
+              <RotatingPlaceholder
+                value={searchValue}
+                onChange={setSearchValue}
+                onKeyDown={(e) => { if (e.key === "Enter") openBuilder(); }}
+              />
             </div>
 
-            <div className="mt-4">
-              <ShimmerButton onClick={openBuilder} className="w-full rounded-[1.25rem] py-3.5 text-[15px]">
-                Plan with Junto AI
-              </ShimmerButton>
-            </div>
+            <ShimmerButton onClick={openBuilder} className="w-full mt-4 rounded-2xl py-3.5 text-[15px]">
+              Plan with Junto AI
+            </ShimmerButton>
           </div>
         </div>
       </section>
