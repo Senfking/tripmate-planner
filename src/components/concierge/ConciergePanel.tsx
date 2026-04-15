@@ -372,20 +372,21 @@ function SuggestionCard({
   const s = suggestion as any;
   const bookingUrl = s.booking_url || null;
   const googleSearchBookUrl = `https://www.google.com/search?q=book+${encodeURIComponent(suggestion.name + " " + (suggestion.address || ""))}`;
-  const mapsUrl = buildMapsUrl(suggestion.name, suggestion.address);
+  const mapsUrl = buildMapsUrl(suggestion.name || "Unknown", suggestion.address);
 
-  // Event card: parse "Event Name at Venue" pattern
-  const isEvent = suggestion.is_event;
+  // Determine if this is an event — only when explicitly flagged
+  const isEvent = suggestion.is_event === true || s.type === "event";
   const eventUrl = s.url || s.booking_url || null;
   const eventThumbnail = s.thumbnail || null;
   const atMatch = isEvent && suggestion.name ? suggestion.name.match(/^(.+?)\s+at\s+(.+)$/i) : null;
-  const eventTitle = atMatch ? atMatch[1] : suggestion.name;
+  const eventTitle = atMatch ? atMatch[1] : (suggestion.name || "Unnamed");
   const eventVenue = atMatch ? atMatch[2] : null;
 
   // Resolve image: event thumbnail > photo_url > placeholder
+  // For regular venues, always show photo_url if available (not_verified only blocks for events)
   const cardImage = isEvent && eventThumbnail
     ? eventThumbnail
-    : (suggestion.photo_url && !suggestion.not_verified ? suggestion.photo_url : null);
+    : (suggestion.photo_url || null);
 
   return (
     <div
@@ -1430,7 +1431,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   </div>
                   <LoadingSkeleton />
                 </div>
-              ) : displayedResults ? (
+              ) : displayedResults && (displayedResults.suggestions?.length ?? 0) > 0 ? (
                 <div className="space-y-3 md:max-w-[900px] md:mx-auto w-full md:px-8">
                   {/* Intro text — regular weight teal, not italic */}
                   {displayedResults.content && (
@@ -1444,9 +1445,9 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     {isLucky ? "Hidden gems & local secrets" : "Insider picks"}
                   </p>
 
-                  {/* Results — mobile: vertical stack, desktop: horizontal carousel */}
+                  {/* Results — mobile: vertical stack, desktop: 2-col grid */}
                   <div className="space-y-3 px-3 md:hidden">
-                    {displayedResults.suggestions!.map((s, i) => (
+                    {(displayedResults.suggestions ?? []).map((s, i) => (
                       <SuggestionCard
                         key={`${displayedResults.id}-${i}`}
                         suggestion={s}
