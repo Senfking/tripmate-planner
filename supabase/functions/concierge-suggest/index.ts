@@ -673,35 +673,76 @@ function normaliseName(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+// Tokenize a name into lowercase words, stripping punctuation
+function tokenize(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+}
+
+// Levenshtein distance between two strings
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+
+  // Single-row DP to save memory
+  let prev = new Array<number>(n + 1);
+  let curr = new Array<number>(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
+}
+
 function fuzzyNameMatch(a: string, b: string): boolean {
   const na = normaliseName(a);
   const nb = normaliseName(b);
   if (!na || !nb) return false;
-  // Exact match after normalisation
+
+  // 1. Exact match after normalisation
   if (na === nb) return true;
-  // One contains the other (handles "savaya" vs "savayabalibeachclub")
+
+  // 2. One contains the other as a substring
   if (na.length >= 4 && nb.length >= 4) {
     if (na.includes(nb) || nb.includes(na)) return true;
   }
-  // Word-level matching: extract lowercase words (≥3 chars) and check if
-  // the primary identifying word is shared. Handles "Savaya Bali" vs
-  // "Savaya Beach Club" where the normalised forms don't substring-match.
-  const wordsA = a.toLowerCase().match(/[a-z]{3,}/g) ?? [];
-  const wordsB = b.toLowerCase().match(/[a-z]{3,}/g) ?? [];
-  // Skip generic filler words
-  const filler = new Set([
-    "the", "bali", "bar", "club", "beach", "cafe", "restaurant", "hotel",
-    "resort", "lounge", "terrace", "rooftop", "garden", "pool", "spa",
-    "night", "day", "music", "live", "event", "seminyak", "canggu",
-    "ubud", "kuta", "denpasar", "uluwatu", "jimbaran", "nusa", "dua",
-  ]);
-  const sigA = wordsA.filter((w) => !filler.has(w));
-  const sigB = wordsB.filter((w) => !filler.has(w));
-  // If the first significant word (the venue's primary name) matches, it's
-  // the same place: "Savaya Bali" (sig: savaya) vs "Savaya Beach Club" (sig: savaya)
-  if (sigA.length > 0 && sigB.length > 0 && sigA[0] === sigB[0] && sigA[0].length >= 4) {
-    return true;
+
+  // 3. Token-based matching (location-agnostic, no hardcoded word lists)
+  const tokA = tokenize(a);
+  const tokB = tokenize(b);
+  if (tokA.length === 0 || tokB.length === 0) return false;
+
+  // Subset match: one name's tokens are entirely contained in the other's set
+  // e.g. {"savaya"} ⊂ {"savaya", "beach", "club"}
+  // e.g. {"la", "favela"} ⊂ {"la", "favela", "bali"}
+  const setA = new Set(tokA);
+  const setB = new Set(tokB);
+  const [smaller, larger] =
+    setA.size <= setB.size ? [setA, setB] : [setB, setA];
+  if (smaller.size >= 1) {
+    let allFound = true;
+    for (const w of smaller) {
+      if (!larger.has(w)) { allFound = false; break; }
+    }
+    if (allFound) return true;
   }
+
+  // 4. Levenshtein distance < 20% of the longer normalised string
+  const longer = na.length >= nb.length ? na : nb;
+  const dist = levenshtein(na, nb);
+  if (dist < longer.length * 0.2) return true;
+
   return false;
 }
 
