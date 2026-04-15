@@ -42,6 +42,54 @@ function isTimeSensitiveQuery(query: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Infer category from a free-text query when no structured category is set.
+// Returns the best-matching category ID, or undefined if no strong signal.
+// ---------------------------------------------------------------------------
+function inferCategoryFromQuery(query: string): string | undefined {
+  const q = query.toLowerCase();
+
+  // Order matters — check more specific categories first
+  const categoryPatterns: Array<{ category: string; pattern: RegExp }> = [
+    {
+      category: "events",
+      pattern:
+        /\b(events?|festival|concert|gig|live music|dj|show|performance|whats on|what'?s on|happening|party tonight|music tonight)\b/,
+    },
+    {
+      category: "party",
+      pattern: /\b(nightclub|club|party|nightlife|rave|afterparty|dance floor)\b/,
+    },
+    {
+      category: "eat",
+      pattern:
+        /\b(restaurant|eat|food|dinner|lunch|breakfast|brunch|dining|cuisine|sushi|pizza|taco|burger|cafe|bistro)\b/,
+    },
+    {
+      category: "drink",
+      pattern: /\b(bar|cocktail|pub|beer|wine|drinks?|speakeasy|rooftop bar)\b/,
+    },
+    {
+      category: "relax",
+      pattern: /\b(spa|massage|wellness|relax|yoga|meditation|retreat)\b/,
+    },
+    {
+      category: "workout",
+      pattern: /\b(gym|fitness|crossfit|workout|exercise|training)\b/,
+    },
+    {
+      category: "explore",
+      pattern:
+        /\b(explore|sightseeing|attraction|museum|temple|market|tour|hike|waterfall)\b/,
+    },
+  ];
+
+  for (const { category, pattern } of categoryPatterns) {
+    if (pattern.test(q)) return category;
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Check if structured "when" filter is time-sensitive
 // ---------------------------------------------------------------------------
 function isTimeSensitiveWhen(when?: string): boolean {
@@ -190,21 +238,206 @@ function eventSearchInstructions(
   dateStr: string,
   whenLabel: string,
   dayOfWeek: string,
+  hasEventData: boolean,
 ): string {
   const catLabel = category
     ? CATEGORY_DESCRIPTIONS[category] || category
     : "things to do";
+
+  if (hasEventData) {
+    // We have real event data from web search — tell the LLM to use it
+    return `
+
+CRITICAL — TIME-SENSITIVE REQUEST (${whenLabel}, ${dateStr}, ${dayOfWeek}):
+The user is looking for ${catLabel} in ${destination} for a specific time.
+You have been provided EVENT DATA from a web search above. Use it.
+- At least 1-2 of your suggestions MUST be specific events from the EVENT DATA section.
+- Mark them with "type": "event" and "is_event": true, and fill in event_details with times, performers, cover charges, etc.
+- Prioritize events that match the requested date/time over generic venue recommendations.`;
+  }
+
+  // No event data available — instruct the LLM to use its own knowledge
   return `
 
-CRITICAL — EVENT SEARCH REQUIRED:
-When the query involves a specific time, you MUST search the web for current events, parties, and happenings. Prioritize time-sensitive results (specific events happening on that date) over generic venue recommendations. Include event names, performers, times, and cover charges.
+CRITICAL — TIME-SENSITIVE REQUEST (${whenLabel}, ${dateStr}, ${dayOfWeek}):
+The user is looking for ${catLabel} in ${destination} for a specific time.
+No web search results were available, so use your best knowledge of recurring events, weekly parties, and cultural happenings in ${destination}.
+- At least 1-2 of your suggestions SHOULD be time-specific happenings (a DJ night, a weekly market, a recurring event) rather than permanent venues.
+- Mark those with "type": "event" and "is_event": true, and fill in event_details.
+- If you know of major festivals or events around ${dateStr} in ${destination}, include them.`;
+}
 
-Search for these specifically:
-- "${destination} events ${dateStr}"
-- "${destination} ${catLabel} ${whenLabel}"
-- "${destination} live music/DJ/party ${dayOfWeek}"
+// ---------------------------------------------------------------------------
+// Event web search result shape
+// ---------------------------------------------------------------------------
+interface EventSearchResult {
+  name: string;
+  date: string | null;
+  venue: string | null;
+  description: string;
+  url: string | null;
+  source: string;
+}
 
-At least 1-2 of your suggestions MUST be specific events happening on that date/time rather than permanent venues. Mark those with is_event: true and fill in event_details.`;
+// ---------------------------------------------------------------------------
+// searchEvents — server-side web search for live/upcoming events.
+// Tries Brave Search API first (BRAVE_API_KEY), falls back to Google Custom
+// Search (GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID). Returns structured results.
+// ---------------------------------------------------------------------------
+async function searchEvents(
+  destination: string,
+  userQuery: string,
+  dateStr: string,
+  category: string | undefined,
+): Promise<EventSearchResult[]> {
+  const braveKey = Deno.env.get("BRAVE_API_KEY");
+  const googleSearchKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
+  const googleCseId = Deno.env.get("GOOGLE_CSE_ID");
+
+  // Build a targeted search query
+  const catLabel = category
+    ? CATEGORY_DESCRIPTIONS[category] || category
+    : "";
+  // e.g. "electronic music events Bali April 2026"
+  const dateObj = new Date(dateStr + "T12:00:00");
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const monthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+  const searchQuery = `${userQuery} ${destination} ${monthYear}`.trim();
+  // Secondary query for broader coverage
+  const fallbackQuery = `${catLabel || "events"} ${destination} ${monthYear}`.trim();
+
+  console.log(`[concierge-suggest] event search queries: "${searchQuery}", "${fallbackQuery}"`);
+
+  if (braveKey) {
+    return searchEventsViaBrave(braveKey, searchQuery, fallbackQuery);
+  }
+
+  if (googleSearchKey && googleCseId) {
+    return searchEventsViaGoogleCSE(
+      googleSearchKey,
+      googleCseId,
+      searchQuery,
+      fallbackQuery,
+    );
+  }
+
+  // No search API key available
+  console.warn(
+    "[concierge-suggest] No web search API key configured. " +
+    "Set BRAVE_API_KEY or (GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID) in Supabase secrets " +
+    "to enable event search. Falling back to LLM knowledge only.",
+  );
+  return [];
+}
+
+async function searchEventsViaBrave(
+  apiKey: string,
+  primaryQuery: string,
+  fallbackQuery: string,
+): Promise<EventSearchResult[]> {
+  const runQuery = async (q: string): Promise<EventSearchResult[]> => {
+    try {
+      const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=10&freshness=pm`;
+      const res = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "Accept-Encoding": "gzip",
+          "X-Subscription-Token": apiKey,
+        },
+      });
+      if (!res.ok) {
+        console.error(`[concierge-suggest] Brave search error: ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      const results = data.web?.results ?? [];
+      return results.map(
+        (r: { title?: string; url?: string; description?: string; page_age?: string }) => ({
+          name: r.title ?? "Unknown event",
+          date: r.page_age ?? null,
+          venue: null,
+          description: r.description ?? "",
+          url: r.url ?? null,
+          source: "brave_search",
+        }),
+      );
+    } catch (err) {
+      console.error("[concierge-suggest] Brave search exception:", err);
+      return [];
+    }
+  };
+
+  // Run both queries in parallel, deduplicate by URL
+  const [primary, secondary] = await Promise.all([
+    runQuery(primaryQuery),
+    runQuery(fallbackQuery),
+  ]);
+
+  const seen = new Set<string>();
+  const merged: EventSearchResult[] = [];
+  for (const r of [...primary, ...secondary]) {
+    const key = r.url || r.name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(r);
+  }
+
+  console.log(`[concierge-suggest] Brave search returned ${merged.length} results`);
+  return merged.slice(0, 15);
+}
+
+async function searchEventsViaGoogleCSE(
+  apiKey: string,
+  cseId: string,
+  primaryQuery: string,
+  fallbackQuery: string,
+): Promise<EventSearchResult[]> {
+  const runQuery = async (q: string): Promise<EventSearchResult[]> => {
+    try {
+      const url =
+        `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(q)}&num=10&dateRestrict=m1`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.error(`[concierge-suggest] Google CSE error: ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      const items = data.items ?? [];
+      return items.map(
+        (r: { title?: string; link?: string; snippet?: string }) => ({
+          name: r.title ?? "Unknown event",
+          date: null,
+          venue: null,
+          description: r.snippet ?? "",
+          url: r.link ?? null,
+          source: "google_cse",
+        }),
+      );
+    } catch (err) {
+      console.error("[concierge-suggest] Google CSE exception:", err);
+      return [];
+    }
+  };
+
+  const [primary, secondary] = await Promise.all([
+    runQuery(primaryQuery),
+    runQuery(fallbackQuery),
+  ]);
+
+  const seen = new Set<string>();
+  const merged: EventSearchResult[] = [];
+  for (const r of [...primary, ...secondary]) {
+    const key = r.url || r.name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(r);
+  }
+
+  console.log(`[concierge-suggest] Google CSE returned ${merged.length} results`);
+  return merged.slice(0, 15);
 }
 
 // ---------------------------------------------------------------------------
@@ -418,6 +651,69 @@ function validateAIResponse(
   const validated: Array<Record<string, unknown>> = [];
 
   for (const item of aiResponse) {
+    const isEvent = item.type === "event" || item.is_event === true;
+
+    // --- Event-type suggestions: relaxed validation (no place_id required) ---
+    if (isEvent) {
+      const eventName = (item.name as string) || "";
+      // Must have a name
+      if (!eventName) continue;
+      // Must have some date/time reference
+      const hasTimeRef = !!(
+        item.event_details ||
+        item.best_time ||
+        item.date
+      );
+      if (!hasTimeRef) continue;
+
+      // If coordinates are provided, check distance
+      const lat = item.lat as number | undefined;
+      const lng = item.lng as number | undefined;
+      let unverifiedLocation = true;
+      if (
+        typeof lat === "number" &&
+        typeof lng === "number" &&
+        searchLat !== null &&
+        searchLng !== null
+      ) {
+        const dist = haversineKm(searchLat, searchLng, lat, lng);
+        if (dist > 25) continue;
+        unverifiedLocation = false;
+      }
+
+      validated.push({
+        id: item.id ?? null,
+        name: eventName,
+        address: item.address ?? item.venue ?? null,
+        lat: lat ?? null,
+        lng: lng ?? null,
+        rating: null,
+        userRatingCount: null,
+        priceLevel: null,
+        types: ["event"],
+        photos: [],
+        googleMapsUri: null,
+        businessStatus: null,
+        description: item.description ?? item.full_description ?? null,
+        pro_tip: item.pro_tip ?? null,
+        why: item.why ?? null,
+        category: "events",
+        best_time: item.best_time ?? null,
+        estimated_cost_per_person: item.estimated_cost_per_person ?? null,
+        currency: item.currency ?? null,
+        what_to_order: item.what_to_order ?? null,
+        booking_url: item.booking_url ?? item.url ?? null,
+        is_event: true,
+        event_details: item.event_details ?? null,
+        specific_night: item.specific_night ?? null,
+        opening_hours: item.opening_hours ?? null,
+        type: "event",
+        unverified_location: unverifiedLocation,
+      });
+      continue;
+    }
+
+    // --- Venue-type suggestions: strict validation (place_id required) ---
     const id = item.id as string;
     if (!id) continue;
 
@@ -466,8 +762,8 @@ function validateAIResponse(
       currency: item.currency ?? null,
       what_to_order: item.what_to_order ?? null,
       booking_url: item.booking_url ?? null,
-      is_event: item.is_event ?? false,
-      event_details: item.event_details ?? null,
+      is_event: false,
+      event_details: null,
       specific_night: item.specific_night ?? null,
       opening_hours: item.opening_hours ?? null,
     });
@@ -695,7 +991,10 @@ Deno.serve(async (req) => {
     const searchLat = rawLat === 0 && rawLng === 0 ? null : rawLat;
     const searchLng = rawLat === 0 && rawLng === 0 ? null : rawLng;
     const searchLocationName = specificLocation || context.destination;
-    const searchCategory = structCategory || "explore";
+    // For free-text queries, infer category from the query text
+    const inferredCategory = !isStructured ? inferCategoryFromQuery(body.query) : undefined;
+    const searchCategory = structCategory || inferredCategory || "explore";
+    console.log(`[concierge-suggest] category resolution: struct=${structCategory}, inferred=${inferredCategory}, final=${searchCategory}`);
     const customSearchText = !isStructured ? body.query : undefined;
     const excludePlaceIds: string[] = Array.isArray(body.exclude_place_ids)
       ? body.exclude_place_ids
@@ -714,8 +1013,29 @@ Deno.serve(async (req) => {
       venueData = await searchPlacesBatch(queries, googleKey, excludePlaceIds);
     }
 
+    // ---- Server-side event web search (runs in parallel with nothing else blocking) ----
+    let eventSearchResults: EventSearchResult[] = [];
+    const shouldSearchEvents =
+      searchCategory === "events" || timeSensitive;
+
+    if (shouldSearchEvents) {
+      const eventQuery = !isStructured ? body.query : (
+        CATEGORY_DESCRIPTIONS[structCategory!] || structCategory || "events"
+      );
+      eventSearchResults = await searchEvents(
+        searchLocationName,
+        eventQuery,
+        dateStr,
+        searchCategory,
+      );
+      console.log(
+        `[concierge-suggest] event search returned ${eventSearchResults.length} results`,
+      );
+    }
+
     // Format venue data for prompt injection
     const hasVenueData = venueData.length > 0;
+    const hasEventData = eventSearchResults.length > 0;
 
     const venueListForPrompt = venueData
       .map((v, i) => {
@@ -731,20 +1051,62 @@ Deno.serve(async (req) => {
       })
       .join("\n");
 
+    // Format event search results for prompt injection
+    const eventListForPrompt = eventSearchResults
+      .map((e, i) => {
+        const parts = [`name="${e.name}"`];
+        if (e.date) parts.push(`date="${e.date}"`);
+        if (e.venue) parts.push(`venue="${e.venue}"`);
+        if (e.url) parts.push(`url="${e.url}"`);
+        parts.push(`description="${e.description}"`);
+        return `${i + 1}. ${parts.join(" | ")}`;
+      })
+      .join("\n");
+
     const venueConstraint = hasVenueData
       ? `\nCRITICAL RULES:
-- You MUST ONLY recommend venues from the VENUE DATA list provided below.
+- For VENUE suggestions: You MUST ONLY recommend venues from the VENUE DATA list provided below.
 - NEVER add or invent venues that are not in the list.
-- Every recommendation MUST include the exact "id" field from the provided data.
+- Every venue recommendation MUST include the exact "id" field from the provided data.
 - Your job is to RANK the best options and ENRICH them with descriptions, tips, and insights.
-- Select 3-5 venues that best match the user's request.`
+- Select 3-5 venues that best match the user's request.${hasEventData ? `\n- For EVENT suggestions: You may also suggest events from the EVENT DATA section. Events use "type": "event" and do NOT need a place_id.` : ""}`
       : "";
 
     const venueDataBlock = hasVenueData
       ? `\n\nVENUE DATA:\n${venueListForPrompt}`
       : "";
 
+    const eventDataBlock = hasEventData
+      ? `\n\nEVENT DATA (from web search — events may not have a place_id, that's okay):
+For event suggestions, include as much detail as possible: name, date, time, venue name, ticket info.
+Mark events with "type": "event" in your response so the frontend can display them differently.
+At least 1-2 of your suggestions SHOULD be specific events from this list if they match the query.
+${eventListForPrompt}`
+      : "";
+
     // JSON response schema — includes "id" when venue data is available
+    const eventSchemaNote = hasEventData
+      ? `
+    // --- OR for events from EVENT DATA (no place_id needed) ---
+    {
+      "type": "event",
+      "name": "Event Name from EVENT DATA",
+      "category": "events",
+      "why": "One sentence why this fits their request",
+      "best_time": "10pm-3am",
+      "estimated_cost_per_person": 200000,
+      "currency": "IDR",
+      "is_event": true,
+      "event_details": "Specific event info: performers, time, cover charge",
+      "booking_url": "URL from EVENT DATA if available, null otherwise",
+      "pro_tip": "Insider hack or tip (null if none)",
+      "what_to_order": null,
+      "specific_night": null,
+      "opening_hours": null,
+      "full_description": "2-3 sentence detailed description of the event"
+    }`
+      : "";
+
     const responseSchema = hasVenueData
       ? `{
   "summary": "Brief one-liner response to their query",
@@ -763,13 +1125,13 @@ Deno.serve(async (req) => {
       "specific_night": null,
       "opening_hours": null,
       "full_description": "2-3 sentence detailed description"
-    }
+    }${eventSchemaNote}
   ]
 }
 
 Rules for the response:
-- The "id" field MUST be copied exactly from the VENUE DATA list. Do not modify or fabricate IDs.
-- Set is_event to true ONLY for time-specific happenings — NOT for permanent venues.
+- For VENUE suggestions: The "id" field MUST be copied exactly from the VENUE DATA list. Do not modify or fabricate IDs.
+- For EVENT suggestions: Use "type": "event" and include "is_event": true. Events do NOT need an "id" field.${hasEventData ? `\n- You MUST include at least 1-2 events from the EVENT DATA section if they match the query.` : ""}
 - When is_event is true, event_details MUST describe the event (e.g. "DJ Set by [name], 10pm-3am, IDR 200k cover").
 - pro_tip should be a genuine insider tip, not generic advice. Think: "Ask for the secret menu" or "Sit upstairs for the view".
 - what_to_order: specific items, not generic ("The wagyu tartare" not "try their food").`
@@ -809,7 +1171,7 @@ Each suggestion MUST have a pro_tip with a genuine insider hack.
 Respond in this exact JSON format:
 ${responseSchema}
 
-Return ONLY valid JSON, no other text.${venueDataBlock}`;
+Return ONLY valid JSON, no other text.${venueDataBlock}${eventDataBlock}`;
     } else if (isStructured) {
       // -- Structured request: skip interpretation, use filters directly --
       const categoryDesc =
@@ -838,7 +1200,7 @@ Suggest 3-5 specific, real venues or activities. Consider:
 Respond in this exact JSON format:
 ${responseSchema}
 
-Return ONLY valid JSON, no other text.${venueDataBlock}`;
+Return ONLY valid JSON, no other text.${venueDataBlock}${eventDataBlock}`;
     } else {
       // -- Free-text request: AI interprets intent --
       systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}. Budget level: ${budgetLevel}. Vibes: ${vibes}.
@@ -859,7 +1221,7 @@ Suggest 3-5 specific, real venues or activities that match their query. Consider
 Respond in this exact JSON format:
 ${responseSchema}
 
-Return ONLY valid JSON, no other text.${venueDataBlock}`;
+Return ONLY valid JSON, no other text.${venueDataBlock}${eventDataBlock}`;
     }
 
     // -- Add exclusion list when paginating ("show more") --
@@ -867,14 +1229,15 @@ Return ONLY valid JSON, no other text.${venueDataBlock}`;
       systemPrompt += `\n\nIMPORTANT — EXCLUSION LIST: The user has already been shown these venues. Do NOT suggest any of them again:\n${excludeNames.map((n) => `- ${n}`).join("\n")}\nSuggest DIFFERENT venues only.`;
     }
 
-    // -- Add aggressive event search instructions for time-sensitive requests --
+    // -- Add event search instructions for time-sensitive requests --
     if (timeSensitive) {
       systemPrompt += eventSearchInstructions(
         context.destination,
-        structCategory,
+        structCategory || inferredCategory,
         dateStr,
         whenLabel,
         dayOfWeek,
+        hasEventData,
       );
     }
 
@@ -883,7 +1246,7 @@ Return ONLY valid JSON, no other text.${venueDataBlock}`;
       ? `Find me ${CATEGORY_DESCRIPTIONS[structCategory!] || structCategory}${whenArr.length ? ` for ${whenArr.join(" or ").toLowerCase()}` : ""}${vibeArr.length ? `, ${vibeArr.join(" or ").toLowerCase()} vibe` : ""} in ${context.destination}`
       : query;
 
-    const aiBody: Record<string, unknown> = {
+    const aiBody = {
       model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: systemPrompt },
@@ -892,27 +1255,17 @@ Return ONLY valid JSON, no other text.${venueDataBlock}`;
       max_tokens: 2048,
     };
 
-    if (timeSensitive) {
-      aiBody.tools = [{ google_search: {} }];
-    }
-
-    const callAiGateway = (body: Record<string, unknown>) =>
-      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${lovableKey}`,
         },
-        body: JSON.stringify(body),
-      });
-
-    let aiRes = await callAiGateway(aiBody);
-
-    if (!aiRes.ok && timeSensitive && "tools" in aiBody) {
-      const fallbackBody = { ...aiBody };
-      delete fallbackBody.tools;
-      aiRes = await callAiGateway(fallbackBody);
-    }
+        body: JSON.stringify(aiBody),
+      },
+    );
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
@@ -1004,6 +1357,8 @@ Return ONLY valid JSON, no other text.${venueDataBlock}`;
           ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + " " + searchLocationName)}`
           : (v.googleMapsUri as string) ?? null;
 
+        const isEventItem = v.type === "event" || v.is_event === true;
+
         return {
           name: venueName,
           category: (v.category as string) || "",
@@ -1027,16 +1382,59 @@ Return ONLY valid JSON, no other text.${venueDataBlock}`;
           lat: (v.lat as number) ?? null,
           lng: (v.lng as number) ?? null,
           priceLevel: (v.priceLevel as string) ?? null,
-          place_id: (v.id as string) || null,
-          not_verified: false,
+          place_id: isEventItem ? null : ((v.id as string) || null),
+          not_verified: isEventItem ? (v.unverified_location as boolean ?? true) : false,
           distance_km,
+          type: isEventItem ? "event" : "venue",
         };
       });
     } else {
-      // No verified venue data — return empty results rather than unvalidated
-      // AI suggestions that could contain wrong-location hallucinations.
-      enriched = [];
-      if (!parsed.summary) {
+      // No verified venue data from Google Places. For venues, return empty
+      // rather than unvalidated AI suggestions that could contain wrong-location
+      // hallucinations. But event-type suggestions (sourced from web search data
+      // injected into the prompt) are still allowed through.
+      if (hasEventData) {
+        enriched = parsed.suggestions
+          .filter((s) => s.type === "event" || s.is_event === true)
+          .map((s) => {
+            const aiName = (s.name as string) || "";
+            const mapsUrl = aiName
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(aiName + " " + searchLocationName)}`
+              : null;
+
+            return {
+              name: aiName,
+              category: (s.category as string) || "events",
+              why: s.why ?? null,
+              best_time: s.best_time ?? null,
+              estimated_cost_per_person: s.estimated_cost_per_person ?? null,
+              currency: s.currency ?? null,
+              is_event: true,
+              event_details: s.event_details ?? null,
+              booking_url: s.booking_url ?? null,
+              pro_tip: s.pro_tip ?? null,
+              what_to_order: s.what_to_order ?? null,
+              specific_night: s.specific_night ?? null,
+              opening_hours: s.opening_hours ?? null,
+              full_description: s.full_description ?? null,
+              photo_url: null,
+              rating: null,
+              totalRatings: null,
+              googleMapsUrl: mapsUrl,
+              address: null,
+              lat: null,
+              lng: null,
+              priceLevel: null,
+              place_id: null,
+              not_verified: true,
+              distance_km: null,
+              type: "event" as const,
+            };
+          });
+      } else {
+        enriched = [];
+      }
+      if (enriched.length === 0 && !parsed.summary) {
         parsed.summary = `I couldn't find verified venues in ${searchLocationName}. Try a different search or check your location.`;
       }
     }
