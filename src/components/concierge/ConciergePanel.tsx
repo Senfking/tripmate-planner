@@ -499,6 +499,16 @@ function SuggestionCard({
               <p className="text-xs text-muted-foreground leading-relaxed">{s.full_description}</p>
             )}
             <div className="flex gap-2 pt-1 flex-wrap">
+              {isEvent && eventUrl ? (
+                <a
+                  href={eventUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#0D9488]/10 text-[#0D9488] hover:bg-[#0D9488]/20 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> View Event
+                </a>
+              ) : null}
               <a
                 href={mapsUrl}
                 target="_blank"
@@ -507,7 +517,7 @@ function SuggestionCard({
               >
                 <ExternalLink className="h-3.5 w-3.5" /> Google Maps
               </a>
-              {bookingUrl ? (
+              {!isEvent && bookingUrl ? (
                 <a
                   href={bookingUrl}
                   target="_blank"
@@ -516,7 +526,7 @@ function SuggestionCard({
                 >
                   <Globe className="h-3.5 w-3.5" /> Visit website
                 </a>
-              ) : (
+              ) : !isEvent ? (
                 <a
                   href={googleSearchBookUrl}
                   target="_blank"
@@ -525,7 +535,7 @@ function SuggestionCard({
                 >
                   <Search className="h-3.5 w-3.5" /> Book
                 </a>
-              )}
+              ) : null}
             </div>
           </div>
         )}
