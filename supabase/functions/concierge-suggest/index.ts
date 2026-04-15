@@ -1043,6 +1043,7 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
+  console.log("[concierge-suggest] v2.1 deployed", new Date().toISOString());
   console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
 
   if (req.method === "OPTIONS") {
