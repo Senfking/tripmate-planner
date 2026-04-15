@@ -705,7 +705,10 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     return dests;
   }, [tripResult, destinationProp]);
 
-  const conciergeContext = buildConciergeContext(destination, manualLocation || resolvedDest, tripResult, memberCount);
+  const conciergeContext = useMemo(
+    () => buildConciergeContext(destination, manualLocation || resolvedDest, tripResult, memberCount),
+    [destination, manualLocation, resolvedDest, tripResult, memberCount]
+  );
   const {
     messages,
     activeResult,
