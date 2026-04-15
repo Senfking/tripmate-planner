@@ -50,7 +50,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
 
   const sorted = [...members].sort((a, b) => {
     if (a.userId === currentUserId) return -1;
-    if (b.user_id === currentUserId) return 1;
+    if (b.userId === currentUserId) return 1;
     return (a.displayName || "").localeCompare(b.displayName || "");
   });
 
