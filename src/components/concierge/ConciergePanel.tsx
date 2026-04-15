@@ -181,14 +181,23 @@ function buildMapsUrl(name: string, address?: string | null): string {
 
 function buildConciergeContext(destination: string, location: string, tripResult?: AITripResult | null, memberCount?: number) {
   const dest = tripResult?.destinations?.[0];
+
+  // Resolve real coordinates: prefer map_center (destination-level), never hardcode 0/0
+  const mapCenter = tripResult?.map_center;
+  const hasCoords = mapCenter && typeof mapCenter.lat === "number" && typeof mapCenter.lng === "number"
+    && !(mapCenter.lat === 0 && mapCenter.lng === 0);
+
+  // Only send hotel_location when we have both a name and real coordinates
+  const hotelLocation = dest?.accommodation && hasCoords
+    ? { name: dest.accommodation.name, lat: mapCenter!.lat, lng: mapCenter!.lng }
+    : undefined;
+
   return {
     destination: destination || "Unknown",
     location: location || undefined,
     group_size: memberCount || 2,
     budget_level: dest?.cost_profile ? "mid-range" : undefined,
-    hotel_location: dest?.accommodation
-      ? { name: dest.accommodation.name, lat: 0, lng: 0 }
-      : undefined,
+    hotel_location: hotelLocation,
   } as {
     destination: string;
     location?: string;
