@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   X, Utensils, Wine, Music, Compass, Waves, Dumbbell,
-  CalendarHeart, Sparkles, Star, MapPin, Clock,
+  Calendar, CalendarHeart, Sparkles, Star, MapPin, Clock,
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
@@ -264,16 +264,8 @@ function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (ke
 /*  HorizontalCarousel (desktop only)                                  */
 /* ------------------------------------------------------------------ */
 
-function DesktopGrid({ children }: { children: ReactNode }) {
-  return (
-    <div className="hidden md:grid md:grid-cols-2 md:gap-3 md:px-0">
-      {children}
-    </div>
-  );
-}
 
-
-function SuggestionCard({
+const SuggestionCard = memo(function SuggestionCard({
   suggestion, messageId, index, tripId, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge, onSaveChange,
 }: {
   suggestion: ConciergeSuggestion;
@@ -396,7 +388,11 @@ function SuggestionCard({
       {/* Photo — full width */}
       <div className="w-full h-[180px] bg-muted overflow-hidden relative">
         {cardImage ? (
-          <img src={cardImage} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
+          <img src={cardImage} alt={suggestion.name || ""} className="w-full h-full object-cover" loading="lazy" />
+        ) : isEvent ? (
+          <div className="w-full h-full flex items-center justify-center bg-[#0D9488]/5">
+            <Calendar className="h-10 w-10 text-[#0D9488]/30" />
+          </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-accent/30">
             <MapPin className="h-8 w-8 text-muted-foreground/30" />
