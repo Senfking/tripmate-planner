@@ -203,7 +203,11 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
         });
 
         if (error) throw error;
-        setActiveResult(buildTransientResult(data?.summary, data?.suggestions));
+        if (!data || typeof data !== "object" || !Array.isArray(data.suggestions)) {
+          console.error("Concierge: unexpected response shape:", data);
+          throw new Error(data?.error || "Unexpected response from concierge");
+        }
+        setActiveResult(buildTransientResult(data.summary, data.suggestions));
         queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
       } catch (err) {
         console.error("Concierge error:", err);
@@ -238,7 +242,11 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
         });
 
         if (error) throw error;
-        setActiveResult(buildTransientResult(data?.summary, data?.suggestions));
+        if (!data || typeof data !== "object" || !Array.isArray(data.suggestions)) {
+          console.error("Concierge: unexpected response shape:", data);
+          throw new Error(data?.error || "Unexpected response from concierge");
+        }
+        setActiveResult(buildTransientResult(data.summary, data.suggestions));
         queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
       } catch (err) {
         console.error("Concierge error:", err);
