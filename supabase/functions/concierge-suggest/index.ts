@@ -1,4 +1,4 @@
-// Last updated: 2026-04-15 — event search pipeline v2.3 (intent-aware tiered ranking)
+// Last updated: 2026-04-15 — event search pipeline v2.4 (name resolution fix)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -910,12 +910,13 @@ function validateAIResponse(
               type: "event",
             });
           } else {
+            const reclassifiedName = matchedPlace.displayName || eventName || matchedPlace.id;
             console.log(
-              `[concierge-suggest] Reclassified "${eventName}" from event → venue (matched Places: "${matchedPlace.displayName}")`,
+              `[concierge-suggest] Reclassified "${eventName}" from event → venue (matched Places: "${reclassifiedName}")`,
             );
             validated.push({
               id: matchedPlace.id,
-              name: matchedPlace.displayName,
+              name: reclassifiedName,
               address: matchedPlace.formattedAddress,
               lat: matchedPlace.location?.latitude ?? null,
               lng: matchedPlace.location?.longitude ?? null,
@@ -1025,10 +1026,21 @@ function validateAIResponse(
     // businessStatus must be OPERATIONAL (or not set)
     if (place.businessStatus && place.businessStatus !== "OPERATIONAL") continue;
 
+    // Resolve name: Google Places displayName is ground truth.
+    // Fallback chain: Places displayName → AI-provided name → place ID.
+    const resolvedName = place.displayName
+      || (item.name as string)
+      || place.id;
+    if (!place.displayName) {
+      console.warn(
+        `[concierge-suggest] Places venue id=${place.id} has null displayName, using fallback="${resolvedName}"`,
+      );
+    }
+
     // Merge: Google Places ground truth + AI enrichment fields
     validated.push({
       id: place.id,
-      name: place.displayName,
+      name: resolvedName,
       address: place.formattedAddress,
       lat: place.location?.latitude ?? null,
       lng: place.location?.longitude ?? null,
@@ -1063,7 +1075,7 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
-  console.log("[concierge-suggest] v2.3 deployed — intent-aware tiered ranking", new Date().toISOString());
+  console.log("[concierge-suggest] v2.4 deployed — name resolution fix", new Date().toISOString());
   console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
 
   if (req.method === "OPTIONS") {
@@ -1743,6 +1755,9 @@ Suggest DIFFERENT venues and events only.`;
     const aiData = await aiRes.json();
     const textContent = aiData.choices?.[0]?.message?.content || "";
 
+    // Log the full raw AI text BEFORE any parsing so we can see exact field names
+    console.log(`[concierge-suggest] RAW AI text (first 2000 chars): ${textContent.slice(0, 2000)}`);
+
     // Parse JSON from response (handle markdown code blocks)
     const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/) || [
       null,
@@ -1770,8 +1785,9 @@ Suggest DIFFERENT venues and events only.`;
       `[concierge-suggest] RAW AI response (${parsed.suggestions.length} suggestions):`,
     );
     for (const s of parsed.suggestions) {
+      const keys = Object.keys(s).join(",");
       console.log(
-        `  → name="${s.name}" type=${s.type ?? "unset"} is_event=${s.is_event ?? "unset"} category=${s.category ?? "unset"}`,
+        `  → keys=[${keys}] name="${s.name}" type=${s.type ?? "unset"} is_event=${s.is_event ?? "unset"} id=${s.id ?? "NONE"}`,
       );
     }
 
@@ -1792,6 +1808,12 @@ Suggest DIFFERENT venues and events only.`;
         excludePlaceIds,
       );
       console.log(`[concierge-suggest] After validation: ${validated.length} of ${parsed.suggestions.length} passed`);
+
+      // Build place_id → displayName lookup for fallback name resolution
+      const venueNameById = new Map<string, string>();
+      for (const vd of venueData) {
+        if (vd.id && vd.displayName) venueNameById.set(vd.id, vd.displayName);
+      }
 
       // Map validated results to frontend-compatible shape
       enriched = validated.map((v) => {
@@ -1818,7 +1840,15 @@ Suggest DIFFERENT venues and events only.`;
             ) / 10;
         }
 
-        const venueName = (v.name as string) || "";
+        // Name resolution: validated name → Google Places lookup by ID → empty string
+        const placeId = v.id as string | undefined;
+        const rawName = v.name as string | null | undefined;
+        const venueName = rawName || (placeId ? venueNameById.get(placeId) : undefined) || "";
+        if (!rawName && placeId) {
+          console.warn(
+            `[concierge-suggest] Venue id=${placeId} had falsy name (${String(rawName)}), resolved to "${venueName}" via Places lookup`,
+          );
+        }
         const mapsUrl = venueName
           ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + " " + searchLocationName)}`
           : (v.googleMapsUri as string) ?? null;
