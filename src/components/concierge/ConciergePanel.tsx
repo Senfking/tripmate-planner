@@ -1431,7 +1431,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   <LoadingSkeleton />
                 </div>
               ) : displayedResults && (displayedResults.suggestions?.length ?? 0) > 0 ? (
-                <div className="space-y-3 md:max-w-[900px] md:mx-auto w-full md:px-8">
+                <div className="space-y-3 md:max-w-[1400px] md:mx-auto w-full md:px-6 lg:px-8">
                   {/* Intro text — regular weight teal, not italic */}
                   {displayedResults.content && (
                     <p className="text-sm px-3 md:px-0 text-[#0D9488] font-normal">
