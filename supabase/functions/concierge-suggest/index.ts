@@ -675,6 +675,8 @@ function validateAIResponse(
       booking_url: item.booking_url ?? null,
       is_event: item.is_event ?? false,
       event_details: item.event_details ?? null,
+      specific_night: item.specific_night ?? null,
+      opening_hours: item.opening_hours ?? null,
     });
   }
 
@@ -893,6 +895,91 @@ Deno.serve(async (req) => {
       whenLabel = timeOfDay;
     }
 
+    // ---- Fetch real venue data via batch Places pipeline ----
+    const searchLat = userGps?.lat ?? context.hotel_location?.lat ?? null;
+    const searchLng = userGps?.lng ?? context.hotel_location?.lng ?? null;
+    const searchLocationName = specificLocation || context.destination;
+    const searchCategory = structCategory || "explore";
+    const customSearchText = !isStructured ? body.query : undefined;
+    const excludePlaceIds: string[] = Array.isArray(body.exclude_place_ids)
+      ? body.exclude_place_ids
+      : [];
+
+    let venueData: BatchPlaceResult[] = [];
+
+    if (googleKey && searchLat !== null && searchLng !== null) {
+      const queries = buildPlacesQueries(
+        searchCategory,
+        vibeArr,
+        budgetArr[0],
+        { name: searchLocationName, lat: searchLat, lng: searchLng },
+        customSearchText,
+      );
+      venueData = await searchPlacesBatch(queries, googleKey, excludePlaceIds);
+    }
+
+    // Format venue data for prompt injection
+    const hasVenueData = venueData.length > 0;
+
+    const venueListForPrompt = venueData
+      .map((v, i) => {
+        const parts = [`id="${v.id}"`, `name="${v.displayName}"`];
+        if (v.formattedAddress) parts.push(`address="${v.formattedAddress}"`);
+        if (v.rating !== null) parts.push(`rating=${v.rating}`);
+        if (v.userRatingCount !== null)
+          parts.push(`reviews=${v.userRatingCount}`);
+        if (v.priceLevel) parts.push(`price=${v.priceLevel}`);
+        if (v.types.length)
+          parts.push(`types=[${v.types.slice(0, 5).join(",")}]`);
+        return `${i + 1}. ${parts.join(" | ")}`;
+      })
+      .join("\n");
+
+    const venueConstraint = hasVenueData
+      ? `\nCRITICAL RULES:
+- You MUST ONLY recommend venues from the VENUE DATA list provided below.
+- NEVER add or invent venues that are not in the list.
+- Every recommendation MUST include the exact "id" field from the provided data.
+- Your job is to RANK the best options and ENRICH them with descriptions, tips, and insights.
+- Select 3-5 venues that best match the user's request.`
+      : "";
+
+    const venueDataBlock = hasVenueData
+      ? `\n\nVENUE DATA:\n${venueListForPrompt}`
+      : "";
+
+    // JSON response schema — includes "id" when venue data is available
+    const responseSchema = hasVenueData
+      ? `{
+  "summary": "Brief one-liner response to their query",
+  "suggestions": [
+    {
+      "id": "EXACT place ID from VENUE DATA — copy verbatim, e.g. ChIJxxxxxx",
+      "category": "food|nightlife|culture|relaxation|activity|wellness|shopping|events",
+      "why": "One sentence why this fits their request",
+      "best_time": "7pm-11pm",
+      "estimated_cost_per_person": 150000,
+      "currency": "IDR",
+      "is_event": false,
+      "event_details": null,
+      "pro_tip": "Insider hack or tip (null if none)",
+      "what_to_order": "Specific dish or drink (null if not relevant)",
+      "specific_night": null,
+      "opening_hours": null,
+      "full_description": "2-3 sentence detailed description"
+    }
+  ]
+}
+
+Rules for the response:
+- The "id" field MUST be copied exactly from the VENUE DATA list. Do not modify or fabricate IDs.
+- Set is_event to true ONLY for time-specific happenings — NOT for permanent venues.
+- When is_event is true, event_details MUST describe the event (e.g. "DJ Set by [name], 10pm-3am, IDR 200k cover").
+- pro_tip should be a genuine insider tip, not generic advice. Think: "Ask for the secret menu" or "Sit upstairs for the view".
+- what_to_order: specific items, not generic ("The wagyu tartare" not "try their food").`
+      : suggestionJsonSchema(context.destination);
+
+    // ---- Build system prompt ----
     let systemPrompt: string;
 
     if (feelingLucky) {
@@ -906,6 +993,7 @@ Deno.serve(async (req) => {
 ${locationNote}
 ${gpsNote}
 ${locationEnforcement}
+${venueConstraint}
 ${categoryHint}
 
 Your job: suggest 3-5 genuinely surprising, unusual, hidden-gem experiences that most tourists would NEVER find. Think:
@@ -923,9 +1011,9 @@ Your summary should be playful and confident, like: "Okay, trust me on these..."
 Each suggestion MUST have a pro_tip with a genuine insider hack.
 
 Respond in this exact JSON format:
-${suggestionJsonSchema(context.destination)}
+${responseSchema}
 
-Return ONLY valid JSON, no other text.`;
+Return ONLY valid JSON, no other text.${venueDataBlock}`;
     } else if (isStructured) {
       // -- Structured request: skip interpretation, use filters directly --
       const categoryDesc =
@@ -936,6 +1024,7 @@ Return ONLY valid JSON, no other text.`;
 ${locationNote}
 ${gpsNote}
 ${locationEnforcement}
+${venueConstraint}
 
 Find the best ${categoryDesc} using these exact filters:
 - Timing: ${whenArr.length ? whenArr.join(" or ") : "any time"} (${dateStr}, ${dayOfWeek})
@@ -951,15 +1040,16 @@ Suggest 3-5 specific, real venues or activities. Consider:
 - Only suggest real, existing places (not generic descriptions)
 
 Respond in this exact JSON format:
-${suggestionJsonSchema(context.destination)}
+${responseSchema}
 
-Return ONLY valid JSON, no other text.`;
+Return ONLY valid JSON, no other text.${venueDataBlock}`;
     } else {
       // -- Free-text request: AI interprets intent --
       systemPrompt = `You are Junto's concierge for a group of ${groupSize} traveling in ${context.destination}. Budget level: ${budgetLevel}. Vibes: ${vibes}.
 ${locationNote}
 ${gpsNote}
 ${locationEnforcement}
+${venueConstraint}
 
 The user is asking about activities for ${dateStr} (${timeOfDay}).
 ${hotelNote}
@@ -971,9 +1061,9 @@ Suggest 3-5 specific, real venues or activities that match their query. Consider
 - Only suggest real, existing places (not generic descriptions)
 
 Respond in this exact JSON format:
-${suggestionJsonSchema(context.destination)}
+${responseSchema}
 
-Return ONLY valid JSON, no other text.`;
+Return ONLY valid JSON, no other text.${venueDataBlock}`;
     }
 
     // -- Add exclusion list when paginating ("show more") --
@@ -1075,80 +1165,90 @@ Return ONLY valid JSON, no other text.`;
       throw new Error("AI response missing suggestions array");
     }
 
-    // ---- Enrich suggestions with Google Places data + validation ----
-    const enriched = await Promise.all(
-      parsed.suggestions.map(async (s: Record<string, unknown>) => {
-        const aiName = (s.name as string) || "";
-        const aiCategory = (s.category as string) || "";
-        let searchQuery =
-          (s.search_query as string) || `${aiName} ${context.destination}`;
+    // ---- Validate & enrich suggestions ----
+    let enriched: Record<string, unknown>[];
 
-        // Append specific location to improve Google Places accuracy
-        if (specificLocation && !searchQuery.toLowerCase().includes(specificLocation.split(",")[0].trim().toLowerCase())) {
-          searchQuery = searchQuery.replace(
-            new RegExp(`\\b${context.destination}\\b`, "i"),
-            `${specificLocation.split(",")[0].trim()} ${context.destination}`,
-          );
+    if (hasVenueData) {
+      // Places-first pipeline: validate AI picks against real venue data
+      const validated = validateAIResponse(
+        parsed.suggestions,
+        venueData,
+        searchLat!,
+        searchLng!,
+        excludePlaceIds,
+      );
+
+      // Map validated results to frontend-compatible shape
+      enriched = validated.map((v) => {
+        const photos = (v.photos as Array<{ name: string }>) || [];
+        let photo_url: string | null = null;
+        if (googleKey && photos.length > 0 && photos[0]?.name) {
+          photo_url = `https://places.googleapis.com/v1/${photos[0].name}/media?maxWidthPx=800&key=${googleKey}`;
         }
 
-        let placeData: PlaceResult = { ...EMPTY_PLACE };
-        let verified = true; // assume verified unless we detect a mismatch
-
-        if (googleKey) {
-          placeData = await lookupPlace(searchQuery, googleKey);
-
-          // Validate: does Google's result match what the AI suggested?
-          if (placeData._displayName && !validatePlaceMatch(aiName, aiCategory, placeData)) {
-            console.log(
-              `[concierge-suggest] mismatch for "${aiName}" (${aiCategory}): Google returned "${placeData._displayName}" (types: ${placeData._types.join(",")})  — retrying`,
-            );
-
-            // Retry with a more specific query: "{name} {category} {location}"
-            const retryQuery = `${aiName} ${aiCategory} ${specificLocation || context.destination}`;
-            const retryData = await lookupPlace(retryQuery, googleKey);
-
-            if (retryData._displayName && validatePlaceMatch(aiName, aiCategory, retryData)) {
-              // Retry succeeded — use the better result
-              placeData = retryData;
-            } else {
-              // Still a mismatch — drop Google data entirely
-              console.log(
-                `[concierge-suggest] retry also mismatched for "${aiName}": "${retryData._displayName}" — marking not_verified`,
-              );
-              placeData = { ...EMPTY_PLACE };
-              verified = false;
-            }
-          }
-        }
-
-        // Compute distance from hotel if both positions are known
         let distance_km: number | null = null;
         if (
           context.hotel_location &&
-          typeof placeData.lat === "number" &&
-          typeof placeData.lng === "number"
+          typeof v.lat === "number" &&
+          typeof v.lng === "number"
         ) {
           distance_km =
             Math.round(
               haversineKm(
                 context.hotel_location.lat,
                 context.hotel_location.lng,
-                placeData.lat as number,
-                placeData.lng as number,
+                v.lat,
+                v.lng,
               ) * 10,
-            ) / 10; // 1 decimal place
+            ) / 10;
         }
 
-        // Always construct maps URL as www.google.com/maps/search — never maps.google.com/?cid=
+        const venueName = (v.name as string) || "";
+        const mapsUrl = venueName
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + " " + searchLocationName)}`
+          : (v.googleMapsUri as string) ?? null;
+
+        return {
+          name: venueName,
+          category: (v.category as string) || "",
+          why: v.why ?? null,
+          best_time: v.best_time ?? null,
+          estimated_cost_per_person: v.estimated_cost_per_person ?? null,
+          currency: v.currency ?? null,
+          is_event: v.is_event ?? false,
+          event_details: v.event_details ?? null,
+          booking_url: v.booking_url ?? null,
+          pro_tip: v.pro_tip ?? null,
+          what_to_order: v.what_to_order ?? null,
+          specific_night: v.specific_night ?? null,
+          opening_hours: v.opening_hours ?? null,
+          full_description: v.description ?? null,
+          photo_url,
+          rating: v.rating as number | null,
+          totalRatings: v.userRatingCount as number | null,
+          googleMapsUrl: mapsUrl,
+          address: (v.address as string) ?? null,
+          lat: (v.lat as number) ?? null,
+          lng: (v.lng as number) ?? null,
+          priceLevel: (v.priceLevel as string) ?? null,
+          place_id: (v.id as string) || null,
+          not_verified: false,
+          distance_km,
+        };
+      });
+    } else {
+      // Fallback: no venue data — return AI suggestions without Google enrichment
+      enriched = parsed.suggestions.map((s) => {
+        const aiName = (s.name as string) || "";
         const mapsUrl = aiName
-          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(aiName + " " + (specificLocation || context.destination))}`
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(aiName + " " + searchLocationName)}`
           : null;
 
         return {
           name: aiName,
-          category: aiCategory,
-          why: s.why,
-          best_time: s.best_time,
+          category: (s.category as string) || "",
+          why: s.why ?? null,
+          best_time: s.best_time ?? null,
           estimated_cost_per_person: s.estimated_cost_per_person ?? null,
           currency: s.currency ?? null,
           is_event: s.is_event ?? false,
@@ -1159,22 +1259,20 @@ Return ONLY valid JSON, no other text.`;
           specific_night: s.specific_night ?? null,
           opening_hours: s.opening_hours ?? null,
           full_description: s.full_description ?? null,
-          // Google Places enrichment (dropped when not_verified)
-          photo_url: placeData.photo_url,
-          rating: placeData.rating,
-          totalRatings: placeData.totalRatings,
+          photo_url: null,
+          rating: null,
+          totalRatings: null,
           googleMapsUrl: mapsUrl,
-          address: placeData.address,
-          lat: placeData.lat,
-          lng: placeData.lng,
-          priceLevel: placeData.priceLevel,
-          // Validation flag
-          not_verified: !verified,
-          // Computed
-          distance_km,
+          address: null,
+          lat: null,
+          lng: null,
+          priceLevel: null,
+          place_id: null,
+          not_verified: true,
+          distance_km: null,
         };
-      }),
-    );
+      });
+    }
 
     // ---- Save assistant message ----
     const { error: insertAssistantErr } = await supabase
