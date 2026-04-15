@@ -1684,6 +1684,10 @@ Suggest DIFFERENT venues and events only.`;
     // ---- Validate & enrich suggestions ----
     let enriched: Record<string, unknown>[];
 
+    console.log(`[concierge-suggest] hasVenueData=${hasVenueData} (${venueData.length} venues), hasEventData=${hasEventData}`);
+    console.log(`[concierge-suggest] AI suggestions IDs: ${parsed.suggestions.map((s: Record<string, unknown>) => `"${s.id ?? 'NONE'}"`).join(", ")}`);
+    console.log(`[concierge-suggest] Venue IDs available: ${venueData.map(v => `"${v.id}"`).join(", ")}`);
+
     if (hasVenueData) {
       // Places-first pipeline: validate AI picks against real venue data
       const validated = validateAIResponse(
@@ -1693,6 +1697,7 @@ Suggest DIFFERENT venues and events only.`;
         searchLng!,
         excludePlaceIds,
       );
+      console.log(`[concierge-suggest] After validation: ${validated.length} of ${parsed.suggestions.length} passed`);
 
       // Map validated results to frontend-compatible shape
       enriched = validated.map((v) => {
