@@ -415,6 +415,273 @@ async function lookupPlace(
 }
 
 // ---------------------------------------------------------------------------
+// Interfaces for batch Places pipeline
+// ---------------------------------------------------------------------------
+
+interface PlacesSearchQuery {
+  textQuery: string;
+  includedType?: string;
+  priceLevels?: string[];
+  locationBias: {
+    circle: {
+      center: { latitude: number; longitude: number };
+      radius: number;
+    };
+  };
+}
+
+interface BatchPlaceResult {
+  id: string;
+  displayName: string | null;
+  formattedAddress: string | null;
+  location: { latitude: number; longitude: number } | null;
+  rating: number | null;
+  userRatingCount: number | null;
+  priceLevel: string | null;
+  types: string[];
+  photos: Array<{ name: string }>;
+  googleMapsUri: string | null;
+  businessStatus: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// buildPlacesQueries — generate 3-4 Google Places Text Search query objects
+// from structured filters (no LLM involved)
+// ---------------------------------------------------------------------------
+function buildPlacesQueries(
+  category: string,
+  vibes: string[],
+  budget: string | undefined,
+  location: { name: string; lat: number; lng: number },
+  customText?: string,
+): PlacesSearchQuery[] {
+  // Category → base search terms
+  const searchTermsByCategory: Record<string, string[]> = {
+    eat: ["restaurant", "dining", "dinner"],
+    drink: ["bar", "cocktail bar", "pub"],
+    party: ["nightclub", "nightlife", "party venue"],
+    explore: ["things to do", "attractions", "must visit"],
+    relax: ["spa", "wellness", "massage"],
+    workout: ["gym", "fitness center", "crossfit"],
+    events: ["events", "festival", "live music"],
+    surprise: ["hidden gem", "unique experience", "local favorite"],
+  };
+
+  // Only assign includedType for categories with a clear 1:1 mapping
+  const includedTypeMap: Record<string, string> = {
+    eat: "restaurant",
+    drink: "bar",
+    workout: "gym",
+    relax: "spa",
+  };
+
+  // Budget string → Google Places priceLevels enum values
+  const budgetToPriceLevels: Record<string, string[]> = {
+    "$": ["PRICE_LEVEL_INEXPENSIVE"],
+    "$$": ["PRICE_LEVEL_MODERATE"],
+    "$$$": ["PRICE_LEVEL_EXPENSIVE"],
+  };
+
+  const terms = searchTermsByCategory[category] || searchTermsByCategory.explore;
+  const includedType = includedTypeMap[category];
+  const priceLevels = budget ? budgetToPriceLevels[budget] : undefined;
+
+  const locationBias = {
+    circle: {
+      center: { latitude: location.lat, longitude: location.lng },
+      radius: 15000,
+    },
+  };
+
+  const makeQuery = (textQuery: string): PlacesSearchQuery => ({
+    textQuery,
+    ...(includedType && { includedType }),
+    ...(priceLevels && { priceLevels }),
+    locationBias,
+  });
+
+  const queries: PlacesSearchQuery[] = [];
+
+  // Query 1: vibe + primary term + location (e.g. "romantic restaurant Canggu")
+  const primaryVibe = vibes.length > 0 ? vibes[0] : "";
+  queries.push(
+    makeQuery(
+      primaryVibe
+        ? `${primaryVibe} ${terms[0]} ${location.name}`
+        : `best ${terms[0]} ${location.name}`,
+    ),
+  );
+
+  // Query 2: secondary vibe/term + location (e.g. "fine dining Canggu")
+  const secondaryVibe = vibes.length > 1 ? vibes[1] : "";
+  queries.push(
+    makeQuery(
+      secondaryVibe
+        ? `${secondaryVibe} ${terms[1]} ${location.name}`
+        : `${terms[1]} ${location.name}`,
+    ),
+  );
+
+  // Query 3: broader search (e.g. "best dinner Canggu")
+  queries.push(makeQuery(`best ${terms[2]} ${location.name}`));
+
+  // Query 4 (optional): custom text with location appended
+  if (customText) {
+    queries.push(makeQuery(`${customText} ${location.name}`));
+  }
+
+  return queries;
+}
+
+// ---------------------------------------------------------------------------
+// searchPlacesBatch — run all queries against Google Places Text Search API
+// (New) in parallel, deduplicate, and filter excluded IDs
+// ---------------------------------------------------------------------------
+async function searchPlacesBatch(
+  queries: PlacesSearchQuery[],
+  googleKey: string,
+  excludePlaceIds: string[] = [],
+): Promise<BatchPlaceResult[]> {
+  const excludeSet = new Set(excludePlaceIds);
+
+  const allResults = await Promise.all(
+    queries.map(async (q) => {
+      try {
+        const res = await fetch(
+          "https://places.googleapis.com/v1/places:searchText",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": googleKey,
+              "X-Goog-FieldMask":
+                "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.types,places.photos,places.googleMapsUri,places.businessStatus",
+            },
+            body: JSON.stringify(q),
+          },
+        );
+
+        if (!res.ok) return [];
+
+        const data = await res.json();
+        return (data.places ?? []) as Array<Record<string, unknown>>;
+      } catch {
+        return [];
+      }
+    }),
+  );
+
+  // Flatten and deduplicate by place ID, filtering out excluded IDs
+  const seen = new Set<string>();
+  const deduped: BatchPlaceResult[] = [];
+
+  for (const places of allResults) {
+    for (const p of places) {
+      const id = p.id as string;
+      if (!id || seen.has(id) || excludeSet.has(id)) continue;
+      seen.add(id);
+
+      deduped.push({
+        id,
+        displayName:
+          (p.displayName as { text?: string } | undefined)?.text ?? null,
+        formattedAddress: (p.formattedAddress as string) ?? null,
+        location:
+          (p.location as { latitude: number; longitude: number } | undefined) ??
+          null,
+        rating: (p.rating as number) ?? null,
+        userRatingCount: (p.userRatingCount as number) ?? null,
+        priceLevel: (p.priceLevel as string) ?? null,
+        types: Array.isArray(p.types) ? (p.types as string[]) : [],
+        photos: Array.isArray(p.photos)
+          ? (p.photos as Array<{ name: string }>)
+          : [],
+        googleMapsUri: (p.googleMapsUri as string) ?? null,
+        businessStatus: (p.businessStatus as string) ?? null,
+      });
+    }
+  }
+
+  return deduped;
+}
+
+// ---------------------------------------------------------------------------
+// validateAIResponse — pure-code validation of AI picks against Google Places
+// ground truth. Merges AI enrichment (description, pro_tip) with verified data.
+// ---------------------------------------------------------------------------
+function validateAIResponse(
+  aiResponse: Array<Record<string, unknown>>,
+  originalPlaces: BatchPlaceResult[],
+  searchLat: number,
+  searchLng: number,
+  excludeIds: string[] = [],
+): Array<Record<string, unknown>> {
+  const placesById = new Map<string, BatchPlaceResult>();
+  for (const p of originalPlaces) {
+    placesById.set(p.id, p);
+  }
+  const excludeSet = new Set(excludeIds);
+
+  const validated: Array<Record<string, unknown>> = [];
+
+  for (const item of aiResponse) {
+    const id = item.id as string;
+    if (!id) continue;
+
+    // Skip excluded IDs
+    if (excludeSet.has(id)) continue;
+
+    // ID must exist in the original Places results
+    const place = placesById.get(id);
+    if (!place) continue;
+
+    // Coordinates must be within 25 km of the search center
+    if (place.location) {
+      const dist = haversineKm(
+        searchLat,
+        searchLng,
+        place.location.latitude,
+        place.location.longitude,
+      );
+      if (dist > 25) continue;
+    }
+
+    // businessStatus must be OPERATIONAL (or not set)
+    if (place.businessStatus && place.businessStatus !== "OPERATIONAL") continue;
+
+    // Merge: Google Places ground truth + AI enrichment fields
+    validated.push({
+      id: place.id,
+      name: place.displayName,
+      address: place.formattedAddress,
+      lat: place.location?.latitude ?? null,
+      lng: place.location?.longitude ?? null,
+      rating: place.rating,
+      userRatingCount: place.userRatingCount,
+      priceLevel: place.priceLevel,
+      types: place.types,
+      photos: place.photos,
+      googleMapsUri: place.googleMapsUri,
+      businessStatus: place.businessStatus,
+      // AI-provided enrichment
+      description: item.description ?? item.full_description ?? null,
+      pro_tip: item.pro_tip ?? null,
+      why: item.why ?? null,
+      category: item.category ?? null,
+      best_time: item.best_time ?? null,
+      estimated_cost_per_person: item.estimated_cost_per_person ?? null,
+      currency: item.currency ?? null,
+      what_to_order: item.what_to_order ?? null,
+      booking_url: item.booking_url ?? null,
+      is_event: item.is_event ?? false,
+      event_details: item.event_details ?? null,
+    });
+  }
+
+  return validated;
+}
+
+// ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
