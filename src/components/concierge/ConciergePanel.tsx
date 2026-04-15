@@ -1281,8 +1281,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       </button>
                     )}
                   </div>
-                  {/* Desktop: 2-column grid */}
-                  <DesktopGrid>
+                  {/* Saved spots grid */}
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 md:gap-3">
                     {savedSpots.map((spot, i) => (
                       <SuggestionCard
                         key={spot.name}
@@ -1295,7 +1295,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         onSaveChange={() => setSavedVersion(v => v + 1)}
                       />
                     ))}
-                  </DesktopGrid>
+                  </div>
                 </div>
               )}
 
@@ -1441,8 +1441,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     {isLucky ? "Hidden gems & local secrets" : "Insider picks"}
                   </p>
 
-                  {/* Results — mobile: vertical stack, desktop: 2-col grid */}
-                  <div className="space-y-3 px-3 md:hidden">
+                  {/* Results — responsive grid: 1 col mobile, 2 col tablet, 3 col desktop, 4 col large */}
+                  <div className="grid grid-cols-1 gap-3 px-3 md:px-0 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                     {(displayedResults.suggestions ?? []).map((s, i) => (
                       <SuggestionCard
                         key={`${displayedResults.id}-${i}`}
@@ -1459,43 +1459,28 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       />
                     ))}
                   </div>
-                  <DesktopGrid>
-                    {(displayedResults.suggestions ?? []).map((s, i) => (
-                      <SuggestionCard
-                        key={`${displayedResults.id}-${i}`}
-                        suggestion={s}
-                        messageId={displayedResults.id}
-                        index={i}
-                        tripId={tripId}
-                        tripDays={tripDays}
-                        onAddToPlan={onAddToPlan}
-                        animDelay={i * 50}
-                        isLucky={isLucky}
-                        luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
-                        onSaveChange={() => setSavedVersion(v => v + 1)}
-                      />
-                    ))}
-                  </DesktopGrid>
 
                   {/* Extra results from "Show more" */}
                   {extraResults.length > 0 && (
-                    <div className="space-y-3 px-3 md:px-0 pt-1 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
-                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase lg:col-span-2">More picks</p>
-                      {extraResults.map((s, i) => (
-                        <SuggestionCard
-                          key={`extra-${i}`}
-                          suggestion={s}
-                          messageId={`extra-${i}`}
-                          index={i}
-                          tripId={tripId}
-                          tripDays={tripDays}
-                          onAddToPlan={onAddToPlan}
-                          animDelay={i * 50}
-                          isLucky={isLucky}
-                          luckyBadge={isLucky ? LUCKY_BADGES[((displayedResults?.suggestions?.length ?? 0) + i) % LUCKY_BADGES.length] : undefined}
-                          onSaveChange={() => setSavedVersion(v => v + 1)}
-                        />
-                      ))}
+                    <div className="px-3 md:px-0 pt-1">
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">More picks</p>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                        {extraResults.map((s, i) => (
+                          <SuggestionCard
+                            key={`extra-${i}`}
+                            suggestion={s}
+                            messageId={`extra-${i}`}
+                            index={i}
+                            tripId={tripId}
+                            tripDays={tripDays}
+                            onAddToPlan={onAddToPlan}
+                            animDelay={i * 50}
+                            isLucky={isLucky}
+                            luckyBadge={isLucky ? LUCKY_BADGES[((displayedResults?.suggestions?.length ?? 0) + i) % LUCKY_BADGES.length] : undefined}
+                            onSaveChange={() => setSavedVersion(v => v + 1)}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
 
