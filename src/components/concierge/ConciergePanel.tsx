@@ -6,7 +6,7 @@ import {
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
-  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown, ChevronLeft, ChevronRight,
+  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -264,70 +264,10 @@ function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (ke
 /*  HorizontalCarousel (desktop only)                                  */
 /* ------------------------------------------------------------------ */
 
-function HorizontalCarousel({ children, cardWidth = 350 }: { children: ReactNode; cardWidth?: number }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", checkScroll, { passive: true });
-    const ro = new ResizeObserver(checkScroll);
-    ro.observe(el);
-    return () => { el.removeEventListener("scroll", checkScroll); ro.disconnect(); };
-  }, [checkScroll, children]);
-
-  const scroll = (dir: "left" | "right") => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir === "left" ? -cardWidth : cardWidth, behavior: "smooth" });
-  };
-
+function DesktopGrid({ children }: { children: ReactNode }) {
   return (
-    <div className="hidden md:block relative group/carousel">
-      <div
-        ref={scrollRef}
-        className="flex gap-3 overflow-x-auto pl-0 pr-0 snap-x snap-mandatory scrollbar-hide"
-        style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          marginRight: "calc(-1 * (100vw - 100%) / 2 - 2rem)",
-          paddingRight: "max(2rem, calc((100vw - 100%) / 2))",
-        }}
-      >
-        {Array.isArray(children) ? children.map((child, i) => (
-          <div key={i} className="shrink-0 snap-start" style={{ width: cardWidth }}>
-            {child}
-          </div>
-        )) : <div className="shrink-0 snap-start" style={{ width: cardWidth }}>{children}</div>}
-      </div>
-      {/* Left arrow */}
-      {canScrollLeft && (
-        <button
-          onClick={() => scroll("left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 h-9 w-9 rounded-full bg-[#0D9488] text-white shadow-lg flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-[#0D9488]/90"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-      )}
-      {/* Right arrow */}
-      {canScrollRight && (
-        <button
-          onClick={() => scroll("right")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-[#0D9488] text-white shadow-lg flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-[#0D9488]/90"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      )}
+    <div className="hidden md:grid md:grid-cols-2 md:gap-3 md:px-0">
+      {children}
     </div>
   );
 }
@@ -434,15 +374,28 @@ function SuggestionCard({
   const googleSearchBookUrl = `https://www.google.com/search?q=book+${encodeURIComponent(suggestion.name + " " + (suggestion.address || ""))}`;
   const mapsUrl = buildMapsUrl(suggestion.name, suggestion.address);
 
+  // Event card: parse "Event Name at Venue" pattern
+  const isEvent = suggestion.is_event;
+  const eventUrl = s.url || s.booking_url || null;
+  const eventThumbnail = s.thumbnail || null;
+  const atMatch = isEvent && suggestion.name ? suggestion.name.match(/^(.+?)\s+at\s+(.+)$/i) : null;
+  const eventTitle = atMatch ? atMatch[1] : suggestion.name;
+  const eventVenue = atMatch ? atMatch[2] : null;
+
+  // Resolve image: event thumbnail > photo_url > placeholder
+  const cardImage = isEvent && eventThumbnail
+    ? eventThumbnail
+    : (suggestion.photo_url && !suggestion.not_verified ? suggestion.photo_url : null);
+
   return (
     <div
-      className={`rounded-xl border overflow-hidden shadow-sm ${isLucky ? "border-amber-200 dark:border-amber-700/30" : "border-border"} bg-card`}
+      className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${isLucky ? "ring-1 ring-amber-200 dark:ring-amber-700/30" : ""}`}
       style={{ animation: `fade-in 0.3s ease-out ${(animDelay || 0)}ms both` }}
     >
       {/* Photo — full width */}
       <div className="w-full h-[180px] bg-muted overflow-hidden relative">
-        {suggestion.photo_url && !suggestion.not_verified ? (
-          <img src={suggestion.photo_url} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
+        {cardImage ? (
+          <img src={cardImage} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-accent/30">
             <MapPin className="h-8 w-8 text-muted-foreground/30" />
@@ -452,8 +405,8 @@ function SuggestionCard({
           <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 text-white backdrop-blur-sm shadow-sm">
             <Gem className="h-3 w-3" /> {luckyBadge}
           </span>
-        ) : suggestion.is_event ? (
-          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-amber-500/90 text-white backdrop-blur-sm animate-pulse">
+        ) : isEvent ? (
+          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-[#0D9488] text-white backdrop-blur-sm">
             <CalendarHeart className="h-3 w-3" /> Live Event
           </span>
         ) : (
@@ -461,18 +414,20 @@ function SuggestionCard({
             {suggestion.category}
           </span>
         )}
-        {suggestion.not_verified && (
-          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-medium px-2 py-0.5 rounded-full bg-yellow-500/80 text-white backdrop-blur-sm">
-            <Signal className="h-3 w-3" /> Not verified
-          </span>
-        )}
       </div>
 
       <div className="p-3.5 space-y-2.5">
         {/* Name + rating */}
         <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-1">{suggestion.name}</h4>
-          {suggestion.rating != null && !suggestion.not_verified && (
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-2">{eventTitle}</h4>
+            {eventVenue && (
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                <MapPin className="h-3 w-3 shrink-0" /> {eventVenue}
+              </p>
+            )}
+          </div>
+          {suggestion.rating != null && !suggestion.not_verified && !isEvent && (
             <div className="flex items-center gap-0.5 text-xs shrink-0">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
               <span className="font-medium">{suggestion.rating.toFixed(1)}</span>
@@ -483,16 +438,16 @@ function SuggestionCard({
           )}
         </div>
 
+        {/* Event date/time — prominent for events */}
+        {isEvent && suggestion.event_details && (
+          <p className="text-xs font-semibold text-[#0D9488] leading-snug">
+            {suggestion.event_details}
+          </p>
+        )}
+
         {/* Why */}
         {suggestion.why && (
           <p className="text-xs text-muted-foreground leading-snug line-clamp-2">{suggestion.why}</p>
-        )}
-
-        {/* Event details */}
-        {suggestion.is_event && suggestion.event_details && (
-          <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 leading-snug">
-            {suggestion.event_details}
-          </p>
         )}
 
         {/* Meta */}
@@ -544,6 +499,16 @@ function SuggestionCard({
               <p className="text-xs text-muted-foreground leading-relaxed">{s.full_description}</p>
             )}
             <div className="flex gap-2 pt-1 flex-wrap">
+              {isEvent && eventUrl ? (
+                <a
+                  href={eventUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#0D9488]/10 text-[#0D9488] hover:bg-[#0D9488]/20 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> View Event
+                </a>
+              ) : null}
               <a
                 href={mapsUrl}
                 target="_blank"
@@ -552,7 +517,7 @@ function SuggestionCard({
               >
                 <ExternalLink className="h-3.5 w-3.5" /> Google Maps
               </a>
-              {bookingUrl ? (
+              {!isEvent && bookingUrl ? (
                 <a
                   href={bookingUrl}
                   target="_blank"
@@ -561,7 +526,7 @@ function SuggestionCard({
                 >
                   <Globe className="h-3.5 w-3.5" /> Visit website
                 </a>
-              ) : (
+              ) : !isEvent ? (
                 <a
                   href={googleSearchBookUrl}
                   target="_blank"
@@ -570,7 +535,7 @@ function SuggestionCard({
                 >
                   <Search className="h-3.5 w-3.5" /> Book
                 </a>
-              )}
+              ) : null}
             </div>
           </div>
         )}
@@ -595,14 +560,25 @@ function SuggestionCard({
 
           <div className="flex items-center gap-1">
             {!expanded && (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent transition-colors"
-              >
-                <ExternalLink className="h-3 w-3" /> Maps
-              </a>
+              isEvent && eventUrl ? (
+                <a
+                  href={eventUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" /> View Event
+                </a>
+              ) : (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" /> Maps
+                </a>
+              )
             )}
             <div className="relative">
               {added ? (
@@ -1162,7 +1138,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         </div>
 
         {/* Content area */}
-        <div className={`min-h-0 flex-1 ${stage === "what" && savedCount === 0 ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`} style={{ paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
+        <div className={`min-h-0 flex-1 ${stage === "what" && savedCount === 0 ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`} style={{ willChange: "transform", paddingBottom: stage === "refine" ? "120px" : "env(safe-area-inset-bottom, 0px)" }}>
 
           {/* =================== STAGE 1: WHAT =================== */}
           {stage === "what" && (
@@ -1308,8 +1284,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       </button>
                     )}
                   </div>
-                  {/* Desktop: horizontal carousel */}
-                  <HorizontalCarousel cardWidth={350}>
+                  {/* Desktop: 2-column grid */}
+                  <DesktopGrid>
                     {savedSpots.map((spot, i) => (
                       <SuggestionCard
                         key={spot.name}
@@ -1322,7 +1298,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         onSaveChange={() => setSavedVersion(v => v + 1)}
                       />
                     ))}
-                  </HorizontalCarousel>
+                  </DesktopGrid>
                 </div>
               )}
 
@@ -1486,43 +1462,23 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       />
                     ))}
                   </div>
-                  {displayedResults.suggestions!.length >= 3 ? (
-                    <HorizontalCarousel cardWidth={380}>
-                      {displayedResults.suggestions!.map((s, i) => (
-                        <SuggestionCard
-                          key={`${displayedResults.id}-${i}`}
-                          suggestion={s}
-                          messageId={displayedResults.id}
-                          index={i}
-                          tripId={tripId}
-                          tripDays={tripDays}
-                          onAddToPlan={onAddToPlan}
-                          animDelay={i * 50}
-                          isLucky={isLucky}
-                          luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
-                          onSaveChange={() => setSavedVersion(v => v + 1)}
-                        />
-                      ))}
-                    </HorizontalCarousel>
-                  ) : (
-                    <div className="hidden md:grid md:grid-cols-2 md:gap-3 md:px-0">
-                      {displayedResults.suggestions!.map((s, i) => (
-                        <SuggestionCard
-                          key={`${displayedResults.id}-${i}`}
-                          suggestion={s}
-                          messageId={displayedResults.id}
-                          index={i}
-                          tripId={tripId}
-                          tripDays={tripDays}
-                          onAddToPlan={onAddToPlan}
-                          animDelay={i * 50}
-                          isLucky={isLucky}
-                          luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
-                          onSaveChange={() => setSavedVersion(v => v + 1)}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <DesktopGrid>
+                    {displayedResults.suggestions!.map((s, i) => (
+                      <SuggestionCard
+                        key={`${displayedResults.id}-${i}`}
+                        suggestion={s}
+                        messageId={displayedResults.id}
+                        index={i}
+                        tripId={tripId}
+                        tripDays={tripDays}
+                        onAddToPlan={onAddToPlan}
+                        animDelay={i * 50}
+                        isLucky={isLucky}
+                        luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
+                        onSaveChange={() => setSavedVersion(v => v + 1)}
+                      />
+                    ))}
+                  </DesktopGrid>
 
                   {/* Extra results from "Show more" */}
                   {extraResults.length > 0 && (
