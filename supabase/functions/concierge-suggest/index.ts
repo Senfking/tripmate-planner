@@ -253,9 +253,10 @@ function eventSearchInstructions(
 CRITICAL — TIME-SENSITIVE REQUEST (${whenLabel}, ${dateStr}, ${dayOfWeek}):
 The user is looking for ${catLabel} in ${destination} for a specific time.
 You have been provided EVENT DATA from a web search above. Use it.
-- At least 1-2 of your suggestions MUST be specific events from the EVENT DATA section.
-- Mark them with "type": "event" and "is_event": true, and fill in event_details with times, performers, cover charges, etc.
-- Prioritize events that match the requested date/time over generic venue recommendations.`;
+- Return a MIX of events AND permanent venues. Out of 3-5 suggestions, include 1-2 specific events from the EVENT DATA section AND 2-3 relevant permanent venues from the VENUE DATA section.
+- Mark events with "type": "event" and "is_event": true, and fill in event_details with times, performers, cover charges, etc.
+- The permanent venues you pick should be ones known for ${catLabel} — places a local would recommend for this kind of night/activity.
+- Do NOT return only events or only venues. The user wants to know what's happening AND where to go.`;
   }
 
   // No event data available — instruct the LLM to use its own knowledge
@@ -358,6 +359,48 @@ async function searchEvents(
   return [];
 }
 
+// Deduplicate event search results by URL (exact) and name (fuzzy token subset).
+// Catches "Day Zero" vs "Day Zero Bali" as the same event.
+function deduplicateEventResults(
+  batches: EventSearchResult[][],
+  limit = 20,
+): EventSearchResult[] {
+  const seenUrls = new Set<string>();
+  const seenTokenSets: Set<string>[] = [];
+  const merged: EventSearchResult[] = [];
+
+  for (const batch of batches) {
+    for (const r of batch) {
+      // URL-based dedup (exact match)
+      if (r.url && seenUrls.has(r.url)) continue;
+
+      // Name-based fuzzy dedup via token subset
+      const tokNew = new Set(tokenize(r.name));
+      let nameIsDupe = false;
+      if (tokNew.size > 0) {
+        for (const prevSet of seenTokenSets) {
+          const [smaller, larger] =
+            tokNew.size <= prevSet.size
+              ? [tokNew, prevSet]
+              : [prevSet, tokNew];
+          let allFound = true;
+          for (const w of smaller) {
+            if (!larger.has(w)) { allFound = false; break; }
+          }
+          if (allFound) { nameIsDupe = true; break; }
+        }
+      }
+      if (nameIsDupe) continue;
+
+      if (r.url) seenUrls.add(r.url);
+      if (tokNew.size > 0) seenTokenSets.push(tokNew);
+      merged.push(r);
+    }
+  }
+
+  return merged.slice(0, limit);
+}
+
 async function searchEventsViaBrave(
   apiKey: string,
   queries: string[],
@@ -407,24 +450,14 @@ async function searchEventsViaBrave(
     }
   };
 
-  // Run all queries in parallel, deduplicate by URL
+  // Run all queries in parallel, deduplicate by URL + fuzzy name
   const allResults = await Promise.all(queries.map(runQuery));
 
-  const seen = new Set<string>();
-  const merged: EventSearchResult[] = [];
-  for (const batch of allResults) {
-    for (const r of batch) {
-      const key = r.url || r.name;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push(r);
-    }
-  }
-
+  const merged = deduplicateEventResults(allResults);
   console.log(
     `[concierge-suggest] Brave search total: ${merged.length} unique results`,
   );
-  return merged.slice(0, 20);
+  return merged;
 }
 
 async function searchEventsViaGoogleCSE(
@@ -460,21 +493,11 @@ async function searchEventsViaGoogleCSE(
 
   const allResults = await Promise.all(queries.map(runQuery));
 
-  const seen = new Set<string>();
-  const merged: EventSearchResult[] = [];
-  for (const batch of allResults) {
-    for (const r of batch) {
-      const key = r.url || r.name;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push(r);
-    }
-  }
-
+  const merged = deduplicateEventResults(allResults);
   console.log(
     `[concierge-suggest] Google CSE total: ${merged.length} unique results`,
   );
-  return merged.slice(0, 20);
+  return merged;
 }
 
 // ---------------------------------------------------------------------------
@@ -526,7 +549,7 @@ function buildPlacesQueries(
     explore: ["things to do", "attractions", "must visit"],
     relax: ["spa", "wellness", "massage"],
     workout: ["gym", "fitness center", "crossfit"],
-    events: ["events", "festival", "live music"],
+    events: ["nightclub", "live music venue", "concert venue"],
     surprise: ["hidden gem", "unique experience", "local favorite"],
   };
 
@@ -1388,8 +1411,7 @@ Deno.serve(async (req) => {
 - For VENUE suggestions: You MUST ONLY recommend venues from the VENUE DATA list provided below.
 - NEVER add or invent venues that are not in the list.
 - Every venue recommendation MUST include the exact "id" field from the provided data.
-- Your job is to RANK the best options and ENRICH them with descriptions, tips, and insights.
-- Select 3-5 venues that best match the user's request.${hasEventData ? `\n- For EVENT suggestions: You may also suggest events from the EVENT DATA section. Events use "type": "event" and do NOT need a place_id.` : ""}`
+- Your job is to RANK the best options and ENRICH them with descriptions, tips, and insights.${hasEventData ? `\n- Return a MIX: 2-3 permanent venues from VENUE DATA + 1-2 time-limited events from EVENT DATA. Do NOT return only events or only venues.\n- For EVENT suggestions: Use "type": "event" and do NOT need a place_id.` : `\n- Select 3-5 venues that best match the user's request.`}`
       : "";
 
     const venueDataBlock = hasVenueData
