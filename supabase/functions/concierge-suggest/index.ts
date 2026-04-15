@@ -1,4 +1,4 @@
-// Last updated: 2026-04-15 — event search pipeline v2.4 (name resolution fix)
+// v2.4 deployed — name resolution fix, 2026-04-15
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
