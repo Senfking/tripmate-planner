@@ -221,7 +221,9 @@ function suggestionJsonSchema(destination: string): string {
 }
 
 Rules for is_event and event_details:
-- Set is_event to true ONLY for time-specific happenings (a DJ set, a festival night, a market, a concert) — NOT for permanent venues.
+- Set is_event to true ONLY for specifically named, date-limited happenings: a festival edition (Day Zero, Epizode), a touring artist's one-off show, a themed party with a specific name and date, or a popup — NOT for permanent venues or their regular programming.
+- A venue's regular weekly/nightly programming (sunset sessions, resident DJs, weekly parties) is NOT an event. Present as a regular venue and mention the programming in pro_tip.
+- When a specific named event happens at a venue, use format "Event Name at Venue Name" as the name (e.g. "Day Zero at Savaya").
 - When is_event is true, event_details MUST be a short string like "DJ Set by [name], 10pm-3am, IDR 200k cover" or "Night Market, 6pm-midnight, free entry".
 - When is_event is false, event_details should be null.
 - pro_tip should be a genuine insider tip, not generic advice. Think: "Ask for the secret menu" or "Sit upstairs for the view".
@@ -305,7 +307,7 @@ async function searchEvents(
   const googleSearchKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
   const googleCseId = Deno.env.get("GOOGLE_CSE_ID");
 
-  // Build 3 targeted query angles
+  // Build 4 targeted query angles
   const dateObj = new Date(dateStr + "T12:00:00");
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
@@ -314,26 +316,24 @@ async function searchEvents(
   const monthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
   const cleanQuery = stripTimePhrases(userQuery);
 
-  // Query 1: User's intent + location + absolute date
+  // Query 1: Direct user intent — "{user query} {location}"
   // e.g. "electronic music events Bali April 2026"
   const q1 = `${cleanQuery} ${destination} ${monthYear}`.trim();
 
-  // Query 2: Festival / major-event focused
-  // e.g. "music festival Bali April 2026"
-  const catLabel = category
-    ? CATEGORY_DESCRIPTIONS[category] || category
-    : "events";
-  const q2 = `${catLabel} festival ${destination} ${monthYear}`.trim();
+  // Query 2: Broad listing — "events {location} {month} {year}"
+  // e.g. "events Bali April 2026"
+  const q2 = `events ${destination} ${monthYear}`.trim();
 
-  // Query 3: What's-on / listings angle
-  // e.g. "what's on Bali this week music"
-  const topicWords = cleanQuery
-    .replace(/\b(events?|in|the|a|an|for|and|or)\b/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-  const q3 = `what's on ${destination} this week ${topicWords}`.trim();
+  // Query 3: Festival specific — "festival {location} {month} {year}"
+  // e.g. "festival Bali April 2026"
+  const q3 = `festival ${destination} ${monthYear}`.trim();
 
-  const queries = [q1, q2, q3];
+  // Query 4: Site-targeted — event listing sites surface actual events, not venue pages
+  // e.g. "Bali events site:ra.co OR site:eventbrite.com OR site:dice.fm"
+  const q4 =
+    `${destination} events ${monthYear} site:ra.co OR site:eventbrite.com OR site:dice.fm`.trim();
+
+  const queries = [q1, q2, q3, q4];
   console.log(
     `[concierge-suggest] event search queries: ${JSON.stringify(queries)}`,
   );
@@ -681,7 +681,26 @@ function fuzzyNameMatch(a: string, b: string): boolean {
   if (na === nb) return true;
   // One contains the other (handles "savaya" vs "savayabalibeachclub")
   if (na.length >= 4 && nb.length >= 4) {
-    return na.includes(nb) || nb.includes(na);
+    if (na.includes(nb) || nb.includes(na)) return true;
+  }
+  // Word-level matching: extract lowercase words (≥3 chars) and check if
+  // the primary identifying word is shared. Handles "Savaya Bali" vs
+  // "Savaya Beach Club" where the normalised forms don't substring-match.
+  const wordsA = a.toLowerCase().match(/[a-z]{3,}/g) ?? [];
+  const wordsB = b.toLowerCase().match(/[a-z]{3,}/g) ?? [];
+  // Skip generic filler words
+  const filler = new Set([
+    "the", "bali", "bar", "club", "beach", "cafe", "restaurant", "hotel",
+    "resort", "lounge", "terrace", "rooftop", "garden", "pool", "spa",
+    "night", "day", "music", "live", "event", "seminyak", "canggu",
+    "ubud", "kuta", "denpasar", "uluwatu", "jimbaran", "nusa", "dua",
+  ]);
+  const sigA = wordsA.filter((w) => !filler.has(w));
+  const sigB = wordsB.filter((w) => !filler.has(w));
+  // If the first significant word (the venue's primary name) matches, it's
+  // the same place: "Savaya Bali" (sig: savaya) vs "Savaya Beach Club" (sig: savaya)
+  if (sigA.length > 0 && sigB.length > 0 && sigA[0] === sigB[0] && sigA[0].length >= 4) {
+    return true;
   }
   return false;
 }
@@ -723,11 +742,26 @@ function validateAIResponse(
       if (!eventName) continue;
 
       // FUZZY MATCH CHECK: if this "event" name matches a Google Places venue,
-      // it's a permanent venue misclassified as an event (e.g. "Savaya Bali").
-      // Reclassify it as a venue with real Places data.
+      // either reclassify as venue (plain venue name) or enrich event with venue data
+      // ("Event at Venue" format).
+      //
+      // Try matching: 1) the full event name, 2) the venue part after " at " if present
       let matchedPlace: BatchPlaceResult | undefined;
+      const atIdx = eventName.toLowerCase().lastIndexOf(" at ");
+      const venuePartOfName = atIdx > 0 ? eventName.slice(atIdx + 4).trim() : null;
+
       for (const [normName, place] of placesByName) {
-        if (fuzzyNameMatch(eventName, place.displayName ?? "")) {
+        // Try matching full event name against venue
+        const fullMatch = fuzzyNameMatch(eventName, place.displayName ?? "");
+        // Try matching just the venue portion after " at "
+        const venuePartMatch = venuePartOfName
+          ? fuzzyNameMatch(venuePartOfName, place.displayName ?? "")
+          : false;
+        const isMatch = fullMatch || venuePartMatch;
+        console.log(
+          `[concierge-suggest] fuzzy match: "${eventName}"${venuePartOfName ? ` (venue part: "${venuePartOfName}")` : ""} vs "${place.displayName}" → ${isMatch}`,
+        );
+        if (isMatch) {
           matchedPlace = place;
           break;
         }
@@ -749,36 +783,76 @@ function validateAIResponse(
           (!matchedPlace.businessStatus ||
             matchedPlace.businessStatus === "OPERATIONAL")
         ) {
-          console.log(
-            `[concierge-suggest] Reclassified "${eventName}" from event → venue (matched Places: "${matchedPlace.displayName}")`,
-          );
-          validated.push({
-            id: matchedPlace.id,
-            name: matchedPlace.displayName,
-            address: matchedPlace.formattedAddress,
-            lat: matchedPlace.location?.latitude ?? null,
-            lng: matchedPlace.location?.longitude ?? null,
-            rating: matchedPlace.rating,
-            userRatingCount: matchedPlace.userRatingCount,
-            priceLevel: matchedPlace.priceLevel,
-            types: matchedPlace.types,
-            photos: matchedPlace.photos,
-            googleMapsUri: matchedPlace.googleMapsUri,
-            businessStatus: matchedPlace.businessStatus,
-            description: item.description ?? item.full_description ?? null,
-            pro_tip: item.pro_tip ?? null,
-            why: item.why ?? null,
-            category: item.category ?? null,
-            best_time: item.best_time ?? null,
-            estimated_cost_per_person: item.estimated_cost_per_person ?? null,
-            currency: item.currency ?? null,
-            what_to_order: item.what_to_order ?? null,
-            booking_url: item.booking_url ?? null,
-            is_event: false,
-            event_details: null,
-            specific_night: item.specific_night ?? null,
-            opening_hours: item.opening_hours ?? null,
-          });
+          // Determine if this is a genuine "event at venue" or a misclassified venue.
+          // "Day Zero at Savaya" → event at venue (keep event identity, use venue data)
+          // "Savaya Bali" → misclassified venue (reclassify to venue)
+          const atIdx = eventName.toLowerCase().lastIndexOf(" at ");
+          const isEventAtVenue = atIdx > 0 && item.event_details;
+
+          if (isEventAtVenue) {
+            console.log(
+              `[concierge-suggest] Event at venue: "${eventName}" — using venue data from "${matchedPlace.displayName}" with event identity`,
+            );
+            validated.push({
+              id: matchedPlace.id,
+              name: eventName, // Keep event name as primary (e.g. "Day Zero at Savaya")
+              address: matchedPlace.formattedAddress,
+              lat: matchedPlace.location?.latitude ?? null,
+              lng: matchedPlace.location?.longitude ?? null,
+              rating: matchedPlace.rating,
+              userRatingCount: matchedPlace.userRatingCount,
+              priceLevel: matchedPlace.priceLevel,
+              types: matchedPlace.types,
+              photos: matchedPlace.photos, // Use Google Places photo
+              googleMapsUri: matchedPlace.googleMapsUri,
+              businessStatus: matchedPlace.businessStatus,
+              description: item.description ?? item.full_description ?? null,
+              pro_tip: item.pro_tip ?? null,
+              why: item.why ?? null,
+              category: "events",
+              best_time: item.best_time ?? null,
+              estimated_cost_per_person: item.estimated_cost_per_person ?? null,
+              currency: item.currency ?? null,
+              what_to_order: item.what_to_order ?? null,
+              booking_url: item.booking_url ?? item.url ?? null,
+              is_event: true,
+              event_details: item.event_details ?? null,
+              specific_night: item.specific_night ?? null,
+              opening_hours: item.opening_hours ?? null,
+              type: "event",
+            });
+          } else {
+            console.log(
+              `[concierge-suggest] Reclassified "${eventName}" from event → venue (matched Places: "${matchedPlace.displayName}")`,
+            );
+            validated.push({
+              id: matchedPlace.id,
+              name: matchedPlace.displayName,
+              address: matchedPlace.formattedAddress,
+              lat: matchedPlace.location?.latitude ?? null,
+              lng: matchedPlace.location?.longitude ?? null,
+              rating: matchedPlace.rating,
+              userRatingCount: matchedPlace.userRatingCount,
+              priceLevel: matchedPlace.priceLevel,
+              types: matchedPlace.types,
+              photos: matchedPlace.photos,
+              googleMapsUri: matchedPlace.googleMapsUri,
+              businessStatus: matchedPlace.businessStatus,
+              description: item.description ?? item.full_description ?? null,
+              pro_tip: item.pro_tip ?? null,
+              why: item.why ?? null,
+              category: item.category ?? null,
+              best_time: item.best_time ?? null,
+              estimated_cost_per_person: item.estimated_cost_per_person ?? null,
+              currency: item.currency ?? null,
+              what_to_order: item.what_to_order ?? null,
+              booking_url: item.booking_url ?? null,
+              is_event: false,
+              event_details: null,
+              specific_night: item.specific_night ?? null,
+              opening_hours: item.opening_hours ?? null,
+            });
+          }
           continue;
         }
       }
@@ -1162,34 +1236,75 @@ Deno.serve(async (req) => {
     // (excludePlaceIds is already handled by searchPlacesBatch, but name-based
     // exclusion is needed for "show more" to remove previously shown results
     // from the data injected into the prompt — otherwise the AI picks them again)
-    const excludeNamesNorm = new Set(
-      excludeNames.map((n) => normaliseName(n)),
+    //
+    // Exclude entries can be:
+    //   - Simple venue names: "Savaya Beach Club"
+    //   - Event+venue pairs: "Day Zero at Savaya" (format: "EventName at VenueName")
+    // Same venue + different event = allowed. Same venue + same event = blocked.
+    //
+    // Parse exclude entries into {event, venue} pairs. If no " at " separator,
+    // the whole string is treated as a venue-only entry.
+    const excludePairs: Array<{ event: string; venue: string }> = excludeNames.map((n) => {
+      const atIdx = n.toLowerCase().lastIndexOf(" at ");
+      if (atIdx > 0) {
+        return {
+          event: normaliseName(n.slice(0, atIdx)),
+          venue: normaliseName(n.slice(atIdx + 4)),
+        };
+      }
+      return { event: "", venue: normaliseName(n) };
+    });
+    const excludeVenueOnly = new Set(
+      excludePairs.filter((p) => !p.event).map((p) => p.venue),
     );
+
+    function isExcludedVenue(venueName: string): boolean {
+      const norm = normaliseName(venueName);
+      if (!norm) return false;
+      for (const v of excludeVenueOnly) {
+        if (v && (norm.includes(v) || v.includes(norm))) return true;
+      }
+      return false;
+    }
+
+    function isExcludedEvent(eventName: string, venueName: string): boolean {
+      const normEvent = normaliseName(eventName);
+      const normVenue = normaliseName(venueName);
+      if (!normEvent) return false;
+      for (const pair of excludePairs) {
+        if (pair.event) {
+          // Event+venue pair: block only if BOTH match
+          const eventMatch = normEvent && pair.event &&
+            (normEvent.includes(pair.event) || pair.event.includes(normEvent));
+          const venueMatch = normVenue && pair.venue &&
+            (normVenue.includes(pair.venue) || pair.venue.includes(normVenue));
+          if (eventMatch && venueMatch) return true;
+        } else {
+          // Venue-only entry: block event only if the event name itself matches
+          // (but allow a different event at the same venue)
+          if (normEvent && pair.venue &&
+            (normEvent.includes(pair.venue) || pair.venue.includes(normEvent))) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
 
     if (excludeNames.length > 0) {
       console.log(
-        `[concierge-suggest] Excluding: names=${JSON.stringify(excludeNames)}, place_ids=${JSON.stringify(excludePlaceIds)}`,
+        `[concierge-suggest] Excluding: names=${JSON.stringify(excludeNames)}, place_ids=${JSON.stringify(excludePlaceIds)}, parsed_pairs=${JSON.stringify(excludePairs)}`,
       );
 
-      // Filter venue data: remove venues whose name fuzzy-matches an exclude entry
-      venueData = venueData.filter((v) => {
-        const norm = normaliseName(v.displayName ?? "");
-        for (const ex of excludeNamesNorm) {
-          if (ex && norm && (norm.includes(ex) || ex.includes(norm)))
-            return false;
-        }
-        return true;
-      });
+      // Filter venue data: remove venues whose name fuzzy-matches a venue-only exclude entry
+      // (Venues are never event+venue pairs, so only check venue-only entries)
+      venueData = venueData.filter((v) => !isExcludedVenue(v.displayName ?? ""));
 
-      // Filter event results: remove events whose title fuzzy-matches an exclude entry
-      eventSearchResults = eventSearchResults.filter((e) => {
-        const norm = normaliseName(e.name);
-        for (const ex of excludeNamesNorm) {
-          if (ex && norm && (norm.includes(ex) || ex.includes(norm)))
-            return false;
-        }
-        return true;
-      });
+      // Filter event results: remove events that match an excluded event+venue pair
+      // or whose title matches a venue-only exclude entry
+      eventSearchResults = eventSearchResults.filter((e) =>
+        !isExcludedEvent(e.name, e.venue ?? ""),
+      );
     }
 
     // Format venue data for prompt injection
@@ -1237,9 +1352,17 @@ Deno.serve(async (req) => {
 
     const eventDataBlock = hasEventData
       ? `\n\nEVENT DATA (from web search):
-IMPORTANT — "type": "event" means a TIME-LIMITED happening: a festival edition, a concert, a DJ set on a specific date, a popup market, a themed party night. These have a start/end date or occur on a specific schedule.
-NEVER mark permanent venues (clubs, bars, beach clubs, restaurants, spas) as type "event" — even if they appear in this web search data. If a result below is clearly a permanent venue (e.g. "Savaya Bali - Beach Club", "Potato Head Seminyak"), use its Google Places data from VENUE DATA instead and treat it as a regular venue suggestion.
-Only use "type": "event" for things that would NOT exist next month — a specific festival date, a guest DJ appearance, a one-off concert, a seasonal market.
+
+CLASSIFICATION RULES — Read carefully:
+
+A venue's regular weekly/nightly programming is NOT a standalone event. Savaya's weekly sunset sessions, La Favela's nightly parties, Potato Head's resident DJ sets — these are regular venue operations. Present these as regular venues (type: "venue") and mention their programming in the description or as a pro_tip.
+
+Only use type "event" for specifically named, date-limited happenings: a festival edition (Day Zero, Epizode), a touring artist's one-off show, a themed party with a specific name and date, or a popup.
+
+A venue CAN appear multiple times IF each appearance is for a genuinely different named event. When this happens, the event name must be the primary title, with the venue as secondary context. Format: "Event Name at Venue Name" — e.g. "Day Zero at Savaya" not "Savaya Bali". The event name is the headline, the venue is the location.
+
+NEVER mark permanent venues (clubs, bars, beach clubs, restaurants, spas) as type "event" — even if they appear in this web search data. If a result below is clearly a permanent venue, use its Google Places data from VENUE DATA instead and treat it as a regular venue suggestion.
+
 At least 1-2 of your suggestions SHOULD be specific dated events from this list if they match the query.
 ${eventListForPrompt}`
       : "";
@@ -1386,7 +1509,11 @@ Return ONLY valid JSON, no other text.${venueDataBlock}${eventDataBlock}`;
 
     // -- Add exclusion list when paginating ("show more") --
     if (excludeNames.length > 0) {
-      systemPrompt += `\n\nIMPORTANT — EXCLUSION LIST: The user has already been shown these venues. Do NOT suggest any of them again:\n${excludeNames.map((n) => `- ${n}`).join("\n")}\nSuggest DIFFERENT venues only.`;
+      systemPrompt += `\n\nIMPORTANT — EXCLUSION LIST: The user has already been shown these. Do NOT suggest the same combination again:
+${excludeNames.map((n) => `- ${n}`).join("\n")}
+Entries like "Event Name at Venue" mean that specific event at that venue was shown — you may suggest the SAME venue for a DIFFERENT event, but not the same event again.
+Plain venue names mean the venue itself was shown — do not suggest it again as a venue.
+Suggest DIFFERENT venues and events only.`;
     }
 
     // -- Add event search instructions for time-sensitive requests --
@@ -1472,6 +1599,16 @@ Return ONLY valid JSON, no other text.${venueDataBlock}${eventDataBlock}`;
 
     if (!parsed.suggestions || !Array.isArray(parsed.suggestions)) {
       throw new Error("AI response missing suggestions array");
+    }
+
+    // ---- LOG RAW AI RESPONSE BEFORE VALIDATION ----
+    console.log(
+      `[concierge-suggest] RAW AI response (${parsed.suggestions.length} suggestions):`,
+    );
+    for (const s of parsed.suggestions) {
+      console.log(
+        `  → name="${s.name}" type=${s.type ?? "unset"} is_event=${s.is_event ?? "unset"} category=${s.category ?? "unset"}`,
+      );
     }
 
     // ---- Validate & enrich suggestions ----
