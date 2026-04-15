@@ -6,7 +6,7 @@ import {
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
-  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown, ChevronLeft, ChevronRight,
+  Dice5, Gem, Plus, Check, Bookmark, Globe, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
