@@ -613,7 +613,7 @@ const SuggestionCard = memo(function SuggestionCard({
       </div>
     </div>
   );
-}
+});
 
 /* ------------------------------------------------------------------ */
 /*  Loading skeleton                                                   */
