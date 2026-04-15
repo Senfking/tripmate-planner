@@ -1,4 +1,4 @@
-import { Map, Vote, CalendarDays, DollarSign, Plus, Hash } from "lucide-react";
+import { Map, Vote, CalendarDays, DollarSign } from "lucide-react";
 import { BetaBadge } from "@/components/BetaBadge";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,12 +22,13 @@ function HeaderAvatar() {
   return (
     <Link
       to="/app/more"
-      className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 overflow-hidden transition-colors hover:bg-white/30"
+      className="flex h-8 w-8 items-center justify-center rounded-full overflow-hidden transition-all hover:ring-2 hover:ring-white/30"
+      style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)" }}
     >
       {profile?.avatar_url ? (
         <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
       ) : (
-        <span className="text-white text-sm font-semibold">{initials}</span>
+        <span className="text-white/90 text-xs font-semibold">{initials}</span>
       )}
     </Link>
   );
@@ -38,35 +39,46 @@ export function DesktopHeader() {
   const { data } = useGlobalDecisions();
   const pendingCount = data?.pendingCount ?? 0;
 
+  // Inside a trip detail → slim mode (no nav tabs)
+  const isTripDetail = /^\/app\/trips\/[^/]+/.test(pathname) && pathname !== "/app/trips/new";
+
   return (
     <header
-      className="hidden md:block sticky top-0 left-0 right-0 z-50 overflow-hidden"
+      className="hidden md:block sticky top-0 left-0 right-0 z-50"
       style={{
-        background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
-        borderRadius: "0 0 16px 16px",
-        margin: 0,
         paddingTop: "env(safe-area-inset-top, 0px)",
-        width: "100%",
       }}
     >
-      {/* Glass shine */}
+      {/* Backdrop layer */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.0) 50%, rgba(255,255,255,0.05) 100%)",
+          background: "linear-gradient(135deg, #0a3d38 0%, #0f766e 40%, #0e7490 100%)",
         }}
       />
 
-      {/* Row 1 - Brand + Avatar */}
-      <div className="relative z-10 flex items-center justify-between h-[44px] px-6 max-w-[1200px] mx-auto">
-        <div className="w-9" /> {/* spacer to balance avatar */}
-        <div className="flex items-center gap-2">
+      {/* Subtle noise / texture overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundSize: "128px 128px",
+        }}
+      />
+
+      {/* Bottom border glow */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-px"
+        style={{ background: "linear-gradient(90deg, transparent 0%, rgba(94,234,212,0.25) 50%, transparent 100%)" }}
+      />
+
+      {/* Content: single row */}
+      <div className="relative z-10 flex items-center h-[48px] px-6 max-w-[1400px] mx-auto gap-6">
+        {/* Brand — left */}
+        <Link to="/app/trips" className="flex items-center gap-2 shrink-0 group">
           <span
-            className="font-bold"
+            className="font-bold tracking-[0.2em] text-[15px] transition-opacity group-hover:opacity-80"
             style={{
-              fontSize: 18,
-              letterSpacing: "0.18em",
               background: "linear-gradient(135deg, #ffffff 0%, #5eead4 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
@@ -76,44 +88,44 @@ export function DesktopHeader() {
             JUNTO
           </span>
           <BetaBadge />
-        </div>
+        </Link>
+
+        {/* Nav tabs — center (hidden on trip detail) */}
+        {!isTripDetail && (
+          <nav className="flex items-center justify-center flex-1">
+            <div className="flex items-center gap-1 rounded-full px-1 py-0.5" style={{ background: "rgba(255,255,255,0.06)" }}>
+              {tabs.map((tab) => {
+                const isActive = pathname === tab.to || pathname.startsWith(tab.to + "/");
+                return (
+                  <Link
+                    key={tab.to}
+                    to={tab.to}
+                    className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] transition-all duration-200 ${
+                      isActive
+                        ? "text-white font-semibold"
+                        : "text-white/50 hover:text-white/75 font-medium"
+                    }`}
+                    style={isActive ? { background: "rgba(255,255,255,0.12)", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" } : {}}
+                  >
+                    <tab.icon className="h-3.5 w-3.5" />
+                    <span>{tab.label}</span>
+                    {tab.to === "/app/decisions" && pendingCount > 0 && (
+                      <span className="ml-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-emerald-400 px-1 text-[9px] font-bold text-emerald-950">
+                        {pendingCount > 99 ? "99+" : pendingCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+        )}
+
+        {/* Spacer when tabs hidden */}
+        {isTripDetail && <div className="flex-1" />}
+
+        {/* Avatar — right */}
         <HeaderAvatar />
-      </div>
-
-      {/* Divider */}
-      <div className="h-px bg-white/10" />
-
-      {/* Row 2 - Nav tabs */}
-      <div className="relative z-10 flex items-center h-[40px] px-6 max-w-[1200px] mx-auto">
-        {/* Centered tabs */}
-        <nav className="flex items-center justify-center flex-1 gap-0">
-          {tabs.map((tab) => {
-            const isActive = pathname === tab.to || pathname.startsWith(tab.to + "/");
-            return (
-              <Link
-                key={tab.to}
-                to={tab.to}
-                className={`relative flex items-center gap-1.5 px-5 h-[40px] text-[13px] transition-colors ${
-                  isActive
-                    ? "text-white font-semibold"
-                    : "text-white/60 hover:text-white/80 font-medium"
-                }`}
-              >
-                <tab.icon className="h-3.5 w-3.5" />
-                <span>{tab.label}</span>
-                {tab.to === "/app/decisions" && pendingCount > 0 && (
-                  <span className="ml-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white/90 px-1.5 text-[10px] font-bold text-[#0D9488]">
-                    {pendingCount > 99 ? "99+" : pendingCount}
-                  </span>
-                )}
-                {/* Active indicator */}
-                {isActive && (
-                  <span className="absolute bottom-0 left-5 right-5 h-[2px] bg-white rounded-full" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
     </header>
   );
