@@ -1464,7 +1464,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     ))}
                   </div>
                   <DesktopGrid>
-                    {displayedResults.suggestions!.map((s, i) => (
+                    {(displayedResults.suggestions ?? []).map((s, i) => (
                       <SuggestionCard
                         key={`${displayedResults.id}-${i}`}
                         suggestion={s}
@@ -1496,7 +1496,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                           onAddToPlan={onAddToPlan}
                           animDelay={i * 50}
                           isLucky={isLucky}
-                          luckyBadge={isLucky ? LUCKY_BADGES[(displayedResults!.suggestions!.length + i) % LUCKY_BADGES.length] : undefined}
+                          luckyBadge={isLucky ? LUCKY_BADGES[((displayedResults?.suggestions?.length ?? 0) + i) % LUCKY_BADGES.length] : undefined}
                           onSaveChange={() => setSavedVersion(v => v + 1)}
                         />
                       ))}
