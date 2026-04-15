@@ -621,24 +621,72 @@ const SuggestionCard = memo(function SuggestionCard({
 
 function LoadingSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 px-3 md:px-0 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-      {[1, 2, 3, 4, 5, 6].map((i) => (
-        <div key={i} className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden" style={{ animation: `fade-in 0.3s ease-out ${i * 80}ms both` }}>
-          <Skeleton className="w-full h-[180px] rounded-none" />
-          <div className="p-3.5 space-y-2.5">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-4 w-4 rounded-full" />
-              <Skeleton className="h-4 w-2/3" />
+    <div className="space-y-3 md:max-w-[1400px] md:mx-auto w-full md:px-6 lg:px-8">
+      <div className="space-y-2 px-3 md:px-0">
+        <Skeleton className="h-4 w-[min(36rem,85%)]" />
+        <Skeleton className="h-3 w-32" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 px-3 md:px-0 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm animate-fade-in"
+            style={{ animationDelay: `${i * 80}ms`, animationFillMode: "both" }}
+          >
+            <div className="relative">
+              <Skeleton className="h-[180px] w-full rounded-none" />
+              <div className="absolute right-2 top-2">
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
             </div>
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-4/5" />
-            <div className="flex gap-2 pt-1">
-              <Skeleton className="h-7 w-16 rounded-full" />
-              <Skeleton className="h-7 w-20 rounded-full" />
+
+            <div className="flex flex-1 flex-col p-3.5">
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-[78%]" />
+                    <Skeleton className="h-4 w-[56%]" />
+                    {i % 3 === 0 ? <Skeleton className="h-3 w-[44%]" /> : null}
+                  </div>
+                  <Skeleton className="h-4 w-12 shrink-0" />
+                </div>
+
+                {i % 2 === 0 ? <Skeleton className="h-3 w-[48%]" /> : null}
+
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-[84%]" />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                  {i % 2 === 1 ? <Skeleton className="h-3 w-14" /> : null}
+                </div>
+
+                <div className="rounded-r-md border-l-[3px] border-border/70 bg-accent/40 px-3 py-2">
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-[76%]" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/50 pt-2">
+                <div className="flex items-center gap-1">
+                  <Skeleton className="h-8 w-14 rounded-lg" />
+                  <Skeleton className="h-8 w-20 rounded-lg" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <Skeleton className="h-8 w-16 rounded-lg" />
+                  <Skeleton className="h-8 w-20 rounded-lg" />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
