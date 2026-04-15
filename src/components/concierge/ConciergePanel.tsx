@@ -538,76 +538,74 @@ const SuggestionCard = memo(function SuggestionCard({
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/50">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleSave}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isSaved ? "bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" : "text-muted-foreground hover:bg-accent"}`}
+        <div className="grid grid-cols-4 gap-0 pt-2 border-t border-border/50">
+          <button
+            onClick={handleSave}
+            className={`inline-flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[11px] font-medium transition-colors ${isSaved ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" : "text-muted-foreground hover:bg-accent"}`}
+          >
+            <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
+            {isSaved ? "Saved" : "Save"}
+          </button>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="inline-flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Info className="h-4 w-4" />
+            {expanded ? "Less" : "More details"}
+          </button>
+          {isEvent && eventUrl ? (
+            <a
+              href={eventUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-accent transition-colors"
             >
-              <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-current" : ""}`} />
-              {isSaved ? "Saved" : "Save"}
-            </button>
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 px-2.5 py-1.5 rounded-lg transition-colors"
+              <ExternalLink className="h-4 w-4" />
+              View Event
+            </a>
+          ) : (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-accent transition-colors"
             >
-              {expanded ? "Less" : "More details"}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {!expanded && (
-              isEvent && eventUrl ? (
-                <a
-                  href={eventUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
-                >
-                  <ExternalLink className="h-3 w-3" /> View Event
-                </a>
-              ) : (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent transition-colors"
-                >
-                  <ExternalLink className="h-3 w-3" /> Maps
-                </a>
-              )
+              <ExternalLink className="h-4 w-4" />
+              Maps
+            </a>
+          )}
+          <div className="relative flex flex-col items-center justify-center">
+            {added ? (
+              <span className="inline-flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                <Check className="h-4 w-4" />
+                Added
+              </span>
+            ) : (
+              <button
+                onClick={() => setShowDayPicker(!showDayPicker)}
+                disabled={!!addingDate}
+                className="inline-flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 w-full"
+              >
+                {addingDate ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarHeart className="h-4 w-4" />}
+                + Add to plan
+              </button>
             )}
-            <div className="relative">
-              {added ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20">
-                  <Check className="h-3.5 w-3.5" /> Added
-                </span>
-              ) : (
-                <button
-                  onClick={() => setShowDayPicker(!showDayPicker)}
-                  disabled={!!addingDate}
-                  className="text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {addingDate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "+ Add to plan"}
-                </button>
-              )}
-              {showDayPicker && tripDays && tripDays.length > 0 && (
-                <div className="absolute bottom-full right-0 mb-1 bg-card border border-border rounded-xl shadow-lg p-2 z-30 min-w-[180px] max-h-[200px] overflow-y-auto animate-fade-in">
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-2 pb-1.5">Add to which day?</p>
-                  {tripDays.map((d) => (
-                    <button
-                      key={d.date}
-                      onClick={() => handleAddToPlan(d.date)}
-                      disabled={addingDate === d.date}
-                      className="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-accent transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                      {addingDate === d.date ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarHeart className="h-3 w-3 text-muted-foreground" />}
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {showDayPicker && tripDays && tripDays.length > 0 && (
+              <div className="absolute bottom-full right-0 mb-1 bg-card border border-border rounded-xl shadow-lg p-2 z-30 min-w-[180px] max-h-[200px] overflow-y-auto animate-fade-in">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-2 pb-1.5">Add to which day?</p>
+                {tripDays.map((d) => (
+                  <button
+                    key={d.date}
+                    onClick={() => handleAddToPlan(d.date)}
+                    disabled={addingDate === d.date}
+                    className="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-accent transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {addingDate === d.date ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarHeart className="h-3 w-3 text-muted-foreground" />}
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
