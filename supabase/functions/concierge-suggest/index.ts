@@ -335,11 +335,14 @@ async function searchEvents(
 
   const queries = [q1, q2, q3, q4];
   console.log(
-    `[concierge-suggest] event search queries: ${JSON.stringify(queries)}`,
+    `[concierge-suggest] === EVENT SEARCH QUERIES === ${JSON.stringify(queries)}`,
   );
 
   if (braveKey) {
-    return searchEventsViaBrave(braveKey, queries);
+    console.log("[concierge-suggest] === CALLING BRAVE === key present, dispatching", queries.length, "queries");
+    const results = await searchEventsViaBrave(braveKey, queries);
+    console.log(`[concierge-suggest] === BRAVE RESPONSE === ${results.length} total results, first 3: ${JSON.stringify(results.slice(0, 3).map(r => r.name))}`);
+    return results;
   }
 
   if (googleSearchKey && googleCseId) {
@@ -1016,6 +1019,8 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
+  console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
