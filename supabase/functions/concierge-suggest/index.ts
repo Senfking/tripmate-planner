@@ -1,4 +1,4 @@
-// Last updated: 2026-04-15 — event search pipeline v2.2 (venue fallback + date accuracy)
+// Last updated: 2026-04-15 — event search pipeline v2.3 (intent-aware tiered ranking)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -196,6 +196,25 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Universal ranking principle — injected into every system prompt
+// ---------------------------------------------------------------------------
+const RANKING_PRINCIPLE = `
+RANKING PRINCIPLE — applies to every suggestion you make:
+Always rank results by how directly they answer the user's specific request.
+
+TIER 1 — Direct matches: Results that are exactly what the user asked for. If they asked for "rooftop bars," a rooftop bar. If they asked for "electronic music events," a specific event. If they asked for "best sushi," a sushi restaurant. These go first.
+
+TIER 2 — Strong adjacent matches: Results that are closely related and enhance the answer. For "rooftop bars," a highly-rated sky lounge. For "electronic music events," a special DJ night at a known venue. For "best sushi," an omakase experience. These fill out the middle.
+
+TIER 3 — Contextual recommendations: Results that are relevant to the broader intent but not exact matches. For "rooftop bars," a ground-level cocktail bar that's too good to skip. For "electronic music events," a club known for that genre even without a specific event listed. For "best sushi," a Japanese restaurant with exceptional sushi as part of a broader menu. These round out the list if needed.
+
+ALWAYS:
+- Lead with Tier 1 results. If none exist, say so honestly in the summary.
+- Fill remaining slots with Tier 2, then Tier 3.
+- Each result's "why" field should make clear WHY it's recommended for this specific query — don't make the user guess the connection.
+- The summary text should reflect what was actually found, not generic filler.`;
+
+// ---------------------------------------------------------------------------
 // Suggestion JSON schema (shared between structured & free-text prompts)
 // ---------------------------------------------------------------------------
 function suggestionJsonSchema(destination: string): string {
@@ -254,10 +273,9 @@ function eventSearchInstructions(
 CRITICAL — TIME-SENSITIVE REQUEST (${whenLabel}, ${dateStr}, ${dayOfWeek}):
 The user is looking for ${catLabel} in ${destination} for a specific time.
 You have been provided EVENT DATA from a web search above. Use it.
-- Return a MIX of events AND permanent venues. Out of 3-5 suggestions, include 1-2 specific events from the EVENT DATA section AND 2-3 relevant permanent venues from the VENUE DATA section.
+- Apply the RANKING PRINCIPLE: specific events from EVENT DATA that directly match the query are Tier 1. Venues known for ${catLabel} are Tier 2-3 depending on relevance.
 - Mark events with "type": "event" and "is_event": true, and fill in event_details with times, performers, cover charges, etc.
-- The permanent venues you pick should be ones known for ${catLabel} — places a local would recommend for this kind of night/activity.
-- Do NOT return only events or only venues. The user wants to know what's happening AND where to go.
+- Venues you pick should be ones known for ${catLabel} — places a local would recommend for this kind of night/activity.
 - DATE ACCURACY: For event dates and times, ONLY use dates explicitly mentioned in the EVENT DATA section. Never guess, infer, or use dates from your training data. If an event's date is not in the EVENT DATA, say "check listing for dates" instead of inventing one.`;
   }
 
@@ -267,8 +285,8 @@ You have been provided EVENT DATA from a web search above. Use it.
 CRITICAL — TIME-SENSITIVE REQUEST (${whenLabel}, ${dateStr}, ${dayOfWeek}):
 The user is looking for ${catLabel} in ${destination} for a specific time.
 No web search results were available, so use your best knowledge of recurring events, weekly parties, and cultural happenings in ${destination}.
-- At least 1-2 of your suggestions SHOULD be time-specific happenings (a DJ night, a weekly market, a recurring event) rather than permanent venues.
-- Mark those with "type": "event" and "is_event": true, and fill in event_details.
+- Apply the RANKING PRINCIPLE: time-specific happenings (a DJ night, a weekly market, a recurring event) that match the query are Tier 1. Permanent venues known for this type of activity are Tier 2-3.
+- Mark time-specific happenings with "type": "event" and "is_event": true, and fill in event_details.
 - If you know of major festivals or events around ${dateStr} in ${destination}, include them.
 - DATE ACCURACY: Only state specific dates if you are highly confident they are correct. For events where you are unsure of the exact date, say "check listing for exact dates" rather than guessing.`;
 }
@@ -1045,7 +1063,7 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
-  console.log("[concierge-suggest] v2.2 deployed — venue fallback + date accuracy", new Date().toISOString());
+  console.log("[concierge-suggest] v2.3 deployed — intent-aware tiered ranking", new Date().toISOString());
   console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
 
   if (req.method === "OPTIONS") {
@@ -1483,11 +1501,11 @@ Deno.serve(async (req) => {
       .join("\n");
 
     const venueConstraint = hasVenueData
-      ? `\nCRITICAL RULES:
+      ? `\nCRITICAL DATA RULES:
 - For VENUE suggestions: You MUST ONLY recommend venues from the VENUE DATA list provided below.
 - NEVER add or invent venues that are not in the list.
 - Every venue recommendation MUST include the exact "id" field from the provided data.
-- Your job is to RANK the best options and ENRICH them with descriptions, tips, and insights.${hasEventData ? `\n- Return a MIX: 2-3 permanent venues from VENUE DATA + 1-2 time-limited events from EVENT DATA. Do NOT return only events or only venues.\n- For EVENT suggestions: Use "type": "event" and do NOT need a place_id.` : `\n- Select 3-5 venues that best match the user's request.`}`
+- Your job is to RANK the best options using the RANKING PRINCIPLE and ENRICH them with descriptions, tips, and insights.${hasEventData ? `\n- For EVENT suggestions: Use "type": "event" and do NOT need a place_id. Apply the RANKING PRINCIPLE to decide how many events vs venues to include based on what the user actually asked for.` : ""}`
       : "";
 
     const venueDataBlock = hasVenueData
@@ -1507,7 +1525,7 @@ A venue CAN appear multiple times IF each appearance is for a genuinely differen
 
 NEVER mark permanent venues (clubs, bars, beach clubs, restaurants, spas) as type "event" — even if they appear in this web search data. If a result below is clearly a permanent venue, use its Google Places data from VENUE DATA instead and treat it as a regular venue suggestion.
 
-At least 1-2 of your suggestions SHOULD be specific dated events from this list if they match the query.
+Use the RANKING PRINCIPLE to decide how many events to include — specific dated events that directly match the query are Tier 1.
 
 DATE ACCURACY — CRITICAL: For event dates, ONLY use dates explicitly stated in the event data below. NEVER guess or infer event dates from your training data — your training data dates are likely wrong or outdated. If an event listing below does not include a specific date, write "check listing for dates" in event_details instead of making one up.
 ${eventListForPrompt}`
@@ -1560,7 +1578,7 @@ ${eventListForPrompt}`
 
 Rules for the response:
 - For VENUE suggestions: The "id" field MUST be copied exactly from the VENUE DATA list. Do not modify or fabricate IDs.
-- For EVENT suggestions: Use "type": "event" and include "is_event": true. Events do NOT need an "id" field.${hasEventData ? `\n- You MUST include at least 1-2 events from the EVENT DATA section if they match the query.` : ""}
+- For EVENT suggestions: Use "type": "event" and include "is_event": true. Events do NOT need an "id" field.
 - When is_event is true, event_details MUST describe the event (e.g. "DJ Set by [name], 10pm-3am, IDR 200k cover").
 - pro_tip should be a genuine insider tip, not generic advice. Think: "Ask for the secret menu" or "Sit upstairs for the view".
 - what_to_order: specific items, not generic ("The wagyu tartare" not "try their food").`
@@ -1582,12 +1600,12 @@ ${gpsNote}
 ${locationEnforcement}
 ${venueConstraint}
 ${categoryHint}
+${RANKING_PRINCIPLE}
 
-Your job: suggest 3-5 genuinely surprising, unusual, hidden-gem experiences that most tourists would NEVER find. Think:
-- Places only locals know about
-- Weird, wonderful, one-of-a-kind experiences
-- Secret spots, underground scenes, off-script adventures
-- Things that make great stories
+For "Feeling Lucky" mode, apply the ranking principle with a twist — prefer hidden gems and unexpected finds at every tier:
+- Tier 1 should be surprising places that directly match the category
+- Tier 2-3 should be genuinely unusual, one-of-a-kind experiences
+- Think: places only locals know, underground scenes, things that make great stories
 
 Do NOT suggest popular tourist attractions or well-known chains. Every suggestion should make someone say "wait, what? Let's do THAT."
 
@@ -1612,6 +1630,7 @@ ${locationNote}
 ${gpsNote}
 ${locationEnforcement}
 ${venueConstraint}
+${RANKING_PRINCIPLE}
 
 Find the best ${categoryDesc} using these exact filters:
 - Timing: ${whenArr.length ? whenArr.join(" or ") : "any time"} (${dateStr}, ${dayOfWeek})
@@ -1623,7 +1642,6 @@ ${hotelNote}
 Suggest 3-5 specific, real venues or activities. Consider:
 - Time appropriateness for ${timeOfDay} (don't suggest nightclubs for morning, don't suggest breakfast spots for evening)
 - Their budget and vibe preferences
-- Mix popular spots with hidden gems
 - Only suggest real, existing places (not generic descriptions)
 
 Respond in this exact JSON format:
@@ -1637,6 +1655,7 @@ ${locationNote}
 ${gpsNote}
 ${locationEnforcement}
 ${venueConstraint}
+${RANKING_PRINCIPLE}
 
 The user is asking about activities for ${dateStr} (${timeOfDay}).
 ${hotelNote}
@@ -1644,7 +1663,6 @@ ${hotelNote}
 Suggest 3-5 specific, real venues or activities that match their query. Consider:
 - Time of day (don't suggest nightclubs for morning, don't suggest breakfast spots for evening)
 - Their budget and vibe preferences
-- Mix popular spots with hidden gems
 - Only suggest real, existing places (not generic descriptions)
 
 Respond in this exact JSON format:
