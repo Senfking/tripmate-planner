@@ -1822,6 +1822,7 @@ Suggest DIFFERENT venues and events only.`;
       );
     }
 
+    console.log(`[concierge-suggest] === RETURNING ${enriched.length} suggestions, summary="${(parsed.summary ?? "").slice(0, 80)}" ===`);
     return jsonResponse({
       summary: parsed.summary,
       suggestions: enriched,
@@ -1829,7 +1830,7 @@ Suggest DIFFERENT venues and events only.`;
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
-    console.error("[concierge-suggest] error:", err);
+    console.error("[concierge-suggest] === ERROR ===", err);
     return jsonResponse({ error: message }, 500);
   }
 });

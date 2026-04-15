@@ -924,7 +924,11 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         },
       });
       if (error) throw error;
-      if (data?.suggestions?.length) {
+      if (!data || typeof data !== "object") {
+        console.error("Concierge show-more: unexpected response shape:", data);
+        throw new Error("Unexpected response from concierge");
+      }
+      if (data.suggestions?.length) {
         setExtraResults(prev => [...prev, ...data.suggestions]);
       } else {
         toast("No more suggestions found");
