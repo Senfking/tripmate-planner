@@ -550,14 +550,25 @@ function SuggestionCard({
 
           <div className="flex items-center gap-1">
             {!expanded && (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent transition-colors"
-              >
-                <ExternalLink className="h-3 w-3" /> Maps
-              </a>
+              isEvent && eventUrl ? (
+                <a
+                  href={eventUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" /> View Event
+                </a>
+              ) : (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" /> Maps
+                </a>
+              )
             )}
             <div className="relative">
               {added ? (
