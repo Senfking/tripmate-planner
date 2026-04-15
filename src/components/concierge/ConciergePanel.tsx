@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   X, Utensils, Wine, Music, Compass, Waves, Dumbbell,
-  CalendarHeart, Sparkles, Star, MapPin, Clock,
+  Calendar, CalendarHeart, Sparkles, Star, MapPin, Clock,
   Users, Search, ArrowLeft, Loader2, ExternalLink,
   Palette, Wallet, ChefHat, Armchair, Disc3, Zap, Map,
   Heart, Activity, Ticket, Navigation, Lightbulb, Signal,
@@ -264,16 +264,8 @@ function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (ke
 /*  HorizontalCarousel (desktop only)                                  */
 /* ------------------------------------------------------------------ */
 
-function DesktopGrid({ children }: { children: ReactNode }) {
-  return (
-    <div className="hidden md:grid md:grid-cols-2 md:gap-3 md:px-0">
-      {children}
-    </div>
-  );
-}
 
-
-function SuggestionCard({
+const SuggestionCard = memo(function SuggestionCard({
   suggestion, messageId, index, tripId, tripDays, onAddToPlan, animDelay, isLucky, luckyBadge, onSaveChange,
 }: {
   suggestion: ConciergeSuggestion;
@@ -396,7 +388,11 @@ function SuggestionCard({
       {/* Photo — full width */}
       <div className="w-full h-[180px] bg-muted overflow-hidden relative">
         {cardImage ? (
-          <img src={cardImage} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
+          <img src={cardImage} alt={suggestion.name || ""} className="w-full h-full object-cover" loading="lazy" />
+        ) : isEvent ? (
+          <div className="w-full h-full flex items-center justify-center bg-[#0D9488]/5">
+            <Calendar className="h-10 w-10 text-[#0D9488]/30" />
+          </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-accent/30">
             <MapPin className="h-8 w-8 text-muted-foreground/30" />
@@ -617,7 +613,7 @@ function SuggestionCard({
       </div>
     </div>
   );
-}
+});
 
 /* ------------------------------------------------------------------ */
 /*  Loading skeleton                                                   */
@@ -709,7 +705,10 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     return dests;
   }, [tripResult, destinationProp]);
 
-  const conciergeContext = buildConciergeContext(destination, manualLocation || resolvedDest, tripResult, memberCount);
+  const conciergeContext = useMemo(
+    () => buildConciergeContext(destination, manualLocation || resolvedDest, tripResult, memberCount),
+    [destination, manualLocation, resolvedDest, tripResult, memberCount]
+  );
   const {
     messages,
     activeResult,
@@ -1285,8 +1284,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       </button>
                     )}
                   </div>
-                  {/* Desktop: 2-column grid */}
-                  <DesktopGrid>
+                  {/* Saved spots grid */}
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 md:gap-3">
                     {savedSpots.map((spot, i) => (
                       <SuggestionCard
                         key={spot.name}
@@ -1299,7 +1298,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         onSaveChange={() => setSavedVersion(v => v + 1)}
                       />
                     ))}
-                  </DesktopGrid>
+                  </div>
                 </div>
               )}
 
@@ -1432,7 +1431,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                   <LoadingSkeleton />
                 </div>
               ) : displayedResults && (displayedResults.suggestions?.length ?? 0) > 0 ? (
-                <div className="space-y-3 md:max-w-[900px] md:mx-auto w-full md:px-8">
+                <div className="space-y-3 md:max-w-[1400px] md:mx-auto w-full md:px-6 lg:px-8">
                   {/* Intro text — regular weight teal, not italic */}
                   {displayedResults.content && (
                     <p className="text-sm px-3 md:px-0 text-[#0D9488] font-normal">
@@ -1445,8 +1444,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     {isLucky ? "Hidden gems & local secrets" : "Insider picks"}
                   </p>
 
-                  {/* Results — mobile: vertical stack, desktop: 2-col grid */}
-                  <div className="space-y-3 px-3 md:hidden">
+                  {/* Results — responsive grid: 1 col mobile, 2 col tablet, 3 col desktop, 4 col large */}
+                  <div className="grid grid-cols-1 gap-3 px-3 md:px-0 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                     {(displayedResults.suggestions ?? []).map((s, i) => (
                       <SuggestionCard
                         key={`${displayedResults.id}-${i}`}
@@ -1463,43 +1462,28 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       />
                     ))}
                   </div>
-                  <DesktopGrid>
-                    {(displayedResults.suggestions ?? []).map((s, i) => (
-                      <SuggestionCard
-                        key={`${displayedResults.id}-${i}`}
-                        suggestion={s}
-                        messageId={displayedResults.id}
-                        index={i}
-                        tripId={tripId}
-                        tripDays={tripDays}
-                        onAddToPlan={onAddToPlan}
-                        animDelay={i * 50}
-                        isLucky={isLucky}
-                        luckyBadge={isLucky ? LUCKY_BADGES[i % LUCKY_BADGES.length] : undefined}
-                        onSaveChange={() => setSavedVersion(v => v + 1)}
-                      />
-                    ))}
-                  </DesktopGrid>
 
                   {/* Extra results from "Show more" */}
                   {extraResults.length > 0 && (
-                    <div className="space-y-3 px-3 md:px-0 pt-1 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
-                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase lg:col-span-2">More picks</p>
-                      {extraResults.map((s, i) => (
-                        <SuggestionCard
-                          key={`extra-${i}`}
-                          suggestion={s}
-                          messageId={`extra-${i}`}
-                          index={i}
-                          tripId={tripId}
-                          tripDays={tripDays}
-                          onAddToPlan={onAddToPlan}
-                          animDelay={i * 50}
-                          isLucky={isLucky}
-                          luckyBadge={isLucky ? LUCKY_BADGES[((displayedResults?.suggestions?.length ?? 0) + i) % LUCKY_BADGES.length] : undefined}
-                          onSaveChange={() => setSavedVersion(v => v + 1)}
-                        />
-                      ))}
+                    <div className="px-3 md:px-0 pt-1">
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">More picks</p>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                        {extraResults.map((s, i) => (
+                          <SuggestionCard
+                            key={`extra-${i}`}
+                            suggestion={s}
+                            messageId={`extra-${i}`}
+                            index={i}
+                            tripId={tripId}
+                            tripDays={tripDays}
+                            onAddToPlan={onAddToPlan}
+                            animDelay={i * 50}
+                            isLucky={isLucky}
+                            luckyBadge={isLucky ? LUCKY_BADGES[((displayedResults?.suggestions?.length ?? 0) + i) % LUCKY_BADGES.length] : undefined}
+                            onSaveChange={() => setSavedVersion(v => v + 1)}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -1569,15 +1553,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           </div>
         )}
       </div>
-
-      {/* Shimmer gradient keyframes */}
-      <style>{`
-        @keyframes shimmer-gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
     </>,
     document.body
   );
