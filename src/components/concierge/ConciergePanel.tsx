@@ -1533,6 +1533,13 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     </button>
                   </div>
                 </div>
+              ) : displayedResults?.content ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                  <p className="text-sm text-muted-foreground">{displayedResults.content}</p>
+                  <button onClick={resetToWhat} className="mt-3 text-sm font-medium text-[#0D9488] hover:underline">
+                    Try something else
+                  </button>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center px-4">
                   <p className="text-sm text-muted-foreground">No results found. Try a different search.</p>
