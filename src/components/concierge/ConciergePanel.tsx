@@ -387,11 +387,47 @@ function SuggestionCard({
     ? eventThumbnail
     : (suggestion.photo_url && !suggestion.not_verified ? suggestion.photo_url : null);
 
+  return (
+    <div
+      className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${isLucky ? "ring-1 ring-amber-200 dark:ring-amber-700/30" : ""}`}
+      style={{ animation: `fade-in 0.3s ease-out ${(animDelay || 0)}ms both` }}
+    >
+      {/* Photo — full width */}
+      <div className="w-full h-[180px] bg-muted overflow-hidden relative">
+        {cardImage ? (
+          <img src={cardImage} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-accent/30">
+            <MapPin className="h-8 w-8 text-muted-foreground/30" />
+          </div>
+        )}
+        {luckyBadge ? (
+          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 text-white backdrop-blur-sm shadow-sm">
+            <Gem className="h-3 w-3" /> {luckyBadge}
+          </span>
+        ) : isEvent ? (
+          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-[#0D9488] text-white backdrop-blur-sm">
+            <CalendarHeart className="h-3 w-3" /> Live Event
+          </span>
+        ) : (
+          <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
+            {suggestion.category}
+          </span>
+        )}
+      </div>
+
       <div className="p-3.5 space-y-2.5">
         {/* Name + rating */}
         <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-1">{suggestion.name}</h4>
-          {suggestion.rating != null && !suggestion.not_verified && (
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-2">{eventTitle}</h4>
+            {eventVenue && (
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                <MapPin className="h-3 w-3 shrink-0" /> {eventVenue}
+              </p>
+            )}
+          </div>
+          {suggestion.rating != null && !suggestion.not_verified && !isEvent && (
             <div className="flex items-center gap-0.5 text-xs shrink-0">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
               <span className="font-medium">{suggestion.rating.toFixed(1)}</span>
@@ -402,16 +438,16 @@ function SuggestionCard({
           )}
         </div>
 
+        {/* Event date/time — prominent for events */}
+        {isEvent && suggestion.event_details && (
+          <p className="text-xs font-semibold text-[#0D9488] leading-snug">
+            {suggestion.event_details}
+          </p>
+        )}
+
         {/* Why */}
         {suggestion.why && (
           <p className="text-xs text-muted-foreground leading-snug line-clamp-2">{suggestion.why}</p>
-        )}
-
-        {/* Event details */}
-        {suggestion.is_event && suggestion.event_details && (
-          <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 leading-snug">
-            {suggestion.event_details}
-          </p>
         )}
 
         {/* Meta */}
