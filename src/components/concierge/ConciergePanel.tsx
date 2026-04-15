@@ -374,39 +374,18 @@ function SuggestionCard({
   const googleSearchBookUrl = `https://www.google.com/search?q=book+${encodeURIComponent(suggestion.name + " " + (suggestion.address || ""))}`;
   const mapsUrl = buildMapsUrl(suggestion.name, suggestion.address);
 
-  return (
-    <div
-      className={`rounded-xl border overflow-hidden shadow-sm ${isLucky ? "border-amber-200 dark:border-amber-700/30" : "border-border"} bg-card`}
-      style={{ animation: `fade-in 0.3s ease-out ${(animDelay || 0)}ms both` }}
-    >
-      {/* Photo — full width */}
-      <div className="w-full h-[180px] bg-muted overflow-hidden relative">
-        {suggestion.photo_url && !suggestion.not_verified ? (
-          <img src={suggestion.photo_url} alt={suggestion.name} className="w-full h-full object-cover" loading="lazy" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-accent/30">
-            <MapPin className="h-8 w-8 text-muted-foreground/30" />
-          </div>
-        )}
-        {luckyBadge ? (
-          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 text-white backdrop-blur-sm shadow-sm">
-            <Gem className="h-3 w-3" /> {luckyBadge}
-          </span>
-        ) : suggestion.is_event ? (
-          <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-amber-500/90 text-white backdrop-blur-sm animate-pulse">
-            <CalendarHeart className="h-3 w-3" /> Live Event
-          </span>
-        ) : (
-          <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
-            {suggestion.category}
-          </span>
-        )}
-        {suggestion.not_verified && (
-          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-medium px-2 py-0.5 rounded-full bg-yellow-500/80 text-white backdrop-blur-sm">
-            <Signal className="h-3 w-3" /> Not verified
-          </span>
-        )}
-      </div>
+  // Event card: parse "Event Name at Venue" pattern
+  const isEvent = suggestion.is_event;
+  const eventUrl = s.url || s.booking_url || null;
+  const eventThumbnail = s.thumbnail || null;
+  const atMatch = isEvent && suggestion.name ? suggestion.name.match(/^(.+?)\s+at\s+(.+)$/i) : null;
+  const eventTitle = atMatch ? atMatch[1] : suggestion.name;
+  const eventVenue = atMatch ? atMatch[2] : null;
+
+  // Resolve image: event thumbnail > photo_url > placeholder
+  const cardImage = isEvent && eventThumbnail
+    ? eventThumbnail
+    : (suggestion.photo_url && !suggestion.not_verified ? suggestion.photo_url : null);
 
       <div className="p-3.5 space-y-2.5">
         {/* Name + rating */}
