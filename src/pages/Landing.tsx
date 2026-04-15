@@ -146,28 +146,7 @@ export default function Landing() {
       {/* ─── FEATURE CARDS ─── */}
       <FeatureCards />
 
-      {/* ─── HOW IT WORKS ─── */}
-      <section className="py-20 sm:py-28 px-5">
-        <div className="mx-auto max-w-3xl text-center">
-          <Reveal>
-            <h2 className="text-2xl sm:text-4xl font-bold text-[#1a1a1a] mb-12">How it works</h2>
-          </Reveal>
-          <div className="grid sm:grid-cols-3 gap-8 sm:gap-6">
-            {HOW_STEPS.map((s, i) => (
-              <Reveal key={s.num} delay={`${i * 0.1}s`}>
-                <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4"
-                    style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)" }}>
-                    {s.num}
-                  </div>
-                  <h3 className="font-semibold text-[#1a1a1a] text-[16px] mb-1">{s.title}</h3>
-                  <p className="text-sm text-[#9ca3af]">{s.desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* HOW IT WORKS — hidden for now */}
 
       {/* ─── BOTTOM CTA ─── */}
       <section className="py-20 sm:py-28 px-5">

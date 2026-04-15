@@ -106,12 +106,5 @@ export function resolvePhoto(tripName: string, routeStopDests: string[]): string
       if (keywords.some((kw) => destLower.includes(kw))) return url;
     }
   }
-  const searchTerm = routeStopDests[0] || tripName
-    .replace(/\d{4}/g, "")
-    .replace(/trip|holiday|vacation|tour/gi, "")
-    .trim();
-  if (searchTerm) {
-    return `https://source.unsplash.com/800x500/?${encodeURIComponent(searchTerm)}+travel`;
-  }
   return DEFAULT_TRIP_PHOTO;
 }
