@@ -1258,9 +1258,43 @@ Deno.serve(async (req) => {
     // Guard: (0, 0) is Null Island — never a valid user location. Treat as missing.
     const rawLat = userGps?.lat ?? context.hotel_location?.lat ?? null;
     const rawLng = userGps?.lng ?? context.hotel_location?.lng ?? null;
-    const searchLat = rawLat === 0 && rawLng === 0 ? null : rawLat;
-    const searchLng = rawLat === 0 && rawLng === 0 ? null : rawLng;
+    let searchLat = rawLat === 0 && rawLng === 0 ? null : rawLat;
+    let searchLng = rawLat === 0 && rawLng === 0 ? null : rawLng;
     const searchLocationName = specificLocation || context.destination;
+
+    // Geocode destination if no GPS coordinates provided
+    if (searchLat === null && searchLng === null && googleKey && context.destination) {
+      try {
+        console.log(`[concierge-suggest] No GPS coords — geocoding "${context.destination}"`);
+        const geoRes = await fetch(
+          "https://places.googleapis.com/v1/places:searchText",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": googleKey,
+              "X-Goog-FieldMask": "places.location,places.displayName",
+            },
+            body: JSON.stringify({
+              textQuery: context.destination,
+              maxResultCount: 1,
+            }),
+          },
+        );
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          const firstPlace = geoData.places?.[0];
+          if (firstPlace?.location) {
+            searchLat = firstPlace.location.latitude;
+            searchLng = firstPlace.location.longitude;
+            console.log(`[concierge-suggest] Geocoded "${context.destination}" → ${searchLat}, ${searchLng}`);
+          }
+        }
+      } catch (geoErr) {
+        console.warn("[concierge-suggest] Geocoding failed:", geoErr);
+      }
+    }
+
     // For free-text queries, infer category from the query text
     const inferredCategory = !isStructured ? inferCategoryFromQuery(body.query) : undefined;
     const searchCategory = structCategory || inferredCategory || "explore";
@@ -1281,6 +1315,9 @@ Deno.serve(async (req) => {
         customSearchText,
       );
       venueData = await searchPlacesBatch(queries, googleKey, excludePlaceIds);
+      console.log(`[concierge-suggest] Places API returned ${venueData.length} venues`);
+    } else {
+      console.log(`[concierge-suggest] Skipping Places API: googleKey=${!!googleKey}, lat=${searchLat}, lng=${searchLng}`);
     }
 
     // ---- Server-side event web search ----
@@ -1684,6 +1721,10 @@ Suggest DIFFERENT venues and events only.`;
     // ---- Validate & enrich suggestions ----
     let enriched: Record<string, unknown>[];
 
+    console.log(`[concierge-suggest] hasVenueData=${hasVenueData} (${venueData.length} venues), hasEventData=${hasEventData}`);
+    console.log(`[concierge-suggest] AI suggestions IDs: ${parsed.suggestions.map((s: Record<string, unknown>) => `"${s.id ?? 'NONE'}"`).join(", ")}`);
+    console.log(`[concierge-suggest] Venue IDs available: ${venueData.map(v => `"${v.id}"`).join(", ")}`);
+
     if (hasVenueData) {
       // Places-first pipeline: validate AI picks against real venue data
       const validated = validateAIResponse(
@@ -1693,6 +1734,7 @@ Suggest DIFFERENT venues and events only.`;
         searchLng!,
         excludePlaceIds,
       );
+      console.log(`[concierge-suggest] After validation: ${validated.length} of ${parsed.suggestions.length} passed`);
 
       // Map validated results to frontend-compatible shape
       enriched = validated.map((v) => {
