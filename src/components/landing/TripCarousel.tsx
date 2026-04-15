@@ -43,7 +43,7 @@ const ADVENTURE: TripCard[] = [
   { name: "Peru", slug: "peru-10-days", duration: "10 days", vibe: "Lima to Machu Picchu", img: "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=800&q=80&auto=format&fit=crop" },
   { name: "Costa Rica", slug: "costa-rica-7-days", duration: "7 days", vibe: "Rainforest + surf", img: "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=800&q=80&auto=format&fit=crop" },
   { name: "Nepal", slug: "nepal-12-days", duration: "12 days", vibe: "Himalaya trekking", img: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80&auto=format&fit=crop" },
-  { name: "Jordan", slug: "jordan-6-days", duration: "6 days", vibe: "Petra + Wadi Rum", img: "https://images.unsplash.com/photo-1579606032821-4e6161c81571?w=800&q=80&auto=format&fit=crop" },
+  { name: "Jordan", slug: "jordan-6-days", duration: "6 days", vibe: "Petra + Wadi Rum", img: "https://upload.wikimedia.org/wikipedia/commons/5/56/Mountain_in_Wadi_Rum%2C_Jordan.jpg" },
   { name: "South Africa", slug: "south-africa-10-days", duration: "10 days", vibe: "Safari + Cape Town", img: "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&q=80&auto=format&fit=crop" },
   { name: "Iceland", slug: "iceland-7-days", duration: "7 days", vibe: "Ring Road adventure", img: "https://images.unsplash.com/photo-1504829857797-ddff29c27927?w=800&q=80&auto=format&fit=crop" },
 ];
