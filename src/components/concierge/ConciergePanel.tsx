@@ -930,7 +930,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
       ];
       const excludeNames = allShown.map(s => s.name).filter(Boolean);
       const excludePlaceIds = allShown
-        .map(s => (s as Record<string, unknown>).place_id as string)
+        .map(s => (s as unknown as Record<string, unknown>).place_id as string)
         .filter(Boolean);
 
       // Re-send the original request body with exclusion list
