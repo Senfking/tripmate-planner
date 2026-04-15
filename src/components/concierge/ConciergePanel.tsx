@@ -1553,15 +1553,6 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
           </div>
         )}
       </div>
-
-      {/* Shimmer gradient keyframes */}
-      <style>{`
-        @keyframes shimmer-gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
     </>,
     document.body
   );
