@@ -1,4 +1,4 @@
-// Last updated: 2026-04-15 — event search pipeline v2
+// Last updated: 2026-04-15 — event search pipeline v2.2 (venue fallback + date accuracy)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -257,7 +257,8 @@ You have been provided EVENT DATA from a web search above. Use it.
 - Return a MIX of events AND permanent venues. Out of 3-5 suggestions, include 1-2 specific events from the EVENT DATA section AND 2-3 relevant permanent venues from the VENUE DATA section.
 - Mark events with "type": "event" and "is_event": true, and fill in event_details with times, performers, cover charges, etc.
 - The permanent venues you pick should be ones known for ${catLabel} — places a local would recommend for this kind of night/activity.
-- Do NOT return only events or only venues. The user wants to know what's happening AND where to go.`;
+- Do NOT return only events or only venues. The user wants to know what's happening AND where to go.
+- DATE ACCURACY: For event dates and times, ONLY use dates explicitly mentioned in the EVENT DATA section. Never guess, infer, or use dates from your training data. If an event's date is not in the EVENT DATA, say "check listing for dates" instead of inventing one.`;
   }
 
   // No event data available — instruct the LLM to use its own knowledge
@@ -268,7 +269,8 @@ The user is looking for ${catLabel} in ${destination} for a specific time.
 No web search results were available, so use your best knowledge of recurring events, weekly parties, and cultural happenings in ${destination}.
 - At least 1-2 of your suggestions SHOULD be time-specific happenings (a DJ night, a weekly market, a recurring event) rather than permanent venues.
 - Mark those with "type": "event" and "is_event": true, and fill in event_details.
-- If you know of major festivals or events around ${dateStr} in ${destination}, include them.`;
+- If you know of major festivals or events around ${dateStr} in ${destination}, include them.
+- DATE ACCURACY: Only state specific dates if you are highly confident they are correct. For events where you are unsure of the exact date, say "check listing for exact dates" rather than guessing.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1043,7 +1045,7 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
-  console.log("[concierge-suggest] v2.1 deployed", new Date().toISOString());
+  console.log("[concierge-suggest] v2.2 deployed — venue fallback + date accuracy", new Date().toISOString());
   console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
 
   if (req.method === "OPTIONS") {
@@ -1314,8 +1316,43 @@ Deno.serve(async (req) => {
         { name: searchLocationName, lat: searchLat, lng: searchLng },
         customSearchText,
       );
+      console.log(`[concierge-suggest] Places queries: ${JSON.stringify(queries.map(q => q.textQuery))}`);
       venueData = await searchPlacesBatch(queries, googleKey, excludePlaceIds);
-      console.log(`[concierge-suggest] Places API returned ${venueData.length} venues`);
+      console.log(`[concierge-suggest] Places API returned ${venueData.length} venues for category="${searchCategory}"`);
+
+      // FALLBACK: When category is "events" and Google Places returns fewer than
+      // 3 venues (the narrow terms "nightclub", "live music venue", "concert venue"
+      // often miss bars and beach clubs), run a second round with broader terms so
+      // the AI always has venues to mix with events.
+      if (searchCategory === "events" && venueData.length < 3) {
+        console.log(`[concierge-suggest] Events category has only ${venueData.length} venues — running broader fallback Places queries`);
+        const existingIds = venueData.map(v => v.id);
+        const fallbackTerms = [
+          `popular bar ${searchLocationName}`,
+          `nightclub ${searchLocationName}`,
+          `beach club ${searchLocationName}`,
+          `live music ${searchLocationName}`,
+        ];
+        const locationBias = {
+          circle: {
+            center: { latitude: searchLat, longitude: searchLng },
+            radius: 15000,
+          },
+        };
+        const fallbackQueries: PlacesSearchQuery[] = fallbackTerms.map(t => ({
+          textQuery: t,
+          locationBias,
+        }));
+        console.log(`[concierge-suggest] Fallback Places queries: ${JSON.stringify(fallbackTerms)}`);
+        const fallbackVenues = await searchPlacesBatch(
+          fallbackQueries,
+          googleKey,
+          [...excludePlaceIds, ...existingIds],
+        );
+        console.log(`[concierge-suggest] Fallback Places returned ${fallbackVenues.length} additional venues`);
+        venueData = [...venueData, ...fallbackVenues];
+        console.log(`[concierge-suggest] Total venues after fallback: ${venueData.length}`);
+      }
     } else {
       console.log(`[concierge-suggest] Skipping Places API: googleKey=${!!googleKey}, lat=${searchLat}, lng=${searchLng}`);
     }
@@ -1471,6 +1508,8 @@ A venue CAN appear multiple times IF each appearance is for a genuinely differen
 NEVER mark permanent venues (clubs, bars, beach clubs, restaurants, spas) as type "event" — even if they appear in this web search data. If a result below is clearly a permanent venue, use its Google Places data from VENUE DATA instead and treat it as a regular venue suggestion.
 
 At least 1-2 of your suggestions SHOULD be specific dated events from this list if they match the query.
+
+DATE ACCURACY — CRITICAL: For event dates, ONLY use dates explicitly stated in the event data below. NEVER guess or infer event dates from your training data — your training data dates are likely wrong or outdated. If an event listing below does not include a specific date, write "check listing for dates" in event_details instead of making one up.
 ${eventListForPrompt}`
       : "";
 
