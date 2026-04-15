@@ -1248,8 +1248,8 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                       </button>
                     )}
                   </div>
-                  {/* Desktop: horizontal carousel */}
-                  <HorizontalCarousel cardWidth={350}>
+                  {/* Desktop: 2-column grid */}
+                  <DesktopGrid>
                     {savedSpots.map((spot, i) => (
                       <SuggestionCard
                         key={spot.name}
@@ -1262,7 +1262,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         onSaveChange={() => setSavedVersion(v => v + 1)}
                       />
                     ))}
-                  </HorizontalCarousel>
+                  </DesktopGrid>
                 </div>
               )}
 
