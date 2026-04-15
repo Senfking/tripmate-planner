@@ -924,10 +924,14 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
     if (loadingMore || !displayedResults?.suggestions) return;
     setLoadingMore(true);
     try {
-      const excludeNames = [
-        ...(displayedResults.suggestions || []).map(s => s.name),
-        ...extraResults.map(s => s.name),
+      const allShown = [
+        ...(displayedResults.suggestions || []),
+        ...extraResults,
       ];
+      const excludeNames = allShown.map(s => s.name).filter(Boolean);
+      const excludePlaceIds = allShown
+        .map(s => (s as Record<string, unknown>).place_id as string)
+        .filter(Boolean);
 
       // Re-send the original request body with exclusion list
       const baseBody = lastRequestBodyRef.current ?? {
@@ -940,6 +944,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         body: {
           ...baseBody,
           exclude_names: excludeNames,
+          exclude_place_ids: excludePlaceIds,
         },
       });
       if (error) throw error;

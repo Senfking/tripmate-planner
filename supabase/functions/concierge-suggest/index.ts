@@ -284,6 +284,17 @@ interface EventSearchResult {
 // Tries Brave Search API first (BRAVE_API_KEY), falls back to Google Custom
 // Search (GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID). Returns structured results.
 // ---------------------------------------------------------------------------
+// Strip relative-time phrases from a query so they don't clash with absolute dates
+function stripTimePhrases(q: string): string {
+  return q
+    .replace(
+      /\b(this week|this weekend|tonight|today|tomorrow|next week|next weekend)\b/gi,
+      "",
+    )
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 async function searchEvents(
   destination: string,
   userQuery: string,
@@ -294,49 +305,59 @@ async function searchEvents(
   const googleSearchKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
   const googleCseId = Deno.env.get("GOOGLE_CSE_ID");
 
-  // Build a targeted search query
-  const catLabel = category
-    ? CATEGORY_DESCRIPTIONS[category] || category
-    : "";
-  // e.g. "electronic music events Bali April 2026"
+  // Build 3 targeted query angles
   const dateObj = new Date(dateStr + "T12:00:00");
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
   ];
   const monthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-  const searchQuery = `${userQuery} ${destination} ${monthYear}`.trim();
-  // Secondary query for broader coverage
-  const fallbackQuery = `${catLabel || "events"} ${destination} ${monthYear}`.trim();
+  const cleanQuery = stripTimePhrases(userQuery);
 
-  console.log(`[concierge-suggest] event search queries: "${searchQuery}", "${fallbackQuery}"`);
+  // Query 1: User's intent + location + absolute date
+  // e.g. "electronic music events Bali April 2026"
+  const q1 = `${cleanQuery} ${destination} ${monthYear}`.trim();
+
+  // Query 2: Festival / major-event focused
+  // e.g. "music festival Bali April 2026"
+  const catLabel = category
+    ? CATEGORY_DESCRIPTIONS[category] || category
+    : "events";
+  const q2 = `${catLabel} festival ${destination} ${monthYear}`.trim();
+
+  // Query 3: What's-on / listings angle
+  // e.g. "what's on Bali this week music"
+  const topicWords = cleanQuery
+    .replace(/\b(events?|in|the|a|an|for|and|or)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  const q3 = `what's on ${destination} this week ${topicWords}`.trim();
+
+  const queries = [q1, q2, q3];
+  console.log(
+    `[concierge-suggest] event search queries: ${JSON.stringify(queries)}`,
+  );
 
   if (braveKey) {
-    return searchEventsViaBrave(braveKey, searchQuery, fallbackQuery);
+    return searchEventsViaBrave(braveKey, queries);
   }
 
   if (googleSearchKey && googleCseId) {
-    return searchEventsViaGoogleCSE(
-      googleSearchKey,
-      googleCseId,
-      searchQuery,
-      fallbackQuery,
-    );
+    return searchEventsViaGoogleCSE(googleSearchKey, googleCseId, queries);
   }
 
   // No search API key available
   console.warn(
     "[concierge-suggest] No web search API key configured. " +
-    "Set BRAVE_API_KEY or (GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID) in Supabase secrets " +
-    "to enable event search. Falling back to LLM knowledge only.",
+      "Set BRAVE_API_KEY or (GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID) in Supabase secrets " +
+      "to enable event search. Falling back to LLM knowledge only.",
   );
   return [];
 }
 
 async function searchEventsViaBrave(
   apiKey: string,
-  primaryQuery: string,
-  fallbackQuery: string,
+  queries: string[],
 ): Promise<EventSearchResult[]> {
   const runQuery = async (q: string): Promise<EventSearchResult[]> => {
     try {
@@ -349,13 +370,26 @@ async function searchEventsViaBrave(
         },
       });
       if (!res.ok) {
-        console.error(`[concierge-suggest] Brave search error: ${res.status}`);
+        console.error(
+          `[concierge-suggest] Brave search error for "${q}": ${res.status}`,
+        );
         return [];
       }
       const data = await res.json();
       const results = data.web?.results ?? [];
+      console.log(
+        `[concierge-suggest] Brave raw for "${q}": ${results.length} hits — ${results
+          .slice(0, 5)
+          .map((r: { title?: string }) => r.title)
+          .join(" | ")}`,
+      );
       return results.map(
-        (r: { title?: string; url?: string; description?: string; page_age?: string }) => ({
+        (r: {
+          title?: string;
+          url?: string;
+          description?: string;
+          page_age?: string;
+        }) => ({
           name: r.title ?? "Unknown event",
           date: r.page_age ?? null,
           venue: null,
@@ -370,38 +404,37 @@ async function searchEventsViaBrave(
     }
   };
 
-  // Run both queries in parallel, deduplicate by URL
-  const [primary, secondary] = await Promise.all([
-    runQuery(primaryQuery),
-    runQuery(fallbackQuery),
-  ]);
+  // Run all queries in parallel, deduplicate by URL
+  const allResults = await Promise.all(queries.map(runQuery));
 
   const seen = new Set<string>();
   const merged: EventSearchResult[] = [];
-  for (const r of [...primary, ...secondary]) {
-    const key = r.url || r.name;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    merged.push(r);
+  for (const batch of allResults) {
+    for (const r of batch) {
+      const key = r.url || r.name;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(r);
+    }
   }
 
-  console.log(`[concierge-suggest] Brave search returned ${merged.length} results`);
-  return merged.slice(0, 15);
+  console.log(
+    `[concierge-suggest] Brave search total: ${merged.length} unique results`,
+  );
+  return merged.slice(0, 20);
 }
 
 async function searchEventsViaGoogleCSE(
   apiKey: string,
   cseId: string,
-  primaryQuery: string,
-  fallbackQuery: string,
+  queries: string[],
 ): Promise<EventSearchResult[]> {
   const runQuery = async (q: string): Promise<EventSearchResult[]> => {
     try {
-      const url =
-        `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(q)}&num=10&dateRestrict=m1`;
+      const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(q)}&num=10&dateRestrict=m1`;
       const res = await fetch(url);
       if (!res.ok) {
-        console.error(`[concierge-suggest] Google CSE error: ${res.status}`);
+        console.error(`[concierge-suggest] Google CSE error for "${q}": ${res.status}`);
         return [];
       }
       const data = await res.json();
@@ -422,22 +455,23 @@ async function searchEventsViaGoogleCSE(
     }
   };
 
-  const [primary, secondary] = await Promise.all([
-    runQuery(primaryQuery),
-    runQuery(fallbackQuery),
-  ]);
+  const allResults = await Promise.all(queries.map(runQuery));
 
   const seen = new Set<string>();
   const merged: EventSearchResult[] = [];
-  for (const r of [...primary, ...secondary]) {
-    const key = r.url || r.name;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    merged.push(r);
+  for (const batch of allResults) {
+    for (const r of batch) {
+      const key = r.url || r.name;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(r);
+    }
   }
 
-  console.log(`[concierge-suggest] Google CSE returned ${merged.length} results`);
-  return merged.slice(0, 15);
+  console.log(
+    `[concierge-suggest] Google CSE total: ${merged.length} unique results`,
+  );
+  return merged.slice(0, 20);
 }
 
 // ---------------------------------------------------------------------------
@@ -632,6 +666,27 @@ async function searchPlacesBatch(
 }
 
 // ---------------------------------------------------------------------------
+// Fuzzy name matching — normalise to lowercase alphanumeric and check if one
+// string contains the other (handles "Savaya" matching "Savaya Bali - Beach Club")
+// ---------------------------------------------------------------------------
+function normaliseName(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function fuzzyNameMatch(a: string, b: string): boolean {
+  const na = normaliseName(a);
+  const nb = normaliseName(b);
+  if (!na || !nb) return false;
+  // Exact match after normalisation
+  if (na === nb) return true;
+  // One contains the other (handles "savaya" vs "savayabalibeachclub")
+  if (na.length >= 4 && nb.length >= 4) {
+    return na.includes(nb) || nb.includes(na);
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // validateAIResponse — pure-code validation of AI picks against Google Places
 // ground truth. Merges AI enrichment (description, pro_tip) with verified data.
 // ---------------------------------------------------------------------------
@@ -650,6 +705,14 @@ function validateAIResponse(
 
   const validated: Array<Record<string, unknown>> = [];
 
+  // Build a name→place lookup for fuzzy matching events against venues
+  const placesByName = new Map<string, BatchPlaceResult>();
+  for (const p of originalPlaces) {
+    if (p.displayName) {
+      placesByName.set(normaliseName(p.displayName), p);
+    }
+  }
+
   for (const item of aiResponse) {
     const isEvent = item.type === "event" || item.is_event === true;
 
@@ -658,6 +721,68 @@ function validateAIResponse(
       const eventName = (item.name as string) || "";
       // Must have a name
       if (!eventName) continue;
+
+      // FUZZY MATCH CHECK: if this "event" name matches a Google Places venue,
+      // it's a permanent venue misclassified as an event (e.g. "Savaya Bali").
+      // Reclassify it as a venue with real Places data.
+      let matchedPlace: BatchPlaceResult | undefined;
+      for (const [normName, place] of placesByName) {
+        if (fuzzyNameMatch(eventName, place.displayName ?? "")) {
+          matchedPlace = place;
+          break;
+        }
+      }
+      if (matchedPlace && !excludeSet.has(matchedPlace.id)) {
+        // Distance check for the matched venue
+        let withinRange = true;
+        if (matchedPlace.location) {
+          const dist = haversineKm(
+            searchLat,
+            searchLng,
+            matchedPlace.location.latitude,
+            matchedPlace.location.longitude,
+          );
+          if (dist > 25) withinRange = false;
+        }
+        if (
+          withinRange &&
+          (!matchedPlace.businessStatus ||
+            matchedPlace.businessStatus === "OPERATIONAL")
+        ) {
+          console.log(
+            `[concierge-suggest] Reclassified "${eventName}" from event → venue (matched Places: "${matchedPlace.displayName}")`,
+          );
+          validated.push({
+            id: matchedPlace.id,
+            name: matchedPlace.displayName,
+            address: matchedPlace.formattedAddress,
+            lat: matchedPlace.location?.latitude ?? null,
+            lng: matchedPlace.location?.longitude ?? null,
+            rating: matchedPlace.rating,
+            userRatingCount: matchedPlace.userRatingCount,
+            priceLevel: matchedPlace.priceLevel,
+            types: matchedPlace.types,
+            photos: matchedPlace.photos,
+            googleMapsUri: matchedPlace.googleMapsUri,
+            businessStatus: matchedPlace.businessStatus,
+            description: item.description ?? item.full_description ?? null,
+            pro_tip: item.pro_tip ?? null,
+            why: item.why ?? null,
+            category: item.category ?? null,
+            best_time: item.best_time ?? null,
+            estimated_cost_per_person: item.estimated_cost_per_person ?? null,
+            currency: item.currency ?? null,
+            what_to_order: item.what_to_order ?? null,
+            booking_url: item.booking_url ?? null,
+            is_event: false,
+            event_details: null,
+            specific_night: item.specific_night ?? null,
+            opening_hours: item.opening_hours ?? null,
+          });
+          continue;
+        }
+      }
+
       // Must have some date/time reference
       const hasTimeRef = !!(
         item.event_details ||
@@ -1013,7 +1138,7 @@ Deno.serve(async (req) => {
       venueData = await searchPlacesBatch(queries, googleKey, excludePlaceIds);
     }
 
-    // ---- Server-side event web search (runs in parallel with nothing else blocking) ----
+    // ---- Server-side event web search ----
     let eventSearchResults: EventSearchResult[] = [];
     const shouldSearchEvents =
       searchCategory === "events" || timeSensitive;
@@ -1031,6 +1156,40 @@ Deno.serve(async (req) => {
       console.log(
         `[concierge-suggest] event search returned ${eventSearchResults.length} results`,
       );
+    }
+
+    // ---- Apply excludeNames to venue data AND event results ----
+    // (excludePlaceIds is already handled by searchPlacesBatch, but name-based
+    // exclusion is needed for "show more" to remove previously shown results
+    // from the data injected into the prompt — otherwise the AI picks them again)
+    const excludeNamesNorm = new Set(
+      excludeNames.map((n) => normaliseName(n)),
+    );
+
+    if (excludeNames.length > 0) {
+      console.log(
+        `[concierge-suggest] Excluding: names=${JSON.stringify(excludeNames)}, place_ids=${JSON.stringify(excludePlaceIds)}`,
+      );
+
+      // Filter venue data: remove venues whose name fuzzy-matches an exclude entry
+      venueData = venueData.filter((v) => {
+        const norm = normaliseName(v.displayName ?? "");
+        for (const ex of excludeNamesNorm) {
+          if (ex && norm && (norm.includes(ex) || ex.includes(norm)))
+            return false;
+        }
+        return true;
+      });
+
+      // Filter event results: remove events whose title fuzzy-matches an exclude entry
+      eventSearchResults = eventSearchResults.filter((e) => {
+        const norm = normaliseName(e.name);
+        for (const ex of excludeNamesNorm) {
+          if (ex && norm && (norm.includes(ex) || ex.includes(norm)))
+            return false;
+        }
+        return true;
+      });
     }
 
     // Format venue data for prompt injection
@@ -1077,10 +1236,11 @@ Deno.serve(async (req) => {
       : "";
 
     const eventDataBlock = hasEventData
-      ? `\n\nEVENT DATA (from web search — events may not have a place_id, that's okay):
-For event suggestions, include as much detail as possible: name, date, time, venue name, ticket info.
-Mark events with "type": "event" in your response so the frontend can display them differently.
-At least 1-2 of your suggestions SHOULD be specific events from this list if they match the query.
+      ? `\n\nEVENT DATA (from web search):
+IMPORTANT — "type": "event" means a TIME-LIMITED happening: a festival edition, a concert, a DJ set on a specific date, a popup market, a themed party night. These have a start/end date or occur on a specific schedule.
+NEVER mark permanent venues (clubs, bars, beach clubs, restaurants, spas) as type "event" — even if they appear in this web search data. If a result below is clearly a permanent venue (e.g. "Savaya Bali - Beach Club", "Potato Head Seminyak"), use its Google Places data from VENUE DATA instead and treat it as a regular venue suggestion.
+Only use "type": "event" for things that would NOT exist next month — a specific festival date, a guest DJ appearance, a one-off concert, a seasonal market.
+At least 1-2 of your suggestions SHOULD be specific dated events from this list if they match the query.
 ${eventListForPrompt}`
       : "";
 
