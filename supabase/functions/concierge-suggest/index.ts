@@ -689,8 +689,11 @@ Deno.serve(async (req) => {
     }
 
     // ---- Fetch real venue data via batch Places pipeline ----
-    const searchLat = userGps?.lat ?? context.hotel_location?.lat ?? null;
-    const searchLng = userGps?.lng ?? context.hotel_location?.lng ?? null;
+    // Guard: (0, 0) is Null Island — never a valid user location. Treat as missing.
+    const rawLat = userGps?.lat ?? context.hotel_location?.lat ?? null;
+    const rawLng = userGps?.lng ?? context.hotel_location?.lng ?? null;
+    const searchLat = rawLat === 0 && rawLng === 0 ? null : rawLat;
+    const searchLng = rawLat === 0 && rawLng === 0 ? null : rawLng;
     const searchLocationName = specificLocation || context.destination;
     const searchCategory = structCategory || "explore";
     const customSearchText = !isStructured ? body.query : undefined;
@@ -1030,41 +1033,12 @@ Return ONLY valid JSON, no other text.${venueDataBlock}`;
         };
       });
     } else {
-      // Fallback: no venue data — return AI suggestions without Google enrichment
-      enriched = parsed.suggestions.map((s) => {
-        const aiName = (s.name as string) || "";
-        const mapsUrl = aiName
-          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(aiName + " " + searchLocationName)}`
-          : null;
-
-        return {
-          name: aiName,
-          category: (s.category as string) || "",
-          why: s.why ?? null,
-          best_time: s.best_time ?? null,
-          estimated_cost_per_person: s.estimated_cost_per_person ?? null,
-          currency: s.currency ?? null,
-          is_event: s.is_event ?? false,
-          event_details: s.event_details ?? null,
-          booking_url: s.booking_url ?? null,
-          pro_tip: s.pro_tip ?? null,
-          what_to_order: s.what_to_order ?? null,
-          specific_night: s.specific_night ?? null,
-          opening_hours: s.opening_hours ?? null,
-          full_description: s.full_description ?? null,
-          photo_url: null,
-          rating: null,
-          totalRatings: null,
-          googleMapsUrl: mapsUrl,
-          address: null,
-          lat: null,
-          lng: null,
-          priceLevel: null,
-          place_id: null,
-          not_verified: true,
-          distance_km: null,
-        };
-      });
+      // No verified venue data — return empty results rather than unvalidated
+      // AI suggestions that could contain wrong-location hallucinations.
+      enriched = [];
+      if (!parsed.summary) {
+        parsed.summary = `I couldn't find verified venues in ${searchLocationName}. Try a different search or check your location.`;
+      }
     }
 
     // ---- Save assistant message ----
