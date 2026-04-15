@@ -5,12 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface MemberInfo {
-  user_id: string;
-  attendance_status: string;
-  profile?: {
-    display_name: string | null;
-    avatar_url?: string | null;
-  };
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  attendanceStatus: string;
 }
 
 interface AttendanceInviteOverlayProps {
@@ -113,9 +111,9 @@ export function AttendanceInviteOverlay({
   const sortedMembers = [...members]
     .sort((a, b) => {
       // Current user always first
-      if (a.user_id === currentUserId) return -1;
-      if (b.user_id === currentUserId) return 1;
-      return (STATUS_ORDER[a.attendance_status] ?? 9) - (STATUS_ORDER[b.attendance_status] ?? 9);
+      if (a.userId === currentUserId) return -1;
+      if (b.userId === currentUserId) return 1;
+      return (STATUS_ORDER[a.attendanceStatus] ?? 9) - (STATUS_ORDER[b.attendanceStatus] ?? 9);
     });
 
   const dateStr = formatDateRange(startDate, endDate);
@@ -159,7 +157,7 @@ export function AttendanceInviteOverlay({
   const peekTranslate = `calc(100% - ${peekHeight}px)`;
 
   const goingMembers = members.filter(
-    (m) => m.attendance_status === "going" || m.attendance_status === "maybe"
+    (m) => m.attendanceStatus === "going" || m.attendanceStatus === "maybe"
   );
 
   return createPortal(
@@ -230,12 +228,12 @@ export function AttendanceInviteOverlay({
           >
             <div className="flex items-center -space-x-1.5">
               {goingMembers.slice(0, 6).map((m) => (
-                <Avatar key={m.user_id} className="h-8 w-8 ring-2 ring-white/30">
-                  {m.profile?.avatar_url && (
-                    <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
+                <Avatar key={m.userId} className="h-8 w-8 ring-2 ring-white/30">
+                  {m.avatarUrl && (
+                    <AvatarImage src={m.avatarUrl} alt={m.displayName || ""} />
                   )}
                   <AvatarFallback className="bg-white/20 text-white text-[10px] font-medium">
-                    {getInitial(m.profile?.display_name)}
+                    {getInitial(m.displayName)}
                   </AvatarFallback>
                 </Avatar>
               ))}
@@ -324,26 +322,26 @@ export function AttendanceInviteOverlay({
                 </p>
                 <div className="space-y-1 mb-6">
                   {sortedMembers.map((m) => {
-                    const badge = STATUS_BADGES[m.attendance_status] ?? STATUS_BADGES.pending;
+                    const badge = STATUS_BADGES[m.attendanceStatus] ?? STATUS_BADGES.pending;
                     return (
                       <div
-                        key={m.user_id}
+                        key={m.userId}
                         className={cn(
                           "flex items-center gap-3 py-2",
-                          m.attendance_status === "not_going" && "opacity-50"
+                          m.attendanceStatus === "not_going" && "opacity-50"
                         )}
                       >
                         <Avatar className="h-9 w-9">
-                          {m.profile?.avatar_url && (
-                            <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
+                          {m.avatarUrl && (
+                            <AvatarImage src={m.avatarUrl} alt={m.displayName || ""} />
                           )}
                           <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-                            {getInitial(m.profile?.display_name)}
+                            {getInitial(m.displayName)}
                           </AvatarFallback>
                         </Avatar>
                         <span className="flex-1 text-[14px] font-medium text-foreground truncate">
-                          {m.profile?.display_name || "Member"}
-                          {m.user_id === currentUserId && <span className="text-muted-foreground font-normal"> (You)</span>}
+                          {m.displayName || "Member"}
+                          {m.userId === currentUserId && <span className="text-muted-foreground font-normal"> (You)</span>}
                         </span>
                         <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full", badge.className)}>
                           {badge.label}

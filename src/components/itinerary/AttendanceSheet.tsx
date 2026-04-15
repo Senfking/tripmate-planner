@@ -11,7 +11,7 @@ import type { AttendanceRecord, TripMember } from "@/hooks/useItineraryAttendanc
 type MemberStatus = "in" | "maybe" | "out";
 
 function getStatus(member: TripMember, attendance: AttendanceRecord[]): MemberStatus {
-  const rec = attendance.find((a) => a.user_id === member.user_id);
+  const rec = attendance.find((a) => a.user_id === member.userId);
   if (!rec) return "in";
   return rec.status as MemberStatus;
 }
@@ -54,7 +54,7 @@ export function AttendanceSheet({
     const sa = getStatus(a, attendance);
     const sb = getStatus(b, attendance);
     if (statusOrder[sa] !== statusOrder[sb]) return statusOrder[sa] - statusOrder[sb];
-    return (a.display_name || "").localeCompare(b.display_name || "");
+    return (a.displayName || "").localeCompare(b.displayName || "");
   });
 
   return (
@@ -66,21 +66,21 @@ export function AttendanceSheet({
         <div className="px-4 pb-6 space-y-2 max-h-[60vh] overflow-y-auto">
           {sorted.map((member) => {
             const status = getStatus(member, attendance);
-            const isMe = member.user_id === currentUserId;
+            const isMe = member.userId === currentUserId;
             return (
               <div
-                key={member.user_id}
+                key={member.userId}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2",
                   status === "out" && "opacity-50"
                 )}
               >
                 <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-secondary-foreground shrink-0">
-                  {getInitials(member.display_name)}
+                  {getInitials(member.displayName)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium truncate block">
-                    {member.display_name || "Unknown"}
+                    {member.displayName || "Unknown"}
                     {isMe && (
                       <span className="ml-1.5 text-xs text-muted-foreground font-normal">
                         (You)

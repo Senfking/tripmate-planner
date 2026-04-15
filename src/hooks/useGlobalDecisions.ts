@@ -25,7 +25,8 @@ export function useGlobalDecisions() {
   return useQuery({
     queryKey: ["global-decisions", user?.id],
     enabled: !!user,
-    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<{ items: PendingItem[]; pendingCount: number }> => {
       const userId = user!.id;
 

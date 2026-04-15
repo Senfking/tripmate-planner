@@ -7,7 +7,7 @@ import { AttendanceSheet } from "./AttendanceSheet";
 type MemberStatus = "in" | "maybe" | "out";
 
 function getStatus(member: TripMember, attendance: AttendanceRecord[]): MemberStatus {
-  const rec = attendance.find((a) => a.user_id === member.user_id);
+  const rec = attendance.find((a) => a.user_id === member.userId);
   if (!rec) return "in";
   return rec.status as MemberStatus;
 }
@@ -49,12 +49,12 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
   const itemAttendance = attendance.filter((a) => a.itinerary_item_id === itemId);
 
   const sorted = [...members].sort((a, b) => {
-    if (a.user_id === currentUserId) return -1;
+    if (a.userId === currentUserId) return -1;
     if (b.user_id === currentUserId) return 1;
-    return (a.display_name || "").localeCompare(b.display_name || "");
+    return (a.displayName || "").localeCompare(b.displayName || "");
   });
 
-  const me = members.find((m) => m.user_id === currentUserId);
+  const me = members.find((m) => m.userId === currentUserId);
   const myStatus = me ? getStatus(me, itemAttendance) : "in";
   const rsvpStyle = RSVP_STYLE[myStatus];
 
@@ -76,24 +76,24 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
             const status = getStatus(member, itemAttendance);
             return (
               <div
-                key={member.user_id}
+                key={member.userId}
                 className={cn(
                   "relative flex shrink-0 items-center justify-center rounded-full text-[8px] font-semibold border-[1.5px] border-card",
-                  !member.avatar_url && (status === "out"
+                  !member.avatarUrl && (status === "out"
                     ? "bg-muted/60 text-muted-foreground/40"
                     : "bg-secondary text-secondary-foreground"),
                 )}
                 style={{ height: 22, width: 22 }}
-                title={`${member.display_name || "?"}: ${RSVP_LABEL[status]}`}
+                title={`${member.displayName || "?"}: ${RSVP_LABEL[status]}`}
               >
-                {member.avatar_url ? (
+                {member.avatarUrl ? (
                   <img
-                    src={member.avatar_url}
-                    alt={member.display_name || ""}
+                    src={member.avatarUrl}
+                    alt={member.displayName || ""}
                     className={cn("h-full w-full rounded-full object-cover", status === "out" && "opacity-40 grayscale")}
                   />
                 ) : (
-                  getInitials(member.display_name)
+                  getInitials(member.displayName)
                 )}
                 <span
                   className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full border border-card"
@@ -149,12 +149,12 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
         >
           {visible.map((member) => {
             const status = getStatus(member, itemAttendance);
-            const isMe = member.user_id === currentUserId;
+            const isMe = member.userId === currentUserId;
             const dotColor = DOT[status];
 
             return (
               <button
-                key={member.user_id}
+                key={member.userId}
                 type="button"
                 disabled={!isMe}
                 onClick={(e) => {
@@ -164,7 +164,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                 }}
                 className={cn(
                   "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold border-2 border-white dark:border-card transition-colors",
-                  !member.avatar_url && (status === "out"
+                  !member.avatarUrl && (status === "out"
                     ? "bg-muted/60 text-muted-foreground/40"
                     : "bg-secondary text-secondary-foreground"),
                   isMe && "ring-2 ring-primary/20 z-10 cursor-pointer",
@@ -173,17 +173,17 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
                 title={
                   isMe
                     ? `You: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"} - tap to change`
-                    : `${member.display_name || "?"}: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"}`
+                    : `${member.displayName || "?"}: ${status === "in" ? "Attending" : status === "maybe" ? "Maybe" : "Out"}`
                 }
               >
-                {member.avatar_url ? (
+                {member.avatarUrl ? (
                   <img
-                    src={member.avatar_url}
-                    alt={member.display_name || ""}
+                    src={member.avatarUrl}
+                    alt={member.displayName || ""}
                     className={cn("h-full w-full rounded-full object-cover", status === "out" && "opacity-40 grayscale")}
                   />
                 ) : (
-                  getInitials(member.display_name)
+                  getInitials(member.displayName)
                 )}
                 <span
                   className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border-[1.5px] border-white dark:border-card"

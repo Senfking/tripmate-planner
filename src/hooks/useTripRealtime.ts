@@ -33,16 +33,16 @@ const EXPLICIT_EVENT_TABLES = new Set(["itinerary_items", "itinerary_attendance"
 const TABLE_QUERY_KEYS: Record<string, (tripId: string) => string[][]> = {
   itinerary_items: (t) => [["itinerary", t], ["itinerary-items-summary", t], ["itinerary-items-for-expenses", t]],
   itinerary_attendance: (t) => [["itinerary_attendance", t]],
-  votes: (t) => [["poll-vote-counts"], ["my-poll-votes", t], ["trip-polls", t], ["trip-poll-options", t], ["global-decisions"]],
-  date_option_votes: (t) => [["trip-date-options", t], ["my-date-votes", t], ["global-decisions"]],
-  proposal_reactions: (t) => [["my-reactions", t], ["trip-proposals", t], ["global-decisions"]],
+  votes: (t) => [["poll-vote-counts"], ["my-poll-votes", t], ["trip-polls", t], ["trip-poll-options", t]],
+  date_option_votes: (t) => [["trip-date-options", t], ["my-date-votes", t]],
+  proposal_reactions: (t) => [["my-reactions", t], ["trip-proposals", t]],
   vibe_responses: (t) => [["my-vibe-responses-count", t], ["vibe-responses", t], ["vibe-aggregates", t]],
   comments: () => [["item-comments"]],
   attachments: (t) => [["attachments", t], ["attachments-summary", t]],
-  expenses: (t) => [["expenses", t], ["expenses-summary", t], ["global-expenses"]],
-  expense_splits: (t) => [["expense-splits", t], ["expenses-summary", t], ["global-expenses"]],
+  expenses: (t) => [["expenses", t], ["expenses-summary", t]],
+  expense_splits: (t) => [["expense-splits", t], ["expenses-summary", t]],
   trip_route_stops: (t) => [["route-stops", t], ["trip-route-stops", t]],
-  trip_members: (t) => [["trip-members-count", t], ["trip-members-profiles", t], ["trip_members_profiles", t]],
+  trip_members: (t) => [["trip-members-count", t], ["members", t]],
 };
 
 // Dashboard keys to also invalidate
@@ -92,10 +92,8 @@ export function useTripRealtime(tripId: string | undefined) {
         if (!tripId) return;
 
         const keys = TABLE_QUERY_KEYS[table]?.(tripId) || [];
-        const dashKeys = DASHBOARD_KEYS(tripId);
-        const allKeys = [...keys, ...dashKeys];
 
-        for (const key of allKeys) {
+        for (const key of keys) {
           queryClient.invalidateQueries({ queryKey: key });
         }
       }, 300)
@@ -124,8 +122,7 @@ export function useTripRealtime(tripId: string | undefined) {
 
     let displayName = "Someone";
     try {
-      const cached = queryClient.getQueryData<any[]>(["trip-members-profiles", tripId])
-        ?? queryClient.getQueryData<any[]>(["trip_members_profiles", tripId]);
+      const cached = queryClient.getQueryData<any[]>(["members", tripId]);
       const member = cached?.find((m: any) => m.userId === userId || m.user_id === userId);
       if (member) {
         displayName = member.displayName || member.display_name || "Someone";
