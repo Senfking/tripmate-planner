@@ -33,7 +33,7 @@ function AttendanceCard({ item }: { item: PendingItem }) {
     onSuccess: (_, status) => {
       qc.invalidateQueries({ queryKey: ["global-decisions"] });
       qc.invalidateQueries({ queryKey: ["my-trip-membership", item.tripId] });
-      qc.invalidateQueries({ queryKey: ["trip-members-full", item.tripId] });
+      qc.invalidateQueries({ queryKey: ["members", item.tripId] });
       if (status === "going") toast.success("You're in! 🎉");
       else toast.success("Marked as maybe");
     },

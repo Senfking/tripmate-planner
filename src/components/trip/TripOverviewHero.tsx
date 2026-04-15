@@ -33,11 +33,11 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
   });
 
   const { data: members } = useQuery({
-    queryKey: ["trip-members-full", tripId],
+    queryKey: ["members", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("user_id, role, joined_at")
+        .select("user_id, role, joined_at, attendance_status")
         .eq("trip_id", tripId)
         .order("joined_at");
       if (error) throw error;
@@ -46,10 +46,14 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
       const { data: profiles } = await supabase
         .rpc("get_public_profiles", { _user_ids: userIds });
 
-      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url }]) ?? []);
       return data.map((m) => ({
-        ...m,
-        profile: profileMap.get(m.user_id) as { display_name: string | null; avatar_url?: string | null } | undefined,
+        userId: m.user_id,
+        displayName: profileMap.get(m.user_id)?.name || "Member",
+        avatarUrl: profileMap.get(m.user_id)?.avatar || null,
+        role: m.role,
+        joinedAt: m.joined_at,
+        attendanceStatus: (m as any).attendance_status ?? "pending",
       }));
     },
   });
@@ -112,14 +116,14 @@ export function TripOverviewHero({ tripId, routeLocked, startDate, endDate }: Tr
           <div className="flex items-center -space-x-2">
             {visibleMembers.map((m) => (
               <Avatar
-                key={m.user_id}
+                key={m.userId}
                 className="h-8 w-8 ring-2 ring-white"
               >
-                {m.profile?.avatar_url && (
-                  <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
+                {m.avatarUrl && (
+                  <AvatarImage src={m.avatarUrl} alt={m.displayName || ""} />
                 )}
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-                  {getInitial(m.profile?.display_name)}
+                  {getInitial(m.displayName)}
                 </AvatarFallback>
               </Avatar>
             ))}

@@ -9,13 +9,12 @@ import {
 } from "@/components/ui/sheet";
 
 interface Member {
-  user_id: string;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
   role: string;
-  joined_at: string;
-  profile?: {
-    display_name: string | null;
-    avatar_url?: string | null;
-  };
+  joinedAt: string;
+  attendanceStatus: string;
 }
 
 interface MemberListSheetProps {
@@ -47,26 +46,26 @@ export function MemberListSheet({ open, onOpenChange, members }: MemberListSheet
         </SheetHeader>
         <div className="space-y-3">
           {members.map((m) => (
-            <div key={m.user_id} className="flex items-center gap-3">
+            <div key={m.userId} className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                {m.profile?.avatar_url && (
-                  <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
+                {m.avatarUrl && (
+                  <AvatarImage src={m.avatarUrl} alt={m.displayName || ""} />
                 )}
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                  {getInitial(m.profile?.display_name)}
+                  {getInitial(m.displayName)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm truncate">
-                    {m.profile?.display_name || "Unknown"}
+                    {m.displayName || "Unknown"}
                   </span>
                   <Badge variant={roleBadgeVariant(m.role)} className="text-[10px] px-1.5 py-0">
                     {roleLabel(m.role)}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Joined {format(new Date(m.joined_at), "MMM d, yyyy")}
+                  Joined {format(new Date(m.joinedAt), "MMM d, yyyy")}
                 </p>
               </div>
             </div>

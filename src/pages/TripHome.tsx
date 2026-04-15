@@ -104,8 +104,7 @@ export default function TripHome() {
     },
     onSuccess: (_, status) => {
       qc.invalidateQueries({ queryKey: ["my-trip-membership", tripId] });
-      qc.invalidateQueries({ queryKey: ["trip-members-full", tripId] });
-      qc.invalidateQueries({ queryKey: ["admin-members", tripId] });
+      qc.invalidateQueries({ queryKey: ["members", tripId] });
       qc.invalidateQueries({ queryKey: ["global-decisions"] });
       if (status === "going") toast.success("You're in!");
       else if (status === "maybe") toast.success("Marked as maybe");
@@ -115,7 +114,7 @@ export default function TripHome() {
   });
 
   const { data: members } = useQuery({
-    queryKey: ["trip-members-full", tripId],
+    queryKey: ["members", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
@@ -125,10 +124,14 @@ export default function TripHome() {
       if (error) throw error;
       const userIds = data.map((m) => m.user_id);
       const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
-      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url }]) ?? []);
       return data.map((m) => ({
-        ...m,
-        profile: profileMap.get(m.user_id) as { display_name: string | null; avatar_url?: string | null } | undefined,
+        userId: m.user_id,
+        displayName: profileMap.get(m.user_id)?.name || "Member",
+        avatarUrl: profileMap.get(m.user_id)?.avatar || null,
+        role: m.role,
+        joinedAt: m.joined_at,
+        attendanceStatus: (m as any).attendance_status ?? "pending",
       }));
     },
     enabled: !!tripId && !!user,
@@ -447,12 +450,12 @@ export default function TripHome() {
           >
             <div className="flex items-center -space-x-2">
               {visibleMembers.map((m) => (
-                <Avatar key={m.user_id} className="h-7 w-7 ring-2 ring-background">
-                  {m.profile?.avatar_url && (
-                    <AvatarImage src={m.profile.avatar_url} alt={m.profile?.display_name || ""} />
+                <Avatar key={m.userId} className="h-7 w-7 ring-2 ring-background">
+                  {m.avatarUrl && (
+                    <AvatarImage src={m.avatarUrl} alt={m.displayName || ""} />
                   )}
                   <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-medium">
-                    {getInitial(m.profile?.display_name)}
+                    {getInitial(m.displayName)}
                   </AvatarFallback>
                 </Avatar>
               ))}

@@ -35,6 +35,7 @@ export interface MemberProfile {
   displayName: string;
   avatarUrl: string | null;
   role: string;
+  joinedAt: string;
   attendanceStatus: string;
 }
 
@@ -59,10 +60,6 @@ export function useExpenses(tripId: string) {
       return data as ExpenseRow[];
     },
     enabled: !!tripId && !!user,
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: "always",
-    refetchOnReconnect: "always",
   });
 
   // Fetch all splits for this trip's expenses
@@ -81,18 +78,17 @@ export function useExpenses(tripId: string) {
       return data as SplitRow[];
     },
     enabled: !!expensesQuery.data,
-    staleTime: 0,
-    refetchOnMount: "always",
   });
 
   // Fetch trip members with profiles
   const membersQuery = useQuery({
-    queryKey: ["trip-members-profiles", tripId],
+    queryKey: ["members", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("user_id, role, attendance_status")
-        .eq("trip_id", tripId);
+        .select("user_id, role, joined_at, attendance_status")
+        .eq("trip_id", tripId)
+        .order("joined_at");
       if (error) throw error;
 
       const userIds = data.map((m) => m.user_id);
@@ -109,6 +105,7 @@ export function useExpenses(tripId: string) {
         displayName: profileMap[m.user_id]?.name || "Member",
         avatarUrl: profileMap[m.user_id]?.avatar || null,
         role: m.role,
+        joinedAt: m.joined_at,
         attendanceStatus: (m as any).attendance_status ?? "pending",
       })) as MemberProfile[];
     },

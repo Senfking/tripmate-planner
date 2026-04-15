@@ -41,7 +41,8 @@ export function useGlobalItinerary() {
   return useQuery({
     queryKey: ["global-itinerary", user?.id],
     enabled: !!user,
-    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<TripItineraryGroup[]> => {
       const userId = user!.id;
       const today = format(new Date(), "yyyy-MM-dd");

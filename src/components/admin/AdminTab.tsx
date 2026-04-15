@@ -49,22 +49,25 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
 
   /* ── Members ───────────────────────────────── */
   const { data: members, isLoading: membersLoading } = useQuery({
-    queryKey: ["admin-members", tripId],
+    queryKey: ["members", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
         .select("user_id, role, joined_at, attendance_status")
         .eq("trip_id", tripId)
-        .order("joined_at", { ascending: true });
+        .order("joined_at");
       if (error) throw error;
       const userIds = (data || []).map((m) => m.user_id);
       const { data: profiles } = await supabase
         .rpc("get_public_profiles", { _user_ids: userIds });
-      const profileMap = new Map((profiles || []).map((p) => [p.id, p.display_name]));
+      const profileMap = new Map((profiles || []).map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url }]));
       return (data || []).map((m) => ({
-        ...m,
-        display_name: profileMap.get(m.user_id) || null,
-        attendance_status: (m as any).attendance_status ?? "pending",
+        userId: m.user_id,
+        displayName: profileMap.get(m.user_id)?.name || "Member",
+        avatarUrl: profileMap.get(m.user_id)?.avatar || null,
+        role: m.role,
+        joinedAt: m.joined_at,
+        attendanceStatus: (m as any).attendance_status ?? "pending",
       }));
     },
     enabled: !!user,
@@ -81,7 +84,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       if ((data as any)?.error) throw new Error((data as any).error);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-members", tripId] });
+      qc.invalidateQueries({ queryKey: ["members", tripId] });
       toast.success("Role updated");
     },
     onError: (e) => toast.error(e.message || "Failed to update role"),
@@ -97,7 +100,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       if ((data as any)?.error) throw new Error((data as any).error);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-members", tripId] });
+      qc.invalidateQueries({ queryKey: ["members", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-members-count", tripId] });
       toast.success("Member removed");
     },
@@ -231,13 +234,13 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
         <h2 className="text-sm font-semibold text-foreground mb-2">Members</h2>
         <Card className="divide-y divide-border">
           {(members || []).map((m) => (
-            <div key={m.user_id} className="px-3">
+            <div key={m.userId} className="px-3">
               <MemberRow
-                userId={m.user_id}
-                displayName={m.display_name}
+                userId={m.userId}
+                displayName={m.displayName}
                 role={m.role}
-                joinedAt={m.joined_at}
-                attendanceStatus={m.attendance_status}
+                joinedAt={m.joinedAt}
+                attendanceStatus={m.attendanceStatus}
                 myRole={myRole}
                 myUserId={user!.id}
                 onPromote={(id) => roleAction.mutate({ targetUserId: id, newRole: "admin" })}

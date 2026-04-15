@@ -402,20 +402,24 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   // Members for expenses card
   const { data: members } = useQuery({
-    queryKey: ["trip-members-full", tripId],
+    queryKey: ["members", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
-        .select("user_id, role, joined_at")
+        .select("user_id, role, joined_at, attendance_status")
         .eq("trip_id", tripId)
         .order("joined_at");
       if (error) throw error;
       const userIds = data.map((m) => m.user_id);
       const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
-      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url }]) ?? []);
       return data.map((m) => ({
-        ...m,
-        profile: profileMap.get(m.user_id) as { display_name: string | null; avatar_url?: string | null } | undefined,
+        userId: m.user_id,
+        displayName: profileMap.get(m.user_id)?.name || "Member",
+        avatarUrl: profileMap.get(m.user_id)?.avatar || null,
+        role: m.role,
+        joinedAt: m.joined_at,
+        attendanceStatus: (m as any).attendance_status ?? "pending",
       }));
     },
     enabled: !!userId,
@@ -616,7 +620,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         // Find who you owe the most to
         const oweTo = balances.filter((b) => b.userId !== userId && b.balance > 0.01);
         const topCreditor = oweTo.length > 0 ? oweTo.sort((a, b) => b.balance - a.balance)[0] : null;
-        const creditorName = topCreditor ? members?.find((m) => m.user_id === topCreditor.userId)?.profile?.display_name : null;
+        const creditorName = topCreditor ? members?.find((m) => m.userId === topCreditor.userId)?.displayName : null;
 
         return (
           <button

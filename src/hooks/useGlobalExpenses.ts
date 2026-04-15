@@ -29,9 +29,8 @@ export function useGlobalExpenses() {
   return useQuery({
     queryKey: ["global-expenses", user?.id],
     enabled: !!user,
-    refetchOnWindowFocus: true,
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<GlobalExpensesResult> => {
       const userId = user!.id;
 

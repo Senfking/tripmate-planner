@@ -14,16 +14,19 @@ export interface AttendanceRecord {
 }
 
 export interface TripMember {
-  user_id: string;
-  display_name: string | null;
-  avatar_url: string | null;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: string;
+  joinedAt: string;
+  attendanceStatus: string;
 }
 
 export function useItineraryAttendance(tripId: string) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const attendanceKey = ["itinerary_attendance", tripId];
-  const membersKey = ["trip_members_profiles", tripId];
+  const membersKey = ["members", tripId];
   const inflightRef = useRef(new Set<string>());
 
   const { data: attendance = [] } = useQuery({
@@ -46,8 +49,9 @@ export function useItineraryAttendance(tripId: string) {
     queryFn: async () => {
       const { data: memberRows, error } = await supabase
         .from("trip_members")
-        .select("user_id")
-        .eq("trip_id", tripId);
+        .select("user_id, role, joined_at, attendance_status")
+        .eq("trip_id", tripId)
+        .order("joined_at");
       if (error) throw error;
 
       const userIds = memberRows.map((m) => m.user_id);
@@ -55,10 +59,13 @@ export function useItineraryAttendance(tripId: string) {
         .rpc("get_public_profiles", { _user_ids: userIds });
 
       const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
-      return userIds.map((uid) => ({
-        user_id: uid,
-        display_name: profileMap.get(uid)?.display_name || null,
-        avatar_url: profileMap.get(uid)?.avatar_url || null,
+      return memberRows.map((m) => ({
+        userId: m.user_id,
+        displayName: profileMap.get(m.user_id)?.display_name || "Member",
+        avatarUrl: profileMap.get(m.user_id)?.avatar_url || null,
+        role: m.role,
+        joinedAt: m.joined_at,
+        attendanceStatus: (m as any).attendance_status ?? "pending",
       })) as TripMember[];
     },
     enabled: !!tripId && !!user,

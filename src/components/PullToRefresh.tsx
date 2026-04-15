@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 const THRESHOLD = 64;
@@ -7,6 +8,7 @@ const MAX_PULL = 120;
 
 export function PullToRefresh({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [refreshing, setRefreshing] = useState(false);
   const pullRef = useRef(0);
   const startYRef = useRef(0);
@@ -59,7 +61,25 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
         el.style.transform = "translateY(20px) scale(1) rotate(0deg)";
         el.style.opacity = "1";
       }
-      await queryClient.invalidateQueries();
+      // Scope invalidation to the current route instead of nuking everything
+      const tripMatch = location.pathname.match(/\/app\/trips\/([^/]+)/);
+      const tripId = tripMatch?.[1] !== "new" ? tripMatch?.[1] : undefined;
+      if (tripId) {
+        // On a trip page: invalidate queries whose key contains the tripId
+        await queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) && query.queryKey.includes(tripId),
+        });
+      } else {
+        // On global pages: only invalidate global + list queries
+        await queryClient.invalidateQueries({
+          predicate: (query) => {
+            const k = query.queryKey;
+            if (!Array.isArray(k) || typeof k[0] !== "string") return false;
+            return k[0].startsWith("global-") || k[0] === "trips";
+          },
+        });
+      }
       await new Promise((r) => setTimeout(r, 300));
       setRefreshing(false);
       if (el) {
