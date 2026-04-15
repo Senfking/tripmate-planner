@@ -21,9 +21,9 @@ const TRENDING: TripCard[] = [
   { name: "Thailand", slug: "thailand-8-days", duration: "8 days", vibe: "Bangkok + islands", img: "https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80&auto=format&fit=crop" },
   { name: "Greece", slug: "greece-5-days", duration: "5 days", vibe: "Island hopping", img: "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&q=80&auto=format&fit=crop" },
   { name: "Mexico", slug: "mexico-7-days", duration: "7 days", vibe: "Ruins + cenotes", img: "https://images.unsplash.com/photo-1518638150340-f706e86654de?w=800&q=80&auto=format&fit=crop" },
-  { name: "Vietnam", slug: "vietnam-10-days", duration: "10 days", vibe: "Hanoi to Ho Chi Minh", img: "https://images.unsplash.com/photo-1557750255-c76072a7aee1?w=800&q=80&auto=format&fit=crop" },
+  { name: "Vietnam", slug: "vietnam-10-days", duration: "10 days", vibe: "Hanoi to Ho Chi Minh", img: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800&q=80&auto=format&fit=crop" },
   { name: "Turkey", slug: "turkey-8-days", duration: "8 days", vibe: "Istanbul + Cappadocia", img: "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800&q=80&auto=format&fit=crop" },
-  { name: "Egypt", slug: "egypt-7-days", duration: "7 days", vibe: "Pyramids + Nile", img: "https://images.unsplash.com/photo-1539768942893-daf53e736b68?w=800&q=80&auto=format&fit=crop" },
+  { name: "Egypt", slug: "egypt-7-days", duration: "7 days", vibe: "Pyramids + Nile", img: "https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=800&q=80&auto=format&fit=crop" },
 ];
 
 const EUROPE: TripCard[] = [
