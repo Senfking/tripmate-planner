@@ -182,13 +182,14 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   return createPortal(
     <div className={cn("fixed inset-0 z-[9999] bg-background", mapState === "partial" ? "flex" : "")}>
       {/* Itinerary scroll area */}
-      <div className={cn(
-        "min-w-0 overflow-y-auto flex-1",
-      )} data-results-scroll-root="true">
+      <div className="min-w-0 overflow-y-auto flex-1" data-results-scroll-root="true">
       {/* Timeline (desktop only) */}
-      <ResultsTimeline nodes={timelineNodes} />
+      <ResultsTimeline nodes={timelineNodes} compact={mapState === "partial"} />
 
-      <div className="max-w-[700px] mx-auto min-h-full flex flex-col lg:pl-[60px]">
+      <div className={cn(
+        "max-w-[700px] mx-auto min-h-full flex flex-col",
+        mapState === "partial" ? "lg:pl-9" : "lg:pl-[60px]"
+      )}>
         {/* Header */}
         <div data-results-header="true" className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
           <div className={cn("flex items-center gap-3", rc)} style={revealStyle("title")}>
