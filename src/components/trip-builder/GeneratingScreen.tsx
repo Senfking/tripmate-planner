@@ -22,6 +22,7 @@ function getSteps(destination: string) {
 }
 
 export function GeneratingScreen({ destination, error, onRetry }: Props) {
+  const steps = useMemo(() => getSteps(destination), [destination]);
   const [completedCount, setCompletedCount] = useState(0);
   const [showDestination, setShowDestination] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -29,19 +30,17 @@ export function GeneratingScreen({ destination, error, onRetry }: Props) {
   useEffect(() => {
     if (error) return;
 
-    // Stage fake progress checkmarks
-    STEPS.forEach((step, i) => {
+    steps.forEach((step, i) => {
       if (step.delay === Infinity) return;
       const t = setTimeout(() => setCompletedCount(i + 1), step.delay);
       timers.current.push(t);
     });
 
-    // Show destination after 3s
     const destTimer = setTimeout(() => setShowDestination(true), 3000);
     timers.current.push(destTimer);
 
     return () => timers.current.forEach(clearTimeout);
-  }, [error]);
+  }, [error, steps]);
 
   // If error arrives, complete all
   // If results arrive externally, parent unmounts this — no action needed
