@@ -522,6 +522,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* Bottom spacer */}
         <div className="h-24" />
+        </>)}
         </div>{/* close inner max-w div */}
       </div>{/* close itinerary scroll column */}
 
