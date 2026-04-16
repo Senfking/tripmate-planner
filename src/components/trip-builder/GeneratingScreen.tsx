@@ -123,7 +123,7 @@ export function GeneratingScreen({ destination, error, onRetry }: Props) {
 
           {/* Checklist */}
           <div className="space-y-2.5">
-            {STEPS.map((step, i) => {
+            {steps.map((step, i) => {
               const isDone = i < completedCount;
               const isActive = i === completedCount && !error;
               const isFinal = step.delay === Infinity;
