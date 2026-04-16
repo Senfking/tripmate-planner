@@ -56,6 +56,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const [editTripOpen, setEditTripOpen] = useState(false);
   const [groupActivityOpen, setGroupActivityOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
+  const [highlightedPin, setHighlightedPin] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"itinerary" | "map">("itinerary");
+
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isMobileOrTablet = !isDesktop;
+  const showSplitMap = isDesktop && mapVisible;
   type CoordsMap = Map<string, { lat: number; lng: number }>;
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id);
