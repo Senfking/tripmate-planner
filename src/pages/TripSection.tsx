@@ -159,6 +159,7 @@ export default function TripSection() {
       case "bookings":
         return <BookingsTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
       case "expenses":
+        console.log("[expenses-parent]", { hasExpensesTab: true, timestamp: Date.now() });
         return <ExpensesTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
       case "admin":
         return <AdminTab tripId={trip.id} myRole={myRole} tripName={trip.name} />;
