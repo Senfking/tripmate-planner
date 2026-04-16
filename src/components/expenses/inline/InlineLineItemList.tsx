@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { LineItemRow, ClaimRow, useLineItemClaims } from "@/hooks/useLineItemClaims";
@@ -340,46 +340,14 @@ function LineItemRowEditable({
         )}
       </div>
 
-      {/* Multi-qty stepper */}
+      {/* Multi-qty stepper — optimistic + debounced */}
       {isMultiQty && (
-        <div className="flex items-center justify-between gap-2 pl-0">
-          <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
-            <button
-              type="button"
-              disabled={myQty <= 0}
-              onClick={() => onSetClaimQty(Math.max(0, myQty - 1))}
-              className={cn(
-                "h-8 w-9 flex items-center justify-center transition-colors",
-                myQty <= 0 ? "text-muted-foreground/30 cursor-not-allowed" : "text-foreground hover:bg-muted active:bg-muted/80",
-              )}
-              aria-label="Decrease claim"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <span className={cn(
-              "h-8 w-8 flex items-center justify-center text-[13px] font-semibold tabular-nums border-x border-border bg-background",
-              myQty > 0 ? "text-primary" : "text-muted-foreground",
-            )}>{myQty}</span>
-            <button
-              type="button"
-              disabled={myQty >= maxClaimable}
-              onClick={() => onSetClaimQty(Math.min(maxClaimable, myQty + 1))}
-              className={cn(
-                "h-8 w-9 flex items-center justify-center transition-colors",
-                myQty >= maxClaimable ? "text-muted-foreground/30 cursor-not-allowed" : "text-foreground hover:bg-muted active:bg-muted/80",
-              )}
-              aria-label="Increase claim"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <span className={cn(
-            "text-[10px] tabular-nums whitespace-nowrap",
-            remaining === 0 ? "text-muted-foreground" : "text-primary",
-          )}>
-            {remaining === 0 ? `All ${item.quantity} claimed` : `${remaining} of ${item.quantity} unclaimed`}
-          </span>
-        </div>
+        <ClaimStepper
+          serverQty={myQty}
+          itemTotalQty={item.quantity}
+          totalClaimedExcludingMe={totalClaimed - myQty}
+          onCommit={onSetClaimQty}
+        />
       )}
 
       {/* Other claimers */}
@@ -523,6 +491,105 @@ function AddItemRow({ currency, onSave, onCancel }: { currency: string; onSave: 
       <Button type="button" size="sm" variant="ghost" onClick={onCancel} className="h-9 w-9 p-0 shrink-0" aria-label="Cancel">
         <X className="h-4 w-4" />
       </Button>
+    </div>
+  );
+}
+
+/* ───────────────────────── Optimistic + debounced claim stepper ───────────────────────── */
+
+function ClaimStepper({
+  serverQty, itemTotalQty, totalClaimedExcludingMe, onCommit,
+}: {
+  serverQty: number;
+  itemTotalQty: number;
+  totalClaimedExcludingMe: number;
+  onCommit: (qty: number) => Promise<void>;
+}) {
+  const [localQty, setLocalQty] = useState(serverQty);
+  const lastConfirmedRef = useRef(serverQty);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef(false);
+
+  // When the server value changes from outside (e.g. another user), sync — but
+  // only if we don't have a pending optimistic change in flight.
+  useEffect(() => {
+    if (!pendingRef.current && timerRef.current === null) {
+      setLocalQty(serverQty);
+      lastConfirmedRef.current = serverQty;
+    }
+  }, [serverQty]);
+
+  // Cleanup pending timer on unmount
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const maxClaimable = Math.max(0, itemTotalQty - totalClaimedExcludingMe);
+  const remainingDisplay = Math.max(0, itemTotalQty - (totalClaimedExcludingMe + localQty));
+
+  const scheduleCommit = (next: number) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      timerRef.current = null;
+      pendingRef.current = true;
+      try {
+        await onCommit(next);
+        lastConfirmedRef.current = next;
+      } catch (e: any) {
+        // Revert to last confirmed value on failure
+        setLocalQty(lastConfirmedRef.current);
+        toast.error(e?.message || "Couldn't update claim");
+      } finally {
+        pendingRef.current = false;
+      }
+    }, 500);
+  };
+
+  const bump = (delta: number) => {
+    setLocalQty((curr) => {
+      const next = Math.max(0, Math.min(maxClaimable, curr + delta));
+      if (next === curr) return curr;
+      scheduleCommit(next);
+      return next;
+    });
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 pl-0">
+      <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
+        <button
+          type="button"
+          disabled={localQty <= 0}
+          onClick={() => bump(-1)}
+          className={cn(
+            "h-8 w-9 flex items-center justify-center transition-colors",
+            localQty <= 0 ? "text-muted-foreground/30 cursor-not-allowed" : "text-foreground hover:bg-muted active:bg-muted/80",
+          )}
+          aria-label="Decrease claim"
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </button>
+        <span className={cn(
+          "h-8 w-8 flex items-center justify-center text-[13px] font-semibold tabular-nums border-x border-border bg-background",
+          localQty > 0 ? "text-primary" : "text-muted-foreground",
+        )}>{localQty}</span>
+        <button
+          type="button"
+          disabled={localQty >= maxClaimable}
+          onClick={() => bump(1)}
+          className={cn(
+            "h-8 w-9 flex items-center justify-center transition-colors",
+            localQty >= maxClaimable ? "text-muted-foreground/30 cursor-not-allowed" : "text-foreground hover:bg-muted active:bg-muted/80",
+          )}
+          aria-label="Increase claim"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <span className={cn(
+        "text-[10px] tabular-nums whitespace-nowrap",
+        remainingDisplay === 0 ? "text-muted-foreground" : "text-primary",
+      )}>
+        {remainingDisplay === 0 ? `All ${itemTotalQty} claimed` : `${remainingDisplay} of ${itemTotalQty} unclaimed`}
+      </span>
     </div>
   );
 }
