@@ -521,9 +521,29 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* Bottom spacer */}
         <div className="h-24" />
-      </div>
+        </div>{/* close inner max-w div */}
+      </div>{/* close itinerary scroll column */}
 
-      {/* Sticky bottom bar */}
+      {/* Desktop split-view map panel */}
+      {isDesktop && showSplitMap && (
+        <div className="w-[40%] shrink-0">
+          <MapSplitPanel
+            result={result}
+            allDays={allDays}
+            totalActivities={totalActivities}
+            refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
+            highlightedPin={highlightedPin}
+            onPinClick={handlePinClick}
+            onClose={() => setMapVisible(false)}
+            visible={true}
+          />
+        </div>
+      )}
+
+      {/* Desktop collapsed map button */}
+      {isDesktop && !mapVisible && (
+        <CollapsedMapButton onClick={() => setMapVisible(true)} totalActivities={totalActivities} />
+      )}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
         <div className="max-w-[700px] mx-auto relative">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
