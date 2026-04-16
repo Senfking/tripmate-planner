@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, Clock, ExternalLink, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
+import { getDayColor } from "./MapSplitPanel";
 
 interface Props {
   result: AITripResult;
@@ -16,6 +17,8 @@ interface Props {
   mode: "overview" | "day";
   refinedCoords?: Map<string, { lat: number; lng: number }>;
   onPinClick?: (dayDate: string, activityIndex: number) => void;
+  highlightedPin?: string | null;
+  useDayColors?: boolean;
 }
 
 function formatDayLabel(date: string, dayNumber?: number): string {
