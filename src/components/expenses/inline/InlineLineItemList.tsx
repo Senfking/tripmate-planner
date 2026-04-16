@@ -495,6 +495,105 @@ function AddItemRow({ currency, onSave, onCancel }: { currency: string; onSave: 
   );
 }
 
+/* ───────────────────────── Optimistic + debounced claim stepper ───────────────────────── */
+
+function ClaimStepper({
+  serverQty, itemTotalQty, totalClaimedExcludingMe, onCommit,
+}: {
+  serverQty: number;
+  itemTotalQty: number;
+  totalClaimedExcludingMe: number;
+  onCommit: (qty: number) => Promise<void>;
+}) {
+  const [localQty, setLocalQty] = useState(serverQty);
+  const lastConfirmedRef = useRef(serverQty);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef(false);
+
+  // When the server value changes from outside (e.g. another user), sync — but
+  // only if we don't have a pending optimistic change in flight.
+  useEffect(() => {
+    if (!pendingRef.current && timerRef.current === null) {
+      setLocalQty(serverQty);
+      lastConfirmedRef.current = serverQty;
+    }
+  }, [serverQty]);
+
+  // Cleanup pending timer on unmount
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const maxClaimable = Math.max(0, itemTotalQty - totalClaimedExcludingMe);
+  const remainingDisplay = Math.max(0, itemTotalQty - (totalClaimedExcludingMe + localQty));
+
+  const scheduleCommit = (next: number) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      timerRef.current = null;
+      pendingRef.current = true;
+      try {
+        await onCommit(next);
+        lastConfirmedRef.current = next;
+      } catch (e: any) {
+        // Revert to last confirmed value on failure
+        setLocalQty(lastConfirmedRef.current);
+        toast.error(e?.message || "Couldn't update claim");
+      } finally {
+        pendingRef.current = false;
+      }
+    }, 500);
+  };
+
+  const bump = (delta: number) => {
+    setLocalQty((curr) => {
+      const next = Math.max(0, Math.min(maxClaimable, curr + delta));
+      if (next === curr) return curr;
+      scheduleCommit(next);
+      return next;
+    });
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 pl-0">
+      <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
+        <button
+          type="button"
+          disabled={localQty <= 0}
+          onClick={() => bump(-1)}
+          className={cn(
+            "h-8 w-9 flex items-center justify-center transition-colors",
+            localQty <= 0 ? "text-muted-foreground/30 cursor-not-allowed" : "text-foreground hover:bg-muted active:bg-muted/80",
+          )}
+          aria-label="Decrease claim"
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </button>
+        <span className={cn(
+          "h-8 w-8 flex items-center justify-center text-[13px] font-semibold tabular-nums border-x border-border bg-background",
+          localQty > 0 ? "text-primary" : "text-muted-foreground",
+        )}>{localQty}</span>
+        <button
+          type="button"
+          disabled={localQty >= maxClaimable}
+          onClick={() => bump(1)}
+          className={cn(
+            "h-8 w-9 flex items-center justify-center transition-colors",
+            localQty >= maxClaimable ? "text-muted-foreground/30 cursor-not-allowed" : "text-foreground hover:bg-muted active:bg-muted/80",
+          )}
+          aria-label="Increase claim"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <span className={cn(
+        "text-[10px] tabular-nums whitespace-nowrap",
+        remainingDisplay === 0 ? "text-muted-foreground" : "text-primary",
+      )}>
+        {remainingDisplay === 0 ? `All ${itemTotalQty} claimed` : `${remainingDisplay} of ${itemTotalQty} unclaimed`}
+      </span>
+    </div>
+  );
+}
+
 /* ───────────────────────── Shared cost row (taxes & service) ───────────────────────── */
 
 function SharedCostRow({ sharedTotal, currency }: { sharedTotal: number; currency: string }) {
