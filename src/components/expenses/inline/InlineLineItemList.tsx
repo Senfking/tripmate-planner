@@ -437,9 +437,10 @@ function EditableQty({ value, canEdit, onCommit }: { value: number; canEdit: boo
   return (
     <EditableField
       readOnly={!canEdit}
-      display={<span>{value}× </span>}
+      showAffordance={canEdit}
+      display={<span className="text-[13px] font-medium tabular-nums">{value}</span>}
       editor={({ commit, cancel }) => (
-        <NumberEditor value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} width="w-12" />
+        <NumberEditor value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} width="w-10" />
       )}
       onCommit={() => onCommit(parseInt(draft, 10))}
       ariaLabel="Edit quantity"
@@ -452,6 +453,8 @@ function EditablePrice({ value, currency, canEdit, onCommit, suffix = "" }: { va
   return (
     <EditableField
       readOnly={!canEdit}
+      showAffordance={canEdit}
+      align="right"
       display={<span className="tabular-nums">{formatCurrency(value, currency)}{suffix}</span>}
       editor={({ commit, cancel }) => (
         <NumberEditor value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} width="w-20" step="0.01" />
