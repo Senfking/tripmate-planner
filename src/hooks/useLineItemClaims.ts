@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSharedCostItem, calculateLineItemTotals } from "@/lib/expenseLineItems";
+import { toast } from "sonner";
 
 export interface LineItemRow {
   id: string;
@@ -22,11 +23,16 @@ export interface ClaimRow {
   created_at: string;
 }
 
+/** Safe accessor — old rows from before the migration lack the column */
+function claimQty(c: ClaimRow): number {
+  return typeof c.claimed_quantity === "number" ? c.claimed_quantity : 1;
+}
+
 /** Helpers to aggregate claim quantities for a line item */
 export function getTotalClaimedQuantity(claims: ClaimRow[], lineItemId: string): number {
   return claims
     .filter((c) => c.line_item_id === lineItemId)
-    .reduce((sum, c) => sum + c.claimed_quantity, 0);
+    .reduce((sum, c) => sum + claimQty(c), 0);
 }
 
 export function getRemainingQuantity(itemQuantity: number, claims: ClaimRow[], lineItemId: string): number {
@@ -106,7 +112,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
       getAssigneeIds: (item) => (claimsByItemId.get(item.id) ?? []).map((c) => c.user_id),
       getClaimQuantity: (item, userId) => {
         const claim = (claimsByItemId.get(item.id) ?? []).find((c) => c.user_id === userId);
-        return claim ? claim.claimed_quantity : 0;
+        return claim ? claimQty(claim) : 0;
       },
     });
 
@@ -136,57 +142,77 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
           .eq("id", existing.id);
         if (error) throw error;
       } else {
+        // Don't send claimed_quantity here — let the DB column default (1) handle it.
+        // This keeps toggleClaim working even before the migration is applied.
         const { error } = await supabase
           .from("expense_line_item_claims")
-          .insert({ line_item_id: lineItemId, user_id: user.id, claimed_quantity: 1 } as any);
+          .insert({ line_item_id: lineItemId, user_id: user.id });
         if (error) throw error;
       }
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["expense-line-item-claims", expenseId] });
       await recalcSplits();
+    },
+    onError: (e: any) => {
+      toast.error(e?.message || "Failed to update claim");
     },
   });
 
   /**
    * Set claim quantity for multi-quantity items.
    * quantity=0 removes the claim; quantity>0 upserts.
+   *
+   * Uses upsert with onConflict to avoid race conditions when the
+   * local claims cache is stale (e.g. rapid clicks before refetch).
    */
   const setClaimQuantity = useMutation({
     mutationFn: async ({ lineItemId, quantity }: { lineItemId: string; quantity: number }) => {
       if (!user || !expenseId) throw new Error("Not authenticated");
 
-      const existing = claimsQuery.data?.find(
-        (c) => c.line_item_id === lineItemId && c.user_id === user.id
-      );
-
       if (quantity <= 0) {
-        // Remove claim
+        // Remove claim — need to find the row to delete
+        const existing = claimsQuery.data?.find(
+          (c) => c.line_item_id === lineItemId && c.user_id === user.id
+        );
         if (existing) {
           const { error } = await supabase
             .from("expense_line_item_claims")
             .delete()
             .eq("id", existing.id);
           if (error) throw error;
+        } else {
+          // No cached row — try deleting by composite key
+          const { error } = await supabase
+            .from("expense_line_item_claims")
+            .delete()
+            .eq("line_item_id", lineItemId)
+            .eq("user_id", user.id);
+          if (error) throw error;
         }
-      } else if (existing) {
-        // Update existing claim quantity
-        const { error } = await supabase
-          .from("expense_line_item_claims")
-          .update({ claimed_quantity: quantity } as any)
-          .eq("id", existing.id);
-        if (error) throw error;
       } else {
-        // Insert new claim with quantity
+        // Upsert: insert or update in one call.
+        // This avoids the stale-cache race where the local claimsQuery.data
+        // doesn't yet reflect a row that was just inserted.
         const { error } = await supabase
           .from("expense_line_item_claims")
-          .insert({ line_item_id: lineItemId, user_id: user.id, claimed_quantity: quantity } as any);
+          .upsert(
+            {
+              line_item_id: lineItemId,
+              user_id: user.id,
+              claimed_quantity: quantity,
+            } as any,
+            { onConflict: "line_item_id,user_id" }
+          );
         if (error) throw error;
       }
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["expense-line-item-claims", expenseId] });
       await recalcSplits();
+    },
+    onError: (e: any) => {
+      toast.error(e?.message || "Failed to update claim quantity");
     },
   });
 

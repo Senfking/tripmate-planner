@@ -1,6 +1,11 @@
 import { useMemo } from "react";
 import { MemberProfile } from "@/hooks/useExpenses";
 import { LineItemRow, ClaimRow, getTotalClaimedQuantity, getRemainingQuantity } from "@/hooks/useLineItemClaims";
+
+/** Safe accessor — old rows from before the migration lack the column */
+function claimQty(c: ClaimRow): number {
+  return typeof c.claimed_quantity === "number" ? c.claimed_quantity : 1;
+}
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { calculateLineItemTotals } from "@/lib/expenseLineItems";
@@ -47,7 +52,7 @@ export function LineItemClaimList({
       getAssigneeIds: (item) => (claimsByItemId.get(item.id) ?? []).map((claim) => claim.user_id),
       getClaimQuantity: (item, userId) => {
         const claim = (claimsByItemId.get(item.id) ?? []).find((c) => c.user_id === userId);
-        return claim ? claim.claimed_quantity : 0;
+        return claim ? claimQty(claim) : 0;
       },
     }),
     [claimsByItemId, lineItems, members, totalAmount],
@@ -208,7 +213,7 @@ function MultiQuantityItem({
   onSetQuantity: (qty: number) => void;
 }) {
   const myClaim = itemClaims.find((c) => c.user_id === currentUserId);
-  const myQty = myClaim?.claimed_quantity ?? 0;
+  const myQty = myClaim ? claimQty(myClaim) : 0;
   const remaining = getRemainingQuantity(item.quantity, itemClaims, item.id);
   const maxClaimable = myQty + remaining;
   const hasClaimed = myQty > 0;
@@ -218,7 +223,7 @@ function MultiQuantityItem({
     ? item.unit_price
     : item.total_price / Math.max(item.quantity, 1);
 
-  const otherClaims = itemClaims.filter((c) => c.user_id !== currentUserId && c.claimed_quantity > 0);
+  const otherClaims = itemClaims.filter((c) => c.user_id !== currentUserId && claimQty(c) > 0);
 
   return (
     <div className={cn(
@@ -318,7 +323,7 @@ function MultiQuantityItem({
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-[10px] text-muted-foreground">
-                  {member?.displayName?.split(" ")[0] || "?"}: {claim.claimed_quantity}
+                  {member?.displayName?.split(" ")[0] || "?"}: {claimQty(claim)}
                 </span>
               </div>
             );
