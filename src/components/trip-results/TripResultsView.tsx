@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ import { ConciergeButton } from "@/components/concierge/ConciergeButton";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
-import { MapSlidePanel } from "./MapSlidePanel";
+import { MapSlidePanel, type MapState } from "./MapSlidePanel";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -79,6 +79,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const [packingOpen, setPackingOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
+  const [mapState, setMapState] = useState<MapState>("closed");
   const [groupActivityOpen, setGroupActivityOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
   type CoordsMap = Map<string, { lat: number; lng: number }>;
@@ -179,7 +180,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-background overflow-y-auto" data-results-scroll-root="true">
+    <div className="fixed inset-0 z-[9999] bg-background flex">
+      {/* Left: Itinerary scroll area */}
+      <div className={cn(
+        "flex-1 min-w-0 overflow-y-auto transition-all duration-300 ease-out",
+        mapState === "partial" && "flex-1",
+        mapState === "full" && "w-[35%] shrink-0",
+      )} data-results-scroll-root="true">
       {/* Timeline (desktop only) */}
       <ResultsTimeline nodes={timelineNodes} />
 
@@ -196,6 +203,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               </h1>
               <p className="text-xs text-muted-foreground font-mono">{dateRange}</p>
             </div>
+            {/* Map toggle */}
+            <button
+              onClick={() => setMapState(mapState === "closed" ? "partial" : "closed")}
+              className={cn(
+                "p-2 rounded-full transition-colors",
+                mapState !== "closed" ? "bg-primary/10 text-primary" : "hover:bg-accent text-muted-foreground"
+              )}
+              title={mapState === "closed" ? "Show map" : "Hide map"}
+            >
+              <MapIcon className="h-4 w-4" />
+            </button>
             {onDashboard && (
               <button
                 onClick={onDashboard}
@@ -488,7 +506,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       </div>
 
       {/* Sticky bottom bar */}
-      <div className={cn("fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]", rc)} style={revealStyle("complete")}>
+      <div className={cn("fixed bottom-0 left-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)] transition-all duration-300 ease-out", rc,
+        mapState === "closed" && "right-0",
+        mapState === "partial" && "right-[420px]",
+        mapState === "full" && "right-[65%]"
+      )} style={revealStyle("complete")}>
         <div className="max-w-[700px] mx-auto relative">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             {standalone ? (
@@ -552,15 +574,19 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         </div>
       </div>
 
+      </div>{/* end scroll area */}
+
       {/* Sliding map panel */}
       <MapSlidePanel
         result={result}
         allDays={allDays}
         refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
         totalActivities={totalActivities}
+        state={mapState}
+        onStateChange={setMapState}
       />
 
-      {/* Alternatives Sheet */}
+      {/* Overlays (outside flex layout) */}
       {/* Group Activity floating button */}
       {planId && (
         <button
