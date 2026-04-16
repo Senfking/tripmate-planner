@@ -245,7 +245,7 @@ function MapController({
 }
 
 /* ── Main component ── */
-export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick }: Props) {
+export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick, highlightedPin, useDayColors }: Props) {
   const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
 
   const getCoords = useCallback((dayDate: string, idx: number, a: AIActivity) => {
@@ -330,18 +330,25 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
       )}
 
       {activitiesForMap.map((act) => {
+        const pinKey = `${act._dayDate}-${act._idx}`;
+        const isHighlighted = highlightedPin === pinKey;
         // In day mode show just activity number (1, 2, 3...)
         // In overview show D1.1, D1.2, D2.1 etc. so user knows day + order
         const pinLabel = mode === "day"
           ? String(act._idx + 1)
           : `D${act._dayNumber}.${act._idx + 1}`;
         const dayLabel = formatDayLabel(act._dayDate, act._dayNumber);
+        const pinColor = useDayColors ? getDayColor(act._dayNumber) : getCategoryColor(act.category);
 
         return (
           <Marker
-            key={`${act._dayDate}-${act._idx}`}
+            key={pinKey}
             position={[act.latitude!, act.longitude!]}
-            icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
+            icon={createPinIcon(pinLabel, pinColor, isHighlighted)}
+            zIndexOffset={isHighlighted ? 1000 : 0}
+            eventHandlers={{
+              click: () => onPinClick?.(act._dayDate, act._idx),
+            }}
           >
             <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
               <PopupContent activity={act} dayLabel={dayLabel} />
