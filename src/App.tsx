@@ -38,6 +38,7 @@ const Admin = lazy(() => import("./pages/Admin"));
 const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
 const Landing = lazy(() => import("./pages/Landing"));
+const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 
 function PageLoader() {
   return (
@@ -138,6 +139,7 @@ function AppInner() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/templates" element={<Templates />} />
+            <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
             
             {/* Protected routes */}
