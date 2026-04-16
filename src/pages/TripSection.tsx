@@ -104,7 +104,7 @@ export default function TripSection() {
     enabled: !!tripId && !!user && section === "plan",
   });
 
-  if (isLoading) {
+  if (isLoading || !trip) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -112,7 +112,7 @@ export default function TripSection() {
     );
   }
 
-  if (!trip || !section || !SECTION_TITLES[section]) {
+  if (!section || !SECTION_TITLES[section]) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center p-4 space-y-4">
         <MapPin className="h-16 w-16 text-muted-foreground/50" />
