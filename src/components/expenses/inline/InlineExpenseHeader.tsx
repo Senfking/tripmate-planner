@@ -307,12 +307,12 @@ function DateCell({ value, canEdit, onChange }: { value: string; canEdit: boolea
   const date = parse(value, "yyyy-MM-dd", new Date());
   const display = format(date, "MMM d, yyyy");
 
-  if (!canEdit) return <span className="text-[12px]">{display}</span>;
+  if (!canEdit) return <span className="text-sm">{display}</span>;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className="text-[12px] text-foreground hover:bg-primary/5 px-1 -mx-1 py-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+        <button type="button" className="text-sm text-foreground bg-muted/50 border-b border-border/80 hover:bg-muted px-1 -mx-1 py-0.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
           {display}
         </button>
       </PopoverTrigger>
