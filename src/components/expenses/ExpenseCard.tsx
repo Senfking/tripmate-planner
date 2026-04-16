@@ -49,7 +49,7 @@ export function ExpenseCard({
 }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
-  const { lineItems, claims, hasLineItems, toggleClaim } = useLineItemClaims(
+  const { lineItems, claims, hasLineItems, toggleClaim, setClaimQuantity } = useLineItemClaims(
     expanded ? expense.id : null,
     tripId
   );
@@ -163,7 +163,8 @@ export function ExpenseCard({
               currency={expense.currency}
               totalAmount={expense.amount}
               onToggleClaim={(id) => toggleClaim.mutate(id)}
-              isToggling={toggleClaim.isPending}
+              onSetClaimQuantity={(id, qty) => setClaimQuantity.mutate({ lineItemId: id, quantity: qty })}
+              isToggling={toggleClaim.isPending || setClaimQuantity.isPending}
             />
           )}
 

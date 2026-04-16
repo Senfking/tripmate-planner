@@ -57,6 +57,7 @@ interface Props {
     splits: { user_id: string; share_amount: number }[];
     lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
     itemAssignments?: Record<number, Set<string>>;
+    quantityAssignments?: Record<number, Record<string, number>>;
   }) => Promise<void> | void;
 }
 
@@ -77,6 +78,7 @@ interface ExpenseFormDraft {
   titleManuallySet: boolean;
   scannedLineItems: LineItem[];
   itemAssignments: Record<number, string[]>;
+  quantityAssignments: Record<number, Record<string, number>>;
 }
 
 const DRAFT_TTL_MS = 10 * 60 * 1000;
@@ -104,6 +106,7 @@ export function ExpenseFormModal({
   const [scanning, setScanning] = useState(false);
   const [scannedLineItems, setScannedLineItems] = useState<LineItem[]>([]);
   const [itemAssignments, setItemAssignments] = useState<Record<number, Set<string>>>({});
+  const [quantityAssignments, setQuantityAssignments] = useState<Record<number, Record<string, number>>>({});
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -167,6 +170,7 @@ export function ExpenseFormModal({
     setTitleManuallySet(false);
     setScannedLineItems([]);
     setItemAssignments({});
+    setQuantityAssignments({});
     setReceiptFile(null);
   }, [defaultSelectedMemberIds, getPreferredPayerId, settlementCurrency]);
 
@@ -215,6 +219,7 @@ export function ExpenseFormModal({
         ]),
       ),
     );
+    setQuantityAssignments(draft.quantityAssignments || {});
   }, [defaultSelectedMemberIds, getPreferredPayerId, members, normalizeScannedLineItems, settlementCurrency]);
 
   useEffect(() => {
@@ -233,6 +238,7 @@ export function ExpenseFormModal({
         setTitleManuallySet(true);
         setScannedLineItems([]);
         setItemAssignments({});
+        setQuantityAssignments({});
         setReceiptFile(null);
         if (editingSplits) {
           setSelectedMembers(new Set(editingSplits.map((s) => s.user_id)));
@@ -291,6 +297,7 @@ export function ExpenseFormModal({
       itemAssignments: Object.fromEntries(
         Object.entries(itemAssignments).map(([key, value]) => [Number(key), Array.from(value)]),
       ),
+      quantityAssignments,
     };
 
     try {
@@ -298,7 +305,7 @@ export function ExpenseFormModal({
     } catch {
       // ignore storage issues
     }
-  }, [amount, category, clearDraft, currency, draftKey, editingExpense, incurredOn, itemAssignments, itineraryItemId, notes, open, payerId, receiptFile, scannedLineItems, selectedMembers, settlementDismissed, splitMode, title, titleManuallySet, customAmounts]);
+  }, [amount, category, clearDraft, currency, draftKey, editingExpense, incurredOn, itemAssignments, itineraryItemId, notes, open, payerId, quantityAssignments, receiptFile, scannedLineItems, selectedMembers, settlementDismissed, splitMode, title, titleManuallySet, customAmounts]);
 
   const parsedAmount = parseFloat(amount) || 0;
 
@@ -307,7 +314,7 @@ export function ExpenseFormModal({
     if (selected.length === 0) return [];
 
     if (splitMode === "byItem") {
-      return computeItemSplits(scannedLineItems, itemAssignments, selected, parsedAmount);
+      return computeItemSplits(scannedLineItems, itemAssignments, selected, parsedAmount, quantityAssignments);
     }
 
     if (splitMode === "custom") {
@@ -334,7 +341,7 @@ export function ExpenseFormModal({
       user_id: uid,
       share_amount: i === 0 ? base + remainder : base,
     }));
-  }, [selectedMembers, splitMode, parsedAmount, customAmounts, scannedLineItems, itemAssignments]);
+  }, [selectedMembers, splitMode, parsedAmount, customAmounts, scannedLineItems, itemAssignments, quantityAssignments]);
 
   const customSum = splitMode === "custom"
     ? computedSplits.reduce((s, c) => s + c.share_amount, 0)
@@ -431,6 +438,7 @@ export function ExpenseFormModal({
         const items = normalizeScannedLineItems(data.line_items as LineItem[], scannedAmount) as LineItem[];
         setScannedLineItems(items);
         setItemAssignments({});
+        setQuantityAssignments({});
         setSplitMode("byItem");
         if (!scannedAmount) {
           setAmount(String(sumLineItemTotals(items)));
@@ -490,6 +498,7 @@ export function ExpenseFormModal({
         splits: computedSplits,
         lineItems: splitMode === "byItem" && scannedLineItems.length > 0 ? scannedLineItems : undefined,
         itemAssignments: splitMode === "byItem" && Object.keys(itemAssignments).length > 0 ? itemAssignments : undefined,
+        quantityAssignments: splitMode === "byItem" && Object.keys(quantityAssignments).length > 0 ? quantityAssignments : undefined,
       }));
 
       clearDraft();
@@ -684,10 +693,32 @@ export function ExpenseFormModal({
               lineItems={scannedLineItems}
               members={members.filter((m) => selectedMembers.has(m.userId))}
               assignments={itemAssignments}
+              quantityAssignments={quantityAssignments}
               onToggle={(idx, uid) => {
                 setItemAssignments((prev) => {
                   const current = new Set(prev[idx] ?? []);
                   current.has(uid) ? current.delete(uid) : current.add(uid);
+                  return { ...prev, [idx]: current };
+                });
+              }}
+              onSetQuantity={(idx, uid, qty) => {
+                setQuantityAssignments((prev) => {
+                  const itemMap = { ...(prev[idx] ?? {}) };
+                  if (qty <= 0) {
+                    delete itemMap[uid];
+                  } else {
+                    itemMap[uid] = qty;
+                  }
+                  return { ...prev, [idx]: itemMap };
+                });
+                // Also keep the assignments Set in sync for the assignee list
+                setItemAssignments((prev) => {
+                  const current = new Set(prev[idx] ?? []);
+                  if (qty > 0) {
+                    current.add(uid);
+                  } else {
+                    current.delete(uid);
+                  }
                   return { ...prev, [idx]: current };
                 });
               }}
@@ -697,6 +728,11 @@ export function ExpenseFormModal({
                 );
                 // Clear assignments for shared items
                 setItemAssignments((prev) => {
+                  const next = { ...prev };
+                  delete next[idx];
+                  return next;
+                });
+                setQuantityAssignments((prev) => {
                   const next = { ...prev };
                   delete next[idx];
                   return next;
