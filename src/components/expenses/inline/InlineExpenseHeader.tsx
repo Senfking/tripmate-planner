@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 import { format, parse } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
 import { useExpenseInlineEdit, recomputeSplits } from "@/hooks/useExpenseInlineEdit";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
