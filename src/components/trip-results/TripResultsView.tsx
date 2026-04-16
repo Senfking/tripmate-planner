@@ -243,45 +243,53 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* Divider */}
         <div className="mx-4 border-t border-border" />
 
-        {/* Overview map */}
-        <div className="mx-4 mt-4 mb-4">
-          {mapVisible ? (
-            <div className="rounded-xl overflow-hidden border border-[#0D9488]/20 relative animate-fade-in">
-              <div className="h-[250px]">
-                <ResultsMap
-                  result={result}
-                  activeDayIndex={-1}
-                  allDays={allDays}
-                  mode="overview"
-                  refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
-                />
-              </div>
-              <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1000 }}>
-                <button
-                  onClick={() => setMapFullscreen(true)}
-                  className="pointer-events-auto absolute top-3 right-3 p-2 rounded-lg bg-card text-foreground shadow-lg border border-border hover:bg-accent transition-colors"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setMapVisible(false)}
-                  className="pointer-events-auto absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-card text-foreground shadow-lg border border-border text-[11px] hover:bg-accent transition-colors"
-                >
-                  Hide map
-                </button>
-              </div>
+        {/* Tab toggle for tablet/mobile */}
+        {isMobileOrTablet && (
+          <div className="px-4 pt-3 pb-1">
+            <div className="flex rounded-lg bg-muted p-1">
+              <button
+                onClick={() => setActiveTab("itinerary")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all ${
+                  activeTab === "itinerary"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                Itinerary
+              </button>
+              <button
+                onClick={() => setActiveTab("map")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all ${
+                  activeTab === "map"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <MapIcon className="h-3.5 w-3.5" />
+                Map
+              </button>
             </div>
-          ) : (
-            <button
-              onClick={() => setMapVisible(true)}
-              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-            >
-              <MapIcon className="h-4 w-4 text-[#0D9488]" />
-              <span className="text-sm font-medium flex-1 text-foreground">Show map</span>
-              <span className="text-xs text-muted-foreground">{totalActivities} pins</span>
-            </button>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Overview map — only on mobile/tablet inline when tab is map */}
+        {isMobileOrTablet && activeTab === "map" && (
+          <div className="px-4 mt-2 mb-4 h-[calc(100vh-240px)]">
+            <div className="rounded-xl overflow-hidden border border-border h-full">
+              <ResultsMap
+                result={result}
+                activeDayIndex={-1}
+                allDays={allDays}
+                mode="overview"
+                refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
+                highlightedPin={highlightedPin}
+                onPinClick={handlePinClick}
+                useDayColors
+              />
+            </div>
+          </div>
+        )}
 
         {/* ===== OVERALL SUMMARY SECTIONS ===== */}
 
