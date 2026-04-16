@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Junto Build Guide v10</title>
+<title>Junto Build Guide v11</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
   :root {
@@ -168,7 +168,7 @@
   <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Toggle menu">☰</button>
   <span class="topbar-logo">JUNTO</span>
   <span class="topbar-sep">/</span>
-  <span class="topbar-title">Build Guide v10 — AI Strategy Edition</span>
+  <span class="topbar-title">Build Guide v11 — AI-First Pivot Edition</span>
   <div class="topbar-right">
     <div class="progress-wrap">
       <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
@@ -186,13 +186,16 @@
     <div class="sidebar-label">Overview</div>
     <div class="sidebar-item active" onclick="show('position',this)"><span class="sidebar-dot dot-teal"></span> Why Junto Wins</div>
     <div class="sidebar-item" onclick="show('status',this)"><span class="sidebar-dot dot-green"></span> Build Status</div>
+    <div class="sidebar-item" onclick="show('archdecisions',this)"><span class="sidebar-dot dot-purple"></span> Arch Decisions</div>
   </div>
 
   <div class="sidebar-group">
-    <div class="sidebar-label">Phase 0 — Fix Now</div>
+    <div class="sidebar-label">Launch</div>
     <div class="sidebar-item" onclick="show('bugs',this)"><span class="sidebar-dot dot-red"></span> Active Bugs</div>
     <div class="sidebar-item" onclick="show('ux',this)"><span class="sidebar-dot dot-amber"></span> UX Issues</div>
-    <div class="sidebar-item" onclick="show('prelaunch',this)"><span class="sidebar-dot dot-amber"></span> Pre-launch Tasks</div>
+    <div class="sidebar-item" onclick="show('prelaunch',this)"><span class="sidebar-dot dot-teal"></span> Launch Readiness</div>
+    <div class="sidebar-item" onclick="show('ideasboard',this)"><span class="sidebar-dot dot-purple"></span> Ideas Board</div>
+    <div class="sidebar-item" onclick="show('roadmap',this)"><span class="sidebar-dot dot-blue"></span> Roadmap</div>
   </div>
 
   <div class="sidebar-group">
@@ -284,7 +287,7 @@
     <p>Competitive position based on deep research across App Store reviews, Reddit, and Trustpilot.</p>
   </div>
 
-  <div class="callout callout-green">Junto occupies a gap no competitor has closed: the all-in-one group trip planner that combines itinerary, expenses, group decisions, and group-aware AI in a single free PWA. This gap is real and validated by thousands of user complaints across every competitor.</div>
+  <div class="callout callout-green">Junto occupies a gap no competitor has closed: the all-in-one group trip planner that combines itinerary, expenses, group decisions, and group-aware AI in a single app. This gap is real and validated by thousands of user complaints across every competitor.</div>
 
   <h3>Competitor weaknesses you can own</h3>
   <table>
@@ -295,10 +298,10 @@
       <tr><td><strong>Splitwise</strong></td><td>Destroyed its free tier — 3–5 expense daily limit + 10-second ad timers. 1.8/5 on Trustpilot, 65% one-star reviews. Reddit threads titled "RIP Splitwise."</td><td>Free expense splitting, no limits, no ads.</td></tr>
       <tr><td><strong>Tricount</strong></td><td>Pure expense splitter. No planning, no AI, no itinerary. Sync failures and data loss since acquisition by bunq.</td><td>Unified planning + expenses + decisions in one app.</td></tr>
       <tr><td><strong>Layla.ai</strong></td><td>Beautiful AI trip planning but zero group features. Solo traveller focus. $49/yr. AI doesn't know your group's budget, dietary needs, or preferences.</td><td>Group-aware AI that balances everyone's preferences via the Group Preference Engine.</td></tr>
-      <tr><td><strong>Pilot</strong></td><td>Has voting + collaboration but no AI expense management. Mixed reviews on polish and reliability.</td><td>AI-powered expenses + group planning in one polished PWA.</td></tr>
+      <tr><td><strong>Pilot</strong></td><td>Has voting + collaboration but no AI expense management. Mixed reviews on polish and reliability.</td><td>AI-powered expenses + group planning in one polished app.</td></tr>
       <tr><td><strong>Wonderplan</strong></td><td>AI itinerary generation but solo only — zero collaboration, no real-time editing, no group features.</td><td>Real-time group collaboration on AI-generated plans. Vote, reorder, discuss.</td></tr>
       <tr><td><strong>Google Travel</strong></td><td>Gemini-powered AI but zero group features. No expense tracking. No polls. Can't invite friends.</td><td>Purpose-built for groups, not bolted onto a search engine.</td></tr>
-      <tr><td><strong>All of them</strong></td><td>"Everyone must download an app" — the #1 adoption complaint across every competitor's reviews.</td><td>PWA: share a link, open in browser, no App Store required.</td></tr>
+      <tr><td><strong>All of them</strong></td><td>"Everyone must download an app" — the #1 adoption complaint across every competitor's reviews.</td><td>Web app today, native app coming. Share a link to join instantly — no friction.</td></tr>
     </tbody>
   </table>
 
@@ -311,7 +314,7 @@
       <tr><td><strong>Budget misalignment</strong> — one person wants luxury, another wants hostels, nobody wants to have the awkward conversation</td><td>Group Preference Engine finds the anonymous overlap. Nobody sees each other's budget number — AI calculates the sweet spot where everyone is comfortable.</td></tr>
       <tr><td><strong>Expense splitting as a separate app</strong></td><td>Unified with itinerary — no context switching</td></tr>
       <tr><td><strong>Multi-currency chaos</strong></td><td>Multi-currency settlement with AI receipt scanning. Fix rate drift (Step 16) before launch.</td></tr>
-      <tr><td><strong>"Tech-averse friends won't download another app"</strong></td><td>PWA: one link, works in the browser</td></tr>
+      <tr><td><strong>"Tech-averse friends won't download another app"</strong></td><td>Share a link to join instantly via browser. Native app coming for deeper engagement.</td></tr>
       <tr><td><strong>No group decision-making</strong></td><td>Integrated polls + Fortune Wheel — no competitor has this</td></tr>
     </tbody>
   </table>
@@ -322,7 +325,7 @@
     <li><strong>Cross-linked intelligence:</strong> Scan a receipt → it offers to add the venue to your itinerary. Upload a booking → it creates the expense. One input, multiple outputs. No competitor connects these silos.</li>
     <li><strong>Dubai base:</strong> 85%+ of the city are expats who travel in friend groups. WhatsApp is default. In-person access to this community beats any online channel.</li>
     <li><strong>Structural virality:</strong> Every trip created requires inviting friends. The product can't be used alone. This is the Venmo mechanic — every payment to a non-user is an implicit invite.</li>
-    <li><strong>PWA architecture:</strong> Eliminates the #1 adoption complaint across all competitors. Share a link, no App Store friction.</li>
+    <li><strong>Instant access:</strong> Share a link, open in browser — no App Store friction for first use. Native app (Capacitor) on the roadmap for push notifications, share sheet, and app store presence.</li>
     <li><strong>Already built the hard things:</strong> Multi-currency expenses, AI receipt scanning, real-time collab, group polls. Competitors paywall or don't have these.</li>
   </ul>
 </div>
@@ -350,10 +353,70 @@
       <tr><td>Desktop optimisation: top header nav, max-width containers, 2-col grids</td><td><span class="pill pill-green">Done</span></td></tr>
       <tr><td>Feedback widget: floating button, AI response, screenshot, DB storage</td><td><span class="pill pill-green">Done</span></td></tr>
       <tr><td>junto.pro domain: purchased, DNS configured (not yet live)</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>AI Trip Builder: premium input flow — vibes, budget, deal-breakers, "what don't you want"</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>AI Trip Builder: editorial voice system prompt (local friend tone, timing tips, booking warnings)</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>AI Trip Builder: confirmation card trust bridge</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>AI Trip Builder: destination-specific loading messages</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Concierge refactor: Google Places-first pipeline</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Concierge: event search via Brave Search API</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Concierge: intent-aware tiered ranking (3 tiers)</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Concierge: fuzzy name matching for venue reclassification</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Performance round 1: cache overrides removed, PullToRefresh scoped, query keys normalized, realtime invalidation reduced</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Expenses: loading state fix (isPending, error state with retry button)</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Expenses: multi-quantity claim stepper backend + UI</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Design system page at /design-system</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Trip ideas board: database schema deployed (trip_ideas + trip_idea_votes with RLS)</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>User flow audit: docs/current-user-flow.md</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>AI Trip Builder: stream reveal animation (hook + CSS built, not verified working)</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>AI Trip Builder: split-view map alongside results</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>Ideas board UI (schema done, frontend pending)</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>Trip list organization (sections: drafts / coming up / happening now / past)</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>Flow simplification (one creation path)</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>Rich venue detail pages</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>Concierge: events+venues mixed results (venue names undefined)</td><td><span class="pill pill-amber">In progress</span></td></tr>
       <tr><td>PWA update banner</td><td><span class="pill pill-amber">In progress</span></td></tr>
       <tr><td>Privacy & T&Cs: placeholder pages live, content not written</td><td><span class="pill pill-red">Pending</span></td></tr>
     </tbody>
   </table>
+</div>
+
+<!-- ══════════ ARCHITECTURAL DECISIONS — AI-FIRST PIVOT ══════════ -->
+<div id="archdecisions" class="section">
+  <div class="section-header">
+    <h2>Architectural Decisions — AI-First Pivot</h2>
+    <p>Structural product decisions made in April 2026. These simplify the app, reduce tab clutter, and put AI at the center of the experience.</p>
+  </div>
+
+  <h3>Decision 1: Kill the Vibe Board</h3>
+  <div class="callout callout-purple">The standalone Vibe Board is redundant. The AI Trip Builder input flow captures vibes, budget, pace, and deal-breakers inline. Keeping both creates confusion.</div>
+  <ul>
+    <li><strong>Remove:</strong> Vibe Board as a standalone page/tab/step</li>
+    <li><strong>Keep:</strong> Underlying vibe preference data in DB — feeds into AI builder for returning users, future Group Preference Engine</li>
+  </ul>
+
+  <h3>Decision 2: Demote Decisions/Polls from Top-Level Tab</h3>
+  <p>Polls are useful but don't deserve a permanent tab. Polls become contextual:</p>
+  <ul>
+    <li>Create from within itinerary ("Can't decide? Create a poll")</li>
+    <li>Create from Ideas board ("Vote on it")</li>
+    <li>Active polls appear as notifications/badges on trip home</li>
+    <li><strong>Remove:</strong> Standalone Decisions tab from main navigation</li>
+    <li>Fortune Wheel easter egg stays wherever polls appear</li>
+  </ul>
+
+  <h3>Decision 3: New Tab Structure</h3>
+  <table>
+    <thead><tr><th>Old</th><th>New</th></tr></thead>
+    <tbody>
+      <tr><td>Trips | Decisions | Itinerary | Expenses</td><td><strong>Trips | Itinerary | Ideas | Expenses</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Decision 4: Kill Onboarding Wizard as Gatekeeper</h3>
+  <p>Setup becomes contextual: currency on first expense, invite from button, all tabs visible with inline empty states. No more 4-step wizard blocking access to the app.</p>
+
+  <h3>Decision 5: One Creation Flow</h3>
+  <div class="callout">Kill TripNew page. AI Trip Builder IS the creation flow. Manual mode is an option within it — not a separate path.</div>
 </div>
 
 <!-- ══════════ PHASE 0: BUGS ══════════ -->
@@ -543,6 +606,66 @@ Don't change the feedback form content or submission logic.<button class="copy-b
       </div>
     </div>
   </div>
+
+  <h3>Recently Fixed</h3>
+
+  <div class="task done">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Concierge wrong location (Mexico result for non-Mexico trip)</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Concierge was returning results for Mexico regardless of trip destination. Fixed in concierge pipeline refactor.</p>
+    </div>
+  </div>
+
+  <div class="task done">
+    <div class="checkbox"><span class="checkmark">✓</span></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Expenses stuck loading indefinitely</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">Expenses tab showed infinite loading state. Fixed with isPending check and error state with retry button.</p>
+    </div>
+  </div>
+
+  <h3>Current Bugs</h3>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Claim stepper button not responding</span><span class="tag tag-bug">Bug</span></div>
+      <p class="task-note">Pre-existing, undiagnosed. The multi-quantity claim stepper button does not respond to taps. Backend + UI shipped but interaction broken.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Low-contrast teal borders app-wide</span><span class="tag tag-bug">Bug</span></div>
+      <p class="task-note">Teal border color is too low-contrast across the app. Prompt ready for fix.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Concierge venue names undefined in mixed results</span><span class="tag tag-bug">Bug</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">When concierge returns mixed events+venues results, venue names show as "undefined". Concierge v2.4 deployed but this is untested.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Stream reveal not verified working</span><span class="tag tag-wip">In progress</span><span class="tag tag-code">Claude Code</span></div>
+      <p class="task-note">AI Trip Builder stream reveal animation — hook and CSS are built but it has not been verified as working end-to-end.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="checkbox"></div>
+    <div class="task-body">
+      <div class="task-top"><span class="task-title">Edge Function deployment requires Lovable workaround</span><span class="tag tag-wip">In progress</span></div>
+      <p class="task-note">Claude Code changes to Edge Functions don't auto-deploy. Requires manual deployment via Lovable as a workaround.</p>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════ UX ISSUES ══════════ -->
@@ -687,12 +810,55 @@ Do not change the split calculation logic — only the form presentation. List e
   </div>
 </div>
 
-<!-- ══════════ PRE-LAUNCH TASKS ══════════ -->
+<!-- ══════════ LAUNCH READINESS CHECKLIST ══════════ -->
 <div id="prelaunch" class="section">
   <div class="section-header">
-    <h2>Pre-launch Tasks — Phase 0</h2>
-    <p>Non-bug tasks to complete before any external user sees the app.</p>
+    <h2>Launch Readiness Checklist</h2>
+    <p>Tiered priorities for launch. Tier 1 blocks launch. Tier 2 should ship with it. Tier 3 is post-launch.</p>
   </div>
+
+  <h3>Tier 1 — Blocks Launch</h3>
+  <table>
+    <thead><tr><th>#</th><th>Item</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><strong>AI Trip Builder presentation</strong> — verify stream reveal works, add split-view map, output must look stunning</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>2</td><td><strong>Ideas board UI</strong> — schema done, build frontend</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>3</td><td><strong>Trip list sections</strong> — drafts / coming up / happening now / past</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>4</td><td><strong>Flow simplification</strong> — kill TripNew, kill onboarding wizard, kill vibe board UI, demote decisions to inline</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>5</td><td><strong>Tab restructure</strong> — Trips | Itinerary | Ideas | Expenses</td><td><span class="pill pill-red">Pending</span></td></tr>
+      <tr><td>6</td><td><strong>Landing page</strong> — hero selling "group trip planning with AI" in 5 seconds, trip input bar as CTA</td><td><span class="pill pill-red">Pending</span></td></tr>
+      <tr><td>7</td><td><strong>Sample trips</strong> — pre-generate 6–8 stunning trips for popular destinations (Bali, Tokyo, Lisbon, NYC, Barcelona, Thailand, Iceland, Dubai) using editorial voice</td><td><span class="pill pill-red">Pending</span></td></tr>
+      <tr><td>8</td><td><strong>Fix remaining bugs</strong> — claim stepper, venue name undefined, low-contrast borders, stream reveal</td><td><span class="pill pill-red">Pending</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Tier 2 — Should Ship</h3>
+  <table>
+    <thead><tr><th>#</th><th>Item</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>9</td><td><strong>Rich venue detail pages</strong> — photos, reviews, map, bookable activities</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td>10</td><td><strong>Concierge desktop layout</strong> — responsive grid</td><td><span class="pill pill-red">Pending</span></td></tr>
+      <tr><td>11</td><td><strong>Performance round 2</strong> — consolidated data loader</td><td><span class="pill pill-red">Pending</span></td></tr>
+      <tr><td>12</td><td><strong>Anonymous trip generation</strong> — generate without login, signup wall on save</td><td><span class="pill pill-red">Pending</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Tier 3 — Post-Launch</h3>
+  <table>
+    <thead><tr><th>#</th><th>Item</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>13</td><td>AI Copilot (agentic chat) — spec written</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td>14</td><td>Save from Social — blocked on native app</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td>15</td><td>Flexible group dates — needs deep research</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td>16</td><td>Group Preference Engine</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td>17</td><td>Affiliate booking integration</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td>18</td><td>Trip templates / discovery</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td>19</td><td>Content creator video assets</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td>20</td><td>Native app wrapper (Capacitor)</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Previous Pre-Launch Tasks</h3>
 
   <div class="task">
     <div class="checkbox"><span class="checkmark">✓</span></div>
@@ -1383,13 +1549,24 @@ Use the same Anthropic API pattern as the existing suggest-activities Edge Funct
 <!-- ══════════ PHASE 2: AI TRIP BUILDER ══════════ -->
 <div id="ai" class="section">
   <div class="section-header">
-    <h2>AI Trip Builder — Phase 2 (Hero Feature)</h2>
-    <p>Map-centric AI trip planning inspired by Layla.ai. NOT a form that outputs a text list — this is a visual, interactive, group-aware experience. The acquisition magnet that turns "I want to plan a trip" into a complete plan in under two minutes.</p>
+    <h2>AI Trip Builder — Hero Feature</h2>
+    <p>The creation flow IS the AI Trip Builder. Premium input captures vibes, budget, deal-breakers, and "what don't you want". Editorial voice output reads like a local friend, not a chatbot. This is how every trip starts.</p>
   </div>
-  <div class="callout callout-purple">Research: Layla.ai generated 10M+ itineraries since 2024. But AI that balances multiple group preferences — "3 of 4 want beach + culture, budget is €80–120/day, Priya is vegetarian" — doesn't exist yet. The key differentiator: this is group-aware. It pulls from the Group Preference Engine to balance everyone's interests. No competitor does this. Cost: ~$0.05 per full trip generation (Sonnet).</div>
+  <div class="callout callout-purple">Research: Layla.ai generated 10M+ itineraries since 2024. But AI that balances multiple group preferences — "3 of 4 want beach + culture, budget is €80–120/day, Priya is vegetarian" — doesn't exist yet. The key differentiator: this is group-aware. No competitor does this. Cost: ~$0.05 per full trip generation (Sonnet).</div>
+
+  <h3>Build Phases</h3>
+  <table>
+    <thead><tr><th>Phase</th><th>Scope</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Phase 1</strong></td><td>Premium input flow + editorial voice + confirmation card + loading messages. Stream reveal built but unverified.</td><td><span class="pill pill-amber">Mostly done</span></td></tr>
+      <tr><td><strong>Phase 2</strong></td><td>Neighborhood clustering + pacing optimization + opening hours validation + split-view map</td><td><span class="pill pill-red">TODO — pre-launch</span></td></tr>
+      <tr><td><strong>Phase 3</strong></td><td>Three-tier iteration: chat refinement, section regeneration, item swap</td><td><span class="pill pill-muted">TODO — post-launch</span></td></tr>
+      <tr><td><strong>Phase 4</strong></td><td>Trust signals: day-coded map pins, live pricing, AI review summaries</td><td><span class="pill pill-muted">TODO — post-launch</span></td></tr>
+    </tbody>
+  </table>
 
   <h3>The Flow</h3>
-  <p>User taps "Plan with AI" → short questionnaire (destination or "surprise me", dates, trip length, budget level, vibe multi-select from Vibe Board, group size, dietary/accessibility needs) → AI generates a full day-by-day plan.</p>
+  <p>User taps "Plan a trip" → premium input (destination, vibes, budget, deal-breakers, "what don't you want") → AI generates a full day-by-day plan with editorial voice → confirmation card trust bridge → add to itinerary.</p>
 
   <h3>The Map Experience</h3>
   <ul>
@@ -1554,6 +1731,58 @@ Do not change any existing itinerary functionality. List every file you'll chang
 
   <h3>Monetization</h3>
   <p>Free users get 2 trip builds total. Pro gets unlimited regeneration. See AI Monetization Tiers for full breakdown.</p>
+</div>
+
+<!-- ══════════ IDEAS BOARD ══════════ -->
+<div id="ideasboard" class="section">
+  <div class="section-header">
+    <h2>Ideas Board — Phase 1 (Pre-Launch)</h2>
+    <p>Shared ideas bucket per trip. Lightweight, collaborative, feeds into everything.</p>
+  </div>
+
+  <div class="callout callout-purple">A shared place for the group to dump ideas before they become itinerary items. Heart/upvote to signal interest. Add to itinerary with conflict detection. Connects to: Concierge "Save" action, AI Builder leftovers, future Save from Social.</div>
+
+  <h3>Core Features</h3>
+  <ul>
+    <li><strong>Shared ideas bucket</strong> — any trip member can add an idea (venue, activity, restaurant, link)</li>
+    <li><strong>Heart / upvote</strong> — lightweight voting to surface popular ideas</li>
+    <li><strong>Add to itinerary</strong> — one-tap promotion with conflict detection (time overlap, duplicate venue)</li>
+    <li><strong>Connects to Concierge</strong> — "Save" from concierge results adds to Ideas board</li>
+    <li><strong>AI Builder leftovers</strong> — suggestions the group didn't accept go to Ideas board automatically</li>
+    <li><strong>Future: Save from Social</strong> — share from Instagram/TikTok saves to Ideas (blocked on native app)</li>
+  </ul>
+
+  <h3>Status</h3>
+  <table>
+    <thead><tr><th>Component</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Database schema: <code>trip_ideas</code> + <code>trip_idea_votes</code> with RLS</td><td><span class="pill pill-green">Done</span></td></tr>
+      <tr><td>Frontend UI</td><td><span class="pill pill-amber">In progress</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════ ROADMAP ══════════ -->
+<div id="roadmap" class="section">
+  <div class="section-header">
+    <h2>Roadmap</h2>
+    <p>Major features beyond the launch readiness checklist.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Feature</th><th>Description</th><th>Phase</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>AI Copilot</strong></td><td>Agentic chat with tool use — ask questions, get actions. "Move dinner to Thursday", "What's our budget left?"</td><td>Phase 2</td><td><span class="pill pill-muted">Spec written</span></td></tr>
+      <tr><td><strong>Save from Social</strong></td><td>Share from Instagram/TikTok → saves to Ideas board. Requires native app share sheet.</td><td>Phase 2–3</td><td><span class="pill pill-muted">Spec written, blocked on native app</span></td></tr>
+      <tr><td><strong>Rich venue detail pages</strong></td><td>Mindtrip-style tabbed view: photos, reviews, map, bookable activities, opening hours.</td><td>Phase 1–2</td><td><span class="pill pill-amber">In progress</span></td></tr>
+      <tr><td><strong>Content creator assets</strong></td><td>Video embeds from TikTok/YouTube/Instagram for venue discovery and social proof.</td><td>Phase 3</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td><strong>Native app wrapper</strong></td><td>Capacitor for iOS/Android. Unlocks share sheet, push notifications, app store presence.</td><td>Phase 3</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td><strong>Flexible group dates</strong></td><td>Members input availability windows, AI finds overlap. Needs deep research.</td><td>Phase 3</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td><strong>Group Preference Engine</strong></td><td>Anonymous budget/vibe/pace overlap calculation. Feeds into AI builder.</td><td>Phase 2</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td><strong>Affiliate booking integration</strong></td><td>Booking.com, Viator, GetYourGuide links in venue detail pages.</td><td>Phase 2–3</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+      <tr><td><strong>Trip templates / discovery</strong></td><td>Community-powered trip library. Browse, copy, rate.</td><td>Phase 3</td><td><span class="pill pill-muted">Post-launch</span></td></tr>
+    </tbody>
+  </table>
 </div>
 
 <!-- ══════════ PHASE 2/4: TRIP TEMPLATES & DISCOVERY ══════════ -->
@@ -3719,6 +3948,16 @@ ALTER TABLE trips ADD COLUMN active_plan_id uuid REFERENCES ai_trip_plans(id);
   </div>
 
   <div class="callout callout-purple">The Trip Builder is the full-plan mode — complete multi-day itineraries. The Concierge is the lite mode — spontaneous, single-activity suggestions via a conversational interface. They share Google Places integration, activity card components, "Add to plan" functionality, and the group reaction system. Together, they cover the full spectrum from "plan an entire trip" to "what should we do tonight?"</div>
+
+  <h3>Current Pipeline (v2.4)</h3>
+  <ul>
+    <li><strong>Google Places-first pipeline</strong> — real venue data as the source of truth, AI for ranking and enrichment only</li>
+    <li><strong>Brave Search for events</strong> — live event discovery via Brave Search API, flagged with <span class="tag tag-wip">LIVE EVENT</span> badge</li>
+    <li><strong>Intent-aware tiered ranking</strong> — 3 tiers: universal (always relevant), contextual (time/weather), niche (specific intent). Applied across all result types.</li>
+    <li><strong>Event type support</strong> — events returned alongside venues with distinct card styling</li>
+    <li><strong>Fuzzy name matching</strong> — reclassifies AI-suggested venues against Google Places results to prevent duplicates</li>
+  </ul>
+  <div class="callout callout-red"><strong>Known issue:</strong> Venue names show as "undefined" in mixed events+venues results. Concierge v2.4 deployed but this bug is untested.</div>
 
   <h3>User stories</h3>
   <ul>
