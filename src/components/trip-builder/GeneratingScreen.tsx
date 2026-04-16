@@ -9,14 +9,17 @@ type Props = {
   onRetry: () => void;
 };
 
-const STEPS = [
-  { label: "Analyzing your preferences", delay: 2000 },
-  { label: "Finding restaurants & cafés", delay: 5000 },
-  { label: "Discovering activities & attractions", delay: 8000 },
-  { label: "Planning your daily schedule", delay: 12000 },
-  { label: "Checking local tips & insider advice", delay: 15000 },
-  { label: "Finalizing your itinerary…", delay: Infinity },
-];
+function getSteps(destination: string) {
+  const d = destination || "your destination";
+  return [
+    { label: `Finding venues in ${d}…`, delay: 3000 },
+    { label: "Checking opening hours and travel times…", delay: 7000 },
+    { label: "Clustering by neighborhood…", delay: 11000 },
+    { label: "Adding local insider tips…", delay: 16000 },
+    { label: "Almost ready…", delay: 21000 },
+    { label: "Polishing your itinerary…", delay: Infinity },
+  ];
+}
 
 export function GeneratingScreen({ destination, error, onRetry }: Props) {
   const [completedCount, setCompletedCount] = useState(0);
