@@ -1,18 +1,18 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { MemberProfile } from "@/hooks/useExpenses";
-import { LineItemRow, ClaimRow, getTotalClaimedQuantity, getRemainingQuantity } from "@/hooks/useLineItemClaims";
-
-/** Safe accessor — old rows from before the migration lack the column */
-function claimQty(c: ClaimRow): number {
-  return typeof c.claimed_quantity === "number" ? c.claimed_quantity : 1;
-}
+import { LineItemRow, ClaimRow, getRemainingQuantity } from "@/hooks/useLineItemClaims";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { calculateLineItemTotals } from "@/lib/expenseLineItems";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { Link2, ChevronDown, Minus, Plus } from "lucide-react";
-import { useState } from "react";
+
+/** Safe accessor — old rows from before the migration lack the column */
+function claimQty(c: ClaimRow): number {
+  return typeof c.claimed_quantity === "number" ? c.claimed_quantity : 1;
+}
 
 interface Props {
   lineItems: LineItemRow[];
@@ -21,7 +21,7 @@ interface Props {
   currency: string;
   totalAmount: number;
   onToggleClaim: (lineItemId: string) => void;
-  onSetClaimQuantity: (lineItemId: string, quantity: number) => void;
+  onSetClaimQuantity: (lineItemId: string, quantity: number) => Promise<void>;
   isToggling: boolean;
 }
 
@@ -84,7 +84,6 @@ export function LineItemClaimList({
                     members={members}
                     currency={currency}
                     currentUserId={user?.id}
-                    isToggling={isToggling}
                     onSetQuantity={(qty) => onSetClaimQuantity(item.id, qty)}
                   />
                 );
@@ -194,14 +193,13 @@ export function LineItemClaimList({
   );
 }
 
-/** Multi-quantity item with stepper and claim summary */
+/** Multi-quantity item with stepper and optimistic updates */
 function MultiQuantityItem({
   item,
   itemClaims,
   members,
   currency,
   currentUserId,
-  isToggling,
   onSetQuantity,
 }: {
   item: LineItemRow;
@@ -209,28 +207,64 @@ function MultiQuantityItem({
   members: MemberProfile[];
   currency: string;
   currentUserId: string | undefined;
-  isToggling: boolean;
-  onSetQuantity: (qty: number) => void;
+  onSetQuantity: (qty: number) => Promise<void>;
 }) {
   const myClaim = itemClaims.find((c) => c.user_id === currentUserId);
   const myQty = myClaim ? claimQty(myClaim) : 0;
   const remaining = getRemainingQuantity(item.quantity, itemClaims, item.id);
   const maxClaimable = myQty + remaining;
-  const hasClaimed = myQty > 0;
   const fullyClaimedByOthers = remaining === 0 && myQty === 0;
 
-  const unitPrice = (item.unit_price > 0)
+  const unitPrice = item.unit_price > 0
     ? item.unit_price
     : item.total_price / Math.max(item.quantity, 1);
 
   const otherClaims = itemClaims.filter((c) => c.user_id !== currentUserId && claimQty(c) > 0);
 
+  // Optimistic local state — tracks the user's intended quantity between taps.
+  // intentRef lets rapid taps accumulate without waiting for React re-renders.
+  // prevCommitted is the last server-confirmed value used to revert on error.
+  const [localQty, setLocalQty] = useState(myQty);
+  const intentRef = useRef(myQty);
+  const prevCommitted = useRef(myQty);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync from server once the debounce settles (i.e., server confirmed the write)
+  useEffect(() => {
+    if (!debounceRef.current) {
+      setLocalQty(myQty);
+      intentRef.current = myQty;
+      prevCommitted.current = myQty;
+    }
+  }, [myQty]);
+
+  const handleStep = useCallback((delta: number) => {
+    const next = Math.max(0, Math.min(maxClaimable, intentRef.current + delta));
+    if (next === intentRef.current) return;
+    intentRef.current = next;
+    setLocalQty(next);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      debounceRef.current = null;
+      const target = intentRef.current;
+      try {
+        await onSetQuantity(target);
+        prevCommitted.current = target;
+      } catch {
+        intentRef.current = prevCommitted.current;
+        setLocalQty(prevCommitted.current);
+        toast.error("Failed to update claim quantity");
+      }
+    }, 500);
+  }, [maxClaimable, onSetQuantity]);
+
+  const hasClaimed = localQty > 0;
+
   return (
     <div className={cn(
       "rounded-lg border px-2.5 py-2 space-y-1.5 transition-colors",
-      hasClaimed
-        ? "border-primary/50 bg-primary/[0.04]"
-        : "border-border"
+      hasClaimed ? "border-primary/50 bg-primary/[0.04]" : "border-border"
     )}>
       {/* Top row: name + total price */}
       <div className="flex items-start justify-between gap-2">
@@ -257,11 +291,11 @@ function MultiQuantityItem({
           <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
             <button
               type="button"
-              disabled={isToggling || myQty <= 0}
-              onClick={() => onSetQuantity(myQty - 1)}
+              disabled={localQty <= 0}
+              onClick={() => handleStep(-1)}
               className={cn(
                 "h-8 w-9 flex items-center justify-center transition-colors",
-                myQty <= 0
+                localQty <= 0
                   ? "text-muted-foreground/30 cursor-not-allowed"
                   : "text-foreground hover:bg-muted active:bg-muted/80"
               )}
@@ -271,17 +305,17 @@ function MultiQuantityItem({
             </button>
             <span className={cn(
               "h-8 w-8 flex items-center justify-center text-[13px] font-semibold tabular-nums border-x border-border bg-background",
-              myQty > 0 ? "text-primary" : "text-muted-foreground"
+              localQty > 0 ? "text-primary" : "text-muted-foreground"
             )}>
-              {myQty}
+              {localQty}
             </span>
             <button
               type="button"
-              disabled={isToggling || myQty >= maxClaimable}
-              onClick={() => onSetQuantity(myQty + 1)}
+              disabled={localQty >= maxClaimable}
+              onClick={() => handleStep(1)}
               className={cn(
                 "h-8 w-9 flex items-center justify-center transition-colors",
-                myQty >= maxClaimable
+                localQty >= maxClaimable
                   ? "text-muted-foreground/30 cursor-not-allowed"
                   : "text-foreground hover:bg-muted active:bg-muted/80"
               )}
@@ -292,9 +326,9 @@ function MultiQuantityItem({
           </div>
 
           <div className="flex items-center gap-2 min-w-0">
-            {myQty > 0 && (
+            {localQty > 0 && (
               <span className="text-[11px] text-muted-foreground">
-                = {formatCurrency(unitPrice * myQty, currency)}
+                = {formatCurrency(unitPrice * localQty, currency)}
               </span>
             )}
             <span className={cn(

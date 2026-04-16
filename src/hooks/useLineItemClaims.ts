@@ -211,9 +211,6 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
       await qc.invalidateQueries({ queryKey: ["expense-line-item-claims", expenseId] });
       await recalcSplits();
     },
-    onError: (e: any) => {
-      toast.error(e?.message || "Failed to update claim quantity");
-    },
   });
 
   return {
