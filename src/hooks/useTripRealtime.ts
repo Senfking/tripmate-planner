@@ -209,8 +209,10 @@ export function useTripRealtime(tripId: string | undefined) {
     scheduleInvalidation("itinerary_items");
   }, [tripId, queryClient, user?.id, showActivityToast, scheduleInvalidation]);
 
+  const userId = user?.id;
+
   useEffect(() => {
-    if (!tripId || !user) return;
+    if (!tripId || !userId) return;
 
     const channel = supabase.channel(`trip-realtime-${tripId}`);
     channelRef.current = channel;
@@ -310,7 +312,7 @@ export function useTripRealtime(tripId: string | undefined) {
       channelRef.current = null;
       setConnectionStatus("disconnected");
     };
-  }, [tripId, user, handleChange, handleItineraryDelete]);
+  }, [tripId, userId, handleChange, handleItineraryDelete]);
 
   return { connectionStatus, newItemIds };
 }

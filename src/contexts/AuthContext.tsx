@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -106,15 +106,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (!error && data?.user) {
       trackEvent("user_login", { method: "email" }, data.user.id);
     }
     return { error: error as Error | null };
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, displayName: string) => {
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -124,19 +124,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       trackEvent("user_signup", { method: "email" }, data.user.id);
     }
     return { data, error: error as Error | null };
-  };
+  }, []);
 
-  const signOut = async () => {
-    const userId = user?.id;
+  const signOut = useCallback(async () => {
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user?.id;
     await supabase.auth.signOut();
     if (userId) trackEvent("user_logout", {}, userId);
     setUser(null);
     setSession(null);
     setProfile(null);
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    user, session, profile, loading, signIn, signUp, signOut, refreshProfile,
+  }), [user, session, profile, loading, signIn, signUp, signOut, refreshProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
