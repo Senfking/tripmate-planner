@@ -79,6 +79,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const [packingOpen, setPackingOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
+  const [mapState, setMapState] = useState<MapState>("closed");
   const [groupActivityOpen, setGroupActivityOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
   type CoordsMap = Map<string, { lat: number; lng: number }>;
@@ -179,7 +180,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-background overflow-y-auto" data-results-scroll-root="true">
+    <div className="fixed inset-0 z-[9999] bg-background flex">
+      {/* Left: Itinerary scroll area */}
+      <div className={cn(
+        "flex-1 min-w-0 overflow-y-auto transition-all duration-300 ease-out",
+        mapState === "partial" && "flex-1",
+        mapState === "full" && "w-[35%] shrink-0",
+      )} data-results-scroll-root="true">
       {/* Timeline (desktop only) */}
       <ResultsTimeline nodes={timelineNodes} />
 
