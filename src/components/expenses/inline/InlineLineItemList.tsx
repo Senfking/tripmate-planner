@@ -124,10 +124,10 @@ export function InlineLineItemList({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {claimableItems.length > 0 && (
         <>
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Items
           </p>
           <ul className="space-y-1">
@@ -268,18 +268,18 @@ function LineItemRowEditable({
 
   return (
     <li className={cn(
-      "group/item rounded-lg border px-2.5 py-1.5 space-y-1 transition-colors",
+      "group/item rounded-lg border px-2.5 py-1 space-y-0.5 transition-colors",
       isClaimed || myQty > 0 ? "border-primary/40 bg-primary/[0.04]" : "border-border",
     )}>
-      <div className="flex items-start gap-2">
-        {/* Mine toggle for single-qty items */}
-        {!isMultiQty && (
+      <div className="flex items-center gap-2">
+        {/* Mine toggle for single-qty items (only when NOT editing) */}
+        {!isMultiQty && !canEdit && (
           <button
             type="button"
             disabled={isToggling}
             onClick={onToggleClaim}
             className={cn(
-              "shrink-0 mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all border min-h-[24px]",
+              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all border min-h-[24px]",
               isClaimed
                 ? "bg-primary/15 text-primary border-primary/30"
                 : "bg-muted text-muted-foreground border-border hover:border-primary/30 hover:text-primary",
@@ -289,62 +289,61 @@ function LineItemRowEditable({
           </button>
         )}
 
-        <div className="flex-1 min-w-0 space-y-0.5">
-          {/* Name */}
+        {/* Quantity prefix — separate from name, editable in edit mode */}
+        {canEdit ? (
+          <EditableQty
+            value={item.quantity}
+            canEdit={canEdit}
+            onCommit={onChangeQty}
+          />
+        ) : isMultiQty ? (
+          <span className="text-[13px] font-medium text-muted-foreground tabular-nums shrink-0">{item.quantity}×</span>
+        ) : null}
+        {canEdit && <span className="text-[13px] text-muted-foreground shrink-0">×</span>}
+
+        {/* Name */}
+        <div className="flex-1 min-w-0">
           <EditableField
             readOnly={!canEdit}
-            display={
-              <span className="text-[13px] font-medium truncate">
-                {isMultiQty && (
-                  <EditableQty
-                    value={item.quantity}
-                    canEdit={canEdit}
-                    onCommit={onChangeQty}
-                  />
-                )}
-                {item.name}
-              </span>
-            }
+            showAffordance={canEdit}
+            display={<span className="text-[13px] font-medium truncate block">{item.name}</span>}
             editor={({ commit, cancel }) => (
               <NameEditor value={nameDraft} onChange={setNameDraft} onCommit={commit} onCancel={cancel} />
             )}
             onCommit={() => onRename(nameDraft)}
             ariaLabel="Edit item name"
+            className="w-full"
           />
-          {isMultiQty && (
+          {isMultiQty && !canEdit && (
             <p className="text-[10px] text-muted-foreground">
-              <EditablePrice
-                value={item.unit_price}
-                currency={currency}
-                canEdit={canEdit}
-                onCommit={onChangeUnitPrice}
-                suffix=" each"
-              />
+              {formatCurrency(item.unit_price, currency)} each
             </p>
           )}
         </div>
 
-        {/* Total price (read-only — derived from qty × unit) */}
-        <span className="text-[12px] font-semibold tabular-nums shrink-0 mt-0.5">
-          {!isMultiQty ? (
+        {/* Price (right-aligned) */}
+        <span className="text-[12px] font-semibold tabular-nums shrink-0">
+          {canEdit ? (
             <EditablePrice
               value={item.unit_price}
               currency={currency}
               canEdit={canEdit}
               onCommit={onChangeUnitPrice}
             />
+          ) : !isMultiQty ? (
+            formatCurrency(item.unit_price, currency)
           ) : (
             formatCurrency(item.total_price, currency)
           )}
         </span>
 
-        {/* Delete X */}
+        {/* Delete X — only on hover/focus (desktop) or always-visible-but-subtle on touch */}
         {canEdit && (
           <button
             type="button"
             onClick={onDelete}
             aria-label={`Remove ${item.name}`}
-            className="shrink-0 -mr-1 -mt-0.5 h-7 w-7 sm:h-6 sm:w-6 inline-flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 sm:opacity-0 sm:group-hover/item:opacity-100 focus:opacity-100 transition-opacity"
+            className="shrink-0 -mr-1 h-7 w-7 sm:h-6 sm:w-6 inline-flex items-center justify-center rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 sm:opacity-0 sm:group-hover/item:opacity-100 sm:focus:opacity-100 transition-opacity"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -438,9 +437,10 @@ function EditableQty({ value, canEdit, onCommit }: { value: number; canEdit: boo
   return (
     <EditableField
       readOnly={!canEdit}
-      display={<span>{value}× </span>}
+      showAffordance={canEdit}
+      display={<span className="text-[13px] font-medium tabular-nums">{value}</span>}
       editor={({ commit, cancel }) => (
-        <NumberEditor value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} width="w-12" />
+        <NumberEditor value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} width="w-10" />
       )}
       onCommit={() => onCommit(parseInt(draft, 10))}
       ariaLabel="Edit quantity"
@@ -453,6 +453,8 @@ function EditablePrice({ value, currency, canEdit, onCommit, suffix = "" }: { va
   return (
     <EditableField
       readOnly={!canEdit}
+      showAffordance={canEdit}
+      align="right"
       display={<span className="tabular-nums">{formatCurrency(value, currency)}{suffix}</span>}
       editor={({ commit, cancel }) => (
         <NumberEditor value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} width="w-20" step="0.01" />
