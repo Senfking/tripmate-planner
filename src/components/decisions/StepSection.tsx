@@ -23,7 +23,7 @@ type Props = {
 
 const variantStyles: Record<StatusVariant, string> = {
   done: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  active: "bg-primary/10 text-primary border-primary/20",
+  active: "bg-primary/10 text-primary border-primary/40",
   waiting: "bg-muted text-muted-foreground border-border",
   muted: "bg-muted text-muted-foreground border-border",
 };

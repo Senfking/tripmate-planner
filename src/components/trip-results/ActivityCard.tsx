@@ -236,7 +236,7 @@ export function ActivityCard({
           ) : reviews.length > 0 ? (
             <div className="px-3.5 pb-1 space-y-1.5">
               {reviews.map((review, i) => (
-                <div key={i} className="flex gap-2 p-2 rounded-lg bg-accent/50 border border-border/50">
+                <div key={i} className="flex gap-2 p-2 rounded-lg bg-accent/50 border border-border">
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
                     style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}

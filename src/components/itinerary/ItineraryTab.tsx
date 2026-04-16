@@ -246,7 +246,7 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           <div className="flex gap-2">
             <button
               onClick={() => setBuilderOpen(true)}
-              className="flex-1 rounded-xl border border-primary/20 bg-primary/5 py-3 text-center text-[13px] font-medium text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5"
+              className="flex-1 rounded-xl border border-primary/40 bg-primary/5 py-3 text-center text-[13px] font-medium text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5"
             >
               <Sparkles className="h-4 w-4" />
               AI Builder

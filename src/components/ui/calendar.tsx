@@ -102,7 +102,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           "inline-flex items-center justify-center",
-          "h-8 w-8 bg-transparent rounded-full border border-border/40 p-0",
+          "h-8 w-8 bg-transparent rounded-full border border-border p-0",
           "text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
         ),
         nav_button_previous: "absolute left-1",

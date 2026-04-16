@@ -57,7 +57,7 @@ export function StepEntryChoice({ onStepByStep, onFreeText }: Props) {
         <div
           className={cn(
             "inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-5 transition-all duration-500",
-            "bg-primary/10 border border-primary/20"
+            "bg-primary/10 border border-primary/40"
           )}
         >
           <Sparkles className="h-3.5 w-3.5 text-primary" />

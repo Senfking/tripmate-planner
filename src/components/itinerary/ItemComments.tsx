@@ -87,7 +87,7 @@ export function ItemComments({ tripId, itemId, newCommentIds }: Props) {
           onChange={(e) => setBody(e.target.value)}
           placeholder="Write a comment…"
           rows={1}
-          className="min-h-[32px] min-w-0 flex-1 resize-none rounded-lg border-border/50 bg-muted/20 px-2.5 py-1.5 text-[12px] placeholder:text-muted-foreground/40"
+          className="min-h-[32px] min-w-0 flex-1 resize-none rounded-lg border-border bg-muted/20 px-2.5 py-1.5 text-[12px] placeholder:text-muted-foreground/40"
         />
         <Button
           size="sm"

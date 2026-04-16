@@ -88,7 +88,7 @@ export function LineItemClaimList({
               // Single-quantity item: keep "Mine" toggle
               const isClaimed = itemClaims.some((c) => c.user_id === user?.id);
               return (
-                <div key={item.id} className="flex items-center gap-2.5 rounded-lg border border-border/60 px-2.5 py-2">
+                <div key={item.id} className="flex items-center gap-2.5 rounded-lg border border-border px-2.5 py-2">
                   <button
                     type="button"
                     disabled={isToggling}
@@ -144,7 +144,7 @@ export function LineItemClaimList({
 
       {/* Shared costs */}
       {Math.abs(sharedTotal) > 0.005 && (
-        <div className="rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2 space-y-1">
+        <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-2 space-y-1">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
               <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -224,8 +224,8 @@ function MultiQuantityItem({
     <div className={cn(
       "rounded-lg border px-2.5 py-2 space-y-1.5 transition-colors",
       hasClaimed
-        ? "border-primary/25 bg-primary/[0.04]"
-        : "border-border/60"
+        ? "border-primary/50 bg-primary/[0.04]"
+        : "border-border"
     )}>
       {/* Top row: name + total price */}
       <div className="flex items-start justify-between gap-2">
