@@ -265,8 +265,9 @@ export function useExpenses(tripId: string) {
       splits: { user_id: string; share_amount: number }[];
       lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
       itemAssignments?: Record<number, Set<string> | string[]>;
+      quantityAssignments?: Record<number, Record<string, number>>;
     }) => {
-      const { splits, lineItems, itemAssignments, ...expenseData } = params;
+      const { splits, lineItems, itemAssignments, quantityAssignments, ...expenseData } = params;
       const { data: expense, error } = await supabase
         .from("expenses")
         .insert({ ...expenseData, trip_id: tripId } as any)
@@ -284,7 +285,7 @@ export function useExpenses(tripId: string) {
 
       // Save line items + claims if using "Split by item" mode
       if (lineItems && lineItems.length > 0) {
-        await saveLineItems(expense.id, lineItems, itemAssignments);
+        await saveLineItems(expense.id, lineItems, itemAssignments, quantityAssignments);
       }
     },
     onSuccess: async (_data, params) => {

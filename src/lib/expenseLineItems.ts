@@ -149,8 +149,10 @@ export function calculateLineItemTotals<T extends ExpenseLineItemLike>(params: {
   memberIds: string[];
   totalAmount: number;
   getAssigneeIds: (item: T, index: number) => Iterable<string> | undefined;
+  /** For multi-quantity items, returns how many units each user claimed. */
+  getClaimQuantity?: (item: T, userId: string, index: number) => number;
 }) {
-  const { lineItems, memberIds, totalAmount, getAssigneeIds } = params;
+  const { lineItems, memberIds, totalAmount, getAssigneeIds, getClaimQuantity } = params;
   const totals: Record<string, number> = {};
   const claimableTotals: Record<string, number> = {};
   const memberIdSet = new Set(memberIds);
@@ -168,10 +170,25 @@ export function calculateLineItemTotals<T extends ExpenseLineItemLike>(params: {
     const recipients = assigneeIds.length > 0 ? assigneeIds : memberIds;
     if (recipients.length === 0) return;
 
-    const perPerson = item.total_price / recipients.length;
-    for (const userId of recipients) {
-      totals[userId] += perPerson;
-      claimableTotals[userId] += perPerson;
+    const unitPrice = (item.unit_price != null && item.unit_price > 0)
+      ? item.unit_price
+      : item.total_price / Math.max(item.quantity, 1);
+
+    if (item.quantity > 1 && getClaimQuantity && assigneeIds.length > 0) {
+      // Multi-quantity item with claims: each user pays for the units they claimed
+      for (const userId of recipients) {
+        const qty = getClaimQuantity(item, userId, index);
+        const share = unitPrice * qty;
+        totals[userId] += share;
+        claimableTotals[userId] += share;
+      }
+    } else {
+      // Single-quantity item or no quantity info: equal split among claimers
+      const perPerson = item.total_price / recipients.length;
+      for (const userId of recipients) {
+        totals[userId] += perPerson;
+        claimableTotals[userId] += perPerson;
+      }
     }
   });
 
