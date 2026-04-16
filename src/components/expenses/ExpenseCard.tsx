@@ -132,76 +132,138 @@ export function ExpenseCard({
       </button>
 
       {expanded && (
-        <div className="space-y-3" style={{ padding: "12px 16px 14px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-          {/* Inline-editable header fields */}
-          <InlineExpenseHeader
-            expense={expense}
-            splits={splits}
-            members={members}
-            tripId={tripId}
-            canEdit={canModify}
-            hasLineItems={hasLineItems}
-            cachedCurrencyCodes={cachedCurrencyCodes}
-          />
+        <ExpandedDetail
+          expense={expense}
+          splits={splits}
+          members={members}
+          tripId={tripId}
+          settlementCurrency={settlementCurrency}
+          baseCurrency={baseCurrency}
+          rates={rates}
+          cachedCurrencyCodes={cachedCurrencyCodes}
+          canModify={canModify}
+          hasReceipt={hasReceipt}
+          handleViewReceipt={handleViewReceipt}
+          onDelete={onDelete}
+          hasLineItems={hasLineItems}
+          lineItems={lineItems}
+          claims={claims}
+          toggleClaim={toggleClaim}
+          setClaimQuantity={setClaimQuantity}
+        />
+      )}
+    </div>
+  );
+}
 
-          {/* Either line items (with claims + editing) or plain splits breakdown */}
-          {hasLineItems ? (
-            <InlineLineItemList
-              expenseId={expense.id}
-              tripId={tripId}
-              members={members}
-              currency={expense.currency}
-              totalAmount={expense.amount}
-              lineItems={lineItems}
-              claims={claims}
-              canEdit={canModify}
-              toggleClaim={(id) => toggleClaim.mutate(id)}
-              setClaimQuantity={(id, qty) => setClaimQuantity.mutateAsync({ lineItemId: id, quantity: qty })}
-              isToggling={toggleClaim.isPending}
-            />
-          ) : (
-            <div className="space-y-1">
-              {splits.map((s) => {
-                const member = members.find((m) => m.userId === s.user_id);
-                const isDifferent = expense.currency !== settlementCurrency;
-                const converted = isDifferent
-                  ? convertAmount(s.share_amount, expense.currency, settlementCurrency, baseCurrency, rates)
-                  : s.share_amount;
-                return (
-                  <div key={s.id} className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{member?.displayName || "Unknown"}</span>
-                    <span>
-                      {formatCurrency(s.share_amount, expense.currency)}
-                      {isDifferent && converted != null && (
-                        <span className="text-muted-foreground ml-1">≈ {formatCurrency(converted, settlementCurrency)}</span>
-                      )}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+function ExpandedDetail({
+  expense, splits, members, tripId, settlementCurrency, baseCurrency, rates,
+  cachedCurrencyCodes, canModify, hasReceipt, handleViewReceipt, onDelete,
+  hasLineItems, lineItems, claims, toggleClaim, setClaimQuantity,
+}: {
+  expense: ExpenseRow;
+  splits: SplitRow[];
+  members: MemberProfile[];
+  tripId: string;
+  settlementCurrency: string;
+  baseCurrency: string;
+  rates: Rates;
+  cachedCurrencyCodes: string[];
+  canModify: boolean;
+  hasReceipt: boolean;
+  handleViewReceipt: () => Promise<void>;
+  onDelete: (id: string) => void;
+  hasLineItems: boolean;
+  lineItems: ReturnType<typeof useLineItemClaims>["lineItems"];
+  claims: ReturnType<typeof useLineItemClaims>["claims"];
+  toggleClaim: ReturnType<typeof useLineItemClaims>["toggleClaim"];
+  setClaimQuantity: ReturnType<typeof useLineItemClaims>["setClaimQuantity"];
+}) {
+  const [editMode, setEditMode] = useState(false);
 
-          {/* Action buttons — Edit removed; everything above is inline */}
-          <div className="flex gap-2 pt-1 flex-wrap">
-            {hasReceipt && (
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleViewReceipt}>
-                <Receipt className="h-3 w-3" /> View receipt
-              </Button>
-            )}
-            {canModify && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
-                onClick={() => onDelete(expense.id)}
-              >
-                <Trash2 className="h-3 w-3" /> Delete
-              </Button>
-            )}
-          </div>
+  return (
+    <div className="space-y-3" style={{ padding: "12px 16px 14px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+      {/* Edit / Done toggle */}
+      {canModify && (
+        <div className="flex justify-end -mb-1">
+          <button
+            type="button"
+            onClick={() => setEditMode((v) => !v)}
+            className="text-[12px] font-medium text-primary hover:bg-primary/5 px-2 py-1 rounded-md min-h-[32px] inline-flex items-center"
+          >
+            {editMode ? "Done" : "Edit"}
+          </button>
         </div>
       )}
+
+      {/* Compact metadata grid */}
+      <InlineExpenseHeader
+        expense={expense}
+        splits={splits}
+        members={members}
+        tripId={tripId}
+        editMode={editMode && canModify}
+        hasLineItems={hasLineItems}
+        cachedCurrencyCodes={cachedCurrencyCodes}
+      />
+
+      {/* Either line items (with claims + editing) or plain splits breakdown */}
+      {hasLineItems ? (
+        <InlineLineItemList
+          expenseId={expense.id}
+          tripId={tripId}
+          members={members}
+          currency={expense.currency}
+          totalAmount={expense.amount}
+          lineItems={lineItems}
+          claims={claims}
+          canEdit={canModify}
+          editMode={editMode}
+          toggleClaim={(id) => toggleClaim.mutate(id)}
+          setClaimQuantity={(id, qty) => setClaimQuantity.mutateAsync({ lineItemId: id, quantity: qty })}
+          isToggling={toggleClaim.isPending}
+        />
+      ) : (
+        <div className="space-y-1">
+          {splits.map((s) => {
+            const member = members.find((m) => m.userId === s.user_id);
+            const isDifferent = expense.currency !== settlementCurrency;
+            const converted = isDifferent
+              ? convertAmount(s.share_amount, expense.currency, settlementCurrency, baseCurrency, rates)
+              : s.share_amount;
+            return (
+              <div key={s.id} className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{member?.displayName || "Unknown"}</span>
+                <span>
+                  {formatCurrency(s.share_amount, expense.currency)}
+                  {isDifferent && converted != null && (
+                    <span className="text-muted-foreground ml-1">≈ {formatCurrency(converted, settlementCurrency)}</span>
+                  )}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-1 flex-wrap">
+        {hasReceipt && (
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleViewReceipt}>
+            <Receipt className="h-3 w-3" /> View receipt
+          </Button>
+        )}
+        {canModify && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+            onClick={() => onDelete(expense.id)}
+          >
+            <Trash2 className="h-3 w-3" /> Delete
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

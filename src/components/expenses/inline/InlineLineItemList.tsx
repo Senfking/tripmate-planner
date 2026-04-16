@@ -31,6 +31,8 @@ interface Props {
   claims: ClaimRow[];
   /** Whether the current user can edit/delete items (payer/admin/owner). */
   canEdit: boolean;
+  /** Global edit mode toggle — gates rename/price/delete affordances. */
+  editMode: boolean;
   toggleClaim: (id: string) => void;
   setClaimQuantity: (id: string, qty: number) => Promise<void>;
   isToggling: boolean;
@@ -44,7 +46,7 @@ interface Props {
  */
 export function InlineLineItemList({
   expenseId, tripId, members, currency, totalAmount,
-  lineItems, claims, canEdit, toggleClaim, setClaimQuantity, isToggling,
+  lineItems, claims, canEdit, editMode, toggleClaim, setClaimQuantity, isToggling,
 }: Props) {
   const { user } = useAuth();
   const { updateLineItem, deleteLineItem } = useLineItemClaims(expenseId, tripId);
@@ -128,7 +130,7 @@ export function InlineLineItemList({
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">
             Items
           </p>
-          <ul className="space-y-1.5">
+          <ul className="space-y-1">
             {claimableItems.map((item) => (
               <LineItemRowEditable
                 key={item.id}
@@ -137,7 +139,7 @@ export function InlineLineItemList({
                 members={members}
                 currency={currency}
                 currentUserId={user?.id}
-                canEdit={canEdit}
+                canEdit={canEdit && editMode}
                 isToggling={isToggling}
                 onRename={async (name) => {
                   if (!name.trim() || name === item.name) return false;
@@ -179,8 +181,8 @@ export function InlineLineItemList({
         </div>
       )}
 
-      {/* + Add item */}
-      {canEdit && (
+      {/* + Add item — only in edit mode */}
+      {canEdit && editMode && (
         adding ? (
           <AddItemRow
             currency={currency}
