@@ -433,18 +433,21 @@ export type Database = {
       }
       expense_line_item_claims: {
         Row: {
+          claimed_quantity: number
           created_at: string
           id: string
           line_item_id: string
           user_id: string
         }
         Insert: {
+          claimed_quantity?: number
           created_at?: string
           id?: string
           line_item_id: string
           user_id: string
         }
         Update: {
+          claimed_quantity?: number
           created_at?: string
           id?: string
           line_item_id?: string
