@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Check, Loader2, AlertTriangle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,16 +9,20 @@ type Props = {
   onRetry: () => void;
 };
 
-const STEPS = [
-  { label: "Analyzing your preferences", delay: 2000 },
-  { label: "Finding restaurants & cafés", delay: 5000 },
-  { label: "Discovering activities & attractions", delay: 8000 },
-  { label: "Planning your daily schedule", delay: 12000 },
-  { label: "Checking local tips & insider advice", delay: 15000 },
-  { label: "Finalizing your itinerary…", delay: Infinity },
-];
+function getSteps(destination: string) {
+  const d = destination || "your destination";
+  return [
+    { label: `Finding venues in ${d}…`, delay: 3000 },
+    { label: "Checking opening hours and travel times…", delay: 7000 },
+    { label: "Clustering by neighborhood…", delay: 11000 },
+    { label: "Adding local insider tips…", delay: 16000 },
+    { label: "Almost ready…", delay: 21000 },
+    { label: "Polishing your itinerary…", delay: Infinity },
+  ];
+}
 
 export function GeneratingScreen({ destination, error, onRetry }: Props) {
+  const steps = useMemo(() => getSteps(destination), [destination]);
   const [completedCount, setCompletedCount] = useState(0);
   const [showDestination, setShowDestination] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -26,19 +30,17 @@ export function GeneratingScreen({ destination, error, onRetry }: Props) {
   useEffect(() => {
     if (error) return;
 
-    // Stage fake progress checkmarks
-    STEPS.forEach((step, i) => {
+    steps.forEach((step, i) => {
       if (step.delay === Infinity) return;
       const t = setTimeout(() => setCompletedCount(i + 1), step.delay);
       timers.current.push(t);
     });
 
-    // Show destination after 3s
     const destTimer = setTimeout(() => setShowDestination(true), 3000);
     timers.current.push(destTimer);
 
     return () => timers.current.forEach(clearTimeout);
-  }, [error]);
+  }, [error, steps]);
 
   // If error arrives, complete all
   // If results arrive externally, parent unmounts this — no action needed
@@ -121,7 +123,7 @@ export function GeneratingScreen({ destination, error, onRetry }: Props) {
 
           {/* Checklist */}
           <div className="space-y-2.5">
-            {STEPS.map((step, i) => {
+            {steps.map((step, i) => {
               const isDone = i < completedCount;
               const isActive = i === completedCount && !error;
               const isFinal = step.delay === Infinity;
