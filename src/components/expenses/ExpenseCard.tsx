@@ -182,21 +182,21 @@ function ExpandedDetail({
   const [editMode, setEditMode] = useState(false);
 
   return (
-    <div className="space-y-3" style={{ padding: "12px 16px 14px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-      {/* Edit / Done toggle */}
+    <div className="space-y-2" style={{ padding: "0 16px 12px" }}>
+      {/* Edit / Done toggle — ghost text button, teal */}
       {canModify && (
-        <div className="flex justify-end -mb-1">
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={() => setEditMode((v) => !v)}
-            className="text-[12px] font-medium text-primary hover:bg-primary/5 px-2 py-1 rounded-md min-h-[32px] inline-flex items-center"
+            className="text-[12px] font-medium text-primary hover:text-primary/80 px-1 py-1 min-h-[32px] inline-flex items-center bg-transparent border-0"
           >
             {editMode ? "Done" : "Edit"}
           </button>
         </div>
       )}
 
-      {/* Compact metadata grid */}
+      {/* Compact metadata grid (includes editable Title in edit mode) */}
       <InlineExpenseHeader
         expense={expense}
         splits={splits}
