@@ -26,26 +26,25 @@ interface Props {
   splits: SplitRow[];
   members: MemberProfile[];
   tripId: string;
-  canEdit: boolean;
+  /** Global edit mode — when false, all fields render as static text. */
+  editMode: boolean;
   /** When true, header amount is read-only (calculated from line items) */
   hasLineItems: boolean;
   cachedCurrencyCodes: string[];
 }
 
 /**
- * Inline-editable detail strip below the collapsed expense row.
- * Each cell is an EditableField — click to edit, save on blur/Enter,
- * brief checkmark flash on success.
+ * Compact metadata grid shown below the collapsed expense row.
+ * Static by default; becomes click-to-edit when `editMode` is true.
  */
 export function InlineExpenseHeader({
-  expense, splits, members, tripId, canEdit, hasLineItems, cachedCurrencyCodes,
+  expense, splits, members, tripId, editMode, hasLineItems, cachedCurrencyCodes,
 }: Props) {
   const { patchExpense, replaceSplits } = useExpenseInlineEdit(tripId);
 
   const payerName = members.find((m) => m.userId === expense.payer_id)?.displayName || "Unknown";
   const categoryLabel = CATEGORIES.find((c) => c.value === expense.category)?.label || "Other";
 
-  // Detect current split mode
   const splitMode: "equal" | "custom" | "byItem" = useMemo(() => {
     if (hasLineItems) return "byItem";
     if (splits.length <= 1) return "equal";
@@ -54,43 +53,25 @@ export function InlineExpenseHeader({
     return allEqual ? "equal" : "custom";
   }, [splits, hasLineItems]);
 
-  /* ── Drafts ── */
-  const [titleDraft, setTitleDraft] = useState(expense.title);
   const [amountDraft, setAmountDraft] = useState(String(expense.amount));
   const [notesDraft, setNotesDraft] = useState(expense.notes || "");
   const [notesExpanded, setNotesExpanded] = useState(false);
 
   return (
     <div className="space-y-2">
-      {/* Title — full width */}
-      <EditableField
-        readOnly={!canEdit}
-        display={<span className="text-[14px] font-semibold leading-snug">{expense.title}</span>}
-        editor={({ commit, cancel }) => (
-          <TextEditor value={titleDraft} onChange={setTitleDraft} onCommit={commit} onCancel={cancel} className="w-full" />
-        )}
-        onCommit={async () => {
-          const v = titleDraft.trim();
-          if (!v || v === expense.title) { setTitleDraft(expense.title); return false; }
-          try { await patchExpense.mutateAsync({ id: expense.id, patch: { title: v } }); return true; }
-          catch { setTitleDraft(expense.title); return false; }
-        }}
-        ariaLabel="Edit title"
-        className="w-full"
-      />
-
-      {/* Compact 2-column label/value grid */}
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+      {/* Compact 2-column label/value grid (title intentionally omitted — already in header card) */}
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
         {/* Amount */}
         <Row label="Amount">
           {hasLineItems ? (
-            <span className="text-[12px] font-medium tabular-nums text-muted-foreground" title="Calculated from items">
+            <span className="text-[12px] tabular-nums text-muted-foreground" title="Calculated from items">
               {formatCurrency(expense.amount, expense.currency)}
             </span>
+          ) : !editMode ? (
+            <span className="text-[12px] tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>
           ) : (
             <EditableField
-              readOnly={!canEdit}
-              display={<span className="text-[12px] font-medium tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>}
+              display={<span className="text-[12px] tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>}
               editor={({ commit, cancel }) => (
                 <NumberEditor value={amountDraft} onChange={setAmountDraft} onCommit={commit} onCancel={cancel} step="0.01" />
               )}
@@ -116,7 +97,7 @@ export function InlineExpenseHeader({
 
         {/* Currency */}
         <Row label="Currency">
-          {canEdit ? (
+          {editMode ? (
             <CurrencyPicker
               value={expense.currency}
               cachedCurrencyCodes={cachedCurrencyCodes}
@@ -134,7 +115,7 @@ export function InlineExpenseHeader({
 
         {/* Category */}
         <Row label="Category">
-          {canEdit ? (
+          {editMode ? (
             <Select
               value={expense.category}
               onValueChange={async (v) => {
@@ -142,7 +123,7 @@ export function InlineExpenseHeader({
                 await patchExpense.mutateAsync({ id: expense.id, patch: { category: v } });
               }}
             >
-              <SelectTrigger className="h-6 text-[12px] w-auto gap-1 border-0 bg-transparent hover:underline decoration-dotted underline-offset-4 px-0 py-0 shadow-none focus:ring-0">
+              <SelectTrigger className="h-6 text-[12px] w-auto gap-1 border-0 bg-transparent hover:bg-primary/5 px-1 -mx-1 py-0 shadow-none focus:ring-0">
                 <SelectValue>{categoryLabel}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -158,7 +139,7 @@ export function InlineExpenseHeader({
         <Row label="Date">
           <DateCell
             value={expense.incurred_on}
-            canEdit={canEdit}
+            canEdit={editMode}
             onChange={async (iso) => {
               if (iso === expense.incurred_on) return;
               await patchExpense.mutateAsync({ id: expense.id, patch: { incurred_on: iso } });
@@ -168,7 +149,7 @@ export function InlineExpenseHeader({
 
         {/* Paid by */}
         <Row label="Paid by">
-          {canEdit ? (
+          {editMode ? (
             <Select
               value={expense.payer_id}
               onValueChange={async (v) => {
@@ -176,7 +157,7 @@ export function InlineExpenseHeader({
                 await patchExpense.mutateAsync({ id: expense.id, patch: { payer_id: v } });
               }}
             >
-              <SelectTrigger className="h-6 text-[12px] w-auto gap-1 border-0 bg-transparent hover:underline decoration-dotted underline-offset-4 px-0 py-0 shadow-none focus:ring-0">
+              <SelectTrigger className="h-6 text-[12px] w-auto gap-1 border-0 bg-transparent hover:bg-primary/5 px-1 -mx-1 py-0 shadow-none focus:ring-0">
                 <SelectValue>{payerName}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -188,14 +169,15 @@ export function InlineExpenseHeader({
           )}
         </Row>
 
-        {/* Split mode */}
+        {/* Split */}
         <Row label="Split">
           {splitMode === "byItem" ? (
             <span className="text-[12px]">By items</span>
+          ) : !editMode ? (
+            <span className="text-[12px] capitalize">{splitMode}</span>
           ) : (
             <SplitModeToggle
               mode={splitMode}
-              disabled={!canEdit}
               onChange={async (next) => {
                 if (next === splitMode) return;
                 const ids = splits.length > 0 ? splits.map((s) => s.user_id) : members.map((m) => m.userId);
@@ -208,42 +190,41 @@ export function InlineExpenseHeader({
       </dl>
 
       {/* Notes — full width, truncated to 1 line, expandable on tap */}
-      {(expense.notes || canEdit) && (
+      {(expense.notes || editMode) && (
         <div className="pt-0.5">
-          <EditableField
-            readOnly={!canEdit}
-            display={
-              expense.notes ? (
-                <span
-                  className={cn(
-                    "text-[12px] text-muted-foreground italic block",
-                    !notesExpanded && "truncate",
-                  )}
-                  onClick={(e) => {
-                    if (!notesExpanded) {
-                      e.stopPropagation();
-                      setNotesExpanded(true);
-                    }
-                  }}
-                >
-                  {expense.notes}
-                </span>
-              ) : (
-                <span className="text-[12px] text-muted-foreground/60 italic">Add a note…</span>
-              )
-            }
-            editor={({ commit, cancel }) => (
-              <TextEditor value={notesDraft} onChange={setNotesDraft} onCommit={commit} onCancel={cancel} className="w-full" placeholder="Notes" />
-            )}
-            onCommit={async () => {
-              const v = notesDraft.trim();
-              if ((expense.notes || "") === v) return false;
-              try { await patchExpense.mutateAsync({ id: expense.id, patch: { notes: v || null as any } }); return true; }
-              catch { setNotesDraft(expense.notes || ""); return false; }
-            }}
-            ariaLabel="Edit notes"
-            className="w-full"
-          />
+          {editMode ? (
+            <EditableField
+              display={
+                expense.notes ? (
+                  <span className="text-[12px] text-muted-foreground italic block truncate">{expense.notes}</span>
+                ) : (
+                  <span className="text-[12px] text-muted-foreground/60 italic">Add a note…</span>
+                )
+              }
+              editor={({ commit, cancel }) => (
+                <TextEditor value={notesDraft} onChange={setNotesDraft} onCommit={commit} onCancel={cancel} className="w-full" placeholder="Notes" />
+              )}
+              onCommit={async () => {
+                const v = notesDraft.trim();
+                if ((expense.notes || "") === v) return false;
+                try { await patchExpense.mutateAsync({ id: expense.id, patch: { notes: v || null as any } }); return true; }
+                catch { setNotesDraft(expense.notes || ""); return false; }
+              }}
+              ariaLabel="Edit notes"
+              className="w-full"
+            />
+          ) : expense.notes ? (
+            <button
+              type="button"
+              onClick={() => setNotesExpanded((v) => !v)}
+              className={cn(
+                "text-[12px] text-muted-foreground italic text-left w-full",
+                !notesExpanded && "truncate block",
+              )}
+            >
+              {expense.notes}
+            </button>
+          ) : null}
         </div>
       )}
     </div>
@@ -305,7 +286,7 @@ function DateCell({ value, canEdit, onChange }: { value: string; canEdit: boolea
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className="text-[12px] text-foreground hover:underline decoration-dotted underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm">
+        <button type="button" className="text-[12px] text-foreground hover:bg-primary/5 px-1 -mx-1 py-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
           {display}
         </button>
       </PopoverTrigger>
@@ -326,7 +307,7 @@ function DateCell({ value, canEdit, onChange }: { value: string; canEdit: boolea
   );
 }
 
-function SplitModeToggle({ mode, disabled, onChange }: { mode: "equal" | "custom"; disabled?: boolean; onChange: (m: "equal" | "percent" | "custom") => void }) {
+function SplitModeToggle({ mode, onChange }: { mode: "equal" | "custom"; onChange: (m: "equal" | "percent" | "custom") => void }) {
   const opts: { v: "equal" | "percent" | "custom"; label: string }[] = [
     { v: "equal", label: "Equal" },
     { v: "percent", label: "%" },
@@ -340,12 +321,10 @@ function SplitModeToggle({ mode, disabled, onChange }: { mode: "equal" | "custom
           <button
             key={o.v}
             type="button"
-            disabled={disabled}
             onClick={() => onChange(o.v)}
             className={cn(
-              "px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors min-h-[28px]",
+              "px-2 py-0.5 text-[11px] font-medium rounded-md transition-colors",
               active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-              disabled && "opacity-60 cursor-not-allowed",
             )}
           >
             {o.label}
