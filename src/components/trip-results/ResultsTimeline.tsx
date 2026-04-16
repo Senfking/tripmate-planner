@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Plane, Bed, Wallet, MapPin, CalendarDays, Package } from "lucide-react";
+import { Plane, Bed, Wallet, MapPin, Package } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface TimelineNode {
@@ -12,6 +12,7 @@ interface TimelineNode {
 
 interface Props {
   nodes: TimelineNode[];
+  compact?: boolean;
 }
 
 export function buildTimelineNodes(
@@ -21,20 +22,18 @@ export function buildTimelineNodes(
 ): TimelineNode[] {
   const nodes: TimelineNode[] = [];
 
-  // Overall summary sections first
   nodes.push({ id: "section-flights", icon: Plane, label: "Flights" });
 
-  const hasAccommodation = destinations.some(d => d.accommodation);
+  const hasAccommodation = destinations.some((d) => d.accommodation);
   if (hasAccommodation) {
     nodes.push({ id: "section-stays-overview", icon: Bed, label: "Stays" });
   }
 
   nodes.push({ id: "section-budget", icon: Wallet, label: "Budget" });
 
-  // Then per-destination with days
   for (const dest of destinations) {
     nodes.push({ id: `section-dest-${dest.name}`, icon: MapPin, label: dest.name });
-    const destDays = allDays.filter(d => d.date >= dest.start_date && d.date <= dest.end_date);
+    const destDays = allDays.filter((d) => d.date >= dest.start_date && d.date <= dest.end_date);
     for (const day of destDays) {
       nodes.push({ id: `section-day-${day.day_number}`, label: `Day ${day.day_number}`, minor: true });
     }
@@ -47,7 +46,7 @@ export function buildTimelineNodes(
   return nodes;
 }
 
-export function ResultsTimeline({ nodes }: Props) {
+export function ResultsTimeline({ nodes, compact = false }: Props) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [activeId, setActiveId] = useState<string | null>(null);
   const isClickScrolling = useRef(false);
@@ -67,7 +66,7 @@ export function ResultsTimeline({ nodes }: Props) {
   useEffect(() => {
     if (!isDesktop) return;
 
-    const nodeIds = nodes.map(n => n.id);
+    const nodeIds = nodes.map((n) => n.id);
     const scrollRoot = getScrollRoot();
 
     const findTopmost = () => {
@@ -115,29 +114,28 @@ export function ResultsTimeline({ nodes }: Props) {
     };
   }, [nodes, isDesktop, getHeaderOffset, getScrollRoot]);
 
-  const scrollTo = useCallback((id: string) => {
-    const el = document.getElementById(id);
-    if (!el) return;
+  const scrollTo = useCallback(
+    (id: string) => {
+      const el = document.getElementById(id);
+      if (!el) return;
 
-    const scrollRoot = getScrollRoot();
-    const rootRect = scrollRoot.getBoundingClientRect();
-    const elementRect = el.getBoundingClientRect();
-    const targetTop = Math.max(
-      0,
-      scrollRoot.scrollTop + (elementRect.top - rootRect.top) - getHeaderOffset()
-    );
+      const scrollRoot = getScrollRoot();
+      const rootRect = scrollRoot.getBoundingClientRect();
+      const elementRect = el.getBoundingClientRect();
+      const targetTop = Math.max(0, scrollRoot.scrollTop + (elementRect.top - rootRect.top) - getHeaderOffset());
 
-    setActiveId(id);
-    isClickScrolling.current = true;
+      setActiveId(id);
+      isClickScrolling.current = true;
 
-    window.clearTimeout(scrollTimeoutRef.current);
+      window.clearTimeout(scrollTimeoutRef.current);
+      scrollRoot.scrollTo({ top: targetTop, behavior: "smooth" });
 
-    scrollRoot.scrollTo({ top: targetTop, behavior: "smooth" });
-
-    scrollTimeoutRef.current = window.setTimeout(() => {
-      isClickScrolling.current = false;
-    }, 700);
-  }, [getHeaderOffset, getScrollRoot]);
+      scrollTimeoutRef.current = window.setTimeout(() => {
+        isClickScrolling.current = false;
+      }, 700);
+    },
+    [getHeaderOffset, getScrollRoot]
+  );
 
   useEffect(() => {
     return () => window.clearTimeout(scrollTimeoutRef.current);
@@ -146,11 +144,13 @@ export function ResultsTimeline({ nodes }: Props) {
   if (!isDesktop) return null;
 
   return (
-    <div className="fixed left-[max(12px,calc(50%-420px))] top-[72px] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none">
-      {/* Thin vertical line */}
-      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-[#0D9488]/15 -translate-x-1/2" />
+    <div
+      className={compact
+        ? "fixed left-3 top-[72px] bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none"
+        : "fixed left-[max(12px,calc(50%-420px))] top-[72px] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none"}
+    >
+      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-primary/15 -translate-x-1/2" />
 
-      {/* Spread nodes across the full height with justify-between */}
       <div className="relative flex flex-col justify-between items-center overflow-visible h-full py-2">
         {nodes.map((node) => {
           const Icon = node.icon;
@@ -165,21 +165,23 @@ export function ResultsTimeline({ nodes }: Props) {
                 title={node.label}
               >
                 <div
-                  className={`rounded-full transition-all duration-300 overflow-visible ${
-                    isActive
-                      ? "w-3 h-3 bg-[#0D9488] shadow-[0_0_10px_rgba(13,148,136,0.5)]"
-                      : "w-1.5 h-1.5 bg-[#0D9488]/25 group-hover:bg-[#0D9488]/50"
-                  }`}
+                  className={isActive
+                    ? compact
+                      ? "w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.45)] transition-all duration-300"
+                      : "w-3 h-3 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.45)] transition-all duration-300"
+                    : compact
+                      ? "w-1.5 h-1.5 rounded-full bg-primary/25 group-hover:bg-primary/50 transition-all duration-300"
+                      : "w-1.5 h-1.5 rounded-full bg-primary/25 group-hover:bg-primary/50 transition-all duration-300"}
                 />
-                <span
-                  className={`absolute left-full ml-3 text-[10px] font-medium whitespace-nowrap transition-all duration-200 pointer-events-none ${
-                    isActive
-                      ? "opacity-100 text-[#0D9488]"
-                      : "opacity-0 group-hover:opacity-100 text-muted-foreground/70"
-                  }`}
-                >
-                  {node.label}
-                </span>
+                {!compact && (
+                  <span
+                    className={isActive
+                      ? "absolute left-full ml-3 text-[10px] font-medium whitespace-nowrap transition-all duration-200 pointer-events-none opacity-100 text-primary"
+                      : "absolute left-full ml-3 text-[10px] font-medium whitespace-nowrap transition-all duration-200 pointer-events-none opacity-0 group-hover:opacity-100 text-muted-foreground/70"}
+                  >
+                    {node.label}
+                  </span>
+                )}
               </button>
             );
           }
@@ -192,23 +194,25 @@ export function ResultsTimeline({ nodes }: Props) {
               title={node.sublabel ? `${node.label}: ${node.sublabel}` : node.label}
             >
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 overflow-visible ${
-                  isActive
-                    ? "bg-[#0D9488] text-white shadow-[0_0_16px_rgba(13,148,136,0.35)] scale-105"
-                    : "bg-background border border-[#0D9488]/20 text-[#0D9488]/40 group-hover:border-[#0D9488]/40 group-hover:text-[#0D9488]/70"
-                }`}
+                className={isActive
+                  ? compact
+                    ? "w-7 h-7 rounded-full flex items-center justify-center bg-primary text-primary-foreground shadow-[0_0_16px_hsl(var(--primary)/0.35)] scale-105 transition-all duration-300"
+                    : "w-8 h-8 rounded-full flex items-center justify-center bg-primary text-primary-foreground shadow-[0_0_16px_hsl(var(--primary)/0.35)] scale-105 transition-all duration-300"
+                  : compact
+                    ? "w-7 h-7 rounded-full flex items-center justify-center bg-background border border-primary/20 text-primary/40 group-hover:border-primary/40 group-hover:text-primary/70 transition-all duration-300"
+                    : "w-8 h-8 rounded-full flex items-center justify-center bg-background border border-primary/20 text-primary/40 group-hover:border-primary/40 group-hover:text-primary/70 transition-all duration-300"}
               >
-                {Icon && <Icon className="h-3.5 w-3.5" strokeWidth={isActive ? 2.5 : 1.5} />}
+                {Icon && <Icon className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} strokeWidth={isActive ? 2.5 : 1.5} />}
               </div>
-              <span
-                className={`absolute left-full ml-3 text-[10px] font-semibold whitespace-nowrap transition-all duration-200 pointer-events-none ${
-                  isActive
-                    ? "opacity-100 text-[#0D9488]"
-                    : "opacity-0 group-hover:opacity-100 text-muted-foreground/70"
-                }`}
-              >
-                {node.label}
-              </span>
+              {!compact && (
+                <span
+                  className={isActive
+                    ? "absolute left-full ml-3 text-[10px] font-semibold whitespace-nowrap transition-all duration-200 pointer-events-none opacity-100 text-primary"
+                    : "absolute left-full ml-3 text-[10px] font-semibold whitespace-nowrap transition-all duration-200 pointer-events-none opacity-0 group-hover:opacity-100 text-muted-foreground/70"}
+                >
+                  {node.label}
+                </span>
+              )}
             </button>
           );
         })}
