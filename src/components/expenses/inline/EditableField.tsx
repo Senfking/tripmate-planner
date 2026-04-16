@@ -22,10 +22,12 @@ interface EditableFieldProps {
   /** Hover/focus-visible affordance label for screen readers */
   ariaLabel?: string;
   className?: string;
+  /** When true, render with a subtle background + bottom border to signal editability (used in global edit mode). */
+  showAffordance?: boolean;
 }
 
 export function EditableField({
-  display, editor, onCommit, disabled, align = "left", readOnly, ariaLabel, className,
+  display, editor, onCommit, disabled, align = "left", readOnly, ariaLabel, className, showAffordance,
 }: EditableFieldProps) {
   const [editing, setEditing] = useState(false);
   const [flash, setFlash] = useState(false);
@@ -76,9 +78,11 @@ export function EditableField({
       aria-label={ariaLabel}
       onClick={() => !disabled && setEditing(true)}
       className={cn(
-        "inline-flex items-center gap-1 max-w-full min-w-0 rounded-sm cursor-text text-left",
-        "hover:underline decoration-dotted underline-offset-4 decoration-muted-foreground/40",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        "inline-flex items-center gap-1 max-w-full min-w-0 cursor-text text-left transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm",
+        showAffordance
+          ? "bg-muted/50 border-b border-border/80 px-1 -mx-1 hover:bg-muted"
+          : "hover:underline decoration-dotted underline-offset-4 decoration-muted-foreground/40",
         align === "right" && "justify-end",
         disabled && "opacity-60 cursor-not-allowed hover:no-underline",
         className,
