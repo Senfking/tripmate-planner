@@ -74,31 +74,28 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
       const rootRect = scrollRoot.getBoundingClientRect();
       const topBoundary = rootRect.top + getHeaderOffset();
-      const bottomBoundary = rootRect.bottom - 24;
-      let passedId: string | null = null;
-      let passedTop = -Infinity;
-      let upcomingId: string | null = null;
-      let upcomingTop = Infinity;
+      let bestId: string | null = null;
+      let bestDistance = Infinity;
 
+      // Find the single node whose top edge is closest to (but not far below) the header boundary
       for (const id of nodeIds) {
         const el = document.getElementById(id);
         if (!el) continue;
 
         const rect = el.getBoundingClientRect();
-        if (rect.bottom <= topBoundary || rect.top >= bottomBoundary) continue;
+        // Distance from topBoundary — negative means section has scrolled past
+        const dist = rect.top - topBoundary;
 
-        if (rect.top <= topBoundary) {
-          if (rect.top > passedTop) {
-            passedTop = rect.top;
-            passedId = id;
-          }
-        } else if (rect.top < upcomingTop) {
-          upcomingTop = rect.top;
-          upcomingId = id;
+        // Prefer sections that have been scrolled past (dist <= 0) — pick the closest one
+        // If none have been scrolled past, pick the nearest upcoming one
+        const absDist = dist <= 0 ? -dist : dist + 10000; // heavily prefer passed sections
+        if (absDist < bestDistance) {
+          bestDistance = absDist;
+          bestId = id;
         }
       }
 
-      const nextActiveId = passedId ?? upcomingId ?? nodeIds[0] ?? null;
+      const nextActiveId = bestId ?? nodeIds[0] ?? null;
       if (nextActiveId && nextActiveId !== activeIdRef.current) {
         setActiveId(nextActiveId);
       }

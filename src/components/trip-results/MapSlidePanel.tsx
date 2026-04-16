@@ -59,6 +59,7 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
       <div className="relative w-[440px] max-w-[46vw] min-w-[400px] shrink-0 border-l border-border bg-background">
         <div className="absolute inset-0 z-0">
           <ResultsMap
+            key="partial"
             result={result}
             activeDayIndex={activeDayIndex}
             allDays={allDays}
@@ -122,9 +123,10 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
   }
 
   return (
-    <div className="fixed inset-0 z-[10000] bg-background">
+    <div className="fixed inset-0 z-[10000] bg-muted">
       <div className="absolute inset-0">
         <ResultsMap
+          key="full"
           result={result}
           activeDayIndex={activeDayIndex}
           allDays={allDays}
