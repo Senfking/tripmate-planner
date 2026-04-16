@@ -180,12 +180,10 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-background flex">
-      {/* Left: Itinerary scroll area */}
+    <div className={cn("fixed inset-0 z-[9999] bg-background", mapState === "partial" ? "flex" : "")}>
+      {/* Itinerary scroll area */}
       <div className={cn(
-        "flex-1 min-w-0 overflow-y-auto transition-all duration-300 ease-out",
-        mapState === "partial" && "flex-1",
-        mapState === "full" && "w-[35%] shrink-0",
+        "min-w-0 overflow-y-auto flex-1",
       )} data-results-scroll-root="true">
       {/* Timeline (desktop only) */}
       <ResultsTimeline nodes={timelineNodes} />
@@ -506,11 +504,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       </div>
 
       {/* Sticky bottom bar */}
-      <div className={cn("fixed bottom-0 left-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)] transition-all duration-300 ease-out", rc,
-        mapState === "closed" && "right-0",
-        mapState === "partial" && "right-[420px]",
-        mapState === "full" && "right-[65%]"
-      )} style={revealStyle("complete")}>
+      <div className={cn("fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]", rc)} style={revealStyle("complete")}>
         <div className="max-w-[700px] mx-auto relative">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             {standalone ? (
