@@ -31,6 +31,8 @@ interface Props {
   claims: ClaimRow[];
   /** Whether the current user can edit/delete items (payer/admin/owner). */
   canEdit: boolean;
+  /** Global edit mode toggle — gates rename/price/delete affordances. */
+  editMode: boolean;
   toggleClaim: (id: string) => void;
   setClaimQuantity: (id: string, qty: number) => Promise<void>;
   isToggling: boolean;
@@ -44,7 +46,7 @@ interface Props {
  */
 export function InlineLineItemList({
   expenseId, tripId, members, currency, totalAmount,
-  lineItems, claims, canEdit, toggleClaim, setClaimQuantity, isToggling,
+  lineItems, claims, canEdit, editMode, toggleClaim, setClaimQuantity, isToggling,
 }: Props) {
   const { user } = useAuth();
   const { updateLineItem, deleteLineItem } = useLineItemClaims(expenseId, tripId);
