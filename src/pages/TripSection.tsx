@@ -133,7 +133,7 @@ export default function TripSection() {
           planId={linkedPlan.id}
           result={linkedPlan.result}
           onClose={() => navigate(`/app/trips/${tripId}`)}
-          onRegenerate={() => {}}
+          onRegenerate={() => navigate(`/app/trips/new?mode=ai`)}
           onDashboard={() => navigate(`/app/trips/${tripId}?view=dashboard`)}
         />
       </div>
