@@ -53,25 +53,48 @@ export function InlineExpenseHeader({
     return allEqual ? "equal" : "custom";
   }, [splits, hasLineItems]);
 
+  const [titleDraft, setTitleDraft] = useState(expense.title);
   const [amountDraft, setAmountDraft] = useState(String(expense.amount));
   const [notesDraft, setNotesDraft] = useState(expense.notes || "");
   const [notesExpanded, setNotesExpanded] = useState(false);
 
   return (
     <div className="space-y-2">
-      {/* Compact 2-column label/value grid (title intentionally omitted — already in header card) */}
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
+      {/* Title — only shown as editable row in edit mode (header card already shows it statically) */}
+      {editMode && (
+        <Row label="Title" fullWidth>
+          <EditableField
+            showAffordance
+            display={<span className="text-sm font-medium truncate">{expense.title}</span>}
+            editor={({ commit, cancel }) => (
+              <TextEditor value={titleDraft} onChange={setTitleDraft} onCommit={commit} onCancel={cancel} className="w-full" />
+            )}
+            onCommit={async () => {
+              const v = titleDraft.trim();
+              if (!v || v === expense.title) { setTitleDraft(expense.title); return false; }
+              try { await patchExpense.mutateAsync({ id: expense.id, patch: { title: v } }); return true; }
+              catch { setTitleDraft(expense.title); return false; }
+            }}
+            ariaLabel="Edit title"
+            className="w-full"
+          />
+        </Row>
+      )}
+
+      {/* Compact 2-column label/value grid */}
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
         {/* Amount */}
         <Row label="Amount">
           {hasLineItems ? (
-            <span className="text-[12px] tabular-nums text-muted-foreground" title="Calculated from items">
+            <span className="text-sm tabular-nums text-muted-foreground" title="Calculated from items">
               {formatCurrency(expense.amount, expense.currency)}
             </span>
           ) : !editMode ? (
-            <span className="text-[12px] tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>
+            <span className="text-sm tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>
           ) : (
             <EditableField
-              display={<span className="text-[12px] tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>}
+              showAffordance
+              display={<span className="text-sm tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>}
               editor={({ commit, cancel }) => (
                 <NumberEditor value={amountDraft} onChange={setAmountDraft} onCommit={commit} onCancel={cancel} step="0.01" />
               )}
@@ -98,18 +121,20 @@ export function InlineExpenseHeader({
         {/* Currency */}
         <Row label="Currency">
           {editMode ? (
-            <CurrencyPicker
-              value={expense.currency}
-              cachedCurrencyCodes={cachedCurrencyCodes}
-              suggestedCodes={[expense.currency]}
-              variant="settlement"
-              onChange={async (c) => {
-                if (c === expense.currency) return;
-                await patchExpense.mutateAsync({ id: expense.id, patch: { currency: c } });
-              }}
-            />
+            <div className="bg-muted/50 border-b border-border/80 px-1 -mx-1 rounded-sm">
+              <CurrencyPicker
+                value={expense.currency}
+                cachedCurrencyCodes={cachedCurrencyCodes}
+                suggestedCodes={[expense.currency]}
+                variant="settlement"
+                onChange={async (c) => {
+                  if (c === expense.currency) return;
+                  await patchExpense.mutateAsync({ id: expense.id, patch: { currency: c } });
+                }}
+              />
+            </div>
           ) : (
-            <span className="text-[12px]">{expense.currency}</span>
+            <span className="text-sm">{expense.currency}</span>
           )}
         </Row>
 
@@ -123,7 +148,7 @@ export function InlineExpenseHeader({
                 await patchExpense.mutateAsync({ id: expense.id, patch: { category: v } });
               }}
             >
-              <SelectTrigger className="h-6 text-[12px] w-auto gap-1 border-0 bg-transparent hover:bg-primary/5 px-1 -mx-1 py-0 shadow-none focus:ring-0">
+              <SelectTrigger className="h-6 text-sm w-auto gap-1 border-0 border-b border-border/80 bg-muted/50 hover:bg-muted px-1 -mx-1 py-0 shadow-none focus:ring-0 rounded-sm">
                 <SelectValue>{categoryLabel}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -131,7 +156,7 @@ export function InlineExpenseHeader({
               </SelectContent>
             </Select>
           ) : (
-            <span className="text-[12px]">{categoryLabel}</span>
+            <span className="text-sm">{categoryLabel}</span>
           )}
         </Row>
 
@@ -157,7 +182,7 @@ export function InlineExpenseHeader({
                 await patchExpense.mutateAsync({ id: expense.id, patch: { payer_id: v } });
               }}
             >
-              <SelectTrigger className="h-6 text-[12px] w-auto gap-1 border-0 bg-transparent hover:bg-primary/5 px-1 -mx-1 py-0 shadow-none focus:ring-0">
+              <SelectTrigger className="h-6 text-sm w-auto gap-1 border-0 border-b border-border/80 bg-muted/50 hover:bg-muted px-1 -mx-1 py-0 shadow-none focus:ring-0 rounded-sm">
                 <SelectValue>{payerName}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -165,16 +190,16 @@ export function InlineExpenseHeader({
               </SelectContent>
             </Select>
           ) : (
-            <span className="text-[12px]">{payerName}</span>
+            <span className="text-sm">{payerName}</span>
           )}
         </Row>
 
         {/* Split */}
         <Row label="Split">
           {splitMode === "byItem" ? (
-            <span className="text-[12px]">By items</span>
+            <span className="text-sm">By items</span>
           ) : !editMode ? (
-            <span className="text-[12px] capitalize">{splitMode}</span>
+            <span className="text-sm capitalize">{splitMode}</span>
           ) : (
             <SplitModeToggle
               mode={splitMode}
@@ -189,16 +214,17 @@ export function InlineExpenseHeader({
         </Row>
       </dl>
 
-      {/* Notes — full width, truncated to 1 line, expandable on tap */}
+      {/* Notes — full width, always truncated to 1 line, expandable on tap */}
       {(expense.notes || editMode) && (
-        <div className="pt-0.5">
+        <div className="pt-1">
           {editMode ? (
             <EditableField
+              showAffordance
               display={
                 expense.notes ? (
-                  <span className="text-[12px] text-muted-foreground italic block truncate">{expense.notes}</span>
+                  <span className="text-sm text-muted-foreground italic block truncate">{expense.notes}</span>
                 ) : (
-                  <span className="text-[12px] text-muted-foreground/60 italic">Add a note…</span>
+                  <span className="text-sm text-muted-foreground/60 italic">Add a note…</span>
                 )
               }
               editor={({ commit, cancel }) => (
@@ -218,7 +244,7 @@ export function InlineExpenseHeader({
               type="button"
               onClick={() => setNotesExpanded((v) => !v)}
               className={cn(
-                "text-[12px] text-muted-foreground italic text-left w-full",
+                "text-sm text-muted-foreground italic text-left w-full",
                 !notesExpanded && "truncate block",
               )}
             >
@@ -233,10 +259,10 @@ export function InlineExpenseHeader({
 
 /* ───────────────────────── Cells ───────────────────────── */
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, fullWidth }: { label: string; children: React.ReactNode; fullWidth?: boolean }) {
   return (
-    <div className="flex flex-col min-w-0 gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{label}</dt>
+    <div className={cn("flex flex-col min-w-0 gap-0.5", fullWidth && "col-span-2")}>
+      <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">{label}</dt>
       <dd className="min-w-0 text-foreground">{children}</dd>
     </div>
   );
