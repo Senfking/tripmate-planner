@@ -33,7 +33,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
     ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
-    cachedCurrencyCodes, itineraryItems, isLoading, isFetchingExpenses, isExpensesSuccess,
+    cachedCurrencyCodes, itineraryItems, isLoading, isError, refetch,
+    isFetchingExpenses, isExpensesSuccess,
     updateSettlementCurrency, addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
 
@@ -359,6 +360,22 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-4">
+        <AlertTriangle className="h-10 w-10 text-muted-foreground/60" />
+        <div>
+          <p className="text-base font-semibold text-foreground">Couldn't load expenses</p>
+          <p className="text-sm text-muted-foreground mt-1">Something went wrong. Please try again.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          Retry
+        </Button>
       </div>
     );
   }
