@@ -139,6 +139,7 @@ function AppInner() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/templates" element={<Templates />} />
+            <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
             
             {/* Protected routes */}
