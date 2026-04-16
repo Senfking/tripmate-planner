@@ -21,7 +21,7 @@ import { ConciergeButton } from "@/components/concierge/ConciergeButton";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
-import { MapSlidePanel } from "./MapSlidePanel";
+import { MapSlidePanel, type MapState } from "./MapSlidePanel";
 import { cn } from "@/lib/utils";
 
 interface Props {
