@@ -163,8 +163,8 @@ export function ExpenseCard({
               currency={expense.currency}
               totalAmount={expense.amount}
               onToggleClaim={(id) => toggleClaim.mutate(id)}
-              onSetClaimQuantity={(id, qty) => setClaimQuantity.mutate({ lineItemId: id, quantity: qty })}
-              isToggling={toggleClaim.isPending || setClaimQuantity.isPending}
+              onSetClaimQuantity={(id, qty) => setClaimQuantity.mutateAsync({ lineItemId: id, quantity: qty })}
+              isToggling={toggleClaim.isPending}
             />
           )}
 
