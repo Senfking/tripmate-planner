@@ -15,10 +15,12 @@ import { TripDiscussion } from "./TripDiscussion";
 import { CostBottomPanel } from "./CostBottomPanel";
 import { EditTripSheet } from "./EditTripSheet";
 import { GroupActivityPanel } from "./GroupActivityPanel";
+import { MapSplitPanel, CollapsedMapButton } from "./MapSplitPanel";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 import { ConciergeButton } from "@/components/concierge/ConciergeButton";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface Props {
   tripId: string;
