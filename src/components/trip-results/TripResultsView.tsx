@@ -15,10 +15,12 @@ import { TripDiscussion } from "./TripDiscussion";
 import { CostBottomPanel } from "./CostBottomPanel";
 import { EditTripSheet } from "./EditTripSheet";
 import { GroupActivityPanel } from "./GroupActivityPanel";
+import { MapSplitPanel, CollapsedMapButton } from "./MapSplitPanel";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 import { ConciergeButton } from "@/components/concierge/ConciergeButton";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface Props {
   tripId: string;
@@ -54,6 +56,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const [editTripOpen, setEditTripOpen] = useState(false);
   const [groupActivityOpen, setGroupActivityOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
+  const [highlightedPin, setHighlightedPin] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"itinerary" | "map">("itinerary");
+
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isMobileOrTablet = !isDesktop;
+  const showSplitMap = isDesktop && mapVisible;
   type CoordsMap = Map<string, { lat: number; lng: number }>;
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id);
@@ -151,12 +159,27 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     [result.destinations, allDays, hasPacking]
   );
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-background overflow-y-auto" data-results-scroll-root="true">
-      {/* Timeline (desktop only) */}
-      <ResultsTimeline nodes={timelineNodes} />
+  const handlePinClick = useCallback((dayDate: string, activityIndex: number) => {
+    // Find day number to scroll to the right section
+    const day = allDays.find(d => d.date === dayDate);
+    if (day) {
+      const sectionId = `section-day-${day.day_number}`;
+      scrollToSection(sectionId);
+    }
+    if (isMobileOrTablet) setActiveTab("itinerary");
+  }, [allDays, scrollToSection, isMobileOrTablet]);
 
-      <div className="max-w-[700px] mx-auto min-h-full flex flex-col lg:pl-[60px]">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-background flex" data-results-scroll-root="true">
+      {/* Timeline (desktop only, when map is open move it left) */}
+      {!showSplitMap && <ResultsTimeline nodes={timelineNodes} />}
+
+      {/* Main itinerary column */}
+      <div
+        className="flex-1 min-w-0 overflow-y-auto"
+        data-results-scroll-root="true"
+      >
+        <div className={`${showSplitMap ? "max-w-[700px]" : "max-w-[700px] mx-auto lg:pl-[60px]"} min-h-full flex flex-col`}>
         {/* Header */}
         <div data-results-header="true" className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
           <div className="flex items-center gap-3">
@@ -218,45 +241,56 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* Divider */}
         <div className="mx-4 border-t border-border" />
 
-        {/* Overview map */}
-        <div className="mx-4 mt-4 mb-4">
-          {mapVisible ? (
-            <div className="rounded-xl overflow-hidden border border-[#0D9488]/20 relative animate-fade-in">
-              <div className="h-[250px]">
-                <ResultsMap
-                  result={result}
-                  activeDayIndex={-1}
-                  allDays={allDays}
-                  mode="overview"
-                  refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
-                />
-              </div>
-              <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1000 }}>
-                <button
-                  onClick={() => setMapFullscreen(true)}
-                  className="pointer-events-auto absolute top-3 right-3 p-2 rounded-lg bg-card text-foreground shadow-lg border border-border hover:bg-accent transition-colors"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setMapVisible(false)}
-                  className="pointer-events-auto absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-card text-foreground shadow-lg border border-border text-[11px] hover:bg-accent transition-colors"
-                >
-                  Hide map
-                </button>
-              </div>
+        {/* Tab toggle for tablet/mobile */}
+        {isMobileOrTablet && (
+          <div className="px-4 pt-3 pb-1">
+            <div className="flex rounded-lg bg-muted p-1">
+              <button
+                onClick={() => setActiveTab("itinerary")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all ${
+                  activeTab === "itinerary"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                Itinerary
+              </button>
+              <button
+                onClick={() => setActiveTab("map")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all ${
+                  activeTab === "map"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <MapIcon className="h-3.5 w-3.5" />
+                Map
+              </button>
             </div>
-          ) : (
-            <button
-              onClick={() => setMapVisible(true)}
-              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-            >
-              <MapIcon className="h-4 w-4 text-[#0D9488]" />
-              <span className="text-sm font-medium flex-1 text-foreground">Show map</span>
-              <span className="text-xs text-muted-foreground">{totalActivities} pins</span>
-            </button>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Overview map — only on mobile/tablet inline when tab is map */}
+        {isMobileOrTablet && activeTab === "map" && (
+          <div className="px-4 mt-2 mb-4 h-[calc(100vh-240px)]">
+            <div className="rounded-xl overflow-hidden border border-border h-full">
+              <ResultsMap
+                result={result}
+                activeDayIndex={-1}
+                allDays={allDays}
+                mode="overview"
+                refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
+                highlightedPin={highlightedPin}
+                onPinClick={handlePinClick}
+                useDayColors
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Itinerary content — hidden when mobile map tab is active */}
+        {(!isMobileOrTablet || activeTab === "itinerary") && (<>
 
         {/* ===== OVERALL SUMMARY SECTIONS ===== */}
 
@@ -488,9 +522,30 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* Bottom spacer */}
         <div className="h-24" />
-      </div>
+        </>)}
+        </div>{/* close inner max-w div */}
+      </div>{/* close itinerary scroll column */}
 
-      {/* Sticky bottom bar */}
+      {/* Desktop split-view map panel */}
+      {isDesktop && showSplitMap && (
+        <div className="w-[40%] shrink-0">
+          <MapSplitPanel
+            result={result}
+            allDays={allDays}
+            totalActivities={totalActivities}
+            refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
+            highlightedPin={highlightedPin}
+            onPinClick={handlePinClick}
+            onClose={() => setMapVisible(false)}
+            visible={true}
+          />
+        </div>
+      )}
+
+      {/* Desktop collapsed map button */}
+      {isDesktop && !mapVisible && (
+        <CollapsedMapButton onClick={() => setMapVisible(true)} totalActivities={totalActivities} />
+      )}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
         <div className="max-w-[700px] mx-auto relative">
           <div className="flex items-center justify-between gap-3 px-4 py-3">

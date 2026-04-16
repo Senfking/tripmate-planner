@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, Clock, ExternalLink, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
+import { getDayColor } from "./MapSplitPanel";
 
 interface Props {
   result: AITripResult;
@@ -16,6 +17,8 @@ interface Props {
   mode: "overview" | "day";
   refinedCoords?: Map<string, { lat: number; lng: number }>;
   onPinClick?: (dayDate: string, activityIndex: number) => void;
+  highlightedPin?: string | null;
+  useDayColors?: boolean;
 }
 
 function formatDayLabel(date: string, dayNumber?: number): string {
@@ -30,14 +33,18 @@ function formatDayLabel(date: string, dayNumber?: number): string {
 }
 
 /* ── Minimal premium pin with day.activity label ── */
-function createPinIcon(label: string, color: string) {
+function createPinIcon(label: string, color: string, highlighted?: boolean) {
   const width = label.length > 2 ? 34 : 28;
+  const size = highlighted ? 36 : 28;
+  const w = label.length > 2 ? size + 6 : size;
+  const ring = highlighted ? "box-shadow:0 0 0 3px white,0 0 12px rgba(0,0,0,0.4);" : "box-shadow:0 2px 8px rgba(0,0,0,0.25);";
+  const scale = highlighted ? "transform:scale(1.2);" : "";
   return L.divIcon({
     className: "",
-    iconSize: [width, 28],
-    iconAnchor: [width / 2, 14],
-    popupAnchor: [0, -16],
-    html: `<div style="min-width:28px;height:28px;padding:0 ${label.length > 2 ? 6 : 0}px;border-radius:14px;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">
+    iconSize: [w, size],
+    iconAnchor: [w / 2, size / 2],
+    popupAnchor: [0, -size / 2 - 2],
+    html: `<div style="min-width:${size}px;height:${size}px;padding:0 ${label.length > 2 ? 6 : 0}px;border-radius:${size}px;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;${ring}${scale}cursor:pointer;transition:transform 150ms ease,box-shadow 150ms ease;z-index:${highlighted ? 1000 : 1};">
       <span style="font-size:${label.length > 2 ? 9 : 11}px;font-weight:700;color:white;font-family:Inter,system-ui,sans-serif;white-space:nowrap;">${label}</span>
     </div>`,
   });
@@ -238,7 +245,7 @@ function MapController({
 }
 
 /* ── Main component ── */
-export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick }: Props) {
+export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick, highlightedPin, useDayColors }: Props) {
   const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
 
   const getCoords = useCallback((dayDate: string, idx: number, a: AIActivity) => {
@@ -323,18 +330,25 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
       )}
 
       {activitiesForMap.map((act) => {
+        const pinKey = `${act._dayDate}-${act._idx}`;
+        const isHighlighted = highlightedPin === pinKey;
         // In day mode show just activity number (1, 2, 3...)
         // In overview show D1.1, D1.2, D2.1 etc. so user knows day + order
         const pinLabel = mode === "day"
           ? String(act._idx + 1)
           : `D${act._dayNumber}.${act._idx + 1}`;
         const dayLabel = formatDayLabel(act._dayDate, act._dayNumber);
+        const pinColor = useDayColors ? getDayColor(act._dayNumber) : getCategoryColor(act.category);
 
         return (
           <Marker
-            key={`${act._dayDate}-${act._idx}`}
+            key={pinKey}
             position={[act.latitude!, act.longitude!]}
-            icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
+            icon={createPinIcon(pinLabel, pinColor, isHighlighted)}
+            zIndexOffset={isHighlighted ? 1000 : 0}
+            eventHandlers={{
+              click: () => onPinClick?.(act._dayDate, act._idx),
+            }}
           >
             <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
               <PopupContent activity={act} dayLabel={dayLabel} />
