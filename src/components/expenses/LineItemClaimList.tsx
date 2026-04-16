@@ -222,22 +222,22 @@ function MultiQuantityItem({
 
   return (
     <div className={cn(
-      "rounded-xl border px-3 py-2.5 space-y-2 transition-colors",
+      "rounded-lg border px-2.5 py-2 space-y-1.5 transition-colors",
       hasClaimed
         ? "border-primary/25 bg-primary/[0.04]"
-        : "border-border/60 bg-background"
+        : "border-border/60"
     )}>
       {/* Top row: name + total price */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold leading-tight truncate">
+          <p className="text-[13px] font-medium truncate">
             {item.quantity}× {item.name}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+          <p className="text-[10px] text-muted-foreground">
             {formatCurrency(unitPrice, currency)} each
           </p>
         </div>
-        <span className="text-[13px] font-semibold tabular-nums shrink-0 font-mono">
+        <span className="text-[12px] font-semibold tabular-nums shrink-0">
           {formatCurrency(item.total_price, currency)}
         </span>
       </div>
@@ -248,25 +248,24 @@ function MultiQuantityItem({
           Fully claimed by others
         </p>
       ) : (
-        <div className="flex items-center justify-between gap-3">
-          {/* Pill stepper */}
-          <div className="flex items-center rounded-full border border-border bg-muted/40 overflow-hidden shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
             <button
               type="button"
               disabled={isToggling || myQty <= 0}
               onClick={() => onSetQuantity(myQty - 1)}
               className={cn(
-                "h-[44px] w-[44px] flex items-center justify-center transition-colors",
+                "h-8 w-9 flex items-center justify-center transition-colors",
                 myQty <= 0
-                  ? "text-muted-foreground/25 cursor-not-allowed"
-                  : "text-foreground hover:bg-muted active:bg-accent"
+                  ? "text-muted-foreground/30 cursor-not-allowed"
+                  : "text-foreground hover:bg-muted active:bg-muted/80"
               )}
               aria-label="Decrease quantity"
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-3.5 w-3.5" />
             </button>
             <span className={cn(
-              "h-[44px] w-[40px] flex items-center justify-center text-[15px] font-bold tabular-nums border-x border-border/60 bg-background",
+              "h-8 w-8 flex items-center justify-center text-[13px] font-semibold tabular-nums border-x border-border bg-background",
               myQty > 0 ? "text-primary" : "text-muted-foreground"
             )}>
               {myQty}
@@ -276,37 +275,38 @@ function MultiQuantityItem({
               disabled={isToggling || myQty >= maxClaimable}
               onClick={() => onSetQuantity(myQty + 1)}
               className={cn(
-                "h-[44px] w-[44px] flex items-center justify-center transition-colors",
+                "h-8 w-9 flex items-center justify-center transition-colors",
                 myQty >= maxClaimable
-                  ? "text-muted-foreground/25 cursor-not-allowed"
-                  : "text-foreground hover:bg-muted active:bg-accent"
+                  ? "text-muted-foreground/30 cursor-not-allowed"
+                  : "text-foreground hover:bg-muted active:bg-muted/80"
               )}
               aria-label="Increase quantity"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          {/* Status: your claim + remaining */}
-          <div className="text-right min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             {myQty > 0 && (
-              <p className="text-[12px] font-medium text-primary font-mono">
+              <span className="text-[11px] text-muted-foreground">
                 = {formatCurrency(unitPrice * myQty, currency)}
-              </p>
+              </span>
             )}
-            <p className={cn(
-              "text-[11px] tabular-nums",
-              remaining === 0 ? "text-muted-foreground" : "text-primary/80"
+            <span className={cn(
+              "text-[10px] ml-auto tabular-nums whitespace-nowrap",
+              remaining === 0 ? "text-muted-foreground" : "text-primary"
             )}>
-              {myQty > 0 ? `You: ${myQty}` : ""}{myQty > 0 && remaining > 0 ? " · " : ""}{remaining > 0 ? `${remaining} unclaimed` : remaining === 0 ? "All claimed" : ""}
-            </p>
+              {remaining === 0
+                ? `All ${item.quantity} claimed`
+                : `${remaining} of ${item.quantity} unclaimed`}
+            </span>
           </div>
         </div>
       )}
 
       {/* Other users' claims */}
       {otherClaims.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
           {otherClaims.map((claim) => {
             const member = members.find((m) => m.userId === claim.user_id);
             return (
