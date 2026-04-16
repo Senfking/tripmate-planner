@@ -266,7 +266,7 @@ function LineItemRowEditable({
 
   return (
     <li className={cn(
-      "group/item rounded-lg border px-2.5 py-2 space-y-1.5 transition-colors",
+      "group/item rounded-lg border px-2.5 py-1.5 space-y-1 transition-colors",
       isClaimed || myQty > 0 ? "border-primary/40 bg-primary/[0.04]" : "border-border",
     )}>
       <div className="flex items-start gap-2">
