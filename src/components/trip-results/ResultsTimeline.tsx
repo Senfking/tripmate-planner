@@ -21,26 +21,33 @@ export function buildTimelineNodes(
   hasPacking: boolean
 ): TimelineNode[] {
   const nodes: TimelineNode[] = [];
+  const seenNodeIds = new Set<string>();
 
-  nodes.push({ id: "section-flights", icon: Plane, label: "Flights" });
+  const pushNode = (node: TimelineNode) => {
+    if (seenNodeIds.has(node.id)) return;
+    seenNodeIds.add(node.id);
+    nodes.push(node);
+  };
+
+  pushNode({ id: "section-flights", icon: Plane, label: "Flights" });
 
   const hasAccommodation = destinations.some((d) => d.accommodation);
   if (hasAccommodation) {
-    nodes.push({ id: "section-stays-overview", icon: Bed, label: "Stays" });
+    pushNode({ id: "section-stays-overview", icon: Bed, label: "Stays" });
   }
 
-  nodes.push({ id: "section-budget", icon: Wallet, label: "Budget" });
+  pushNode({ id: "section-budget", icon: Wallet, label: "Budget" });
 
   for (const dest of destinations) {
-    nodes.push({ id: `section-dest-${dest.name}`, icon: MapPin, label: dest.name });
+    pushNode({ id: `section-dest-${dest.name}`, icon: MapPin, label: dest.name });
     const destDays = allDays.filter((d) => d.date >= dest.start_date && d.date <= dest.end_date);
     for (const day of destDays) {
-      nodes.push({ id: `section-day-${day.day_number}`, label: `Day ${day.day_number}`, minor: true });
+      pushNode({ id: `section-day-${day.day_number}`, label: `Day ${day.day_number}`, minor: true });
     }
   }
 
   if (hasPacking) {
-    nodes.push({ id: "section-packing", icon: Package, label: "Packing" });
+    pushNode({ id: "section-packing", icon: Package, label: "Packing" });
   }
 
   return nodes;
