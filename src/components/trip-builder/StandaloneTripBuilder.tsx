@@ -200,9 +200,12 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           planId={savedPlanId}
           result={results}
           onClose={onClose}
-          onRegenerate={() => {
+          onRegenerate={(prompt) => {
             setResults(null);
             setSavedPlanId(null);
+            if (prompt && inputData) {
+              setInputData({ ...inputData, freeText: prompt });
+            }
             setPhase("generating");
             handleConfirm();
           }}

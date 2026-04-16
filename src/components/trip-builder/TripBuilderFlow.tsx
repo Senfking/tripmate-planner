@@ -326,10 +326,11 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         planId={savedPlanId}
         result={results}
         onClose={onClose}
-        onRegenerate={() => {
+        onRegenerate={(prompt) => {
           setResults(null);
           setSavedPlanId(null);
           setRevealing(false);
+          if (prompt) setAnswers(prev => ({ ...prev, freeText: prompt, notes: prompt }));
           handleGenerate();
         }}
         onAdjust={() => {
