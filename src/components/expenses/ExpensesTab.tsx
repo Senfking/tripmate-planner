@@ -38,6 +38,15 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     updateSettlementCurrency, addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
 
+  // ── DEBUG LOGGING (temporary) ──────────────────────────────────
+  console.log("[expenses-tab-debug]", {
+    isLoading,
+    isError,
+    hasExpenses: expenses?.length,
+    timestamp: Date.now(),
+  });
+  // ── END DEBUG LOGGING ─────────────────────────────────────────
+
   const { data: trip } = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async () => {
