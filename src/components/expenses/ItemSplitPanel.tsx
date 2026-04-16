@@ -75,7 +75,7 @@ export function ItemSplitPanel({ lineItems, members, assignments, quantityAssign
         }
 
         return (
-          <div key={`${index}-${item.name}`} className="rounded-lg border border-border/60 px-2.5 py-2 space-y-1.5">
+          <div key={`${index}-${item.name}`} className="rounded-lg border border-border px-2.5 py-2 space-y-1.5">
             {/* Item row */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0 flex items-center gap-1.5">
@@ -157,7 +157,7 @@ export function ItemSplitPanel({ lineItems, members, assignments, quantityAssign
       )}
 
       {sharedItems.length > 0 && (
-        <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-2.5 py-2 space-y-1">
+        <div className="rounded-lg border border-dashed border-border bg-muted/30 px-2.5 py-2 space-y-1">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Auto</Badge>
@@ -214,7 +214,7 @@ function MultiQtyFormItem({
   const remaining = Math.max(0, item.quantity - totalAssigned);
 
   return (
-    <div className="rounded-lg border border-border/60 px-2.5 py-2 space-y-1.5">
+    <div className="rounded-lg border border-border px-2.5 py-2 space-y-1.5">
       {/* Item header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0 flex items-center gap-1.5">

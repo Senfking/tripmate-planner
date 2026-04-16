@@ -162,7 +162,7 @@ export function DaySection({
 
             {/* Day-level comments */}
             {planId && (
-              <div className="px-4 py-3 border-b border-border/50 bg-accent/20">
+              <div className="px-4 py-3 border-b border-border bg-accent/20">
                 <TripDiscussion
                   planId={planId}
                   activityKey={`day-${dayIndex}`}

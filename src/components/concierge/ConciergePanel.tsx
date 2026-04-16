@@ -538,7 +538,7 @@ const SuggestionCard = memo(function SuggestionCard({
         )}
 
         {/* Actions */}
-        <div className="grid grid-cols-4 gap-0 pt-2 border-t border-border/50">
+        <div className="grid grid-cols-4 gap-0 pt-2 border-t border-border">
           <button
             onClick={handleSave}
             className={`inline-flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[11px] font-medium transition-colors ${isSaved ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" : "text-muted-foreground hover:bg-accent"}`}
@@ -671,7 +671,7 @@ function LoadingSkeleton() {
                 </div>
               </div>
 
-              <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/50 pt-2">
+              <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-2">
                 <div className="flex items-center gap-1">
                   <Skeleton className="h-8 w-14 rounded-lg" />
                   <Skeleton className="h-8 w-20 rounded-lg" />
@@ -1120,7 +1120,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
         </div>
 
         {/* Location bar — clean list style */}
-        <div className="shrink-0 px-4 py-2 border-b border-border/50 bg-background/80">
+        <div className="shrink-0 px-4 py-2 border-b border-border bg-background/80">
           <button
             onClick={() => setShowLocationPicker(!showLocationPicker)}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
@@ -1149,7 +1149,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               {/* Trip destinations */}
               {tripDestinations.length > 0 && (
                 <>
-                  <div className="border-t border-border/50" />
+                  <div className="border-t border-border" />
                   <div className="px-4 py-3 space-y-2">
                     <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Trip destinations</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -1172,7 +1172,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               )}
 
               {/* Manual input */}
-              <div className="border-t border-border/50" />
+              <div className="border-t border-border" />
               <div className="flex gap-2 px-4 py-3">
                 <input
                   type="text"

@@ -367,7 +367,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
               return (
                 <div
                   key={`route-${stop.id}`}
-                  className="rounded-xl border border-primary/20 bg-primary/[0.03] shadow-sm overflow-hidden transition-all"
+                  className="rounded-xl border border-primary/40 bg-primary/[0.03] shadow-sm overflow-hidden transition-all"
                 >
                   <button
                     onClick={() => toggle(`route-${stop.id}`)}
@@ -400,7 +400,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                   </button>
 
                   {isExpanded && (
-                    <div className="px-3 pb-3 pt-0 space-y-3 border-t border-primary/10">
+                    <div className="px-3 pb-3 pt-0 space-y-3 border-t border-primary/30">
                       {!isEditing && (
                         <>
                           {inCount > 0 && (
@@ -598,7 +598,7 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-border/50">
+                  <div className="border-t border-border">
                     <div className="p-4 space-y-3">
                       {/* Avatars + I'm in */}
                       <div className="flex items-center gap-3">
