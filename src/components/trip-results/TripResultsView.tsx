@@ -176,9 +176,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
       {/* Main itinerary column */}
       <div
-        className={`flex-1 min-w-0 overflow-y-auto ${
-          isMobileOrTablet && activeTab === "map" ? "hidden" : ""
-        }`}
+        className="flex-1 min-w-0 overflow-y-auto"
         data-results-scroll-root="true"
       >
         <div className={`${showSplitMap ? "max-w-[700px]" : "max-w-[700px] mx-auto lg:pl-[60px]"} min-h-full flex flex-col`}>
