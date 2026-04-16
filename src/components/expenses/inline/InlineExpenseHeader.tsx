@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 import { format, parse } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
 import { useExpenseInlineEdit, recomputeSplits } from "@/hooks/useExpenseInlineEdit";
 import { formatCurrency } from "@/lib/settlementCalc";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -60,194 +58,205 @@ export function InlineExpenseHeader({
   const [titleDraft, setTitleDraft] = useState(expense.title);
   const [amountDraft, setAmountDraft] = useState(String(expense.amount));
   const [notesDraft, setNotesDraft] = useState(expense.notes || "");
+  const [notesExpanded, setNotesExpanded] = useState(false);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[12px]">
-      {/* Title */}
-      <Cell label="Title" full>
-        <EditableField
-          readOnly={!canEdit}
-          display={<span className="text-[13px] font-medium">{expense.title}</span>}
-          editor={({ commit, cancel }) => (
-            <TextEditor value={titleDraft} onChange={setTitleDraft} onCommit={commit} onCancel={cancel} className="w-full" />
-          )}
-          onCommit={async () => {
-            const v = titleDraft.trim();
-            if (!v || v === expense.title) { setTitleDraft(expense.title); return false; }
-            try { await patchExpense.mutateAsync({ id: expense.id, patch: { title: v } }); return true; }
-            catch { setTitleDraft(expense.title); return false; }
-          }}
-          ariaLabel="Edit title"
-          className="w-full"
-        />
-      </Cell>
+    <div className="space-y-2">
+      {/* Title — full width */}
+      <EditableField
+        readOnly={!canEdit}
+        display={<span className="text-[14px] font-semibold leading-snug">{expense.title}</span>}
+        editor={({ commit, cancel }) => (
+          <TextEditor value={titleDraft} onChange={setTitleDraft} onCommit={commit} onCancel={cancel} className="w-full" />
+        )}
+        onCommit={async () => {
+          const v = titleDraft.trim();
+          if (!v || v === expense.title) { setTitleDraft(expense.title); return false; }
+          try { await patchExpense.mutateAsync({ id: expense.id, patch: { title: v } }); return true; }
+          catch { setTitleDraft(expense.title); return false; }
+        }}
+        ariaLabel="Edit title"
+        className="w-full"
+      />
 
-      {/* Amount */}
-      <Cell label="Amount">
-        {hasLineItems ? (
-          <span className="inline-flex flex-col">
-            <span className="text-[13px] font-semibold tabular-nums">
+      {/* Compact 2-column label/value grid */}
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+        {/* Amount */}
+        <Row label="Amount">
+          {hasLineItems ? (
+            <span className="text-[12px] font-medium tabular-nums text-muted-foreground" title="Calculated from items">
               {formatCurrency(expense.amount, expense.currency)}
             </span>
-            <span className="text-[10px] text-muted-foreground italic">Calculated from items</span>
-          </span>
-        ) : (
+          ) : (
+            <EditableField
+              readOnly={!canEdit}
+              display={<span className="text-[12px] font-medium tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>}
+              editor={({ commit, cancel }) => (
+                <NumberEditor value={amountDraft} onChange={setAmountDraft} onCommit={commit} onCancel={cancel} step="0.01" />
+              )}
+              onCommit={async () => {
+                const v = parseFloat(amountDraft);
+                if (!Number.isFinite(v) || v <= 0 || Math.abs(v - expense.amount) < 0.005) {
+                  setAmountDraft(String(expense.amount));
+                  return false;
+                }
+                try {
+                  await patchExpense.mutateAsync({ id: expense.id, patch: { amount: v } });
+                  if (splits.length > 0) {
+                    const next = recomputeSplits(splitMode === "byItem" ? "equal" : splitMode, splits.map(s => s.user_id), v, splits);
+                    await replaceSplits.mutateAsync({ expenseId: expense.id, splits: next });
+                  }
+                  return true;
+                } catch { setAmountDraft(String(expense.amount)); return false; }
+              }}
+              ariaLabel="Edit amount"
+            />
+          )}
+        </Row>
+
+        {/* Currency */}
+        <Row label="Currency">
+          {canEdit ? (
+            <CurrencyPicker
+              value={expense.currency}
+              cachedCurrencyCodes={cachedCurrencyCodes}
+              suggestedCodes={[expense.currency]}
+              variant="settlement"
+              onChange={async (c) => {
+                if (c === expense.currency) return;
+                await patchExpense.mutateAsync({ id: expense.id, patch: { currency: c } });
+              }}
+            />
+          ) : (
+            <span className="text-[12px]">{expense.currency}</span>
+          )}
+        </Row>
+
+        {/* Category */}
+        <Row label="Category">
+          {canEdit ? (
+            <Select
+              value={expense.category}
+              onValueChange={async (v) => {
+                if (v === expense.category) return;
+                await patchExpense.mutateAsync({ id: expense.id, patch: { category: v } });
+              }}
+            >
+              <SelectTrigger className="h-6 text-[12px] w-auto gap-1 border-0 bg-transparent hover:underline decoration-dotted underline-offset-4 px-0 py-0 shadow-none focus:ring-0">
+                <SelectValue>{categoryLabel}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-[12px]">{categoryLabel}</span>
+          )}
+        </Row>
+
+        {/* Date */}
+        <Row label="Date">
+          <DateCell
+            value={expense.incurred_on}
+            canEdit={canEdit}
+            onChange={async (iso) => {
+              if (iso === expense.incurred_on) return;
+              await patchExpense.mutateAsync({ id: expense.id, patch: { incurred_on: iso } });
+            }}
+          />
+        </Row>
+
+        {/* Paid by */}
+        <Row label="Paid by">
+          {canEdit ? (
+            <Select
+              value={expense.payer_id}
+              onValueChange={async (v) => {
+                if (v === expense.payer_id) return;
+                await patchExpense.mutateAsync({ id: expense.id, patch: { payer_id: v } });
+              }}
+            >
+              <SelectTrigger className="h-6 text-[12px] w-auto gap-1 border-0 bg-transparent hover:underline decoration-dotted underline-offset-4 px-0 py-0 shadow-none focus:ring-0">
+                <SelectValue>{payerName}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {members.map((m) => <SelectItem key={m.userId} value={m.userId}>{m.displayName}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-[12px]">{payerName}</span>
+          )}
+        </Row>
+
+        {/* Split mode */}
+        <Row label="Split">
+          {splitMode === "byItem" ? (
+            <span className="text-[12px]">By items</span>
+          ) : (
+            <SplitModeToggle
+              mode={splitMode}
+              disabled={!canEdit}
+              onChange={async (next) => {
+                if (next === splitMode) return;
+                const ids = splits.length > 0 ? splits.map((s) => s.user_id) : members.map((m) => m.userId);
+                const recomputed = recomputeSplits(next, ids, expense.amount, splits);
+                await replaceSplits.mutateAsync({ expenseId: expense.id, splits: recomputed });
+              }}
+            />
+          )}
+        </Row>
+      </dl>
+
+      {/* Notes — full width, truncated to 1 line, expandable on tap */}
+      {(expense.notes || canEdit) && (
+        <div className="pt-0.5">
           <EditableField
             readOnly={!canEdit}
-            display={<span className="text-[13px] font-semibold tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span>}
+            display={
+              expense.notes ? (
+                <span
+                  className={cn(
+                    "text-[12px] text-muted-foreground italic block",
+                    !notesExpanded && "truncate",
+                  )}
+                  onClick={(e) => {
+                    if (!notesExpanded) {
+                      e.stopPropagation();
+                      setNotesExpanded(true);
+                    }
+                  }}
+                >
+                  {expense.notes}
+                </span>
+              ) : (
+                <span className="text-[12px] text-muted-foreground/60 italic">Add a note…</span>
+              )
+            }
             editor={({ commit, cancel }) => (
-              <NumberEditor value={amountDraft} onChange={setAmountDraft} onCommit={commit} onCancel={cancel} step="0.01" />
+              <TextEditor value={notesDraft} onChange={setNotesDraft} onCommit={commit} onCancel={cancel} className="w-full" placeholder="Notes" />
             )}
             onCommit={async () => {
-              const v = parseFloat(amountDraft);
-              if (!Number.isFinite(v) || v <= 0 || Math.abs(v - expense.amount) < 0.005) {
-                setAmountDraft(String(expense.amount));
-                return false;
-              }
-              try {
-                await patchExpense.mutateAsync({ id: expense.id, patch: { amount: v } });
-                // Re-balance splits proportionally to keep them valid
-                if (splits.length > 0) {
-                  const next = recomputeSplits(splitMode === "byItem" ? "equal" : splitMode, splits.map(s => s.user_id), v, splits);
-                  await replaceSplits.mutateAsync({ expenseId: expense.id, splits: next });
-                }
-                return true;
-              } catch { setAmountDraft(String(expense.amount)); return false; }
+              const v = notesDraft.trim();
+              if ((expense.notes || "") === v) return false;
+              try { await patchExpense.mutateAsync({ id: expense.id, patch: { notes: v || null as any } }); return true; }
+              catch { setNotesDraft(expense.notes || ""); return false; }
             }}
-            ariaLabel="Edit amount"
+            ariaLabel="Edit notes"
+            className="w-full"
           />
-        )}
-      </Cell>
-
-      {/* Currency */}
-      <Cell label="Currency">
-        {canEdit ? (
-          <CurrencyPicker
-            value={expense.currency}
-            cachedCurrencyCodes={cachedCurrencyCodes}
-            suggestedCodes={[expense.currency]}
-            variant="settlement"
-            onChange={async (c) => {
-              if (c === expense.currency) return;
-              await patchExpense.mutateAsync({ id: expense.id, patch: { currency: c } });
-            }}
-          />
-        ) : (
-          <span className="text-[13px]">{expense.currency}</span>
-        )}
-      </Cell>
-
-      {/* Category */}
-      <Cell label="Category">
-        {canEdit ? (
-          <Select
-            value={expense.category}
-            onValueChange={async (v) => {
-              if (v === expense.category) return;
-              await patchExpense.mutateAsync({ id: expense.id, patch: { category: v } });
-            }}
-          >
-            <SelectTrigger className="h-8 text-[13px] w-auto min-w-[140px] gap-1 border-0 bg-transparent hover:bg-primary/5 px-2">
-              <SelectValue>{categoryLabel}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="text-[13px]">{categoryLabel}</span>
-        )}
-      </Cell>
-
-      {/* Date */}
-      <Cell label="Date">
-        <DateCell
-          value={expense.incurred_on}
-          canEdit={canEdit}
-          onChange={async (iso) => {
-            if (iso === expense.incurred_on) return;
-            await patchExpense.mutateAsync({ id: expense.id, patch: { incurred_on: iso } });
-          }}
-        />
-      </Cell>
-
-      {/* Paid by */}
-      <Cell label="Paid by">
-        {canEdit ? (
-          <Select
-            value={expense.payer_id}
-            onValueChange={async (v) => {
-              if (v === expense.payer_id) return;
-              await patchExpense.mutateAsync({ id: expense.id, patch: { payer_id: v } });
-            }}
-          >
-            <SelectTrigger className="h-8 text-[13px] w-auto min-w-[140px] gap-1 border-0 bg-transparent hover:bg-primary/5 px-2">
-              <SelectValue>{payerName}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {members.map((m) => <SelectItem key={m.userId} value={m.userId}>{m.displayName}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="text-[13px]">{payerName}</span>
-        )}
-      </Cell>
-
-      {/* Split mode */}
-      <Cell label="Split">
-        {splitMode === "byItem" ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[11px] font-medium">
-            By items
-          </span>
-        ) : (
-          <SplitModeToggle
-            mode={splitMode}
-            disabled={!canEdit}
-            onChange={async (next) => {
-              if (next === splitMode) return;
-              const ids = splits.length > 0 ? splits.map((s) => s.user_id) : members.map((m) => m.userId);
-              const recomputed = recomputeSplits(next, ids, expense.amount, splits);
-              await replaceSplits.mutateAsync({ expenseId: expense.id, splits: recomputed });
-            }}
-          />
-        )}
-      </Cell>
-
-      {/* Notes */}
-      <Cell label="Notes" full>
-        <EditableField
-          readOnly={!canEdit}
-          display={
-            expense.notes ? (
-              <span className="text-[12px] text-muted-foreground italic">{expense.notes}</span>
-            ) : (
-              <span className="text-[12px] text-muted-foreground/60">Add a note…</span>
-            )
-          }
-          editor={({ commit, cancel }) => (
-            <TextEditor value={notesDraft} onChange={setNotesDraft} onCommit={commit} onCancel={cancel} className="w-full" placeholder="Notes" />
-          )}
-          onCommit={async () => {
-            const v = notesDraft.trim();
-            if ((expense.notes || "") === v) return false;
-            try { await patchExpense.mutateAsync({ id: expense.id, patch: { notes: v || null as any } }); return true; }
-            catch { setNotesDraft(expense.notes || ""); return false; }
-          }}
-          ariaLabel="Edit notes"
-          className="w-full"
-        />
-      </Cell>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ───────────────────────── Cells ───────────────────────── */
 
-function Cell({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className={cn("flex items-baseline gap-2 min-w-0", full && "sm:col-span-2")}>
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 shrink-0 w-16">{label}</span>
-      <div className="min-w-0 flex-1">{children}</div>
+    <div className="flex flex-col min-w-0 gap-0.5">
+      <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{label}</dt>
+      <dd className="min-w-0 text-foreground">{children}</dd>
     </div>
   );
 }
@@ -291,15 +300,14 @@ function DateCell({ value, canEdit, onChange }: { value: string; canEdit: boolea
   const date = parse(value, "yyyy-MM-dd", new Date());
   const display = format(date, "MMM d, yyyy");
 
-  if (!canEdit) return <span className="text-[13px]">{display}</span>;
+  if (!canEdit) return <span className="text-[12px]">{display}</span>;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 px-2 text-[13px] gap-1.5 hover:bg-primary/5 -mx-2">
-          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+        <button type="button" className="text-[12px] text-foreground hover:underline decoration-dotted underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm">
           {display}
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
         <Calendar
