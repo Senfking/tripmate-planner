@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
-  ArrowLeftRight, Trash2, Receipt,
+  ArrowLeftRight, Trash2, Receipt, Pencil, Check,
 } from "lucide-react";
 import { format } from "date-fns";
 import { InlineExpenseHeader } from "./inline/InlineExpenseHeader";
@@ -183,19 +183,6 @@ function ExpandedDetail({
 
   return (
     <div className="space-y-2" style={{ padding: "0 16px 12px" }}>
-      {/* Edit / Done toggle — ghost text button, teal */}
-      {canModify && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => setEditMode((v) => !v)}
-            className="text-[12px] font-medium text-primary hover:text-primary/80 px-1 py-1 min-h-[32px] inline-flex items-center bg-transparent border-0"
-          >
-            {editMode ? "Done" : "Edit"}
-          </button>
-        </div>
-      )}
-
       {/* Compact metadata grid (includes editable Title in edit mode) */}
       <InlineExpenseHeader
         expense={expense}
@@ -246,18 +233,29 @@ function ExpandedDetail({
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Action buttons: [View receipt] [Edit/Done] [Delete] */}
       <div className="flex gap-2 pt-1 flex-wrap">
         {hasReceipt && (
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleViewReceipt}>
+          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 px-2" onClick={handleViewReceipt}>
             <Receipt className="h-3 w-3" /> View receipt
           </Button>
         )}
         {canModify && (
           <Button
             size="sm"
-            variant="outline"
-            className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+            variant="ghost"
+            className="h-7 text-xs gap-1 px-2 text-primary hover:text-primary"
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? <Check className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
+            {editMode ? "Done" : "Edit"}
+          </Button>
+        )}
+        {canModify && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs gap-1 px-2 text-destructive hover:text-destructive"
             onClick={() => onDelete(expense.id)}
           >
             <Trash2 className="h-3 w-3" /> Delete
