@@ -263,6 +263,23 @@ html.dark, html.dark body, html.dark #root {
     animation: success-fade-in 0.4s ease forwards;
   }
 
+  /* Streaming reveal: slide-up + fade-in for itinerary items */
+  @keyframes reveal-slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .reveal-item {
+    opacity: 0;
+    animation: reveal-slide-up 250ms ease-out both;
+  }
+
   /* Scale-in for checkmark */
   @keyframes scale-in {
     from { transform: scale(0); opacity: 0; }

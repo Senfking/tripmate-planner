@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, ChevronUp, Share2, SlidersHorizontal, Hotel, Sparkles, Map as MapIcon, Maximize2, X, Plane, Bell, Lightbulb, Bed, Wallet, PenLine, Users, LayoutDashboard, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 import { ConciergeButton } from "@/components/concierge/ConciergeButton";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
+import { useStreamReveal } from "@/hooks/useStreamReveal";
+import { StreamRevealIndicator } from "./StreamRevealIndicator";
+import { cn } from "@/lib/utils";
 
 interface Props {
   tripId: string;
@@ -32,13 +35,38 @@ interface Props {
   onSaveDraft?: () => void;
   creatingTrip?: boolean;
   onDashboard?: () => void;
+  revealMode?: boolean;
+  onRevealComplete?: () => void;
 }
 
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete }: Props) {
+  const reveal = useStreamReveal(result, !!revealMode);
+
+  // Notify parent when reveal completes
+  useEffect(() => {
+    if (revealMode && !reveal.isRevealing) {
+      onRevealComplete?.();
+    }
+  }, [revealMode, reveal.isRevealing, onRevealComplete]);
+
+  // Helper: returns inline style with animation-delay for a reveal key
+  const revealStyle = useCallback(
+    (key: string): React.CSSProperties => {
+      if (!revealMode) return {};
+      const delay = reveal.getDelay(key);
+      if (delay === undefined) return {};
+      return { animationDelay: `${delay}ms` };
+    },
+    [revealMode, reveal.getDelay]
+  );
+
+  // Helper: returns the reveal-item class when in reveal mode
+  const rc = revealMode ? "reveal-item" : "";
+
   const handleShare = useCallback(() => {
     navigator.clipboard.writeText(window.location.href).then(
       () => toast.success("Plan link copied!"),
@@ -159,7 +187,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       <div className="max-w-[700px] mx-auto min-h-full flex flex-col lg:pl-[60px]">
         {/* Header */}
         <div data-results-header="true" className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
-          <div className="flex items-center gap-3">
+          <div className={cn("flex items-center gap-3", rc)} style={revealStyle("title")}>
             <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
@@ -188,8 +216,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         </div>
 
+        {/* Streaming reveal indicator */}
+        {revealMode && (
+          <StreamRevealIndicator
+            message={reveal.currentMessage}
+            progress={reveal.progress}
+            isRevealing={reveal.isRevealing}
+          />
+        )}
+
         {/* Stat pills */}
-        <div className="px-4 pt-4 pb-2">
+        <div className={cn("px-4 pt-4 pb-2", rc)} style={revealStyle("stats")}>
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#0D9488]/15 border border-[#0D9488]/25 text-xs text-[#0D9488] font-mono">
               <CalendarDays className="h-3 w-3" /> {allDays.length} days
@@ -209,7 +246,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         </div>
 
         {/* Trip summary */}
-        <div className="px-4 pt-2 pb-4">
+        <div className={cn("px-4 pt-2 pb-4", rc)} style={revealStyle("summary")}>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {result.trip_summary}
           </p>
@@ -219,7 +256,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         <div className="mx-4 border-t border-border" />
 
         {/* Overview map */}
-        <div className="mx-4 mt-4 mb-4">
+        <div className={cn("mx-4 mt-4 mb-4", rc)} style={revealStyle("map")}>
           {mapVisible ? (
             <div className="rounded-xl overflow-hidden border border-[#0D9488]/20 relative animate-fade-in">
               <div className="h-[250px]">
@@ -261,7 +298,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* ===== OVERALL SUMMARY SECTIONS ===== */}
 
         {/* Flights */}
-        <div id="section-flights" className="px-4 mb-4">
+        <div id="section-flights" className={cn("px-4 mb-4", rc)} style={revealStyle("overview-flights")}>
           <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
             <Plane className="h-5 w-5 text-[#0D9488]" /> Flights
           </h3>
@@ -283,7 +320,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* All stays overview */}
         {result.destinations.some(d => d.accommodation) && (
-          <div id="section-stays-overview" className="px-4 mb-4">
+          <div id="section-stays-overview" className={cn("px-4 mb-4", rc)} style={revealStyle("overview-stays")}>
             <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <Bed className="h-5 w-5 text-primary" /> Where you'll stay
             </h3>
@@ -318,7 +355,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         )}
 
         {/* Trip budget */}
-        <div id="section-budget" className="mx-4 mb-6">
+        <div id="section-budget" className={cn("mx-4 mb-6", rc)} style={revealStyle("overview-budget")}>
           <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center gap-2">
             <Wallet className="h-5 w-5 text-primary" /> Estimated budget
           </h3>
@@ -388,7 +425,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
           return (
             <div key={destIdx}>
-              <div id={`section-dest-${dest.name}`}>
+              <div id={`section-dest-${dest.name}`} className={rc} style={revealStyle(`dest-${destIdx}`)}>
                 <DestinationSection
                   name={dest.name}
                   startDate={dest.start_date}
@@ -422,8 +459,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               {/* Day cards */}
               <div className="space-y-2 px-4 pb-4">
                 {destDays.map((day) => (
+                  <div key={day.date} className={rc} style={revealStyle(`day-${day.day_number}`)}>
                   <DaySection
-                    key={day.date}
                     day={day}
                     planId={planId || null}
                     destinationName={dest.name}
@@ -443,6 +480,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     getReplacedActivity={state.getReplacedActivity}
                     onCoordsRefined={handleCoordsRefined}
                   />
+                  </div>
                 ))}
               </div>
 
@@ -460,7 +498,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* Packing suggestions */}
         {hasPacking && (
-          <div id="section-packing" className="mx-4 mt-2 mb-6">
+          <div id="section-packing" className={cn("mx-4 mt-2 mb-6", rc)} style={revealStyle("packing")}>
             <button
               onClick={() => setPackingOpen(!packingOpen)}
               className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
@@ -491,7 +529,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       </div>
 
       {/* Sticky bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
+      <div className={cn("fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]", rc)} style={revealStyle("complete")}>
         <div className="max-w-[700px] mx-auto relative">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             {standalone ? (
