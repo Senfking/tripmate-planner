@@ -254,46 +254,6 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* Divider */}
         <div className="mx-4 border-t border-border" />
 
-        {/* Overview map */}
-        <div className={cn("mx-4 mt-4 mb-4", rc)} style={revealStyle("map")}>
-          {mapVisible ? (
-            <div className="rounded-xl overflow-hidden border border-[#0D9488]/20 relative animate-fade-in">
-              <div className="h-[250px]">
-                <ResultsMap
-                  result={result}
-                  activeDayIndex={-1}
-                  allDays={allDays}
-                  mode="overview"
-                  refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
-                />
-              </div>
-              <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1000 }}>
-                <button
-                  onClick={() => setMapFullscreen(true)}
-                  className="pointer-events-auto absolute top-3 right-3 p-2 rounded-lg bg-card text-foreground shadow-lg border border-border hover:bg-accent transition-colors"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setMapVisible(false)}
-                  className="pointer-events-auto absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-card text-foreground shadow-lg border border-border text-[11px] hover:bg-accent transition-colors"
-                >
-                  Hide map
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setMapVisible(true)}
-              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-            >
-              <MapIcon className="h-4 w-4 text-[#0D9488]" />
-              <span className="text-sm font-medium flex-1 text-foreground">Show map</span>
-              <span className="text-xs text-muted-foreground">{totalActivities} pins</span>
-            </button>
-          )}
-        </div>
-
         {/* ===== OVERALL SUMMARY SECTIONS ===== */}
 
         {/* Flights */}
@@ -592,27 +552,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         </div>
       </div>
 
-      {/* Fullscreen map overlay */}
-      {mapFullscreen && (
-        <div className="fixed inset-0 z-[10000] bg-background">
-          <div className="absolute top-4 left-4 z-[10001]">
-            <button
-              onClick={() => setMapFullscreen(false)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-card text-foreground shadow-xl border border-border hover:bg-accent transition-colors"
-            >
-              <X className="h-4 w-4" />
-              <span className="text-xs font-medium">Close map</span>
-            </button>
-          </div>
-          <ResultsMap
-            result={result}
-            activeDayIndex={-1}
-            allDays={allDays}
-            mode="overview"
-            refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
-          />
-        </div>
-      )}
+      {/* Sliding map panel */}
+      <MapSlidePanel
+        result={result}
+        allDays={allDays}
+        refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
+        totalActivities={totalActivities}
+      />
 
       {/* Alternatives Sheet */}
       {/* Group Activity floating button */}
