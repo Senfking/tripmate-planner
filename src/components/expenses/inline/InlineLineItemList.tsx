@@ -124,10 +124,10 @@ export function InlineLineItemList({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {claimableItems.length > 0 && (
         <>
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Items
           </p>
           <ul className="space-y-1">
