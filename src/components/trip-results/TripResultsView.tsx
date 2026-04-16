@@ -203,6 +203,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               </h1>
               <p className="text-xs text-muted-foreground font-mono">{dateRange}</p>
             </div>
+            {/* Map toggle */}
+            <button
+              onClick={() => setMapState(mapState === "closed" ? "partial" : "closed")}
+              className={cn(
+                "p-2 rounded-full transition-colors",
+                mapState !== "closed" ? "bg-primary/10 text-primary" : "hover:bg-accent text-muted-foreground"
+              )}
+              title={mapState === "closed" ? "Show map" : "Hide map"}
+            >
+              <MapIcon className="h-4 w-4" />
+            </button>
             {onDashboard && (
               <button
                 onClick={onDashboard}
