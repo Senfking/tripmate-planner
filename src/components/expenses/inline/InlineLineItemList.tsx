@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { LineItemRow, ClaimRow, useLineItemClaims } from "@/hooks/useLineItemClaims";
@@ -340,46 +340,14 @@ function LineItemRowEditable({
         )}
       </div>
 
-      {/* Multi-qty stepper */}
+      {/* Multi-qty stepper — optimistic + debounced */}
       {isMultiQty && (
-        <div className="flex items-center justify-between gap-2 pl-0">
-          <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
-            <button
-              type="button"
-              disabled={myQty <= 0}
-              onClick={() => onSetClaimQty(Math.max(0, myQty - 1))}
-              className={cn(
-                "h-8 w-9 flex items-center justify-center transition-colors",
-                myQty <= 0 ? "text-muted-foreground/30 cursor-not-allowed" : "text-foreground hover:bg-muted active:bg-muted/80",
-              )}
-              aria-label="Decrease claim"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <span className={cn(
-              "h-8 w-8 flex items-center justify-center text-[13px] font-semibold tabular-nums border-x border-border bg-background",
-              myQty > 0 ? "text-primary" : "text-muted-foreground",
-            )}>{myQty}</span>
-            <button
-              type="button"
-              disabled={myQty >= maxClaimable}
-              onClick={() => onSetClaimQty(Math.min(maxClaimable, myQty + 1))}
-              className={cn(
-                "h-8 w-9 flex items-center justify-center transition-colors",
-                myQty >= maxClaimable ? "text-muted-foreground/30 cursor-not-allowed" : "text-foreground hover:bg-muted active:bg-muted/80",
-              )}
-              aria-label="Increase claim"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <span className={cn(
-            "text-[10px] tabular-nums whitespace-nowrap",
-            remaining === 0 ? "text-muted-foreground" : "text-primary",
-          )}>
-            {remaining === 0 ? `All ${item.quantity} claimed` : `${remaining} of ${item.quantity} unclaimed`}
-          </span>
-        </div>
+        <ClaimStepper
+          serverQty={myQty}
+          itemTotalQty={item.quantity}
+          totalClaimedExcludingMe={totalClaimed - myQty}
+          onCommit={onSetClaimQty}
+        />
       )}
 
       {/* Other claimers */}
