@@ -389,10 +389,11 @@ export function useExpenses(tripId: string) {
     refreshRates,
     cachedCurrencyCodes: cachedCodesQuery.data || [],
     itineraryItems: itineraryQuery.data || [],
-    // isPending is true only until the first successful OR failed fetch.
-    // Unlike the old `data === undefined` check, this correctly becomes
-    // false when a query errors, preventing infinite loading skeletons.
-    isLoading: expensesQuery.isPending || membersQuery.isPending || settlementQuery.isPending,
+    // isLoading = isPending && isFetching. Disabled queries (enabled:false) have
+    // isFetching=false so they don't contribute to the loading state, preventing
+    // the auth-init race where user=null briefly disables queries but isPending
+    // stays true, causing permanent skeletons on first load.
+    isLoading: expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading,
     isError: expensesQuery.isError || membersQuery.isError || settlementQuery.isError,
     refetch: async () => {
       await Promise.all([
