@@ -135,7 +135,7 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
         />
       </div>
 
-      <div className="absolute inset-x-0 top-0 z-30 p-4 pointer-events-none">
+      <div className="absolute inset-x-0 top-0 z-[1200] p-4 pointer-events-none">
         <div className="flex items-start gap-3">
           <div className="pointer-events-auto bg-card/92 backdrop-blur-xl rounded-2xl border border-border shadow-2xl px-5 py-4 max-w-sm">
             <h2 className="text-base font-bold text-foreground truncate">{result.trip_title}</h2>
@@ -174,7 +174,7 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none">
+      <div className="absolute bottom-0 left-0 right-0 z-[1200] pointer-events-none">
         <div className="p-4">
           <div className="pointer-events-auto bg-card/92 backdrop-blur-xl rounded-2xl border border-border shadow-2xl p-3 max-w-xl mx-auto">
             <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
