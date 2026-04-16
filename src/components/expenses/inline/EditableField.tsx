@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef, useState, KeyboardEvent } from "react";
-import { Check, Pencil } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -76,18 +76,17 @@ export function EditableField({
       aria-label={ariaLabel}
       onClick={() => !disabled && setEditing(true)}
       className={cn(
-        "group inline-flex items-center gap-1.5 max-w-full min-w-0 rounded-md px-1 py-0.5 -mx-1 transition-colors",
-        "hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        "inline-flex items-center gap-1 max-w-full min-w-0 rounded-sm cursor-text text-left",
+        "hover:underline decoration-dotted underline-offset-4 decoration-muted-foreground/40",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         align === "right" && "justify-end",
-        disabled && "opacity-60 cursor-not-allowed hover:bg-transparent",
+        disabled && "opacity-60 cursor-not-allowed hover:no-underline",
         className,
       )}
     >
       <span className="min-w-0 truncate">{display}</span>
-      {flash ? (
+      {flash && (
         <Check className="h-3 w-3 text-primary shrink-0 animate-in fade-in zoom-in duration-150" />
-      ) : (
-        <Pencil className="h-3 w-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity shrink-0" />
       )}
     </button>
   );
