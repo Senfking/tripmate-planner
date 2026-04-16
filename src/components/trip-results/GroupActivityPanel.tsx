@@ -437,7 +437,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
         <div className="border-t border-border bg-muted/10 px-3 py-1.5">
           <div className="ml-6 border-l-[2px] border-primary/50 rounded-bl-lg">
             {replies.map((reply, i) => (
-              <div key={reply.id} className={`pl-3 py-1.5 ${i > 0 ? "border-t border-border/15" : ""}`}>
+              <div key={reply.id} className={`pl-3 py-1.5 ${i > 0 ? "border-t border-border" : ""}`}>
                 <CommentRow
                   comment={reply}
                   isOwn={reply.userId === currentUserId}
