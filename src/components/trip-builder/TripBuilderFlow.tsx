@@ -330,7 +330,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           setResults(null);
           setSavedPlanId(null);
           setRevealing(false);
-          if (prompt) setFreeText(prompt);
+          if (prompt) setAnswers(prev => ({ ...prev, freeText: prompt, notes: prompt }));
           handleGenerate();
         }}
         onAdjust={() => {
