@@ -526,3 +526,44 @@ function AddItemRow({ currency, onSave, onCancel }: { currency: string; onSave: 
     </div>
   );
 }
+
+/* ───────────────────────── Shared cost row (taxes & service) ───────────────────────── */
+
+function SharedCostRow({ sharedTotal, currency }: { sharedTotal: number; currency: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-2.5 py-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+          <p className="text-[12px] font-medium truncate">Taxes & service (auto-split)</p>
+          <button
+            type="button"
+            aria-label="How is this split?"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className="shrink-0 inline-flex items-center justify-center h-6 w-6 -my-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <span className="text-[12px] font-semibold tabular-nums shrink-0">
+          {formatCurrency(sharedTotal, currency)}
+        </span>
+      </div>
+      {/* Inline expandable explanation — smooth height animation via grid-rows trick */}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-150 ease-out",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="overflow-hidden">
+          <p className="text-xs text-muted-foreground border-t border-border/60 bg-muted/40 px-3 py-2 leading-relaxed">
+            Taxes and service charges are split proportionally based on each person's claimed items. If you claimed 60% of the items by value, you pay 60% of the tax.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
