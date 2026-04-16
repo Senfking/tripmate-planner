@@ -33,14 +33,18 @@ function formatDayLabel(date: string, dayNumber?: number): string {
 }
 
 /* ── Minimal premium pin with day.activity label ── */
-function createPinIcon(label: string, color: string) {
+function createPinIcon(label: string, color: string, highlighted?: boolean) {
   const width = label.length > 2 ? 34 : 28;
+  const size = highlighted ? 36 : 28;
+  const w = label.length > 2 ? size + 6 : size;
+  const ring = highlighted ? "box-shadow:0 0 0 3px white,0 0 12px rgba(0,0,0,0.4);" : "box-shadow:0 2px 8px rgba(0,0,0,0.25);";
+  const scale = highlighted ? "transform:scale(1.2);" : "";
   return L.divIcon({
     className: "",
-    iconSize: [width, 28],
-    iconAnchor: [width / 2, 14],
-    popupAnchor: [0, -16],
-    html: `<div style="min-width:28px;height:28px;padding:0 ${label.length > 2 ? 6 : 0}px;border-radius:14px;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">
+    iconSize: [w, size],
+    iconAnchor: [w / 2, size / 2],
+    popupAnchor: [0, -size / 2 - 2],
+    html: `<div style="min-width:${size}px;height:${size}px;padding:0 ${label.length > 2 ? 6 : 0}px;border-radius:${size}px;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;${ring}${scale}cursor:pointer;transition:transform 150ms ease,box-shadow 150ms ease;z-index:${highlighted ? 1000 : 1};">
       <span style="font-size:${label.length > 2 ? 9 : 11}px;font-weight:700;color:white;font-family:Inter,system-ui,sans-serif;white-space:nowrap;">${label}</span>
     </div>`,
   });
