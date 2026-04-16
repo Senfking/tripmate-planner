@@ -4,21 +4,16 @@ import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
 import { useLineItemClaims } from "@/hooks/useLineItemClaims";
 import { convertAmount, formatCurrency, Rates } from "@/lib/settlementCalc";
 import { Button } from "@/components/ui/button";
-import { LineItemClaimList } from "./LineItemClaimList";
-
 import { supabase } from "@/integrations/supabase/client";
 import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
-  ArrowLeftRight, Pencil, Trash2, Receipt,
+  ArrowLeftRight, Trash2, Receipt,
 } from "lucide-react";
 import { format } from "date-fns";
+import { InlineExpenseHeader } from "./inline/InlineExpenseHeader";
+import { InlineLineItemList } from "./inline/InlineLineItemList";
 
-const CATEGORY_CONFIG: Record<string, {
-  icon: typeof Utensils;
-  label: string;
-  iconColor: string;
-  bgColor: string;
-}> = {
+const CATEGORY_CONFIG: Record<string, { icon: typeof Utensils; label: string; iconColor: string; bgColor: string }> = {
   food:          { icon: Utensils,       label: "Food & Drink",  iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
   transport:     { icon: Car,            label: "Transport",     iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
   accommodation: { icon: Hotel,          label: "Accommodation", iconColor: "#0D9488", bgColor: "rgba(13,148,136,0.08)" },
@@ -38,35 +33,32 @@ interface Props {
   baseCurrency: string;
   rates: Rates;
   itineraryItems: { id: string; title: string; day_date: string }[];
+  cachedCurrencyCodes?: string[];
   isNew?: boolean;
-  onEdit: (expense: ExpenseRow) => void;
   onDelete: (id: string) => void;
+  /** Kept for API compat with ExpensesTab — no longer used (inline editing replaces the modal). */
+  onEdit?: (expense: ExpenseRow) => void;
 }
 
 export function ExpenseCard({
   expense, splits, members, myRole, tripId, settlementCurrency,
-  baseCurrency, rates, itineraryItems, isNew, onEdit, onDelete,
+  baseCurrency, rates, itineraryItems, cachedCurrencyCodes = [], isNew, onDelete,
 }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const { lineItems, claims, hasLineItems, toggleClaim, setClaimQuantity } = useLineItemClaims(
     expanded ? expense.id : null,
-    tripId
+    tripId,
   );
 
   const hasReceipt = !!expense.receipt_image_path;
 
   const handleViewReceipt = async () => {
     const tab = window.open("about:blank", "_blank");
-    const { data } = await supabase.storage
-      .from("receipt-images")
-      .createSignedUrl(expense.receipt_image_path!, 3600);
+    const { data } = await supabase.storage.from("receipt-images").createSignedUrl(expense.receipt_image_path!, 3600);
     if (data?.signedUrl) {
-      if (tab) {
-        tab.location.href = data.signedUrl;
-      } else {
-        window.open(data.signedUrl, "_blank", "noopener");
-      }
+      if (tab) tab.location.href = data.signedUrl;
+      else window.open(data.signedUrl, "_blank", "noopener");
     } else {
       tab?.close();
     }
@@ -75,22 +67,15 @@ export function ExpenseCard({
   const cat = CATEGORY_CONFIG[expense.category] || CATEGORY_CONFIG.other;
   const Icon = cat.icon;
   const payer = members.find((m) => m.userId === expense.payer_id);
-  const isDifferentCurrency = expense.currency !== settlementCurrency;
-  const convertedAmount = isDifferentCurrency
-    ? convertAmount(expense.amount, expense.currency, settlementCurrency, baseCurrency, rates)
-    : expense.amount;
-
   const isSettlement = expense.category === "settlement";
   const isPayer = expense.payer_id === user?.id;
   const mySplit = user ? splits.find((s) => s.user_id === user.id) : null;
-  // If no splits loaded yet for this expense and we're the payer, don't flash the full amount
   const splitsReady = splits.length > 0 || !isPayer;
   const youLentAmount = isPayer && mySplit
     ? expense.amount - mySplit.share_amount
     : isPayer && !splitsReady ? null : isPayer ? expense.amount : 0;
 
-  const canModify =
-    expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
+  const canModify = expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
 
   return (
     <div
@@ -125,9 +110,7 @@ export function ExpenseCard({
               ) : !isSettlement && isPayer && youLentAmount != null && youLentAmount > 0 ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
-                  <p className="text-[17px] font-bold text-foreground">
-                    {formatCurrency(youLentAmount, expense.currency)}
-                  </p>
+                  <p className="text-[17px] font-bold text-foreground">{formatCurrency(youLentAmount, expense.currency)}</p>
                   {youLentAmount !== expense.amount && (
                     <p className="text-[11px] text-muted-foreground">total {formatCurrency(expense.amount, expense.currency)}</p>
                   )}
@@ -135,17 +118,13 @@ export function ExpenseCard({
               ) : !isSettlement && !isPayer && mySplit ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#EF4444" }}>you owe</p>
-                  <p className="text-[17px] font-bold text-foreground">
-                    {formatCurrency(mySplit.share_amount, expense.currency)}
-                  </p>
+                  <p className="text-[17px] font-bold text-foreground">{formatCurrency(mySplit.share_amount, expense.currency)}</p>
                   {mySplit.share_amount !== expense.amount && (
                     <p className="text-[11px] text-muted-foreground">total {formatCurrency(expense.amount, expense.currency)}</p>
                   )}
                 </>
               ) : (
-                <p className="font-bold text-[15px]">
-                  {formatCurrency(expense.amount, expense.currency)}
-                </p>
+                <p className="font-bold text-[15px]">{formatCurrency(expense.amount, expense.currency)}</p>
               )}
             </div>
           </div>
@@ -153,27 +132,39 @@ export function ExpenseCard({
       </button>
 
       {expanded && (
-        <div className="py-2.5 space-y-3" style={{ padding: "10px 16px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-          {/* Line item claiming UI */}
-          {hasLineItems && (
-            <LineItemClaimList
-              lineItems={lineItems}
-              claims={claims}
+        <div className="space-y-3" style={{ padding: "12px 16px 14px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+          {/* Inline-editable header fields */}
+          <InlineExpenseHeader
+            expense={expense}
+            splits={splits}
+            members={members}
+            tripId={tripId}
+            canEdit={canModify}
+            hasLineItems={hasLineItems}
+            cachedCurrencyCodes={cachedCurrencyCodes}
+          />
+
+          {/* Either line items (with claims + editing) or plain splits breakdown */}
+          {hasLineItems ? (
+            <InlineLineItemList
+              expenseId={expense.id}
+              tripId={tripId}
               members={members}
               currency={expense.currency}
               totalAmount={expense.amount}
-              onToggleClaim={(id) => toggleClaim.mutate(id)}
-              onSetClaimQuantity={(id, qty) => setClaimQuantity.mutateAsync({ lineItemId: id, quantity: qty })}
+              lineItems={lineItems}
+              claims={claims}
+              canEdit={canModify}
+              toggleClaim={(id) => toggleClaim.mutate(id)}
+              setClaimQuantity={(id, qty) => setClaimQuantity.mutateAsync({ lineItemId: id, quantity: qty })}
               isToggling={toggleClaim.isPending}
             />
-          )}
-
-          {/* Standard splits breakdown */}
-          {!hasLineItems && (
+          ) : (
             <div className="space-y-1">
               {splits.map((s) => {
                 const member = members.find((m) => m.userId === s.user_id);
-                const convertedShare = isDifferentCurrency
+                const isDifferent = expense.currency !== settlementCurrency;
+                const converted = isDifferent
                   ? convertAmount(s.share_amount, expense.currency, settlementCurrency, baseCurrency, rates)
                   : s.share_amount;
                 return (
@@ -181,10 +172,8 @@ export function ExpenseCard({
                     <span className="text-muted-foreground">{member?.displayName || "Unknown"}</span>
                     <span>
                       {formatCurrency(s.share_amount, expense.currency)}
-                      {isDifferentCurrency && convertedShare != null && (
-                        <span className="text-muted-foreground ml-1">
-                          ≈ {formatCurrency(convertedShare, settlementCurrency)}
-                        </span>
+                      {isDifferent && converted != null && (
+                        <span className="text-muted-foreground ml-1">≈ {formatCurrency(converted, settlementCurrency)}</span>
                       )}
                     </span>
                   </div>
@@ -193,11 +182,7 @@ export function ExpenseCard({
             </div>
           )}
 
-          {expense.notes && (
-            <p className="text-xs text-muted-foreground italic">{expense.notes}</p>
-          )}
-
-          {/* Receipt & action buttons */}
+          {/* Action buttons — Edit removed; everything above is inline */}
           <div className="flex gap-2 pt-1 flex-wrap">
             {hasReceipt && (
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleViewReceipt}>
@@ -205,24 +190,18 @@ export function ExpenseCard({
               </Button>
             )}
             {canModify && (
-              <>
-                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onEdit(expense)}>
-                  <Pencil className="h-3 w-3" /> Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
-                  onClick={() => onDelete(expense.id)}
-                >
-                  <Trash2 className="h-3 w-3" /> Delete
-                </Button>
-              </>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+                onClick={() => onDelete(expense.id)}
+              >
+                <Trash2 className="h-3 w-3" /> Delete
+              </Button>
             )}
           </div>
         </div>
       )}
-
     </div>
   );
 }
