@@ -148,7 +148,7 @@ function PopupContent({ activity, dayLabel }: { activity: AIActivity; dayLabel?:
         )}
 
         {/* Cost + Maps link */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/40">
+        <div className="flex items-center justify-between pt-2 border-t border-border">
           {activity.estimated_cost_per_person != null ? (
             <span className="text-[11px] font-semibold text-emerald-600">
               ~{activity.currency}{Math.round(activity.estimated_cost_per_person).toLocaleString()}/person

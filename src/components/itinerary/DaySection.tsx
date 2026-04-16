@@ -241,7 +241,7 @@ export function DaySection({ dayDate, dayNumber, items, tripId, myRole, destinat
 
         {/* Cost → expense inline prompt */}
         {costPrompt && onCreateExpenseFromItem && (
-          <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 animate-fade-in">
+          <div className="flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 animate-fade-in">
             <Receipt className="h-4 w-4 text-primary shrink-0" />
             <span className="text-[12px] text-foreground flex-1">
               Create expense for <span className="font-semibold">{costPrompt.cost.raw}</span>?

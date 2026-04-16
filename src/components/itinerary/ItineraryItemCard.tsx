@@ -250,7 +250,7 @@ export function ItineraryItemCard({
 
         {/* ━━ EXPANDED: Attendance + Comments ━━ */}
         {expanded && (
-          <div className="border-t border-border/40">
+          <div className="border-t border-border">
             {user && members.length > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5">
                 <AttendanceRow

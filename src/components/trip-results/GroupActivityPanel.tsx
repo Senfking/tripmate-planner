@@ -372,7 +372,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
   }, [thread.reactions]);
 
   return (
-    <div className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
       {/* Thread header — activity label */}
       <div
         onClick={onScrollTo}
@@ -389,7 +389,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
 
       {/* Reactions summary */}
       {reactionSummary.length > 0 && (
-        <div className="px-3 py-1.5 flex items-center gap-2.5 border-t border-border/30">
+        <div className="px-3 py-1.5 flex items-center gap-2.5 border-t border-border">
           {reactionSummary.map(([emoji, count]) => {
             const info = EMOJI_MAP[emoji];
             return info ? (
@@ -403,7 +403,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
 
       {/* First comment (root) */}
       {firstComment && (
-        <div className="px-3 py-2.5 border-t border-border/30">
+        <div className="px-3 py-2.5 border-t border-border">
           <CommentRow
             comment={firstComment}
             isOwn={firstComment.userId === currentUserId}
@@ -425,7 +425,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
 
       {/* No comments, only reactions */}
       {!firstComment && (
-        <div className="px-3 py-2 border-t border-border/30">
+        <div className="px-3 py-2 border-t border-border">
           <button onClick={onReply} className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
             <MessageSquare className="h-3 w-3" /> Comment
           </button>
@@ -434,10 +434,10 @@ function ThreadCard({ thread, currentUserId, isExpanded, replyTo, onToggle, onSc
 
       {/* Threaded replies */}
       {isExpanded && hasReplies && (
-        <div className="border-t border-border/30 bg-muted/10 px-3 py-1.5">
-          <div className="ml-6 border-l-[2px] border-primary/25 rounded-bl-lg">
+        <div className="border-t border-border bg-muted/10 px-3 py-1.5">
+          <div className="ml-6 border-l-[2px] border-primary/50 rounded-bl-lg">
             {replies.map((reply, i) => (
-              <div key={reply.id} className={`pl-3 py-1.5 ${i > 0 ? "border-t border-border/15" : ""}`}>
+              <div key={reply.id} className={`pl-3 py-1.5 ${i > 0 ? "border-t border-border" : ""}`}>
                 <CommentRow
                   comment={reply}
                   isOwn={reply.userId === currentUserId}

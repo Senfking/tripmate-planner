@@ -324,7 +324,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </h3>
           <p className="text-[11px] text-muted-foreground/70 mb-3 ml-7">Based on typical prices · actual costs may vary</p>
 
-          <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card to-muted/20 shadow-sm overflow-hidden">
+          <div className="rounded-2xl border border-border bg-gradient-to-b from-card to-muted/20 shadow-sm overflow-hidden">
             {/* Summary header */}
             <button
               onClick={() => setCostOpen(!costOpen)}
@@ -354,7 +354,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   {costBreakdown.categories.map(([cat, amount], i) => {
                     const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
                     return (
-                      <div key={cat} className={`flex items-center gap-3 py-2.5 ${i > 0 ? "border-t border-border/30" : ""}`}>
+                      <div key={cat} className={`flex items-center gap-3 py-2.5 ${i > 0 ? "border-t border-border" : ""}`}>
                         <span className="text-xs text-muted-foreground flex-1">{cat}</span>
                         <div className="w-20 h-1.5 rounded-full bg-muted/60 overflow-hidden">
                           <div className="h-full rounded-full bg-primary/40" style={{ width: `${Math.min(pct, 100)}%` }} />
@@ -407,7 +407,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                       const el = document.getElementById("section-stays-overview");
                       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-accent/50 border border-border hover:bg-accent/80 hover:border-primary/20 transition-all group text-left cursor-pointer"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-accent/50 border border-border hover:bg-accent/80 hover:border-primary/40 transition-all group text-left cursor-pointer"
                   >
                     <Bed className="h-4 w-4 text-[#0D9488] shrink-0" />
                     <div className="flex-1 min-w-0">
