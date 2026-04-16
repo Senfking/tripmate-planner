@@ -28,6 +28,7 @@ interface Props {
 }
 
 export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
+  console.log("[expenses-mount]", window.location.pathname, Date.now());
   const location = useLocation();
   const { user } = useAuth();
   const {
