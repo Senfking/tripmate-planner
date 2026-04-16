@@ -294,10 +294,10 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
     <MapContainer
       center={[result.map_center.lat, result.map_center.lng]}
       zoom={result.map_zoom || 6}
-      className="h-full w-full"
+      className="trip-results-map-root h-full w-full"
       zoomControl={false}
       attributionControl={false}
-      style={{ background: "hsl(var(--accent))" }}
+      style={{ background: "hsl(var(--accent))", zIndex: 0, isolation: "isolate" }}
     >
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
