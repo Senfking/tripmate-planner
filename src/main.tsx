@@ -48,21 +48,6 @@ if ("serviceWorker" in navigator) {
   } else {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" }).then((reg) => {
-        // Detect new waiting service worker
-        const emitWaiting = (sw: ServiceWorker) => {
-          window.dispatchEvent(new CustomEvent("sw-waiting", { detail: sw }));
-        };
-        if (reg.waiting) emitWaiting(reg.waiting);
-        reg.addEventListener("updatefound", () => {
-          const newSW = reg.installing;
-          if (!newSW) return;
-          newSW.addEventListener("statechange", () => {
-            if (newSW.state === "installed" && navigator.serviceWorker.controller) {
-              emitWaiting(newSW);
-            }
-          });
-        });
-
         // Proactively check for updates when the user returns to the app
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
@@ -71,6 +56,11 @@ if ("serviceWorker" in navigator) {
         });
       }).catch((err) => {
         console.error("[SW] Registration failed:", err);
+      });
+
+      // Auto-reload when a new SW takes control (skipWaiting was called)
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        window.location.reload();
       });
     });
   }

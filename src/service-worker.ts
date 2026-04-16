@@ -52,7 +52,6 @@ function idbGet(filePath: string): Promise<Blob | null> {
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
-      // Use individual puts so a single 404 doesn't blow up the whole install.
       Promise.all(
         SHELL_URLS.map((url) =>
           cache.add(url).catch((err) => {
@@ -62,7 +61,7 @@ self.addEventListener('install', (event) => {
       )
     )
   );
-  // Don't skipWaiting here - let the client trigger it via message
+  self.skipWaiting();
 });
 
 self.addEventListener('message', (event) => {
