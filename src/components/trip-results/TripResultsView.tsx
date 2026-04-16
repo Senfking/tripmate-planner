@@ -159,12 +159,29 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     [result.destinations, allDays, hasPacking]
   );
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-background overflow-y-auto" data-results-scroll-root="true">
-      {/* Timeline (desktop only) */}
-      <ResultsTimeline nodes={timelineNodes} />
+  const handlePinClick = useCallback((dayDate: string, activityIndex: number) => {
+    // Find day number to scroll to the right section
+    const day = allDays.find(d => d.date === dayDate);
+    if (day) {
+      const sectionId = `section-day-${day.day_number}`;
+      scrollToSection(sectionId);
+    }
+    if (isMobileOrTablet) setActiveTab("itinerary");
+  }, [allDays, scrollToSection, isMobileOrTablet]);
 
-      <div className="max-w-[700px] mx-auto min-h-full flex flex-col lg:pl-[60px]">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-background flex" data-results-scroll-root="true">
+      {/* Timeline (desktop only, when map is open move it left) */}
+      {!showSplitMap && <ResultsTimeline nodes={timelineNodes} />}
+
+      {/* Main itinerary column */}
+      <div
+        className={`flex-1 min-w-0 overflow-y-auto ${
+          isMobileOrTablet && activeTab === "map" ? "hidden" : ""
+        }`}
+        data-results-scroll-root="true"
+      >
+        <div className={`${showSplitMap ? "max-w-[700px]" : "max-w-[700px] mx-auto lg:pl-[60px]"} min-h-full flex flex-col`}>
         {/* Header */}
         <div data-results-header="true" className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
           <div className="flex items-center gap-3">
