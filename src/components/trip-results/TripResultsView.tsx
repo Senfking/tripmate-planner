@@ -289,6 +289,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
+        {/* Itinerary content — hidden when mobile map tab is active */}
+        {(!isMobileOrTablet || activeTab === "itinerary") && (<>
+
         {/* ===== OVERALL SUMMARY SECTIONS ===== */}
 
         {/* Flights */}
