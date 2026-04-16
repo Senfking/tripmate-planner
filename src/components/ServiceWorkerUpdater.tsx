@@ -9,12 +9,10 @@ export function ServiceWorkerUpdater() {
   const [waitingSW, setWaitingSW] = useState<ServiceWorker | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
-  const isStandalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as any).standalone === true;
+  // Show update banner for ALL users, not just standalone PWA
 
   useEffect(() => {
-    if (!isStandalone || !("serviceWorker" in navigator)) return;
+    if (!("serviceWorker" in navigator)) return;
 
     // Check if there's already a waiting worker
     navigator.serviceWorker.ready.then((reg) => {
@@ -29,7 +27,7 @@ export function ServiceWorkerUpdater() {
     };
     window.addEventListener("sw-waiting", handler);
     return () => window.removeEventListener("sw-waiting", handler);
-  }, [isStandalone]);
+  }, []);
 
   const handleUpdate = useCallback(() => {
     if (!waitingSW) return;
@@ -40,7 +38,7 @@ export function ServiceWorkerUpdater() {
     });
   }, [waitingSW]);
 
-  if (!waitingSW || dismissed || !isStandalone) return null;
+  if (!waitingSW || dismissed) return null;
 
   return (
     <div
