@@ -75,8 +75,17 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
 
   /** Recalculate and persist splits based on current claims */
   const recalcSplits = async () => {
-    const items = lineItemsQuery.data || [];
-    if (items.length === 0 || !expenseId) return;
+    if (!expenseId) return;
+
+    // Always fetch fresh line items so callers that mutate line items
+    // (updateLineItem, deleteLineItem) get consistent data.
+    const { data: freshItems } = await supabase
+      .from("expense_line_items")
+      .select("*")
+      .eq("expense_id", expenseId)
+      .order("created_at");
+    const items = (freshItems as LineItemRow[]) || [];
+    if (items.length === 0) return;
 
     const { data: expense } = await supabase
       .from("expenses")
@@ -213,6 +222,47 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
     },
   });
 
+  const updateLineItem = useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      name?: string;
+      quantity?: number;
+      unit_price?: number;
+      is_shared?: boolean;
+    }) => {
+      const { id, ...fields } = payload;
+      const { error } = await supabase
+        .from("expense_line_items")
+        .update(fields)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["expense-line-items", expenseId] });
+      await recalcSplits();
+    },
+    onError: (e: any) => {
+      toast.error(e?.message || "Failed to update line item");
+    },
+  });
+
+  const deleteLineItem = useMutation({
+    mutationFn: async (lineItemId: string) => {
+      const { error } = await supabase
+        .from("expense_line_items")
+        .delete()
+        .eq("id", lineItemId);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["expense-line-items", expenseId] });
+      await recalcSplits();
+    },
+    onError: (e: any) => {
+      toast.error(e?.message || "Failed to delete line item");
+    },
+  });
+
   return {
     lineItems: lineItemsQuery.data || [],
     claims: claimsQuery.data || [],
@@ -220,6 +270,8 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
     isLoading: lineItemsQuery.isLoading,
     toggleClaim,
     setClaimQuantity,
+    updateLineItem,
+    deleteLineItem,
   };
 }
 
