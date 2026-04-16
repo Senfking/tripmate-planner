@@ -117,7 +117,7 @@ export function DateRangePicker({
   return (
     <Popover open={open} onOpenChange={handleOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 z-[200]" align="start">
         {calendarContent}
       </PopoverContent>
     </Popover>
