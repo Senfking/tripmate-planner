@@ -24,6 +24,14 @@ END;
 $wrapper$;
 
 -- =============================================================================
+-- 0. Drop rogue trigger/function created outside migrations
+--    notify_admin_new_feedback() has a bug (casts body to ::text) and uses
+--    current_setting() instead of a hardcoded key.
+-- =============================================================================
+DROP TRIGGER IF EXISTS trg_notify_admin_new_feedback ON public.feedback;
+DROP FUNCTION IF EXISTS public.notify_admin_new_feedback();
+
+-- =============================================================================
 -- 1. notify_new_feedback — AFTER INSERT on feedback
 -- =============================================================================
 DROP TRIGGER IF EXISTS trg_notify_new_feedback ON public.feedback;
