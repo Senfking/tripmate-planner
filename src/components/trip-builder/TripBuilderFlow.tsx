@@ -117,6 +117,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [results, setResults] = useState<AITripResult | null>(null);
+  const [revealing, setRevealing] = useState(false);
   const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [prefilledSteps, setPrefilledSteps] = useState<Set<number>>(new Set());
@@ -276,6 +277,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       }
 
       setSavedPlanId(planId);
+      setRevealing(true);
       setResults(normalized);
 
       // Update URL to shareable plan link without full reload
@@ -327,14 +329,18 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         onRegenerate={() => {
           setResults(null);
           setSavedPlanId(null);
+          setRevealing(false);
           handleGenerate();
         }}
         onAdjust={() => {
           // Go back to questionnaire with answers pre-filled (they're already in state)
           setResults(null);
           setSavedPlanId(null);
+          setRevealing(false);
           setStep(1); // Start at destination step
         }}
+        revealMode={revealing}
+        onRevealComplete={() => setRevealing(false)}
       />
     );
   }
