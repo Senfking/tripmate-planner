@@ -38,6 +38,7 @@ const Admin = lazy(() => import("./pages/Admin"));
 const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
 const Landing = lazy(() => import("./pages/Landing"));
+const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 
 function PageLoader() {
   return (
