@@ -28,7 +28,7 @@ interface Props {
   planId?: string | null;
   result: AITripResult;
   onClose: () => void;
-  onRegenerate: () => void;
+  onRegenerate: (prompt?: string) => void;
   onAdjust?: () => void;
   standalone?: boolean;
   onCreateTrip?: () => void;
@@ -581,7 +581,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={onRegenerate}
+                    onClick={() => setEditTripOpen(true)}
                     className="h-8 px-3 rounded-lg text-xs gap-1"
                   >
                     <RefreshCw className="h-3.5 w-3.5" /> Regenerate
@@ -666,7 +666,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           onRegenerate={(prompt) => {
             setEditTripOpen(false);
             toast.info("Regenerating plan...");
-            onRegenerate();
+            onRegenerate(prompt);
           }}
           onClose={() => setEditTripOpen(false)}
         />
