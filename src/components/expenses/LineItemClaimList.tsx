@@ -1,6 +1,11 @@
 import { useMemo } from "react";
 import { MemberProfile } from "@/hooks/useExpenses";
 import { LineItemRow, ClaimRow, getTotalClaimedQuantity, getRemainingQuantity } from "@/hooks/useLineItemClaims";
+
+/** Safe accessor — old rows from before the migration lack the column */
+function claimQty(c: ClaimRow): number {
+  return typeof c.claimed_quantity === "number" ? c.claimed_quantity : 1;
+}
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { calculateLineItemTotals } from "@/lib/expenseLineItems";
@@ -47,7 +52,7 @@ export function LineItemClaimList({
       getAssigneeIds: (item) => (claimsByItemId.get(item.id) ?? []).map((claim) => claim.user_id),
       getClaimQuantity: (item, userId) => {
         const claim = (claimsByItemId.get(item.id) ?? []).find((c) => c.user_id === userId);
-        return claim ? claim.claimed_quantity : 0;
+        return claim ? claimQty(claim) : 0;
       },
     }),
     [claimsByItemId, lineItems, members, totalAmount],
@@ -208,7 +213,7 @@ function MultiQuantityItem({
   onSetQuantity: (qty: number) => void;
 }) {
   const myClaim = itemClaims.find((c) => c.user_id === currentUserId);
-  const myQty = myClaim?.claimed_quantity ?? 0;
+  const myQty = myClaim ? claimQty(myClaim) : 0;
   const totalClaimed = getTotalClaimedQuantity(itemClaims, item.id);
   const remaining = getRemainingQuantity(item.quantity, itemClaims, item.id);
   // Max this user can claim = their current qty + whatever is unclaimed
@@ -302,7 +307,7 @@ function MultiQuantityItem({
                   </AvatarFallback>
                 </Avatar>
                 <span className={cn("text-[10px]", isMe ? "text-primary font-medium" : "text-muted-foreground")}>
-                  {member?.displayName?.split(" ")[0] || "?"}: {claim.claimed_quantity}
+                  {member?.displayName?.split(" ")[0] || "?"}: {claimQty(claim)}
                 </span>
               </div>
             );
