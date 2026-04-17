@@ -1,3 +1,4 @@
+// SW update: silent activation, no page reload on tab switch
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
