@@ -22,6 +22,7 @@ import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
+import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
@@ -368,6 +369,7 @@ export default function TripList() {
   const [joinError, setJoinError] = useState("");
   const [emptyDestination, setEmptyDestination] = useState("");
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showPast, setShowPast] = useState(false);
   const [builderInitDest, setBuilderInitDest] = useState("");
   const [draftToResume, setDraftToResume] = useState<{ planId: string; result: AITripResult } | null>(null);
   const [referralDismissed, setReferralDismissed] = useState(
