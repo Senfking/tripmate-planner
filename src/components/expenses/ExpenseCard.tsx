@@ -211,7 +211,8 @@ function ExpandedDetail({
           isToggling={toggleClaim.isPending}
         />
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1 pt-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Per person</p>
           {splits.map((s) => {
             const member = members.find((m) => m.userId === s.user_id);
             const isDifferent = expense.currency !== settlementCurrency;
