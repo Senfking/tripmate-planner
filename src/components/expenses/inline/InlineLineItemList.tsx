@@ -255,7 +255,7 @@ export function InlineLineItemList({
 /* ───────────────────────── Single editable row ───────────────────────── */
 
 function LineItemRowEditable({
-  item, claims, members, currency, currentUserId, canEdit, isToggling,
+  item, claims, members, currency, currentUserId, canEdit, editMode, isToggling,
   onRename, onChangeQty, onChangeUnitPrice, onDelete, onToggleClaim, onSetClaimQty,
   onToggleClaimForUser, onSetClaimQtyForUser,
 }: {
@@ -265,6 +265,7 @@ function LineItemRowEditable({
   currency: string;
   currentUserId: string | undefined;
   canEdit: boolean;
+  editMode: boolean;
   isToggling: boolean;
   onRename: (name: string) => Promise<boolean>;
   onChangeQty: (q: number) => Promise<boolean>;
