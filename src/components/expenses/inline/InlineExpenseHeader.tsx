@@ -218,15 +218,15 @@ export function InlineExpenseHeader({
 
       {/* Notes — full width, always truncated to 1 line, expandable on tap */}
       {(expense.notes || editMode) && (
-        <div className="pt-1">
+        <div className="pt-0.5">
           {editMode ? (
             <EditableField
               showAffordance
               display={
                 expense.notes ? (
-                  <span className="text-sm text-muted-foreground italic block truncate">{expense.notes}</span>
+                  <span className="text-xs text-muted-foreground italic block truncate">{expense.notes}</span>
                 ) : (
-                  <span className="text-sm text-muted-foreground/60 italic">Add a note…</span>
+                  <span className="text-xs text-muted-foreground/60 italic">Add a note…</span>
                 )
               }
               editor={({ commit, cancel }) => (
@@ -246,7 +246,7 @@ export function InlineExpenseHeader({
               type="button"
               onClick={() => setNotesExpanded((v) => !v)}
               className={cn(
-                "text-sm text-muted-foreground italic text-left w-full",
+                "text-xs text-muted-foreground italic text-left w-full",
                 !notesExpanded && "truncate block",
               )}
             >
@@ -263,9 +263,9 @@ export function InlineExpenseHeader({
 
 function Row({ label, children, fullWidth }: { label: string; children: React.ReactNode; fullWidth?: boolean }) {
   return (
-    <div className={cn("flex flex-col min-w-0 gap-0.5", fullWidth && "col-span-2")}>
-      <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">{label}</dt>
-      <dd className="min-w-0 text-foreground">{children}</dd>
+    <div className={cn("flex flex-col min-w-0", fullWidth && "col-span-2")}>
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 leading-tight">{label}</dt>
+      <dd className="min-w-0 text-foreground leading-tight">{children}</dd>
     </div>
   );
 }
