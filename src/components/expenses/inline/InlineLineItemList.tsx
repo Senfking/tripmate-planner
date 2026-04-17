@@ -555,12 +555,13 @@ function AddItemRow({ currency, onSave, onCancel }: { currency: string; onSave: 
 /* ───────────────────────── Optimistic + debounced claim stepper ───────────────────────── */
 
 function ClaimStepper({
-  serverQty, itemTotalQty, totalClaimedExcludingMe, onCommit,
+  serverQty, itemTotalQty, totalClaimedExcludingMe, onCommit, onAssignOthers,
 }: {
   serverQty: number;
   itemTotalQty: number;
   totalClaimedExcludingMe: number;
   onCommit: (qty: number) => Promise<void>;
+  onAssignOthers?: () => void;
 }) {
   const [localQty, setLocalQty] = useState(serverQty);
   const lastConfirmedRef = useRef(serverQty);
