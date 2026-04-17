@@ -124,15 +124,22 @@ export function InlineLineItemList({
     void undone;
   };
 
+  const ITEMS_COLLAPSED_LIMIT = 4;
+  const [itemsExpanded, setItemsExpanded] = useState(false);
+  const visibleClaimableItems = itemsExpanded
+    ? claimableItems
+    : claimableItems.slice(0, ITEMS_COLLAPSED_LIMIT);
+  const hiddenCount = claimableItems.length - visibleClaimableItems.length;
+
   return (
     <div className="space-y-2">
       {claimableItems.length > 0 && (
         <>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Items
+            Items · {claimableItems.length}
           </p>
-          <ul className="space-y-1">
-            {claimableItems.map((item) => (
+          <ul className="space-y-0.5">
+            {visibleClaimableItems.map((item) => (
               <LineItemRowEditable
                 key={item.id}
                 item={item}
@@ -141,6 +148,7 @@ export function InlineLineItemList({
                 currency={currency}
                 currentUserId={user?.id}
                 canEdit={canEdit && editMode}
+                editMode={editMode}
                 isToggling={isToggling}
                 onRename={async (name) => {
                   if (!name.trim() || name === item.name) return false;
@@ -166,6 +174,24 @@ export function InlineLineItemList({
               />
             ))}
           </ul>
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setItemsExpanded(true)}
+              className="text-[12px] font-medium text-primary hover:underline py-1"
+            >
+              Show {hiddenCount} more {hiddenCount === 1 ? "item" : "items"}
+            </button>
+          )}
+          {itemsExpanded && claimableItems.length > ITEMS_COLLAPSED_LIMIT && (
+            <button
+              type="button"
+              onClick={() => setItemsExpanded(false)}
+              className="text-[12px] font-medium text-muted-foreground hover:underline py-1"
+            >
+              Show less
+            </button>
+          )}
         </>
       )}
 
