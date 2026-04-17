@@ -8,7 +8,7 @@ export interface PendingItem {
   tripName: string;
   tripEmoji: string | null;
   tripStartDate: string | null;
-  type: "vibe" | "destination" | "date" | "poll" | "attendance";
+  type: "destination" | "date" | "poll" | "attendance";
   label: string;
   description: string;
   /** For type "poll", the actual poll UUID for deep-link scrolling */
@@ -44,14 +44,13 @@ export function useGlobalDecisions() {
       // 2. Fetch trips metadata
       const { data: trips } = await supabase
         .from("trips")
-        .select("id, name, emoji, tentative_start_date, vibe_board_active, vibe_board_locked")
+        .select("id, name, emoji, tentative_start_date")
         .in("id", tripIds);
 
       if (!trips?.length) return { items: [], pendingCount: 0 };
 
       // 3. Fetch all related data in parallel
       const [
-        { data: vibeResponses },
         { data: proposals },
         { data: routeStops },
         { data: reactions },
@@ -62,11 +61,6 @@ export function useGlobalDecisions() {
         { data: votes },
         { data: allMembers },
       ] = await Promise.all([
-        supabase
-          .from("vibe_responses")
-          .select("trip_id, user_id")
-          .eq("user_id", userId)
-          .in("trip_id", tripIds),
         supabase
           .from("trip_proposals")
           .select("id, trip_id, destination")
@@ -156,10 +150,6 @@ export function useGlobalDecisions() {
         (routeStops ?? []).filter((s) => s.proposal_id).map((s) => s.proposal_id)
       );
 
-      const vibeTrips = new Set(
-        (vibeResponses ?? []).map((v) => v.trip_id)
-      );
-
       const userReactionProposalIds = new Set(
         (reactions ?? []).map((r) => r.proposal_id)
       );
@@ -173,20 +163,6 @@ export function useGlobalDecisions() {
       );
 
       for (const trip of trips) {
-        // Vibe Board
-        if (trip.vibe_board_active && !trip.vibe_board_locked && !vibeTrips.has(trip.id)) {
-          items.push({
-            id: `vibe-${trip.id}`,
-            tripId: trip.id,
-            tripName: trip.name,
-            tripEmoji: trip.emoji,
-            tripStartDate: trip.tentative_start_date,
-            type: "vibe",
-            label: "Vibe Board",
-            description: `Share your travel vibe for ${trip.name}`,
-          });
-        }
-
         // Destination votes
         const tripProposals = (proposals ?? []).filter(
           (p) => p.trip_id === trip.id && !confirmedProposalIds.has(p.id)

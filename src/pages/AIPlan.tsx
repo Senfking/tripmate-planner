@@ -61,7 +61,11 @@ export default function AIPlan() {
       planId={planId || null}
       result={result}
       onClose={() => navigate(`/app/trips/${tripId}`)}
-      onRegenerate={() => navigate(`/app/trips/new?mode=ai`)}
+      onRegenerate={() => {
+        const dest = result.destinations[0]?.name ?? "";
+        const qs = dest ? `?initialDestination=${encodeURIComponent(dest)}` : "";
+        navigate(`/app/trips/new${qs}`);
+      }}
     />
   );
 }

@@ -26,6 +26,8 @@ export type PremiumInputData = {
 
 type Props = {
   onGenerate: (data: PremiumInputData) => void;
+  onSkipAI?: (destination: string, dateRange: DateRange | undefined) => void;
+  initialDestination?: string;
 };
 
 /* ─── Constants ───────────────────────────────────── */
@@ -60,8 +62,8 @@ const MAX_VIBES = 3;
 
 /* ─── Component ───────────────────────────────────── */
 
-export function PremiumTripInput({ onGenerate }: Props) {
-  const [destination, setDestination] = useState("");
+export function PremiumTripInput({ onGenerate, onSkipAI, initialDestination }: Props) {
+  const [destination, setDestination] = useState(initialDestination ?? "");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [travelParty, setTravelParty] = useState<TravelParty | null>(null);
   const [kidsAges, setKidsAges] = useState("");
@@ -313,6 +315,16 @@ export function PremiumTripInput({ onGenerate }: Props) {
             <p className="text-xs text-muted-foreground text-center mt-1.5">
               Add a destination and dates to continue
             </p>
+          )}
+          {onSkipAI && (
+            <button
+              type="button"
+              onClick={() => canGenerate && onSkipAI(destination.trim(), dateRange)}
+              disabled={!canGenerate}
+              className="mt-2 w-full text-center text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Skip AI — create manually
+            </button>
           )}
         </div>
       </div>

@@ -25,6 +25,7 @@ const TripSection = lazy(() => import("./pages/TripSection"));
 const AIPlan = lazy(() => import("./pages/AIPlan"));
 const Decisions = lazy(() => import("./pages/Decisions"));
 const Itinerary = lazy(() => import("./pages/Itinerary"));
+const Ideas = lazy(() => import("./pages/Ideas"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const More = lazy(() => import("./pages/More"));
 const InviteRedeem = lazy(() => import("./pages/InviteRedeem"));
@@ -157,6 +158,7 @@ function AppInner() {
                 <Route path="/app/trips/:tripId/:section" element={<TripSection />} />
                 <Route path="/app/decisions" element={<Decisions />} />
                 <Route path="/app/itinerary" element={<Itinerary />} />
+                <Route path="/app/ideas" element={<Ideas />} />
                 <Route path="/app/expenses" element={<Expenses />} />
                 <Route path="/app/more" element={<More />} />
               </Route>

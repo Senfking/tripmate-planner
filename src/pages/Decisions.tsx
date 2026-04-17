@@ -3,14 +3,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { CircleCheck, Vote, MapPin, CalendarDays, MessageSquare, ArrowRight, Plane } from "lucide-react";
+import { CircleCheck, Vote, MapPin, CalendarDays, ArrowRight, Plane } from "lucide-react";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 import { DesktopFooter } from "@/components/DesktopFooter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
 const typeConfig = {
-  vibe: { label: "Vibe Board", icon: MessageSquare },
   destination: { label: "Destination vote", icon: MapPin },
   date: { label: "Date vote", icon: CalendarDays },
   poll: { label: "Group poll", icon: Vote },
@@ -114,10 +113,8 @@ const Decisions = () => {
   if (!isLoading && items.length > 0) {
     const destVotes = items.filter((i) => i.type === "destination" || i.type === "date").length;
     const pollVotes = items.filter((i) => i.type === "poll").length;
-    const vibeVotes = items.filter((i) => i.type === "vibe").length;
     if (destVotes > 0) pills.push({ icon: <MapPin className="h-3 w-3" />, label: `${destVotes} trip vote${destVotes !== 1 ? "s" : ""}` });
     if (pollVotes > 0) pills.push({ icon: <Vote className="h-3 w-3" />, label: `${pollVotes} poll${pollVotes !== 1 ? "s" : ""}` });
-    if (vibeVotes > 0) pills.push({ icon: <MessageSquare className="h-3 w-3" />, label: `${vibeVotes} vibe check${vibeVotes !== 1 ? "s" : ""}` });
   }
 
   if (isLoading) {
@@ -161,7 +158,6 @@ const Decisions = () => {
               <Link
                 key={item.id}
                 to={`/app/trips/${item.tripId}/decisions?scrollTo=${{
-                  vibe: "vibe",
                   destination: "where",
                   date: "where",
                   poll: "polls",
