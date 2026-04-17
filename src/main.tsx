@@ -48,19 +48,15 @@ if ("serviceWorker" in navigator) {
   } else {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" }).then((reg) => {
-        // Proactively check for updates when the user returns to the app
+        let lastSwCheck = 0;
         document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") {
+          if (document.visibilityState === "visible" && Date.now() - lastSwCheck > 3600000) {
+            lastSwCheck = Date.now();
             reg.update().catch(() => {});
           }
         });
       }).catch((err) => {
         console.error("[SW] Registration failed:", err);
-      });
-
-      // Auto-reload when a new SW takes control (skipWaiting was called)
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        window.location.reload();
       });
     });
   }
