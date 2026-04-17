@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -45,7 +45,6 @@ export function useExpenses(tripId: string) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [refreshingRates, setRefreshingRates] = useState(false);
-  const hasLoadedOnceRef = useRef(false);
 
   // Fetch expenses
   const expensesQuery = useQuery({
@@ -376,10 +375,6 @@ export function useExpenses(tripId: string) {
     }
   };
 
-  if (expensesQuery.data !== undefined && membersQuery.data !== undefined && settlementQuery.data !== undefined) {
-    hasLoadedOnceRef.current = true;
-  }
-
   return {
     expenses: expensesQuery.data || [],
     splits: splitsQuery.data || [],
@@ -399,10 +394,6 @@ export function useExpenses(tripId: string) {
     // the auth-init race where user=null briefly disables queries but isPending
     // stays true, causing permanent skeletons on first load.
     isLoading: expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading,
-    // True only when we have NEVER successfully loaded expenses. Stays false during
-    // background refetches (e.g. window-focus refetch), so visible content is never
-    // replaced by skeletons once data has been seen.
-    hasLoadedOnce: hasLoadedOnceRef.current,
     isError: expensesQuery.isError || membersQuery.isError || settlementQuery.isError,
     refetch: async () => {
       await Promise.all([
