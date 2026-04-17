@@ -311,8 +311,8 @@ function LineItemRowEditable({
       "group/item rounded-lg border px-2.5 py-1 space-y-0.5 transition-colors",
       isClaimed || myQty > 0 ? "border-primary/40 bg-primary/[0.04]" : "border-border",
     )}>
-      <div className="flex items-center gap-2">
-        {/* Mine toggle + Assign link for single-qty items (only when NOT editing) */}
+      <div className="flex items-center gap-2 min-h-[40px]">
+        {/* Mine toggle for single-qty items (always visible). Assign link only in edit mode. */}
         {!isMultiQty && !canEdit && (
           <div className="flex items-center gap-1 shrink-0">
             <button
@@ -328,13 +328,15 @@ function LineItemRowEditable({
             >
               {isClaimed ? "✓ Mine" : "Mine"}
             </button>
-            <button
-              type="button"
-              onClick={() => setAssignOpen(true)}
-              className="text-[10px] font-medium text-primary hover:underline px-1 py-0.5 min-h-[24px]"
-            >
-              Assign
-            </button>
+            {editMode && (
+              <button
+                type="button"
+                onClick={() => setAssignOpen(true)}
+                className="text-[10px] font-medium text-primary hover:underline px-1 py-0.5 min-h-[24px]"
+              >
+                Assign
+              </button>
+            )}
           </div>
         )}
 
