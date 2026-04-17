@@ -74,19 +74,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
+        const newUserId = newSession?.user?.id ?? null;
+
+        // Preserve the user reference when identity hasn't changed.
+        // TOKEN_REFRESHED (fires on tab focus / near-expiry) hands us a NEW
+        // User object with the same id — replacing it churns every useAuth()
+        // consumer and cascades through ProtectedRoute → AppLayout → Outlet,
+        // which unmounts the active route component (e.g. ExpensesTab).
+        setUser((prev) => {
+          if (newUserId && prev?.id === newUserId) return prev;
+          return newSession?.user ?? null;
+        });
+        setSession((prev) => {
+          if (newUserId && prev?.user?.id === newUserId && newSession) {
+            // Same identity — keep prior reference to avoid cascading memo
+            // invalidations. The access_token inside Supabase's internal state
+            // is already updated; consumers that need the fresh token read it
+            // via supabase.auth.getSession() or the client's own calls.
+            return prev;
+          }
+          return newSession;
+        });
+
         if (newSession?.user) {
-          setTimeout(() => fetchProfile(newSession.user.id), 0);
+          // Skip profile refetch on TOKEN_REFRESHED for the same user — the
+          // profile can't have changed just because the JWT rotated, and the
+          // redundant fetch adds another render cycle on every tab focus.
+          if (event !== "TOKEN_REFRESHED") {
+            setTimeout(() => fetchProfile(newSession.user.id), 0);
+          }
         } else {
           setProfile(null);
         }
         setLoading(false);
 
-        // When a session becomes available (sign-in or token refresh), flush
-        // any queries that may have been cached with empty/stale results while
-        // auth was not yet established or the JWT was expired.
-        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        // Only flush caches on fresh sign-in, when queries may have been
+        // populated without auth. TOKEN_REFRESHED means auth was already
+        // valid — blanket invalidation here triggers a storm of refetches
+        // on every tab focus and contributes to the unmount race above.
+        if (event === "SIGNED_IN") {
           queryClient.invalidateQueries();
         }
       }

@@ -87,11 +87,14 @@ const queryClient = new QueryClient({
 function ExchangeRatePrefetch() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const userId = user?.id;
 
   useEffect(() => {
     // Only prefetch after auth - firing before risks caching empty {} for
     // 1 hour if the table has RLS or the request fails without a valid JWT.
-    if (!user) return;
+    // Key on userId (string), not user (object) — a stable identity shouldn't
+    // retrigger this effect when the User reference changes on TOKEN_REFRESHED.
+    if (!userId) return;
 
     qc.prefetchQuery({
       queryKey: ["exchange-rates", "EUR"],
@@ -108,7 +111,7 @@ function ExchangeRatePrefetch() {
       },
       staleTime: 1000 * 60 * 60,
     });
-  }, [qc, user]);
+  }, [qc, userId]);
 
   return null;
 }
