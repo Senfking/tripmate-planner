@@ -59,13 +59,13 @@ export function InlineExpenseHeader({
   const [notesExpanded, setNotesExpanded] = useState(false);
 
   return (
-    <div className="space-y-1.5">
-      {/* Title — full, no truncation. Editable in edit mode. */}
-      {editMode ? (
+    <div className="space-y-1.5 text-muted-foreground">
+      {/* Title — only editable in edit mode (header card already shows it). Hidden when not editing. */}
+      {editMode && (
         <Row label="Title" fullWidth>
           <EditableField
             showAffordance
-            display={<span className="text-sm font-medium break-words">{expense.title}</span>}
+            display={<span className="text-sm font-medium break-words text-foreground">{expense.title}</span>}
             editor={({ commit, cancel }) => (
               <TextEditor value={titleDraft} onChange={setTitleDraft} onCommit={commit} onCancel={cancel} className="w-full" />
             )}
@@ -79,11 +79,9 @@ export function InlineExpenseHeader({
             className="w-full"
           />
         </Row>
-      ) : (
-        <p className="text-sm font-medium text-foreground break-words leading-snug">{expense.title}</p>
       )}
 
-      {/* Compact 2-column label/value grid */}
+      {/* Compact 2-column label/value grid — visually muted (reference info) */}
       <dl className="grid grid-cols-2 gap-x-2 gap-y-0.5">
         {/* Amount */}
         <Row label="Amount">
