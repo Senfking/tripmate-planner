@@ -104,12 +104,15 @@ export default function TripSection() {
     enabled: !!tripId && !!user && section === "plan",
   });
 
-  if (isLoading || !trip) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (!trip) {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+    return null;
   }
 
   if (!section || !SECTION_TITLES[section]) {

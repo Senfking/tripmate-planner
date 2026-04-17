@@ -292,7 +292,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       }))
     : undefined;
 
-  if (isLoading) {
+  if (isLoading && expenses.length === 0) {
     return (
       <div className="space-y-4">
         {/* Hero card skeleton — uses the real teal gradient with translucent placeholders */}
