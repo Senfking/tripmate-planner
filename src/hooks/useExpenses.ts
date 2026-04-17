@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,6 +60,7 @@ export function useExpenses(tripId: string) {
       return data as ExpenseRow[];
     },
     enabled: !!tripId && !!user,
+    placeholderData: keepPreviousData,
   });
 
   // Fetch all splits for this trip's expenses
@@ -110,6 +111,7 @@ export function useExpenses(tripId: string) {
       })) as MemberProfile[];
     },
     enabled: !!tripId && !!user,
+    placeholderData: keepPreviousData,
   });
 
   // Fetch settlement currency from trip
@@ -125,6 +127,7 @@ export function useExpenses(tripId: string) {
       return (data as any).settlement_currency as string || "EUR";
     },
     enabled: !!tripId && !!user,
+    placeholderData: keepPreviousData,
   });
 
   // Exchange rates: DB cache first, then live API fallback
