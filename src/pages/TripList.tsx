@@ -759,9 +759,12 @@ export default function TripList() {
     );
   }
 
-  /* ── Separate live vs rest ── */
+  /* ── Group trips by section ── */
   const liveTrip = trips.find((t) => t.statusInfo.status === "live");
-  const otherTrips = trips.filter((t) => t !== liveTrip);
+  const upcomingTrips = trips.filter(
+    (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming" || t.statusInfo.status === "no-dates")
+  );
+  const pastTrips = trips.filter((t) => t.statusInfo.status === "ended");
 
   return (
     <div className="relative min-h-dvh flex flex-col bg-background">
