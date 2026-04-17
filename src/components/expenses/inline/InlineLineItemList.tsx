@@ -701,7 +701,7 @@ function SharedCostRow({ sharedTotal, currency }: { sharedTotal: number; currenc
       <div className="flex items-center justify-between gap-2 px-2.5 py-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
-          <p className="text-[12px] font-medium truncate">Taxes & service (auto-split)</p>
+          <p className="text-[12px] font-medium truncate">Taxes & service</p>
           <button
             type="button"
             aria-label="How is this split?"
