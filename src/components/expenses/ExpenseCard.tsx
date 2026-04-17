@@ -9,7 +9,7 @@ import {
   Utensils, Car, Hotel, Ticket, ShoppingBag, MoreHorizontal,
   ArrowLeftRight, Trash2, Receipt, Pencil, Check,
 } from "lucide-react";
-import { format } from "date-fns";
+
 import { InlineExpenseHeader } from "./inline/InlineExpenseHeader";
 import { InlineLineItemList } from "./inline/InlineLineItemList";
 
