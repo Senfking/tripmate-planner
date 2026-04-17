@@ -736,13 +736,6 @@ export default function TripList() {
             or plan step by step
           </button>
 
-          <button
-            onClick={() => navigate("/app/trips/new?mode=manual")}
-            className="mt-1.5 text-xs text-muted-foreground bg-transparent border-none cursor-pointer hover:text-foreground transition-colors"
-          >
-            or create trip manually
-          </button>
-
           <div className="w-full h-px bg-border my-6" />
 
           <button

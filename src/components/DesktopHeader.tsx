@@ -1,13 +1,12 @@
-import { Map, Vote, CalendarDays, DollarSign } from "lucide-react";
+import { Map, CalendarDays, Lightbulb, DollarSign } from "lucide-react";
 import { BetaBadge } from "@/components/BetaBadge";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
 
 const tabs = [
   { label: "Trips", to: "/app/trips", icon: Map },
-  { label: "Decisions", to: "/app/decisions", icon: Vote },
   { label: "Itinerary", to: "/app/itinerary", icon: CalendarDays },
+  { label: "Ideas", to: "/app/ideas", icon: Lightbulb },
   { label: "Expenses", to: "/app/expenses", icon: DollarSign },
 ];
 
@@ -36,8 +35,6 @@ function HeaderAvatar() {
 
 export function DesktopHeader() {
   const { pathname } = useLocation();
-  const { data } = useGlobalDecisions();
-  const pendingCount = data?.pendingCount ?? 0;
 
   // Inside a trip detail → slim mode (no nav tabs)
   const isTripDetail = /^\/app\/trips\/[^/]+/.test(pathname) && pathname !== "/app/trips/new";
@@ -109,11 +106,6 @@ export function DesktopHeader() {
                   >
                     <tab.icon className="h-3.5 w-3.5" />
                     <span>{tab.label}</span>
-                    {tab.to === "/app/decisions" && pendingCount > 0 && (
-                      <span className="ml-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-emerald-400 px-1 text-[9px] font-bold text-emerald-950">
-                        {pendingCount > 99 ? "99+" : pendingCount}
-                      </span>
-                    )}
                   </Link>
                 );
               })}

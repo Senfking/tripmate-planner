@@ -1,7 +1,6 @@
-import { Map, Vote, CalendarDays, DollarSign, MoreHorizontal } from "lucide-react";
+import { Map, CalendarDays, Lightbulb, DollarSign, MoreHorizontal } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
-import { useGlobalDecisions } from "@/hooks/useGlobalDecisions";
 import {
   Sidebar,
   SidebarContent,
@@ -15,8 +14,8 @@ import {
 
 const items = [
   { title: "Trips", url: "/app/trips", icon: Map },
-  { title: "Decisions", url: "/app/decisions", icon: Vote },
   { title: "Itinerary", url: "/app/itinerary", icon: CalendarDays },
+  { title: "Ideas", url: "/app/ideas", icon: Lightbulb },
   { title: "Expenses", url: "/app/expenses", icon: DollarSign },
   { title: "More", url: "/app/more", icon: MoreHorizontal },
 ];
@@ -25,8 +24,6 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
-  const { data } = useGlobalDecisions();
-  const pendingCount = data?.pendingCount ?? 0;
 
   return (
     <Sidebar collapsible="icon" className="hidden border-r border-sidebar-border md:!hidden">
@@ -65,11 +62,6 @@ export function AppSidebar() {
                       >
                         <item.icon className="h-[18px] w-[18px] shrink-0" />
                         {!collapsed && <span>{item.title}</span>}
-                        {item.url === "/app/decisions" && pendingCount > 0 && !collapsed && (
-                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
-                            {pendingCount > 99 ? "99+" : pendingCount}
-                          </span>
-                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

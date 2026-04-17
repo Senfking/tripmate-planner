@@ -299,16 +299,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     enabled: !!userId && !!pollOptions?.length,
   });
 
-  const { data: myVibeResponses } = useQuery({
-    queryKey: ["my-vibe-responses-count", tripId, userId],
-    queryFn: async () => {
-      const { count, error } = await supabase.from("vibe_responses").select("id", { count: "exact", head: true }).eq("trip_id", tripId).eq("user_id", userId!);
-      if (error) throw error;
-      return count ?? 0;
-    },
-    enabled: !!userId,
-  });
-
   const unreactedProposals = (proposals?.length ?? 0) - (myReactions?.length ?? 0);
   const unvotedDateOptions = (dateOptions?.length ?? 0) - (myDateVotes?.length ?? 0);
   const votedPollOptionIds = new Set(myPollVotes?.map((v) => v.poll_option_id) ?? []);
@@ -321,7 +311,6 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   const decisionsBadge = (() => {
     if (tripEnded) return { label: "Trip ended", color: "grey" as const };
-    if ((myVibeResponses ?? 0) === 0) return { label: "Vibe pending", color: "amber" as const };
     if (pendingVoteCount > 0) return { label: `${pendingVoteCount} pending`, color: "amber" as const };
     if (routeLocked) return { label: "Route confirmed", color: "teal" as const };
     return { label: "Not started", color: "grey" as const };
