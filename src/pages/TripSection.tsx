@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,21 @@ export default function TripSection() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { connectionStatus, newItemIds } = useTripRealtime(tripId);
+
+  useEffect(() => {
+    const ts = () => new Date().toISOString().slice(11, 23);
+    // eslint-disable-next-line no-console
+    console.log(`[junto-mount ${ts()}] TripSection MOUNT`, { tripId, section, visible: document.visibilityState });
+    return () => {
+      // eslint-disable-next-line no-console
+      console.log(`[junto-mount ${ts()}] TripSection UNMOUNT`, { tripId, section, visible: document.visibilityState });
+    };
+  }, []);
+
+  if (!tripId) {
+    // eslint-disable-next-line no-console
+    console.log(`[junto-mount ${new Date().toISOString().slice(11, 23)}] TripSection RENDER with tripId=undefined`, { section, path: window.location.pathname });
+  }
 
   const { data: trip, isLoading } = useQuery({
     queryKey: ["trip", tripId],

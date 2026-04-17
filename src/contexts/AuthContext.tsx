@@ -75,6 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         const newUserId = newSession?.user?.id ?? null;
+        const ts = new Date().toISOString().slice(11, 23);
+        // eslint-disable-next-line no-console
+        console.log(`[junto-mount ${ts}] AuthContext onAuthStateChange`, { event, newUserId, visible: document.visibilityState });
 
         // Preserve the user reference when identity hasn't changed.
         // TOKEN_REFRESHED (fires on tab focus / near-expiry) hands us a NEW
