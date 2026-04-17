@@ -96,7 +96,7 @@ export function ExpenseCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-[15px] leading-snug truncate text-foreground">{expense.title}</p>
+              <p className="font-medium text-[15px] leading-snug line-clamp-2 text-foreground">{expense.title}</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">
                 {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
               </p>
@@ -211,7 +211,8 @@ function ExpandedDetail({
           isToggling={toggleClaim.isPending}
         />
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1 pt-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Per person</p>
           {splits.map((s) => {
             const member = members.find((m) => m.userId === s.user_id);
             const isDifferent = expense.currency !== settlementCurrency;

@@ -59,13 +59,13 @@ export function InlineExpenseHeader({
   const [notesExpanded, setNotesExpanded] = useState(false);
 
   return (
-    <div className="space-y-2">
-      {/* Title — only shown as editable row in edit mode (header card already shows it statically) */}
-      {editMode && (
+    <div className="space-y-1.5">
+      {/* Title — full, no truncation. Editable in edit mode. */}
+      {editMode ? (
         <Row label="Title" fullWidth>
           <EditableField
             showAffordance
-            display={<span className="text-sm font-medium truncate">{expense.title}</span>}
+            display={<span className="text-sm font-medium break-words">{expense.title}</span>}
             editor={({ commit, cancel }) => (
               <TextEditor value={titleDraft} onChange={setTitleDraft} onCommit={commit} onCancel={cancel} className="w-full" />
             )}
@@ -79,10 +79,12 @@ export function InlineExpenseHeader({
             className="w-full"
           />
         </Row>
+      ) : (
+        <p className="text-sm font-medium text-foreground break-words leading-snug">{expense.title}</p>
       )}
 
       {/* Compact 2-column label/value grid */}
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+      <dl className="grid grid-cols-2 gap-x-2 gap-y-0.5">
         {/* Amount */}
         <Row label="Amount">
           {hasLineItems ? (
@@ -216,15 +218,15 @@ export function InlineExpenseHeader({
 
       {/* Notes — full width, always truncated to 1 line, expandable on tap */}
       {(expense.notes || editMode) && (
-        <div className="pt-1">
+        <div className="pt-0.5">
           {editMode ? (
             <EditableField
               showAffordance
               display={
                 expense.notes ? (
-                  <span className="text-sm text-muted-foreground italic block truncate">{expense.notes}</span>
+                  <span className="text-xs text-muted-foreground italic block truncate">{expense.notes}</span>
                 ) : (
-                  <span className="text-sm text-muted-foreground/60 italic">Add a note…</span>
+                  <span className="text-xs text-muted-foreground/60 italic">Add a note…</span>
                 )
               }
               editor={({ commit, cancel }) => (
@@ -244,7 +246,7 @@ export function InlineExpenseHeader({
               type="button"
               onClick={() => setNotesExpanded((v) => !v)}
               className={cn(
-                "text-sm text-muted-foreground italic text-left w-full",
+                "text-xs text-muted-foreground italic text-left w-full",
                 !notesExpanded && "truncate block",
               )}
             >
@@ -261,9 +263,9 @@ export function InlineExpenseHeader({
 
 function Row({ label, children, fullWidth }: { label: string; children: React.ReactNode; fullWidth?: boolean }) {
   return (
-    <div className={cn("flex flex-col min-w-0 gap-0.5", fullWidth && "col-span-2")}>
-      <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">{label}</dt>
-      <dd className="min-w-0 text-foreground">{children}</dd>
+    <div className={cn("flex flex-col min-w-0", fullWidth && "col-span-2")}>
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 leading-tight">{label}</dt>
+      <dd className="min-w-0 text-foreground leading-tight">{children}</dd>
     </div>
   );
 }
