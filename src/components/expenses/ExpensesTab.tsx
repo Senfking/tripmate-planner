@@ -33,7 +33,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
     ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
-    cachedCurrencyCodes, itineraryItems, isLoading, isError, refetch,
+    cachedCurrencyCodes, itineraryItems, isLoading, hasLoadedOnce, isError, refetch,
     isFetchingExpenses, isExpensesSuccess,
     updateSettlementCurrency, addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
