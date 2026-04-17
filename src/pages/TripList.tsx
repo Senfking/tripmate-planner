@@ -700,30 +700,32 @@ export default function TripList() {
             Describe your dream trip and let Junto AI plan it for you
           </p>
 
-          {/* Destination input + Generate button */}
-          <div className="w-full mt-5 flex gap-2">
-            <Input
-              value={emptyDestination}
-              onChange={(e) => setEmptyDestination(e.target.value)}
-              placeholder="e.g. Bali, Tokyo, Barcelona..."
-              className="flex-1 h-12 rounded-xl bg-white border-border shadow-sm text-[15px]"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && emptyDestination.trim()) {
-                  setBuilderInitDest(emptyDestination.trim());
-                  setShowBuilder(true);
-                }
-              }}
-            />
+          {/* Landing-style rotating input */}
+          <div className="w-full mt-5">
+            <div
+              className="relative rounded-2xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-border overflow-hidden"
+            >
+              <RotatingPlaceholder
+                value={emptyDestination}
+                onChange={setEmptyDestination}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && emptyDestination.trim()) {
+                    setBuilderInitDest(emptyDestination.trim());
+                    setShowBuilder(true);
+                  }
+                }}
+              />
+            </div>
             <Button
               onClick={() => {
                 setBuilderInitDest(emptyDestination.trim());
                 setShowBuilder(true);
               }}
-              className="h-12 px-5 rounded-xl font-semibold text-white text-sm shrink-0"
+              className="w-full mt-2.5 h-12 rounded-xl font-semibold text-white text-sm"
               style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
             >
               <Sparkles className="h-4 w-4 mr-1.5" />
-              Generate
+              Plan with AI
             </Button>
           </div>
 
