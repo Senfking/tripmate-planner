@@ -22,6 +22,7 @@ import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
+import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
@@ -368,6 +369,7 @@ export default function TripList() {
   const [joinError, setJoinError] = useState("");
   const [emptyDestination, setEmptyDestination] = useState("");
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showPast, setShowPast] = useState(false);
   const [builderInitDest, setBuilderInitDest] = useState("");
   const [draftToResume, setDraftToResume] = useState<{ planId: string; result: AITripResult } | null>(null);
   const [referralDismissed, setReferralDismissed] = useState(
@@ -698,30 +700,32 @@ export default function TripList() {
             Describe your dream trip and let Junto AI plan it for you
           </p>
 
-          {/* Destination input + Generate button */}
-          <div className="w-full mt-5 flex gap-2">
-            <Input
-              value={emptyDestination}
-              onChange={(e) => setEmptyDestination(e.target.value)}
-              placeholder="e.g. Bali, Tokyo, Barcelona..."
-              className="flex-1 h-12 rounded-xl bg-white border-border shadow-sm text-[15px]"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && emptyDestination.trim()) {
-                  setBuilderInitDest(emptyDestination.trim());
-                  setShowBuilder(true);
-                }
-              }}
-            />
+          {/* Landing-style rotating input */}
+          <div className="w-full mt-5">
+            <div
+              className="relative rounded-2xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-border overflow-hidden"
+            >
+              <RotatingPlaceholder
+                value={emptyDestination}
+                onChange={setEmptyDestination}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && emptyDestination.trim()) {
+                    setBuilderInitDest(emptyDestination.trim());
+                    setShowBuilder(true);
+                  }
+                }}
+              />
+            </div>
             <Button
               onClick={() => {
                 setBuilderInitDest(emptyDestination.trim());
                 setShowBuilder(true);
               }}
-              className="h-12 px-5 rounded-xl font-semibold text-white text-sm shrink-0"
+              className="w-full mt-2.5 h-12 rounded-xl font-semibold text-white text-sm"
               style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
             >
               <Sparkles className="h-4 w-4 mr-1.5" />
-              Generate
+              Plan with AI
             </Button>
           </div>
 
@@ -759,9 +763,12 @@ export default function TripList() {
     );
   }
 
-  /* ── Separate live vs rest ── */
+  /* ── Group trips by section ── */
   const liveTrip = trips.find((t) => t.statusInfo.status === "live");
-  const otherTrips = trips.filter((t) => t !== liveTrip);
+  const upcomingTrips = trips.filter(
+    (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming" || t.statusInfo.status === "no-dates")
+  );
+  const pastTrips = trips.filter((t) => t.statusInfo.status === "ended");
 
   return (
     <div className="relative min-h-dvh flex flex-col bg-background">
@@ -775,8 +782,8 @@ export default function TripList() {
 
       {/* ── Drafts Section ── */}
       {drafts && drafts.length > 0 && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Drafts</h3>
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Drafts</h3>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {drafts.map((draft: any) => {
               const result = draft.result as AITripResult;
@@ -789,49 +796,130 @@ export default function TripList() {
                 if (startDate && endDate) dateLabel = `${format(parseISO(startDate), "MMM d")} – ${format(parseISO(endDate), "MMM d")}`;
                 else if (startDate) dateLabel = format(parseISO(startDate), "MMM d, yyyy");
               } catch {}
+              const photoUrl = resolvePhoto(destName, []);
 
               return (
-                <div
+                <button
                   key={draft.id}
-                  className="relative shrink-0 w-[200px] rounded-xl border border-border bg-card p-3 shadow-sm"
+                  onClick={() => setDraftToResume({ planId: draft.id, result })}
+                  className="group relative shrink-0 w-[220px] h-[120px] rounded-2xl overflow-hidden shadow-md text-left active:scale-[0.98] transition-transform"
                 >
-                  <button
-                    onClick={() => deleteDraftMutation.mutate(draft.id)}
-                    className="absolute top-2 right-2 h-5 w-5 flex items-center justify-center rounded-full bg-muted hover:bg-destructive/10 transition-colors"
+                  <img
+                    src={photoUrl}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading="lazy"
+                    onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
+                  />
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.30) 55%, rgba(0,0,0,0.10) 100%)",
+                    }}
+                  />
+
+                  {/* Draft badge - top left */}
+                  <span className="absolute left-2.5 top-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+                    Draft
+                  </span>
+
+                  {/* Dismiss - top right */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteDraftMutation.mutate(draft.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        deleteDraftMutation.mutate(draft.id);
+                      }
+                    }}
+                    className="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm hover:bg-destructive/80 transition-colors cursor-pointer"
+                    aria-label="Delete draft"
                   >
-                    <X className="h-3 w-3 text-muted-foreground" />
-                  </button>
-                  <p className="font-semibold text-foreground text-sm truncate pr-5">{destName}</p>
-                  {dateLabel && <p className="text-[11px] text-muted-foreground mt-0.5">{dateLabel}</p>}
-                  <p className="text-[11px] text-muted-foreground">{actCount} activities</p>
-                  <button
-                    onClick={() => setDraftToResume({ planId: draft.id, result })}
-                    className="mt-2 text-xs font-semibold px-3 py-1 rounded-lg"
-                    style={{ color: "#0D9488", background: "rgba(13,148,136,0.08)" }}
-                  >
-                    Continue →
-                  </button>
-                </div>
+                    <X className="h-3.5 w-3.5 text-white" />
+                  </span>
+
+                  {/* Bottom content */}
+                  <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
+                    <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">{destName}</p>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <p className="text-[11px] text-white/75">
+                        {dateLabel || `${actCount} ${actCount === 1 ? "activity" : "activities"}`}
+                      </p>
+                      <span className="text-[11px] font-semibold text-white/90 flex items-center gap-0.5">
+                        Continue <ChevronRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </div>
+                </button>
               );
             })}
           </div>
         </div>
       )}
 
-      <div className={`mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 pb-[100px] md:pb-8 ${drafts && drafts.length > 0 ? '' : 'mt-4 md:mt-0'}`}>
-        {liveTrip && <div className="md:col-span-2"><HeroCard trip={liveTrip} /></div>}
-        {otherTrips.map((trip, i) => (
-          <div
-            key={trip.id}
-            className={
-              otherTrips.length % 2 !== 0 && i === otherTrips.length - 1
-                ? "md:col-span-2"
-                : ""
-            }
-          >
-            <RegularCard trip={trip} />
+      {/* ── Happening now ── */}
+      {liveTrip && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
+          <HeroCard trip={liveTrip} />
+        </div>
+      )}
+
+      {/* ── Coming up ── */}
+      {upcomingTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Coming up</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {upcomingTrips.map((trip, i) => (
+              <div
+                key={trip.id}
+                className={
+                  upcomingTrips.length % 2 !== 0 && i === upcomingTrips.length - 1
+                    ? "md:col-span-2"
+                    : ""
+                }
+              >
+                <RegularCard trip={trip} />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+      )}
+
+      {/* ── Past trips (collapsed by default) ── */}
+      {pastTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
+          <button
+            onClick={() => setShowPast((v) => !v)}
+            className="w-full flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5 py-1"
+          >
+            <span>{showPast ? "Past trips" : `Show past trips (${pastTrips.length})`}</span>
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showPast ? "rotate-90" : ""}`} />
+          </button>
+          {showPast && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 opacity-75">
+              {pastTrips.map((trip, i) => (
+                <div
+                  key={trip.id}
+                  className={
+                    pastTrips.length % 2 !== 0 && i === pastTrips.length - 1
+                      ? "md:col-span-2"
+                      : ""
+                  }
+                >
+                  <RegularCard trip={trip} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 pb-[100px] md:pb-8">
 
         {/* Join a trip row */}
         <button
