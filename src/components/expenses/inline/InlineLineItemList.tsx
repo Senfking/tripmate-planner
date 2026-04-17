@@ -161,6 +161,8 @@ export function InlineLineItemList({
                 onDelete={() => handleDelete(item)}
                 onToggleClaim={() => toggleClaim(item.id)}
                 onSetClaimQty={(q) => setClaimQuantity(item.id, q)}
+                onToggleClaimForUser={(uid) => Promise.resolve(toggleClaim(item.id, uid))}
+                onSetClaimQtyForUser={(uid, q) => setClaimQuantity(item.id, q, uid)}
               />
             ))}
           </ul>
