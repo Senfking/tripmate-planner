@@ -139,10 +139,11 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
 
   /** Toggle claim for quantity=1 items (backward-compatible binary toggle) */
   const toggleClaim = useMutation({
-    mutationFn: async (lineItemId: string) => {
+    mutationFn: async ({ lineItemId, userId }: { lineItemId: string; userId?: string }) => {
       if (!user || !expenseId) throw new Error("Not authenticated");
+      const targetUserId = userId ?? user.id;
       const existing = claimsQuery.data?.find(
-        (c) => c.line_item_id === lineItemId && c.user_id === user.id
+        (c) => c.line_item_id === lineItemId && c.user_id === targetUserId
       );
       if (existing) {
         const { error } = await supabase
@@ -155,7 +156,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
         // This keeps toggleClaim working even before the migration is applied.
         const { error } = await supabase
           .from("expense_line_item_claims")
-          .insert({ line_item_id: lineItemId, user_id: user.id });
+          .insert({ line_item_id: lineItemId, user_id: targetUserId });
         if (error) throw error;
       }
     },
@@ -176,13 +177,14 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
    * local claims cache is stale (e.g. rapid clicks before refetch).
    */
   const setClaimQuantity = useMutation({
-    mutationFn: async ({ lineItemId, quantity }: { lineItemId: string; quantity: number }) => {
+    mutationFn: async ({ lineItemId, quantity, userId }: { lineItemId: string; quantity: number; userId?: string }) => {
       if (!user || !expenseId) throw new Error("Not authenticated");
+      const targetUserId = userId ?? user.id;
 
       if (quantity <= 0) {
         // Remove claim — need to find the row to delete
         const existing = claimsQuery.data?.find(
-          (c) => c.line_item_id === lineItemId && c.user_id === user.id
+          (c) => c.line_item_id === lineItemId && c.user_id === targetUserId
         );
         if (existing) {
           const { error } = await supabase
@@ -196,7 +198,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
             .from("expense_line_item_claims")
             .delete()
             .eq("line_item_id", lineItemId)
-            .eq("user_id", user.id);
+            .eq("user_id", targetUserId);
           if (error) throw error;
         }
       } else {
@@ -208,7 +210,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
           .upsert(
             {
               line_item_id: lineItemId,
-              user_id: user.id,
+              user_id: targetUserId,
               claimed_quantity: quantity,
             } as any,
             { onConflict: "line_item_id,user_id" }
