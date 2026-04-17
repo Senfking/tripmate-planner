@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { trackEvent } from "@/lib/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExpenses, ExpenseRow } from "@/hooks/useExpenses";
@@ -29,7 +29,6 @@ interface Props {
 
 export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const location = useLocation();
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
@@ -38,8 +37,6 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     isFetchingExpenses, isExpensesSuccess,
     updateSettlementCurrency, addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
-  const hasCachedExpenses = queryClient.getQueryData(["expenses", tripId]) !== undefined;
-
   const { data: trip } = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async () => {
@@ -297,7 +294,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   // Skeletons ONLY on the very first load (no cached data anywhere). After data has been
   // seen once, background refetches (window focus, realtime invalidations) keep the prior
   // content visible — never replace it with skeletons.
-  if (!hasCachedExpenses && isLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         {/* Hero card skeleton — uses the real teal gradient with translucent placeholders */}
@@ -689,7 +686,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
               Tap "Add Expense" to start tracking costs
             </p>
           </div>
-        ) : expenses.length === 0 && !hasCachedExpenses && isLoading ? (
+        ) : expenses.length === 0 && isLoading ? (
           /* Still fetching — show inline skeleton rows */
           <div>
             <div className="px-4 py-3 flex items-center justify-between">
