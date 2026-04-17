@@ -206,8 +206,8 @@ function ExpandedDetail({
           claims={claims}
           canEdit={canModify}
           editMode={editMode}
-          toggleClaim={(id) => toggleClaim.mutate({ lineItemId: id })}
-          setClaimQuantity={(id, qty) => setClaimQuantity.mutateAsync({ lineItemId: id, quantity: qty })}
+          toggleClaim={(id, userId) => toggleClaim.mutate({ lineItemId: id, userId })}
+          setClaimQuantity={(id, qty, userId) => setClaimQuantity.mutateAsync({ lineItemId: id, quantity: qty, userId })}
           isToggling={toggleClaim.isPending}
         />
       ) : (
