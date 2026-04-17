@@ -231,6 +231,7 @@ export function InlineLineItemList({
 function LineItemRowEditable({
   item, claims, members, currency, currentUserId, canEdit, isToggling,
   onRename, onChangeQty, onChangeUnitPrice, onDelete, onToggleClaim, onSetClaimQty,
+  onToggleClaimForUser, onSetClaimQtyForUser,
 }: {
   item: LineItemRow;
   claims: ClaimRow[];
@@ -245,10 +246,13 @@ function LineItemRowEditable({
   onDelete: () => void;
   onToggleClaim: () => void;
   onSetClaimQty: (q: number) => Promise<void>;
+  onToggleClaimForUser: (userId: string) => Promise<void>;
+  onSetClaimQtyForUser: (userId: string, q: number) => Promise<void>;
 }) {
   const [nameDraft, setNameDraft] = useState(item.name);
   const [qtyDraft, setQtyDraft] = useState(String(item.quantity));
   const [priceDraft, setPriceDraft] = useState(String(item.unit_price));
+  const [assignOpen, setAssignOpen] = useState(false);
 
   const isMultiQty = item.quantity > 1;
   const myClaim = claims.find((c) => c.user_id === currentUserId);
@@ -259,27 +263,52 @@ function LineItemRowEditable({
   const maxClaimable = myQty + remaining;
   const isClaimed = !isMultiQty && claims.some((c) => c.user_id === currentUserId);
 
+  // Build "Oliver: 2, Sarah: 3, You: 2" style summary for multi-qty items
+  const summaryParts: string[] = [];
+  if (isMultiQty) {
+    for (const c of claims) {
+      if (claimQty(c) <= 0) continue;
+      const m = members.find((mm) => mm.userId === c.user_id);
+      const name = c.user_id === currentUserId ? "You" : (m?.displayName?.split(" ")[0] || "?");
+      summaryParts.push(`${name}: ${claimQty(c)}`);
+    }
+  }
+
+  // For single-qty multi-claimer: overlapping avatars (max 3 + overflow)
+  const singleClaimers = !isMultiQty ? claims.filter((c) => claimQty(c) > 0) : [];
+  const visibleClaimers = singleClaimers.slice(0, 3);
+  const overflow = singleClaimers.length - visibleClaimers.length;
+
   return (
     <li className={cn(
       "group/item rounded-lg border px-2.5 py-1 space-y-0.5 transition-colors",
       isClaimed || myQty > 0 ? "border-primary/40 bg-primary/[0.04]" : "border-border",
     )}>
       <div className="flex items-center gap-2">
-        {/* Mine toggle for single-qty items (only when NOT editing) */}
+        {/* Mine toggle + Assign link for single-qty items (only when NOT editing) */}
         {!isMultiQty && !canEdit && (
-          <button
-            type="button"
-            disabled={isToggling}
-            onClick={onToggleClaim}
-            className={cn(
-              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all border min-h-[24px]",
-              isClaimed
-                ? "bg-primary/15 text-primary border-primary/30"
-                : "bg-muted text-muted-foreground border-border hover:border-primary/30 hover:text-primary",
-            )}
-          >
-            {isClaimed ? "✓ Mine" : "Mine"}
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              disabled={isToggling}
+              onClick={onToggleClaim}
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-medium transition-all border min-h-[24px]",
+                isClaimed
+                  ? "bg-primary/15 text-primary border-primary/30"
+                  : "bg-muted text-muted-foreground border-border hover:border-primary/30 hover:text-primary",
+              )}
+            >
+              {isClaimed ? "✓ Mine" : "Mine"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssignOpen(true)}
+              className="text-[10px] font-medium text-primary hover:underline px-1 py-0.5 min-h-[24px]"
+            >
+              Assign
+            </button>
+          </div>
         )}
 
         {/* Quantity prefix — separate from name, editable in edit mode */}
@@ -350,28 +379,53 @@ function LineItemRowEditable({
           itemTotalQty={item.quantity}
           totalClaimedExcludingMe={totalClaimed - myQty}
           onCommit={onSetClaimQty}
+          onAssignOthers={!canEdit ? () => setAssignOpen(true) : undefined}
         />
       )}
 
-      {/* Other claimers */}
-      {otherClaims.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-          {otherClaims.map((c) => {
-            const m = members.find((mm) => mm.userId === c.user_id);
-            return (
-              <div key={c.id} className="flex items-center gap-1">
-                <Avatar className="h-4 w-4 border border-background">
+      {/* Summary line for multi-qty items */}
+      {isMultiQty && summaryParts.length > 0 && (
+        <p className="text-[11px] text-muted-foreground truncate">
+          {summaryParts.join(", ")}
+        </p>
+      )}
+
+      {/* Single-qty: overlapping avatars when other members also claimed */}
+      {!isMultiQty && singleClaimers.length > 1 && (
+        <div className="flex items-center gap-1.5">
+          <div className="flex -space-x-1.5">
+            {visibleClaimers.map((c) => {
+              const m = members.find((mm) => mm.userId === c.user_id);
+              return (
+                <Avatar key={c.id} className="h-4 w-4 border border-background">
                   {m?.avatarUrl && <AvatarImage src={m.avatarUrl} alt={m.displayName} />}
-                  <AvatarFallback className="text-[7px] bg-primary/10 text-primary">{getInitials(m?.displayName || "?")}</AvatarFallback>
+                  <AvatarFallback className="text-[7px] bg-primary/10 text-primary">
+                    {getInitials(m?.displayName || "?")}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="text-[10px] text-muted-foreground">
-                  {m?.displayName?.split(" ")[0] || "?"}{isMultiQty ? `: ${claimQty(c)}` : ""}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {overflow > 0 && (
+            <span className="text-[10px] text-muted-foreground">+{overflow}</span>
+          )}
+          <span className="text-[10px] text-muted-foreground">split equally</span>
         </div>
       )}
+
+      {/* Assign sheet */}
+      <AssignSheet
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
+        itemName={item.name}
+        itemQuantity={item.quantity}
+        members={members}
+        claims={claims}
+        currentUserId={currentUserId}
+        {...(isMultiQty
+          ? { mode: "multi" as const, onSetQuantityForUser: onSetClaimQtyForUser }
+          : { mode: "single" as const, onToggleForUser: onToggleClaimForUser })}
+      />
     </li>
   );
 }
