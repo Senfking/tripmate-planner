@@ -642,12 +642,23 @@ function ClaimStepper({
           <Plus className="h-3.5 w-3.5" />
         </button>
       </div>
-      <span className={cn(
-        "text-[10px] tabular-nums whitespace-nowrap",
-        remainingDisplay === 0 ? "text-muted-foreground" : "text-primary",
-      )}>
-        {remainingDisplay === 0 ? `All ${itemTotalQty} claimed` : `${remainingDisplay} of ${itemTotalQty} unclaimed`}
-      </span>
+      <div className="flex items-center gap-2 ml-auto">
+        {onAssignOthers && (
+          <button
+            type="button"
+            onClick={onAssignOthers}
+            className="text-[10px] font-medium text-primary hover:underline"
+          >
+            Assign others
+          </button>
+        )}
+        <span className={cn(
+          "text-[10px] tabular-nums whitespace-nowrap",
+          remainingDisplay === 0 ? "text-muted-foreground" : "text-primary",
+        )}>
+          {remainingDisplay === 0 ? `All ${itemTotalQty} claimed` : `${remainingDisplay} of ${itemTotalQty} unclaimed`}
+        </span>
+      </div>
     </div>
   );
 }
