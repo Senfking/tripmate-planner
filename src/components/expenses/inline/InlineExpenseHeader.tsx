@@ -84,7 +84,7 @@ export function InlineExpenseHeader({
       )}
 
       {/* Compact 2-column label/value grid */}
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+      <dl className="grid grid-cols-2 gap-x-2 gap-y-0.5">
         {/* Amount */}
         <Row label="Amount">
           {hasLineItems ? (
