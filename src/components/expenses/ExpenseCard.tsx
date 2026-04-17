@@ -98,7 +98,7 @@ export function ExpenseCard({
             <div className="min-w-0 flex-1">
               <p className="font-medium text-[15px] leading-snug line-clamp-2 text-foreground">{expense.title}</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">
-                {payer?.displayName || "Unknown"} · {format(new Date(expense.incurred_on), "MMM d")}
+                {payer?.displayName || "Unknown"}
               </p>
             </div>
             <div className="text-right shrink-0">
