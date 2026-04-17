@@ -124,15 +124,22 @@ export function InlineLineItemList({
     void undone;
   };
 
+  const ITEMS_COLLAPSED_LIMIT = 4;
+  const [itemsExpanded, setItemsExpanded] = useState(false);
+  const visibleClaimableItems = itemsExpanded
+    ? claimableItems
+    : claimableItems.slice(0, ITEMS_COLLAPSED_LIMIT);
+  const hiddenCount = claimableItems.length - visibleClaimableItems.length;
+
   return (
     <div className="space-y-2">
       {claimableItems.length > 0 && (
         <>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Items
+            Items · {claimableItems.length}
           </p>
-          <ul className="space-y-1">
-            {claimableItems.map((item) => (
+          <ul className="space-y-0.5">
+            {visibleClaimableItems.map((item) => (
               <LineItemRowEditable
                 key={item.id}
                 item={item}
@@ -141,6 +148,7 @@ export function InlineLineItemList({
                 currency={currency}
                 currentUserId={user?.id}
                 canEdit={canEdit && editMode}
+                editMode={editMode}
                 isToggling={isToggling}
                 onRename={async (name) => {
                   if (!name.trim() || name === item.name) return false;
@@ -166,6 +174,24 @@ export function InlineLineItemList({
               />
             ))}
           </ul>
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setItemsExpanded(true)}
+              className="text-[12px] font-medium text-primary hover:underline py-1"
+            >
+              Show {hiddenCount} more {hiddenCount === 1 ? "item" : "items"}
+            </button>
+          )}
+          {itemsExpanded && claimableItems.length > ITEMS_COLLAPSED_LIMIT && (
+            <button
+              type="button"
+              onClick={() => setItemsExpanded(false)}
+              className="text-[12px] font-medium text-muted-foreground hover:underline py-1"
+            >
+              Show less
+            </button>
+          )}
         </>
       )}
 
@@ -229,7 +255,7 @@ export function InlineLineItemList({
 /* ───────────────────────── Single editable row ───────────────────────── */
 
 function LineItemRowEditable({
-  item, claims, members, currency, currentUserId, canEdit, isToggling,
+  item, claims, members, currency, currentUserId, canEdit, editMode, isToggling,
   onRename, onChangeQty, onChangeUnitPrice, onDelete, onToggleClaim, onSetClaimQty,
   onToggleClaimForUser, onSetClaimQtyForUser,
 }: {
@@ -239,6 +265,7 @@ function LineItemRowEditable({
   currency: string;
   currentUserId: string | undefined;
   canEdit: boolean;
+  editMode: boolean;
   isToggling: boolean;
   onRename: (name: string) => Promise<boolean>;
   onChangeQty: (q: number) => Promise<boolean>;
@@ -284,8 +311,8 @@ function LineItemRowEditable({
       "group/item rounded-lg border px-2.5 py-1 space-y-0.5 transition-colors",
       isClaimed || myQty > 0 ? "border-primary/40 bg-primary/[0.04]" : "border-border",
     )}>
-      <div className="flex items-center gap-2">
-        {/* Mine toggle + Assign link for single-qty items (only when NOT editing) */}
+      <div className="flex items-center gap-2 min-h-[40px]">
+        {/* Mine toggle for single-qty items (always visible). Assign link only in edit mode. */}
         {!isMultiQty && !canEdit && (
           <div className="flex items-center gap-1 shrink-0">
             <button
@@ -301,13 +328,15 @@ function LineItemRowEditable({
             >
               {isClaimed ? "✓ Mine" : "Mine"}
             </button>
-            <button
-              type="button"
-              onClick={() => setAssignOpen(true)}
-              className="text-[10px] font-medium text-primary hover:underline px-1 py-0.5 min-h-[24px]"
-            >
-              Assign
-            </button>
+            {editMode && (
+              <button
+                type="button"
+                onClick={() => setAssignOpen(true)}
+                className="text-[10px] font-medium text-primary hover:underline px-1 py-0.5 min-h-[24px]"
+              >
+                Assign
+              </button>
+            )}
           </div>
         )}
 
@@ -672,7 +701,7 @@ function SharedCostRow({ sharedTotal, currency }: { sharedTotal: number; currenc
       <div className="flex items-center justify-between gap-2 px-2.5 py-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
-          <p className="text-[12px] font-medium truncate">Taxes & service (auto-split)</p>
+          <p className="text-[12px] font-medium truncate">Taxes & service</p>
           <button
             type="button"
             aria-label="How is this split?"
