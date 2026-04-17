@@ -396,6 +396,10 @@ export function useExpenses(tripId: string) {
     // the auth-init race where user=null briefly disables queries but isPending
     // stays true, causing permanent skeletons on first load.
     isLoading: expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading,
+    // True only when we have NEVER successfully loaded expenses. Stays false during
+    // background refetches (e.g. window-focus refetch), so visible content is never
+    // replaced by skeletons once data has been seen.
+    hasLoadedOnce: expensesQuery.data !== undefined && membersQuery.data !== undefined && settlementQuery.data !== undefined,
     isError: expensesQuery.isError || membersQuery.isError || settlementQuery.isError,
     refetch: async () => {
       await Promise.all([

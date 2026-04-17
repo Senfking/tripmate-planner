@@ -33,7 +33,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const {
     expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
     ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
-    cachedCurrencyCodes, itineraryItems, isLoading, isError, refetch,
+    cachedCurrencyCodes, itineraryItems, isLoading, hasLoadedOnce, isError, refetch,
     isFetchingExpenses, isExpensesSuccess,
     updateSettlementCurrency, addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
@@ -292,7 +292,10 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       }))
     : undefined;
 
-  if (isLoading && expenses.length === 0) {
+  // Skeletons ONLY on the very first load (no cached data anywhere). After data has been
+  // seen once, background refetches (window focus, realtime invalidations) keep the prior
+  // content visible — never replace it with skeletons.
+  if (!hasLoadedOnce) {
     return (
       <div className="space-y-4">
         {/* Hero card skeleton — uses the real teal gradient with translucent placeholders */}
