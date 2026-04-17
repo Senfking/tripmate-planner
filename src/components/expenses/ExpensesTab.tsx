@@ -37,6 +37,17 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     isFetchingExpenses, isExpensesSuccess,
     updateSettlementCurrency, addExpense, updateExpense, deleteExpense,
   } = useExpenses(tripId);
+
+  useEffect(() => {
+    const ts = () => new Date().toISOString().slice(11, 23);
+    // eslint-disable-next-line no-console
+    console.log(`[junto-mount ${ts()}] ExpensesTab MOUNT`, { tripId, visible: document.visibilityState });
+    return () => {
+      // eslint-disable-next-line no-console
+      console.log(`[junto-mount ${ts()}] ExpensesTab UNMOUNT`, { tripId, visible: document.visibilityState });
+    };
+  }, []);
+
   const { data: trip } = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async () => {

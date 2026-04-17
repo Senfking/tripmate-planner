@@ -5,6 +5,11 @@ import { Loader2 } from "lucide-react";
 export function ProtectedRoute() {
   const { user, loading } = useAuth();
 
+  const ts = () => new Date().toISOString().slice(11, 23);
+  const branch = loading ? "loading" : !user ? "navigate-to-ref" : "outlet";
+  // eslint-disable-next-line no-console
+  console.log(`[junto-mount ${ts()}] ProtectedRoute RENDER`, { branch, userId: user?.id ?? null, loading, visible: document.visibilityState });
+
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
