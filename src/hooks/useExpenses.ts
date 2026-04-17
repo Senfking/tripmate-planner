@@ -375,32 +375,7 @@ export function useExpenses(tripId: string) {
     }
   };
 
-  // ── DEBUG LOGGING (temporary) ──────────────────────────────────
-  const _returnedIsLoading = expensesQuery.isLoading || membersQuery.isLoading || settlementQuery.isLoading;
-  useEffect(() => {
-    console.log("[expenses-debug]", {
-      tripId,
-      userId: user?.id,
-      expensesStatus: expensesQuery.status,
-      expensesFetchStatus: expensesQuery.fetchStatus,
-      expensesIsPending: expensesQuery.isPending,
-      expensesIsLoading: expensesQuery.isLoading,
-      expensesIsFetching: expensesQuery.isFetching,
-      expensesEnabled: !!tripId && !!user,
-      expensesDataLength: expensesQuery.data?.length,
-      expensesError: expensesQuery.error?.message,
-      membersStatus: membersQuery.status,
-      membersFetchStatus: membersQuery.fetchStatus,
-      membersIsPending: membersQuery.isPending,
-      membersIsLoading: membersQuery.isLoading,
-      settlementStatus: settlementQuery.status,
-      settlementFetchStatus: settlementQuery.fetchStatus,
-      settlementIsLoading: settlementQuery.isLoading,
-      returnedIsLoading: _returnedIsLoading,
-      timestamp: Date.now(),
-    });
-  });
-  // ── END DEBUG LOGGING ─────────────────────────────────────────
+
 
   return {
     expenses: expensesQuery.data || [],
