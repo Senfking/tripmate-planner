@@ -34,8 +34,8 @@ interface Props {
   canEdit: boolean;
   /** Global edit mode toggle — gates rename/price/delete affordances. */
   editMode: boolean;
-  toggleClaim: (id: string) => void;
-  setClaimQuantity: (id: string, qty: number) => Promise<void>;
+  toggleClaim: (id: string, userId?: string) => Promise<void> | void;
+  setClaimQuantity: (id: string, qty: number, userId?: string) => Promise<void>;
   isToggling: boolean;
 }
 
