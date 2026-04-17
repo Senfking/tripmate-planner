@@ -858,20 +858,64 @@ export default function TripList() {
         </div>
       )}
 
-      <div className={`mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 pb-[100px] md:pb-8 ${drafts && drafts.length > 0 ? '' : 'mt-4 md:mt-0'}`}>
-        {liveTrip && <div className="md:col-span-2"><HeroCard trip={liveTrip} /></div>}
-        {otherTrips.map((trip, i) => (
-          <div
-            key={trip.id}
-            className={
-              otherTrips.length % 2 !== 0 && i === otherTrips.length - 1
-                ? "md:col-span-2"
-                : ""
-            }
-          >
-            <RegularCard trip={trip} />
+      {/* ── Happening now ── */}
+      {liveTrip && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
+          <HeroCard trip={liveTrip} />
+        </div>
+      )}
+
+      {/* ── Coming up ── */}
+      {upcomingTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Coming up</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {upcomingTrips.map((trip, i) => (
+              <div
+                key={trip.id}
+                className={
+                  upcomingTrips.length % 2 !== 0 && i === upcomingTrips.length - 1
+                    ? "md:col-span-2"
+                    : ""
+                }
+              >
+                <RegularCard trip={trip} />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+      )}
+
+      {/* ── Past trips (collapsed by default) ── */}
+      {pastTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
+          <button
+            onClick={() => setShowPast((v) => !v)}
+            className="w-full flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5 py-1"
+          >
+            <span>{showPast ? "Past trips" : `Show past trips (${pastTrips.length})`}</span>
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showPast ? "rotate-90" : ""}`} />
+          </button>
+          {showPast && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 opacity-75">
+              {pastTrips.map((trip, i) => (
+                <div
+                  key={trip.id}
+                  className={
+                    pastTrips.length % 2 !== 0 && i === pastTrips.length - 1
+                      ? "md:col-span-2"
+                      : ""
+                  }
+                >
+                  <RegularCard trip={trip} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 pb-[100px] md:pb-8">
 
         {/* Join a trip row */}
         <button
