@@ -441,6 +441,9 @@ interface EnrichedActivity {
   booking_partner: AffiliatePartner;
   is_junto_pick: boolean;
   dietary_notes?: string;
+  // Populated for is_event rows via fuzzy-match against events[] in hydration.
+  // Null for place-backed rows and for events that never matched a candidate.
+  event_url: string | null;
   // Transitional alias so the unchanged frontend keeps rendering tips
   tips: string;
 }
@@ -2047,15 +2050,66 @@ function buildPhotoUrls(photos: Array<{ name: string }>, googleKey: string, max 
     .map((p) => `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=800&key=${googleKey}`);
 }
 
+// Lightweight fuzzy-match for events — the ranker copies title text from the
+// snippet most of the time, so a normalized substring check is enough. We
+// avoid Levenshtein here because event names can be long and the marginal
+// benefit isn't worth the CPU when we already have the candidate list.
+function normalizeEventKey(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function matchEventCandidate(
+  title: string,
+  description: string,
+  events: EventCandidate[],
+): EventCandidate | null {
+  if (!events.length) return null;
+  const t = normalizeEventKey(title);
+  const d = normalizeEventKey(description);
+  if (!t && !d) return null;
+
+  let best: { ev: EventCandidate; score: number } | null = null;
+  for (const ev of events) {
+    const n = normalizeEventKey(ev.name);
+    if (!n) continue;
+    let score = 0;
+    if (t && n.includes(t)) score += 3;
+    else if (t && t.includes(n)) score += 2;
+    if (d && n && d.includes(n)) score += 1;
+    if (ev.venue_name) {
+      const v = normalizeEventKey(ev.venue_name);
+      if (v && (t.includes(v) || d.includes(v))) score += 1;
+    }
+    if (score > 0 && (!best || score > best.score)) best = { ev, score };
+  }
+  return best?.ev ?? null;
+}
+
 function hydrateActivity(
   raw: RawRankerActivity,
   slot: PacingSlot,
   place: BatchPlaceResult | null,
   googleKey: string,
   currency: string,
+  events: EventCandidate[] = [],
 ): EnrichedActivity | null {
   // Non-event activities without a pool match get dropped here.
   if (!raw.is_event && !place) return null;
+
+  // For events, try to bind a url from the snippet pool. No match → null URL,
+  // warn for observability, validator later keeps the row but the decorate
+  // loop will emit an empty event_direct URL.
+  let event_url: string | null = null;
+  if (raw.is_event) {
+    const match = matchEventCandidate(raw.title ?? "", raw.description ?? "", events);
+    if (match?.url) {
+      event_url = match.url;
+    } else {
+      console.warn(
+        `[hydrateActivity] event "${raw.title}" had no candidate url match (events pool size=${events.length})`,
+      );
+    }
+  }
 
   const duration_minutes = slot.duration_minutes;
   const duration_hours = minutesToHours1dp(duration_minutes);
@@ -2092,6 +2146,7 @@ function hydrateActivity(
     booking_partner: "google_maps", // default; Step 8 overrides
     is_junto_pick: false,     // set by Step 8
     dietary_notes: raw.dietary_notes?.trim() || undefined,
+    event_url,
     tips: raw.pro_tip?.trim() ?? "", // transitional alias for unchanged frontend
   };
 }
@@ -2178,7 +2233,7 @@ async function rankAndEnrich(
       const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
       // Non-event activities need a pool-resident place.
       if (!rawAct.is_event && rawAct.place_id && !place) continue;
-      const activity = hydrateActivity(rawAct, slot, place, googleKey, currency);
+      const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
       if (!activity) continue;
       if (place) seenIds.add(place.id);
       activities.push(activity);
@@ -2506,6 +2561,13 @@ function validateActivities(
 // Logging — fail loud on any DB write error
 // ---------------------------------------------------------------------------
 
+interface LLMLoggerTotals {
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  call_count: number;
+}
+
 interface LLMLogger {
   log: (entry: {
     feature: string;
@@ -2515,14 +2577,25 @@ interface LLMLogger {
     cost_usd: number;
     cached: boolean;
   }) => Promise<void>;
+  totals: () => LLMLoggerTotals;
 }
 
 function makeLLMLogger(
   svcClient: ReturnType<typeof createClient>,
   userId: string,
 ): LLMLogger {
+  const totals: LLMLoggerTotals = {
+    input_tokens: 0,
+    output_tokens: 0,
+    cost_usd: 0,
+    call_count: 0,
+  };
   return {
     async log(entry) {
+      totals.input_tokens += entry.input_tokens;
+      totals.output_tokens += entry.output_tokens;
+      totals.cost_usd += entry.cost_usd;
+      totals.call_count += 1;
       const { error } = await svcClient.from("ai_request_log").insert({
         user_id: userId,
         feature: entry.feature,
@@ -2538,6 +2611,7 @@ function makeLLMLogger(
         throw new Error(`ai_request_log insert failed: ${error.message}`);
       }
     },
+    totals: () => ({ ...totals }),
   };
 }
 
@@ -2550,14 +2624,9 @@ function computeHaikuCost(usage: ClaudeUsage): number {
   );
 }
 
-async function logPlacesCalls(
-  svcClient: ReturnType<typeof createClient>,
-  userId: string,
-  callCount: number,
-): Promise<void> {
+async function logPlacesCalls(logger: LLMLogger, callCount: number): Promise<void> {
   if (callCount <= 0) return;
-  const { error } = await svcClient.from("ai_request_log").insert({
-    user_id: userId,
+  await logger.log({
     feature: "places_search",
     model: "google-places-text-search",
     input_tokens: 0,
@@ -2565,10 +2634,6 @@ async function logPlacesCalls(
     cost_usd: callCount * PLACES_PRICE_PER_CALL,
     cached: false,
   });
-  if (error) {
-    console.error("[ai_request_log] places insert failed:", error);
-    throw new Error(`ai_request_log places insert failed: ${error.message}`);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2654,6 +2719,7 @@ Deno.serve(async (req) => {
     // =========================================================================
     // NEW PIPELINE BRANCH — Places-first, Claude Haiku ranker
     // =========================================================================
+    const pipelineStartedAt = Date.now();
 
     // ---- Validate inputs and resolve dates ----
     const surpriseMe = body.surprise_me === true;
@@ -2791,7 +2857,7 @@ Deno.serve(async (req) => {
       searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
     ]);
 
-    await logPlacesCalls(svcClient, user.id, queries.length);
+    await logPlacesCalls(logger, queries.length);
 
     // Group venues by pool for the ranker prompt
     const venuesByPool = new Map<PoolKey, BatchPlaceResult[]>();
@@ -2821,11 +2887,10 @@ Deno.serve(async (req) => {
     const affEnv = { booking: bookingAid, viator: viatorMcid, gyg: gygPid };
     for (const dest of ranked.destinations) {
       const decorate = (a: EnrichedActivity) => {
-        // Events (place_id === "") go through with a null place → event_direct
-        // partner. Event URL passthrough is not wired yet; validator will drop
-        // truly unrecoverable rows.
+        // Events (place_id === "") pass null → event_direct; their event_url
+        // (fuzzy-matched during hydration) becomes booking_url.
         const place = a.place_id ? allPlacesById.get(a.place_id) ?? null : null;
-        const aff = buildAffiliateUrl(place, affEnv);
+        const aff = buildAffiliateUrl(place, affEnv, a.event_url);
         a.booking_url = aff.booking_url;
         a.booking_partner = aff.booking_partner;
       };
@@ -2837,7 +2902,7 @@ Deno.serve(async (req) => {
 
     const validated = validateActivities(ranked, allPlacesById, { lat: geo.lat, lng: geo.lng });
 
-    // ---- Cache write (fail loud) ----
+    // ---- Cache write (fail loud, AFTER validation passes) ----
     {
       const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
         cache_key: cacheKey,
@@ -2847,6 +2912,28 @@ Deno.serve(async (req) => {
       if (cacheInsErr) {
         console.error("[ai_response_cache] insert failed:", cacheInsErr);
         throw new Error(`ai_response_cache insert failed: ${cacheInsErr.message}`);
+      }
+    }
+
+    // ---- Aggregated total log — one row per successful trip build ----
+    // ai_request_log is a flat table; we pack wall-time (ms) into the model
+    // label and keep Places-call / total-call counts in the existing fields so
+    // downstream SQL can sum without a migration bump.
+    {
+      const totals = logger.totals();
+      const durationMs = Date.now() - pipelineStartedAt;
+      const { error: totalErr } = await svcClient.from("ai_request_log").insert({
+        user_id: user.id,
+        feature: "trip_builder_total",
+        model: `aggregate;duration_ms=${durationMs};places_calls=${queries.length};sub_calls=${totals.call_count}`,
+        input_tokens: totals.input_tokens,
+        output_tokens: totals.output_tokens,
+        cost_usd: totals.cost_usd,
+        cached: false,
+      });
+      if (totalErr) {
+        console.error("[ai_request_log] trip_builder_total insert failed:", totalErr);
+        throw new Error(`ai_request_log trip_builder_total insert failed: ${totalErr.message}`);
       }
     }
 
@@ -2860,6 +2947,9 @@ Deno.serve(async (req) => {
         days: numDays,
         budget_level: intent.budget_tier,
         pace: intent.pace,
+        duration_ms: Date.now() - pipelineStartedAt,
+        places_calls: queries.length,
+        llm_cost_usd: logger.totals().cost_usd,
       },
     });
 
