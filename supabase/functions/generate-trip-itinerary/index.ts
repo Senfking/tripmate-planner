@@ -1,4 +1,25 @@
+// generate-trip-itinerary — source-of-truth pipeline (Places-first, Claude Haiku ranker)
+//
+// Pipeline (non-alternatives_mode):
+//   1. parseIntent       — Claude Haiku extracts structured intent from form + free text
+//   2. buildSkeleton     — pure-code pacing skeleton (slots per day)
+//   3. buildPlacesQueries— pure-code Google Places query plan, deduped + capped at 20
+//   4. searchPlacesBatch — Google Places Text Search in parallel, dedup by place_id
+//   5. searchEvents      — Brave/Google CSE event search (optional, parallel)
+//   6. rankAndEnrich     — Claude Haiku assigns venues to slots + writes editorial copy
+//   7. markJuntoPicks    — pure code: rating/reviews/intent-match heuristic
+//   8. buildAffiliateUrl — pure code: types[] -> Booking/Viator/GetYourGuide/Maps
+//   9. validateActivities— drop hallucinations: missing place_id, > distance, not OPERATIONAL
+//
+// All Claude calls go to direct Anthropic API (claude-haiku-4-5-20251001) with prompt
+// caching on the static system blocks. The `alternatives_mode` branch is preserved
+// verbatim and still uses Lovable AI Gateway / Gemini.
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// ---------------------------------------------------------------------------
+// CORS / response helpers
+// ---------------------------------------------------------------------------
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +35,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Request body
 // ---------------------------------------------------------------------------
 
 type BudgetLevel = "budget" | "mid-range" | "premium";
@@ -40,26 +61,15 @@ interface TripBuilderRequest {
   user_description?: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// Date helpers
+// ---------------------------------------------------------------------------
+
 function daysBetween(start: string, end: string): number {
   const ms = new Date(end).getTime() - new Date(start).getTime();
   return Math.round(ms / 86_400_000) + 1;
 }
 
-function buildCacheKey(r: TripBuilderRequest, dest: string, numDays: number): string {
-  const interests = r.vibes || r.interests || [];
-  const parts = [
-    dest.toLowerCase().trim(),
-    String(numDays),
-    String(r.group_size || 1),
-    r.budget_level || "mid-range",
-    [...interests].sort().join(","),
-    [...(r.dietary || [])].sort().join(","),
-    r.pace || "balanced",
-  ];
-  return parts.join("|");
-}
-
-/** Generate fake start/end dates for flexible trips */
 function generateFlexDates(durationDays: number): { start: string; end: string } {
   const start = new Date();
   start.setDate(start.getDate() + 30);
@@ -70,7 +80,7 @@ function generateFlexDates(durationDays: number): { start: string; end: string }
 }
 
 // ---------------------------------------------------------------------------
-// Lovable AI Gateway call
+// Lovable AI Gateway (used ONLY by the alternatives_mode branch — kept verbatim)
 // ---------------------------------------------------------------------------
 
 interface AIResult {
@@ -97,12 +107,7 @@ async function callLovableAI(
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      tools: [
-        {
-          type: "function",
-          function: toolSchema,
-        },
-      ],
+      tools: [{ type: "function", function: toolSchema }],
       tool_choice: { type: "function", function: { name: toolSchema.name } },
     }),
   });
@@ -110,12 +115,8 @@ async function callLovableAI(
   if (!res.ok) {
     const errText = await res.text();
     console.error("AI Gateway error:", res.status, errText);
-    if (res.status === 429) {
-      throw new Error("AI rate limit exceeded. Please try again in a moment.");
-    }
-    if (res.status === 402) {
-      throw new Error("AI credits exhausted. Please add funds.");
-    }
+    if (res.status === 429) throw new Error("AI rate limit exceeded. Please try again in a moment.");
+    if (res.status === 402) throw new Error("AI credits exhausted. Please add funds.");
     throw new Error(`AI gateway error ${res.status}`);
   }
 
@@ -123,13 +124,11 @@ async function callLovableAI(
   const usage = data.usage || {};
   const choice = data.choices?.[0];
 
-  // Extract from tool call
   const toolCall = choice?.message?.tool_calls?.[0];
   if (toolCall?.function?.arguments) {
     try {
-      const parsed = JSON.parse(toolCall.function.arguments);
       return {
-        itinerary: parsed,
+        itinerary: JSON.parse(toolCall.function.arguments),
         inputTokens: usage.prompt_tokens || 0,
         outputTokens: usage.completion_tokens || 0,
       };
@@ -138,16 +137,14 @@ async function callLovableAI(
     }
   }
 
-  // Fallback: try content as JSON
   const content = choice?.message?.content;
   if (content) {
     try {
       const firstBrace = content.indexOf("{");
       const lastBrace = content.lastIndexOf("}");
       if (firstBrace !== -1 && lastBrace > firstBrace) {
-        const parsed = JSON.parse(content.slice(firstBrace, lastBrace + 1));
         return {
-          itinerary: parsed,
+          itinerary: JSON.parse(content.slice(firstBrace, lastBrace + 1)),
           inputTokens: usage.prompt_tokens || 0,
           outputTokens: usage.completion_tokens || 0,
         };
@@ -161,7 +158,7 @@ async function callLovableAI(
 }
 
 // ---------------------------------------------------------------------------
-// Post-processing / normalization
+// Activity normalization (used by alternatives_mode only)
 // ---------------------------------------------------------------------------
 
 const MAX_ACTIVITY_DURATION = 480;
@@ -188,337 +185,23 @@ function normalizeActivity(activity: Record<string, unknown>): Record<string, un
   if (!Number.isFinite(duration) || duration <= 0 || duration > MAX_ACTIVITY_DURATION) {
     activity.duration_minutes = defaultDurationForCategory(activity.category);
   }
-
   const rawCost = activity.estimated_cost_per_person;
   if (typeof rawCost !== "number" || !Number.isFinite(rawCost)) {
     activity.estimated_cost_per_person = 0;
   }
-
   return activity;
 }
 
-// ---------------------------------------------------------------------------
-// Cost validation helpers (Layer 2)
-// ---------------------------------------------------------------------------
-
-interface CostRange {
-  budget: [number, number];
-  midrange: [number, number];
-  premium: [number, number];
-}
-
-interface CostProfile {
-  currency: string;
-  meal: CostRange;
-  activity: CostRange;
-  hotel_night: CostRange & { luxury: [number, number] };
-  transport: { local: [number, number]; intercity: [number, number] };
-}
-
-function isValidRange(r: unknown): r is [number, number] {
-  return Array.isArray(r) && r.length >= 2
-    && typeof r[0] === "number" && typeof r[1] === "number"
-    && Number.isFinite(r[0]) && Number.isFinite(r[1])
-    && r[0] <= r[1];
-}
-
-function parseCostProfile(raw: unknown): CostProfile | null {
-  if (!raw || typeof raw !== "object") return null;
-  const cp = raw as Record<string, any>;
-  if (typeof cp.currency !== "string" || !cp.currency) return null;
-
-  const categories = ["meal", "activity", "hotel_night", "transport"];
-  for (const cat of categories) {
-    if (!cp[cat] || typeof cp[cat] !== "object") return null;
-  }
-
-  // Validate ranges exist (we'll fix ordering issues below)
-  for (const cat of ["meal", "activity"]) {
-    for (const tier of ["budget", "midrange", "premium"]) {
-      if (!isValidRange(cp[cat]?.[tier])) return null;
-    }
-  }
-  for (const tier of ["budget", "midrange", "premium", "luxury"]) {
-    if (!isValidRange(cp.hotel_night?.[tier])) return null;
-  }
-  for (const tier of ["local", "intercity"]) {
-    if (!isValidRange(cp.transport?.[tier])) return null;
-  }
-
-  return cp as unknown as CostProfile;
-}
-
-/** Validate internal consistency: budget < midrange < premium */
-function validateCostProfileConsistency(cp: CostProfile): void {
-  for (const cat of ["meal", "activity"] as const) {
-    const ranges = cp[cat];
-    // Ensure budget.max <= midrange.min and midrange.max <= premium.min
-    if (ranges.budget[1] > ranges.midrange[0]) {
-      ranges.midrange[0] = ranges.budget[1];
-    }
-    if (ranges.midrange[1] > ranges.premium[0]) {
-      ranges.premium[0] = ranges.midrange[1];
-    }
-  }
-  const hn = cp.hotel_night;
-  if (hn.budget[1] > hn.midrange[0]) hn.midrange[0] = hn.budget[1];
-  if (hn.midrange[1] > hn.premium[0]) hn.premium[0] = hn.midrange[1];
-  if (hn.premium[1] > hn.luxury[0]) hn.luxury[0] = hn.premium[1];
-}
-
 /**
- * Currency denomination check (Layer 2b).
- * Detects when the AI likely generated USD-scale numbers for a high-denomination
- * currency and applies a correction factor.
+ * Slim normalizer used only by `alternatives_mode`. The new main pipeline produces
+ * fully validated activities and does not need this safety net — the destinations
+ * branch of the old normalizeAIResponse has been removed along with the cost
+ * validation tower (parseCostProfile, currencyDenominationCheck, etc.) since the
+ * new pipeline grounds prices in Google Places price_level rather than LLM output.
  */
-function currencyDenominationCheck(
-  activities: Record<string, unknown>[],
-  cp: CostProfile | null,
-): number {
-  // Collect all non-zero costs
-  const costs = activities
-    .map((a) => a.estimated_cost_per_person as number)
-    .filter((c) => typeof c === "number" && c > 0);
-
-  if (costs.length === 0) return 1;
-
-  // Compute median
-  const sorted = [...costs].sort((a, b) => a - b);
-  const median = sorted[Math.floor(sorted.length / 2)];
-
-  // Expected order-of-magnitude thresholds by currency
-  const thresholds: Record<string, number> = {
-    IDR: 10000, VND: 10000,
-    JPY: 100, KRW: 100,
-    USD: 1, EUR: 1, GBP: 1, AUD: 1, CHF: 1, SGD: 1, CAD: 1, NZD: 1,
-    KWD: 0.1, BHD: 0.1, OMR: 0.1,
-    THB: 10, PHP: 10, MXN: 10, INR: 10, TWD: 10, CZK: 10,
-    HUF: 100, ISK: 100, CLP: 100, COP: 1000, MMK: 1000,
-    RUB: 10, BRL: 1, ZAR: 10, TRY: 10, SEK: 10, NOK: 10, DKK: 10, PLN: 1,
-    MYR: 1, AED: 1, SAR: 1, QAR: 1, HKD: 1,
-    CNY: 1, EGP: 10, MAD: 10, LKR: 100, NPR: 100, PKR: 100, BDT: 10,
-    KES: 100, NGN: 100, GHS: 1, TZS: 1000, UGX: 1000,
-    ARS: 100, PEN: 1, UYU: 10, BOB: 1, PYG: 1000, DOP: 10, CRC: 100,
-    JMD: 100, GTQ: 1, HNL: 10, NIO: 10,
-    KHR: 1000, LAK: 10000, MNT: 1000, UZS: 10000, KZT: 100,
-    GEL: 1, AMD: 100, RSD: 100, ALL: 100, MKD: 10,
-    BGN: 1, RON: 1, HRK: 1, BAM: 1,
-    XOF: 100, XAF: 100, XPF: 100,
-    FJD: 1, WST: 1, TOP: 1, PGK: 1,
-  };
-
-  const currency = cp?.currency || "";
-  const threshold = thresholds[currency];
-  if (!threshold) return 1; // Unknown currency — can't validate
-
-  if (median >= threshold) return 1; // Looks correctly denominated
-
-  // If we have a cost_profile, use meal.midrange as the reference
-  if (cp) {
-    const expectedMidMeal = (cp.meal.midrange[0] + cp.meal.midrange[1]) / 2;
-    if (expectedMidMeal > 0 && expectedMidMeal < threshold) {
-      // Cost profile is also wrong — correct both using the threshold
-      // Use ratio of expected midrange meal for this currency vs what AI gave
-      const typicalMidMeal = threshold * 10; // rough heuristic: midrange meal ~ 10x threshold
-      const factor = typicalMidMeal / expectedMidMeal;
-      console.warn(`[cost-validation] Currency ${currency}: cost_profile also appears USD-scale. Applying factor ${factor.toFixed(1)}`);
-      return factor;
-    }
-    const factor = expectedMidMeal / median;
-    if (factor > 2) {
-      console.warn(`[cost-validation] Currency ${currency}: median activity cost ${median} below threshold ${threshold}. Correction factor: ${factor.toFixed(1)}`);
-      return factor;
-    }
-  } else {
-    // No cost_profile — use threshold-based heuristic
-    const factor = threshold / median;
-    if (factor > 5) {
-      console.warn(`[cost-validation] Currency ${currency}: median ${median} far below threshold ${threshold}. Applying factor ${factor.toFixed(1)}`);
-      return factor;
-    }
-  }
-
-  return 1;
-}
-
-/** Map activity category to cost_profile field */
-function categoryToCostField(category: string): "meal" | "activity" | null {
-  switch (category) {
-    case "food": return "meal";
-    case "culture":
-    case "nature":
-    case "nightlife":
-    case "adventure":
-    case "relaxation":
-      return "activity";
-    default:
-      return null;
-  }
-}
-
-// Patterns for activities that are typically free
-const FREE_ACTIVITY_PATTERNS = /\b(beach|temple visit|walk|park|sunset|sunrise|window shopping|street art|public garden|promenade|plaza|square|boardwalk|waterfront|viewpoint|lookout)\b/i;
-
-/**
- * Per-activity cost validation (Layer 2c).
- * Validates and clamps individual activity costs against the cost_profile.
- */
-function validateActivityCosts(
-  activities: Record<string, unknown>[],
-  cp: CostProfile | null,
-): void {
-  if (!cp) return;
-
-  for (const activity of activities) {
-    const cost = activity.estimated_cost_per_person;
-    if (typeof cost !== "number") continue;
-
-    const category = activity.category as string;
-    const title = (activity.title as string || "").toLowerCase();
-    const costField = categoryToCostField(category);
-
-    // If cost is 0 but category is food/nightlife/accommodation, set to budget midpoint
-    if (cost === 0 && (category === "food" || category === "nightlife")) {
-      const field = category === "food" ? "meal" : "activity";
-      const range = cp[field].budget;
-      activity.estimated_cost_per_person = Math.round((range[0] + range[1]) / 2);
-      continue;
-    }
-
-    // If cost > 0 but activity looks clearly free, set to 0
-    if (cost > 0 && FREE_ACTIVITY_PATTERNS.test(title) && category !== "food" && category !== "nightlife") {
-      activity.estimated_cost_per_person = 0;
-      continue;
-    }
-
-    // Validate against appropriate range — clamp outliers
-    if (costField && cp[costField]) {
-      const premiumMax = cp[costField].premium[1];
-      if (cost > premiumMax * 3) {
-        activity.estimated_cost_per_person = premiumMax;
-        console.warn(`[cost-validation] Clamped "${activity.title}" from ${cost} to ${premiumMax} (> 3x premium max)`);
-      }
-    }
-  }
-}
-
-/**
- * Trip-level sanity check (Layer 2d).
- * Verifies that total daily cost aligns with budget level.
- */
-function tripSanityCheck(
-  destinations: any[],
-  budgetLevel: string,
-): void {
-  for (const dest of destinations) {
-    const cp = parseCostProfile(dest.cost_profile);
-    if (!cp) continue;
-
-    const days = dest.days;
-    if (!Array.isArray(days)) continue;
-
-    const midrangeMealPrice = (cp.meal.midrange[0] + cp.meal.midrange[1]) / 2;
-    if (midrangeMealPrice <= 0) continue;
-
-    for (const day of days) {
-      const activities = day?.activities;
-      if (!Array.isArray(activities)) continue;
-
-      let dailyTotal = 0;
-      for (const act of activities) {
-        dailyTotal += (act.estimated_cost_per_person as number) || 0;
-      }
-
-      if (budgetLevel === "budget" && dailyTotal > midrangeMealPrice * 5) {
-        console.warn(`[cost-validation] Budget trip sanity: day ${day.day_number} in ${dest.name} has daily total ${dailyTotal}, > 5x midrange meal (${midrangeMealPrice})`);
-      }
-      if (budgetLevel === "premium" && dailyTotal > 0 && dailyTotal < midrangeMealPrice) {
-        console.warn(`[cost-validation] Premium trip sanity: day ${day.day_number} in ${dest.name} has daily total ${dailyTotal}, < midrange meal (${midrangeMealPrice})`);
-      }
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Main normalization
-// ---------------------------------------------------------------------------
-
-function normalizeAIResponse(
-  itinerary: Record<string, unknown> | null,
-  budgetLevel: string = "mid-range",
-): Record<string, unknown> | null {
+function normalizeAlternatives(itinerary: Record<string, unknown> | null): Record<string, unknown> | null {
   if (!itinerary) return itinerary;
-
-  const destinations = (itinerary as any).destinations;
-  if (Array.isArray(destinations)) {
-    for (const dest of destinations) {
-      const days = dest?.days;
-      if (!Array.isArray(days)) continue;
-
-      // Collect all activities for this destination
-      const allActivities: Record<string, unknown>[] = [];
-
-      for (const day of days) {
-        const activities = day?.activities;
-        if (!Array.isArray(activities)) continue;
-        for (const activity of activities) {
-          if (activity && typeof activity === "object") {
-            normalizeActivity(activity as Record<string, unknown>);
-            allActivities.push(activity as Record<string, unknown>);
-          }
-        }
-      }
-
-      // --- Layer 2a: Cost profile validation ---
-      const cp = parseCostProfile(dest.cost_profile);
-      if (cp) {
-        validateCostProfileConsistency(cp);
-
-        // --- Layer 2b: Currency denomination check ---
-        const correctionFactor = currencyDenominationCheck(allActivities, cp);
-        if (correctionFactor !== 1) {
-          // Apply correction to all activity costs
-          for (const act of allActivities) {
-            const c = act.estimated_cost_per_person;
-            if (typeof c === "number" && c > 0) {
-              act.estimated_cost_per_person = Math.round((c as number) * correctionFactor);
-            }
-          }
-          // Also correct cost_profile values
-          for (const cat of ["meal", "activity"] as const) {
-            for (const tier of ["budget", "midrange", "premium"] as const) {
-              cp[cat][tier][0] = Math.round(cp[cat][tier][0] * correctionFactor);
-              cp[cat][tier][1] = Math.round(cp[cat][tier][1] * correctionFactor);
-            }
-          }
-          for (const tier of ["budget", "midrange", "premium", "luxury"] as const) {
-            cp.hotel_night[tier][0] = Math.round(cp.hotel_night[tier][0] * correctionFactor);
-            cp.hotel_night[tier][1] = Math.round(cp.hotel_night[tier][1] * correctionFactor);
-          }
-          for (const tier of ["local", "intercity"] as const) {
-            cp.transport[tier][0] = Math.round(cp.transport[tier][0] * correctionFactor);
-            cp.transport[tier][1] = Math.round(cp.transport[tier][1] * correctionFactor);
-          }
-          // Correct accommodation price if present
-          if (dest.accommodation?.price_per_night && typeof dest.accommodation.price_per_night === "number") {
-            dest.accommodation.price_per_night = Math.round(dest.accommodation.price_per_night * correctionFactor);
-          }
-          // Write corrected profile back
-          dest.cost_profile = cp;
-        }
-
-        // --- Layer 2c: Per-activity validation ---
-        validateActivityCosts(allActivities, cp);
-      } else {
-        console.warn(`[cost-validation] No valid cost_profile for destination "${dest.name}" — using AI costs as-is`);
-      }
-    }
-
-    // --- Layer 2d: Trip sanity check ---
-    tripSanityCheck(destinations, budgetLevel);
-  }
-
-  const alternatives = (itinerary as any).alternatives;
+  const alternatives = (itinerary as { alternatives?: unknown }).alternatives;
   if (Array.isArray(alternatives)) {
     for (const activity of alternatives) {
       if (activity && typeof activity === "object") {
@@ -526,169 +209,468 @@ function normalizeAIResponse(
       }
     }
   }
-
   return itinerary;
 }
 
 // ---------------------------------------------------------------------------
-// Tool schema for structured output
+// Geometry
 // ---------------------------------------------------------------------------
 
-function buildToolSchema(hasDietary: boolean) {
-  const activityProps: Record<string, unknown> = {
-    title: { type: "string", description: "Specific real venue name" },
-    description: { type: "string", description: "1-2 sentences — what makes this special, not generic filler" },
-    category: { type: "string", enum: ["food", "culture", "nature", "nightlife", "adventure", "relaxation", "transport", "accommodation"] },
-    start_time: { type: "string", description: "HH:MM format" },
-    duration_minutes: { type: "number" },
-    estimated_cost_per_person: { type: "number", description: "In local currency. 0 for free activities." },
-    currency: { type: "string" },
-    location_name: { type: "string" },
-    latitude: { type: "number" },
-    longitude: { type: "number" },
-    neighborhood: { type: "string", description: "Neighborhood or district name for clustering and route optimization" },
-    google_maps_url: { type: "string" },
-    booking_url: { type: ["string", "null"] },
-    booking_required: { type: "boolean", description: "True if reservation or advance booking is needed" },
-    booking_lead_time_days: { type: ["number", "null"], description: "How many days ahead to book, e.g. 21 for 3 weeks. Null if booking_required is false." },
-    photo_query: { type: "string" },
-    tips: { type: "string", description: "DEPRECATED — use pro_tip instead" },
-    pro_tip: { type: "string", description: "REQUIRED editorial insight: timing tip, booking warning, local knowledge, which entrance/dish/seat is best" },
-    skip_if: { type: ["string", "null"], description: "When this activity is NOT right for the user, e.g. 'skip if you don't like crowds' or 'skip if you've already visited a similar market'" },
-    travel_time_from_previous: { type: "string" },
-    travel_mode_from_previous: { type: "string" },
-  };
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
-  if (hasDietary) {
-    activityProps.dietary_notes = { type: "string", description: "How this venue handles dietary needs" };
-  }
+// ---------------------------------------------------------------------------
+// Tool schema for the alternatives_mode branch (Lovable / Gemini)
+// ---------------------------------------------------------------------------
 
-  return {
-    name: "generate_itinerary",
-    description: "Generate a complete trip itinerary as structured data",
-    parameters: {
-      type: "object",
-      properties: {
-        trip_title: { type: "string" },
-        trip_summary: { type: "string" },
-        destinations: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              start_date: { type: "string" },
-              end_date: { type: "string" },
-              intro: { type: "string" },
-              days: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    date: { type: "string" },
-                    day_number: { type: "number" },
-                    theme: { type: "string" },
-                    activities: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: activityProps,
-                        required: ["title", "category", "start_time", "duration_minutes", "latitude", "longitude"],
-                      },
-                    },
-                  },
-                  required: ["date", "day_number", "theme", "activities"],
-                },
-              },
-              accommodation: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  stars: { type: "number" },
-                  price_per_night: { type: "number" },
-                  currency: { type: "string" },
-                  booking_url: { type: "string" },
-                },
-              },
-              transport_to_next: {
-                type: ["object", "null"],
-                properties: {
-                  mode: { type: "string" },
-                  duration: { type: "string" },
-                  from: { type: "string" },
-                  to: { type: "string" },
-                },
-              },
-              cost_profile: {
-                type: "object",
-                description: "Realistic local price ranges for this destination",
-                properties: {
-                  currency: { type: "string", description: "ISO 4217 currency code for local currency" },
-                  meal: {
-                    type: "object",
-                    properties: {
-                      budget: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                      midrange: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                      premium: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                    },
-                    required: ["budget", "midrange", "premium"],
-                  },
-                  activity: {
-                    type: "object",
-                    properties: {
-                      budget: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                      midrange: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                      premium: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                    },
-                    required: ["budget", "midrange", "premium"],
-                  },
-                  hotel_night: {
-                    type: "object",
-                    properties: {
-                      budget: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                      midrange: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                      premium: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                      luxury: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                    },
-                    required: ["budget", "midrange", "premium", "luxury"],
-                  },
-                  transport: {
-                    type: "object",
-                    properties: {
-                      local: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                      intercity: { type: "array", items: { type: "number" }, description: "[min, max]" },
-                    },
-                    required: ["local", "intercity"],
-                  },
-                },
-                required: ["currency", "meal", "activity", "hotel_night", "transport"],
-              },
-            },
-            required: ["name", "start_date", "end_date", "days", "cost_profile"],
-          },
-        },
-        map_center: {
+const ALT_TOOL_SCHEMA: Record<string, unknown> = {
+  name: "suggest_alternatives",
+  description: "Return 3 alternative activities",
+  parameters: {
+    type: "object",
+    properties: {
+      alternatives: {
+        type: "array",
+        items: {
           type: "object",
           properties: {
-            lat: { type: "number" },
-            lng: { type: "number" },
+            title: { type: "string" },
+            description: { type: "string" },
+            category: { type: "string" },
+            start_time: { type: "string" },
+            duration_minutes: { type: "number" },
+            estimated_cost_per_person: { type: "number" },
+            currency: { type: "string" },
+            location_name: { type: "string" },
+            latitude: { type: "number" },
+            longitude: { type: "number" },
+            google_maps_url: { type: "string" },
+            booking_url: { type: ["string", "null"] },
+            photo_query: { type: "string" },
+            tips: { type: "string" },
           },
-          required: ["lat", "lng"],
+          required: ["title", "category", "start_time", "duration_minutes", "latitude", "longitude"],
         },
-        map_zoom: { type: "number" },
-        daily_budget_estimate: { type: "number" },
-        currency: { type: "string" },
-        packing_suggestions: { type: "array", items: { type: "string" } },
-        total_activities: { type: "number" },
       },
-      required: ["trip_title", "trip_summary", "destinations", "map_center", "daily_budget_estimate", "currency"],
+    },
+    required: ["alternatives"],
+  },
+};
+
+// ===========================================================================
+// NEW PIPELINE — types, constants, stubs
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+const ANTHROPIC_VERSION = "2023-06-01";
+
+// Anthropic Claude Haiku 4.5 pricing (USD per token)
+const HAIKU_PRICING = {
+  input: 1.0 / 1_000_000,         // $1.00 / MTok
+  output: 5.0 / 1_000_000,        // $5.00 / MTok
+  cache_write: 1.25 / 1_000_000,  // $1.25 / MTok (5-min ephemeral)
+  cache_read: 0.10 / 1_000_000,   // $0.10 / MTok
+};
+
+// Google Places (New) — Enterprise SKU because we request rating/userRatingCount/priceLevel
+const PLACES_PRICE_PER_CALL = 0.032;
+const MAX_PLACES_QUERIES_PER_TRIP = 20;
+
+// Affiliate URL templates
+const BOOKING_TEMPLATE = "https://www.booking.com/search.html?ss={loc}&aid={aid}";
+const VIATOR_TEMPLATE = "https://www.viator.com/searchResults/all?text={name}&mcid={mcid}";
+const GETYOURGUIDE_TEMPLATE = "https://www.getyourguide.com/s/?q={name}&partner_id={pid}";
+
+// Google Places type buckets for affiliate routing
+const LODGING_TYPES = new Set([
+  "lodging", "hotel", "resort_hotel", "motel", "guest_house",
+  "bed_and_breakfast", "hostel", "extended_stay_hotel",
+]);
+const FOOD_TYPES = new Set([
+  "restaurant", "cafe", "bar", "food", "meal_takeaway", "meal_delivery",
+  "bakery", "ice_cream_shop", "coffee_shop", "wine_bar", "pub",
+]);
+const TOURS_TYPES = new Set([
+  "tourist_attraction", "museum", "amusement_park", "aquarium", "zoo", "park",
+  "national_park", "art_gallery", "historical_landmark", "monument",
+  "observation_deck", "beach", "hindu_temple", "buddhist_temple", "church",
+  "mosque", "synagogue", "place_of_worship",
+]);
+
+// Country -> meal-time pattern. Default = americas/asia.
+const MEAL_PATTERNS: Record<string, { lunch: [number, number]; dinner: [number, number] }> = {
+  spain:    { lunch: [14, 16], dinner: [21, 23] },
+  italy:    { lunch: [13, 15], dinner: [20, 22] },
+  portugal: { lunch: [13, 15], dinner: [20, 22] },
+};
+const DEFAULT_MEAL_PATTERN = { lunch: [12, 14] as [number, number], dinner: [19, 21] as [number, number] };
+
+// ---------------------------------------------------------------------------
+// New types
+// ---------------------------------------------------------------------------
+
+interface Intent {
+  destination: string;             // resolved or surprise-picked
+  vibes: string[];
+  must_haves: string[];
+  must_avoids: string[];
+  budget_tier: "budget" | "mid-range" | "premium";
+  pace: "leisurely" | "balanced" | "active";
+  dietary: string[];
+  group_composition: string;       // e.g. "couple", "family with young kids", "friends 20s"
+  raw_notes: string;               // original notes/free_text passthrough
+}
+
+type SlotType =
+  | "lodging"
+  | "arrival"
+  | "breakfast"
+  | "morning_major"
+  | "lunch"
+  | "afternoon_major"
+  | "rest"
+  | "dinner"
+  | "nightlife"
+  | "departure"
+  | "transit_buffer";
+
+interface PacingSlot {
+  type: SlotType;
+  start_time: string;       // "HH:MM"
+  duration_minutes: number;
+  category: string;         // for query routing: food | culture | nightlife | accommodation | nature | relaxation
+}
+
+interface DaySkeleton {
+  date: string;
+  day_number: number;
+  theme: string;
+  slots: PacingSlot[];
+}
+
+interface PlacesSearchQuery {
+  textQuery: string;
+  includedType?: string;
+  priceLevels?: string[];
+  locationBias: { circle: { center: { latitude: number; longitude: number }; radius: number } };
+  // For routing the result back to the right slot pool:
+  poolKey: PoolKey;
+}
+
+type PoolKey =
+  | "lodging"
+  | "breakfast"
+  | "lunch"
+  | "dinner"
+  | "attractions"
+  | "nightlife"
+  | "experiences"
+  | "rest";
+
+interface BatchPlaceResult {
+  id: string;
+  displayName: string | null;
+  formattedAddress: string | null;
+  location: { latitude: number; longitude: number } | null;
+  rating: number | null;
+  userRatingCount: number | null;
+  priceLevel: string | null;
+  types: string[];
+  photos: Array<{ name: string }>;
+  googleMapsUri: string | null;
+  businessStatus: string | null;
+  poolKey: PoolKey;
+}
+
+interface EventCandidate {
+  name: string;
+  date: string | null;
+  venue: string | null;
+  description: string;
+  url: string | null;
+}
+
+type AffiliatePartner = "booking" | "viator" | "getyourguide" | "google_maps";
+
+interface EnrichedActivity {
+  place_id: string;
+  title: string;
+  description: string;
+  pro_tip: string;
+  why_for_you: string;
+  skip_if: string | null;
+  category: string;
+  start_time: string;
+  duration_minutes: number;
+  location_name: string;
+  neighborhood: string | null;
+  latitude: number;
+  longitude: number;
+  rating: number | null;
+  user_rating_count: number | null;
+  price_level: string | null;
+  photos: string[];                 // pre-built media URLs
+  google_maps_url: string | null;
+  estimated_cost_per_person: number;
+  currency: string;
+  booking_url: string;
+  booking_partner: AffiliatePartner;
+  is_junto_pick: boolean;
+  dietary_notes?: string;
+  // Transitional alias so the unchanged frontend keeps rendering tips
+  tips: string;
+}
+
+interface RankedDay {
+  date: string;
+  day_number: number;
+  theme: string;
+  activities: EnrichedActivity[];
+}
+
+interface RankedDestination {
+  name: string;
+  start_date: string;
+  end_date: string;
+  intro: string;
+  days: RankedDay[];
+  accommodation?: EnrichedActivity;
+}
+
+interface PipelineResult {
+  trip_title: string;
+  trip_summary: string;
+  destinations: RankedDestination[];
+  map_center: { lat: number; lng: number };
+  map_zoom: number;
+  daily_budget_estimate: number;
+  currency: string;
+  packing_suggestions: string[];
+  total_activities: number;
+}
+
+interface ClaudeUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens: number;
+  cache_read_input_tokens: number;
+}
+
+interface ClaudeCallResult<T> {
+  data: T | null;
+  usage: ClaudeUsage;
+}
+
+// ---------------------------------------------------------------------------
+// Stubs — implemented in subsequent commits
+// ---------------------------------------------------------------------------
+
+async function callClaudeHaiku<T = Record<string, unknown>>(
+  _apiKey: string,
+  _systemBlocks: Array<{ type: "text"; text: string; cache_control?: { type: "ephemeral" } }>,
+  _userContent: string,
+  _toolName: string,
+  _toolSchema: Record<string, unknown>,
+  _maxTokens = 4096,
+): Promise<ClaudeCallResult<T>> {
+  throw new Error("callClaudeHaiku: not implemented");
+}
+
+async function parseIntent(
+  _anthropicKey: string,
+  _body: TripBuilderRequest,
+  _resolvedDestination: string,
+  _logger: LLMLogger,
+): Promise<Intent> {
+  throw new Error("parseIntent: not implemented");
+}
+
+async function pickSurpriseDestination(
+  _anthropicKey: string,
+  _body: TripBuilderRequest,
+  _logger: LLMLogger,
+): Promise<string> {
+  throw new Error("pickSurpriseDestination: not implemented");
+}
+
+function buildSkeleton(
+  _intent: Intent,
+  _numDays: number,
+  _startDate: string,
+): DaySkeleton[] {
+  throw new Error("buildSkeleton: not implemented");
+}
+
+function buildPlacesQueries(
+  _intent: Intent,
+  _skeleton: DaySkeleton[],
+  _center: { lat: number; lng: number; name: string },
+): PlacesSearchQuery[] {
+  throw new Error("buildPlacesQueries: not implemented");
+}
+
+async function geocodeDestination(
+  _googleKey: string,
+  _destination: string,
+): Promise<{ lat: number; lng: number } | null> {
+  throw new Error("geocodeDestination: not implemented");
+}
+
+async function searchPlacesBatch(
+  _queries: PlacesSearchQuery[],
+  _googleKey: string,
+): Promise<BatchPlaceResult[]> {
+  throw new Error("searchPlacesBatch: not implemented");
+}
+
+async function searchEvents(
+  _destination: string,
+  _startDate: string,
+  _endDate: string,
+  _intent: Intent,
+): Promise<EventCandidate[]> {
+  throw new Error("searchEvents: not implemented");
+}
+
+async function rankAndEnrich(
+  _anthropicKey: string,
+  _intent: Intent,
+  _skeleton: DaySkeleton[],
+  _venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
+  _events: EventCandidate[],
+  _googleKey: string,
+  _logger: LLMLogger,
+): Promise<PipelineResult> {
+  throw new Error("rankAndEnrich: not implemented");
+}
+
+function markJuntoPicks(_result: PipelineResult, _intent: Intent): void {
+  throw new Error("markJuntoPicks: not implemented");
+}
+
+function buildAffiliateUrl(
+  _place: BatchPlaceResult,
+  _slot: PacingSlot,
+  _env: { booking: string; viator: string; gyg: string },
+): { booking_url: string; booking_partner: AffiliatePartner } {
+  throw new Error("buildAffiliateUrl: not implemented");
+}
+
+function validateActivities(
+  _result: PipelineResult,
+  _allPlaces: Map<string, BatchPlaceResult>,
+  _center: { lat: number; lng: number },
+): PipelineResult {
+  throw new Error("validateActivities: not implemented");
+}
+
+// ---------------------------------------------------------------------------
+// Logging — fail loud on any DB write error
+// ---------------------------------------------------------------------------
+
+interface LLMLogger {
+  log: (entry: {
+    feature: string;
+    model: string;
+    input_tokens: number;
+    output_tokens: number;
+    cost_usd: number;
+    cached: boolean;
+  }) => Promise<void>;
+}
+
+function makeLLMLogger(
+  svcClient: ReturnType<typeof createClient>,
+  userId: string,
+): LLMLogger {
+  return {
+    async log(entry) {
+      const { error } = await svcClient.from("ai_request_log").insert({
+        user_id: userId,
+        feature: entry.feature,
+        model: entry.model,
+        input_tokens: entry.input_tokens,
+        output_tokens: entry.output_tokens,
+        cost_usd: entry.cost_usd,
+        cached: entry.cached,
+      });
+      if (error) {
+        // Fail loud — historically these errors were swallowed and we lost all telemetry.
+        console.error("[ai_request_log] insert failed:", error);
+        throw new Error(`ai_request_log insert failed: ${error.message}`);
+      }
     },
   };
 }
 
+function computeHaikuCost(usage: ClaudeUsage): number {
+  return (
+    usage.input_tokens * HAIKU_PRICING.input +
+    usage.output_tokens * HAIKU_PRICING.output +
+    usage.cache_creation_input_tokens * HAIKU_PRICING.cache_write +
+    usage.cache_read_input_tokens * HAIKU_PRICING.cache_read
+  );
+}
+
+async function logPlacesCalls(
+  svcClient: ReturnType<typeof createClient>,
+  userId: string,
+  callCount: number,
+): Promise<void> {
+  if (callCount <= 0) return;
+  const { error } = await svcClient.from("ai_request_log").insert({
+    user_id: userId,
+    feature: "places_search",
+    model: "google-places-text-search",
+    input_tokens: 0,
+    output_tokens: 0,
+    cost_usd: callCount * PLACES_PRICE_PER_CALL,
+    cached: false,
+  });
+  if (error) {
+    console.error("[ai_request_log] places insert failed:", error);
+    throw new Error(`ai_request_log places insert failed: ${error.message}`);
+  }
+}
+
 // ---------------------------------------------------------------------------
-// Main handler
+// Cache key — sha256 of normalized intent shape
 // ---------------------------------------------------------------------------
+
+async function buildIntentCacheKey(intent: Intent, numDays: number): Promise<string> {
+  const shape = {
+    destination: intent.destination.toLowerCase().trim(),
+    days: numDays,
+    budget: intent.budget_tier,
+    pace: intent.pace,
+    vibes: [...intent.vibes].sort(),
+    must_haves: [...intent.must_haves].sort(),
+    must_avoids: [...intent.must_avoids].sort(),
+    dietary: [...intent.dietary].sort(),
+    group: intent.group_composition,
+  };
+  const enc = new TextEncoder().encode(JSON.stringify(shape));
+  const hash = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// ===========================================================================
+// MAIN HANDLER
+// ===========================================================================
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -696,7 +678,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ---- Auth check ----
+    // ---- Auth ----
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return jsonResponse({ success: false, error: "Unauthorized" }, 401);
@@ -706,17 +688,16 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
-    const {
-      data: { user },
-      error: authErr,
-    } = await authClient.auth.getUser();
+    const { data: { user }, error: authErr } = await authClient.auth.getUser();
     if (authErr || !user) {
       return jsonResponse({ success: false, error: "Unauthorized" }, 401);
     }
 
-    // ---- Parse & validate input ----
     const body: TripBuilderRequest = await req.json();
 
+    // =========================================================================
+    // ALTERNATIVES_MODE BRANCH — preserved verbatim, still uses Lovable / Gemini
+    // =========================================================================
     if (body.alternatives_mode) {
       const altNotes = body.notes || "";
       const userDescription = body.user_description?.trim() || "";
@@ -724,40 +705,6 @@ Deno.serve(async (req) => {
       if (!lovableApiKey) {
         return jsonResponse({ success: false, error: "LOVABLE_API_KEY not configured" }, 500);
       }
-
-      const altToolSchema = {
-        name: "suggest_alternatives",
-        description: "Return 3 alternative activities",
-        parameters: {
-          type: "object",
-          properties: {
-            alternatives: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  category: { type: "string" },
-                  start_time: { type: "string" },
-                  duration_minutes: { type: "number" },
-                  estimated_cost_per_person: { type: "number" },
-                  currency: { type: "string" },
-                  location_name: { type: "string" },
-                  latitude: { type: "number" },
-                  longitude: { type: "number" },
-                  google_maps_url: { type: "string" },
-                  booking_url: { type: ["string", "null"] },
-                  photo_query: { type: "string" },
-                  tips: { type: "string" },
-                },
-                required: ["title", "category", "start_time", "duration_minutes", "latitude", "longitude"],
-              },
-            },
-          },
-          required: ["alternatives"],
-        },
-      };
 
       const altSystemPrompt = userDescription
         ? "You are an expert travel planner. Suggest 3 real alternative activities that match the user's description. Use REAL venue names that actually exist. Include realistic coordinates."
@@ -768,14 +715,9 @@ Deno.serve(async (req) => {
         : altNotes;
 
       try {
-        const altResult = await callLovableAI(
-          lovableApiKey,
-          altSystemPrompt,
-          altUserPrompt,
-          altToolSchema,
-        );
-        const normalizedAlt = normalizeAIResponse(altResult.itinerary);
-        const alts = (normalizedAlt as any)?.alternatives || [];
+        const altResult = await callLovableAI(lovableApiKey, altSystemPrompt, altUserPrompt, ALT_TOOL_SCHEMA);
+        const normalizedAlt = normalizeAlternatives(altResult.itinerary);
+        const alts = (normalizedAlt as { alternatives?: unknown })?.alternatives || [];
         return jsonResponse({ success: true, alternatives: alts });
       } catch (e) {
         console.error("Alternatives generation failed:", e);
@@ -783,43 +725,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    const {
-      trip_id = null,
-      destination: rawDest,
-      surprise_me = false,
-      start_date: rawStart,
-      end_date: rawEnd,
-      flexible = false,
-      duration_days: rawDuration,
-      group_size = 1,
-      budget_level = "mid-range",
-      vibes = [],
-      interests: rawInterests = [],
-      dietary = [],
-      pace = "balanced",
-      notes = null,
-      free_text = null,
-    } = body;
+    // =========================================================================
+    // NEW PIPELINE BRANCH — Places-first, Claude Haiku ranker
+    // =========================================================================
 
-    const destination = surprise_me ? "a surprise destination (you choose an amazing, underrated destination)" : (rawDest || "").trim();
-    if (!destination) {
-      return jsonResponse({ success: false, error: "destination is required (or set surprise_me=true)" }, 400);
+    // ---- Validate inputs and resolve dates ----
+    const surpriseMe = body.surprise_me === true;
+    const rawDest = (body.destination || "").trim();
+    if (!surpriseMe && !rawDest) {
+      return jsonResponse(
+        { success: false, error: "destination is required (or set surprise_me=true)" },
+        400,
+      );
     }
 
     let startDate: string;
     let endDate: string;
-
-    if (flexible || (!rawStart && !rawEnd)) {
-      const dur = rawDuration && rawDuration > 0 ? Math.min(rawDuration, 21) : 7;
+    if (body.flexible || (!body.start_date && !body.end_date)) {
+      const dur = body.duration_days && body.duration_days > 0 ? Math.min(body.duration_days, 21) : 7;
       const flexDates = generateFlexDates(dur);
       startDate = flexDates.start;
       endDate = flexDates.end;
     } else {
-      if (!rawStart || !rawEnd) {
-        return jsonResponse({ success: false, error: "start_date and end_date are required when not using flexible dates" }, 400);
+      if (!body.start_date || !body.end_date) {
+        return jsonResponse(
+          { success: false, error: "start_date and end_date are required when not using flexible dates" },
+          400,
+        );
       }
-      startDate = rawStart;
-      endDate = rawEnd;
+      startDate = body.start_date;
+      endDate = body.end_date;
     }
 
     const numDays = daysBetween(startDate, endDate);
@@ -830,271 +765,173 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: "Trip duration cannot exceed 21 days" }, 400);
     }
 
-    const clampedGroupSize = Math.max(1, Math.min(group_size, 20));
-    const validBudgets: BudgetLevel[] = ["budget", "mid-range", "premium"];
-    const safeBudget = validBudgets.includes(budget_level) ? budget_level : "mid-range";
-    const validPaces: Pace[] = ["packed", "balanced", "relaxed"];
-    const safePace = validPaces.includes(pace) ? pace : "balanced";
-    const allInterests = [...new Set([...vibes, ...rawInterests])].filter(Boolean);
+    // ---- Required env ----
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const googleKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
+    const bookingAid = Deno.env.get("BOOKING_AID") ?? "";
+    const viatorMcid = Deno.env.get("VIATOR_MCID") ?? "";
+    const gygPid = Deno.env.get("GETYOURGUIDE_PARTNER_ID") ?? "";
 
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) {
-      return jsonResponse({ success: false, error: "LOVABLE_API_KEY not configured" }, 500);
+    if (!anthropicKey) {
+      return jsonResponse({ success: false, error: "ANTHROPIC_API_KEY not configured" }, 500);
+    }
+    if (!googleKey) {
+      return jsonResponse({ success: false, error: "GOOGLE_PLACES_API_KEY not configured" }, 500);
     }
 
     const svcClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    const logger = makeLLMLogger(svcClient, user.id);
 
-    // ---- Cache check ----
-    const cacheKey = buildCacheKey(body, destination, numDays);
-    try {
-      const { data: cached } = await svcClient
+    // ---- Step 0: surprise destination picker (only when surprise_me) ----
+    const resolvedDestination = surpriseMe
+      ? await pickSurpriseDestination(anthropicKey, body, logger)
+      : rawDest;
+
+    // ---- Step 1: parse intent ----
+    const intent = await parseIntent(anthropicKey, body, resolvedDestination, logger);
+
+    // ---- Cache check by intent hash (BEFORE Places spend) ----
+    const cacheKey = await buildIntentCacheKey(intent, numDays);
+    {
+      const { data: cached, error: cacheErr } = await svcClient
         .from("ai_response_cache")
-        .select("response_json, created_at")
+        .select("response_json")
         .eq("cache_key", cacheKey)
-        .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
+        .gt("expires_at", new Date().toISOString())
         .maybeSingle();
-
+      if (cacheErr) {
+        // Fail loud — silent cache misses were the original bug.
+        console.error("[ai_response_cache] lookup failed:", cacheErr);
+        throw new Error(`ai_response_cache lookup failed: ${cacheErr.message}`);
+      }
       if (cached?.response_json) {
-        console.log("Cache hit for trip builder:", cacheKey.slice(0, 60));
-        await svcClient.from("analytics_events").insert({
-          event_name: "ai_trip_builder",
-          user_id: user.id,
-          properties: { source: "cache", destination: destination.trim() },
+        await logger.log({
+          feature: "trip_builder_cache_hit",
+          model: "cache",
+          input_tokens: 0,
+          output_tokens: 0,
+          cost_usd: 0,
+          cached: true,
         });
-        return jsonResponse({ success: true, ...cached.response_json as Record<string, unknown> });
+        return jsonResponse({ success: true, ...(cached.response_json as Record<string, unknown>) });
       }
-    } catch {
-      console.log("Cache lookup skipped (table may not exist)");
     }
 
-    // ---- Fetch Vibe Board data if trip_id provided ----
-    let vibeContext = "";
-    if (trip_id) {
-      try {
-        const { data: vibeAgg } = await svcClient.rpc("get_vibe_aggregates", {
-          _trip_id: trip_id,
+    // ---- Step 2: pacing skeleton ----
+    const skeleton = buildSkeleton(intent, numDays, startDate);
+
+    // ---- Step 3 + 4: query plan + Places batch ----
+    const center = await geocodeDestination(googleKey, intent.destination);
+    if (!center) {
+      return jsonResponse(
+        { success: false, error: `Could not geocode destination "${intent.destination}"` },
+        500,
+      );
+    }
+    const queries = buildPlacesQueries(intent, skeleton, { ...center, name: intent.destination });
+    if (queries.length > MAX_PLACES_QUERIES_PER_TRIP) {
+      console.warn(
+        `[generate-trip-itinerary] query planner produced ${queries.length} queries, exceeding cap ${MAX_PLACES_QUERIES_PER_TRIP}`,
+      );
+    }
+
+    // Step 4 + Step 5 in parallel
+    const [places, events] = await Promise.all([
+      searchPlacesBatch(queries, googleKey),
+      searchEvents(intent.destination, startDate, endDate, intent),
+    ]);
+
+    await logPlacesCalls(svcClient, user.id, queries.length);
+
+    // Group venues by pool for the ranker prompt
+    const venuesByPool = new Map<PoolKey, BatchPlaceResult[]>();
+    for (const p of places) {
+      const pool = venuesByPool.get(p.poolKey) ?? [];
+      pool.push(p);
+      venuesByPool.set(p.poolKey, pool);
+    }
+    const allPlacesById = new Map<string, BatchPlaceResult>();
+    for (const p of places) allPlacesById.set(p.id, p);
+
+    // ---- Step 6: rank + enrich ----
+    const ranked = await rankAndEnrich(
+      anthropicKey,
+      intent,
+      skeleton,
+      venuesByPool,
+      events,
+      googleKey,
+      logger,
+    );
+
+    // ---- Step 7-9: junto picks, affiliate URLs, validation ----
+    markJuntoPicks(ranked, intent);
+
+    for (const dest of ranked.destinations) {
+      const decorate = (a: EnrichedActivity, slotType: SlotType, category: string) => {
+        const place = allPlacesById.get(a.place_id);
+        if (!place) return; // validator will drop this
+        const slotShim: PacingSlot = {
+          type: slotType,
+          start_time: a.start_time,
+          duration_minutes: a.duration_minutes,
+          category,
+        };
+        const aff = buildAffiliateUrl(place, slotShim, {
+          booking: bookingAid,
+          viator: viatorMcid,
+          gyg: gygPid,
         });
-        if (vibeAgg && vibeAgg.length > 0) {
-          const grouped: Record<string, string[]> = {};
-          for (const row of vibeAgg) {
-            const key = row.question_key as string;
-            const val = `${row.answer_value} (${row.response_count} votes)`;
-            if (!grouped[key]) grouped[key] = [];
-            grouped[key].push(val);
-          }
-          const lines = Object.entries(grouped)
-            .map(([k, vals]) => `  ${k}: ${vals.join(", ")}`)
-            .join("\n");
-          vibeContext = `\n\nGROUP VIBE BOARD RESULTS (from trip members voting):\n${lines}\nUse these preferences to guide your choices.`;
+        a.booking_url = aff.booking_url;
+        a.booking_partner = aff.booking_partner;
+      };
+      if (dest.accommodation) decorate(dest.accommodation, "lodging", "accommodation");
+      for (const day of dest.days) {
+        for (const act of day.activities) {
+          // Slot type is reconstructed from category; ranker also returns it directly when present.
+          const slotType: SlotType =
+            act.category === "food" ? "lunch" :
+            act.category === "nightlife" ? "nightlife" :
+            "morning_major";
+          decorate(act, slotType, act.category);
         }
-      } catch (e) {
-        console.error("Failed to fetch vibe data:", e);
       }
     }
 
-    // ---- Build AI prompt ----
-    const paceGuide: Record<Pace, string> = {
-      packed: "4-5 activities per day. The group wants to see and do everything.",
-      balanced: "3-4 activities per day. Mix active exploration with downtime.",
-      relaxed: "2-3 activities per day. Plenty of free time and slow mornings.",
-    };
+    const validated = validateActivities(ranked, allPlacesById, center);
 
-    const budgetGuide: Record<BudgetLevel, string> = {
-      budget: "Street food, local eateries, hostels, budget guesthouses. Activities: free walking tours, public beaches, markets, temples. Transport: public transit, shared rides.",
-      "mid-range": "Mid-tier restaurants, 3-star hotels, boutique stays. Activities: guided tours, cooking classes, snorkeling trips. Transport: private transfers for longer distances.",
-      premium: "Fine dining, luxury resorts, 5-star hotels. Activities: private tours, spa treatments, yacht charters, exclusive experiences. Transport: private car/driver.",
-    };
-
-    const hasDietaryReqs =
-      dietary.length > 0 && !dietary.every((d) => d === "none" || d === "No restrictions");
-    const activeDietary = dietary.filter((d) => d !== "none" && d !== "No restrictions");
-    const dietaryNote = hasDietaryReqs
-      ? `\n\nDIETARY REQUIREMENTS: ${activeDietary.join(", ")}. For EVERY restaurant/food activity, include a dietary_notes field explaining how this venue accommodates these requirements.`
-      : "";
-
-    const notesSection = [];
-    if (notes) notesSection.push(`SPECIAL NOTES (treat as non-negotiable constraints): "${notes}"`);
-    if (free_text) notesSection.push(`FREE-TEXT DESCRIPTION FROM USER (treat preferences and dislikes as ABSOLUTE deal-breakers): "${free_text}"`);
-    const accessibilityNote = notesSection.length > 0 ? `\n\n${notesSection.join("\n\n")}. These are the user's own words — treat every stated preference, dislike, or constraint as ABSOLUTE. If they conflict with a popular recommendation, drop the recommendation. Never include something the user explicitly said they don't want.` : "";
-
-    const systemPrompt = `You are a knowledgeable local friend writing personalized trip recommendations for Junto, a group trip planning app. You are NOT a list generator. You create detailed, realistic, map-ready itineraries using REAL venues and places that actually exist.
-
-EDITORIAL VOICE — non-negotiable:
-
-Every activity must include AT LEAST ONE of:
-- A specific timing tip ("arrive before 8am to have it nearly to yourself")
-- A booking warning ("requires reservation 3 weeks ahead — book before this trip")
-- A genre/style insight ("this is where locals eat, not the tourist strip on the main square")
-- A "skip if" caveat ("skip if you've been to a similar one — go to X instead")
-- A specific micro-detail that demonstrates real knowledge (which entrance is faster, which dish to order, which seat has the view)
-
-NEVER write generic descriptions like "visit the museum" or "enjoy local cuisine." Every recommendation must explain WHY this specific place at THIS specific time is right for THIS user.
-
-USE THE USER'S NOTES AND FREE-TEXT INPUT AGGRESSIVELY:
-If the user said "no tourist traps," you must NOT include the obvious top-3 attractions even if they're highly rated. Find the equivalent local spot.
-If the user said "no early mornings," do not schedule anything before 9am.
-If the user mentioned a deal-breaker, treat it as ABSOLUTE. Better to skip a category entirely than violate it.
-
-LOGISTICS RULES — non-negotiable:
-
-1. PACING: Maximum 1-2 MAJOR activities per day. Surround them with smaller experiences (coffee, walks, casual meals).
-2. BUFFER TIME: Insert 15-30 min buffers between every activity for transitions, bathroom breaks, spontaneous discovery.
-3. FIRST DAY: Light pacing for jet lag/arrival. Don't schedule anything intensive in the first 4 hours of arrival day.
-4. LAST DAY: Light pacing for departure. End final scheduled activity at least 4 hours before flight time. NEVER schedule anything ending after the user needs to leave for the airport.
-5. REST DAY: For trips longer than 4 days, include at least one deliberately unstructured day or half-day.
-6. ALTERNATE: Don't put two museum days back-to-back. Don't put two beach days back-to-back. Vary high-energy and restorative activities.
-
-MEAL TIMING — culture-aware:
-
-- Northern Europe / US: lunch 12-2pm, dinner 7-9pm
-- Spain: lunch 2-4pm, dinner 9-11pm
-- Italy: lunch 1-2:30pm, dinner 8-10pm
-- Asia: varies by country, default lunch 12-2pm, dinner 6-9pm
-- Always reserve a meal time slot AND walk time from previous activity
-
-GROUNDING — non-negotiable:
-
-Every venue must be a real place verifiable via Google Places. NEVER invent restaurants, hotels, or attractions. If you don't have a real recommendation, leave the slot empty rather than hallucinate.
-
-Only suggest places you're highly confident exist. After generation, the system will validate every venue against Google Places. Anything that doesn't match will be dropped.
-
-CRITICAL RULES:
-1. Use REAL, SPECIFIC venue names that actually exist in ${destination.trim()}. Never use generic descriptions.
-2. Include realistic latitude/longitude coordinates for each venue.
-3. Schedule realistically: include travel time between locations, proper meal times.
-4. Each day should flow naturally with buffer time between activities.
-5. Balance different group interests across the trip.
-6. The google_maps_url must be a valid Google Maps search URL.
-7. Keep descriptions to 1-2 sentences max — but make them editorial, not generic. Explain what makes this place special.
-8. The pro_tip field is REQUIRED for every activity — include a specific timing tip, booking warning, local insight, or micro-detail.
-9. The skip_if field should be included when relevant — tell the user when this activity is NOT right for them.
-
-DURATION GUIDANCE: duration_minutes should be the time spent AT the activity, not the total stay. Hotel check-in: 30-60 min. Restaurant meal: 60-120 min. Museum visit: 90-180 min. Bar/club: 120-180 min. Walking tour: 120-240 min. Beach/pool: 120-240 min. Never exceed 480 minutes for a single activity.
-
-PACE: ${paceGuide[safePace]}
-
-BUDGET LEVEL (${safeBudget}): ${budgetGuide[safeBudget]}
-
-GROUP SIZE: ${clampedGroupSize} people.
-
-INTERESTS: ${allInterests.length > 0 ? allInterests.join(", ") : "general sightseeing"}.
-
-COST ESTIMATION RULES:
-1. All costs MUST be in the user's requested currency or the local currency of the destination.
-2. Include a cost_profile per destination with realistic LOCAL price ranges (min and max, not single values):
-
-cost_profile: {
-  currency: '<LOCAL_CURRENCY_CODE>',
-  meal: { budget: [min, max], midrange: [min, max], premium: [min, max] },
-  activity: { budget: [min, max], midrange: [min, max], premium: [min, max] },
-  hotel_night: { budget: [min, max], midrange: [min, max], premium: [min, max], luxury: [min, max] },
-  transport: { local: [min, max], intercity: [min, max] }
-}
-
-3. SELF-CHECK: After generating all activities, verify:
-   - Does a 'budget meal' cost more than a 'premium meal'? Fix it.
-   - Is the daily total reasonable for the destination? A budget day in Bali should be ~IDR 500,000-1,500,000. A budget day in Zurich should be ~CHF 100-200.
-   - Are free attractions (temples, beaches, parks, walking) marked as 0 cost?
-   - Is transport priced per ride, not per day?
-
-4. Use RANGES from cost_profile when assigning estimated_cost_per_person. Pick a specific value within the appropriate range based on the venue's positioning (a casual warung at the low end of budget, a trendy cafe at the high end of midrange).
-
-5. Common free activities that should be cost 0: public beaches, temple visits (unless entry fee), walking tours (self-guided), park visits, window shopping, sunset watching, street art walks.
-
-EXAMPLES of editorial voice DONE RIGHT:
-
-Bad: "Visit the Eiffel Tower"
-Good: "Eiffel Tower at 9am — enter via the south pillar to skip the longer queues. The morning light photographs better than the famous sunset shot, and you'll beat 80% of the crowd."
-
-Bad: "Have lunch at a local restaurant"
-Good: "Rue Cler market for lunch — this is where Parisians actually grocery shop. Grab a crêpe from the stand at the corner of Rue du Champ de Mars (the one with the longer local queue, not the tourist-facing one)."
-
-Bad: "Enjoy the nightlife"
-Good: "Start at Bar Hemingway at the Ritz (book a table for 9pm, dress smart-casual) — order the Clean Dirty Martini, their signature. Skip if cocktail bars aren't your thing — head to Le Syndicat on Rue du Faubourg Saint-Denis instead for natural wine and zero pretension."${dietaryNote}${accessibilityNote}${vibeContext}`;
-
-    const userPrompt = `Plan a ${numDays}-day group trip to ${destination.trim()} for ${clampedGroupSize} people.
-
-Dates: ${startDate} to ${endDate}${flexible ? " (flexible — dates are approximate)" : ""}
-Budget: ${safeBudget}
-Pace: ${safePace}
-Interests: ${allInterests.length > 0 ? allInterests.join(", ") : "general"}
-Dietary: ${dietary.length > 0 ? dietary.join(", ") : "none"}
-${notes ? `Notes: ${notes}` : ""}
-${free_text ? `User description: ${free_text}` : ""}
-
-Generate the complete itinerary.`;
-
-    // ---- Call Lovable AI Gateway ----
-    const toolSchema = buildToolSchema(hasDietaryReqs);
-    
-    let aiResult: AIResult;
-    try {
-      aiResult = await callLovableAI(lovableApiKey, systemPrompt, userPrompt, toolSchema);
-    } catch (apiErr) {
-      console.error("AI Gateway error:", (apiErr as Error).message);
-      return jsonResponse({ success: false, error: (apiErr as Error).message }, 500);
-    }
-
-    if (!aiResult.itinerary) {
-      return jsonResponse({ success: false, error: "Failed to parse AI-generated itinerary" }, 500);
-    }
-
-    const itinerary = normalizeAIResponse(aiResult.itinerary, safeBudget)!;
-    const inputTokens = aiResult.inputTokens;
-    const outputTokens = aiResult.outputTokens;
-
-    // ---- Log request ----
-    try {
-      await svcClient.from("ai_request_log").insert({
-        user_id: user.id,
-        feature: "trip_builder",
-        model: "google/gemini-2.5-flash",
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        cost_usd: 0, // Lovable AI pricing handled externally
-      });
-    } catch {
-      console.log("ai_request_log insert skipped");
-    }
-
-    // ---- Cache the response ----
-    try {
-      await svcClient.from("ai_response_cache").insert({
+    // ---- Cache write (fail loud) ----
+    {
+      const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
         cache_key: cacheKey,
-        response_json: itinerary,
+        response_json: validated,
         expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
       });
-    } catch {
-      console.log("ai_response_cache insert skipped");
+      if (cacheInsErr) {
+        console.error("[ai_response_cache] insert failed:", cacheInsErr);
+        throw new Error(`ai_response_cache insert failed: ${cacheInsErr.message}`);
+      }
     }
 
-    // ---- Track usage ----
+    // ---- Analytics (best-effort; not in scope of fail-loud requirement) ----
     await svcClient.from("analytics_events").insert({
       event_name: "ai_trip_builder",
       user_id: user.id,
       properties: {
         source: "generated",
-        destination: destination.trim(),
+        destination: intent.destination,
         days: numDays,
-        group_size: clampedGroupSize,
-        budget_level: safeBudget,
-        pace: safePace,
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
+        budget_level: intent.budget_tier,
+        pace: intent.pace,
       },
     });
 
-    return jsonResponse({ success: true, ...itinerary });
+    return jsonResponse({ success: true, ...validated });
   } catch (e) {
     console.error("generate-trip-itinerary error:", e);
-    return jsonResponse(
-      { success: false, error: (e as Error).message || "Internal error" },
-      500,
-    );
+    return jsonResponse({ success: false, error: (e as Error).message || "Internal error" }, 500);
   }
 });
