@@ -614,21 +614,264 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
   return { data: input as T, usage };
 }
 
+// ---------------------------------------------------------------------------
+// Intent parser — static, cache-friendly system prompt
+// ---------------------------------------------------------------------------
+
+const INTENT_SYSTEM_PROMPT = `You are extracting structured travel preferences from a user's trip-builder form submission.
+
+Your output will be used to (1) pick a surprise destination when the user hasn't named one, (2) plan Google Places searches, and (3) steer an LLM ranker. So be concrete. Do not invent preferences the user did not express.
+
+EXTRACTION RULES
+
+destination:
+- If the user provided a destination_hint (non-empty), copy it verbatim into destination.
+- If destination_hint is empty or looks like a placeholder (TBD, surprise me, anywhere, etc.), return destination as an empty string. A separate step will pick one.
+- Never invent a destination from thin air.
+
+vibes:
+- Start from the user's explicit vibes[] array.
+- Add vibes that are clearly implied by free_text (e.g. "we want to eat our way through" => add "foodie"; "chill beach days" => add "beach", "slow").
+- Short lowercase tags, 1-3 words each. De-duplicate.
+
+must_haves:
+- Specific experiences the user explicitly asked for. Examples: "cooking class", "see the Northern Lights", "visit the Miffy Museum", "sunrise hike".
+- Only from explicit statements in notes or free_text. Empty array if none.
+
+must_avoids (CRITICAL — extract aggressively from text):
+- Read notes and free_text carefully for negative signals: "no tourist traps", "nothing too loud", "no early mornings", "skip the obvious stuff", "no chains", "I hate museums", "nothing over 2 hours", "we don't drink".
+- Normalize into short lowercase phrases that a downstream prompt can honor: "tourist traps", "loud nightlife", "early mornings", "chain restaurants", "museums", "long activities", "alcohol".
+- Empty array if the user expressed no deal-breakers. Do not invent caution.
+
+budget_tier:
+- Map budget_level: "budget" => "budget", "mid-range" => "mid-range", "premium" => "premium".
+- If free_text contradicts the form (user ticked mid-range but wrote "we're on a shoestring"), trust the text.
+
+pace:
+- Map form pace: "packed" => "active", "balanced" => "balanced", "relaxed" => "leisurely".
+- If free_text contradicts (form says balanced but user writes "slow mornings, lots of downtime"), trust the text.
+
+dietary:
+- Start from dietary[]. Drop "none" / "No restrictions".
+- Add any dietary signals from text (e.g. "we're plant-based" => "vegan").
+
+group_composition:
+- One short human phrase describing the group. Examples: "solo traveler", "couple", "family with young kids", "friends in their 30s", "multi-generational group".
+- Infer from group_size + any signals in notes/free_text. For plain numbers without context, use "group of N".
+
+Return exactly one tool_use call. Do not add commentary.`;
+
+const INTENT_TOOL: ClaudeTool = {
+  name: "record_parsed_intent",
+  description: "Record the structured intent extracted from the trip-builder form.",
+  input_schema: {
+    type: "object",
+    properties: {
+      destination: {
+        type: "string",
+        description: "Copy of destination_hint, or empty string if none was provided.",
+      },
+      vibes: {
+        type: "array",
+        items: { type: "string" },
+        description: "Short lowercase vibe tags.",
+      },
+      must_haves: {
+        type: "array",
+        items: { type: "string" },
+        description: "Explicit positive requests. Empty array if none.",
+      },
+      must_avoids: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Explicit negative signals from notes/free_text. Empty array if none. Examples: 'tourist traps', 'early mornings'.",
+      },
+      budget_tier: {
+        type: "string",
+        enum: ["budget", "mid-range", "premium"],
+      },
+      pace: {
+        type: "string",
+        enum: ["leisurely", "balanced", "active"],
+      },
+      dietary: {
+        type: "array",
+        items: { type: "string" },
+        description: "Real dietary restrictions only. Empty array if none.",
+      },
+      group_composition: {
+        type: "string",
+        description: "Short phrase describing the group.",
+      },
+    },
+    required: [
+      "destination",
+      "vibes",
+      "must_haves",
+      "must_avoids",
+      "budget_tier",
+      "pace",
+      "dietary",
+      "group_composition",
+    ],
+  },
+};
+
+function buildIntentUserMessage(body: TripBuilderRequest, destinationHint: string): string {
+  const payload = {
+    destination_hint: destinationHint,
+    surprise_me: body.surprise_me === true,
+    group_size: body.group_size ?? 1,
+    budget_level: body.budget_level ?? "mid-range",
+    pace: body.pace ?? "balanced",
+    vibes: body.vibes ?? [],
+    interests: body.interests ?? [],
+    dietary: body.dietary ?? [],
+    notes: body.notes ?? "",
+    free_text: body.free_text ?? "",
+  };
+  return `Extract parsed intent for this trip-builder submission:\n\n${JSON.stringify(payload, null, 2)}`;
+}
+
 async function parseIntent(
-  _anthropicKey: string,
-  _body: TripBuilderRequest,
-  _resolvedDestination: string,
-  _logger: LLMLogger,
+  anthropicKey: string,
+  body: TripBuilderRequest,
+  destinationHint: string,
+  logger: LLMLogger,
 ): Promise<Intent> {
-  throw new Error("parseIntent: not implemented");
+  const result = await callClaudeHaiku<{
+    destination: string;
+    vibes: string[];
+    must_haves: string[];
+    must_avoids: string[];
+    budget_tier: "budget" | "mid-range" | "premium";
+    pace: "leisurely" | "balanced" | "active";
+    dietary: string[];
+    group_composition: string;
+  }>(
+    anthropicKey,
+    [{ type: "text", text: INTENT_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    buildIntentUserMessage(body, destinationHint),
+    INTENT_TOOL,
+    1024,
+  );
+
+  await logger.log({
+    feature: "trip_builder_intent",
+    model: HAIKU_MODEL,
+    input_tokens: result.usage.input_tokens,
+    output_tokens: result.usage.output_tokens,
+    cost_usd: computeHaikuCost(result.usage),
+    cached: result.usage.cache_read_input_tokens > 0,
+  });
+
+  if (!result.data) {
+    throw new Error("parseIntent: Claude returned no tool input");
+  }
+
+  const rawNotes = [body.notes ?? "", body.free_text ?? ""].filter(Boolean).join("\n\n").trim();
+
+  return {
+    destination: result.data.destination ?? "",
+    vibes: Array.isArray(result.data.vibes) ? result.data.vibes : [],
+    must_haves: Array.isArray(result.data.must_haves) ? result.data.must_haves : [],
+    must_avoids: Array.isArray(result.data.must_avoids) ? result.data.must_avoids : [],
+    budget_tier: result.data.budget_tier ?? "mid-range",
+    pace: result.data.pace ?? "balanced",
+    dietary: Array.isArray(result.data.dietary) ? result.data.dietary : [],
+    group_composition: result.data.group_composition ?? "group",
+    raw_notes: rawNotes,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Surprise destination picker (Step 3 — runs only when surprise_me=true)
+// Takes parsed Intent (without destination) and picks a city that actually
+// fits the user's vibes/budget/pace/must_haves/must_avoids. Prompt explicitly
+// steers away from the five "obvious" defaults so returning users don't get
+// the same suggestion every time.
+// ---------------------------------------------------------------------------
+
+const SURPRISE_SYSTEM_PROMPT = `You are a travel concierge who picks ONE destination city for a surprise trip based on a traveler's parsed preferences.
+
+HARD RULES:
+- Return exactly ONE destination in the form "City, Country" (e.g. "Porto, Portugal", "Oaxaca, Mexico", "Kyoto, Japan"). Never a region, country, or continent alone.
+- The city MUST plausibly satisfy every must_have and avoid every must_avoid. If the must_avoids rule out a candidate, pick a different city. Dietary restrictions are not a reason to avoid a city; cuisine variety is abundant.
+- The budget_tier MUST be realistic for the city. Do not suggest Zurich for a "budget" traveler or a remote village for "premium".
+- The pace MUST fit the city's character. Active pace → cities with abundant structured activities. Leisurely pace → cities that reward wandering.
+
+VARIETY RULES (critical — these override your defaults):
+- Do NOT default to Paris, Barcelona, Rome, Tokyo, or Bali. These are over-suggested. Avoid them unless the user's vibes + must_haves make one of them uniquely correct and no comparable alternative exists.
+- Prefer lesser-known but well-served cities: Porto, Valencia, Ljubljana, Kotor, Tbilisi, Oaxaca, Mexico City, Medellín, Cartagena, Cape Town, Marrakech, Fes, Istanbul, Tel Aviv, Amman, Jordan's Petra base, Kyoto, Kanazawa, Taipei, Hanoi, Chiang Mai, Siem Reap, Colombo, Kochi, Jaipur, Georgetown (Penang), Hoi An, Tallinn, Vilnius, Krakow, Bologna, Seville, Granada, Lyon, Edinburgh, Galway, Reykjavik, Bergen, Copenhagen, Trieste, Naples, Palermo, Marseille, Québec City, Montréal, Vancouver, Portland, Savannah, New Orleans, Buenos Aires, Valparaíso, Cusco, Quito, Ubud, Hội An, Luang Prabang, Kandy, Hampi, Pondicherry.
+- If the user's preferences genuinely point at a well-known city (e.g. explicit vibe "romantic Parisian cafés"), you may choose it, but bias toward a sibling city that fits equally well.
+- Pick a different region/continent each time when all else is equal — avoid cookie-cutter European answers when Latin America, Southeast Asia, or North Africa would fit.
+
+OUTPUT: You must call the pick_destination tool with the chosen destination and a one-sentence rationale tying it to the user's parsed intent.`;
+
+const SURPRISE_TOOL: ClaudeTool = {
+  name: "pick_destination",
+  description: "Pick one surprise destination that matches the parsed intent.",
+  input_schema: {
+    type: "object",
+    properties: {
+      destination: {
+        type: "string",
+        description: "City and country, formatted exactly as 'City, Country'.",
+      },
+      rationale: {
+        type: "string",
+        description: "One sentence explaining why this city fits the traveler's vibes/must_haves.",
+      },
+    },
+    required: ["destination", "rationale"],
+    additionalProperties: false,
+  },
+};
+
+function buildSurpriseUserMessage(intent: Intent, numDays: number): string {
+  const payload = {
+    trip_length_days: numDays,
+    vibes: intent.vibes,
+    must_haves: intent.must_haves,
+    must_avoids: intent.must_avoids,
+    budget_tier: intent.budget_tier,
+    pace: intent.pace,
+    dietary: intent.dietary,
+    group_composition: intent.group_composition,
+    raw_notes: intent.raw_notes,
+  };
+  return `Pick a surprise destination for this traveler:\n\n${JSON.stringify(payload, null, 2)}`;
 }
 
 async function pickSurpriseDestination(
-  _anthropicKey: string,
-  _body: TripBuilderRequest,
-  _logger: LLMLogger,
+  anthropicKey: string,
+  intent: Intent,
+  numDays: number,
+  logger: LLMLogger,
 ): Promise<string> {
-  throw new Error("pickSurpriseDestination: not implemented");
+  const result = await callClaudeHaiku<{ destination: string; rationale: string }>(
+    anthropicKey,
+    [{ type: "text", text: SURPRISE_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    buildSurpriseUserMessage(intent, numDays),
+    SURPRISE_TOOL,
+    512,
+  );
+
+  await logger.log({
+    feature: "trip_builder_surprise_destination",
+    model: HAIKU_MODEL,
+    input_tokens: result.usage.input_tokens,
+    output_tokens: result.usage.output_tokens,
+    cost_usd: computeHaikuCost(result.usage),
+    cached: result.usage.cache_read_input_tokens > 0,
+  });
+
+  const picked = result.data?.destination?.trim();
+  if (!picked) {
+    throw new Error("pickSurpriseDestination: Claude returned no destination");
+  }
+  return picked;
 }
 
 function buildSkeleton(
@@ -911,13 +1154,27 @@ Deno.serve(async (req) => {
     );
     const logger = makeLLMLogger(svcClient, user.id);
 
-    // ---- Step 0: surprise destination picker (only when surprise_me) ----
-    const resolvedDestination = surpriseMe
-      ? await pickSurpriseDestination(anthropicKey, body, logger)
-      : rawDest;
-
     // ---- Step 1: parse intent ----
-    const intent = await parseIntent(anthropicKey, body, resolvedDestination, logger);
+    // In surprise mode we pass an empty destination hint — the surprise picker
+    // runs next with the parsed vibes/must_haves/must_avoids and fills in
+    // intent.destination. This ordering means the picker sees the same
+    // extracted must_avoids the ranker will later enforce.
+    const intent = await parseIntent(
+      anthropicKey,
+      body,
+      surpriseMe ? "" : rawDest,
+      logger,
+    );
+
+    // ---- Step 1.5: surprise destination picker (only when surprise_me) ----
+    if (surpriseMe) {
+      intent.destination = await pickSurpriseDestination(
+        anthropicKey,
+        intent,
+        numDays,
+        logger,
+      );
+    }
 
     // ---- Cache check by intent hash (BEFORE Places spend) ----
     const cacheKey = await buildIntentCacheKey(intent, numDays);
