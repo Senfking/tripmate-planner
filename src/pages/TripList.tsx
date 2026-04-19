@@ -28,16 +28,22 @@ import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
 
 function getTripStatus(start: string | null, end: string | null): { status: TripStatus; daysToGo?: number } {
-  // Strictly date-based: missing either date → draft bucket ("no-dates")
-  if (!start || !end) return { status: "no-dates" };
+  // No start_date → draft (can't classify on the timeline)
+  if (!start) return { status: "no-dates" };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const s = parseISO(start);
-  const e = parseISO(end);
+  const e = end ? parseISO(end) : null;
 
-  if (isBefore(e, today)) return { status: "ended" };
-  if (isWithinInterval(today, { start: s, end: e })) return { status: "live" };
+  // Ended: end date exists and is strictly before today
+  if (e && isBefore(e, today)) return { status: "ended" };
+
+  // Live: today within [start, end], or start ≤ today with no end date
+  if (e && isWithinInterval(today, { start: s, end: e })) return { status: "live" };
+  if (!e && !isAfter(s, today)) return { status: "live" };
+
+  // Future
   if (isAfter(s, today)) {
     const days = differenceInDays(s, today);
     if (days <= 60) return { status: "countdown", daysToGo: days };
