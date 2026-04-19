@@ -810,6 +810,53 @@ export default function TripList() {
         </div>
       )}
 
+      {/* ── No dates yet (compact cards, same shape as drafts) ── */}
+      {noDateTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">No dates yet</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            {noDateTrips.map((trip) => (
+              <Link
+                key={trip.id}
+                to={`/app/trips/${trip.id}`}
+                className="group relative shrink-0 w-[220px] h-[120px] rounded-2xl overflow-hidden shadow-md text-left active:scale-[0.98] transition-transform"
+              >
+                <img
+                  src={trip.photoUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ objectPosition: trip.coverFocalPoint || "center" }}
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.30) 55%, rgba(0,0,0,0.10) 100%)",
+                  }}
+                />
+
+                {/* Member count - top right */}
+                {trip.memberCount > 0 && (
+                  <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/40 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white">
+                    <Users className="h-3 w-3" />
+                    {trip.memberCount}
+                  </span>
+                )}
+
+                {/* Bottom content */}
+                <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
+                  <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">
+                    {trip.emoji ? `${trip.emoji} ` : ""}{trip.name}
+                  </p>
+                  <p className="text-[11px] text-white/75 mt-0.5">Dates TBD</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Drafts Section ── */}
       {drafts && drafts.length > 0 && (
         <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
@@ -888,27 +935,6 @@ export default function TripList() {
                 </button>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* ── No dates yet ── */}
-      {noDateTrips.length > 0 && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">No dates yet</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {noDateTrips.map((trip, i) => (
-              <div
-                key={trip.id}
-                className={
-                  noDateTrips.length % 2 !== 0 && i === noDateTrips.length - 1
-                    ? "md:col-span-2"
-                    : ""
-                }
-              >
-                <RegularCard trip={trip} />
-              </div>
-            ))}
           </div>
         </div>
       )}
