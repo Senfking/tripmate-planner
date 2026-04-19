@@ -350,7 +350,12 @@ interface PacingSlot {
   type: SlotType;
   start_time: string;       // "HH:MM"
   duration_minutes: number;
-  category: string;         // for query routing: food | culture | nightlife | accommodation | nature | relaxation
+  // High-level zone hint for the query planner. V1 vocabulary:
+  //   "primary"     — main city neighborhood / core itinerary
+  //   "transit_hub" — near airport/station (arrival / departure days)
+  //   "day_trip"    — outside the city proper (reserved; not emitted by V1)
+  // Query planner combines this with slot.type + intent.vibes to build queries.
+  region_tag_for_queries: string;
 }
 
 interface DaySkeleton {
@@ -874,12 +879,156 @@ async function pickSurpriseDestination(
   return picked;
 }
 
+// ---------------------------------------------------------------------------
+// Step 4: pacing skeleton (pure code, no LLM)
+//
+// Emits an ordered list of slots per day. Slot types are granular enough that
+// the query planner can derive distinct queries from them (e.g. "dinner" +
+// vibe "lively" ≠ "dinner" + vibe "romantic"). Meal timing is driven by the
+// MEAL_PATTERNS data table keyed by country; unknown countries fall back to
+// the americas/asia default (lunch 12–14, dinner 19–21).
+//
+// Pacing rules (spec):
+//   leisurely → 1 major attraction/day (2 on mid-trip "exploration" days)
+//   balanced  → 2 major attractions/day (one morning, one afternoon)
+//   active    → 3 major attractions/day (morning + two afternoon blocks)
+//
+// First day always lighter (arrival buffer); last day lighter (departure
+// buffer). On trips ≥ 6 days with active pace, every 4th interior day becomes
+// a rest day (breakfast + lunch + rest + dinner only).
+// ---------------------------------------------------------------------------
+
+function hhmm(hour: number, minute = 0): string {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function addDaysIso(isoDate: string, n: number): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function resolveMealPattern(destination: string): { lunch: [number, number]; dinner: [number, number] } {
+  const parts = destination.split(",").map((s) => s.trim().toLowerCase());
+  const country = parts[parts.length - 1] ?? "";
+  return MEAL_PATTERNS[country] ?? DEFAULT_MEAL_PATTERN;
+}
+
+function hasNightlifeSignal(intent: Intent): boolean {
+  const haystack = [
+    ...intent.vibes,
+    ...intent.must_haves,
+    intent.group_composition,
+    intent.raw_notes,
+  ]
+    .join(" ")
+    .toLowerCase();
+  if (/family|kids|children|toddler/.test(haystack)) return false;
+  return /nightlife|party|club|bar\b|cocktail|lively|live music|rooftop/.test(haystack);
+}
+
+function themeForDay(opts: {
+  isFirst: boolean;
+  isLast: boolean;
+  isRest: boolean;
+  pace: Intent["pace"];
+}): string {
+  if (opts.isFirst) return "Arrival & settling in";
+  if (opts.isLast) return "Last highlights & departure";
+  if (opts.isRest) return "Rest day — recharge";
+  if (opts.pace === "active") return "Full exploration";
+  if (opts.pace === "leisurely") return "Slow wandering";
+  return "Balanced exploration";
+}
+
 function buildSkeleton(
-  _intent: Intent,
-  _numDays: number,
-  _startDate: string,
+  intent: Intent,
+  numDays: number,
+  startDate: string,
 ): DaySkeleton[] {
-  throw new Error("buildSkeleton: not implemented");
+  // Placeholder start date for pure-duration flexible mode — downstream uses
+  // the date only for ordering and display, not for factual claims.
+  const base = startDate || new Date().toISOString().slice(0, 10);
+
+  const meal = resolveMealPattern(intent.destination);
+  const lunchStart = meal.lunch[0];
+  const dinnerStart = meal.dinner[0];
+  const wantsNightlife = hasNightlifeSignal(intent);
+
+  const days: DaySkeleton[] = [];
+  for (let d = 0; d < numDays; d++) {
+    const date = addDaysIso(base, d);
+    const isFirst = numDays > 1 && d === 0;
+    const isLast = numDays > 1 && d === numDays - 1;
+    // Rest day: only on longer active trips, never on arrival/departure days.
+    const isRest =
+      numDays >= 6 &&
+      intent.pace === "active" &&
+      !isFirst &&
+      !isLast &&
+      (d + 1) % 4 === 0;
+
+    const slots: PacingSlot[] = [];
+    const primary = "primary";
+    const transitHub = "transit_hub";
+
+    if (isFirst) {
+      // Arrival day: afternoon arrival buffer, one light sight, dinner.
+      slots.push({ type: "arrival", start_time: hhmm(13, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
+      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 30), duration_minutes: 75, region_tag_for_queries: primary });
+      slots.push({ type: "afternoon_major", start_time: hhmm(16, 0), duration_minutes: 120, region_tag_for_queries: primary });
+      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+    } else if (isLast) {
+      // Departure day: one short morning highlight, lunch, then departure buffer.
+      slots.push({ type: "breakfast", start_time: hhmm(9, 0), duration_minutes: 45, region_tag_for_queries: primary });
+      slots.push({ type: "morning_major", start_time: hhmm(10, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
+      slots.push({ type: "departure", start_time: hhmm(15, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
+    } else if (isRest) {
+      // Rest day: late breakfast, long lunch, afternoon rest, dinner.
+      slots.push({ type: "breakfast", start_time: hhmm(10, 0), duration_minutes: 60, region_tag_for_queries: primary });
+      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      slots.push({ type: "rest", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
+      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+    } else if (intent.pace === "leisurely") {
+      // Leisurely: late breakfast, one morning sight, lunch, one afternoon sight, dinner.
+      slots.push({ type: "breakfast", start_time: hhmm(10, 0), duration_minutes: 60, region_tag_for_queries: primary });
+      slots.push({ type: "morning_major", start_time: hhmm(11, 30), duration_minutes: 120, region_tag_for_queries: primary });
+      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 30), duration_minutes: 90, region_tag_for_queries: primary });
+      slots.push({ type: "afternoon_major", start_time: hhmm(15, 30), duration_minutes: 120, region_tag_for_queries: primary });
+      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+    } else if (intent.pace === "active") {
+      // Active: early start, morning + two afternoon majors, optional nightlife.
+      slots.push({ type: "breakfast", start_time: hhmm(8, 30), duration_minutes: 45, region_tag_for_queries: primary });
+      slots.push({ type: "morning_major", start_time: hhmm(9, 30), duration_minutes: 150, region_tag_for_queries: primary });
+      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 60, region_tag_for_queries: primary });
+      slots.push({ type: "afternoon_major", start_time: hhmm(14, 0), duration_minutes: 150, region_tag_for_queries: primary });
+      slots.push({ type: "afternoon_major", start_time: hhmm(16, 45), duration_minutes: 105, region_tag_for_queries: primary });
+      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      if (wantsNightlife) {
+        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
+      }
+    } else {
+      // Balanced (default): breakfast, morning + afternoon major, dinner, optional nightlife.
+      slots.push({ type: "breakfast", start_time: hhmm(9, 0), duration_minutes: 45, region_tag_for_queries: primary });
+      slots.push({ type: "morning_major", start_time: hhmm(10, 0), duration_minutes: 150, region_tag_for_queries: primary });
+      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
+      slots.push({ type: "afternoon_major", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
+      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      if (wantsNightlife && !isFirst) {
+        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 90, region_tag_for_queries: primary });
+      }
+    }
+
+    days.push({
+      date,
+      day_number: d + 1,
+      theme: themeForDay({ isFirst, isLast, isRest, pace: intent.pace }),
+      slots,
+    });
+  }
+
+  return days;
 }
 
 function buildPlacesQueries(
@@ -1254,14 +1403,14 @@ Deno.serve(async (req) => {
     markJuntoPicks(ranked, intent);
 
     for (const dest of ranked.destinations) {
-      const decorate = (a: EnrichedActivity, slotType: SlotType, category: string) => {
+      const decorate = (a: EnrichedActivity, slotType: SlotType) => {
         const place = allPlacesById.get(a.place_id);
         if (!place) return; // validator will drop this
         const slotShim: PacingSlot = {
           type: slotType,
           start_time: a.start_time,
           duration_minutes: a.duration_minutes,
-          category,
+          region_tag_for_queries: "primary",
         };
         const aff = buildAffiliateUrl(place, slotShim, {
           booking: bookingAid,
@@ -1271,15 +1420,16 @@ Deno.serve(async (req) => {
         a.booking_url = aff.booking_url;
         a.booking_partner = aff.booking_partner;
       };
-      if (dest.accommodation) decorate(dest.accommodation, "lodging", "accommodation");
+      if (dest.accommodation) decorate(dest.accommodation, "lodging");
       for (const day of dest.days) {
         for (const act of day.activities) {
           // Slot type is reconstructed from category; ranker also returns it directly when present.
+          // Step 8's buildAffiliateUrl reads partner from place.types, so category is redundant here.
           const slotType: SlotType =
             act.category === "food" ? "lunch" :
             act.category === "nightlife" ? "nightlife" :
             "morning_major";
-          decorate(act, slotType, act.category);
+          decorate(act, slotType);
         }
       }
     }
