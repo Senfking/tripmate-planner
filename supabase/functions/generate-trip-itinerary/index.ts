@@ -386,6 +386,12 @@ type PoolKey =
   | "experiences"
   | "rest";
 
+interface AddressComponent {
+  longText: string;
+  shortText: string;
+  types: string[];
+}
+
 interface BatchPlaceResult {
   id: string;
   displayName: string | null;
@@ -398,6 +404,7 @@ interface BatchPlaceResult {
   photos: Array<{ name: string }>;
   googleMapsUri: string | null;
   businessStatus: string | null;
+  addressComponents: AddressComponent[];
   poolKey: PoolKey;
 }
 
@@ -1354,7 +1361,7 @@ async function geocodeDestination(
 // ---------------------------------------------------------------------------
 
 const PLACES_FIELD_MASK =
-  "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.types,places.photos,places.googleMapsUri,places.businessStatus";
+  "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.types,places.photos,places.googleMapsUri,places.businessStatus,places.addressComponents";
 
 async function searchPlacesBatch(
   queries: PlacesSearchQuery[],
@@ -1415,6 +1422,8 @@ async function searchPlacesBatch(
         photos: (p.photos as Array<{ name: string }> | undefined) ?? [],
         googleMapsUri: (p.googleMapsUri as string | null) ?? null,
         businessStatus: (p.businessStatus as string | null) ?? null,
+        addressComponents:
+          (p.addressComponents as AddressComponent[] | undefined) ?? [],
         poolKey: pool,
       });
     }
@@ -2050,6 +2059,25 @@ function buildPhotoUrls(photos: Array<{ name: string }>, googleKey: string, max 
     .map((p) => `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=800&key=${googleKey}`);
 }
 
+// Neighborhood preference order: the first address component that carries one
+// of these types wins. Google returns these in decreasing granularity, so
+// sublocality_level_1 (e.g. "Kreuzberg") is preferred over sublocality, and
+// both over the generic "neighborhood" tag.
+const NEIGHBORHOOD_TYPE_PRIORITY = [
+  "sublocality_level_1",
+  "sublocality",
+  "neighborhood",
+];
+
+function extractNeighborhood(components: AddressComponent[]): string | null {
+  if (!components?.length) return null;
+  for (const wanted of NEIGHBORHOOD_TYPE_PRIORITY) {
+    const hit = components.find((c) => c.types?.includes(wanted));
+    if (hit?.longText) return hit.longText;
+  }
+  return null;
+}
+
 // Lightweight fuzzy-match for events — the ranker copies title text from the
 // snippet most of the time, so a normalized substring check is enough. We
 // avoid Levenshtein here because event names can be long and the marginal
@@ -2132,7 +2160,7 @@ function hydrateActivity(
     duration_minutes,
     duration_hours,
     location_name: place?.formattedAddress ?? "",
-    neighborhood: null, // populated by Step 8 from Places components if available
+    neighborhood: place ? extractNeighborhood(place.addressComponents) : null,
     latitude: place?.location?.latitude ?? 0,
     longitude: place?.location?.longitude ?? 0,
     rating: place?.rating ?? null,
