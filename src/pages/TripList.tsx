@@ -769,6 +769,7 @@ export default function TripList() {
   const upcomingTrips = trips.filter(
     (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming")
   );
+  const noDateTrips = trips.filter((t) => t.statusInfo.status === "no-dates");
   const pastTrips = trips.filter((t) => t.statusInfo.status === "ended");
 
   return (
