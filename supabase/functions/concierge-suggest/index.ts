@@ -1,4 +1,4 @@
-// v2.5 deployed — events skip fuzzy match, 9302bcb
+// v2.6 deployed — venue drop instrumentation
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -881,17 +881,27 @@ function validateAIResponse(
 
     // --- Venue-type suggestions: hydrate from Places, THEN validate ---
     const id = item.id as string;
-    if (!id) continue;
+    if (!id) {
+      console.log(
+        `[concierge-suggest][venue-drop] DROP_EMPTY_ID item.id=${JSON.stringify(item.id)} item.name=${JSON.stringify(item.name)}`,
+      );
+      continue;
+    }
 
     // Skip excluded IDs
-    if (excludeSet.has(id)) continue;
+    if (excludeSet.has(id)) {
+      console.log(
+        `[concierge-suggest][venue-drop] DROP_EXCLUDED id=${id}`,
+      );
+      continue;
+    }
 
     // ID must exist in the original Places results. If not, the AI either
     // hallucinated the ID or copied it incorrectly — drop before hydration.
     const place = placesById.get(id);
     if (!place) {
-      console.warn(
-        `[concierge-suggest] Venue id=${id} not found in Places results — AI hallucination, dropping`,
+      console.log(
+        `[concierge-suggest][venue-drop] DROP_NOT_IN_PLACES id=${id} placesById.size=${placesById.size}`,
       );
       continue;
     }
@@ -920,11 +930,25 @@ function validateAIResponse(
         place.location.latitude,
         place.location.longitude,
       );
-      if (dist > 25) continue;
+      if (dist > 25) {
+        console.log(
+          `[concierge-suggest][venue-drop] DROP_DISTANCE id=${id} name=${JSON.stringify(hydrated.name)} distKm=${dist.toFixed(2)} searchLat=${searchLat} searchLng=${searchLng} venueLat=${place.location.latitude} venueLng=${place.location.longitude}`,
+        );
+        continue;
+      }
     }
 
     // businessStatus must be OPERATIONAL (or not set)
-    if (place.businessStatus && place.businessStatus !== "OPERATIONAL") continue;
+    if (place.businessStatus && place.businessStatus !== "OPERATIONAL") {
+      console.log(
+        `[concierge-suggest][venue-drop] DROP_BUSINESS_STATUS id=${id} name=${JSON.stringify(hydrated.name)} businessStatus=${JSON.stringify(place.businessStatus)}`,
+      );
+      continue;
+    }
+
+    console.log(
+      `[concierge-suggest][venue-pass] PASS id=${id} name=${JSON.stringify(hydrated.name)}`,
+    );
 
     // Merge: Google Places ground truth + AI enrichment fields
     validated.push({
@@ -964,7 +988,7 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
-  console.log("[concierge-suggest] v2.5 deployed — events skip fuzzy match, 9302bcb", new Date().toISOString());
+  console.log("[concierge-suggest] v2.6 deployed — venue drop instrumentation", new Date().toISOString());
   console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
 
   if (req.method === "OPTIONS") {
