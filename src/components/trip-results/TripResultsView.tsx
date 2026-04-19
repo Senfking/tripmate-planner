@@ -180,9 +180,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   );
 
   return createPortal(
-    <div className={cn("fixed inset-0 z-[9999] bg-background", mapState === "partial" ? "flex" : "")}>
+    <div className={cn("fixed inset-0 z-[9999] bg-background flex")}>
       {/* Itinerary scroll area */}
-      <div className="min-w-0 overflow-y-auto flex-1" data-results-scroll-root="true">
+      <div className="min-w-0 overflow-y-auto flex-1 h-full" data-results-scroll-root="true">
       {/* Timeline (desktop only) */}
       <ResultsTimeline nodes={timelineNodes} compact={mapState === "partial"} />
 
