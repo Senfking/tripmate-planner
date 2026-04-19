@@ -28,22 +28,17 @@ import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
 
 function getTripStatus(start: string | null, end: string | null): { status: TripStatus; daysToGo?: number } {
-  if (!start && !end) return { status: "no-dates" };
+  // Strictly date-based: missing either date → draft bucket ("no-dates")
+  if (!start || !end) return { status: "no-dates" };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const s = start ? parseISO(start) : null;
-  const e = end ? parseISO(end) : null;
+  const s = parseISO(start);
+  const e = parseISO(end);
 
-  // Trip has ended (end date is strictly before today)
-  if (e && isBefore(e, today)) return { status: "ended" };
-
-  // Trip is live: today is within [start, end], OR start is today/past with no end date
-  if (s && e && isWithinInterval(today, { start: s, end: e })) return { status: "live" };
-  if (s && !e && !isAfter(s, today)) return { status: "live" };
-
-  // Trip is in the future
-  if (s && isAfter(s, today)) {
+  if (isBefore(e, today)) return { status: "ended" };
+  if (isWithinInterval(today, { start: s, end: e })) return { status: "live" };
+  if (isAfter(s, today)) {
     const days = differenceInDays(s, today);
     if (days <= 60) return { status: "countdown", daysToGo: days };
     return { status: "upcoming" };
