@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export type GooglePriceLevel =
@@ -28,6 +28,8 @@ export function useGooglePlaceDetails(activityName: string, location: string) {
     queryKey: ["place-details", activityName, location],
     enabled,
     staleTime: 24 * 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    placeholderData: keepPreviousData,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnMount: false,

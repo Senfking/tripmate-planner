@@ -2,14 +2,30 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 console.log("[get-place-details] module loaded");
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+  ...CORS_HEADERS,
+};
+
+const CACHE_TTL_DAYS = 30;
+
+function getServiceClient() {
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) return null;
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-      },
-    });
+    return new Response("ok", { headers: CORS_HEADERS });
   }
 
   try {
@@ -19,8 +35,35 @@ Deno.serve(async (req) => {
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "GOOGLE_PLACES_API_KEY not set" }), {
         status: 500,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: JSON_HEADERS,
       });
+    }
+
+    const normalizedQuery = typeof query === "string" ? query.trim() : "";
+    if (!normalizedQuery) {
+      return new Response(JSON.stringify({ error: "query is required" }), {
+        status: 400,
+        headers: JSON_HEADERS,
+      });
+    }
+
+    const supabase = getServiceClient();
+
+    // Step 0: Cache lookup. Rows past expires_at are ignored so stale data
+    // doesn't linger beyond the TTL even if the cleanup cron is behind.
+    if (supabase) {
+      const { data: cached, error: cacheErr } = await supabase
+        .from("place_details_cache")
+        .select("response, expires_at")
+        .eq("query_text", normalizedQuery)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (cacheErr) {
+        console.warn("[get-place-details] cache lookup failed", cacheErr.message);
+      } else if (cached?.response) {
+        return new Response(JSON.stringify(cached.response), { headers: JSON_HEADERS });
+      }
     }
 
     // Step 1: Text Search — include location for accurate coordinates
@@ -31,14 +74,14 @@ Deno.serve(async (req) => {
         "X-Goog-Api-Key": apiKey,
         "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.userRatingCount,places.reviews,places.photos,places.googleMapsUri,places.formattedAddress,places.location,places.priceLevel",
       },
-      body: JSON.stringify({ textQuery: query }),
+      body: JSON.stringify({ textQuery: normalizedQuery }),
     });
 
     if (!searchRes.ok) {
       const errText = await searchRes.text();
       return new Response(JSON.stringify({ error: "Google API error", status: searchRes.status, detail: errText }), {
         status: 502,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: JSON_HEADERS,
       });
     }
 
@@ -46,9 +89,17 @@ Deno.serve(async (req) => {
     const place = searchData.places?.[0];
 
     if (!place) {
-      return new Response(JSON.stringify({ photos: [], reviews: [], rating: null, totalRatings: null, googleMapsUrl: null, address: null, latitude: null, longitude: null }), {
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      });
+      const empty = { photos: [], reviews: [], rating: null, totalRatings: null, googleMapsUrl: null, address: null, latitude: null, longitude: null, priceLevel: null };
+      // Cache the miss too — repeating the same failed query shouldn't keep
+      // burning Places API quota.
+      if (supabase) {
+        const expiresAt = new Date(Date.now() + CACHE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+        const { error: upsertErr } = await supabase
+          .from("place_details_cache")
+          .upsert({ query_text: normalizedQuery, response: empty, expires_at: expiresAt }, { onConflict: "query_text" });
+        if (upsertErr) console.warn("[get-place-details] cache upsert (miss) failed", upsertErr.message);
+      }
+      return new Response(JSON.stringify(empty), { headers: JSON_HEADERS });
     }
 
     // Step 2: Build photo URLs
@@ -86,14 +137,20 @@ Deno.serve(async (req) => {
       priceLevel: place.priceLevel ?? null,
     };
 
-    return new Response(JSON.stringify(result), {
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-    });
+    if (supabase) {
+      const expiresAt = new Date(Date.now() + CACHE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      const { error: upsertErr } = await supabase
+        .from("place_details_cache")
+        .upsert({ query_text: normalizedQuery, response: result, expires_at: expiresAt }, { onConflict: "query_text" });
+      if (upsertErr) console.warn("[get-place-details] cache upsert failed", upsertErr.message);
+    }
+
+    return new Response(JSON.stringify(result), { headers: JSON_HEADERS });
 
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      headers: JSON_HEADERS,
     });
   }
 });
