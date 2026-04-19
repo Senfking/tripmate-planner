@@ -413,7 +413,7 @@ interface EventCandidate {
   confidence: number;            // 0..1 rough prior: snippet-match only, no verification
 }
 
-type AffiliatePartner = "booking" | "viator" | "getyourguide" | "google_maps";
+type AffiliatePartner = "booking" | "viator" | "getyourguide" | "google_maps" | "event_direct";
 
 interface EnrichedActivity {
   place_id: string;
@@ -2258,24 +2258,248 @@ async function rankAndEnrich(
   };
 }
 
-function markJuntoPicks(_result: PipelineResult, _intent: Intent): void {
-  throw new Error("markJuntoPicks: not implemented");
+// ---------------------------------------------------------------------------
+// Step 8: post-ranking finishers (all pure code, no LLM)
+// ---------------------------------------------------------------------------
+
+// ---- markJuntoPicks ----
+//
+// Marks 2–3 activities per trip with is_junto_pick=true. Qualifying bar:
+//   rating >= 4.5 AND user_rating_count in [50, 500]  (hidden-gem band)
+//   AND the activity matches >= 2 intent signals (vibe / must_have / dietary).
+// Events never qualify (no rating/review data).
+// Fewer than 2 qualifiers → mark what we have; never force a bad pick.
+
+function countIntentSignalMatches(act: EnrichedActivity, intent: Intent): number {
+  const haystack = [
+    act.title,
+    act.description,
+    act.pro_tip,
+    act.why_for_you,
+    act.dietary_notes ?? "",
+    act.category,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  let matches = 0;
+  for (const v of intent.vibes) {
+    if (v && haystack.includes(v.toLowerCase())) { matches++; if (matches >= 3) return matches; }
+  }
+  for (const mh of intent.must_haves) {
+    if (mh && haystack.includes(mh.toLowerCase())) { matches++; if (matches >= 3) return matches; }
+  }
+  for (const d of intent.dietary) {
+    if (d && haystack.includes(d.toLowerCase())) { matches++; if (matches >= 3) return matches; }
+  }
+  return matches;
+}
+
+function markJuntoPicks(result: PipelineResult, intent: Intent): void {
+  // Score every candidate across the whole trip, then pick up to 3.
+  interface Candidate { act: EnrichedActivity; score: number; }
+  const candidates: Candidate[] = [];
+
+  for (const dest of result.destinations) {
+    for (const day of dest.days) {
+      for (const act of day.activities) {
+        // Events ineligible — no rating/review data.
+        if (!act.place_id) continue;
+        const rating = act.rating ?? 0;
+        const reviews = act.user_rating_count ?? 0;
+        if (rating < 4.5) continue;
+        if (reviews < 50 || reviews > 500) continue;
+        const signalMatches = countIntentSignalMatches(act, intent);
+        if (signalMatches < 2) continue;
+        // Tie-breaker: higher signalMatches, then higher rating, then fewer reviews
+        // (hidden-gem bias — prefer 80-review 4.7 over 450-review 4.6).
+        const score =
+          signalMatches * 1000 +
+          rating * 10 -
+          reviews / 100;
+        candidates.push({ act, score });
+      }
+    }
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  for (const c of candidates.slice(0, 3)) {
+    c.act.is_junto_pick = true;
+  }
+}
+
+// ---- buildAffiliateUrl ----
+//
+// Maps a venue to one of the four affiliate partners (or google_maps fallback,
+// or event_direct for events). Partner is decided by place.types:
+//   LODGING_TYPES       → Booking.com (aid)
+//   TOURS_TYPES         → Viator (mcid)
+//   travel_agency/class → GetYourGuide (partner_id)
+//   FOOD_TYPES (or any other food) → google_maps fallback
+//   null place (event)  → event_direct with optional event URL
+// Every activity gets a URL — never null for non-event slots.
+
+const GYG_SIGNAL_TYPES = new Set([
+  "travel_agency", "tour_agency", "cooking_class", "workshop",
+  "language_school", "school", "sports_club",
+]);
+
+function urlencode(s: string): string {
+  return encodeURIComponent(s);
+}
+
+function partnerForPlace(place: BatchPlaceResult): AffiliatePartner {
+  const types = place.types ?? [];
+  for (const t of types) if (LODGING_TYPES.has(t)) return "booking";
+  for (const t of types) if (GYG_SIGNAL_TYPES.has(t)) return "getyourguide";
+  for (const t of types) if (TOURS_TYPES.has(t)) return "viator";
+  for (const t of types) if (FOOD_TYPES.has(t)) return "google_maps";
+  // Unknown type — if there's a Google Maps URI, keep it; otherwise fall back
+  // to viator (tour-ish) since that's the most common catch-all.
+  return place.googleMapsUri ? "google_maps" : "viator";
 }
 
 function buildAffiliateUrl(
-  _place: BatchPlaceResult,
-  _slot: PacingSlot,
-  _env: { booking: string; viator: string; gyg: string },
+  place: BatchPlaceResult | null,
+  env: { booking: string; viator: string; gyg: string },
+  eventUrl?: string | null,
 ): { booking_url: string; booking_partner: AffiliatePartner } {
-  throw new Error("buildAffiliateUrl: not implemented");
+  // Event case — no Places data.
+  if (!place) {
+    return {
+      booking_url: eventUrl?.trim() ? eventUrl.trim() : "",
+      booking_partner: "event_direct",
+    };
+  }
+
+  const partner = partnerForPlace(place);
+  const name = place.displayName ?? "";
+  const city = (place.formattedAddress ?? "").split(",").slice(-2, -1)[0]?.trim() ?? "";
+  const nameWithCity = city ? `${name} ${city}` : name;
+
+  switch (partner) {
+    case "booking":
+      return {
+        booking_url: BOOKING_TEMPLATE
+          .replace("{loc}", urlencode(nameWithCity))
+          .replace("{aid}", urlencode(env.booking)),
+        booking_partner: "booking",
+      };
+    case "viator":
+      return {
+        booking_url: VIATOR_TEMPLATE
+          .replace("{name}", urlencode(nameWithCity))
+          .replace("{mcid}", urlencode(env.viator)),
+        booking_partner: "viator",
+      };
+    case "getyourguide":
+      return {
+        booking_url: GETYOURGUIDE_TEMPLATE
+          .replace("{name}", urlencode(nameWithCity))
+          .replace("{pid}", urlencode(env.gyg)),
+        booking_partner: "getyourguide",
+      };
+    case "google_maps":
+    default:
+      return {
+        booking_url: place.googleMapsUri ?? "",
+        booking_partner: "google_maps",
+      };
+  }
 }
 
+// ---- validateActivities ----
+//
+// Last-chance sanity filter. Drops any activity where:
+//   - place_id is missing AND is_event is false
+//   - coords are more than 200 km from the trip centroid (wrong-city check)
+//   - businessStatus is present and !== "OPERATIONAL"
+// If we drop more than 20 % of total activities, something is wrong upstream
+// and we fail loud — a user-visible error beats shipping a broken trip.
+
+const VALIDATION_MAX_KM_FROM_CENTER = 200;
+const VALIDATION_DROP_THRESHOLD = 0.20;
+
 function validateActivities(
-  _result: PipelineResult,
-  _allPlaces: Map<string, BatchPlaceResult>,
-  _center: { lat: number; lng: number },
+  result: PipelineResult,
+  allPlaces: Map<string, BatchPlaceResult>,
+  center: { lat: number; lng: number },
 ): PipelineResult {
-  throw new Error("validateActivities: not implemented");
+  let totalBefore = 0;
+  let dropped = 0;
+
+  for (const dest of result.destinations) {
+    for (const day of dest.days) {
+      totalBefore += day.activities.length;
+      const kept: EnrichedActivity[] = [];
+      for (const act of day.activities) {
+        // Reason 1: missing place_id on a non-event slot.
+        const isEvent = !act.place_id; // events come out of hydration with place_id=""
+        if (!isEvent && !allPlaces.has(act.place_id)) {
+          console.warn(`[validateActivities] drop "${act.title}" — place_id not in pool`);
+          dropped++;
+          continue;
+        }
+        const place = act.place_id ? allPlaces.get(act.place_id) ?? null : null;
+
+        // Reason 2: off-continent coords.
+        if (place?.location) {
+          const d = haversineKm(
+            center.lat, center.lng,
+            place.location.latitude, place.location.longitude,
+          );
+          if (d > VALIDATION_MAX_KM_FROM_CENTER) {
+            console.warn(
+              `[validateActivities] drop "${act.title}" — ${d.toFixed(0)} km from trip center (limit ${VALIDATION_MAX_KM_FROM_CENTER})`,
+            );
+            dropped++;
+            continue;
+          }
+        }
+
+        // Reason 3: venue permanently/temporarily closed.
+        if (place?.businessStatus && place.businessStatus !== "OPERATIONAL") {
+          console.warn(
+            `[validateActivities] drop "${act.title}" — businessStatus=${place.businessStatus}`,
+          );
+          dropped++;
+          continue;
+        }
+
+        kept.push(act);
+      }
+      day.activities = kept;
+    }
+    // Check accommodation separately; if invalid, drop it but don't count
+    // against the activity-drop threshold (accommodation is trip-level).
+    const accom = dest.accommodation;
+    if (accom?.place_id) {
+      const place = allPlaces.get(accom.place_id);
+      if (!place) {
+        console.warn(`[validateActivities] drop accommodation "${accom.title}" — place_id not in pool`);
+        dest.accommodation = undefined;
+      } else if (place.businessStatus && place.businessStatus !== "OPERATIONAL") {
+        console.warn(
+          `[validateActivities] drop accommodation "${accom.title}" — businessStatus=${place.businessStatus}`,
+        );
+        dest.accommodation = undefined;
+      }
+    }
+  }
+
+  if (totalBefore > 0 && dropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
+    throw new Error(
+      `validateActivities: dropped ${dropped}/${totalBefore} (${Math.round(100 * dropped / totalBefore)}%) activities — upstream pipeline is producing garbage`,
+    );
+  }
+
+  // Recompute total_activities after validation.
+  result.total_activities = result.destinations.reduce(
+    (n, d) => n + d.days.reduce((m, day) => m + day.activities.length, 0),
+    0,
+  );
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -2594,35 +2818,20 @@ Deno.serve(async (req) => {
     // ---- Step 7-9: junto picks, affiliate URLs, validation ----
     markJuntoPicks(ranked, intent);
 
+    const affEnv = { booking: bookingAid, viator: viatorMcid, gyg: gygPid };
     for (const dest of ranked.destinations) {
-      const decorate = (a: EnrichedActivity, slotType: SlotType) => {
-        const place = allPlacesById.get(a.place_id);
-        if (!place) return; // validator will drop this
-        const slotShim: PacingSlot = {
-          type: slotType,
-          start_time: a.start_time,
-          duration_minutes: a.duration_minutes,
-          region_tag_for_queries: "primary",
-        };
-        const aff = buildAffiliateUrl(place, slotShim, {
-          booking: bookingAid,
-          viator: viatorMcid,
-          gyg: gygPid,
-        });
+      const decorate = (a: EnrichedActivity) => {
+        // Events (place_id === "") go through with a null place → event_direct
+        // partner. Event URL passthrough is not wired yet; validator will drop
+        // truly unrecoverable rows.
+        const place = a.place_id ? allPlacesById.get(a.place_id) ?? null : null;
+        const aff = buildAffiliateUrl(place, affEnv);
         a.booking_url = aff.booking_url;
         a.booking_partner = aff.booking_partner;
       };
-      if (dest.accommodation) decorate(dest.accommodation, "lodging");
+      if (dest.accommodation) decorate(dest.accommodation);
       for (const day of dest.days) {
-        for (const act of day.activities) {
-          // Slot type is reconstructed from category; ranker also returns it directly when present.
-          // Step 8's buildAffiliateUrl reads partner from place.types, so category is redundant here.
-          const slotType: SlotType =
-            act.category === "food" ? "lunch" :
-            act.category === "nightlife" ? "nightlife" :
-            "morning_major";
-          decorate(act, slotType);
-        }
+        for (const act of day.activities) decorate(act);
       }
     }
 
