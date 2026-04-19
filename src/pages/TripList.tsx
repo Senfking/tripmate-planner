@@ -28,22 +28,17 @@ import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
 
 function getTripStatus(start: string | null, end: string | null): { status: TripStatus; daysToGo?: number } {
-  if (!start && !end) return { status: "no-dates" };
+  // Strictly date-based: missing either date → draft bucket ("no-dates")
+  if (!start || !end) return { status: "no-dates" };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const s = start ? parseISO(start) : null;
-  const e = end ? parseISO(end) : null;
+  const s = parseISO(start);
+  const e = parseISO(end);
 
-  // Trip has ended (end date is strictly before today)
-  if (e && isBefore(e, today)) return { status: "ended" };
-
-  // Trip is live: today is within [start, end], OR start is today/past with no end date
-  if (s && e && isWithinInterval(today, { start: s, end: e })) return { status: "live" };
-  if (s && !e && !isAfter(s, today)) return { status: "live" };
-
-  // Trip is in the future
-  if (s && isAfter(s, today)) {
+  if (isBefore(e, today)) return { status: "ended" };
+  if (isWithinInterval(today, { start: s, end: e })) return { status: "live" };
+  if (isAfter(s, today)) {
     const days = differenceInDays(s, today);
     if (days <= 60) return { status: "countdown", daysToGo: days };
     return { status: "upcoming" };
@@ -766,7 +761,7 @@ export default function TripList() {
   /* ── Group trips by section ── */
   const liveTrip = trips.find((t) => t.statusInfo.status === "live");
   const upcomingTrips = trips.filter(
-    (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming" || t.statusInfo.status === "no-dates")
+    (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming")
   );
   const pastTrips = trips.filter((t) => t.statusInfo.status === "ended");
 
@@ -780,9 +775,37 @@ export default function TripList() {
         <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
       </div>
 
+      {/* ── Happening now ── */}
+      {liveTrip && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
+          <HeroCard trip={liveTrip} />
+        </div>
+      )}
+
+      {/* ── Coming up ── */}
+      {upcomingTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Coming up</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {upcomingTrips.map((trip, i) => (
+              <div
+                key={trip.id}
+                className={
+                  upcomingTrips.length % 2 !== 0 && i === upcomingTrips.length - 1
+                    ? "md:col-span-2"
+                    : ""
+                }
+              >
+                <RegularCard trip={trip} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Drafts Section ── */}
       {drafts && drafts.length > 0 && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-4">
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Drafts</h3>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {drafts.map((draft: any) => {
@@ -862,33 +885,6 @@ export default function TripList() {
         </div>
       )}
 
-      {/* ── Happening now ── */}
-      {liveTrip && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
-          <HeroCard trip={liveTrip} />
-        </div>
-      )}
-
-      {/* ── Coming up ── */}
-      {upcomingTrips.length > 0 && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Coming up</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {upcomingTrips.map((trip, i) => (
-              <div
-                key={trip.id}
-                className={
-                  upcomingTrips.length % 2 !== 0 && i === upcomingTrips.length - 1
-                    ? "md:col-span-2"
-                    : ""
-                }
-              >
-                <RegularCard trip={trip} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── Past trips (collapsed by default) ── */}
       {pastTrips.length > 0 && (
@@ -921,16 +917,6 @@ export default function TripList() {
 
       <div className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 pb-[100px] md:pb-8">
 
-        {/* Join a trip row */}
-        <button
-          onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-          className="md:col-span-2 flex items-center rounded-2xl border border-dashed px-4 py-3.5 bg-card transition-colors"
-          style={{ borderColor: "rgba(13,148,136,0.3)" }}
-        >
-          <Hash className="h-5 w-5 shrink-0" style={{ color: "#0D9488" }} />
-          <span className="ml-3 flex-1 text-left font-medium text-foreground text-sm">Join a trip</span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </button>
 
         {/* Post-trip referral nudge */}
         {postTripNudge && (profile as any)?.referral_code && (
@@ -1025,20 +1011,6 @@ export default function TripList() {
           </div>
         )}
 
-        <Link to="/app/trips/new" className="block md:col-span-2">
-          <div
-            className="flex h-[56px] items-center justify-center rounded-2xl transition-colors"
-            style={{
-              background: "rgba(0,0,0,0.04)",
-              border: "1px dashed rgba(0,0,0,0.15)",
-            }}
-          >
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Plus className="h-4 w-4" />
-              Plan a new trip
-            </span>
-          </div>
-        </Link>
       </div>
 
       {/* Join trip drawer */}
