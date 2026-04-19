@@ -810,11 +810,13 @@ export default function TripList() {
         </div>
       )}
 
-      {/* ── No dates yet (compact cards, same shape as drafts) ── */}
+      {/* ── No dates yet (compact cards, full-bleed carousel) ── */}
       {noDateTrips.length > 0 && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">No dates yet</h3>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+        <div className="mb-5">
+          <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">No dates yet</h3>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide pl-4 md:pl-[max(2rem,calc((100vw-900px)/2+2rem))]">
             {noDateTrips.map((trip) => (
               <Link
                 key={trip.id}
