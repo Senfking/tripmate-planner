@@ -62,11 +62,13 @@ Deno.serve(async (req) => {
       if (cacheErr) {
         console.warn("[get-place-details] cache lookup failed", cacheErr.message);
       } else if (cached?.response) {
+        console.log(`[get-place-details] cache_hit query="${normalizedQuery}"`);
         return new Response(JSON.stringify(cached.response), { headers: JSON_HEADERS });
       }
     }
 
     // Step 1: Text Search — include location for accurate coordinates
+    console.log(`[get-place-details] cache_miss query="${normalizedQuery}"`);
     const searchRes = await fetch("https://places.googleapis.com/v1/places:searchText", {
       method: "POST",
       headers: {
