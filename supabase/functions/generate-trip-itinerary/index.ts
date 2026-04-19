@@ -1235,12 +1235,22 @@ function buildPlacesQueries(
 // ---------------------------------------------------------------------------
 // Step 5a: geocodeDestination
 //
-// Resolves a destination string to { lat, lng, country_code, viewport } using
-// Google's Geocoding API. country_code (ISO-3166-1 alpha-2) feeds
+// Resolves a destination string to { lat, lng, country_code, viewport } via
+// the Places API (searchText). country_code (ISO-3166-1 alpha-2) feeds
 // buildSkeleton's MEAL_PATTERNS lookup; lat/lng feed locationBias on every
 // Places search; viewport is kept for future bounding-box queries.
 //
-// Cached in ai_response_cache under "geocode:v1:{normalized destination}" for
+// NOTE: we deliberately use the Places API here, not the legacy Geocoding
+// API. This project's GOOGLE_PLACES_API_KEY is enabled for Places but NOT for
+// the Geocoding API — calling maps.googleapis.com/maps/api/geocode/json with
+// it returns 403 REQUEST_DENIED. This bug bit concierge-suggest in v2.7 and
+// trip-builder v1.0; the Places-API pattern here mirrors concierge v2.8.
+//
+// places.types is included in the field mask so future admin-scale
+// derivation (locality → admin_1 → country → radius) can use it without
+// changing the request.
+//
+// Cached in ai_response_cache under "geocode:v1:{sha256 normalized}" for
 // 30 days (cities don't move). We rely on this cache, NOT place_details_cache
 // — that table exists but isn't populated in production today.
 // ---------------------------------------------------------------------------
@@ -1267,9 +1277,15 @@ async function geocodeDestination(
   googleKey: string,
   destination: string,
   svcClient: ReturnType<typeof createClient>,
-): Promise<GeocodeResult | null> {
+): Promise<GeocodeResult> {
   const normalized = destination.trim().toLowerCase();
-  if (!normalized) return null;
+  if (!normalized) {
+    throw new PipelineError(
+      "geocodeDestination",
+      "Could not resolve destination",
+      "empty destination after normalization",
+    );
+  }
   const cacheKey = `geocode:v1:${await sha256Hex(normalized)}`;
 
   // Cache lookup — fail loud on DB errors, miss silently on not-found.
@@ -1286,45 +1302,71 @@ async function geocodeDestination(
     return cached.response_json as unknown as GeocodeResult;
   }
 
-  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-  url.searchParams.set("address", destination);
-  url.searchParams.set("key", googleKey);
-
-  const res = await fetch(url.toString());
+  const res = await fetch(
+    "https://places.googleapis.com/v1/places:searchText",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": googleKey,
+        "X-Goog-FieldMask":
+          "places.location,places.types,places.displayName,places.formattedAddress,places.addressComponents,places.viewport",
+      },
+      body: JSON.stringify({ textQuery: destination, maxResultCount: 1 }),
+    },
+  );
   if (!res.ok) {
-    console.error(`[geocodeDestination] HTTP ${res.status}`);
-    return null;
+    const errBody = await res.text();
+    console.error(
+      `[geocodeDestination] HTTP ${res.status} for "${destination}": ${errBody.slice(0, 200)}`,
+    );
+    throw new PipelineError(
+      "geocodeDestination",
+      "Could not resolve destination",
+      `places:searchText returned ${res.status}`,
+    );
   }
-  const body = (await res.json()) as {
-    status: string;
-    results?: Array<{
-      geometry?: {
-        location?: { lat: number; lng: number };
-        viewport?: {
-          northeast: { lat: number; lng: number };
-          southwest: { lat: number; lng: number };
-        };
-      };
-      address_components?: Array<{
-        short_name: string;
-        long_name: string;
+  const data = (await res.json()) as {
+    places?: Array<{
+      location?: { latitude: number; longitude: number };
+      types?: string[];
+      displayName?: { text?: string };
+      formattedAddress?: string;
+      addressComponents?: Array<{
+        longText: string;
+        shortText: string;
         types: string[];
       }>;
+      viewport?: {
+        low?: { latitude: number; longitude: number };
+        high?: { latitude: number; longitude: number };
+      };
     }>;
   };
-  if (body.status !== "OK" || !body.results?.length) {
-    console.error(`[geocodeDestination] status=${body.status} for "${destination}"`);
-    return null;
+  const first = data?.places?.[0];
+  if (!first?.location) {
+    console.error(
+      `[geocodeDestination] no places for "${destination}" (places.length=${data?.places?.length ?? 0})`,
+    );
+    throw new PipelineError(
+      "geocodeDestination",
+      "Could not resolve destination",
+      "places:searchText returned 0 matches",
+    );
   }
-  const top = body.results[0];
-  const loc = top.geometry?.location;
-  if (!loc) return null;
-  const countryComp = top.address_components?.find((c) => c.types.includes("country"));
+  const countryComp = first.addressComponents?.find((c) => c.types?.includes("country"));
+  const vp = first.viewport;
   const result: GeocodeResult = {
-    lat: loc.lat,
-    lng: loc.lng,
-    country_code: countryComp?.short_name?.toLowerCase() ?? null,
-    viewport: top.geometry?.viewport ?? null,
+    lat: first.location.latitude,
+    lng: first.location.longitude,
+    country_code: countryComp?.shortText?.toLowerCase() ?? null,
+    viewport:
+      vp?.low && vp?.high
+        ? {
+            northeast: { lat: vp.high.latitude, lng: vp.high.longitude },
+            southwest: { lat: vp.low.latitude, lng: vp.low.longitude },
+          }
+        : null,
   };
 
   // Write-through cache — 30 days.
@@ -2688,7 +2730,26 @@ async function buildIntentCacheKey(intent: Intent, numDays: number): Promise<str
 // MAIN HANDLER
 // ===========================================================================
 
+// PipelineError tags a failure with the pipeline step that raised it and a
+// user-facing message. The top-level catch converts these into the structured
+// 500 body the UI renders; other Error types collapse into a generic
+// "internal_error" shape so we never bubble raw backend messages to users.
+class PipelineError extends Error {
+  step: string;
+  userMessage: string;
+  constructor(step: string, userMessage: string, detail: string) {
+    super(`[${step}] ${detail}`);
+    this.name = "PipelineError";
+    this.step = step;
+    this.userMessage = userMessage;
+  }
+}
+
 Deno.serve(async (req) => {
+  console.log(
+    "[generate-trip-itinerary] v1.1 deployed — geocode via Places API + structured errors",
+    new Date().toISOString(),
+  );
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -2853,13 +2914,9 @@ Deno.serve(async (req) => {
 
     // ---- Step 2a: geocode (must run before buildSkeleton so MEAL_PATTERNS
     //               gets the country_code rather than parsing the string) ----
+    // Throws PipelineError on API failure or no-match; top-level catch
+    // converts it into a structured { error, step, message } 500 response.
     const geo = await geocodeDestination(googleKey, intent.destination, svcClient);
-    if (!geo) {
-      return jsonResponse(
-        { success: false, error: `Could not geocode destination "${intent.destination}"` },
-        500,
-      );
-    }
 
     // ---- Step 2b: pacing skeleton ----
     const skeleton = buildSkeleton(intent, numDays, startDate, geo.country_code);
@@ -2981,6 +3038,25 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: true, ...validated });
   } catch (e) {
     console.error("generate-trip-itinerary error:", e);
-    return jsonResponse({ success: false, error: (e as Error).message || "Internal error" }, 500);
+    if (e instanceof PipelineError) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "trip_build_failed",
+          step: e.step,
+          message: e.userMessage,
+        },
+        500,
+      );
+    }
+    return jsonResponse(
+      {
+        success: false,
+        error: "trip_build_failed",
+        step: "unknown",
+        message: "Something went wrong building your trip. Please try again.",
+      },
+      500,
+    );
   }
 });
