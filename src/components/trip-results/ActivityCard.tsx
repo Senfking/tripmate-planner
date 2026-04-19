@@ -136,8 +136,14 @@ export function ActivityCard({
             <IconComponent className="h-8 w-8 opacity-40" style={{ color }} />
           </div>
         )}
-        {/* Category badge */}
-        <div className="absolute top-2 left-2">
+        {/* Category + Junto Pick badges (stacked top-left) */}
+        <div className="absolute top-2 left-2 flex flex-col items-start gap-1">
+          {activity.is_junto_pick && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-bold text-white shadow-md backdrop-blur-sm" style={{ backgroundColor: "#0D9488" }}>
+              <Sparkles className="h-2.5 w-2.5" />
+              Junto Pick
+            </span>
+          )}
           <span className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[8px] uppercase tracking-wider font-bold bg-primary/90 text-primary-foreground backdrop-blur-sm">
             <IconComponent className="h-2.5 w-2.5" />
             {activity.category}
