@@ -315,13 +315,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         </div>
 
-        {/* All stays overview */}
-        {result.destinations.some(d => d.accommodation) && (
-          <div id="section-stays-overview" className={cn("px-4 mb-4", rc)} style={revealStyle("overview-stays")}>
-            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+        {/* All stays overview — multi-destination only (compact horizontal carousel) */}
+        {isMultiDestination && result.destinations.some(d => d.accommodation) && (
+          <div id="section-stays-overview" className={cn("mb-4", rc)} style={revealStyle("overview-stays")}>
+            <h3 className="px-4 text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <Bed className="h-5 w-5 text-primary" /> Where you'll stay
             </h3>
-            <div className="space-y-3">
+            <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 -mx-px snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {result.destinations.filter(d => d.accommodation).map((dest, i) => {
                 const destDays = allDays.filter(d => d.date >= dest.start_date && d.date <= dest.end_date);
                 const nightCount = destDays.length;
@@ -329,22 +329,22 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 const lastDay = destDays[destDays.length - 1]?.day_number || firstDay;
                 const dayLabel = firstDay === lastDay ? `Day ${firstDay}` : `Days ${firstDay}–${lastDay}`;
                 return (
-                  <div key={i}>
-                    {/* Destination context line */}
-                    <div className="flex items-center gap-2 mb-1.5 ml-1">
-                      <span className="text-xs font-semibold text-foreground">{dest.name}</span>
-                      <span className="text-[10px] text-muted-foreground">·</span>
-                      <span className="text-[10px] text-muted-foreground">{dayLabel} · {nightCount} {nightCount === 1 ? "night" : "nights"}</span>
+                  <button
+                    key={i}
+                    onClick={() => scrollToSection(`section-dest-${dest.name}`)}
+                    className="snap-start shrink-0 w-[180px] text-left rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-accent/40 transition-colors p-3"
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <MapPin className="h-3 w-3 text-primary shrink-0" />
+                      <span className="text-[13px] font-semibold text-foreground truncate">{dest.name}</span>
                     </div>
-                    <AccommodationCard
-                      name={dest.accommodation!.name}
-                      stars={dest.accommodation!.stars}
-                      pricePerNight={dest.accommodation!.price_per_night}
-                      currency={dest.accommodation!.currency}
-                      bookingUrl={dest.accommodation!.booking_url}
-                      locationHint={dest.name}
-                    />
-                  </div>
+                    <p className="text-[10px] text-muted-foreground font-mono">
+                      {dayLabel} · {nightCount} {nightCount === 1 ? "night" : "nights"}
+                    </p>
+                    <span className="mt-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                      <Hotel className="h-2.5 w-2.5" /> 1 stay
+                    </span>
+                  </button>
                 );
               })}
             </div>
