@@ -1656,16 +1656,606 @@ async function searchEvents(
   return events;
 }
 
+// ===========================================================================
+// Step 7: rankAndEnrich — the heart of the engine.
+//
+// Assigns venues from the pool to slots in the skeleton and writes opinionated
+// editorial content for each. Single Haiku call for a whole trip with the
+// static system prompt marked cache_control: ephemeral so prompt caching kicks
+// in across trips (system prompt ≈ 2.5k tokens; cached reads cost 10x less).
+//
+// ABSOLUTE INVARIANT: every non-event activity's place_id must reference a
+// venue that exists in the input pool. The validator in Step 8 drops anything
+// that violates this — but we guard earlier at hydration time too.
+//
+// After the LLM returns, estimated_cost_per_person is clamped against the
+// Google priceLevel → local-currency band, because LLMs routinely lie about
+// prices (especially in non-USD currencies).
+// ===========================================================================
+
+// country_code (ISO-3166-1 alpha-2) → currency for the trip. Missing codes
+// default to USD in resolveTripCurrency. Not exhaustive — covers the most
+// common destinations; add rows as we expand.
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+  us: "USD", ca: "CAD", mx: "MXN",
+  br: "BRL", ar: "ARS", cl: "CLP", pe: "PEN", co: "COP", uy: "UYU",
+  gb: "GBP", ie: "EUR",
+  es: "EUR", pt: "EUR", fr: "EUR", de: "EUR", nl: "EUR", be: "EUR",
+  at: "EUR", it: "EUR", gr: "EUR", fi: "EUR", ee: "EUR", lv: "EUR",
+  lt: "EUR", sk: "EUR", si: "EUR", lu: "EUR", mt: "EUR", cy: "EUR",
+  hr: "EUR",
+  ch: "CHF", se: "SEK", no: "NOK", dk: "DKK", is: "ISK",
+  pl: "PLN", cz: "CZK", hu: "HUF", ro: "RON", bg: "BGN", ua: "UAH",
+  ru: "RUB", tr: "TRY",
+  il: "ILS", ae: "AED", sa: "SAR", qa: "QAR", bh: "BHD", om: "OMR",
+  kw: "KWD", jo: "JOD", lb: "LBP", eg: "EGP", ma: "MAD", tn: "TND",
+  za: "ZAR", ke: "KES", ng: "NGN",
+  jp: "JPY", cn: "CNY", hk: "HKD", tw: "TWD", kr: "KRW",
+  sg: "SGD", my: "MYR", th: "THB", id: "IDR", ph: "PHP", vn: "VND",
+  in: "INR", lk: "LKR", pk: "PKR", bd: "BDT", np: "NPR",
+  au: "AUD", nz: "NZD",
+};
+
+// Rough local-currency bands for Google Places priceLevel (index 1..4).
+// PRICE_LEVEL_FREE → 0. PRICE_LEVEL_UNSPECIFIED → no clamp applied.
+// Bands are per-person for food/experiences, per-room-per-night for lodging.
+// Approximations based on late-2024 FX — good enough for V1 clamping.
+const PRICE_BANDS: Record<string, [number, number, number, number]> = {
+  USD: [15, 40, 100, 300],
+  EUR: [14, 35, 90,  275],
+  GBP: [12, 35, 80,  240],
+  CAD: [20, 55, 135, 400],
+  AUD: [22, 60, 150, 450],
+  NZD: [22, 60, 150, 450],
+  CHF: [15, 40, 90,  275],
+  SEK: [130, 380, 950, 2800],
+  NOK: [140, 400, 1000, 3000],
+  DKK: [90, 260, 650, 2000],
+  ISK: [2000, 5500, 13500, 40000],
+  PLN: [55, 160, 400, 1200],
+  CZK: [300, 900, 2300, 6800],
+  HUF: [4500, 13000, 33000, 100000],
+  RON: [65, 180, 450, 1400],
+  BGN: [25, 70, 175, 540],
+  UAH: [600, 1600, 4000, 12000],
+  RUB: [1400, 3800, 9500, 28000],
+  TRY: [300, 900, 2500, 7500],
+  ILS: [45, 130, 330, 1000],
+  AED: [40, 110, 280, 850],
+  SAR: [45, 130, 330, 1000],
+  QAR: [45, 130, 330, 1000],
+  EGP: [400, 1200, 3000, 9000],
+  MAD: [120, 360, 900, 2700],
+  ZAR: [200, 600, 1500, 4500],
+  JPY: [1500, 4000, 10000, 30000],
+  CNY: [80, 250, 700, 2000],
+  HKD: [100, 300, 780, 2300],
+  TWD: [400, 1200, 3000, 9000],
+  KRW: [15000, 45000, 130000, 400000],
+  SGD: [20, 55, 135, 400],
+  MYR: [50, 150, 400, 1200],
+  THB: [400, 1200, 3000, 9000],
+  IDR: [75000, 200000, 500000, 1500000],
+  PHP: [700, 2000, 5500, 16000],
+  VND: [300000, 900000, 2400000, 7000000],
+  INR: [400, 1200, 3500, 10000],
+  LKR: [3000, 9000, 23000, 70000],
+  MXN: [200, 600, 1500, 4500],
+  BRL: [60, 180, 450, 1400],
+  ARS: [10000, 30000, 75000, 220000],
+  CLP: [10000, 28000, 70000, 210000],
+  COP: [45000, 130000, 330000, 1000000],
+  PEN: [40, 120, 300, 900],
+};
+
+function resolveTripCurrency(countryCode: string | null): string {
+  if (!countryCode) return "USD";
+  return COUNTRY_TO_CURRENCY[countryCode.toLowerCase()] ?? "USD";
+}
+
+// Google priceLevel enum → band index (1..4). 0 or unknown → -1 (skip clamp).
+function priceLevelIndex(level: string | null): number {
+  switch (level) {
+    case "PRICE_LEVEL_FREE":          return 0;
+    case "PRICE_LEVEL_INEXPENSIVE":   return 1;
+    case "PRICE_LEVEL_MODERATE":      return 2;
+    case "PRICE_LEVEL_EXPENSIVE":     return 3;
+    case "PRICE_LEVEL_VERY_EXPENSIVE":return 4;
+    default:                           return -1;
+  }
+}
+
+// Clamp LLM-quoted cost against Google's priceLevel band in the trip's local
+// currency. LLM is allowed to exceed the band by ≤ 20 % before we clamp — this
+// avoids noise on values that are plausibly right but unlucky. Free venues
+// always return 0. Warn (not throw) so the trip still ships.
+function clampCostPerPerson(
+  llmCost: number,
+  priceLevel: string | null,
+  currency: string,
+  venueTitle: string,
+): number {
+  if (!Number.isFinite(llmCost) || llmCost < 0) return 0;
+  const idx = priceLevelIndex(priceLevel);
+  if (idx === 0) return 0;
+  if (idx < 0) return llmCost; // unknown priceLevel — trust the LLM
+  const band = PRICE_BANDS[currency] ?? PRICE_BANDS.USD;
+  const upper = band[idx - 1];
+  const tolerated = upper * 1.2;
+  if (llmCost > tolerated) {
+    console.warn(
+      `[rankAndEnrich] clamped "${venueTitle}" from ${llmCost} ${currency} → ${upper} ${currency} ` +
+        `(priceLevel=${priceLevel}, band upper=${upper}, tolerated=${tolerated.toFixed(0)})`,
+    );
+    return upper;
+  }
+  return llmCost;
+}
+
+// ---------------------------------------------------------------------------
+// Static system prompt (cache_control: ephemeral). Keep stable — every edit
+// busts the prompt cache across the whole codebase.
+// ---------------------------------------------------------------------------
+
+const RANKER_SYSTEM_PROMPT = `You are an editorial trip curator for Junto. Your job is to pick venues from the provided venue pool and write specific, honest, opinionated copy for each slot in the day skeleton.
+
+ABSOLUTE RULES — violating any of these makes your output useless:
+1. Every activity you emit MUST reference a place_id that appears in the provided venue pool. NEVER invent a place_id. If the pool truly has no fit for a slot, emit place_id=null AND set is_event=false — the validator will drop the slot. Events from the events list are the only case where place_id may be null AND is_event=true.
+2. Never assign the same place_id to two different slots in the same trip. The only exception: accommodation may repeat across nights — but pick one lodging venue for the whole destination.
+3. Honor start_time and duration_minutes from the skeleton slot exactly as given. Do not reshape pacing. Your job is editorial, not scheduling.
+4. Filter venues that violate intent.must_avoids BEFORE picking. If the only remaining pool candidates violate must_avoids, pick the least-bad and say so honestly in why_for_you.
+5. slot_type must match the skeleton — if the slot is "dinner", do not pick a museum.
+6. Pick exactly one activity per slot in the skeleton. If a slot is "arrival", "departure", "transit_buffer", or "rest", emit an activity whose category reflects the downtime (e.g. "transit" or "rest") with a short helpful description ("Arrive, check in, unpack" / "Return to the hotel; you've earned it"). place_id=null is acceptable for pure-downtime slots — set is_event=false.
+
+EDITORIAL VOICE — MANDATORY, NOT OPTIONAL:
+- Never generic. "Great restaurant" is banned. "A cozy spot" is banned. "Popular with locals" is banned unless you can name the specific local tradition, regular dish, or community ritual that makes it popular. Every description cites something specific to THAT venue: a signature dish, a view, a founder's name, an architectural detail, a ritual, the year it opened, the pastry that sells out by 10am.
+- why_for_you MUST reference a concrete signal from the user's parsed intent — a vibe, a must_have, a dietary preference, a pace descriptor, or their group_composition. If no real match exists, say so honestly: "No strong match on your stated vibes; picked because the dinner pool was thin and this is the strongest remaining option." Do NOT fabricate a match.
+- pro_tip MUST be actionable and specific. Banned: "Consider booking ahead", "Arrive early", "Check their website". Required format examples: "Book 2 weeks ahead for a terrace table overlooking the plaza", "Order the black cod miso — it's what regulars come back for", "Arrive 15 minutes before the 11am tour to beat the noon bus", "Ask for the chef's tasting if the bar counter is open — not on the printed menu".
+- skip_if is OPTIONAL but HONEST negative signal. Include only when there's a real caveat — do not invent caveats. Good examples: "Skip if you dislike communal seating", "Skip if you're vegetarian — the menu is 90 % seafood", "Skip if stairs are hard for you — the climb has 400 steps". Empty string or null when no genuine caveat.
+- description is 2–3 sentences, evocative but concrete. No travel-brochure adjectives ("stunning", "breathtaking", "world-class", "iconic", "must-see") unless immediately grounded in a specific observation. "Stunning view" is banned. "The rooftop terrace frames the cathedral bell tower dead center at sunset" is fine.
+
+COST GUIDANCE:
+- estimated_cost_per_person is an HONEST expected spend in the trip's local currency (provided in the user message). Google's priceLevel is the anchor: 1 ≈ cheap, 2 ≈ moderate, 3 ≈ expensive, 4 ≈ very expensive.
+- The system will CLAMP your number against currency bands after you respond. Staying within ±20 % of the band upper bound is safe; going wildly over is wasted work because we'll clamp it.
+- For lodging, cost is per room per night (assume a standard double).
+- For attractions with free admission, use 0.
+- For bars/nightlife, cost is a reasonable 2-drink average.
+- NEVER quote USD when the trip currency is something else. The user message tells you which currency to use.
+
+DIETARY:
+- If intent.dietary contains values (vegan, vegetarian, halal, kosher, gluten-free, etc.), only pick food venues that plausibly serve them — or annotate dietary_notes with a specific caveat such as "vegetarian options available but menu is heavily meat-focused".
+- dietary_notes is OPTIONAL. Only fill it for food activities when there's a real dietary consideration for THIS user.
+
+MUST-AVOIDS HANDLING (specific examples):
+- "tourist traps" → skip venues that are obviously the top tourist sight (the ones every major travel blog puts first). Prefer the 4.3–4.6 neighborhood gem over the 4.7 megasight. When you must pick a popular sight, justify it in why_for_you.
+- "chain restaurants" → skip venues whose displayName matches a globally recognized chain (Starbucks, McDonald's, Hard Rock Cafe, etc.). Local-only franchise chains are okay if distinctive.
+- "crowds" → prefer venues with 50–500 reviews where the rating is still ≥ 4.2. Avoid 5000-review megasights.
+- "loud" → avoid venues with "lively" / "bustling" / "party" markers in types/displayName.
+
+JUNTO PICKS:
+- is_junto_pick is computed later by code — do NOT set it yourself. Leave it out of your output.
+
+ACCOMMODATION:
+- Pick ONE lodging for the whole destination from the "lodging" pool. Prefer rating ≥ 4.3, reviews 100+, and a priceLevel consistent with intent.budget_tier. If the pool is thin, pick the best available and note the limitation.
+
+EVENTS (may be empty):
+- The events list contains snippets from web search — dates are often missing or wrong. Only slot an event into the itinerary when there's a nightlife slot for it AND the event appears genuinely relevant to the trip's vibes. When you do include an event, set is_event=true and place_id=null.
+
+TRIP SUMMARY:
+- trip_title: 4–7 words, evocative, grounded in one specific thing the user is doing (a ritual, a season, a neighborhood). Not "Amazing Portugal Getaway". Try "Porto's Riverside Food & Port Nights".
+- trip_summary: 2–3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. No adjective spam.
+- packing_suggestions: 5–8 items, weather-specific and activity-specific. Not "comfortable shoes" — "closed-toe walking shoes for the cobblestones on Rua das Flores".
+
+OUTPUT: you MUST call the emit_trip tool with the full structured response. Do not include any text outside the tool call.`;
+
+// ---------------------------------------------------------------------------
+// Tool schema — forces the model into a structured emit_trip call.
+// ---------------------------------------------------------------------------
+
+const RANKER_ACTIVITY_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  required: [
+    "slot_index", "slot_type", "place_id", "is_event",
+    "title", "description", "pro_tip", "why_for_you",
+    "category", "estimated_cost_per_person",
+  ],
+  properties: {
+    slot_index: { type: "integer", description: "0-based index into the day's slots array." },
+    slot_type:  { type: "string",  description: "Must match skeleton slot.type exactly." },
+    place_id:   { type: ["string", "null"], description: "Must come from the venue pool, or null for events/downtime." },
+    is_event:   { type: "boolean" },
+    title:      { type: "string" },
+    description:{ type: "string", description: "2–3 sentences, specific not generic." },
+    pro_tip:    { type: "string", description: "One actionable, specific tip." },
+    why_for_you:{ type: "string", description: "Reference a concrete intent signal." },
+    skip_if:    { type: ["string", "null"] },
+    category:   { type: "string", description: "food | culture | nightlife | nature | transit | rest | experience | event" },
+    estimated_cost_per_person: { type: "number", description: "In trip currency, honest expected spend." },
+    dietary_notes: { type: ["string", "null"] },
+  },
+  additionalProperties: false,
+};
+
+const RANKER_TOOL: ClaudeTool = {
+  name: "emit_trip",
+  description: "Emit the full ranked & enriched trip. Call this exactly once.",
+  input_schema: {
+    type: "object",
+    required: ["trip_title", "trip_summary", "packing_suggestions", "accommodation", "days"],
+    properties: {
+      trip_title: { type: "string", description: "4–7 words, specific, grounded." },
+      trip_summary: { type: "string", description: "2–3 sentences, concrete." },
+      packing_suggestions: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 3,
+        maxItems: 10,
+      },
+      accommodation: {
+        type: "object",
+        required: ["place_id", "title", "description", "pro_tip", "why_for_you", "estimated_cost_per_person"],
+        properties: {
+          place_id: { type: ["string", "null"] },
+          title: { type: "string" },
+          description: { type: "string" },
+          pro_tip: { type: "string" },
+          why_for_you: { type: "string" },
+          skip_if: { type: ["string", "null"] },
+          estimated_cost_per_person: { type: "number", description: "Per room per night in trip currency." },
+          dietary_notes: { type: ["string", "null"] },
+        },
+        additionalProperties: false,
+      },
+      days: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["day_number", "theme", "activities"],
+          properties: {
+            day_number: { type: "integer" },
+            theme: { type: "string" },
+            activities: {
+              type: "array",
+              items: RANKER_ACTIVITY_SCHEMA,
+            },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    additionalProperties: false,
+  },
+};
+
+// ---------------------------------------------------------------------------
+// User-message builder. All dynamic content goes HERE, not in the system
+// prompt, so the system prompt stays cacheable across trips.
+// ---------------------------------------------------------------------------
+
+interface VenueDigestEntry {
+  place_id: string;
+  displayName: string | null;
+  types: string[];
+  rating: number | null;
+  reviews: number | null;
+  priceLevel: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+function digestVenue(p: BatchPlaceResult): VenueDigestEntry {
+  return {
+    place_id: p.id,
+    displayName: p.displayName,
+    types: p.types,
+    rating: p.rating,
+    reviews: p.userRatingCount,
+    priceLevel: p.priceLevel,
+    address: p.formattedAddress,
+    lat: p.location?.latitude ?? null,
+    lng: p.location?.longitude ?? null,
+  };
+}
+
+function buildRankerUserMessage(
+  intent: Intent,
+  skeleton: DaySkeleton[],
+  venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
+  events: EventCandidate[],
+  currency: string,
+  countryCode: string | null,
+): string {
+  // Condense pool: per pool, sort by (rating desc, reviews desc), cap at 15.
+  const pool: Record<string, VenueDigestEntry[]> = {};
+  for (const [key, venues] of venuesByPool.entries()) {
+    const sorted = [...venues].sort((a, b) => {
+      const ra = a.rating ?? 0, rb = b.rating ?? 0;
+      if (rb !== ra) return rb - ra;
+      return (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0);
+    });
+    pool[key] = sorted.slice(0, 15).map(digestVenue);
+  }
+
+  const payload = {
+    intent: {
+      destination: intent.destination,
+      country_code: countryCode,
+      currency,
+      vibes: intent.vibes,
+      must_haves: intent.must_haves,
+      must_avoids: intent.must_avoids,
+      budget_tier: intent.budget_tier,
+      pace: intent.pace,
+      dietary: intent.dietary,
+      group_composition: intent.group_composition,
+      raw_notes: intent.raw_notes,
+    },
+    skeleton: skeleton.map((d) => ({
+      day_number: d.day_number,
+      date: d.date,
+      theme: d.theme,
+      slots: d.slots.map((s, i) => ({
+        slot_index: i,
+        type: s.type,
+        start_time: s.start_time,
+        duration_minutes: s.duration_minutes,
+        region_tag: s.region_tag_for_queries,
+      })),
+    })),
+    venue_pool_by_category: pool,
+    events: events.map((e) => ({
+      name: e.name,
+      date_iso: e.date_iso,
+      time: e.time,
+      venue_name: e.venue_name,
+      url: e.url,
+      category: e.category,
+      description: e.description,
+      confidence: e.confidence,
+    })),
+  };
+  return `Rank, assign, and enrich this trip. Return exactly one emit_trip tool call.\n\n${JSON.stringify(payload)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Hydration — take a ranker pick + pool venue → EnrichedActivity.
+// Fields the LLM produced (editorial + cost) are clamped/passed through;
+// factual fields (coords, photos, rating) come from the pool.
+// ---------------------------------------------------------------------------
+
+interface RawRankerActivity {
+  slot_index: number;
+  slot_type: string;
+  place_id: string | null;
+  is_event: boolean;
+  title: string;
+  description: string;
+  pro_tip: string;
+  why_for_you: string;
+  skip_if: string | null;
+  category: string;
+  estimated_cost_per_person: number;
+  dietary_notes: string | null;
+}
+
+function buildPhotoUrls(photos: Array<{ name: string }>, googleKey: string, max = 3): string[] {
+  if (!photos?.length) return [];
+  return photos
+    .slice(0, max)
+    .filter((p) => p?.name)
+    .map((p) => `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=800&key=${googleKey}`);
+}
+
+function hydrateActivity(
+  raw: RawRankerActivity,
+  slot: PacingSlot,
+  place: BatchPlaceResult | null,
+  googleKey: string,
+  currency: string,
+): EnrichedActivity | null {
+  // Non-event activities without a pool match get dropped here.
+  if (!raw.is_event && !place) return null;
+
+  const duration_minutes = slot.duration_minutes;
+  const duration_hours = minutesToHours1dp(duration_minutes);
+
+  const clampedCost = place
+    ? clampCostPerPerson(raw.estimated_cost_per_person, place.priceLevel, currency, raw.title)
+    : Math.max(0, raw.estimated_cost_per_person);
+
+  const title = raw.title?.trim() || place?.displayName || "Activity";
+
+  return {
+    place_id: place?.id ?? "",
+    title,
+    description: raw.description?.trim() ?? "",
+    pro_tip: raw.pro_tip?.trim() ?? "",
+    why_for_you: raw.why_for_you?.trim() ?? "",
+    skip_if: raw.skip_if?.trim() ? raw.skip_if.trim() : null,
+    category: raw.category?.trim() || "experience",
+    start_time: slot.start_time,
+    duration_minutes,
+    duration_hours,
+    location_name: place?.formattedAddress ?? "",
+    neighborhood: null, // populated by Step 8 from Places components if available
+    latitude: place?.location?.latitude ?? 0,
+    longitude: place?.location?.longitude ?? 0,
+    rating: place?.rating ?? null,
+    user_rating_count: place?.userRatingCount ?? null,
+    price_level: place?.priceLevel ?? null,
+    photos: place ? buildPhotoUrls(place.photos ?? [], googleKey) : [],
+    google_maps_url: place?.googleMapsUri ?? null,
+    estimated_cost_per_person: clampedCost,
+    currency,
+    booking_url: "",          // filled in Step 8
+    booking_partner: "google_maps", // default; Step 8 overrides
+    is_junto_pick: false,     // set by Step 8
+    dietary_notes: raw.dietary_notes?.trim() || undefined,
+    tips: raw.pro_tip?.trim() ?? "", // transitional alias for unchanged frontend
+  };
+}
+
+interface RawRankerAccommodation {
+  place_id: string | null;
+  title: string;
+  description: string;
+  pro_tip: string;
+  why_for_you: string;
+  skip_if: string | null;
+  estimated_cost_per_person: number;
+  dietary_notes: string | null;
+}
+
+interface RawRankerOutput {
+  trip_title: string;
+  trip_summary: string;
+  packing_suggestions: string[];
+  accommodation: RawRankerAccommodation;
+  days: Array<{
+    day_number: number;
+    theme: string;
+    activities: RawRankerActivity[];
+  }>;
+}
+
 async function rankAndEnrich(
-  _anthropicKey: string,
-  _intent: Intent,
-  _skeleton: DaySkeleton[],
-  _venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
-  _events: EventCandidate[],
-  _googleKey: string,
-  _logger: LLMLogger,
+  anthropicKey: string,
+  intent: Intent,
+  skeleton: DaySkeleton[],
+  venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
+  events: EventCandidate[],
+  googleKey: string,
+  geo: GeocodeResult,
+  logger: LLMLogger,
 ): Promise<PipelineResult> {
-  throw new Error("rankAndEnrich: not implemented");
+  const currency = resolveTripCurrency(geo.country_code);
+
+  // Build an id → place map spanning every pool so hydration can resolve
+  // place_ids regardless of which pool the ranker drew from.
+  const placeById = new Map<string, BatchPlaceResult>();
+  for (const venues of venuesByPool.values()) {
+    for (const v of venues) placeById.set(v.id, v);
+  }
+
+  const result = await callClaudeHaiku<RawRankerOutput>(
+    anthropicKey,
+    [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
+    RANKER_TOOL,
+    8192,
+  );
+
+  await logger.log({
+    feature: "trip_builder_rank",
+    model: HAIKU_MODEL,
+    input_tokens: result.usage.input_tokens,
+    output_tokens: result.usage.output_tokens,
+    cost_usd: computeHaikuCost(result.usage),
+    cached: result.usage.cache_read_input_tokens > 0,
+  });
+
+  if (!result.data) {
+    throw new Error("rankAndEnrich: Claude returned no tool input");
+  }
+  const raw = result.data;
+
+  // ---- Assemble days, honoring skeleton slot order ----
+  const ranked_days: RankedDay[] = [];
+  const seenIds = new Set<string>();
+  for (const day of skeleton) {
+    const rawDay = raw.days.find((d) => d.day_number === day.day_number);
+    const theme = rawDay?.theme?.trim() || day.theme;
+    const activities: EnrichedActivity[] = [];
+    const rawActs = rawDay?.activities ?? [];
+    for (let i = 0; i < day.slots.length; i++) {
+      const slot = day.slots[i];
+      const rawAct = rawActs.find((a) => a.slot_index === i);
+      if (!rawAct) continue;
+      // Reject duplicate place_ids across the trip (ranker was instructed not
+      // to reuse venues; guard in case it ignored the rule).
+      if (rawAct.place_id && seenIds.has(rawAct.place_id)) continue;
+      const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
+      // Non-event activities need a pool-resident place.
+      if (!rawAct.is_event && rawAct.place_id && !place) continue;
+      const activity = hydrateActivity(rawAct, slot, place, googleKey, currency);
+      if (!activity) continue;
+      if (place) seenIds.add(place.id);
+      activities.push(activity);
+    }
+    ranked_days.push({
+      date: day.date,
+      day_number: day.day_number,
+      theme,
+      activities,
+    });
+  }
+
+  // ---- Accommodation ----
+  let accommodation: EnrichedActivity | undefined;
+  if (raw.accommodation.place_id) {
+    const place = placeById.get(raw.accommodation.place_id) ?? null;
+    if (place) {
+      const fakeSlot: PacingSlot = {
+        type: "lodging",
+        start_time: "15:00",
+        duration_minutes: 0,
+        region_tag_for_queries: "primary",
+      };
+      const hydrated = hydrateActivity(
+        {
+          slot_index: -1,
+          slot_type: "lodging",
+          place_id: raw.accommodation.place_id,
+          is_event: false,
+          title: raw.accommodation.title,
+          description: raw.accommodation.description,
+          pro_tip: raw.accommodation.pro_tip,
+          why_for_you: raw.accommodation.why_for_you,
+          skip_if: raw.accommodation.skip_if,
+          category: "accommodation",
+          estimated_cost_per_person: raw.accommodation.estimated_cost_per_person,
+          dietary_notes: raw.accommodation.dietary_notes,
+        },
+        fakeSlot,
+        place,
+        googleKey,
+        currency,
+      );
+      if (hydrated) accommodation = hydrated;
+    }
+  }
+
+  // ---- Trip-level rollups ----
+  const total_activities = ranked_days.reduce((n, d) => n + d.activities.length, 0);
+  const numDays = skeleton.length;
+  const dailySpend = ranked_days.map((d) =>
+    d.activities.reduce((s, a) => s + (a.estimated_cost_per_person || 0), 0),
+  );
+  const daily_budget_estimate = numDays > 0
+    ? Math.round(dailySpend.reduce((s, n) => s + n, 0) / numDays)
+    : 0;
+
+  const destination: RankedDestination = {
+    name: intent.destination,
+    start_date: skeleton[0]?.date ?? "",
+    end_date: skeleton[skeleton.length - 1]?.date ?? "",
+    intro: raw.trip_summary?.trim() ?? "",
+    days: ranked_days,
+    accommodation,
+  };
+
+  return {
+    trip_title: raw.trip_title?.trim() ?? intent.destination,
+    trip_summary: raw.trip_summary?.trim() ?? "",
+    destinations: [destination],
+    map_center: { lat: geo.lat, lng: geo.lng },
+    map_zoom: 12,
+    daily_budget_estimate,
+    currency,
+    packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions.slice(0, 10) : [],
+    total_activities,
+  };
 }
 
 function markJuntoPicks(_result: PipelineResult, _intent: Intent): void {
@@ -1997,6 +2587,7 @@ Deno.serve(async (req) => {
       venuesByPool,
       events,
       googleKey,
+      geo,
       logger,
     );
 
