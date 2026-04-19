@@ -775,9 +775,37 @@ export default function TripList() {
         <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
       </div>
 
+      {/* ── Happening now ── */}
+      {liveTrip && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
+          <HeroCard trip={liveTrip} />
+        </div>
+      )}
+
+      {/* ── Coming up ── */}
+      {upcomingTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Coming up</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {upcomingTrips.map((trip, i) => (
+              <div
+                key={trip.id}
+                className={
+                  upcomingTrips.length % 2 !== 0 && i === upcomingTrips.length - 1
+                    ? "md:col-span-2"
+                    : ""
+                }
+              >
+                <RegularCard trip={trip} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Drafts Section ── */}
       {drafts && drafts.length > 0 && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-4">
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Drafts</h3>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {drafts.map((draft: any) => {
@@ -857,33 +885,6 @@ export default function TripList() {
         </div>
       )}
 
-      {/* ── Happening now ── */}
-      {liveTrip && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
-          <HeroCard trip={liveTrip} />
-        </div>
-      )}
-
-      {/* ── Coming up ── */}
-      {upcomingTrips.length > 0 && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Coming up</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {upcomingTrips.map((trip, i) => (
-              <div
-                key={trip.id}
-                className={
-                  upcomingTrips.length % 2 !== 0 && i === upcomingTrips.length - 1
-                    ? "md:col-span-2"
-                    : ""
-                }
-              >
-                <RegularCard trip={trip} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── Past trips (collapsed by default) ── */}
       {pastTrips.length > 0 && (
