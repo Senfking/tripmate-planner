@@ -451,8 +451,6 @@ interface EnrichedActivity {
   // Populated for is_event rows via fuzzy-match against events[] in hydration.
   // Null for place-backed rows and for events that never matched a candidate.
   event_url: string | null;
-  // Transitional alias so the unchanged frontend keeps rendering tips
-  tips: string;
 }
 
 interface RankedDay {
@@ -2175,7 +2173,6 @@ function hydrateActivity(
     is_junto_pick: false,     // set by Step 8
     dietary_notes: raw.dietary_notes?.trim() || undefined,
     event_url,
-    tips: raw.pro_tip?.trim() ?? "", // transitional alias for unchanged frontend
   };
 }
 
