@@ -1,4 +1,4 @@
-// v2.4 deployed — name resolution fix, 2026-04-15
+// v2.5 deployed — events skip fuzzy match, 9302bcb
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -964,7 +964,7 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
-  console.log("[concierge-suggest] v2.4 deployed — name resolution fix", new Date().toISOString());
+  console.log("[concierge-suggest] v2.5 deployed — events skip fuzzy match, 9302bcb", new Date().toISOString());
   console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
 
   if (req.method === "OPTIONS") {
