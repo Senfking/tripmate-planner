@@ -761,7 +761,7 @@ export default function TripList() {
   /* ── Group trips by section ── */
   const liveTrip = trips.find((t) => t.statusInfo.status === "live");
   const upcomingTrips = trips.filter(
-    (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming" || t.statusInfo.status === "no-dates")
+    (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming")
   );
   const pastTrips = trips.filter((t) => t.statusInfo.status === "ended");
 
