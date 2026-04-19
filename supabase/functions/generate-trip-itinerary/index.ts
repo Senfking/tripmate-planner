@@ -403,10 +403,14 @@ interface BatchPlaceResult {
 
 interface EventCandidate {
   name: string;
-  date: string | null;
-  venue: string | null;
-  description: string;
+  date_iso: string | null;       // ISO-8601 date if we could parse one; null otherwise
+  time: string | null;           // "HH:MM" if a time appeared in the snippet; null otherwise
+  venue_name: string | null;     // best-guess venue parsed from "... at <venue>" patterns
+  venue_place_id: string | null; // never populated by the searcher; ranker may fuzzy-match later
   url: string | null;
+  category: string;              // "events" by default; "music" / "festival" / "culture" when the query shape implies it
+  description: string;           // snippet — kept so the ranker can judge fit
+  confidence: number;            // 0..1 rough prior: snippet-match only, no verification
 }
 
 type AffiliatePartner = "booking" | "viator" | "getyourguide" | "google_maps";
@@ -1415,13 +1419,241 @@ async function searchPlacesBatch(
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Step 6: searchEvents (optional enrichment — pipeline must not fail without it)
+//
+// Reuses the concierge-suggest pattern: Brave Search first, Google CSE
+// fallback. We do NOT add a new LLM vendor. Event search is optional and
+// tightly bounded:
+//   - max 2 parallel queries
+//   - max 10 candidates returned
+//   - 24h TTL cache in ai_response_cache (events go stale fast)
+//   - only fires when the trip actually cares about events
+//
+// Relevance heuristics (fire when ANY is true):
+//   - skeleton has a nightlife slot, OR
+//   - intent.vibes / must_haves include live-music / festival / events / cultural signals
+//
+// If no API keys are configured we warn and return [] — never throw.
+// ---------------------------------------------------------------------------
+
+const EVENTS_MAX_QUERIES = 2;
+const EVENTS_MAX_RESULTS = 10;
+const EVENT_VIBE_SIGNALS = /live music|festival|concert|gig|dj|event|cultural|theatre|theater|exhibition|opera|ballet/i;
+
+function shouldSearchEvents(intent: Intent, skeleton: DaySkeleton[]): boolean {
+  for (const day of skeleton) {
+    for (const slot of day.slots) {
+      if (slot.type === "nightlife") return true;
+    }
+  }
+  const haystack = [...intent.vibes, ...intent.must_haves, intent.raw_notes].join(" ");
+  return EVENT_VIBE_SIGNALS.test(haystack);
+}
+
+function classifyEventQuery(q: string): string {
+  if (/festival/i.test(q)) return "festival";
+  if (/concert|gig|live music|dj/i.test(q)) return "music";
+  if (/exhibition|theatre|theater|opera|ballet|cultural/i.test(q)) return "culture";
+  return "events";
+}
+
+// Parse "Event Name at Venue" → venue_name. Best effort; null when ambiguous.
+function parseVenueFromTitle(title: string): string | null {
+  const atIdx = title.toLowerCase().lastIndexOf(" at ");
+  if (atIdx <= 0) return null;
+  const venue = title.slice(atIdx + 4).trim();
+  return venue.length > 1 && venue.length < 80 ? venue : null;
+}
+
+function buildEventQueries(destination: string, startDate: string, intent: Intent): string[] {
+  const monthYear = (() => {
+    try {
+      const d = new Date(`${startDate}T00:00:00Z`);
+      return d.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+    } catch {
+      return "";
+    }
+  })();
+  const vibeSignal = intent.vibes.find((v) => EVENT_VIBE_SIGNALS.test(v)) ?? "events";
+  const q1 = `${vibeSignal} ${destination} ${monthYear}`.trim();
+  const q2 = `${destination} events ${monthYear} site:ra.co OR site:eventbrite.com OR site:dice.fm`.trim();
+  return [q1, q2].slice(0, EVENTS_MAX_QUERIES);
+}
+
+interface RawEventHit {
+  title: string;
+  url: string | null;
+  description: string;
+}
+
+async function fetchBraveHits(apiKey: string, queries: string[]): Promise<Array<{ q: string; hits: RawEventHit[] }>> {
+  return await Promise.all(
+    queries.map(async (q) => {
+      try {
+        const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=10&freshness=pm`;
+        const res = await fetch(url, {
+          headers: {
+            Accept: "application/json",
+            "Accept-Encoding": "gzip",
+            "X-Subscription-Token": apiKey,
+          },
+        });
+        if (!res.ok) {
+          console.error(`[searchEvents] Brave HTTP ${res.status} for "${q}"`);
+          return { q, hits: [] };
+        }
+        const data = (await res.json()) as {
+          web?: { results?: Array<{ title?: string; url?: string; description?: string }> };
+        };
+        const hits = (data.web?.results ?? []).map((r) => ({
+          title: r.title ?? "",
+          url: r.url ?? null,
+          description: r.description ?? "",
+        }));
+        return { q, hits };
+      } catch (err) {
+        console.error(`[searchEvents] Brave threw for "${q}":`, err);
+        return { q, hits: [] };
+      }
+    }),
+  );
+}
+
+async function fetchCseHits(
+  apiKey: string,
+  cseId: string,
+  queries: string[],
+): Promise<Array<{ q: string; hits: RawEventHit[] }>> {
+  return await Promise.all(
+    queries.map(async (q) => {
+      try {
+        const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(q)}&num=10&dateRestrict=m1`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          console.error(`[searchEvents] CSE HTTP ${res.status} for "${q}"`);
+          return { q, hits: [] };
+        }
+        const data = (await res.json()) as {
+          items?: Array<{ title?: string; link?: string; snippet?: string }>;
+        };
+        const hits = (data.items ?? []).map((r) => ({
+          title: r.title ?? "",
+          url: r.link ?? null,
+          description: r.snippet ?? "",
+        }));
+        return { q, hits };
+      } catch (err) {
+        console.error(`[searchEvents] CSE threw for "${q}":`, err);
+        return { q, hits: [] };
+      }
+    }),
+  );
+}
+
+function normalizeEventHits(
+  groups: Array<{ q: string; hits: RawEventHit[] }>,
+): EventCandidate[] {
+  const seen = new Set<string>();
+  const out: EventCandidate[] = [];
+  for (const { q, hits } of groups) {
+    const category = classifyEventQuery(q);
+    for (const h of hits) {
+      if (!h.title) continue;
+      const urlKey = h.url ?? `title:${h.title.toLowerCase()}`;
+      if (seen.has(urlKey)) continue;
+      seen.add(urlKey);
+      out.push({
+        name: h.title,
+        date_iso: null,
+        time: null,
+        venue_name: parseVenueFromTitle(h.title),
+        venue_place_id: null,
+        url: h.url,
+        category,
+        description: h.description,
+        confidence: 0.5, // snippet-match prior; ranker adjusts
+      });
+      if (out.length >= EVENTS_MAX_RESULTS) return out;
+    }
+  }
+  return out;
+}
+
 async function searchEvents(
-  _destination: string,
-  _startDate: string,
-  _endDate: string,
-  _intent: Intent,
+  destination: string,
+  startDate: string,
+  endDate: string,
+  intent: Intent,
+  skeleton: DaySkeleton[],
+  svcClient: ReturnType<typeof createClient>,
+  logger: LLMLogger,
 ): Promise<EventCandidate[]> {
-  throw new Error("searchEvents: not implemented");
+  // ---- Heuristic short-circuit ----
+  if (!shouldSearchEvents(intent, skeleton)) {
+    await logger.log({
+      feature: "events_search_skipped",
+      model: "heuristic",
+      input_tokens: 0,
+      output_tokens: 0,
+      cost_usd: 0,
+      cached: false,
+    });
+    return [];
+  }
+
+  // ---- Cache (24h TTL — events go stale fast) ----
+  const shape = JSON.stringify({
+    dest: destination.toLowerCase().trim(),
+    start: startDate,
+    end: endDate,
+    vibes: [...intent.vibes].sort(),
+  });
+  const cacheKey = `events:v1:${await sha256Hex(shape)}`;
+  const { data: cached, error: cacheErr } = await svcClient
+    .from("ai_response_cache")
+    .select("response_json")
+    .eq("cache_key", cacheKey)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (cacheErr) {
+    throw new Error(`ai_response_cache events lookup failed: ${cacheErr.message}`);
+  }
+  if (cached?.response_json) {
+    return cached.response_json as unknown as EventCandidate[];
+  }
+
+  // ---- Vendor selection ----
+  const braveKey = Deno.env.get("BRAVE_API_KEY");
+  const cseKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
+  const cseId = Deno.env.get("GOOGLE_CSE_ID");
+  const queries = buildEventQueries(destination, startDate, intent);
+
+  let groups: Array<{ q: string; hits: RawEventHit[] }> = [];
+  if (braveKey) {
+    groups = await fetchBraveHits(braveKey, queries);
+  } else if (cseKey && cseId) {
+    groups = await fetchCseHits(cseKey, cseId, queries);
+  } else {
+    console.warn(
+      "[searchEvents] No BRAVE_API_KEY and no GOOGLE_SEARCH_API_KEY+GOOGLE_CSE_ID configured — returning [].",
+    );
+    return [];
+  }
+
+  const events = normalizeEventHits(groups);
+
+  // ---- Cache write (24h TTL) ----
+  const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
+    cache_key: cacheKey,
+    response_json: events as unknown as Record<string, unknown>,
+    expires_at: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+  });
+  if (cacheInsErr && cacheInsErr.code !== "23505") {
+    throw new Error(`ai_response_cache events insert failed: ${cacheInsErr.message}`);
+  }
+
+  return events;
 }
 
 async function rankAndEnrich(
@@ -1742,7 +1974,7 @@ Deno.serve(async (req) => {
     // Step 4 + Step 5 in parallel
     const [places, events] = await Promise.all([
       searchPlacesBatch(queries, googleKey),
-      searchEvents(intent.destination, startDate, endDate, intent),
+      searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
     ]);
 
     await logPlacesCalls(svcClient, user.id, queries.length);
