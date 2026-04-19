@@ -1,4 +1,4 @@
-// v2.7 deployed — IP geo + adaptive radius, haversine removed
+// v2.8 deployed — geocode via Places API + per-layer logs, 437d08b
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -135,19 +135,46 @@ interface GeocodeResult {
   formattedAddress: string | null;
 }
 
-// Geocode a destination using the Geocoding API and derive max admin scale
-// from the returned "types" field.
+// Geocode a destination using the Places API (New) Text Search and derive the
+// max admin scale from the returned `types` field.
+//
+// NOTE: we deliberately use the Places API here, not the legacy Geocoding API.
+// The GOOGLE_PLACES_API_KEY in this project is enabled for Places but not the
+// Geocoding API — calling the Geocoding endpoint with it returns 403
+// REQUEST_DENIED, which v2.7 silently swallowed.
 async function geocodeDestination(
   destination: string,
   googleKey: string,
 ): Promise<GeocodeResult | null> {
   try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=${googleKey}`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
+    const res = await fetch(
+      "https://places.googleapis.com/v1/places:searchText",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": googleKey,
+          "X-Goog-FieldMask":
+            "places.location,places.types,places.displayName,places.formattedAddress",
+        },
+        body: JSON.stringify({ textQuery: destination, maxResultCount: 1 }),
+      },
+    );
+    if (!res.ok) {
+      const body = await res.text();
+      console.warn(
+        `[concierge-suggest] geocode HTTP ${res.status} for "${destination}": ${body.slice(0, 200)}`,
+      );
+      return null;
+    }
     const data = await res.json();
-    const first = data?.results?.[0];
-    if (!first?.geometry?.location) return null;
+    const first = data?.places?.[0];
+    if (!first?.location) {
+      console.warn(
+        `[concierge-suggest] geocode returned no location for "${destination}" (places.length=${data?.places?.length ?? 0})`,
+      );
+      return null;
+    }
     const types: string[] = Array.isArray(first.types) ? first.types : [];
     let scale: keyof typeof MAX_RADIUS_BY_SCALE = "unknown";
     const order: Array<keyof typeof MAX_RADIUS_BY_SCALE> = [
@@ -165,19 +192,22 @@ async function geocodeDestination(
       }
     }
     return {
-      lat: first.geometry.location.lat,
-      lng: first.geometry.location.lng,
+      lat: first.location.latitude,
+      lng: first.location.longitude,
       scale,
       maxRadius: MAX_RADIUS_BY_SCALE[scale],
-      formattedAddress: first.formatted_address ?? null,
+      formattedAddress: (first.formattedAddress as string) ?? null,
     };
   } catch (err) {
-    console.warn("[concierge-suggest] geocode failed:", err);
+    console.warn("[concierge-suggest] geocode threw:", err);
     return null;
   }
 }
 
-// Reverse geocode coordinates to the nearest locality/sublocality name.
+// Reverse geocode via the legacy Geocoding API to get the nearest locality.
+// This endpoint is optional — if the project's key isn't enabled for it, we
+// just fall back to the destination string for the prompt/query. Failure here
+// is logged (once) but non-fatal.
 async function reverseGeocodeLocality(
   lat: number,
   lng: number,
@@ -186,11 +216,21 @@ async function reverseGeocodeLocality(
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&result_type=sublocality|locality|neighborhood&key=${googleKey}`;
     const res = await fetch(url);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.log(
+        `[concierge-suggest] reverse-geocode HTTP ${res.status} (non-fatal)`,
+      );
+      return null;
+    }
     const data = await res.json();
+    if (data?.status && data.status !== "OK") {
+      console.log(
+        `[concierge-suggest] reverse-geocode status=${data.status} (non-fatal)`,
+      );
+      return null;
+    }
     const first = data?.results?.[0];
     if (!first) return null;
-    // Prefer the locality / sublocality component by name
     const components: Array<{ long_name: string; types: string[] }> =
       first.address_components ?? [];
     for (const wanted of ["sublocality", "locality", "neighborhood"]) {
@@ -1224,7 +1264,7 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
-  console.log("[concierge-suggest] v2.7 deployed — IP geo + adaptive radius, haversine removed", new Date().toISOString());
+  console.log("[concierge-suggest] v2.8 deployed — geocode via Places API + per-layer logs, 437d08b", new Date().toISOString());
   console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
 
   if (req.method === "OPTIONS") {
@@ -1485,11 +1525,17 @@ Deno.serve(async (req) => {
       locationSource = "gps";
       // User is here — 20km max is plenty.
       maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+      console.log(
+        `[location] layer 0 (gps): center=(${gpsLat},${gpsLng})`,
+      );
     }
 
     // Layer 0b: explicit specificLocation string — geocode it for center
     if (!searchLat && !searchLng && specificLocation && googleKey) {
       const subGeo = await geocodeDestination(specificLocation, googleKey);
+      console.log(
+        `[location] layer 0b (specificLocation): tried=${JSON.stringify(specificLocation)} result=${subGeo ? `{lat:${subGeo.lat},lng:${subGeo.lng},scale:${subGeo.scale}}` : "null"}`,
+      );
       if (subGeo) {
         searchLat = subGeo.lat;
         searchLng = subGeo.lng;
@@ -1502,57 +1548,89 @@ Deno.serve(async (req) => {
     // Layer 1: sub-locality extracted from free-text query (e.g. "in Seminyak")
     if (searchLat === null && !isStructured && body.query && googleKey) {
       const sub = extractSubLocality(body.query);
-      if (sub && destGeo) {
-        // Geocode within the destination country/region. Append destination
-        // so "Seminyak" resolves within Bali, not a random Seminyak elsewhere.
+      if (!sub) {
+        console.log(`[location] layer 1 (sub-locality): tried=null result=null`);
+      } else if (!destGeo) {
+        console.log(
+          `[location] layer 1 (sub-locality): tried=${JSON.stringify(sub)} result=null reason=no_destGeo`,
+        );
+      } else {
         const subGeo = await geocodeDestination(
           `${sub}, ${context.destination}`,
           googleKey,
         );
-        if (
-          subGeo &&
-          pointWithin(
+        if (!subGeo) {
+          console.log(
+            `[location] layer 1 (sub-locality): tried=${JSON.stringify(sub)} result=null reason=geocode_failed`,
+          );
+        } else {
+          const inside = pointWithin(
             { lat: destGeo.lat, lng: destGeo.lng },
             { lat: subGeo.lat, lng: subGeo.lng },
             destGeo.maxRadius,
-          )
-        ) {
-          searchLat = subGeo.lat;
-          searchLng = subGeo.lng;
-          locationSource = "sublocality";
-          localityName = sub;
-          maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+          );
+          console.log(
+            `[location] layer 1 (sub-locality): tried=${JSON.stringify(sub)} result={lat:${subGeo.lat},lng:${subGeo.lng},scale:${subGeo.scale}} inside_destination=${inside}`,
+          );
+          if (inside) {
+            searchLat = subGeo.lat;
+            searchLng = subGeo.lng;
+            locationSource = "sublocality";
+            localityName = sub;
+            maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+          }
         }
       }
     }
 
     // Layer 2: IP geolocation (only if it falls inside the destination area)
-    if (searchLat === null && destGeo) {
-      const clientIp = extractClientIp(req);
-      const ipGeo = await ipGeolocate(clientIp);
-      if (
-        ipGeo &&
-        pointWithin(
-          { lat: destGeo.lat, lng: destGeo.lng },
-          { lat: ipGeo.lat, lng: ipGeo.lng },
-          destGeo.maxRadius,
-        )
-      ) {
-        searchLat = ipGeo.lat;
-        searchLng = ipGeo.lng;
-        locationSource = "ip";
-        localityName = ipGeo.city;
-        // User is physically near — tighter cap
-        maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+    if (searchLat === null) {
+      if (!destGeo) {
+        console.log(
+          `[location] layer 2 (ip): skipped reason=no_destGeo (can't validate inside-destination)`,
+        );
+      } else {
+        const clientIp = extractClientIp(req);
+        const ipGeo = await ipGeolocate(clientIp);
+        if (!ipGeo) {
+          console.log(
+            `[location] layer 2 (ip): ip=${JSON.stringify(clientIp)} result=null`,
+          );
+        } else {
+          const inside = pointWithin(
+            { lat: destGeo.lat, lng: destGeo.lng },
+            { lat: ipGeo.lat, lng: ipGeo.lng },
+            destGeo.maxRadius,
+          );
+          console.log(
+            `[location] layer 2 (ip): ip=${JSON.stringify(clientIp)} result={lat:${ipGeo.lat},lng:${ipGeo.lng},city:${JSON.stringify(ipGeo.city)}} inside_destination=${inside}`,
+          );
+          if (inside) {
+            searchLat = ipGeo.lat;
+            searchLng = ipGeo.lng;
+            locationSource = "ip";
+            localityName = ipGeo.city;
+            maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+          }
+        }
       }
     }
 
     // Layer 3: destination geocode (fallback)
-    if (searchLat === null && destGeo) {
-      searchLat = destGeo.lat;
-      searchLng = destGeo.lng;
-      locationSource = "destination";
-      maxRadiusMeters = destGeo.maxRadius;
+    if (searchLat === null) {
+      if (destGeo) {
+        searchLat = destGeo.lat;
+        searchLng = destGeo.lng;
+        locationSource = "destination";
+        maxRadiusMeters = destGeo.maxRadius;
+        console.log(
+          `[location] layer 3 (destination): tried=${JSON.stringify(context.destination)} result={lat:${destGeo.lat},lng:${destGeo.lng},scale:${destGeo.scale}}`,
+        );
+      } else {
+        console.log(
+          `[location] layer 3 (destination): tried=${JSON.stringify(context.destination)} result=null — all layers exhausted`,
+        );
+      }
     }
 
     // Reverse-geocode the final center to a locality name (for prompt/query use)
