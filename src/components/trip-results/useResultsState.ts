@@ -22,6 +22,7 @@ export interface AIActivity {
   dietary_notes: string | null;
   travel_time_from_previous?: string | null;
   travel_mode_from_previous?: string | null;
+  is_junto_pick?: boolean;
 }
 
 export interface AIDay {

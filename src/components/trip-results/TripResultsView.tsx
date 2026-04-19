@@ -170,6 +170,27 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     return result.destinations.filter((d) => d.accommodation).length;
   }, [result]);
 
+  // Determine trip shape: single-destination (all days same place) vs multi-destination.
+  const isMultiDestination = useMemo(() => {
+    const names = new Set(result.destinations.map((d) => d.name?.trim().toLowerCase()).filter(Boolean));
+    return names.size >= 2;
+  }, [result]);
+
+  // Warn once if backend never marks any activity as a Junto Pick.
+  useEffect(() => {
+    const hasField = result.destinations.some((d) =>
+      d.days.some((day) => day.activities.some((a) => typeof (a as any).is_junto_pick === "boolean"))
+    );
+    const hasAnyPick = result.destinations.some((d) =>
+      d.days.some((day) => day.activities.some((a) => (a as any).is_junto_pick === true))
+    );
+    if (!hasField) {
+      console.warn("[TripResultsView] expected junto_pick field not found in activity data");
+    } else if (!hasAnyPick) {
+      console.info("[TripResultsView] is_junto_pick present but no activity marked true for this trip");
+    }
+  }, [result]);
+
   const currency = result.currency || "USD";
 
   const hasPacking = (result.packing_suggestions?.length || 0) > 0;
