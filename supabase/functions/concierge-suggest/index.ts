@@ -1,4 +1,4 @@
-// v2.6 deployed — venue drop instrumentation
+// v2.7 deployed — IP geo + adaptive radius, haversine removed
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -31,6 +31,188 @@ function haversineKm(
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ---------------------------------------------------------------------------
+// Location resolution helpers
+// ---------------------------------------------------------------------------
+
+// Max radius (meters) per destination admin scale. Derived from the Geocoding
+// API "types" field — islands/regions need wider search than single cities.
+const MAX_RADIUS_BY_SCALE: Record<string, number> = {
+  neighborhood: 10000,
+  sublocality: 10000,
+  locality: 10000,
+  administrative_area_level_2: 30000,
+  administrative_area_level_1: 80000,
+  country: 300000,
+  unknown: 30000,
+};
+
+// IP geolocation cache (in-memory per isolate). ipapi.co free tier is 1000/day.
+interface IpGeoCacheEntry {
+  lat: number;
+  lng: number;
+  city: string | null;
+  country: string | null;
+  expiresAt: number;
+}
+const ipGeoCache = new Map<string, IpGeoCacheEntry>();
+const IP_GEO_TTL_MS = 24 * 60 * 60 * 1000;
+
+function extractClientIp(req: Request): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return req.headers.get("x-real-ip") ?? req.headers.get("cf-connecting-ip");
+}
+
+// IP geolocation via ipapi.co (1000/day free, no key, returns JSON).
+// Chosen because: (a) no API key needed — no secret to provision, (b) free
+// tier sufficient for current volume, (c) returns lat/lng + city + country
+// in one call, (d) non-commercial traffic permitted without registration.
+async function ipGeolocate(ip: string | null): Promise<IpGeoCacheEntry | null> {
+  if (!ip) return null;
+  // Skip localhost / private ranges
+  if (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip.startsWith("10.") ||
+    ip.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
+  ) {
+    return null;
+  }
+
+  const cached = ipGeoCache.get(ip);
+  if (cached && cached.expiresAt > Date.now()) return cached;
+
+  try {
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
+      headers: { "User-Agent": "junto-concierge/1.0" },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.error) return null;
+    const lat = typeof data.latitude === "number" ? data.latitude : null;
+    const lng = typeof data.longitude === "number" ? data.longitude : null;
+    if (lat === null || lng === null) return null;
+    const entry: IpGeoCacheEntry = {
+      lat,
+      lng,
+      city: (data.city as string) ?? null,
+      country: (data.country_name as string) ?? null,
+      expiresAt: Date.now() + IP_GEO_TTL_MS,
+    };
+    ipGeoCache.set(ip, entry);
+    return entry;
+  } catch (err) {
+    console.warn("[concierge-suggest] ipapi.co failed:", err);
+    return null;
+  }
+}
+
+// Sub-locality extraction: patterns like "<cat> in Seminyak", "around Canggu",
+// "near Ubud". We only accept capitalised tokens of length 3+ to avoid noise.
+function extractSubLocality(query: string): string | null {
+  const patterns = [
+    /\b(?:in|at|around|near|by)\s+([A-Z][A-Za-z\u00C0-\u024F]{2,}(?:\s+[A-Z][A-Za-z\u00C0-\u024F]+){0,2})\b/,
+  ];
+  for (const re of patterns) {
+    const m = query.match(re);
+    if (m?.[1]) return m[1].trim();
+  }
+  return null;
+}
+
+interface GeocodeResult {
+  lat: number;
+  lng: number;
+  scale: keyof typeof MAX_RADIUS_BY_SCALE;
+  maxRadius: number;
+  formattedAddress: string | null;
+}
+
+// Geocode a destination using the Geocoding API and derive max admin scale
+// from the returned "types" field.
+async function geocodeDestination(
+  destination: string,
+  googleKey: string,
+): Promise<GeocodeResult | null> {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=${googleKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const first = data?.results?.[0];
+    if (!first?.geometry?.location) return null;
+    const types: string[] = Array.isArray(first.types) ? first.types : [];
+    let scale: keyof typeof MAX_RADIUS_BY_SCALE = "unknown";
+    const order: Array<keyof typeof MAX_RADIUS_BY_SCALE> = [
+      "neighborhood",
+      "sublocality",
+      "locality",
+      "administrative_area_level_2",
+      "administrative_area_level_1",
+      "country",
+    ];
+    for (const s of order) {
+      if (types.includes(s as string)) {
+        scale = s;
+        break;
+      }
+    }
+    return {
+      lat: first.geometry.location.lat,
+      lng: first.geometry.location.lng,
+      scale,
+      maxRadius: MAX_RADIUS_BY_SCALE[scale],
+      formattedAddress: first.formatted_address ?? null,
+    };
+  } catch (err) {
+    console.warn("[concierge-suggest] geocode failed:", err);
+    return null;
+  }
+}
+
+// Reverse geocode coordinates to the nearest locality/sublocality name.
+async function reverseGeocodeLocality(
+  lat: number,
+  lng: number,
+  googleKey: string,
+): Promise<string | null> {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&result_type=sublocality|locality|neighborhood&key=${googleKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const first = data?.results?.[0];
+    if (!first) return null;
+    // Prefer the locality / sublocality component by name
+    const components: Array<{ long_name: string; types: string[] }> =
+      first.address_components ?? [];
+    for (const wanted of ["sublocality", "locality", "neighborhood"]) {
+      const hit = components.find((c) => c.types.includes(wanted));
+      if (hit?.long_name) return hit.long_name;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Check that `pt` is within `maxRadius` meters of `center`. Used to gate
+// whether IP geolocation is trustworthy for the current destination.
+function pointWithin(
+  center: { lat: number; lng: number },
+  pt: { lat: number; lng: number },
+  maxRadiusMeters: number,
+): boolean {
+  return (
+    haversineKm(center.lat, center.lng, pt.lat, pt.lng) * 1000 <= maxRadiusMeters
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -560,6 +742,7 @@ function buildPlacesQueries(
   vibes: string[],
   budget: string | undefined,
   location: { name: string; lat: number; lng: number },
+  radiusMeters: number,
   customText?: string,
 ): PlacesSearchQuery[] {
   // Category → base search terms
@@ -596,7 +779,7 @@ function buildPlacesQueries(
   const locationBias = {
     circle: {
       center: { latitude: location.lat, longitude: location.lng },
-      radius: 15000,
+      radius: radiusMeters,
     },
   };
 
@@ -713,6 +896,59 @@ async function searchPlacesBatch(
 }
 
 // ---------------------------------------------------------------------------
+// Adaptive Places search — start at 5km; if too thin, widen to 10km, then 20km,
+// bounded by the destination's admin max radius. Returns the final radius used
+// so the event branch can reuse it as the distance gate.
+// ---------------------------------------------------------------------------
+interface AdaptiveSearchResult {
+  venues: BatchPlaceResult[];
+  finalRadiusMeters: number;
+}
+
+async function searchPlacesAdaptive(
+  buildQueriesAtRadius: (radiusMeters: number) => PlacesSearchQuery[],
+  googleKey: string,
+  excludePlaceIds: string[],
+  maxRadiusMeters: number,
+): Promise<AdaptiveSearchResult> {
+  const ladder = [5000, 10000, 20000].filter((r) => r <= maxRadiusMeters);
+  // Always include the hard cap so we can still widen to the destination's max
+  if (ladder.length === 0 || ladder[ladder.length - 1] < maxRadiusMeters) {
+    ladder.push(maxRadiusMeters);
+  }
+
+  let venues: BatchPlaceResult[] = [];
+  let finalRadius = ladder[0];
+
+  for (let i = 0; i < ladder.length; i++) {
+    const radius = ladder[i];
+    finalRadius = radius;
+    const queries = buildQueriesAtRadius(radius);
+    venues = await searchPlacesBatch(queries, googleKey, excludePlaceIds);
+
+    // Good enough — stop widening
+    if (venues.length >= 15) break;
+
+    // Only widen if there's a larger step available
+    const next = ladder[i + 1];
+    if (!next) break;
+
+    // <5 venues: always widen. 5-14 venues: widen one more step if possible.
+    if (venues.length < 5) {
+      console.log(
+        `[concierge-suggest] Places thin at ${radius / 1000}km (${venues.length} venues), widening to ${next / 1000}km`,
+      );
+      continue;
+    }
+    console.log(
+      `[concierge-suggest] Places marginal at ${radius / 1000}km (${venues.length} venues), widening to ${next / 1000}km`,
+    );
+  }
+
+  return { venues, finalRadiusMeters: finalRadius };
+}
+
+// ---------------------------------------------------------------------------
 // Fuzzy name matching — normalise to lowercase alphanumeric and check if one
 // string contains the other (handles "Savaya" matching "Savaya Bali - Beach Club")
 // ---------------------------------------------------------------------------
@@ -802,6 +1038,7 @@ function validateAIResponse(
   originalPlaces: BatchPlaceResult[],
   searchLat: number,
   searchLng: number,
+  eventMaxDistanceKm: number,
   excludeIds: string[] = [],
 ): Array<Record<string, unknown>> {
   const placesById = new Map<string, BatchPlaceResult>();
@@ -843,7 +1080,7 @@ function validateAIResponse(
         searchLng !== null
       ) {
         const dist = haversineKm(searchLat, searchLng, lat, lng);
-        if (dist > 25) continue;
+        if (dist > eventMaxDistanceKm) continue;
         unverifiedLocation = false;
       }
 
@@ -922,20 +1159,19 @@ function validateAIResponse(
     }
 
     // --- Now validate the hydrated venue ---
-    // Coordinates must be within 25 km of the search center
+    // No distance gate: venues are already constrained by the Places API
+    // locationBias radius used during search. A post-hoc haversine check here
+    // would only drop legitimate venues whenever the geocoder center differs
+    // from where the Places API actually found the venue (which happens for
+    // island/region-scale destinations like "Bali").
+    let distKm: number | null = null;
     if (place.location) {
-      const dist = haversineKm(
+      distKm = haversineKm(
         searchLat,
         searchLng,
         place.location.latitude,
         place.location.longitude,
       );
-      if (dist > 25) {
-        console.log(
-          `[concierge-suggest][venue-drop] DROP_DISTANCE id=${id} name=${JSON.stringify(hydrated.name)} distKm=${dist.toFixed(2)} searchLat=${searchLat} searchLng=${searchLng} venueLat=${place.location.latitude} venueLng=${place.location.longitude}`,
-        );
-        continue;
-      }
     }
 
     // businessStatus must be OPERATIONAL (or not set)
@@ -947,7 +1183,7 @@ function validateAIResponse(
     }
 
     console.log(
-      `[concierge-suggest][venue-pass] PASS id=${id} name=${JSON.stringify(hydrated.name)}`,
+      `[concierge-suggest][venue-pass] PASS id=${id} name=${JSON.stringify(hydrated.name)} distKm=${distKm !== null ? distKm.toFixed(2) : "n/a"}`,
     );
 
     // Merge: Google Places ground truth + AI enrichment fields
@@ -988,7 +1224,7 @@ function validateAIResponse(
 // Main handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
-  console.log("[concierge-suggest] v2.6 deployed — venue drop instrumentation", new Date().toISOString());
+  console.log("[concierge-suggest] v2.7 deployed — IP geo + adaptive radius, haversine removed", new Date().toISOString());
   console.log("[concierge-suggest] === REQUEST RECEIVED ===", new Date().toISOString(), req.method, req.url);
 
   if (req.method === "OPTIONS") {
@@ -1199,46 +1435,21 @@ Deno.serve(async (req) => {
       whenLabel = timeOfDay;
     }
 
-    // ---- Fetch real venue data via batch Places pipeline ----
-    // Guard: (0, 0) is Null Island — never a valid user location. Treat as missing.
+    // ---- 3-layer location resolution (GPS-free by default) ----
+    // Priority: explicit user GPS > explicit `specificLocation` > sub-locality
+    // in query > IP geolocation (validated against destination) > destination
+    // geocode (last resort, with admin-level max scale).
+    //
+    // Only explicit signals (GPS / hotel / specificLocation / user-typed
+    // sub-locality) cap the max radius at 20km. IP fallback caps at 20km
+    // because we're near the user. Destination geocode inherits the admin
+    // scale's max radius (locality=10km up to country=300km).
+
     const rawLat = userGps?.lat ?? context.hotel_location?.lat ?? null;
     const rawLng = userGps?.lng ?? context.hotel_location?.lng ?? null;
-    let searchLat = rawLat === 0 && rawLng === 0 ? null : rawLat;
-    let searchLng = rawLat === 0 && rawLng === 0 ? null : rawLng;
-    const searchLocationName = specificLocation || context.destination;
-
-    // Geocode destination if no GPS coordinates provided
-    if (searchLat === null && searchLng === null && googleKey && context.destination) {
-      try {
-        console.log(`[concierge-suggest] No GPS coords — geocoding "${context.destination}"`);
-        const geoRes = await fetch(
-          "https://places.googleapis.com/v1/places:searchText",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": googleKey,
-              "X-Goog-FieldMask": "places.location,places.displayName",
-            },
-            body: JSON.stringify({
-              textQuery: context.destination,
-              maxResultCount: 1,
-            }),
-          },
-        );
-        if (geoRes.ok) {
-          const geoData = await geoRes.json();
-          const firstPlace = geoData.places?.[0];
-          if (firstPlace?.location) {
-            searchLat = firstPlace.location.latitude;
-            searchLng = firstPlace.location.longitude;
-            console.log(`[concierge-suggest] Geocoded "${context.destination}" → ${searchLat}, ${searchLng}`);
-          }
-        }
-      } catch (geoErr) {
-        console.warn("[concierge-suggest] Geocoding failed:", geoErr);
-      }
-    }
+    const gpsLat = rawLat === 0 && rawLng === 0 ? null : rawLat;
+    const gpsLng = rawLat === 0 && rawLng === 0 ? null : rawLng;
+    const explicitGpsProvided = gpsLat !== null && gpsLng !== null;
 
     // For free-text queries, infer category from the query text
     const inferredCategory = !isStructured ? inferCategoryFromQuery(body.query) : undefined;
@@ -1249,19 +1460,137 @@ Deno.serve(async (req) => {
       ? body.exclude_place_ids
       : [];
 
+    // Always geocode destination — used both as fallback center AND to
+    // determine the max radius cap for IP / explicit-GPS searches.
+    let destGeo: GeocodeResult | null = null;
+    if (googleKey && context.destination) {
+      destGeo = await geocodeDestination(context.destination, googleKey);
+      if (destGeo) {
+        console.log(
+          `[concierge-suggest] Geocoded "${context.destination}" → ${destGeo.lat},${destGeo.lng} scale=${destGeo.scale} maxRadius=${destGeo.maxRadius / 1000}km`,
+        );
+      }
+    }
+
+    let searchLat: number | null = null;
+    let searchLng: number | null = null;
+    let locationSource: "gps" | "specific" | "sublocality" | "ip" | "destination" | "none" = "none";
+    let localityName: string | null = null;
+    let maxRadiusMeters = destGeo?.maxRadius ?? MAX_RADIUS_BY_SCALE.unknown;
+
+    // Layer 0: explicit user GPS / hotel coords (highest priority)
+    if (explicitGpsProvided) {
+      searchLat = gpsLat;
+      searchLng = gpsLng;
+      locationSource = "gps";
+      // User is here — 20km max is plenty.
+      maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+    }
+
+    // Layer 0b: explicit specificLocation string — geocode it for center
+    if (!searchLat && !searchLng && specificLocation && googleKey) {
+      const subGeo = await geocodeDestination(specificLocation, googleKey);
+      if (subGeo) {
+        searchLat = subGeo.lat;
+        searchLng = subGeo.lng;
+        locationSource = "specific";
+        localityName = specificLocation;
+        maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+      }
+    }
+
+    // Layer 1: sub-locality extracted from free-text query (e.g. "in Seminyak")
+    if (searchLat === null && !isStructured && body.query && googleKey) {
+      const sub = extractSubLocality(body.query);
+      if (sub && destGeo) {
+        // Geocode within the destination country/region. Append destination
+        // so "Seminyak" resolves within Bali, not a random Seminyak elsewhere.
+        const subGeo = await geocodeDestination(
+          `${sub}, ${context.destination}`,
+          googleKey,
+        );
+        if (
+          subGeo &&
+          pointWithin(
+            { lat: destGeo.lat, lng: destGeo.lng },
+            { lat: subGeo.lat, lng: subGeo.lng },
+            destGeo.maxRadius,
+          )
+        ) {
+          searchLat = subGeo.lat;
+          searchLng = subGeo.lng;
+          locationSource = "sublocality";
+          localityName = sub;
+          maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+        }
+      }
+    }
+
+    // Layer 2: IP geolocation (only if it falls inside the destination area)
+    if (searchLat === null && destGeo) {
+      const clientIp = extractClientIp(req);
+      const ipGeo = await ipGeolocate(clientIp);
+      if (
+        ipGeo &&
+        pointWithin(
+          { lat: destGeo.lat, lng: destGeo.lng },
+          { lat: ipGeo.lat, lng: ipGeo.lng },
+          destGeo.maxRadius,
+        )
+      ) {
+        searchLat = ipGeo.lat;
+        searchLng = ipGeo.lng;
+        locationSource = "ip";
+        localityName = ipGeo.city;
+        // User is physically near — tighter cap
+        maxRadiusMeters = Math.min(maxRadiusMeters, 20000);
+      }
+    }
+
+    // Layer 3: destination geocode (fallback)
+    if (searchLat === null && destGeo) {
+      searchLat = destGeo.lat;
+      searchLng = destGeo.lng;
+      locationSource = "destination";
+      maxRadiusMeters = destGeo.maxRadius;
+    }
+
+    // Reverse-geocode the final center to a locality name (for prompt/query use)
+    if (searchLat !== null && searchLng !== null && !localityName && googleKey) {
+      localityName = await reverseGeocodeLocality(searchLat, searchLng, googleKey);
+    }
+    const searchLocationName =
+      specificLocation || localityName || context.destination;
+
+    console.log(
+      `[concierge-suggest] location: source=${locationSource} center=(${searchLat},${searchLng}) locality=${JSON.stringify(localityName)} destType=${destGeo?.scale ?? "n/a"} maxRadius=${maxRadiusMeters / 1000}km`,
+    );
+
     let venueData: BatchPlaceResult[] = [];
+    let finalSearchRadiusMeters = maxRadiusMeters;
 
     if (googleKey && searchLat !== null && searchLng !== null) {
-      const queries = buildPlacesQueries(
-        searchCategory,
-        vibeArr,
-        budgetArr[0],
-        { name: searchLocationName, lat: searchLat, lng: searchLng },
-        customSearchText,
+      const centerLat = searchLat;
+      const centerLng = searchLng;
+      const adaptive = await searchPlacesAdaptive(
+        (radius) =>
+          buildPlacesQueries(
+            searchCategory,
+            vibeArr,
+            budgetArr[0],
+            { name: searchLocationName, lat: centerLat, lng: centerLng },
+            radius,
+            customSearchText,
+          ),
+        googleKey,
+        excludePlaceIds,
+        maxRadiusMeters,
       );
-      console.log(`[concierge-suggest] Places queries: ${JSON.stringify(queries.map(q => q.textQuery))}`);
-      venueData = await searchPlacesBatch(queries, googleKey, excludePlaceIds);
-      console.log(`[concierge-suggest] Places API returned ${venueData.length} venues for category="${searchCategory}"`);
+      venueData = adaptive.venues;
+      finalSearchRadiusMeters = adaptive.finalRadiusMeters;
+      console.log(
+        `[concierge-suggest] Places API returned ${venueData.length} venues for category="${searchCategory}" at radius=${finalSearchRadiusMeters / 1000}km`,
+      );
 
       // FALLBACK: When category is "events" and Google Places returns fewer than
       // 3 venues (the narrow terms "nightclub", "live music venue", "concert venue"
@@ -1279,7 +1608,7 @@ Deno.serve(async (req) => {
         const locationBias = {
           circle: {
             center: { latitude: searchLat, longitude: searchLng },
-            radius: 15000,
+            radius: finalSearchRadiusMeters,
           },
         };
         const fallbackQueries: PlacesSearchQuery[] = fallbackTerms.map(t => ({
@@ -1718,6 +2047,7 @@ Suggest DIFFERENT venues and events only.`;
         venueData,
         searchLat!,
         searchLng!,
+        finalSearchRadiusMeters / 1000,
         excludePlaceIds,
       );
       console.log(`[concierge-suggest] After validation: ${validated.length} of ${parsed.suggestions.length} passed`);
