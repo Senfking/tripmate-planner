@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Dedupe window for identical concierge-suggest invocations. The same request
+// body within this window returns the cached response instead of re-hitting
+// the Edge Function (and the 3 Places queries it fires).
+const CONCIERGE_SUGGEST_STALE_MS = 5 * 60 * 1000;
+const CONCIERGE_SUGGEST_GC_MS = 10 * 60 * 1000;
 
 export interface ConciergeSuggestion {
   name: string;
@@ -80,6 +86,10 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
       return (data || []) as unknown as ConciergeMessage[];
     },
     enabled: !!tripId,
+    staleTime: 60 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   });
 
   const { data: reactions = [] } = useQuery({
@@ -95,6 +105,10 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
       return (data || []) as ConciergeReaction[];
     },
     enabled: messages.length > 0,
+    staleTime: 60 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -190,23 +204,32 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
           else time_of_day = "night";
         }
 
-        const { data, error } = await supabase.functions.invoke("concierge-suggest", {
-          body: {
-            trip_id: tripId,
-            query,
-            context: {
-              ...context,
-              date,
-              time_of_day,
-            },
+        const body = {
+          trip_id: tripId,
+          query,
+          context: {
+            ...context,
+            date,
+            time_of_day,
+          },
+        };
+
+        const data = await queryClient.fetchQuery<{ summary?: string; suggestions: ConciergeSuggestion[]; error?: string }>({
+          queryKey: ["concierge-suggest", tripId, "freetext", body],
+          staleTime: CONCIERGE_SUGGEST_STALE_MS,
+          gcTime: CONCIERGE_SUGGEST_GC_MS,
+          retry: false,
+          queryFn: async () => {
+            const { data, error } = await supabase.functions.invoke("concierge-suggest", { body });
+            if (error) throw error;
+            if (!data || typeof data !== "object" || !Array.isArray(data.suggestions)) {
+              console.error("Concierge: unexpected response shape:", data);
+              throw new Error(data?.error || "Unexpected response from concierge");
+            }
+            return data;
           },
         });
 
-        if (error) throw error;
-        if (!data || typeof data !== "object" || !Array.isArray(data.suggestions)) {
-          console.error("Concierge: unexpected response shape:", data);
-          throw new Error(data?.error || "Unexpected response from concierge");
-        }
         setActiveResult(buildTransientResult(data.summary, data.suggestions));
         queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
       } catch (err) {
@@ -226,26 +249,35 @@ export function useConcierge(tripId: string, context: ConciergeContext) {
       setActiveResult(null);
 
       try {
-        const { data, error } = await supabase.functions.invoke("concierge-suggest", {
-          body: {
-            trip_id: tripId,
-            category: filters.category,
-            when: filters.when,
-            vibe: filters.vibe,
-            budget: filters.budget,
-            feeling_lucky: filters.feeling_lucky || false,
-            context: {
-              ...context,
-              date: context.date || new Date().toISOString().split("T")[0],
-            },
+        const body = {
+          trip_id: tripId,
+          category: filters.category,
+          when: filters.when,
+          vibe: filters.vibe,
+          budget: filters.budget,
+          feeling_lucky: filters.feeling_lucky || false,
+          context: {
+            ...context,
+            date: context.date || new Date().toISOString().split("T")[0],
+          },
+        };
+
+        const data = await queryClient.fetchQuery<{ summary?: string; suggestions: ConciergeSuggestion[]; error?: string }>({
+          queryKey: ["concierge-suggest", tripId, "structured", body],
+          staleTime: CONCIERGE_SUGGEST_STALE_MS,
+          gcTime: CONCIERGE_SUGGEST_GC_MS,
+          retry: false,
+          queryFn: async () => {
+            const { data, error } = await supabase.functions.invoke("concierge-suggest", { body });
+            if (error) throw error;
+            if (!data || typeof data !== "object" || !Array.isArray(data.suggestions)) {
+              console.error("Concierge: unexpected response shape:", data);
+              throw new Error(data?.error || "Unexpected response from concierge");
+            }
+            return data;
           },
         });
 
-        if (error) throw error;
-        if (!data || typeof data !== "object" || !Array.isArray(data.suggestions)) {
-          console.error("Concierge: unexpected response shape:", data);
-          throw new Error(data?.error || "Unexpected response from concierge");
-        }
         setActiveResult(buildTransientResult(data.summary, data.suggestions));
         queryClient.invalidateQueries({ queryKey: ["concierge-messages", tripId] });
       } catch (err) {
