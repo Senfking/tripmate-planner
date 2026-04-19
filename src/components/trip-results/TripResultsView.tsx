@@ -491,8 +491,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* Trip-level discussion moved into Group Activity panel */}
 
-        {/* Bottom spacer */}
-        <div className="h-24" />
+        {/* Bottom spacer — clears fixed bottom action bar + Group Chat pill + safe area */}
+        <div className="h-40" />
       </div>
 
       {/* Sticky bottom bar */}
