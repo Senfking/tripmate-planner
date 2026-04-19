@@ -812,144 +812,22 @@ function validateAIResponse(
 
   const validated: Array<Record<string, unknown>> = [];
 
-  // Build a name→place lookup for fuzzy matching events against venues
-  const placesByName = new Map<string, BatchPlaceResult>();
-  for (const p of originalPlaces) {
-    if (p.displayName) {
-      placesByName.set(normaliseName(p.displayName), p);
-    }
-  }
-
   for (const item of aiResponse) {
     const isEvent = item.type === "event" || item.is_event === true;
 
     // --- Event-type suggestions: relaxed validation (no place_id required) ---
+    // Events do NOT run the fuzzy-match-against-venue-names loop — that's a 50x
+    // comparison per event that always fails for genuine events like festivals
+    // and produces zero signal.
     if (isEvent) {
       const eventName = (item.name as string) || "";
-      // Must have a name
       if (!eventName) continue;
-
-      // FUZZY MATCH CHECK: if this "event" name matches a Google Places venue,
-      // either reclassify as venue (plain venue name) or enrich event with venue data
-      // ("Event at Venue" format).
-      //
-      // Try matching: 1) the full event name, 2) the venue part after " at " if present
-      let matchedPlace: BatchPlaceResult | undefined;
-      const atIdx = eventName.toLowerCase().lastIndexOf(" at ");
-      const venuePartOfName = atIdx > 0 ? eventName.slice(atIdx + 4).trim() : null;
-
-      for (const [normName, place] of placesByName) {
-        // Try matching full event name against venue
-        const fullMatch = fuzzyNameMatch(eventName, place.displayName ?? "");
-        // Try matching just the venue portion after " at "
-        const venuePartMatch = venuePartOfName
-          ? fuzzyNameMatch(venuePartOfName, place.displayName ?? "")
-          : false;
-        const isMatch = fullMatch || venuePartMatch;
-        console.log(
-          `[concierge-suggest] fuzzy match: "${eventName}"${venuePartOfName ? ` (venue part: "${venuePartOfName}")` : ""} vs "${place.displayName}" → ${isMatch}`,
-        );
-        if (isMatch) {
-          matchedPlace = place;
-          break;
-        }
-      }
-      if (matchedPlace && !excludeSet.has(matchedPlace.id)) {
-        // Distance check for the matched venue
-        let withinRange = true;
-        if (matchedPlace.location) {
-          const dist = haversineKm(
-            searchLat,
-            searchLng,
-            matchedPlace.location.latitude,
-            matchedPlace.location.longitude,
-          );
-          if (dist > 25) withinRange = false;
-        }
-        if (
-          withinRange &&
-          (!matchedPlace.businessStatus ||
-            matchedPlace.businessStatus === "OPERATIONAL")
-        ) {
-          // Determine if this is a genuine "event at venue" or a misclassified venue.
-          // "Day Zero at Savaya" → event at venue (keep event identity, use venue data)
-          // "Savaya Bali" → misclassified venue (reclassify to venue)
-          const atIdx = eventName.toLowerCase().lastIndexOf(" at ");
-          const isEventAtVenue = atIdx > 0 && item.event_details;
-
-          if (isEventAtVenue) {
-            console.log(
-              `[concierge-suggest] Event at venue: "${eventName}" — using venue data from "${matchedPlace.displayName}" with event identity`,
-            );
-            validated.push({
-              id: matchedPlace.id,
-              name: eventName, // Keep event name as primary (e.g. "Day Zero at Savaya")
-              address: matchedPlace.formattedAddress,
-              lat: matchedPlace.location?.latitude ?? null,
-              lng: matchedPlace.location?.longitude ?? null,
-              rating: matchedPlace.rating,
-              userRatingCount: matchedPlace.userRatingCount,
-              priceLevel: matchedPlace.priceLevel,
-              types: matchedPlace.types,
-              photos: matchedPlace.photos, // Use Google Places photo
-              googleMapsUri: matchedPlace.googleMapsUri,
-              businessStatus: matchedPlace.businessStatus,
-              description: item.description ?? item.full_description ?? null,
-              pro_tip: item.pro_tip ?? null,
-              why: item.why ?? null,
-              category: "events",
-              best_time: item.best_time ?? null,
-              estimated_cost_per_person: item.estimated_cost_per_person ?? null,
-              currency: item.currency ?? null,
-              what_to_order: item.what_to_order ?? null,
-              booking_url: item.booking_url ?? item.url ?? null,
-              is_event: true,
-              event_details: item.event_details ?? null,
-              specific_night: item.specific_night ?? null,
-              opening_hours: item.opening_hours ?? null,
-              type: "event",
-            });
-          } else {
-            const reclassifiedName = matchedPlace.displayName || eventName || matchedPlace.id;
-            console.log(
-              `[concierge-suggest] Reclassified "${eventName}" from event → venue (matched Places: "${reclassifiedName}")`,
-            );
-            validated.push({
-              id: matchedPlace.id,
-              name: reclassifiedName,
-              address: matchedPlace.formattedAddress,
-              lat: matchedPlace.location?.latitude ?? null,
-              lng: matchedPlace.location?.longitude ?? null,
-              rating: matchedPlace.rating,
-              userRatingCount: matchedPlace.userRatingCount,
-              priceLevel: matchedPlace.priceLevel,
-              types: matchedPlace.types,
-              photos: matchedPlace.photos,
-              googleMapsUri: matchedPlace.googleMapsUri,
-              businessStatus: matchedPlace.businessStatus,
-              description: item.description ?? item.full_description ?? null,
-              pro_tip: item.pro_tip ?? null,
-              why: item.why ?? null,
-              category: item.category ?? null,
-              best_time: item.best_time ?? null,
-              estimated_cost_per_person: item.estimated_cost_per_person ?? null,
-              currency: item.currency ?? null,
-              what_to_order: item.what_to_order ?? null,
-              booking_url: item.booking_url ?? null,
-              is_event: false,
-              event_details: null,
-              specific_night: item.specific_night ?? null,
-              opening_hours: item.opening_hours ?? null,
-            });
-          }
-          continue;
-        }
-      }
 
       // Must have some date/time reference
       const hasTimeRef = !!(
         item.event_details ||
         item.best_time ||
+        item.specific_night ||
         item.date
       );
       if (!hasTimeRef) continue;
@@ -1001,17 +879,39 @@ function validateAIResponse(
       continue;
     }
 
-    // --- Venue-type suggestions: strict validation (place_id required) ---
+    // --- Venue-type suggestions: hydrate from Places, THEN validate ---
     const id = item.id as string;
     if (!id) continue;
 
     // Skip excluded IDs
     if (excludeSet.has(id)) continue;
 
-    // ID must exist in the original Places results
+    // ID must exist in the original Places results. If not, the AI either
+    // hallucinated the ID or copied it incorrectly — drop before hydration.
     const place = placesById.get(id);
-    if (!place) continue;
+    if (!place) {
+      console.warn(
+        `[concierge-suggest] Venue id=${id} not found in Places results — AI hallucination, dropping`,
+      );
+      continue;
+    }
 
+    // --- HYDRATE from Places ground truth BEFORE any name-dependent validation.
+    // AI is instructed to return only "id"; name/address/coords come from Places.
+    const hydrated = {
+      ...item,
+      name: place.displayName ?? (item.name as string) ?? place.id,
+      address: place.formattedAddress,
+      lat: place.location?.latitude ?? null,
+      lng: place.location?.longitude ?? null,
+    };
+    if (!place.displayName) {
+      console.warn(
+        `[concierge-suggest] Places venue id=${place.id} has null displayName, using fallback="${hydrated.name}"`,
+      );
+    }
+
+    // --- Now validate the hydrated venue ---
     // Coordinates must be within 25 km of the search center
     if (place.location) {
       const dist = haversineKm(
@@ -1026,24 +926,13 @@ function validateAIResponse(
     // businessStatus must be OPERATIONAL (or not set)
     if (place.businessStatus && place.businessStatus !== "OPERATIONAL") continue;
 
-    // Resolve name: Google Places displayName is ground truth.
-    // Fallback chain: Places displayName → AI-provided name → place ID.
-    const resolvedName = place.displayName
-      || (item.name as string)
-      || place.id;
-    if (!place.displayName) {
-      console.warn(
-        `[concierge-suggest] Places venue id=${place.id} has null displayName, using fallback="${resolvedName}"`,
-      );
-    }
-
     // Merge: Google Places ground truth + AI enrichment fields
     validated.push({
       id: place.id,
-      name: resolvedName,
-      address: place.formattedAddress,
-      lat: place.location?.latitude ?? null,
-      lng: place.location?.longitude ?? null,
+      name: hydrated.name,
+      address: hydrated.address,
+      lat: hydrated.lat,
+      lng: hydrated.lng,
       rating: place.rating,
       userRatingCount: place.userRatingCount,
       priceLevel: place.priceLevel,
