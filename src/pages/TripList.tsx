@@ -917,16 +917,6 @@ export default function TripList() {
 
       <div className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 pb-[100px] md:pb-8">
 
-        {/* Join a trip row */}
-        <button
-          onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-          className="md:col-span-2 flex items-center rounded-2xl border border-dashed px-4 py-3.5 bg-card transition-colors"
-          style={{ borderColor: "rgba(13,148,136,0.3)" }}
-        >
-          <Hash className="h-5 w-5 shrink-0" style={{ color: "#0D9488" }} />
-          <span className="ml-3 flex-1 text-left font-medium text-foreground text-sm">Join a trip</span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </button>
 
         {/* Post-trip referral nudge */}
         {postTripNudge && (profile as any)?.referral_code && (
