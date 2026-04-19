@@ -473,19 +473,145 @@ interface ClaudeCallResult<T> {
   usage: ClaudeUsage;
 }
 
+interface ClaudeTool {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+}
+
+type ClaudeSystemBlock = {
+  type: "text";
+  text: string;
+  cache_control?: { type: "ephemeral" };
+};
+
 // ---------------------------------------------------------------------------
 // Stubs — implemented in subsequent commits
 // ---------------------------------------------------------------------------
 
+/**
+ * Direct Anthropic Messages API call with prompt caching + forced tool use.
+ *
+ * - Uses `claude-haiku-4-5-20251001` (HAIKU_MODEL).
+ * - Pass `cache_control: { type: "ephemeral" }` on any system block you want
+ *   cached (put the stable portion — rules, schema — first; caller is
+ *   responsible for ordering since Anthropic caches by prefix).
+ * - Forces the model to return a single tool_use block for `tool.name`.
+ * - Returns parsed tool input as T, plus full usage including cache tokens.
+ *
+ * Throws with actionable messages on auth/rate-limit/5xx/missing-tool-use.
+ */
 async function callClaudeHaiku<T = Record<string, unknown>>(
-  _apiKey: string,
-  _systemBlocks: Array<{ type: "text"; text: string; cache_control?: { type: "ephemeral" } }>,
-  _userContent: string,
-  _toolName: string,
-  _toolSchema: Record<string, unknown>,
-  _maxTokens = 4096,
+  apiKey: string,
+  systemBlocks: ClaudeSystemBlock[],
+  userContent: string,
+  tool: ClaudeTool,
+  maxTokens = 4096,
 ): Promise<ClaudeCallResult<T>> {
-  throw new Error("callClaudeHaiku: not implemented");
+  if (!apiKey) {
+    throw new Error("callClaudeHaiku: ANTHROPIC_API_KEY is empty");
+  }
+  if (systemBlocks.length === 0) {
+    throw new Error("callClaudeHaiku: at least one system block is required");
+  }
+
+  const body = {
+    model: HAIKU_MODEL,
+    max_tokens: maxTokens,
+    system: systemBlocks,
+    messages: [{ role: "user", content: userContent }],
+    tools: [
+      {
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.input_schema,
+      },
+    ],
+    tool_choice: { type: "tool", name: tool.name },
+  };
+
+  let res: Response;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": ANTHROPIC_VERSION,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw new Error(`Anthropic network error calling "${tool.name}": ${(e as Error).message}`);
+  }
+
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    const snippet = errBody.slice(0, 500);
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(
+        `Anthropic auth failed (${res.status}) for tool "${tool.name}". ` +
+          `Check ANTHROPIC_API_KEY in Supabase secrets. Body: ${snippet}`,
+      );
+    }
+    if (res.status === 429) {
+      const retryAfter = res.headers.get("retry-after");
+      throw new Error(
+        `Anthropic rate-limited (429) for tool "${tool.name}"` +
+          (retryAfter ? ` — retry after ${retryAfter}s` : "") +
+          `. Body: ${snippet}`,
+      );
+    }
+    if (res.status >= 500) {
+      throw new Error(
+        `Anthropic server error ${res.status} for tool "${tool.name}". Body: ${snippet}`,
+      );
+    }
+    throw new Error(`Anthropic API error ${res.status} for tool "${tool.name}". Body: ${snippet}`);
+  }
+
+  const data = await res.json().catch((e) => {
+    throw new Error(`Anthropic returned non-JSON body: ${(e as Error).message}`);
+  });
+
+  const usage: ClaudeUsage = {
+    input_tokens: typeof data?.usage?.input_tokens === "number" ? data.usage.input_tokens : 0,
+    output_tokens: typeof data?.usage?.output_tokens === "number" ? data.usage.output_tokens : 0,
+    cache_creation_input_tokens:
+      typeof data?.usage?.cache_creation_input_tokens === "number"
+        ? data.usage.cache_creation_input_tokens
+        : 0,
+    cache_read_input_tokens:
+      typeof data?.usage?.cache_read_input_tokens === "number"
+        ? data.usage.cache_read_input_tokens
+        : 0,
+  };
+
+  const blocks: Array<Record<string, unknown>> = Array.isArray(data?.content) ? data.content : [];
+  const toolBlock = blocks.find(
+    (b) => b?.type === "tool_use" && b?.name === tool.name,
+  );
+
+  if (!toolBlock) {
+    const textBlock = blocks.find((b) => b?.type === "text");
+    const textSnippet =
+      typeof (textBlock as { text?: unknown })?.text === "string"
+        ? ((textBlock as { text: string }).text).slice(0, 500)
+        : "";
+    throw new Error(
+      `Anthropic response did not include a tool_use block for "${tool.name}". ` +
+        `stop_reason=${data?.stop_reason ?? "unknown"}. Text content: ${textSnippet}`,
+    );
+  }
+
+  const input = (toolBlock as { input?: unknown }).input;
+  if (!input || typeof input !== "object") {
+    throw new Error(
+      `Anthropic tool_use block for "${tool.name}" had no input object (got ${typeof input})`,
+    );
+  }
+
+  return { data: input as T, usage };
 }
 
 async function parseIntent(
