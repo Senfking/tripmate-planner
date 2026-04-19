@@ -769,6 +769,7 @@ export default function TripList() {
   const upcomingTrips = trips.filter(
     (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming")
   );
+  const noDateTrips = trips.filter((t) => t.statusInfo.status === "no-dates");
   const pastTrips = trips.filter((t) => t.statusInfo.status === "ended");
 
   return (
@@ -891,6 +892,26 @@ export default function TripList() {
         </div>
       )}
 
+      {/* ── No dates yet ── */}
+      {noDateTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mb-5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">No dates yet</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {noDateTrips.map((trip, i) => (
+              <div
+                key={trip.id}
+                className={
+                  noDateTrips.length % 2 !== 0 && i === noDateTrips.length - 1
+                    ? "md:col-span-2"
+                    : ""
+                }
+              >
+                <RegularCard trip={trip} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Past trips (collapsed by default) ── */}
       {pastTrips.length > 0 && (
