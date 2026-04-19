@@ -309,11 +309,13 @@ const TOURS_TYPES = new Set([
   "mosque", "synagogue", "place_of_worship",
 ]);
 
-// Country -> meal-time pattern. Default = americas/asia.
+// Country (ISO-3166-1 alpha-2, lowercased) -> meal-time pattern. Default =
+// americas/asia. geocodeDestination supplies the country code so we don't
+// have to parse "City, Country" strings (Google's result is ground truth).
 const MEAL_PATTERNS: Record<string, { lunch: [number, number]; dinner: [number, number] }> = {
-  spain:    { lunch: [14, 16], dinner: [21, 23] },
-  italy:    { lunch: [13, 15], dinner: [20, 22] },
-  portugal: { lunch: [13, 15], dinner: [20, 22] },
+  es: { lunch: [14, 16], dinner: [21, 23] }, // Spain
+  it: { lunch: [13, 15], dinner: [20, 22] }, // Italy
+  pt: { lunch: [13, 15], dinner: [20, 22] }, // Portugal
 };
 const DEFAULT_MEAL_PATTERN = { lunch: [12, 14] as [number, number], dinner: [19, 21] as [number, number] };
 
@@ -917,10 +919,9 @@ function addDaysIso(isoDate: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function resolveMealPattern(destination: string): { lunch: [number, number]; dinner: [number, number] } {
-  const parts = destination.split(",").map((s) => s.trim().toLowerCase());
-  const country = parts[parts.length - 1] ?? "";
-  return MEAL_PATTERNS[country] ?? DEFAULT_MEAL_PATTERN;
+function resolveMealPattern(countryCode: string | null): { lunch: [number, number]; dinner: [number, number] } {
+  if (!countryCode) return DEFAULT_MEAL_PATTERN;
+  return MEAL_PATTERNS[countryCode.toLowerCase()] ?? DEFAULT_MEAL_PATTERN;
 }
 
 function hasNightlifeSignal(intent: Intent): boolean {
@@ -954,12 +955,13 @@ function buildSkeleton(
   intent: Intent,
   numDays: number,
   startDate: string,
+  countryCode: string | null,
 ): DaySkeleton[] {
   // Placeholder start date for pure-duration flexible mode — downstream uses
   // the date only for ordering and display, not for factual claims.
   const base = startDate || new Date().toISOString().slice(0, 10);
 
-  const meal = resolveMealPattern(intent.destination);
+  const meal = resolveMealPattern(countryCode);
   const lunchStart = meal.lunch[0];
   const dinnerStart = meal.dinner[0];
   const wantsNightlife = hasNightlifeSignal(intent);
@@ -1040,26 +1042,377 @@ function buildSkeleton(
   return days;
 }
 
+// ---------------------------------------------------------------------------
+// Step 5b: buildPlacesQueries (pure code, aggressive dedup, 20-query cap)
+//
+// One broad query feeds multiple slots. "dinner restaurants <city>" covers
+// every dinner slot across a 14-day trip; we do NOT fire per-day queries.
+// Queries are keyed by (slot-type, vibe-tone, must-have-index) so we never
+// emit the same text twice. Total output is hard-capped at 20.
+//
+// must_avoids are reflected in query phrasing where possible. Text Search
+// doesn't support negative terms, so we prepend positive counter-phrases:
+//   "chain restaurants" avoid → prefix "local independent" on food queries
+//   "tourist traps"     avoid → prefix "authentic hidden" on attraction queries
+//   "crowds"            avoid → prefix "quiet"           on cafe queries
+// ---------------------------------------------------------------------------
+
+const PLACES_RADIUS_METERS = 12000; // ~12 km — tight enough to stay in the city, wide enough for day trips.
+
+const BUDGET_PRICE_LEVELS: Record<Intent["budget_tier"], string[]> = {
+  budget:      ["PRICE_LEVEL_FREE", "PRICE_LEVEL_INEXPENSIVE"],
+  "mid-range": ["PRICE_LEVEL_INEXPENSIVE", "PRICE_LEVEL_MODERATE"],
+  premium:     ["PRICE_LEVEL_MODERATE", "PRICE_LEVEL_EXPENSIVE", "PRICE_LEVEL_VERY_EXPENSIVE"],
+};
+
+function detectDinnerTone(vibes: string[]): "romantic" | "lively" | "" {
+  const joined = vibes.join(" ").toLowerCase();
+  if (/romantic|date|intimate|candlelit/.test(joined)) return "romantic";
+  if (/lively|party|fun|social|buzzing|loud/.test(joined)) return "lively";
+  return "";
+}
+
+function detectFoodVibe(vibes: string[]): string | null {
+  const match = vibes.find((v) => /foodie|culinary|fine dining|street food|michelin|tapas|ramen|bbq/i.test(v));
+  return match ?? null;
+}
+
+function budgetLodgingTerm(tier: Intent["budget_tier"]): string {
+  if (tier === "premium") return "4 star boutique";
+  if (tier === "budget") return "budget";
+  return "boutique";
+}
+
 function buildPlacesQueries(
-  _intent: Intent,
-  _skeleton: DaySkeleton[],
-  _center: { lat: number; lng: number; name: string },
+  intent: Intent,
+  skeleton: DaySkeleton[],
+  center: { lat: number; lng: number; name: string },
 ): PlacesSearchQuery[] {
-  throw new Error("buildPlacesQueries: not implemented");
+  const city = center.name.split(",")[0].trim() || center.name;
+  const locationBias = {
+    circle: {
+      center: { latitude: center.lat, longitude: center.lng },
+      radius: PLACES_RADIUS_METERS,
+    },
+  };
+  const priceLevels = BUDGET_PRICE_LEVELS[intent.budget_tier];
+
+  const avoids = intent.must_avoids.map((s) => s.toLowerCase()).join(" | ");
+  const avoidChain  = /chain|franchise|corporate/.test(avoids);
+  const avoidTraps  = /tourist trap|touristy|overrated|crowded sight/.test(avoids);
+  const avoidCrowds = /crowd|busy|loud|noisy/.test(avoids);
+
+  const foodPrefix = avoidChain ? "local independent " : "";
+  const sightPrefix = avoidTraps ? "authentic hidden " : "";
+  const cafePrefix = avoidCrowds ? "quiet " : "";
+
+  const slotTypesSeen = new Set<SlotType>();
+  for (const day of skeleton) for (const slot of day.slots) slotTypesSeen.add(slot.type);
+
+  const dinnerTone = detectDinnerTone(intent.vibes);
+  const foodVibe = detectFoodVibe(intent.vibes);
+  const topVibe = intent.vibes[0] ?? "";
+  const wantsRooftop = intent.vibes.some((v) => /rooftop|skyline|view/i.test(v));
+
+  const queries: PlacesSearchQuery[] = [];
+  const seen = new Set<string>();
+  const add = (dedupKey: string, q: PlacesSearchQuery): void => {
+    if (queries.length >= MAX_PLACES_QUERIES_PER_TRIP) return;
+    if (seen.has(dedupKey)) return;
+    seen.add(dedupKey);
+    queries.push(q);
+  };
+
+  // ---- Lodging (always 1 query) ----
+  const lodgingTerm = budgetLodgingTerm(intent.budget_tier);
+  add(`lodging:${lodgingTerm}`, {
+    textQuery: `${lodgingTerm} hotels ${city}`,
+    includedType: "lodging",
+    locationBias,
+    poolKey: "lodging",
+  });
+
+  // ---- Breakfast (single shared query across all breakfast slots) ----
+  if (slotTypesSeen.has("breakfast")) {
+    add("breakfast:default", {
+      textQuery: `${cafePrefix}breakfast cafes ${city}`,
+      includedType: "cafe",
+      locationBias,
+      poolKey: "breakfast",
+    });
+  }
+
+  // ---- Lunch (base + optional food-vibe specialization) ----
+  if (slotTypesSeen.has("lunch")) {
+    add("lunch:base", {
+      textQuery: `${foodPrefix}lunch restaurants ${city}`,
+      includedType: "restaurant",
+      priceLevels,
+      locationBias,
+      poolKey: "lunch",
+    });
+    if (foodVibe) {
+      add(`lunch:vibe:${foodVibe}`, {
+        textQuery: `${foodPrefix}${foodVibe} ${city}`,
+        includedType: "restaurant",
+        priceLevels,
+        locationBias,
+        poolKey: "lunch",
+      });
+    }
+  }
+
+  // ---- Dinner (tone variant + broad fallback) ----
+  if (slotTypesSeen.has("dinner")) {
+    if (dinnerTone) {
+      add(`dinner:${dinnerTone}`, {
+        textQuery: `${foodPrefix}${dinnerTone} dinner restaurants ${city}`,
+        includedType: "restaurant",
+        priceLevels,
+        locationBias,
+        poolKey: "dinner",
+      });
+    }
+    add("dinner:base", {
+      textQuery: `${foodPrefix}dinner restaurants ${city}`,
+      includedType: "restaurant",
+      priceLevels,
+      locationBias,
+      poolKey: "dinner",
+    });
+  }
+
+  // ---- Attractions (base + top vibe specialization) ----
+  if (slotTypesSeen.has("morning_major") || slotTypesSeen.has("afternoon_major")) {
+    add("attractions:base", {
+      textQuery: `${sightPrefix}top attractions ${city}`,
+      locationBias,
+      poolKey: "attractions",
+    });
+    if (topVibe) {
+      add(`attractions:vibe:${topVibe.toLowerCase()}`, {
+        textQuery: `${sightPrefix}${topVibe} ${city}`,
+        locationBias,
+        poolKey: "attractions",
+      });
+    }
+  }
+
+  // ---- Nightlife ----
+  if (slotTypesSeen.has("nightlife")) {
+    add("nightlife:base", {
+      textQuery: `${wantsRooftop ? "rooftop " : ""}bars ${city}`,
+      locationBias,
+      poolKey: "nightlife",
+    });
+  }
+
+  // ---- Must-haves → specialized experience queries (fills remaining budget) ----
+  for (const mh of intent.must_haves) {
+    const dedupKey = `must_have:${mh.toLowerCase().trim()}`;
+    add(dedupKey, {
+      textQuery: `${mh} ${city}`,
+      locationBias,
+      poolKey: "experiences",
+    });
+  }
+
+  return queries;
+}
+
+// ---------------------------------------------------------------------------
+// Step 5a: geocodeDestination
+//
+// Resolves a destination string to { lat, lng, country_code, viewport } using
+// Google's Geocoding API. country_code (ISO-3166-1 alpha-2) feeds
+// buildSkeleton's MEAL_PATTERNS lookup; lat/lng feed locationBias on every
+// Places search; viewport is kept for future bounding-box queries.
+//
+// Cached in ai_response_cache under "geocode:v1:{normalized destination}" for
+// 30 days (cities don't move). We rely on this cache, NOT place_details_cache
+// — that table exists but isn't populated in production today.
+// ---------------------------------------------------------------------------
+
+interface GeocodeResult {
+  lat: number;
+  lng: number;
+  country_code: string | null;
+  viewport: {
+    northeast: { lat: number; lng: number };
+    southwest: { lat: number; lng: number };
+  } | null;
+}
+
+async function sha256Hex(s: string): Promise<string> {
+  const buf = new TextEncoder().encode(s);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 async function geocodeDestination(
-  _googleKey: string,
-  _destination: string,
-): Promise<{ lat: number; lng: number } | null> {
-  throw new Error("geocodeDestination: not implemented");
+  googleKey: string,
+  destination: string,
+  svcClient: ReturnType<typeof createClient>,
+): Promise<GeocodeResult | null> {
+  const normalized = destination.trim().toLowerCase();
+  if (!normalized) return null;
+  const cacheKey = `geocode:v1:${await sha256Hex(normalized)}`;
+
+  // Cache lookup — fail loud on DB errors, miss silently on not-found.
+  const { data: cached, error: cacheErr } = await svcClient
+    .from("ai_response_cache")
+    .select("response_json")
+    .eq("cache_key", cacheKey)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (cacheErr) {
+    throw new Error(`ai_response_cache geocode lookup failed: ${cacheErr.message}`);
+  }
+  if (cached?.response_json) {
+    return cached.response_json as unknown as GeocodeResult;
+  }
+
+  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  url.searchParams.set("address", destination);
+  url.searchParams.set("key", googleKey);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    console.error(`[geocodeDestination] HTTP ${res.status}`);
+    return null;
+  }
+  const body = (await res.json()) as {
+    status: string;
+    results?: Array<{
+      geometry?: {
+        location?: { lat: number; lng: number };
+        viewport?: {
+          northeast: { lat: number; lng: number };
+          southwest: { lat: number; lng: number };
+        };
+      };
+      address_components?: Array<{
+        short_name: string;
+        long_name: string;
+        types: string[];
+      }>;
+    }>;
+  };
+  if (body.status !== "OK" || !body.results?.length) {
+    console.error(`[geocodeDestination] status=${body.status} for "${destination}"`);
+    return null;
+  }
+  const top = body.results[0];
+  const loc = top.geometry?.location;
+  if (!loc) return null;
+  const countryComp = top.address_components?.find((c) => c.types.includes("country"));
+  const result: GeocodeResult = {
+    lat: loc.lat,
+    lng: loc.lng,
+    country_code: countryComp?.short_name?.toLowerCase() ?? null,
+    viewport: top.geometry?.viewport ?? null,
+  };
+
+  // Write-through cache — 30 days.
+  const { error: cacheWriteErr } = await svcClient.from("ai_response_cache").insert({
+    cache_key: cacheKey,
+    response_json: result as unknown as Record<string, unknown>,
+    expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+  });
+  if (cacheWriteErr && cacheWriteErr.code !== "23505") {
+    // 23505 = unique_violation (race); anything else is a real problem.
+    throw new Error(`ai_response_cache geocode insert failed: ${cacheWriteErr.message}`);
+  }
+
+  return result;
 }
 
+// ---------------------------------------------------------------------------
+// Step 5c: searchPlacesBatch
+//
+// Parallel Promise.all across all queries. Each query's results inherit that
+// query's poolKey so the ranker knows which slot they feed. Places API is the
+// new Text Search endpoint with the concierge-suggest field mask (price_level
+// included so we can clamp costs in Step 7).
+//
+// Dedupe across the whole batch by place.id — a venue found by both the
+// "dinner:base" and "dinner:romantic" queries is kept once, tagged with the
+// FIRST pool that saw it (arbitrary but stable).
+//
+// Per-query failures are logged and tolerated (individual HTTP 5xx shouldn't
+// sink the whole trip). Billing is logged at the call-count level by
+// logPlacesCalls in the main handler — the fail-loud contract applies there.
+// ---------------------------------------------------------------------------
+
+const PLACES_FIELD_MASK =
+  "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.types,places.photos,places.googleMapsUri,places.businessStatus";
+
 async function searchPlacesBatch(
-  _queries: PlacesSearchQuery[],
-  _googleKey: string,
+  queries: PlacesSearchQuery[],
+  googleKey: string,
 ): Promise<BatchPlaceResult[]> {
-  throw new Error("searchPlacesBatch: not implemented");
+  const perQueryResults = await Promise.all(
+    queries.map(async (q) => {
+      try {
+        const body = {
+          textQuery: q.textQuery,
+          ...(q.includedType ? { includedType: q.includedType } : {}),
+          ...(q.priceLevels ? { priceLevels: q.priceLevels } : {}),
+          locationBias: q.locationBias,
+          maxResultCount: 10,
+        };
+        const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": googleKey,
+            "X-Goog-FieldMask": PLACES_FIELD_MASK,
+          },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          console.error(
+            `[searchPlacesBatch] HTTP ${res.status} for "${q.textQuery}" (${q.poolKey})`,
+          );
+          return [] as Array<Record<string, unknown>>;
+        }
+        const data = (await res.json()) as { places?: Array<Record<string, unknown>> };
+        return data.places ?? [];
+      } catch (err) {
+        console.error(`[searchPlacesBatch] threw for "${q.textQuery}":`, err);
+        return [] as Array<Record<string, unknown>>;
+      }
+    }),
+  );
+
+  const seen = new Set<string>();
+  const out: BatchPlaceResult[] = [];
+  for (let i = 0; i < perQueryResults.length; i++) {
+    const pool = queries[i].poolKey;
+    for (const p of perQueryResults[i]) {
+      const id = p.id as string | undefined;
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push({
+        id,
+        displayName: (p.displayName as { text?: string } | undefined)?.text ?? null,
+        formattedAddress: (p.formattedAddress as string) ?? null,
+        location:
+          (p.location as { latitude: number; longitude: number } | undefined) ?? null,
+        rating: (p.rating as number | null) ?? null,
+        userRatingCount: (p.userRatingCount as number | null) ?? null,
+        priceLevel: (p.priceLevel as string | null) ?? null,
+        types: (p.types as string[] | undefined) ?? [],
+        photos: (p.photos as Array<{ name: string }> | undefined) ?? [],
+        googleMapsUri: (p.googleMapsUri as string | null) ?? null,
+        businessStatus: (p.businessStatus as string | null) ?? null,
+        poolKey: pool,
+      });
+    }
+  }
+  return out;
 }
 
 async function searchEvents(
@@ -1361,18 +1714,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---- Step 2: pacing skeleton ----
-    const skeleton = buildSkeleton(intent, numDays, startDate);
-
-    // ---- Step 3 + 4: query plan + Places batch ----
-    const center = await geocodeDestination(googleKey, intent.destination);
-    if (!center) {
+    // ---- Step 2a: geocode (must run before buildSkeleton so MEAL_PATTERNS
+    //               gets the country_code rather than parsing the string) ----
+    const geo = await geocodeDestination(googleKey, intent.destination, svcClient);
+    if (!geo) {
       return jsonResponse(
         { success: false, error: `Could not geocode destination "${intent.destination}"` },
         500,
       );
     }
-    const queries = buildPlacesQueries(intent, skeleton, { ...center, name: intent.destination });
+
+    // ---- Step 2b: pacing skeleton ----
+    const skeleton = buildSkeleton(intent, numDays, startDate, geo.country_code);
+
+    // ---- Step 3 + 4: query plan + Places batch ----
+    const queries = buildPlacesQueries(intent, skeleton, {
+      lat: geo.lat,
+      lng: geo.lng,
+      name: intent.destination,
+    });
     if (queries.length > MAX_PLACES_QUERIES_PER_TRIP) {
       console.warn(
         `[generate-trip-itinerary] query planner produced ${queries.length} queries, exceeding cap ${MAX_PLACES_QUERIES_PER_TRIP}`,
@@ -1443,7 +1803,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const validated = validateActivities(ranked, allPlacesById, center);
+    const validated = validateActivities(ranked, allPlacesById, { lat: geo.lat, lng: geo.lng });
 
     // ---- Cache write (fail loud) ----
     {
