@@ -418,7 +418,8 @@ interface EnrichedActivity {
   skip_if: string | null;
   category: string;
   start_time: string;
-  duration_minutes: number;
+  duration_minutes: number;     // canonical — used for buffer math, day packing, travel-time addition
+  duration_hours: number;       // derived = duration_minutes / 60 rounded to 1dp; frontend prefers this for display
   location_name: string;
   neighborhood: string | null;
   latitude: number;
@@ -900,6 +901,14 @@ async function pickSurpriseDestination(
 
 function hhmm(hour: number, minute = 0): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+// Derived display field. duration_minutes remains canonical (easier arithmetic
+// for buffer math and day packing). The frontend prefers duration_hours for
+// rendering ("2.5h" reads cleaner than "150 min"). Always populate both on
+// every EnrichedActivity — do not let the LLM compute this.
+function minutesToHours1dp(minutes: number): number {
+  return Math.round((minutes / 60) * 10) / 10;
 }
 
 function addDaysIso(isoDate: string, n: number): string {
