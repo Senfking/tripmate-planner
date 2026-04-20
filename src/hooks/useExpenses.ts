@@ -272,6 +272,10 @@ export function useExpenses(tripId: string) {
       itemAssignments?: Record<number, Set<string> | string[]>;
       quantityAssignments?: Record<number, Record<string, number>>;
     }) => {
+      if (!tripId) {
+        throw new Error("Cannot add expense: trip context is missing. Please refresh the page.");
+      }
+
       const { splits, lineItems, itemAssignments, quantityAssignments, ...expenseData } = params;
 
       // Pre-flight: make sure the cached JWT isn't within its expiry window.
