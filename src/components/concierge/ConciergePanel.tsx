@@ -310,17 +310,22 @@ const SuggestionCard = memo(function SuggestionCard({
       } else {
         const notes = [
           suggestion.why,
+          suggestion.best_time ? `⏰ ${suggestion.best_time}` : null,
           suggestion.address ? `📍 ${suggestion.address}` : null,
           suggestion.estimated_cost_per_person != null
             ? `💰 ~${suggestion.currency || "USD"} ${suggestion.estimated_cost_per_person}/pp`
             : null,
         ].filter(Boolean).join("\n");
 
+        // Sanitize: only accept HH:MM (24h). "7pm", "Monday nights", "11pm-3am" → null.
+        const rawStart = suggestion.best_time?.split("-")[0]?.trim() || "";
+        const startTime = /^([01]?\d|2[0-3]):[0-5]\d$/.test(rawStart) ? rawStart : null;
+
         const { error } = await supabase.from("itinerary_items").insert({
           trip_id: tripId,
           title: suggestion.name,
           day_date: dayDate,
-          start_time: suggestion.best_time?.split("-")[0]?.trim() || null,
+          start_time: startTime,
           location_text: suggestion.address || null,
           notes,
           status: "idea",
@@ -342,7 +347,8 @@ const SuggestionCard = memo(function SuggestionCard({
       });
     } catch (err) {
       console.error("Failed to add to plan:", err);
-      toast.error("Failed to add to plan");
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Couldn't add to plan: ${msg}`);
     } finally {
       setAddingDate(null);
     }
