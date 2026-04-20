@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo, type ReactNode } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // [junto-diag] — remove when tab-switch race is diagnosed.
+  const prevUserIdRef = useRef<string | null>(null);
+  const prevAccessTokenTailRef = useRef<string | null>(null);
+
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
@@ -79,6 +83,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const ts = new Date().toISOString().slice(11, 23);
         // eslint-disable-next-line no-console
         console.log(`[junto-mount ${ts}] AuthContext onAuthStateChange`, { event, newUserId, visible: document.visibilityState });
+
+        // [junto-diag] — remove when tab-switch race is diagnosed.
+        const newTokenTail = newSession?.access_token?.slice(-8) ?? null;
+        const expiresInSec = newSession?.expires_at
+          ? newSession.expires_at - Math.floor(Date.now() / 1000)
+          : null;
+        const isSpuriousSignIn =
+          event === "SIGNED_IN" && !!newUserId && prevUserIdRef.current === newUserId;
+        // eslint-disable-next-line no-console
+        console.log(`[junto-diag ${ts}] authEvent`, {
+          event,
+          newUserId,
+          prevUserId: prevUserIdRef.current,
+          isSpuriousSignIn,
+          tokenChanged: newTokenTail !== prevAccessTokenTailRef.current,
+          newTokenTail,
+          prevTokenTail: prevAccessTokenTailRef.current,
+          expiresInSec,
+          visible: document.visibilityState,
+          willInvalidateQueries: event === "SIGNED_IN",
+        });
+        prevUserIdRef.current = newUserId;
+        prevAccessTokenTailRef.current = newTokenTail;
 
         // Preserve the user reference when identity hasn't changed.
         // TOKEN_REFRESHED (fires on tab focus / near-expiry) hands us a NEW
