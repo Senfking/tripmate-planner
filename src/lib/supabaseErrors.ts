@@ -54,8 +54,17 @@ export function isAuthOrRlsError(err: MaybeError): boolean {
 
 // Produces a user-friendly message. Falls back to a provided default when the
 // raw error is generic or unhelpful. Never leaks "row-level security" wording.
+//
+// The raw error is also logged to the console so DevTools retains the
+// underlying cause. Mutation errors are additionally reported through
+// QueryClient's MutationCache.onError (see App.tsx) — this console log
+// covers the try/catch call sites that never pass through React Query.
 export function friendlyErrorMessage(err: MaybeError, fallback: string): string {
   const raw = getMessage(err);
+  if (raw) {
+    // eslint-disable-next-line no-console
+    console.warn("[supabase error]", raw, err);
+  }
   if (!raw) return fallback;
 
   if (isAuthOrRlsError(err)) {
