@@ -278,11 +278,40 @@ export function useExpenses(tripId: string) {
 
       const { splits, lineItems, itemAssignments, quantityAssignments, ...expenseData } = params;
 
+      // [junto-diag] — remove when tab-switch race is diagnosed.
+      const diagTs = () => new Date().toISOString().slice(11, 23);
+      {
+        const { data: { session } } = await supabase.auth.getSession();
+        const nowSec = Math.floor(Date.now() / 1000);
+        // eslint-disable-next-line no-console
+        console.log(`[junto-diag ${diagTs()}] addExpense.start`, {
+          tripId,
+          userId: user?.id,
+          visible: document.visibilityState,
+          hasSession: !!session,
+          sessionUserId: session?.user?.id,
+          expiresInSec: session?.expires_at ? session.expires_at - nowSec : null,
+          accessTokenTail: session?.access_token?.slice(-8) ?? null,
+        });
+      }
+
       // Pre-flight: make sure the cached JWT isn't within its expiry window.
       // Without this, an insert fired immediately after returning from a
       // backgrounded tab can race the auth client's auto-refresh and get
       // rejected as an RLS violation.
       await ensureFreshSession();
+
+      {
+        const { data: { session } } = await supabase.auth.getSession();
+        const nowSec = Math.floor(Date.now() / 1000);
+        // eslint-disable-next-line no-console
+        console.log(`[junto-diag ${diagTs()}] addExpense.afterEnsureFresh`, {
+          hasSession: !!session,
+          sessionUserId: session?.user?.id,
+          expiresInSec: session?.expires_at ? session.expires_at - nowSec : null,
+          accessTokenTail: session?.access_token?.slice(-8) ?? null,
+        });
+      }
 
       const insertExpense = () =>
         supabase
@@ -291,7 +320,22 @@ export function useExpenses(tripId: string) {
           .select("id")
           .single();
 
+      // eslint-disable-next-line no-console
+      console.log(`[junto-diag ${diagTs()}] addExpense.beforeInsert`, {
+        bodyKeys: Object.keys({ ...expenseData, trip_id: tripId }),
+        tripId,
+      });
+
       let { data: expense, error } = await insertExpense();
+
+      // eslint-disable-next-line no-console
+      console.log(`[junto-diag ${diagTs()}] addExpense.afterInsert`, {
+        ok: !error,
+        errorCode: (error as any)?.code,
+        errorStatus: (error as any)?.status,
+        errorMessage: error?.message,
+        expenseId: expense?.id,
+      });
 
       // Recovery path: if the first attempt failed with an auth/RLS error,
       // the client likely had a stale token. Force a refresh and retry once

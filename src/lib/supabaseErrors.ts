@@ -65,7 +65,15 @@ export function friendlyErrorMessage(err: MaybeError, fallback: string): string 
   const raw = getMessage(err);
   if (raw) {
     // eslint-disable-next-line no-console
-    console.warn("[supabase error]", raw, err);
+    console.warn("[supabase error]", raw, {
+      code: (err as any)?.code,
+      status: (err as any)?.status,
+      details: (err as any)?.details,
+      hint: (err as any)?.hint,
+      name: (err as any)?.name,
+      fallback,
+      fullError: err,
+    });
   }
   if (!raw) return fallback;
 
