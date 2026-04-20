@@ -141,22 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       });
 
-    // Browsers throttle setInterval in backgrounded tabs, which can miss the
-    // Supabase auto-refresh window. When the user brings the tab back, the
-    // internal client may still hold an expired JWT until the next refresh
-    // fires. We proactively refresh on focus so the very next mutation (e.g.
-    // adding an expense) runs against a valid session instead of being
-    // rejected as an RLS/auth failure.
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void ensureFreshSession();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
     return () => {
       subscription.unsubscribe();
-      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [fetchProfile]);
 
