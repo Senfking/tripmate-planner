@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 
 export type AttachmentRow = {
   id: string;
@@ -103,7 +104,7 @@ export function useAttachments(tripId: string) {
           });
       }
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage(e, "Failed to upload file")),
   });
 
   const addLink = useMutation({
@@ -143,7 +144,7 @@ export function useAttachments(tripId: string) {
         });
       }
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage(e, "Failed to add link")),
   });
 
   const deleteAttachment = useMutation({
@@ -164,7 +165,7 @@ export function useAttachments(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Deleted");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage(e, "Failed to delete")),
   });
 
   const getSignedUrl = async (filePath: string) => {
@@ -191,7 +192,7 @@ export function useAttachments(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Booking added");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage(e, "Failed to add booking")),
   });
 
   const updateNotes = useMutation({
@@ -206,7 +207,7 @@ export function useAttachments(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Notes saved");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage(e, "Failed to save notes")),
   });
 
   const updatePrivacy = useMutation({
@@ -221,7 +222,7 @@ export function useAttachments(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success(vars.is_private ? "Set to private" : "Set to shared");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage(e, "Failed to update privacy")),
   });
 
   const updateType = useMutation({
@@ -236,7 +237,7 @@ export function useAttachments(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Category updated");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyErrorMessage(e, "Failed to update category")),
   });
 
   const clearLastExtractedId = () => setLastExtractedId(null);

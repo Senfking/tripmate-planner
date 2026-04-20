@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSharedCostItem, calculateLineItemTotals } from "@/lib/expenseLineItems";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 
 export interface LineItemRow {
   id: string;
@@ -165,7 +166,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
       await recalcSplits();
     },
     onError: (e: any) => {
-      toast.error(e?.message || "Failed to update claim");
+      toast.error(friendlyErrorMessage(e, "Failed to update claim"));
     },
   });
 
@@ -244,7 +245,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
       await recalcSplits();
     },
     onError: (e: any) => {
-      toast.error(e?.message || "Failed to update line item");
+      toast.error(friendlyErrorMessage(e, "Failed to update line item"));
     },
   });
 
@@ -261,7 +262,7 @@ export function useLineItemClaims(expenseId: string | null, tripId: string) {
       await recalcSplits();
     },
     onError: (e: any) => {
-      toast.error(e?.message || "Failed to delete line item");
+      toast.error(friendlyErrorMessage(e, "Failed to delete line item"));
     },
   });
 

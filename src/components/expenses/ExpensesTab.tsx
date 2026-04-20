@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
 import { ItineraryCrossLinkDrawer } from "./ItineraryCrossLinkDrawer";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 
 interface Props {
   tripId: string;
@@ -132,7 +133,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
       setFormOpen(true);
       toast.success("Receipt scanned - review the details");
     } catch (err: any) {
-      toast.error(err.message || "Failed to scan receipt");
+      toast.error(friendlyErrorMessage(err, "Failed to scan receipt"));
       trackEvent("ai_receipt_scan", { success: false });
     } finally {
       setScanning(false);

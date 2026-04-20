@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -131,7 +132,7 @@ function SingleRow({
       if (!isMe && isPermissionError(e)) {
         toast.error("Can't assign for others — ask them to claim it themselves");
       } else {
-        toast.error(e?.message || "Couldn't update");
+        toast.error(friendlyErrorMessage(e, "Couldn't update"));
       }
     } finally {
       setBusy(false);
@@ -205,7 +206,7 @@ function MultiRow({
         if (!isMe && isPermissionError(e)) {
           toast.error("Can't assign for others — ask them to claim it themselves");
         } else {
-          toast.error(e?.message || "Couldn't update claim");
+          toast.error(friendlyErrorMessage(e, "Couldn't update claim"));
         }
       } finally {
         pendingRef.current = false;

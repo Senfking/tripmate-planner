@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { saveLineItems } from "@/hooks/useLineItemClaims";
 import { parseRates, fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
+import { friendlyErrorMessage, isAuthOrRlsError } from "@/lib/supabaseErrors";
+import { ensureFreshSession, forceRefreshSession } from "@/lib/sessionRefresh";
 
 export interface ExpenseRow {
   id: string;
@@ -271,11 +273,30 @@ export function useExpenses(tripId: string) {
       quantityAssignments?: Record<number, Record<string, number>>;
     }) => {
       const { splits, lineItems, itemAssignments, quantityAssignments, ...expenseData } = params;
-      const { data: expense, error } = await supabase
-        .from("expenses")
-        .insert({ ...expenseData, trip_id: tripId } as any)
-        .select("id")
-        .single();
+
+      // Pre-flight: make sure the cached JWT isn't within its expiry window.
+      // Without this, an insert fired immediately after returning from a
+      // backgrounded tab can race the auth client's auto-refresh and get
+      // rejected as an RLS violation.
+      await ensureFreshSession();
+
+      const insertExpense = () =>
+        supabase
+          .from("expenses")
+          .insert({ ...expenseData, trip_id: tripId } as any)
+          .select("id")
+          .single();
+
+      let { data: expense, error } = await insertExpense();
+
+      // Recovery path: if the first attempt failed with an auth/RLS error,
+      // the client likely had a stale token. Force a refresh and retry once
+      // before surfacing the error to the user.
+      if (error && isAuthOrRlsError(error)) {
+        await forceRefreshSession();
+        ({ data: expense, error } = await insertExpense());
+      }
+
       if (error) throw error;
 
       const splitRows = splits.map((s) => ({
@@ -299,7 +320,7 @@ export function useExpenses(tripId: string) {
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense added");
     },
-    onError: (e) => toast.error(e.message || "Failed to add expense"),
+    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to add expense")),
   });
 
   // Update expense
@@ -317,10 +338,20 @@ export function useExpenses(tripId: string) {
       splits: { user_id: string; share_amount: number }[];
     }) => {
       const { id, splits, ...expenseData } = params;
-      const { error } = await supabase
-        .from("expenses")
-        .update({ ...expenseData, updated_at: new Date().toISOString() } as any)
-        .eq("id", id);
+
+      await ensureFreshSession();
+
+      const runUpdate = () =>
+        supabase
+          .from("expenses")
+          .update({ ...expenseData, updated_at: new Date().toISOString() } as any)
+          .eq("id", id);
+
+      let { error } = await runUpdate();
+      if (error && isAuthOrRlsError(error)) {
+        await forceRefreshSession();
+        ({ error } = await runUpdate());
+      }
       if (error) throw error;
 
       // Atomically replace splits in a single DB transaction
@@ -338,7 +369,7 @@ export function useExpenses(tripId: string) {
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense updated");
     },
-    onError: (e) => toast.error(e.message || "Failed to update expense"),
+    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to update expense")),
   });
 
   // Delete expense
@@ -357,7 +388,7 @@ export function useExpenses(tripId: string) {
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense deleted");
     },
-    onError: () => toast.error("Failed to delete expense"),
+    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to delete expense")),
   });
 
   // Manual refresh function
