@@ -93,7 +93,16 @@ async function handleSupabaseStorage(request: Request, filePath: string): Promis
       headers: { 'Content-Type': cached.type || 'application/octet-stream' },
     });
   }
-  return fetch(request);
+  try {
+    return await fetch(request);
+  } catch (err) {
+    // Never let a thrown fetch bubble up as "FetchEvent.respondWith received
+    // an error: TypeError: Load failed" — iOS Safari is particularly prone
+    // to that. Return a synthetic 504 so the calling image/link can fail
+    // gracefully instead of crashing the SW pipeline.
+    console.warn('[SW] storage fetch failed:', err);
+    return new Response('Failed to load attachment', { status: 504 });
+  }
 }
 
 /** Cache-first for hashed assets (immutable), with runtime caching on miss. */
@@ -101,20 +110,40 @@ async function handleAsset(request: Request): Promise<Response> {
   const cached = await caches.match(request);
   if (cached) return cached;
 
-  const response = await fetch(request);
-  // Cache successful responses for immutable hashed assets
-  if (response.ok) {
-    const cache = await caches.open(CACHE_NAME);
-    cache.put(request, response.clone());
+  try {
+    const response = await fetch(request);
+    // Cache successful responses for immutable hashed assets
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (err) {
+    console.warn('[SW] asset fetch failed:', err);
+    return new Response('Gateway Timeout', { status: 504 });
   }
-  return response;
 }
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Only handle same-origin requests (except Supabase storage)
-  if (url.origin !== self.location.origin && url.host !== SUPABASE_STORAGE_HOST) {
+  // Cross-origin handling: only intercept the narrow Supabase Storage
+  // signed-URL path so we can serve offline-cached attachments from
+  // IndexedDB. Everything else that isn't same-origin — including
+  // Supabase REST (/rest/v1/*), Auth (/auth/v1/*), Realtime (/realtime/v1/*),
+  // and Edge Functions (/functions/v1/*) — must pass through without a
+  // respondWith() call. Intercepting them meant iOS Safari occasionally
+  // failed the internal re-fetch and surfaced "FetchEvent.respondWith
+  // received an error: TypeError: Load failed" on top of any underlying
+  // failure, and has historically been associated with cross-origin
+  // Authorization-header stripping that looks like an auth/RLS failure.
+  if (url.origin !== self.location.origin) {
+    if (url.host === SUPABASE_STORAGE_HOST) {
+      const filePath = extractFilePath(url);
+      if (filePath) {
+        event.respondWith(handleSupabaseStorage(event.request, filePath));
+      }
+    }
     return;
   }
 
@@ -123,13 +152,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Intercept Supabase Storage signed-URL requests
-  if (url.host === SUPABASE_STORAGE_HOST) {
-    const filePath = extractFilePath(url);
-    if (filePath) {
-      event.respondWith(handleSupabaseStorage(event.request, filePath));
-      return;
-    }
+  // Only handle GETs. Mutations (POST/PUT/PATCH/DELETE) should go straight
+  // to the network — there's nothing useful the cache can contribute, and
+  // wrapping them in respondWith() only adds ways for the SW to turn a
+  // transient network error into an opaque "Load failed".
+  if (event.request.method !== 'GET') {
+    return;
   }
 
   // Navigation: network-first, fall back to cached index.html for offline shell
@@ -148,9 +176,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // All other same-origin requests: cache-first, fallback to network
+  // All other same-origin GETs: cache-first, fallback to network. Catch a
+  // thrown fetch so we never reject the respondWith promise.
   event.respondWith(
-    caches.match(event.request).then((r) => r || fetch(event.request))
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).catch((err) => {
+        console.warn('[SW] fetch failed:', err);
+        return new Response('Gateway Timeout', { status: 504 });
+      });
+    })
   );
 });
 

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 
 export interface ItineraryItem {
   id: string;
@@ -74,7 +75,7 @@ export function useItinerary(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Activity added");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Failed to add activity")),
   });
 
   const updateItem = useMutation({
@@ -106,7 +107,7 @@ export function useItinerary(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Activity updated");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Failed to update activity")),
   });
 
   const deleteItem = useMutation({
@@ -119,7 +120,7 @@ export function useItinerary(tripId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Activity deleted");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Failed to delete activity")),
   });
 
   const batchAddItems = useMutation({
@@ -163,7 +164,7 @@ export function useItinerary(tripId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: key });
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Failed to add activities")),
   });
 
   const reorderItems = useMutation({
@@ -190,7 +191,7 @@ export function useItinerary(tripId: string) {
     },
     onError: (e: any, _vars, context) => {
       if (context?.previous) qc.setQueryData(key, context.previous);
-      toast.error(e.message);
+      toast.error(friendlyErrorMessage(e, "Failed to reorder activities"));
     },
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });

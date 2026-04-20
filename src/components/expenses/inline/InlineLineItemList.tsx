@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { LineItemRow, ClaimRow, useLineItemClaims } from "@/hooks/useLineItemClaims";
 import { useExpenseInlineEdit } from "@/hooks/useExpenseInlineEdit";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 import { MemberProfile } from "@/hooks/useExpenses";
 import { calculateLineItemTotals } from "@/lib/expenseLineItems";
 import { formatCurrency } from "@/lib/settlementCalc";
@@ -113,7 +114,7 @@ export function InlineLineItemList({
             }
             toast.success("Restored");
           } catch (e: any) {
-            toast.error(e?.message || "Couldn't restore item");
+            toast.error(friendlyErrorMessage(e, "Couldn't restore item"));
           }
         },
       },
@@ -623,7 +624,7 @@ function ClaimStepper({
       } catch (e: any) {
         // Revert to last confirmed value on failure
         setLocalQty(lastConfirmedRef.current);
-        toast.error(e?.message || "Couldn't update claim");
+        toast.error(friendlyErrorMessage(e, "Couldn't update claim"));
       } finally {
         pendingRef.current = false;
       }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 
 export interface ItemComment {
   id: string;
@@ -58,7 +59,7 @@ export function useItemComments(tripId: string, itemId: string) {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Failed to post comment")),
   });
 
   const deleteComment = useMutation({
@@ -70,7 +71,7 @@ export function useItemComments(tripId: string, itemId: string) {
       qc.invalidateQueries({ queryKey: key });
       toast.success("Comment deleted");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Failed to delete comment")),
   });
 
   return { comments, isLoading, postComment, deleteComment };

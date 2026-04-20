@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 import { useState } from "react";
 import { Copy, Loader2, Info, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
@@ -87,7 +88,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       qc.invalidateQueries({ queryKey: ["members", tripId] });
       toast.success("Role updated");
     },
-    onError: (e) => toast.error(e.message || "Failed to update role"),
+    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to update role")),
   });
 
   const removeMember = useMutation({
@@ -104,7 +105,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       qc.invalidateQueries({ queryKey: ["trip-members-count", tripId] });
       toast.success("Member removed");
     },
-    onError: (e) => toast.error(e.message || "Failed to remove member"),
+    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to remove member")),
   });
 
   /* ── Trip settings (share permission) ──────── */
@@ -136,7 +137,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       toast.success("Trip name updated");
       setEditingName(false);
     },
-    onError: (e) => toast.error(e.message || "Failed to update name"),
+    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to update name")),
   });
 
   const updateSharePerm = useMutation({
@@ -189,7 +190,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       toast.success("You left the trip");
       navigate("/app/trips");
     },
-    onError: (e) => toast.error(e.message || "Failed to leave trip"),
+    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to leave trip")),
   });
 
   const deleteTrip = useMutation({
@@ -207,7 +208,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
       toast.success("Trip deleted");
       navigate("/app/trips", { replace: true });
     },
-    onError: (e) => toast.error(e.message || "Failed to delete trip"),
+    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to delete trip")),
   });
 
   const copyToClipboard = async (text: string) => {

@@ -5,6 +5,7 @@ import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/contexts/AuthContext";
 import { ExpenseRow, SplitRow } from "@/hooks/useExpenses";
 import { isSharedCostItem } from "@/lib/expenseLineItems";
+import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 
 type SplitMode = "equal" | "percent" | "custom";
 
@@ -33,7 +34,7 @@ export function useExpenseInlineEdit(tripId: string) {
       qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Couldn't save change"),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Couldn't save change")),
   });
 
   /**
@@ -56,7 +57,7 @@ export function useExpenseInlineEdit(tripId: string) {
       qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Couldn't update split"),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Couldn't update split")),
   });
 
   /** Insert a single new line item under an expense */
@@ -82,7 +83,7 @@ export function useExpenseInlineEdit(tripId: string) {
       qc.invalidateQueries({ queryKey: ["expense-line-items", vars.expenseId] });
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Couldn't add item"),
+    onError: (e: any) => toast.error(friendlyErrorMessage(e, "Couldn't add item")),
   });
 
   return { patchExpense, replaceSplits, addLineItem };

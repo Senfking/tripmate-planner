@@ -3,6 +3,7 @@ import type { User, Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
+import { ensureFreshSession } from "@/lib/sessionRefresh";
 
 type NotificationPreferences = {
   new_activity: boolean;
@@ -121,18 +122,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: existing } }) => {
-      setSession(existing);
-      setUser(existing?.user ?? null);
-      if (existing?.user) {
-        fetchProfile(existing.user.id);
-      }
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
+    // On initial load, refresh the session if the cached JWT is close to
+    // expiring. Reading a stale session from storage and firing queries with
+    // an expired token is what causes the expenses page to render empty on
+    // first load — a subsequent tab switch re-fetches with a fresh token and
+    // everything appears.
+    ensureFreshSession()
+      .then(() => supabase.auth.getSession())
+      .then(({ data: { session: existing } }) => {
+        setSession(existing);
+        setUser(existing?.user ?? null);
+        if (existing?.user) {
+          fetchProfile(existing.user.id);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
 
-    return () => subscription.unsubscribe();
+    // Browsers throttle setInterval in backgrounded tabs, which can miss the
+    // Supabase auto-refresh window. When the user brings the tab back, the
+    // internal client may still hold an expired JWT until the next refresh
+    // fires. We proactively refresh on focus so the very next mutation (e.g.
+    // adding an expense) runs against a valid session instead of being
+    // rejected as an RLS/auth failure.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void ensureFreshSession();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [fetchProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
