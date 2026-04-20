@@ -39,8 +39,10 @@ export function isAuthOrRlsError(err: MaybeError): boolean {
   const status = getStatus(err);
 
   if (status === 401 || status === 403) return true;
-  // Postgres error codes: 42501 = insufficient_privilege, 28000 = invalid_authorization_specification
-  if (code === "42501" || code === "28000" || code === "PGRST301") return true;
+  // 28000 = invalid_authorization_specification, PGRST301 = JWT expired (PostgREST)
+  // 42501 (insufficient_privilege) is intentionally excluded: it fires for ANY
+  // RLS violation (e.g. missing trip_id), not just auth failures.
+  if (code === "28000" || code === "PGRST301") return true;
   if (
     msg.includes("row-level security") ||
     msg.includes("row level security") ||
