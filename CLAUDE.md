@@ -48,6 +48,20 @@
 - Never call `queryClient.invalidateQueries()` without a filter on `TOKEN_REFRESHED` — it flushes every cache entry and forces skeleton flashes across the app. Reserve full invalidation for `SIGNED_IN`.
 - React Query list queries that users see after tab switches should set `placeholderData: keepPreviousData` so transient state resets don't flash skeletons over loaded data.
 
+### Known Architecture Issues
+
+5. Service Worker cache/fetch interception was too broad — intercepted all same-host requests, not just storage signed URLs. Caused iOS Safari "Load failed" errors and dropped Authorization headers on cross-origin re-fetches. When adding SW fetch handling, the host check must distinguish Supabase Storage from REST/Auth/Functions (they share a host).
+
+6. Browser tab backgrounding throttles setInterval, starving Supabase's autoRefreshToken timer. JWTs drift past expiry; next request fails RLS with auth.uid() = NULL. Fixed by calling ensureFreshSession() on AuthContext init. Any new client-side data mutation should pre-flight ensureFreshSession() and retry once on auth/RLS failure via forceRefreshSession().
+
+7. Supabase JS v2.100+ emits SIGNED_IN on tab return (internal auto-refresh re-auths), not just on actual login. Responding to SIGNED_IN with queryClient.invalidateQueries() causes a refetch storm that cascades through the component tree, resetting local form state. Always gate SIGNED_IN handlers on actual userId change (prevUserId !== newUserId) — spurious re-emissions should be no-ops.
+
+8. Postgres error code 42501 is NOT uniquely an auth error. Any RLS violation — including policy checks with NULL or wrong foreign keys — surfaces as 42501. Error classifiers must use auth-specific signals (401/403/PGRST301/"jwt expired" message), not just the Postgres code, or data errors get misreported as session expiry.
+
+9. When debugging intermittent Supabase mutation failures, inspect the request payload first. Missing or null foreign keys in the body produce RLS failures that look identical to auth failures. The payload is ground truth; error messages often lie about the cause.
+
+10. React Query's keepPreviousData makes state races invisible in the UI. A component can render with stale props while underlying queries are briefly broken. Useful for UX but dangerous for debugging — always verify prop freshness at mutation time, not just query data freshness.
+
 ## Common Commands
 - npm run dev — start local dev server
 - npm run build — production build
