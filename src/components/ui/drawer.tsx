@@ -3,7 +3,11 @@ import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "@/lib/utils";
 
-const Drawer = ({ shouldScaleBackground = true, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
+// Note: shouldScaleBackground defaults to false to avoid vaul applying
+// transform/overflow:hidden to the <body>. Without a `data-vaul-drawer-wrapper`
+// parent, the scaled-body effect could fail to clean up on iOS Safari and
+// leave the entire page non-scrollable after a drawer closed.
+const Drawer = ({ shouldScaleBackground = false, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
 );
 Drawer.displayName = "Drawer";
