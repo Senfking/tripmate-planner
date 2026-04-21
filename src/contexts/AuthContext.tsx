@@ -45,9 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // [junto-diag] — remove when tab-switch race is diagnosed.
   const prevUserIdRef = useRef<string | null>(null);
-  const prevAccessTokenTailRef = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -80,32 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         const newUserId = newSession?.user?.id ?? null;
-        const ts = new Date().toISOString().slice(11, 23);
-        // eslint-disable-next-line no-console
-        console.log(`[junto-mount ${ts}] AuthContext onAuthStateChange`, { event, newUserId, visible: document.visibilityState });
-
-        // [junto-diag] — remove when tab-switch race is diagnosed.
-        const newTokenTail = newSession?.access_token?.slice(-8) ?? null;
-        const expiresInSec = newSession?.expires_at
-          ? newSession.expires_at - Math.floor(Date.now() / 1000)
-          : null;
-        const isSpuriousSignIn =
-          event === "SIGNED_IN" && !!newUserId && prevUserIdRef.current === newUserId;
-        // eslint-disable-next-line no-console
-        console.log(`[junto-diag ${ts}] authEvent`, {
-          event,
-          newUserId,
-          prevUserId: prevUserIdRef.current,
-          isSpuriousSignIn,
-          tokenChanged: newTokenTail !== prevAccessTokenTailRef.current,
-          newTokenTail,
-          prevTokenTail: prevAccessTokenTailRef.current,
-          expiresInSec,
-          visible: document.visibilityState,
-          willInvalidateQueries: event === "SIGNED_IN",
-        });
+        const prevUserId = prevUserIdRef.current;
         prevUserIdRef.current = newUserId;
-        prevAccessTokenTailRef.current = newTokenTail;
 
         // Preserve the user reference when identity hasn't changed.
         // TOKEN_REFRESHED (fires on tab focus / near-expiry) hands us a NEW
@@ -128,10 +102,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (newSession?.user) {
-          // Skip profile refetch on TOKEN_REFRESHED for the same user — the
-          // profile can't have changed just because the JWT rotated, and the
-          // redundant fetch adds another render cycle on every tab focus.
-          if (event !== "TOKEN_REFRESHED") {
+          // Only refetch profile when the identity actually changed. Both
+          // TOKEN_REFRESHED and spurious SIGNED_IN (Supabase v2 emits it on
+          // every auto-refresh, not only on real login) carry the same userId
+          // — the profile can't have changed, and the extra fetch adds a render
+          // cycle on every tab focus.
+          const isNewIdentity = prevUserId !== newUserId;
+          if (isNewIdentity) {
             setTimeout(() => fetchProfile(newSession.user.id), 0);
           }
         } else {
@@ -139,11 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setLoading(false);
 
-        // Only flush caches on fresh sign-in, when queries may have been
-        // populated without auth. TOKEN_REFRESHED means auth was already
-        // valid — blanket invalidation here triggers a storm of refetches
-        // on every tab focus and contributes to the unmount race above.
-        if (event === "SIGNED_IN") {
+        // Only flush caches when the user genuinely changed (null → populated,
+        // or user A → user B). Supabase v2 emits SIGNED_IN on every tab-return
+        // auto-refresh — blanket invalidation there causes a refetch storm that
+        // unmounts form children and resets their local state.
+        if (event === "SIGNED_IN" && prevUserId !== newUserId) {
           queryClient.invalidateQueries();
         }
       }

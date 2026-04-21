@@ -28,14 +28,6 @@ window.addEventListener("error", (event) => {
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Diagnostic: log tab visibility transitions. Correlates with mount/unmount
-// logs tagged [junto-mount] to prove whether tab switch causes unmount.
-document.addEventListener("visibilitychange", () => {
-  const ts = new Date().toISOString().slice(11, 23);
-  // eslint-disable-next-line no-console
-  console.log(`[junto-mount ${ts}] visibilitychange -> ${document.visibilityState}`);
-});
-
 // Service worker registration - only in production, not in iframes or preview hosts
 if ("serviceWorker" in navigator) {
   const isInIframe = (() => {
