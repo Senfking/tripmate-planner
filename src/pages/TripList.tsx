@@ -973,11 +973,7 @@ export default function TripList() {
       )}
 
       <div
-        className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 md:pb-8"
-        style={{
-          // Clear the fixed BottomNav (~96px) + InstallPrompt card (~140px) + safe-area
-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 260px)",
-        }}
+        className="mx-auto grid w-full max-w-md md:max-w-[900px] grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 px-4 md:px-8 pb-[calc(env(safe-area-inset-bottom,0px)+260px)] md:pb-8"
       >
 
 
