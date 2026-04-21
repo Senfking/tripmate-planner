@@ -92,6 +92,7 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
     currency: raw.currency || "USD",
     packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions : [],
     total_activities: typeof raw.total_activities === "number" ? raw.total_activities : 0,
+    budget_tier: raw.budget_tier,
   };
 }
 

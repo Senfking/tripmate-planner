@@ -24,6 +24,16 @@ export interface AIActivity {
   travel_time_from_previous?: string | null;
   travel_mode_from_previous?: string | null;
   is_junto_pick?: boolean;
+  // Google Places ground truth — preferred over LLM estimated_cost_per_person
+  // when present. Populated by the backend in hydrateActivity.
+  price_level?:
+    | "PRICE_LEVEL_FREE"
+    | "PRICE_LEVEL_INEXPENSIVE"
+    | "PRICE_LEVEL_MODERATE"
+    | "PRICE_LEVEL_EXPENSIVE"
+    | "PRICE_LEVEL_VERY_EXPENSIVE"
+    | null;
+  priceRange?: string | null;
 }
 
 export interface AIDay {
@@ -87,6 +97,9 @@ export interface AITripResult {
   packing_suggestions: string[];
   total_activities: number;
   origin_city?: string;
+  // Used by budgetCalc to pick a per-night accommodation default when Places
+  // returns no hotel pricing. Optional so older cached plans still typecheck.
+  budget_tier?: "budget" | "mid-range" | "premium" | "luxury";
 }
 
 export function useResultsState(tripId: string) {

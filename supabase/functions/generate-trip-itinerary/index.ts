@@ -400,6 +400,9 @@ interface BatchPlaceResult {
   rating: number | null;
   userRatingCount: number | null;
   priceLevel: string | null;
+  // Formatted from Places v1 `priceRange` structured field, e.g. "€15-20".
+  // Null unless Places returned both start/end units.
+  priceRange: string | null;
   types: string[];
   photos: Array<{ name: string }>;
   googleMapsUri: string | null;
@@ -439,7 +442,11 @@ interface EnrichedActivity {
   longitude: number;
   rating: number | null;
   user_rating_count: number | null;
+  // Google Places ground-truth pricing. Budget math prefers these over
+  // estimated_cost_per_person (which is an LLM estimate). NEVER populated
+  // from the ranker's output — pulled straight from the Places response.
   price_level: string | null;
+  priceRange: string | null;
   photos: string[];                 // pre-built media URLs
   google_maps_url: string | null;
   estimated_cost_per_person: number;
@@ -479,6 +486,9 @@ interface PipelineResult {
   currency: string;
   packing_suggestions: string[];
   total_activities: number;
+  // Propagated from Intent so the frontend budget helper can pick a sensible
+  // per-night default when Places returns no hotel pricing.
+  budget_tier: "budget" | "mid-range" | "premium";
 }
 
 interface ClaudeUsage {
@@ -1401,7 +1411,35 @@ async function geocodeDestination(
 // ---------------------------------------------------------------------------
 
 const PLACES_FIELD_MASK =
-  "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.types,places.photos,places.googleMapsUri,places.businessStatus,places.addressComponents";
+  "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.priceRange,places.types,places.photos,places.googleMapsUri,places.businessStatus,places.addressComponents";
+
+// Currency code → symbol for formatting Places priceRange strings. Falls back
+// to the raw code when unknown — "CHF 20-40" reads fine without a symbol.
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$", EUR: "€", GBP: "£", JPY: "¥", AUD: "A$", CAD: "C$", CHF: "CHF ",
+};
+
+// Places v1 returns priceRange as { startPrice: { currencyCode, units }, endPrice: {...} }.
+// We flatten it into a display string; downstream consumers (frontend +
+// budgetCalc) parse it into a midpoint. Returns null if the shape is missing
+// or malformed — never throw, never guess.
+function formatPlacesPriceRange(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const pr = raw as {
+    startPrice?: { currencyCode?: string; units?: string };
+    endPrice?: { currencyCode?: string; units?: string };
+  };
+  const startUnits = pr.startPrice?.units ? Number(pr.startPrice.units) : null;
+  const endUnits = pr.endPrice?.units ? Number(pr.endPrice.units) : null;
+  const code = pr.startPrice?.currencyCode || pr.endPrice?.currencyCode || "";
+  const symbol = CURRENCY_SYMBOLS[code] ?? (code ? `${code} ` : "");
+  if (startUnits != null && Number.isFinite(startUnits) && endUnits != null && Number.isFinite(endUnits) && startUnits !== endUnits) {
+    return `${symbol}${startUnits}-${endUnits}`;
+  }
+  if (startUnits != null && Number.isFinite(startUnits)) return `${symbol}${startUnits}`;
+  if (endUnits != null && Number.isFinite(endUnits)) return `${symbol}${endUnits}`;
+  return null;
+}
 
 async function searchPlacesBatch(
   queries: PlacesSearchQuery[],
@@ -1458,6 +1496,7 @@ async function searchPlacesBatch(
         rating: (p.rating as number | null) ?? null,
         userRatingCount: (p.userRatingCount as number | null) ?? null,
         priceLevel: (p.priceLevel as string | null) ?? null,
+        priceRange: formatPlacesPriceRange(p.priceRange),
         types: (p.types as string[] | undefined) ?? [],
         photos: (p.photos as Array<{ name: string }> | undefined) ?? [],
         googleMapsUri: (p.googleMapsUri as string | null) ?? null,
@@ -2205,7 +2244,11 @@ function hydrateActivity(
     longitude: place?.location?.longitude ?? 0,
     rating: place?.rating ?? null,
     user_rating_count: place?.userRatingCount ?? null,
+    // Sourced directly from Places — never from the ranker. Even if the LLM
+    // fabricates these on RawRankerActivity (it can't — schema doesn't expose
+    // the fields), we'd overwrite here.
     price_level: place?.priceLevel ?? null,
+    priceRange: place?.priceRange ?? null,
     photos: place ? buildPhotoUrls(place.photos ?? [], googleKey) : [],
     google_maps_url: place?.googleMapsUri ?? null,
     estimated_cost_per_person: clampedCost,
@@ -2377,6 +2420,7 @@ async function rankAndEnrich(
     currency,
     packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions.slice(0, 10) : [],
     total_activities,
+    budget_tier: intent.budget_tier,
   };
 }
 

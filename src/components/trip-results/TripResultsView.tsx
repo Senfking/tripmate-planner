@@ -17,6 +17,7 @@ import { EditTripSheet } from "./EditTripSheet";
 import { GroupActivityPanel } from "./GroupActivityPanel";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
+import { computeTripBudget } from "@/lib/budgetCalc";
 import { ConciergeButton } from "@/components/concierge/ConciergeButton";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import { useStreamReveal } from "@/hooks/useStreamReveal";
@@ -38,10 +39,6 @@ interface Props {
   onDashboard?: () => void;
   revealMode?: boolean;
   onRevealComplete?: () => void;
-}
-
-function titleCase(s: string) {
-  return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete }: Props) {
@@ -124,32 +121,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
   // removed: remainingCount / addedCount no longer needed
 
-  const costBreakdown = useMemo(() => {
-    const categories: Record<string, number> = {};
-    let total = 0;
-    for (const day of allDays) {
-      for (const act of day.activities) {
-        const cost = act.estimated_cost_per_person || 0;
-        total += cost;
-        const rawCat = (act.category || "Other").toLowerCase().trim();
-        const cat = titleCase(rawCat);
-        categories[cat] = (categories[cat] || 0) + cost;
-      }
-    }
-    for (const dest of result.destinations) {
-      const ppn = dest.accommodation?.price_per_night;
-      if (ppn) {
-        const nights = dest.days.length;
-        const accomTotal = ppn * nights;
-        total += accomTotal;
-        categories["Accommodation"] = (categories["Accommodation"] || 0) + accomTotal;
-      }
-    }
-    const numDays = allDays.length || 1;
-    const dailyAvg = Math.round(total / numDays);
-    const sorted = Object.entries(categories).sort((a, b) => b[1] - a[1]);
-    return { total: Math.round(total), dailyAvg, categories: sorted };
-  }, [allDays, result]);
+  // Single source of truth for budget math — mirrors the sticky footer,
+  // any dashboard summary, and the preview breakdown. Avoids the drift
+  // CLAUDE.md flags: every surface routes through computeTripBudget.
+  // budget_tier gates the accommodation fallback when Places returns
+  // no pricing — otherwise a luxury trip would default to mid-range.
+  const costBreakdown = useMemo(
+    () => computeTripBudget(result, result.budget_tier),
+    [result],
+  );
 
   const dateRange = useMemo(() => {
     if (result.destinations.length === 0) return "";
@@ -373,8 +353,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   ~{currency}{costBreakdown.total.toLocaleString()}
                   <span className="text-sm font-normal text-muted-foreground"> per person</span>
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">
-                  ~{currency}{costBreakdown.dailyAvg.toLocaleString()}/day · {costBreakdown.categories.length} categories
+                <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+                  Activities ~{currency}{costBreakdown.activitiesTotal.toLocaleString()}
+                  {costBreakdown.accommodationTotal > 0 && (
+                    <> · Stay ~{currency}{costBreakdown.accommodationTotal.toLocaleString()}</>
+                  )}
+                  {" · "}
+                  ~{currency}{costBreakdown.dailyAvg.toLocaleString()}/day
                 </div>
               </div>
               <div className={`p-1.5 rounded-lg bg-muted/50 transition-transform duration-200 ${costOpen ? "rotate-180" : ""}`}>
