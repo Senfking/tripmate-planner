@@ -80,8 +80,8 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
 
   const viewYear = viewMonth.getFullYear();
   const currentYear = today.getFullYear();
-  // 12-year grid starting one year before today
-  const years = Array.from({ length: 12 }, (_, i) => currentYear - 1 + i);
+  // 6 years: current + next 5
+  const years = Array.from({ length: 6 }, (_, i) => currentYear + i);
 
   const handleYearPick = (y: number) => {
     setViewMonth(setYear(viewMonth, y));
@@ -227,7 +227,9 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
                   onClick={() => handleYearPick(y)}
                   className={cn(
                     "h-12 rounded-xl text-sm font-semibold transition-colors",
-                    selected ? "text-white" : "text-foreground hover:bg-muted border border-border"
+                    selected
+                      ? "text-white shadow-sm"
+                      : "text-foreground/80 hover:bg-[#0D9488]/10 hover:text-[#0D9488]"
                   )}
                   style={selected ? { background: TEAL } : undefined}
                 >
