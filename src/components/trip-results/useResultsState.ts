@@ -39,11 +39,32 @@ export interface AIDestination {
   intro: string;
   days: AIDay[];
   accommodation?: {
-    name: string;
-    stars: number;
-    price_per_night: number;
-    currency: string;
-    booking_url?: string;
+    // Backend ships an EnrichedActivity for accommodation. Use Google Places
+    // fields as source of truth — booking_url / booking_partner may be null
+    // until Booking.com integration lands.
+    title?: string;
+    name?: string;
+    location_name?: string;
+    neighborhood?: string | null;
+    photos?: string[];
+    rating?: number | null;
+    user_rating_count?: number | null;
+    price_level?:
+      | "PRICE_LEVEL_FREE"
+      | "PRICE_LEVEL_INEXPENSIVE"
+      | "PRICE_LEVEL_MODERATE"
+      | "PRICE_LEVEL_EXPENSIVE"
+      | "PRICE_LEVEL_VERY_EXPENSIVE"
+      | null;
+    priceRange?: string | null;
+    estimated_cost_per_person?: number | null;
+    currency?: string;
+    google_maps_url?: string | null;
+    booking_url?: string | null;
+    booking_partner?: string | null;
+    // Legacy fields (older cached responses)
+    stars?: number;
+    price_per_night?: number;
   };
   transport_to_next?: {
     mode: string;
