@@ -8,7 +8,9 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -19,15 +21,17 @@ interface ReauthenticationEmailProps {
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your verification code</Preview>
+    <Preview>Your Junto verification code</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm reauthentication</Heading>
-        <Text style={text}>Use the code below to confirm your identity:</Text>
+        <Section style={logoSection}>
+          <Img src={LOGO_URL} alt="Junto" width="56" height="56" style={logo} />
+        </Section>
+        <Heading style={h1}>Confirm it's you</Heading>
+        <Text style={text}>Use this code to confirm your identity:</Text>
         <Text style={codeStyle}>{token}</Text>
         <Text style={footer}>
-          This code will expire shortly. If you didn't request this, you can
-          safely ignore this email.
+          This code expires shortly. If you didn't request it, you can safely ignore this email.
         </Text>
       </Container>
     </Body>
@@ -36,25 +40,45 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
 
 export default ReauthenticationEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const LOGO_URL =
+  'https://dwtbqomfleihcvkfoopm.supabase.co/storage/v1/object/public/email-assets/junto-logo.png'
+
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily:
+    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+}
+const container = { padding: '32px 28px', maxWidth: '560px' }
+const logoSection = { marginBottom: '24px' }
+const logo = { borderRadius: '12px', display: 'block' }
 const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
+  fontSize: '24px',
+  fontWeight: 700 as const,
+  color: '#0F3D3A',
+  margin: '0 0 16px',
+  letterSpacing: '-0.01em',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: '#475569',
+  lineHeight: '1.6',
+  margin: '0 0 20px',
 }
 const codeStyle = {
-  fontFamily: 'Courier, monospace',
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
+  fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+  fontSize: '28px',
+  fontWeight: 700 as const,
+  color: '#0F3D3A',
+  letterSpacing: '0.2em',
+  backgroundColor: '#F1F5F9',
+  padding: '16px 24px',
+  borderRadius: '12px',
+  display: 'inline-block',
   margin: '0 0 30px',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = {
+  fontSize: '13px',
+  color: '#94A3B8',
+  margin: '32px 0 0',
+  lineHeight: '1.5',
+}
