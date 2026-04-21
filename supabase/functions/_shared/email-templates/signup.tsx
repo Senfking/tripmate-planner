@@ -9,8 +9,10 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -29,29 +31,30 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>Confirm your email to start planning with {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <Section style={logoSection}>
+          <Img src={LOGO_URL} alt="Junto" width="56" height="56" style={logo} />
+        </Section>
+        <Heading style={h1}>Welcome aboard!</Heading>
         <Text style={text}>
-          Thanks for signing up for{' '}
+          Thanks for joining{' '}
           <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
+            <strong>Junto</strong>
           </Link>
-          !
+          . We're glad you're here — group trips just got a whole lot easier.
         </Text>
         <Text style={text}>
-          Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) by clicking the button below:
+          Confirm your email ({recipient}) to start planning your next trip:
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
+        <Section style={buttonSection}>
+          <Button style={button} href={confirmationUrl}>
+            Confirm email
+          </Button>
+        </Section>
         <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+          If you didn't create a Junto account, you can safely ignore this email.
         </Text>
       </Container>
     </Body>
@@ -60,27 +63,45 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const LOGO_URL =
+  'https://dwtbqomfleihcvkfoopm.supabase.co/storage/v1/object/public/email-assets/junto-logo.png'
+
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily:
+    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+}
+const container = { padding: '32px 28px', maxWidth: '560px' }
+const logoSection = { marginBottom: '24px' }
+const logo = { borderRadius: '12px', display: 'block' }
 const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
+  fontSize: '24px',
+  fontWeight: 700 as const,
+  color: '#0F3D3A',
+  margin: '0 0 16px',
+  letterSpacing: '-0.01em',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: '#475569',
+  lineHeight: '1.6',
+  margin: '0 0 20px',
 }
-const link = { color: 'inherit', textDecoration: 'underline' }
+const link = { color: '#0D9488', textDecoration: 'none' }
+const buttonSection = { margin: '28px 0' }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#0D9488',
   color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  fontSize: '15px',
+  fontWeight: 600 as const,
+  borderRadius: '12px',
+  padding: '14px 28px',
   textDecoration: 'none',
+  display: 'inline-block',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = {
+  fontSize: '13px',
+  color: '#94A3B8',
+  margin: '32px 0 0',
+  lineHeight: '1.5',
+}
