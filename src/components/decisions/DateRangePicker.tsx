@@ -285,7 +285,10 @@ export function DateRangePicker({
   );
 
   const handleApply = () => {
-    onChange(draft);
+    // Treat a single picked day as a same-day (one-day) trip
+    const finalRange =
+      draft?.from && !draft?.to ? { from: draft.from, to: draft.from } : draft;
+    onChange(finalRange);
     setOpen(false);
   };
 
@@ -334,8 +337,8 @@ export function DateRangePicker({
           type="button"
           size="sm"
           onClick={handleApply}
-          disabled={!draft?.from || !draft?.to}
-          style={draft?.from && draft?.to ? { background: TEAL, color: "white" } : undefined}
+          disabled={!draft?.from}
+          style={draft?.from ? { background: TEAL, color: "white" } : undefined}
         >
           Apply
         </Button>
