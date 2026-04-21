@@ -139,7 +139,7 @@ export function AccommodationCard({
             <span className="text-muted-foreground/30">·</span>
           )}
           {priceLabel && (
-            <span className="text-[11px] text-foreground font-mono font-medium">
+            <span className="text-[11px] text-muted-foreground font-mono">
               {priceLabel}
             </span>
           )}
