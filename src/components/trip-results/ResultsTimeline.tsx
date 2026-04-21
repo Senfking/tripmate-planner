@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function buildTimelineNodes(
-  destinations: { name: string; start_date: string; end_date: string; accommodation?: { name: string } }[],
+  destinations: { name: string; start_date: string; end_date: string; accommodation?: { name?: string; title?: string } }[],
   allDays: { day_number: number; date: string }[],
   hasPacking: boolean
 ): TimelineNode[] {

@@ -137,9 +137,10 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       }
     }
     for (const dest of result.destinations) {
-      if (dest.accommodation?.price_per_night) {
+      const ppn = dest.accommodation?.price_per_night;
+      if (ppn) {
         const nights = dest.days.length;
-        const accomTotal = dest.accommodation.price_per_night * nights;
+        const accomTotal = ppn * nights;
         total += accomTotal;
         categories["Accommodation"] = (categories["Accommodation"] || 0) + accomTotal;
       }
@@ -435,11 +436,16 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               {/* Accommodation card per destination */}
               {dest.accommodation ? (
                 <AccommodationCard
-                  name={dest.accommodation.name}
-                  stars={dest.accommodation.stars}
-                  pricePerNight={dest.accommodation.price_per_night}
-                  currency={dest.accommodation.currency}
-                  bookingUrl={dest.accommodation.booking_url}
+                  name={dest.accommodation.title || dest.accommodation.name || "Stay"}
+                  photos={dest.accommodation.photos}
+                  rating={dest.accommodation.rating ?? null}
+                  userRatingCount={dest.accommodation.user_rating_count ?? null}
+                  priceLevel={dest.accommodation.price_level ?? null}
+                  priceRange={dest.accommodation.priceRange ?? null}
+                  neighborhood={dest.accommodation.neighborhood ?? null}
+                  googleMapsUrl={dest.accommodation.google_maps_url ?? null}
+                  bookingUrl={dest.accommodation.booking_url ?? null}
+                  bookingPartner={dest.accommodation.booking_partner ?? null}
                   locationHint={dest.name}
                 />
               ) : (
