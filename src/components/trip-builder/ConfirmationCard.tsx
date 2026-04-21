@@ -113,6 +113,18 @@ function pickOpener(seed: number): string {
   return openers[seed % openers.length];
 }
 
+// Pick "a" vs "an" based on the phonetic start of the body. The only realistic
+// vowel-sound starts here are durations like "8-day" (eight), "11-day" (eleven),
+// "18-day" (eighteen). Everything else starts with a consonant sound.
+function articleFor(body: string): string {
+  const m = body.match(/^(\d+)-day\b/);
+  if (!m) return "a";
+  const n = m[1];
+  if (n === "8" || n === "11" || n === "18") return "an";
+  if (/^8[0-9]$/.test(n)) return "an";
+  return "a";
+}
+
 function pickCloser(vibes: string[], party: PremiumInputData["travelParty"], seed: number): string {
   const low = vibes.map((v) => v.toLowerCase()).join(" ");
   if (/nightlife|party/.test(low)) return "Let's make it fun.";
@@ -143,9 +155,10 @@ function buildSummary(data: PremiumInputData): string {
   const closer = pickCloser(data.vibes, data.travelParty, seed);
 
   const body = `${core}${vibeClause}${avoidClause}`;
+  const article = articleFor(body);
   const sentence = opener
-    ? `${opener}a ${body}.`
-    : `A ${body}.`;
+    ? `${opener}${article} ${body}.`
+    : `${article === "an" ? "An" : "A"} ${body}.`;
 
   return `${sentence} ${closer}`;
 }
