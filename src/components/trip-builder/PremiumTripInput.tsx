@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
-import { MapPin, Sparkles, ChevronDown, AlertCircle } from "lucide-react";
+import { MapPin, Sparkles, ChevronDown, AlertCircle, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -301,7 +301,7 @@ export function PremiumTripInput({ onGenerate, onSkipAI, initialDestination }: P
 
       {/* ── Generate CTA (fixed bottom) ── */}
       <div className="fixed bottom-0 inset-x-0 bg-background/90 backdrop-blur-lg border-t border-border z-10">
-        <div className="max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3">
+        <div className="max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 space-y-2">
           <Button
             onClick={handleGenerate}
             disabled={!canGenerate}
@@ -312,18 +312,26 @@ export function PremiumTripInput({ onGenerate, onSkipAI, initialDestination }: P
             Generate my trip
           </Button>
           {!canGenerate && (
-            <p className="text-xs text-muted-foreground text-center mt-1.5">
+            <p className="text-[11px] text-muted-foreground text-center -mt-0.5">
               Add a destination and dates to continue
             </p>
           )}
           {onSkipAI && (
             <button
               type="button"
-              onClick={() => canGenerate && onSkipAI(destination.trim(), dateRange)}
-              disabled={!canGenerate}
-              className="mt-2 w-full text-center text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => {
+                const trimmed = destination.trim();
+                if (!trimmed) return;
+                onSkipAI(trimmed, dateRange);
+              }}
+              disabled={destination.trim().length === 0}
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl text-[14px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#0D9488]/5"
+              style={{ color: "#0D9488" }}
             >
-              Skip AI — create manually
+              <span className="underline underline-offset-4 decoration-[#0D9488]/40">
+                Or create a trip manually
+              </span>
+              <ArrowRight className="h-4 w-4" />
             </button>
           )}
         </div>
