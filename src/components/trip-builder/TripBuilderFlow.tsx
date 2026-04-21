@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { parseEdgeError } from "@/lib/parseEdgeError";
 
 import { useTripBuilderDefaults, type BudgetLevel, type PaceLevel } from "./useTripBuilderDefaults";
 import { parseFreeText } from "./parseFreeText";
@@ -241,7 +242,14 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       });
 
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) {
+        // 200 OK with logical error in body — keep as a safety net even though
+        // PR #168 returns non-2xx for these cases.
+        const msg = typeof data.message === "string" && data.message.trim().length > 0
+          ? data.message
+          : data.error;
+        throw new Error(msg);
+      }
       if (!data) throw new Error("No data returned from generate-trip-itinerary");
 
       const normalized = normalizeAIResponse(data);
@@ -287,8 +295,9 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
 
       onSuccess?.(normalized, planId ?? undefined);
     } catch (err: any) {
-      console.error("[TripBuilder] Generation failed:", err);
-      setGenError(err?.message || "Failed to generate itinerary. Please try again.");
+      console.warn("[trip-builder error]", err);
+      const parsed = await parseEdgeError(err, "Failed to generate itinerary. Please try again.");
+      setGenError(parsed.message);
     } finally {
       setGenerating(false);
     }

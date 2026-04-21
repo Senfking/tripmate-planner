@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { parseEdgeError } from "@/lib/parseEdgeError";
 import type { CostProfile } from "@/lib/calibrateCost";
 
 export interface AIActivity {
@@ -192,8 +193,10 @@ export function useResultsState(tripId: string) {
 
         if (error) throw error;
         setAlternatives(data?.alternatives || []);
-      } catch {
-        toast.error("Failed to get alternatives");
+      } catch (err) {
+        console.warn("[trip-builder error]", err);
+        const parsed = await parseEdgeError(err, "Failed to get alternatives");
+        toast.error(parsed.message);
         setAlternativesFor(null);
       } finally {
         setLoadingAlternatives(false);
