@@ -9,7 +9,6 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Link,
   Preview,
   Section,
@@ -24,18 +23,17 @@ interface SignupEmailProps {
 }
 
 export const SignupEmail = ({
-  siteName,
   siteUrl,
   recipient,
   confirmationUrl,
 }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your email to start planning with {siteName}</Preview>
+    <Preview>Confirm your email to start planning with Junto</Preview>
     <Body style={main}>
       <Container style={outer}>
         <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="Junto" height="32" style={logo} />
+          <Text style={wordmark}>Junto</Text>
         </Section>
         <Container style={card}>
           <Heading style={h1}>Welcome aboard</Heading>
@@ -51,7 +49,7 @@ export const SignupEmail = ({
           </Text>
           <Section style={buttonSection}>
             <Button style={button} href={confirmationUrl}>
-              Confirm email
+              <span style={buttonText}>Confirm email</span>
             </Button>
           </Section>
           <Text style={footer}>
@@ -66,9 +64,6 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const LOGO_URL =
-  'https://dwtbqomfleihcvkfoopm.supabase.co/storage/v1/object/public/email-assets/junto-wordmark.png'
-
 const main = {
   background: 'linear-gradient(160deg, #0F3D3A 0%, #0D9488 60%, #0891b2 100%)',
   backgroundColor: '#0F3D3A',
@@ -79,8 +74,17 @@ const main = {
   minHeight: '100%',
 }
 const outer = { maxWidth: '560px', margin: '0 auto', padding: 0 }
-const logoSection = { padding: '8px 0 24px', textAlign: 'center' as const }
-const logo = { display: 'inline-block', height: '32px', width: 'auto' }
+const logoSection = { padding: '8px 0 28px', textAlign: 'center' as const }
+const wordmark = {
+  color: '#ffffff',
+  fontSize: '32px',
+  fontWeight: 800 as const,
+  letterSpacing: '-0.02em',
+  margin: 0,
+  textAlign: 'center' as const,
+  fontFamily:
+    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+}
 const card = {
   backgroundColor: '#ffffff',
   borderRadius: '20px',
@@ -105,6 +109,7 @@ const link = { color: '#0D9488', textDecoration: 'none', fontWeight: 600 as cons
 const buttonSection = { margin: '28px 0 8px' }
 const button = {
   backgroundColor: '#0D9488',
+  backgroundImage: 'linear-gradient(135deg, #0D9488 0%, #0891b2 100%)',
   color: '#ffffff',
   fontSize: '15px',
   fontWeight: 600 as const,
@@ -112,7 +117,12 @@ const button = {
   padding: '14px 32px',
   textDecoration: 'none',
   display: 'inline-block',
-  boxShadow: '0 4px 14px rgba(13, 148, 136, 0.35)',
+  boxShadow: '0 6px 18px rgba(13, 148, 136, 0.4)',
+}
+const buttonText = {
+  color: '#ffffff',
+  textDecoration: 'none',
+  fontWeight: 600 as const,
 }
 const footer = {
   fontSize: '13px',
@@ -122,7 +132,7 @@ const footer = {
 }
 const legal = {
   fontSize: '12px',
-  color: 'rgba(255,255,255,0.6)',
+  color: 'rgba(255,255,255,0.7)',
   textAlign: 'center' as const,
   margin: '24px 0 0',
 }
