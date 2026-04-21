@@ -26,11 +26,18 @@ export function BlankTripModal({ open, onOpenChange }: Props) {
   const [destination, setDestination] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [submitting, setSubmitting] = useState(false);
+  const [nameError, setNameError] = useState(false);
 
-  const canSubmit = name.trim().length > 0 && !!dateRange?.from && !submitting;
+  const hasName = name.trim().length > 0;
+  const canSubmit = hasName && !submitting;
 
   const handleSubmit = useCallback(async () => {
-    if (!user || !canSubmit) return;
+    if (!user) return;
+    if (!hasName) {
+      setNameError(true);
+      return;
+    }
+    if (!canSubmit) return;
     setSubmitting(true);
     const trimmedName = name.trim();
     const trimmedDest = destination.trim();
