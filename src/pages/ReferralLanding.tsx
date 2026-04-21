@@ -480,6 +480,14 @@ export default function ReferralLanding() {
                     {error}
                   </p>
                 )}
+                {info && (
+                  <p
+                    className="rounded-xl px-3 py-2 text-sm text-left"
+                    style={{ background: "rgba(13,148,136,0.18)", color: "#5eead4" }}
+                  >
+                    {info}
+                  </p>
+                )}
 
                 {/* Google OAuth */}
                 <button
