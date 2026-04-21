@@ -526,7 +526,9 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
   systemBlocks: ClaudeSystemBlock[],
   userContent: string,
   tool: ClaudeTool,
-  maxTokens = 4096,
+  maxTokens: number,
+  pipelineStartedAt: number,
+  step: string,
 ): Promise<ClaudeCallResult<T>> {
   if (!apiKey) {
     throw new Error("callClaudeHaiku: ANTHROPIC_API_KEY is empty");
@@ -534,6 +536,23 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
   if (systemBlocks.length === 0) {
     throw new Error("callClaudeHaiku: at least one system block is required");
   }
+
+  // Remaining wall-clock budget before Supabase SIGKILLs the function. If it's
+  // already gone, fail fast without spending an Anthropic call. Otherwise wrap
+  // the fetch in an AbortController so a slow-to-finish rank call gets
+  // interrupted cleanly instead of the whole function getting SIGKILLed.
+  const remaining =
+    PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+  if (remaining <= 0) {
+    throw new PipelineError(
+      step,
+      "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
+      `pipeline budget exhausted before "${step}" Anthropic call (elapsed ${Date.now() - pipelineStartedAt}ms)`,
+    );
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), remaining);
 
   const body = {
     model: HAIKU_MODEL,
@@ -550,88 +569,118 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     tool_choice: { type: "tool", name: tool.name },
   };
 
-  let res: Response;
   try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": ANTHROPIC_VERSION,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    throw new Error(`Anthropic network error calling "${tool.name}": ${(e as Error).message}`);
-  }
-
-  if (!res.ok) {
-    const errBody = await res.text().catch(() => "");
-    const snippet = errBody.slice(0, 500);
-    if (res.status === 401 || res.status === 403) {
-      throw new Error(
-        `Anthropic auth failed (${res.status}) for tool "${tool.name}". ` +
-          `Check ANTHROPIC_API_KEY in Supabase secrets. Body: ${snippet}`,
-      );
+    let res: Response;
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": ANTHROPIC_VERSION,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      const err = e as Error;
+      if (controller.signal.aborted || err?.name === "AbortError") {
+        throw new PipelineError(
+          step,
+          "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
+          `Anthropic fetch aborted after ${remaining}ms budget during step "${step}" (tool="${tool.name}")`,
+        );
+      }
+      throw new Error(`Anthropic network error calling "${tool.name}": ${err.message}`);
     }
-    if (res.status === 429) {
-      const retryAfter = res.headers.get("retry-after");
-      throw new Error(
-        `Anthropic rate-limited (429) for tool "${tool.name}"` +
-          (retryAfter ? ` — retry after ${retryAfter}s` : "") +
-          `. Body: ${snippet}`,
-      );
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      const snippet = errBody.slice(0, 500);
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          `Anthropic auth failed (${res.status}) for tool "${tool.name}". ` +
+            `Check ANTHROPIC_API_KEY in Supabase secrets. Body: ${snippet}`,
+        );
+      }
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("retry-after");
+        throw new Error(
+          `Anthropic rate-limited (429) for tool "${tool.name}"` +
+            (retryAfter ? ` — retry after ${retryAfter}s` : "") +
+            `. Body: ${snippet}`,
+        );
+      }
+      if (res.status >= 500) {
+        throw new Error(
+          `Anthropic server error ${res.status} for tool "${tool.name}". Body: ${snippet}`,
+        );
+      }
+      throw new Error(`Anthropic API error ${res.status} for tool "${tool.name}". Body: ${snippet}`);
     }
-    if (res.status >= 500) {
-      throw new Error(
-        `Anthropic server error ${res.status} for tool "${tool.name}". Body: ${snippet}`,
-      );
+
+    let data: Record<string, unknown>;
+    try {
+      data = await res.json();
+    } catch (e) {
+      const err = e as Error;
+      if (controller.signal.aborted || err?.name === "AbortError") {
+        throw new PipelineError(
+          step,
+          "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
+          `Anthropic response body aborted after ${remaining}ms budget during step "${step}" (tool="${tool.name}")`,
+        );
+      }
+      throw new Error(`Anthropic returned non-JSON body: ${err.message}`);
     }
-    throw new Error(`Anthropic API error ${res.status} for tool "${tool.name}". Body: ${snippet}`);
-  }
 
-  const data = await res.json().catch((e) => {
-    throw new Error(`Anthropic returned non-JSON body: ${(e as Error).message}`);
-  });
+    const usage: ClaudeUsage = {
+      input_tokens:
+        typeof (data as any)?.usage?.input_tokens === "number" ? (data as any).usage.input_tokens : 0,
+      output_tokens:
+        typeof (data as any)?.usage?.output_tokens === "number"
+          ? (data as any).usage.output_tokens
+          : 0,
+      cache_creation_input_tokens:
+        typeof (data as any)?.usage?.cache_creation_input_tokens === "number"
+          ? (data as any).usage.cache_creation_input_tokens
+          : 0,
+      cache_read_input_tokens:
+        typeof (data as any)?.usage?.cache_read_input_tokens === "number"
+          ? (data as any).usage.cache_read_input_tokens
+          : 0,
+    };
 
-  const usage: ClaudeUsage = {
-    input_tokens: typeof data?.usage?.input_tokens === "number" ? data.usage.input_tokens : 0,
-    output_tokens: typeof data?.usage?.output_tokens === "number" ? data.usage.output_tokens : 0,
-    cache_creation_input_tokens:
-      typeof data?.usage?.cache_creation_input_tokens === "number"
-        ? data.usage.cache_creation_input_tokens
-        : 0,
-    cache_read_input_tokens:
-      typeof data?.usage?.cache_read_input_tokens === "number"
-        ? data.usage.cache_read_input_tokens
-        : 0,
-  };
-
-  const blocks: Array<Record<string, unknown>> = Array.isArray(data?.content) ? data.content : [];
-  const toolBlock = blocks.find(
-    (b) => b?.type === "tool_use" && b?.name === tool.name,
-  );
-
-  if (!toolBlock) {
-    const textBlock = blocks.find((b) => b?.type === "text");
-    const textSnippet =
-      typeof (textBlock as { text?: unknown })?.text === "string"
-        ? ((textBlock as { text: string }).text).slice(0, 500)
-        : "";
-    throw new Error(
-      `Anthropic response did not include a tool_use block for "${tool.name}". ` +
-        `stop_reason=${data?.stop_reason ?? "unknown"}. Text content: ${textSnippet}`,
+    const blocks: Array<Record<string, unknown>> = Array.isArray((data as any)?.content)
+      ? ((data as any).content as Array<Record<string, unknown>>)
+      : [];
+    const toolBlock = blocks.find(
+      (b) => b?.type === "tool_use" && b?.name === tool.name,
     );
-  }
 
-  const input = (toolBlock as { input?: unknown }).input;
-  if (!input || typeof input !== "object") {
-    throw new Error(
-      `Anthropic tool_use block for "${tool.name}" had no input object (got ${typeof input})`,
-    );
-  }
+    if (!toolBlock) {
+      const textBlock = blocks.find((b) => b?.type === "text");
+      const textSnippet =
+        typeof (textBlock as { text?: unknown })?.text === "string"
+          ? ((textBlock as { text: string }).text).slice(0, 500)
+          : "";
+      throw new Error(
+        `Anthropic response did not include a tool_use block for "${tool.name}". ` +
+          `stop_reason=${(data as any)?.stop_reason ?? "unknown"}. Text content: ${textSnippet}`,
+      );
+    }
 
-  return { data: input as T, usage };
+    const input = (toolBlock as { input?: unknown }).input;
+    if (!input || typeof input !== "object") {
+      throw new Error(
+        `Anthropic tool_use block for "${tool.name}" had no input object (got ${typeof input})`,
+      );
+    }
+
+    return { data: input as T, usage };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -759,6 +808,7 @@ async function parseIntent(
   body: TripBuilderRequest,
   destinationHint: string,
   logger: LLMLogger,
+  pipelineStartedAt: number,
 ): Promise<Intent> {
   const result = await callClaudeHaiku<{
     destination: string;
@@ -775,6 +825,8 @@ async function parseIntent(
     buildIntentUserMessage(body, destinationHint),
     INTENT_TOOL,
     1024,
+    pipelineStartedAt,
+    "parseIntent",
   );
 
   await logger.log({
@@ -869,6 +921,7 @@ async function pickSurpriseDestination(
   intent: Intent,
   numDays: number,
   logger: LLMLogger,
+  pipelineStartedAt: number,
 ): Promise<string> {
   const result = await callClaudeHaiku<{ destination: string; rationale: string }>(
     anthropicKey,
@@ -876,6 +929,8 @@ async function pickSurpriseDestination(
     buildSurpriseUserMessage(intent, numDays),
     SURPRISE_TOOL,
     512,
+    pipelineStartedAt,
+    "pickSurpriseDestination",
   );
 
   await logger.log({
@@ -2250,6 +2305,7 @@ async function rankAndEnrich(
   googleKey: string,
   geo: GeocodeResult,
   logger: LLMLogger,
+  pipelineStartedAt: number,
 ): Promise<PipelineResult> {
   const currency = resolveTripCurrency(geo.country_code);
 
@@ -2266,6 +2322,8 @@ async function rankAndEnrich(
     buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
     RANKER_TOOL,
     8192,
+    pipelineStartedAt,
+    "rankAndEnrich",
   );
 
   await logger.log({
@@ -2931,6 +2989,7 @@ Deno.serve(async (req) => {
       body,
       surpriseMe ? "" : rawDest,
       logger,
+      pipelineStartedAt,
     );
     if (intent.destination) loggedDestination = intent.destination;
 
@@ -2943,6 +3002,7 @@ Deno.serve(async (req) => {
         intent,
         numDays,
         logger,
+        pipelineStartedAt,
       );
       loggedDestination = intent.destination;
     }
@@ -3031,6 +3091,7 @@ Deno.serve(async (req) => {
       googleKey,
       geo,
       logger,
+      pipelineStartedAt,
     );
 
     // ---- Step 7-9: junto picks, affiliate URLs, validation ----
