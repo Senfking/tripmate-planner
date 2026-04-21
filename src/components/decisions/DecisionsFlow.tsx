@@ -215,7 +215,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
     });
   };
 
-  const content = (
+  const formBody = (
     <div className="space-y-4" data-vaul-no-drag>
       <div className="space-y-1.5">
         <Label>Question</Label>
@@ -223,6 +223,7 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
           placeholder="e.g. Airbnb or hotel?"
           value={prefTitle}
           onChange={(e) => setPrefTitle(e.target.value)}
+          enterKeyHint="next"
         />
       </div>
 
@@ -237,6 +238,13 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
                 placeholder={isLastEmpty ? "Add another option…" : `Option ${i + 1}`}
                 value={opt}
                 onChange={(e) => updateOption(i, e.target.value)}
+                enterKeyHint={isLastEmpty ? "done" : "next"}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    (e.currentTarget as HTMLInputElement).blur();
+                  }
+                }}
               />
               {!isLastEmpty && filledCount > 2 && (
                 <Button
@@ -265,19 +273,26 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
         <ListChecks className="h-4 w-4" />
         <span className="font-medium">Allow multiple answers</span>
       </button>
-
-      <Button
-        className="w-full"
-        onClick={handleCreatePref}
-        disabled={
-          !prefTitle.trim() ||
-          prefOptions.filter((o) => o.trim()).length < 2 ||
-          createPoll.isPending
-        }
-      >
-        {createPoll.isPending ? "Creating…" : "Create poll"}
-      </Button>
     </div>
+  );
+
+  const submitButton = (
+    <Button
+      className="w-full"
+      onClick={() => {
+        if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        handleCreatePref();
+      }}
+      disabled={
+        !prefTitle.trim() ||
+        prefOptions.filter((o) => o.trim()).length < 2 ||
+        createPoll.isPending
+      }
+    >
+      {createPoll.isPending ? "Creating…" : "Create poll"}
+    </Button>
   );
 
   return (
