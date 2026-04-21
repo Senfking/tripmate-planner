@@ -80,7 +80,7 @@ const wordmark = {
   color: '#ffffff',
   fontSize: '32px',
   fontWeight: 800 as const,
-  letterSpacing: '-0.02em',
+  letterSpacing: '0.18em',
   margin: 0,
   textAlign: 'center' as const,
   fontFamily:
