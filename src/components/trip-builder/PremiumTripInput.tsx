@@ -146,7 +146,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
       {/* ── Required fields card ── */}
       <div className="rounded-2xl bg-card border border-border shadow-sm p-5 space-y-4">
         {/* Destination */}
-        <div className="space-y-1.5">
+        <div ref={destRef} className="space-y-1.5 scroll-mt-24">
           <label className="text-[13px] font-semibold text-foreground">Where to? *</label>
           <div className="relative">
             <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -154,10 +154,19 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               placeholder="e.g. Bali"
-              className="h-12 pl-10 rounded-xl bg-background border-border text-[15px]"
+              className={cn(
+                "h-12 pl-10 rounded-xl bg-background text-[15px]",
+                showErrors && destMissing
+                  ? "border-red-300 focus-visible:ring-red-200"
+                  : "border-border"
+              )}
+              aria-invalid={showErrors && destMissing}
               autoFocus
             />
           </div>
+          {showErrors && destMissing && (
+            <p className="text-[12px] text-red-500 pl-1 animate-fade-in">Required</p>
+          )}
           {looksMultiDestination && (
             <p className="text-[12px] text-muted-foreground pl-1 leading-snug animate-fade-in">
               We currently support single-destination trips. Try one city at a time for best results.
@@ -166,9 +175,17 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
         </div>
 
         {/* Date range */}
-        <div className="space-y-1.5">
+        <div ref={dateRef} className="space-y-1.5 scroll-mt-24">
           <label className="text-[13px] font-semibold text-foreground">When? *</label>
-          <DateRangePicker value={dateRange} onChange={setDateRange} className="w-full" />
+          <div className={cn(
+            "rounded-xl",
+            showErrors && dateMissing && "ring-1 ring-red-300"
+          )}>
+            <DateRangePicker value={dateRange} onChange={setDateRange} className="w-full" />
+          </div>
+          {showErrors && dateMissing && (
+            <p className="text-[12px] text-red-500 pl-1 animate-fade-in">Required</p>
+          )}
         </div>
       </div>
 
