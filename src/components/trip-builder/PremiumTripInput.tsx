@@ -109,7 +109,12 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   }, []);
 
   const handleGenerate = useCallback(() => {
-    if (!canGenerate) return;
+    if (!canGenerate) {
+      setShowErrors(true);
+      const target = destMissing ? destRef.current : dateRef.current;
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     onGenerate({
       destination: destination.trim(),
       dateRange,
@@ -120,7 +125,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
       dealBreakers: dealBreakers.trim(),
       freeText: freeText.trim(),
     });
-  }, [destination, dateRange, travelParty, kidsAges, budgetLevel, vibes, dealBreakers, freeText, canGenerate, onGenerate]);
+  }, [destination, dateRange, travelParty, kidsAges, budgetLevel, vibes, dealBreakers, freeText, canGenerate, destMissing, onGenerate]);
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 pb-32">
