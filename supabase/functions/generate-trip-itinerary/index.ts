@@ -486,6 +486,9 @@ interface PipelineResult {
   currency: string;
   packing_suggestions: string[];
   total_activities: number;
+  // Propagated from Intent so the frontend budget helper can pick a sensible
+  // per-night default when Places returns no hotel pricing.
+  budget_tier: "budget" | "mid-range" | "premium";
 }
 
 interface ClaudeUsage {
@@ -2417,6 +2420,7 @@ async function rankAndEnrich(
     currency,
     packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions.slice(0, 10) : [],
     total_activities,
+    budget_tier: intent.budget_tier,
   };
 }
 

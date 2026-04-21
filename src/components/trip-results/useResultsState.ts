@@ -97,6 +97,9 @@ export interface AITripResult {
   packing_suggestions: string[];
   total_activities: number;
   origin_city?: string;
+  // Used by budgetCalc to pick a per-night accommodation default when Places
+  // returns no hotel pricing. Optional so older cached plans still typecheck.
+  budget_tier?: "budget" | "mid-range" | "premium" | "luxury";
 }
 
 export function useResultsState(tripId: string) {

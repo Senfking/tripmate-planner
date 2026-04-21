@@ -124,7 +124,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   // Single source of truth for budget math — mirrors the sticky footer,
   // any dashboard summary, and the preview breakdown. Avoids the drift
   // CLAUDE.md flags: every surface routes through computeTripBudget.
-  const costBreakdown = useMemo(() => computeTripBudget(result), [result]);
+  // budget_tier gates the accommodation fallback when Places returns
+  // no pricing — otherwise a luxury trip would default to mid-range.
+  const costBreakdown = useMemo(
+    () => computeTripBudget(result, result.budget_tier),
+    [result],
+  );
 
   const dateRange = useMemo(() => {
     if (result.destinations.length === 0) return "";
