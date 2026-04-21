@@ -173,6 +173,7 @@ export function useResultsState(tripId: string) {
         if (error) throw error;
         setAlternatives(data?.alternatives || []);
       } catch (err) {
+        console.warn("[trip-builder error]", err);
         const parsed = await parseEdgeError(err, "Failed to get alternatives");
         toast.error(parsed.message);
         setAlternativesFor(null);

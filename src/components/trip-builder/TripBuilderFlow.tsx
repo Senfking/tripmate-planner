@@ -295,7 +295,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
 
       onSuccess?.(normalized, planId ?? undefined);
     } catch (err: any) {
-      console.error("[TripBuilder] Generation failed:", err);
+      console.warn("[trip-builder error]", err);
       const parsed = await parseEdgeError(err, "Failed to generate itinerary. Please try again.");
       setGenError(parsed.message);
     } finally {

@@ -183,7 +183,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       setPhase("results");
       trackEvent("ai_trip_generated", { standalone: true, destination: inputData.destination });
     } catch (err: any) {
-      console.error("[StandaloneBuilder] Generation failed:", err);
+      console.warn("[trip-builder error]", err);
       const parsed = await parseEdgeError(err, "Failed to generate itinerary. Please try again.");
       setGenError(parsed.message);
     }
