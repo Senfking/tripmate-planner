@@ -200,22 +200,22 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
       {/* Year picker overlay — tap outside the grid to close */}
       {yearPickerOpen && (
         <div
-          className="absolute inset-0 z-20 bg-background/95 backdrop-blur-sm flex flex-col"
+          className="absolute inset-0 z-20 bg-white dark:bg-card flex flex-col"
           onClick={() => setYearPickerOpen(false)}
         >
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+          <div className="flex items-center justify-between px-3 py-2">
             <span className="text-sm font-semibold text-foreground">Select year</span>
             <button
               type="button"
               onClick={() => setYearPickerOpen(false)}
               aria-label="Close year picker"
-              className="h-9 w-9 inline-flex items-center justify-center rounded-full hover:bg-muted"
+              className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-muted"
             >
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
           <div
-            className="grid grid-cols-3 gap-2 p-4 overflow-y-auto"
+            className="grid grid-cols-3 gap-2 px-3 pb-3"
             onClick={(e) => e.stopPropagation()}
           >
             {years.map((y) => {
@@ -226,7 +226,7 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
                   type="button"
                   onClick={() => handleYearPick(y)}
                   className={cn(
-                    "h-12 rounded-xl text-sm font-semibold transition-colors",
+                    "h-11 rounded-xl text-sm font-semibold transition-colors",
                     selected
                       ? "text-white shadow-sm"
                       : "text-foreground/80 hover:bg-[#0D9488]/10 hover:text-[#0D9488]"
