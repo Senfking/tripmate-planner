@@ -103,8 +103,11 @@ export function useItinerary(tripId: string) {
       if (error) throw error;
     },
     onSuccess: (_data, item) => {
-      trackEvent("itinerary_item_updated", { trip_id: tripId, item_id: item.id, status: item.status || "idea" }, user?.id);
+      qc.setQueryData<ItineraryItem[]>(key, (old) =>
+        old?.map((i) => i.id === item.id ? { ...i, ...item, updated_at: new Date().toISOString() } : i)
+      );
       qc.invalidateQueries({ queryKey: key });
+      trackEvent("itinerary_item_updated", { trip_id: tripId, item_id: item.id, status: item.status || "idea" }, user?.id);
       toast.success("Activity updated");
     },
     onError: (e: any) => toast.error(friendlyErrorMessage(e, "Failed to update activity")),
@@ -116,8 +119,9 @@ export function useItinerary(tripId: string) {
       if (error) throw error;
     },
     onSuccess: (_data, id) => {
-      trackEvent("itinerary_item_deleted", { trip_id: tripId, item_id: id }, user?.id);
+      qc.setQueryData<ItineraryItem[]>(key, (old) => old?.filter((i) => i.id !== id));
       qc.invalidateQueries({ queryKey: key });
+      trackEvent("itinerary_item_deleted", { trip_id: tripId, item_id: id }, user?.id);
       toast.success("Activity deleted");
     },
     onError: (e: any) => toast.error(friendlyErrorMessage(e, "Failed to delete activity")),
