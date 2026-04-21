@@ -2745,17 +2745,68 @@ class PipelineError extends Error {
   }
 }
 
+// Supabase Edge Functions on the current plan wall-clock cap out at 150s
+// (free plan: 30s). We throw a clean PipelineError a few seconds before then
+// so the top-level catch has time to log and return a structured response
+// instead of getting SIGKILLed with a generic 504.
+const PIPELINE_WALL_CLOCK_MS = 150_000;
+const PIPELINE_TIMEOUT_BUFFER_MS = 3_000;
+const PIPELINE_TIMEOUT_MS = PIPELINE_WALL_CLOCK_MS - PIPELINE_TIMEOUT_BUFFER_MS;
+
+function checkPipelineTimeout(startedAt: number, nextStep: string): void {
+  const elapsed = Date.now() - startedAt;
+  if (elapsed > PIPELINE_TIMEOUT_MS) {
+    throw new PipelineError(
+      "timeout",
+      "Trip generation took too long — try a smaller destination or shorter trip.",
+      `elapsed ${elapsed}ms exceeded budget ${PIPELINE_TIMEOUT_MS}ms before step "${nextStep}"`,
+    );
+  }
+}
+
+// Fire-and-forget error logging. MUST NOT throw — if the insert fails we swallow
+// because the top-level catch has already decided the response body and we
+// never want logging to shadow the actual pipeline error.
+async function logGenerationError(
+  svcClient: ReturnType<typeof createClient>,
+  row: {
+    user_id: string | null;
+    destination: string | null;
+    step: string;
+    error_message: string;
+    error_raw: Record<string, unknown>;
+    duration_ms: number;
+  },
+): Promise<void> {
+  try {
+    await svcClient.from("ai_generation_errors").insert(row);
+  } catch {
+    // intentionally swallowed
+  }
+}
+
 Deno.serve(async (req) => {
   console.log(
-    "[generate-trip-itinerary] v1.1 deployed — geocode via Places API + structured errors",
+    "[generate-trip-itinerary] v1.2 deployed — failure logging + timeout guard",
     new Date().toISOString(),
   );
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestStartedAt = Date.now();
+  // Populated as the pipeline progresses so the top-level catch can log rich
+  // context even if we crash mid-step.
+  let loggedUserId: string | null = null;
+  let loggedDestination: string | null = null;
+  let loggedStep = "init";
+  // Created lazily (after auth) so we can log errors even when auth itself
+  // fails. For pre-auth failures we leave this null — nothing to log.
+  let svcClientForLogging: ReturnType<typeof createClient> | null = null;
+
   try {
     // ---- Auth ----
+    loggedStep = "auth";
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return jsonResponse({ success: false, error: "Unauthorized" }, 401);
@@ -2769,8 +2820,12 @@ Deno.serve(async (req) => {
     if (authErr || !user) {
       return jsonResponse({ success: false, error: "Unauthorized" }, 401);
     }
+    loggedUserId = user.id;
 
     const body: TripBuilderRequest = await req.json();
+    if (typeof body?.destination === "string" && body.destination.trim()) {
+      loggedDestination = body.destination.trim();
+    }
 
     // =========================================================================
     // ALTERNATIVES_MODE BRANCH — preserved verbatim, still uses Lovable / Gemini
@@ -2861,6 +2916,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    svcClientForLogging = svcClient;
     const logger = makeLLMLogger(svcClient, user.id);
 
     // ---- Step 1: parse intent ----
@@ -2868,24 +2924,32 @@ Deno.serve(async (req) => {
     // runs next with the parsed vibes/must_haves/must_avoids and fills in
     // intent.destination. This ordering means the picker sees the same
     // extracted must_avoids the ranker will later enforce.
+    loggedStep = "parseIntent";
+    checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const intent = await parseIntent(
       anthropicKey,
       body,
       surpriseMe ? "" : rawDest,
       logger,
     );
+    if (intent.destination) loggedDestination = intent.destination;
 
     // ---- Step 1.5: surprise destination picker (only when surprise_me) ----
     if (surpriseMe) {
+      loggedStep = "pickSurpriseDestination";
+      checkPipelineTimeout(pipelineStartedAt, loggedStep);
       intent.destination = await pickSurpriseDestination(
         anthropicKey,
         intent,
         numDays,
         logger,
       );
+      loggedDestination = intent.destination;
     }
 
     // ---- Cache check by intent hash (BEFORE Places spend) ----
+    loggedStep = "cacheLookup";
+    checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const cacheKey = await buildIntentCacheKey(intent, numDays);
     {
       const { data: cached, error: cacheErr } = await svcClient
@@ -2916,6 +2980,8 @@ Deno.serve(async (req) => {
     //               gets the country_code rather than parsing the string) ----
     // Throws PipelineError on API failure or no-match; top-level catch
     // converts it into a structured { error, step, message } 500 response.
+    loggedStep = "geocodeDestination";
+    checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const geo = await geocodeDestination(googleKey, intent.destination, svcClient);
 
     // ---- Step 2b: pacing skeleton ----
@@ -2934,6 +3000,8 @@ Deno.serve(async (req) => {
     }
 
     // Step 4 + Step 5 in parallel
+    loggedStep = "searchPlacesAndEvents";
+    checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const [places, events] = await Promise.all([
       searchPlacesBatch(queries, googleKey),
       searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
@@ -2952,6 +3020,8 @@ Deno.serve(async (req) => {
     for (const p of places) allPlacesById.set(p.id, p);
 
     // ---- Step 6: rank + enrich ----
+    loggedStep = "rankAndEnrich";
+    checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const ranked = await rankAndEnrich(
       anthropicKey,
       intent,
@@ -2982,6 +3052,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    loggedStep = "validateActivities";
     const validated = validateActivities(ranked, allPlacesById, { lat: geo.lat, lng: geo.lng });
 
     // ---- Cache write (fail loud, AFTER validation passes) ----
@@ -3038,23 +3109,40 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: true, ...validated });
   } catch (e) {
     console.error("generate-trip-itinerary error:", e);
-    if (e instanceof PipelineError) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "trip_build_failed",
-          step: e.step,
-          message: e.userMessage,
+
+    const err = e as Error;
+    const isPipelineErr = err instanceof PipelineError;
+    const step = isPipelineErr ? (err as PipelineError).step : loggedStep;
+    const userMessage = isPipelineErr
+      ? (err as PipelineError).userMessage
+      : "Something went wrong building your trip. Please try again.";
+
+    // Fire-and-forget: must not block or delay the user-facing error response
+    // and must not throw. Only attempt if we got past auth and created the
+    // service-role client — pre-auth failures don't get logged (we have no
+    // table access and no user context worth recording).
+    if (svcClientForLogging) {
+      logGenerationError(svcClientForLogging, {
+        user_id: loggedUserId,
+        destination: loggedDestination,
+        step,
+        error_message: isPipelineErr ? (err as PipelineError).userMessage : err?.message ?? String(err),
+        error_raw: {
+          name: err?.name ?? "Error",
+          message: err?.message ?? String(err),
+          stack: err?.stack ?? null,
+          is_pipeline_error: isPipelineErr,
         },
-        500,
-      );
+        duration_ms: Date.now() - requestStartedAt,
+      }).catch(() => {});
     }
+
     return jsonResponse(
       {
         success: false,
         error: "trip_build_failed",
-        step: "unknown",
-        message: "Something went wrong building your trip. Please try again.",
+        step,
+        message: userMessage,
       },
       500,
     );

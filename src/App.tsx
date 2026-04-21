@@ -36,6 +36,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Admin = lazy(() => import("./pages/Admin"));
+const AdminAIErrors = lazy(() => import("./pages/AdminAIErrors"));
 const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
 const Landing = lazy(() => import("./pages/Landing"));
@@ -151,6 +152,7 @@ function AppInner() {
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/app/admin" element={<Admin />} />
+              <Route path="/app/admin/ai-errors" element={<AdminAIErrors />} />
               <Route element={<AppLayout />}>
                 <Route path="/app/trips" element={<TripList />} />
                 <Route path="/app/trips/new" element={<TripNew />} />
