@@ -78,7 +78,7 @@ const logoSection = { padding: '8px 0 28px', textAlign: 'center' as const }
 const wordmark = {
   color: '#ffffff',
   fontSize: '32px',
-  fontWeight: 800 as const,
+  fontWeight: 500 as const,
   letterSpacing: '0.18em',
   margin: 0,
   textAlign: 'center' as const,
