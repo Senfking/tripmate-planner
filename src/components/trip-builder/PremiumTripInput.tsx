@@ -350,9 +350,8 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
         <div className="max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 space-y-2">
           <Button
             onClick={handleGenerate}
-            disabled={!canGenerate}
             className="w-full h-12 rounded-xl font-semibold text-[15px] text-primary-foreground gap-2"
-            style={canGenerate ? { background: "var(--gradient-primary)" } : undefined}
+            style={{ background: "var(--gradient-primary)" }}
           >
             <Sparkles className="h-4 w-4" />
             Generate my trip
