@@ -172,6 +172,32 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
   const [prefTitle, setPrefTitle] = useState("");
   const [prefOptions, setPrefOptions] = useState<string[]>(["", ""]);
   const [prefMultiSelect, setPrefMultiSelect] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (!isMobile || !prefOpen) {
+      setKeyboardHeight(0);
+      return;
+    }
+
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const updateKeyboard = () => {
+      const nextKeyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardHeight(nextKeyboardHeight);
+    };
+
+    updateKeyboard();
+    vv.addEventListener("resize", updateKeyboard);
+    vv.addEventListener("scroll", updateKeyboard);
+
+    return () => {
+      vv.removeEventListener("resize", updateKeyboard);
+      vv.removeEventListener("scroll", updateKeyboard);
+      setKeyboardHeight(0);
+    };
+  }, [isMobile, prefOpen]);
 
   const resetForm = () => {
     setPrefTitle("");
@@ -337,18 +363,22 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
         );
         if (isMobile) {
           return (
-            <Drawer open={prefOpen} onOpenChange={setPrefOpen} shouldScaleBackground={false}>
+            <Drawer open={prefOpen} onOpenChange={setPrefOpen} shouldScaleBackground={false} repositionInputs={false}>
               <DrawerTrigger asChild>{trigger}</DrawerTrigger>
               <DrawerContent
-                className="max-h-[92dvh] flex flex-col"
+                className="flex max-h-[92dvh] flex-col"
+                style={{
+                  maxHeight: `calc(100dvh - env(safe-area-inset-top, 0px) - 20px - ${keyboardHeight}px)`,
+                  transition: "max-height 0.15s ease-out",
+                }}
                 onPointerDownOutside={(e) => e.preventDefault()}
               >
                 <DrawerHeader className="text-left px-4 pb-2 shrink-0">
                   <DrawerTitle>New poll</DrawerTitle>
                 </DrawerHeader>
                 <div
-                  className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4"
-                  style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4"
+                  style={{ WebkitOverflowScrolling: "touch" }}
                 >
                   {formBody}
                 </div>
