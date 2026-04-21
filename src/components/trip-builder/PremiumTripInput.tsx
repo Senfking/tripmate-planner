@@ -74,8 +74,14 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   const [freeText, setFreeText] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [freeTextOpen, setFreeTextOpen] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
-  const canGenerate = destination.trim().length > 0 && !!dateRange?.from;
+  const destRef = useRef<HTMLDivElement>(null);
+  const dateRef = useRef<HTMLDivElement>(null);
+
+  const destMissing = destination.trim().length === 0;
+  const dateMissing = !dateRange?.from;
+  const canGenerate = !destMissing && !dateMissing;
 
   // Heuristic: warn (don't block) when the destination string suggests
   // multiple locations. We check for " and ", "+", "/" or 2+ commas
