@@ -52,6 +52,10 @@ function normalizeDealBreaker(raw: string): string | null {
   // Driving
   if (/driv/.test(text)) return "no driving";
 
+  // Stairs / steps — accessibility signal that "strenuous" would flatten.
+  // Check before the generic strenuous fallback.
+  if (/\b(stair|stairs|steps)\b/.test(text)) return "easy on the stairs";
+
   // Strenuous
   if (/(hik|trek|strenuous|climb|steep)/.test(text)) return "nothing too strenuous";
 
