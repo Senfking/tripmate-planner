@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import type { DateRange } from "react-day-picker";
 import { MapPin, Sparkles, ChevronDown, AlertCircle, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
