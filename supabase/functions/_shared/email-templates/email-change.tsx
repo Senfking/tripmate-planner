@@ -33,7 +33,7 @@ export const EmailChangeEmail = ({
     <Body style={main}>
       <Container style={outer}>
         <Section style={logoSection}>
-          <Text style={wordmark}>Junto</Text>
+          <Text style={wordmark}>JUNTO</Text>
         </Section>
         <Container style={card}>
           <Heading style={h1}>Confirm your email change</Heading>
@@ -80,7 +80,7 @@ const wordmark = {
   color: '#ffffff',
   fontSize: '32px',
   fontWeight: 800 as const,
-  letterSpacing: '-0.02em',
+  letterSpacing: '0.18em',
   margin: 0,
   textAlign: 'center' as const,
   fontFamily:
