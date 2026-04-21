@@ -29,7 +29,7 @@ export const RecoveryEmail = ({
     <Body style={main}>
       <Container style={outer}>
         <Section style={logoSection}>
-          <Text style={wordmark}>Junto</Text>
+          <Text style={wordmark}>JUNTO</Text>
         </Section>
         <Container style={card}>
           <Heading style={h1}>Reset your password</Heading>
