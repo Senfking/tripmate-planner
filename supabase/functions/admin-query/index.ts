@@ -1320,6 +1320,25 @@ Deno.serve(async (req) => {
         })));
       }
 
+      case "ai_generation_errors_feed": {
+        const { data } = await db.from("ai_generation_errors")
+          .select("id, created_at, user_id, destination, step, error_message, error_raw, duration_ms")
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        const userIds = [...new Set((data || []).map((r: any) => r.user_id).filter(Boolean))];
+        let userNames: Record<string, string> = {};
+        if (userIds.length > 0) {
+          const { data: profiles } = await db.from("profiles").select("id, display_name").in("id", userIds);
+          (profiles || []).forEach((p: any) => { userNames[p.id] = p.display_name; });
+        }
+
+        return json((data || []).map((r: any) => ({
+          ...r,
+          display_name: r.user_id ? (userNames[r.user_id] || "Unknown") : "Anonymous",
+        })));
+      }
+
       case "notifications_list": {
         const { data } = await db.from("admin_notifications")
           .select("*")

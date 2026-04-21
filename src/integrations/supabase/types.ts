@@ -56,6 +56,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_generation_errors: {
+        Row: {
+          created_at: string
+          destination: string | null
+          duration_ms: number | null
+          error_message: string | null
+          error_raw: Json | null
+          id: string
+          step: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          destination?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          error_raw?: Json | null
+          id?: string
+          step?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          destination?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          error_raw?: Json | null
+          id?: string
+          step?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_request_log: {
         Row: {
           cached: boolean | null
