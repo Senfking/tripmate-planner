@@ -167,7 +167,14 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   }, [inputData, user]);
 
   const handleCreateTrip = useCallback(async () => {
-    if (!results || !user) return;
+    if (!results) {
+      toast.error("Plan isn't ready yet — please wait a moment.");
+      return;
+    }
+    if (!user) {
+      toast.error("You need to be signed in to save a trip.");
+      return;
+    }
     setCreatingTrip(true);
     try {
       const firstDest = results.destinations[0];
@@ -195,7 +202,8 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       toast.success("Trip created!");
       navigate(`/app/trips/${trip.id}`, { replace: true });
     } catch (err: any) {
-      toast.error(err?.message || "Failed to create trip");
+      console.error("[StandaloneBuilder] create trip failed:", err);
+      toast.error(err?.message || "Couldn't save your trip. Please try again.");
     } finally {
       setCreatingTrip(false);
     }

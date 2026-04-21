@@ -32,7 +32,10 @@ export function BlankTripModal({ open, onOpenChange }: Props) {
   const canSubmit = hasName && !submitting;
 
   const handleSubmit = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("You need to be signed in to create a trip.");
+      return;
+    }
     if (!hasName) {
       setNameError(true);
       return;
@@ -62,7 +65,8 @@ export function BlankTripModal({ open, onOpenChange }: Props) {
       setDateRange(undefined);
       navigate(`/app/trips/${trip.id}`);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to create trip");
+      console.error("[BlankTripModal] create trip failed:", err);
+      toast.error(err?.message || "Couldn't create your trip. Please try again.");
       setSubmitting(false);
     }
   }, [user, canSubmit, hasName, name, destination, dateRange, navigate, onOpenChange]);
