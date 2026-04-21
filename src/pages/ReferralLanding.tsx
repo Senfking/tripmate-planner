@@ -184,8 +184,29 @@ export default function ReferralLanding() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setInfo(null);
+    if (!email) {
+      setError("Enter your email above, then tap Forgot password.");
+      return;
+    }
+    setResetLoading(true);
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResetLoading(false);
+    if (err) {
+      setError(friendlyError(err.message));
+    } else {
+      setInfo(`We sent a reset link to ${email}. Check your inbox.`);
+    }
+  };
 
   // Redirect if already authenticated
   useEffect(() => {
