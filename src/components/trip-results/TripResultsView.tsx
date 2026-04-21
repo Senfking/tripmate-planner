@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -433,7 +433,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               </div>
 
               {/* Accommodation card per destination */}
-              {dest.accommodation && (
+              {dest.accommodation ? (
                 <AccommodationCard
                   name={dest.accommodation.name}
                   stars={dest.accommodation.stars}
@@ -442,6 +442,21 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   bookingUrl={dest.accommodation.booking_url}
                   locationHint={dest.name}
                 />
+              ) : (
+                <div className="mx-4 mb-4 rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
+                  <Building2 className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-foreground">Hotel search coming soon</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    We'll suggest stays matched to your trip
+                  </p>
+                  <button
+                    onClick={() => toast.success("We'll let you know when hotel search is available!")}
+                    className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0D9488]/15 border border-[#0D9488]/25 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/25 transition-colors"
+                  >
+                    <Bell className="h-3 w-3" />
+                    Notify me
+                  </button>
+                </div>
               )}
 
               {/* Day cards */}
