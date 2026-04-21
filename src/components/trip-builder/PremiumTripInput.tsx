@@ -26,7 +26,7 @@ export type PremiumInputData = {
 
 type Props = {
   onGenerate: (data: PremiumInputData) => void;
-  onSkipAI?: (destination: string, dateRange: DateRange | undefined) => void;
+  onStartBlank?: () => void;
   initialDestination?: string;
 };
 
@@ -62,7 +62,7 @@ const MAX_VIBES = 3;
 
 /* ─── Component ───────────────────────────────────── */
 
-export function PremiumTripInput({ onGenerate, onSkipAI, initialDestination }: Props) {
+export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination }: Props) {
   const [destination, setDestination] = useState(initialDestination ?? "");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [travelParty, setTravelParty] = useState<TravelParty | null>(null);
@@ -76,6 +76,19 @@ export function PremiumTripInput({ onGenerate, onSkipAI, initialDestination }: P
   const [freeTextOpen, setFreeTextOpen] = useState(false);
 
   const canGenerate = destination.trim().length > 0 && !!dateRange?.from;
+
+  // Heuristic: warn (don't block) when the destination string suggests
+  // multiple locations. We check for " and ", "+", "/" or 2+ commas
+  // (regional names like "South Tyrol, Italy" have a single comma).
+  const looksMultiDestination = useMemo(() => {
+    const t = destination.trim();
+    if (t.length < 3) return false;
+    if (/\s+and\s+/i.test(t)) return true;
+    if (/[+/]/.test(t)) return true;
+    const commaCount = (t.match(/,/g) || []).length;
+    if (commaCount >= 2) return true;
+    return false;
+  }, [destination]);
 
   const toggleVibe = useCallback((label: string) => {
     setVibes((prev) => {
@@ -129,11 +142,16 @@ export function PremiumTripInput({ onGenerate, onSkipAI, initialDestination }: P
             <Input
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
-              placeholder="Bali, Tokyo, Lisbon and Porto..."
+              placeholder="e.g. Bali"
               className="h-12 pl-10 rounded-xl bg-background border-border text-[15px]"
               autoFocus
             />
           </div>
+          {looksMultiDestination && (
+            <p className="text-[12px] text-muted-foreground pl-1 leading-snug animate-fade-in">
+              We currently support single-destination trips. Try one city at a time for best results.
+            </p>
+          )}
         </div>
 
         {/* Date range */}
@@ -316,20 +334,15 @@ export function PremiumTripInput({ onGenerate, onSkipAI, initialDestination }: P
               Add a destination and dates to continue
             </p>
           )}
-          {onSkipAI && (
+          {onStartBlank && (
             <button
               type="button"
-              onClick={() => {
-                const trimmed = destination.trim();
-                if (!trimmed) return;
-                onSkipAI(trimmed, dateRange);
-              }}
-              disabled={destination.trim().length === 0}
-              className="w-full min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl text-[14px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#0D9488]/5"
+              onClick={onStartBlank}
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl text-[14px] font-semibold transition-colors hover:bg-[#0D9488]/5"
               style={{ color: "#0D9488" }}
             >
               <span className="underline underline-offset-4 decoration-[#0D9488]/40">
-                Or create a trip manually
+                Start with a blank trip
               </span>
               <ArrowRight className="h-4 w-4" />
             </button>

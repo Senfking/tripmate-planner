@@ -1,8 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
-import { format } from "date-fns";
-import type { DateRange } from "react-day-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +9,7 @@ import { trackEvent } from "@/lib/analytics";
 import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
 import { ConfirmationCard } from "./ConfirmationCard";
 import { GeneratingScreen } from "./GeneratingScreen";
+import { BlankTripModal } from "./BlankTripModal";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 
@@ -85,33 +84,11 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   const [results, setResults] = useState<AITripResult | null>(draftResult ?? null);
   const [savedPlanId, setSavedPlanId] = useState<string | null>(draftPlanId ?? null);
   const [creatingTrip, setCreatingTrip] = useState(false);
-  const [skippingAI, setSkippingAI] = useState(false);
+  const [blankModalOpen, setBlankModalOpen] = useState(false);
 
-  const handleSkipAI = useCallback(async (destination: string, dateRange: DateRange | undefined) => {
-    if (!user || skippingAI) return;
-    const trimmed = destination.trim();
-    if (!trimmed) return;
-    setSkippingAI(true);
-    try {
-      const { data: trip, error } = await supabase
-        .from("trips")
-        .insert({
-          name: trimmed,
-          destination: trimmed,
-          tentative_start_date: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null,
-          tentative_end_date: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null,
-        } as any)
-        .select()
-        .single();
-      if (error) throw error;
-      trackEvent("trip_created", { trip_id: trip.id, skip_ai: true });
-      toast.success("Trip created!");
-      navigate(`/app/trips/${trip.id}`, { replace: true });
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to create trip");
-      setSkippingAI(false);
-    }
-  }, [user, skippingAI, navigate]);
+  const handleStartBlank = useCallback(() => {
+    setBlankModalOpen(true);
+  }, []);
 
   const handleInputComplete = useCallback((data: PremiumInputData) => {
     setInputData(data);
@@ -277,7 +254,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           </div>
           <PremiumTripInput
             onGenerate={handleInputComplete}
-            onSkipAI={handleSkipAI}
+            onStartBlank={handleStartBlank}
             initialDestination={initialDestination}
           />
         </div>
@@ -292,17 +269,20 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
 
   // Input view
   return (
-    <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-y-auto">
-      <div className="flex items-center justify-end px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-2 max-w-lg mx-auto w-full">
-        <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors">
-          <X className="h-5 w-5 text-muted-foreground" />
-        </button>
+    <>
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-y-auto">
+        <div className="flex items-center justify-end px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-2 max-w-lg mx-auto w-full">
+          <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+        <PremiumTripInput
+          onGenerate={handleInputComplete}
+          onStartBlank={handleStartBlank}
+          initialDestination={initialDestination}
+        />
       </div>
-      <PremiumTripInput
-        onGenerate={handleInputComplete}
-        onSkipAI={handleSkipAI}
-        initialDestination={initialDestination}
-      />
-    </div>
+      <BlankTripModal open={blankModalOpen} onOpenChange={setBlankModalOpen} />
+    </>
   );
 }
