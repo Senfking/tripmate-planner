@@ -366,11 +366,15 @@ export function useExpenses(tripId: string) {
       if (sErr) throw sErr;
     },
     onSuccess: (_data, params) => {
-      trackEvent("expense_updated", { trip_id: tripId, expense_id: params.id }, user?.id);
+      const { id, splits, ...expenseData } = params;
+      qc.setQueryData<ExpenseRow[]>(["expenses", tripId], (old) =>
+        old?.map((e) => e.id === id ? { ...e, ...expenseData, updated_at: new Date().toISOString() } : e)
+      );
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
       qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
+      trackEvent("expense_updated", { trip_id: tripId, expense_id: id }, user?.id);
       toast.success("Expense updated");
     },
     onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to update expense")),
@@ -385,11 +389,17 @@ export function useExpenses(tripId: string) {
       if (error) throw error;
     },
     onSuccess: (_data, id) => {
-      trackEvent("expense_deleted", { trip_id: tripId, expense_id: id }, user?.id);
+      qc.setQueryData<ExpenseRow[]>(["expenses", tripId], (old) =>
+        old?.filter((e) => e.id !== id)
+      );
+      qc.setQueryData<SplitRow[]>(["expense-splits", tripId], (old) =>
+        old?.filter((s) => s.expense_id !== id)
+      );
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
       qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
+      trackEvent("expense_deleted", { trip_id: tripId, expense_id: id }, user?.id);
       toast.success("Expense deleted");
     },
     onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to delete expense")),

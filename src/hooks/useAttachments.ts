@@ -161,8 +161,11 @@ export function useAttachments(tripId: string) {
       if (error) throw error;
     },
     onSuccess: (_data, attachment) => {
-      trackEvent("attachment_deleted", { trip_id: tripId, type: attachment.type }, user?.id);
+      qc.setQueryData<AttachmentRow[]>(key, (old) =>
+        old?.filter((a) => a.id !== attachment.id)
+      );
       qc.invalidateQueries({ queryKey: key });
+      trackEvent("attachment_deleted", { trip_id: tripId, type: attachment.type }, user?.id);
       toast.success("Deleted");
     },
     onError: (e: Error) => toast.error(friendlyErrorMessage(e, "Failed to delete")),
@@ -203,7 +206,10 @@ export function useAttachments(tripId: string) {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
+      qc.setQueryData<AttachmentRow[]>(key, (old) =>
+        old?.map((a) => a.id === vars.id ? { ...a, notes: vars.notes || null } : a)
+      );
       qc.invalidateQueries({ queryKey: key });
       toast.success("Notes saved");
     },
@@ -219,6 +225,9 @@ export function useAttachments(tripId: string) {
       if (error) throw error;
     },
     onSuccess: (_data, vars) => {
+      qc.setQueryData<AttachmentRow[]>(key, (old) =>
+        old?.map((a) => a.id === vars.id ? { ...a, is_private: vars.is_private } : a)
+      );
       qc.invalidateQueries({ queryKey: key });
       toast.success(vars.is_private ? "Set to private" : "Set to shared");
     },
@@ -233,7 +242,10 @@ export function useAttachments(tripId: string) {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
+      qc.setQueryData<AttachmentRow[]>(key, (old) =>
+        old?.map((a) => a.id === vars.id ? { ...a, type: vars.type } : a)
+      );
       qc.invalidateQueries({ queryKey: key });
       toast.success("Category updated");
     },
