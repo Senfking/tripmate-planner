@@ -40,6 +40,7 @@ const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
 const Landing = lazy(() => import("./pages/Landing"));
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 function PageLoader() {
   return (
@@ -139,6 +140,7 @@ function AppInner() {
             <Route path="/join" element={<JoinByCode />} />
             <Route path="/join/:code" element={<JoinByCode />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/ref" element={<ReferralLanding />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
