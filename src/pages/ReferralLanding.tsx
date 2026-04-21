@@ -565,13 +565,13 @@ export default function ReferralLanding() {
                     }}
                   />
                   {mode === "signin" && (
-                    <div className="flex justify-end">
+                    <div className="flex justify-end -mt-1">
                       <button
                         type="button"
                         onClick={handleForgotPassword}
                         disabled={resetLoading}
-                        className="text-[13px] underline underline-offset-2 disabled:opacity-50"
-                        style={{ color: "rgba(255,255,255,0.55)" }}
+                        className="text-[12px] px-1 py-1 hover:text-white/70 transition-colors disabled:opacity-50"
+                        style={{ color: "rgba(255,255,255,0.4)" }}
                       >
                         {resetLoading ? "Sending…" : "Forgot password?"}
                       </button>
