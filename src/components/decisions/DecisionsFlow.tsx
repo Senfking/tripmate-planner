@@ -339,11 +339,25 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
           return (
             <Drawer open={prefOpen} onOpenChange={setPrefOpen} shouldScaleBackground={false}>
               <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-              <DrawerContent className="px-4 pb-6 max-h-[85dvh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
-                <DrawerHeader className="text-left px-0">
+              <DrawerContent
+                className="max-h-[92dvh] flex flex-col"
+                onPointerDownOutside={(e) => e.preventDefault()}
+              >
+                <DrawerHeader className="text-left px-4 pb-2 shrink-0">
                   <DrawerTitle>New poll</DrawerTitle>
                 </DrawerHeader>
-                {content}
+                <div
+                  className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4"
+                  style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+                >
+                  {formBody}
+                </div>
+                <div
+                  className="shrink-0 border-t border-border bg-background px-4 pt-3"
+                  style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+                >
+                  {submitButton}
+                </div>
               </DrawerContent>
             </Drawer>
           );
@@ -355,7 +369,8 @@ function PreferencesContent({ tripId, myRole, highlightedPollId }: { tripId: str
               <DialogHeader>
                 <DialogTitle>New poll</DialogTitle>
               </DialogHeader>
-              {content}
+              {formBody}
+              {submitButton}
             </DialogContent>
           </Dialog>
         );
