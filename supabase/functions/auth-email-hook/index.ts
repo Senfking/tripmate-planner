@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "juntotravel"
+const SITE_NAME = "Junto"
 const SENDER_DOMAIN = "notify.junto.pro"
 const ROOT_DOMAIN = "junto.pro"
 const FROM_DOMAIN = "junto.pro" // Domain shown in From address (may be root or sender subdomain)
