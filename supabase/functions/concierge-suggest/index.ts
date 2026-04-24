@@ -1,5 +1,26 @@
-// v2.8 deployed — geocode via Places API + per-layer logs, 437d08b
+// v2.9 deployed — shared places_cache, single wide-radius Places search,
+// in-memory distance filter, two-pass field mask, rate limit + circuit breaker.
+//
+// Cost shape (v2.8 → v2.9):
+//   - up to 12 Places Text Search calls per query (3 adaptive rungs × 3-4 queries)
+//     at fat Pro+ field mask → 3-4 calls at Essentials + ≤4 Pro Details.
+//   - shared places_cache reuses trip-builder lookups so the same venue never
+//     costs twice per 7-30 days across features.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildGeocodeCacheKey,
+  buildSearchCacheKey,
+  cacheGet,
+  cacheSet,
+  logPlacesCall,
+  placesSpendLastDayUsd,
+  userGenerationsInLastHour,
+} from "../_shared/places/cache.ts";
+
+const DEFAULT_RATE_LIMIT_PER_HOUR = 5;
+const DEFAULT_PLACES_DAILY_BUDGET_USD = 50;
+const CONCIERGE_MAX_RETURN = 5;  // current UI shows ≤5 cards — don't hydrate more
+const CONCIERGE_MAX_HYDRATIONS = 8; // small headroom for excluded/fuzz-dropped picks
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -135,17 +156,87 @@ interface GeocodeResult {
   formattedAddress: string | null;
 }
 
-// Geocode a destination using the Places API (New) Text Search and derive the
-// max admin scale from the returned `types` field.
+// Module-level: set to true if the current GOOGLE_PLACES_API_KEY is not
+// enabled for the Geocoding API. Avoids retrying the cheap endpoint every
+// request when it's known to be denied.
+let geocodingApiDisabled = false;
+
+// Geocode a destination. Tries the cheaper Geocoding API ($5/1K) first, falls
+// back to Places:searchText ($20/1K) if the key isn't enabled. Results cache
+// in the shared places_cache (tier="geocode", 30d TTL) so trip-builder and
+// concierge share destination lookups.
 //
-// NOTE: we deliberately use the Places API here, not the legacy Geocoding API.
-// The GOOGLE_PLACES_API_KEY in this project is enabled for Places but not the
-// Geocoding API — calling the Geocoding endpoint with it returns 403
-// REQUEST_DENIED, which v2.7 silently swallowed.
+// NOTE for Oliver: enable "Geocoding API" on GOOGLE_PLACES_API_KEY in Google
+// Cloud Console to unlock the cheaper path. Until then this function silently
+// falls back to places:searchText on the first REQUEST_DENIED and remembers
+// not to retry for this isolate's lifetime.
 async function geocodeDestination(
   destination: string,
   googleKey: string,
+  svcClient: ReturnType<typeof createClient> | null,
+  userId: string | null,
 ): Promise<GeocodeResult | null> {
+  const normalized = destination.trim();
+  if (!normalized) return null;
+
+  // Shared cache
+  if (svcClient) {
+    try {
+      const cached = await cacheGet<GeocodeResult>(svcClient, "geocode", buildGeocodeCacheKey(normalized));
+      if (cached) {
+        await logPlacesCall(svcClient, { userId, feature: "concierge_suggest", sku: "geocode", cached: true });
+        return cached;
+      }
+    } catch (err) {
+      console.warn("[concierge-suggest] geocode cache lookup failed:", (err as Error).message);
+    }
+  }
+
+  // Try Geocoding API first
+  if (!geocodingApiDisabled) {
+    try {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(normalized)}&key=${googleKey}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.status === "OK" && data.results?.[0]) {
+          const r = data.results[0];
+          const types: string[] = Array.isArray(r.types) ? r.types : [];
+          let scale: keyof typeof MAX_RADIUS_BY_SCALE = "unknown";
+          const order: Array<keyof typeof MAX_RADIUS_BY_SCALE> = [
+            "neighborhood", "sublocality", "locality",
+            "administrative_area_level_2", "administrative_area_level_1", "country",
+          ];
+          for (const s of order) {
+            if (types.includes(s as string)) { scale = s; break; }
+          }
+          const result: GeocodeResult = {
+            lat: r.geometry.location.lat,
+            lng: r.geometry.location.lng,
+            scale,
+            maxRadius: MAX_RADIUS_BY_SCALE[scale],
+            formattedAddress: (r.formatted_address as string) ?? null,
+          };
+          if (svcClient) {
+            await cacheSet(svcClient, "geocode", buildGeocodeCacheKey(normalized), result);
+            await logPlacesCall(svcClient, { userId, feature: "concierge_suggest", sku: "geocode" });
+          }
+          return result;
+        }
+        if (data?.status === "REQUEST_DENIED") {
+          geocodingApiDisabled = true;
+          console.warn(
+            "[concierge-suggest] Geocoding API REQUEST_DENIED — falling back to Places. " +
+            "Enable 'Geocoding API' on GOOGLE_PLACES_API_KEY in GCP to cut geocode cost ~75%.",
+          );
+        }
+      }
+    } catch (err) {
+      console.warn("[concierge-suggest] Geocoding API threw, falling back:", (err as Error).message);
+    }
+  }
+
+  // Fallback: Places Text Search
   try {
     const res = await fetch(
       "https://places.googleapis.com/v1/places:searchText",
@@ -157,7 +248,7 @@ async function geocodeDestination(
           "X-Goog-FieldMask":
             "places.location,places.types,places.displayName,places.formattedAddress",
         },
-        body: JSON.stringify({ textQuery: destination, maxResultCount: 1 }),
+        body: JSON.stringify({ textQuery: normalized, maxResultCount: 1 }),
       },
     );
     if (!res.ok) {
@@ -178,26 +269,24 @@ async function geocodeDestination(
     const types: string[] = Array.isArray(first.types) ? first.types : [];
     let scale: keyof typeof MAX_RADIUS_BY_SCALE = "unknown";
     const order: Array<keyof typeof MAX_RADIUS_BY_SCALE> = [
-      "neighborhood",
-      "sublocality",
-      "locality",
-      "administrative_area_level_2",
-      "administrative_area_level_1",
-      "country",
+      "neighborhood", "sublocality", "locality",
+      "administrative_area_level_2", "administrative_area_level_1", "country",
     ];
     for (const s of order) {
-      if (types.includes(s as string)) {
-        scale = s;
-        break;
-      }
+      if (types.includes(s as string)) { scale = s; break; }
     }
-    return {
+    const result: GeocodeResult = {
       lat: first.location.latitude,
       lng: first.location.longitude,
       scale,
       maxRadius: MAX_RADIUS_BY_SCALE[scale],
       formattedAddress: (first.formattedAddress as string) ?? null,
     };
+    if (svcClient) {
+      await cacheSet(svcClient, "geocode", buildGeocodeCacheKey(normalized), result);
+      await logPlacesCall(svcClient, { userId, feature: "concierge_suggest", sku: "search_pro" });
+    }
+    return result;
   } catch (err) {
     console.warn("[concierge-suggest] geocode threw:", err);
     return null;
@@ -864,18 +953,62 @@ function buildPlacesQueries(
 }
 
 // ---------------------------------------------------------------------------
-// searchPlacesBatch — run all queries against Google Places Text Search API
-// (New) in parallel, deduplicate, and filter excluded IDs
+// Field masks for the two-pass strategy.
+//
+// Ranking: Essentials only (id, displayName, address, location, types,
+// businessStatus). Enough for the LLM to pick the top 3-5 candidates.
+//
+// Hydration: Pro fields — rating, userRatingCount, priceLevel, photos.
+// Only paid for the ≤8 venues we actually return to the user.
 // ---------------------------------------------------------------------------
+const RANKING_FIELD_MASK =
+  "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.businessStatus";
+
+const HYDRATION_FIELD_MASK =
+  "id,displayName,formattedAddress,location,rating,userRatingCount,priceLevel,types,photos,googleMapsUri,businessStatus";
+
+export interface ConciergeSearchStats {
+  live_calls: number;
+  cache_hits: number;
+}
+
+// Run each query against Places Text Search with the RANKING field mask.
+// Results cache in the shared places_cache under cache_tier="search".
+// Trip-builder cache writes the SAME table under the same key shape, so a
+// venue fetched by a trip build earlier today serves the concierge's next
+// query for free.
 async function searchPlacesBatch(
   queries: PlacesSearchQuery[],
   googleKey: string,
   excludePlaceIds: string[] = [],
-): Promise<BatchPlaceResult[]> {
+  svcClient: ReturnType<typeof createClient> | null = null,
+): Promise<{ places: BatchPlaceResult[]; stats: ConciergeSearchStats }> {
   const excludeSet = new Set(excludePlaceIds);
+  const stats: ConciergeSearchStats = { live_calls: 0, cache_hits: 0 };
 
   const allResults = await Promise.all(
     queries.map(async (q) => {
+      const cacheKey = buildSearchCacheKey(
+        q.textQuery,
+        q.locationBias.circle.center.latitude,
+        q.locationBias.circle.center.longitude,
+        q.locationBias.circle.radius,
+        q.includedType,
+        q.priceLevels,
+      );
+
+      if (svcClient) {
+        try {
+          const cached = await cacheGet<Array<Record<string, unknown>>>(svcClient, "search", cacheKey);
+          if (cached) {
+            stats.cache_hits++;
+            return cached;
+          }
+        } catch (err) {
+          console.warn("[concierge-suggest] search cache lookup failed:", (err as Error).message);
+        }
+      }
+
       try {
         const res = await fetch(
           "https://places.googleapis.com/v1/places:searchText",
@@ -884,8 +1017,7 @@ async function searchPlacesBatch(
             headers: {
               "Content-Type": "application/json",
               "X-Goog-Api-Key": googleKey,
-              "X-Goog-FieldMask":
-                "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.types,places.photos,places.googleMapsUri,places.businessStatus",
+              "X-Goog-FieldMask": RANKING_FIELD_MASK,
             },
             body: JSON.stringify(q),
           },
@@ -894,14 +1026,21 @@ async function searchPlacesBatch(
         if (!res.ok) return [];
 
         const data = await res.json();
-        return (data.places ?? []) as Array<Record<string, unknown>>;
+        stats.live_calls++;
+        const places = (data.places ?? []) as Array<Record<string, unknown>>;
+        if (svcClient) {
+          cacheSet(svcClient, "search", cacheKey, places).catch(() => {});
+        }
+        return places;
       } catch {
         return [];
       }
     }),
   );
 
-  // Flatten and deduplicate by place ID, filtering out excluded IDs
+  // Flatten and deduplicate by place ID, filtering out excluded IDs.
+  // Rating/priceLevel/photos are null at this stage — hydrateConciergeFinalists
+  // fills them for the venues the ranker actually returns to the user.
   const seen = new Set<string>();
   const deduped: BatchPlaceResult[] = [];
 
@@ -919,73 +1058,160 @@ async function searchPlacesBatch(
         location:
           (p.location as { latitude: number; longitude: number } | undefined) ??
           null,
-        rating: (p.rating as number) ?? null,
-        userRatingCount: (p.userRatingCount as number) ?? null,
-        priceLevel: (p.priceLevel as string) ?? null,
+        rating: null,
+        userRatingCount: null,
+        priceLevel: null,
         types: Array.isArray(p.types) ? (p.types as string[]) : [],
-        photos: Array.isArray(p.photos)
-          ? (p.photos as Array<{ name: string }>)
-          : [],
-        googleMapsUri: (p.googleMapsUri as string) ?? null,
+        photos: [],
+        googleMapsUri: null,
         businessStatus: (p.businessStatus as string) ?? null,
       });
     }
   }
 
-  return deduped;
+  return { places: deduped, stats };
+}
+
+// Hydrate Pro fields for a subset of place IDs via Place Details GET.
+// Cached in places_cache under tier="details" for 30 days (shared with
+// trip-builder so the same venue only pays Details once per month).
+async function hydrateConciergeFinalists(
+  placeIds: string[],
+  existingById: Map<string, BatchPlaceResult>,
+  googleKey: string,
+  svcClient: ReturnType<typeof createClient> | null,
+): Promise<{ hydrated: Map<string, BatchPlaceResult>; stats: ConciergeSearchStats }> {
+  const stats: ConciergeSearchStats = { live_calls: 0, cache_hits: 0 };
+  const hydrated = new Map(existingById);
+  const unique = Array.from(new Set(placeIds)).slice(0, CONCIERGE_MAX_HYDRATIONS);
+  if (unique.length === 0) return { hydrated, stats };
+
+  await Promise.all(
+    unique.map(async (id) => {
+      const base = existingById.get(id);
+      if (!base) return;
+
+      if (svcClient) {
+        try {
+          const cached = await cacheGet<Record<string, unknown>>(svcClient, "details", id);
+          if (cached) {
+            stats.cache_hits++;
+            applyConciergeDetails(base, cached);
+            hydrated.set(id, base);
+            return;
+          }
+        } catch (err) {
+          console.warn(`[concierge-suggest] details cache lookup failed for ${id}:`, (err as Error).message);
+        }
+      }
+
+      try {
+        const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": googleKey,
+            "X-Goog-FieldMask": HYDRATION_FIELD_MASK,
+          },
+        });
+        if (!res.ok) return;
+        stats.live_calls++;
+        const data = await res.json() as Record<string, unknown>;
+        applyConciergeDetails(base, data);
+        hydrated.set(id, base);
+        if (svcClient) {
+          cacheSet(svcClient, "details", id, data).catch(() => {});
+        }
+      } catch (err) {
+        console.error(`[concierge-suggest] hydrateFinalists threw for ${id}:`, err);
+      }
+    }),
+  );
+
+  return { hydrated, stats };
+}
+
+function applyConciergeDetails(base: BatchPlaceResult, details: Record<string, unknown>): void {
+  const displayName = (details.displayName as { text?: string } | undefined)?.text;
+  if (displayName && !base.displayName) base.displayName = displayName;
+  if (!base.formattedAddress && typeof details.formattedAddress === "string") {
+    base.formattedAddress = details.formattedAddress;
+  }
+  const loc = details.location as { latitude: number; longitude: number } | undefined;
+  if (loc && !base.location) base.location = loc;
+  base.rating = (details.rating as number | null) ?? base.rating ?? null;
+  base.userRatingCount = (details.userRatingCount as number | null) ?? base.userRatingCount ?? null;
+  base.priceLevel = (details.priceLevel as string | null) ?? base.priceLevel ?? null;
+  const photos = details.photos as Array<{ name: string }> | undefined;
+  if (Array.isArray(photos) && photos.length) base.photos = photos;
+  base.googleMapsUri = (details.googleMapsUri as string | null) ?? base.googleMapsUri ?? null;
+  base.businessStatus = (details.businessStatus as string | null) ?? base.businessStatus ?? null;
+  const types = details.types as string[] | undefined;
+  if (Array.isArray(types) && types.length) base.types = types;
 }
 
 // ---------------------------------------------------------------------------
-// Adaptive Places search — start at 5km; if too thin, widen to 10km, then 20km,
-// bounded by the destination's admin max radius. Returns the final radius used
-// so the event branch can reuse it as the distance gate.
+// Single-wide search + in-memory distance filter.
+//
+// The old adaptive ladder (5 → 10 → 20km) fired up to 3 rounds of 3-4 queries
+// each = up to 12 Places calls per concierge request. Replaced with one round
+// at the destination's admin-capped maxRadius, which caches for 7 days.
+// Post-fetch we compute the distance to each venue and tier the results so
+// the AI can prefer nearby picks without us paying for a second API call.
+//
+// Returns `nearby` (≤5km), `mid` (≤10km), `far` (≤maxRadius) buckets sorted
+// by distance within each tier. Caller merges them into a single list for
+// the prompt with nearby-first ordering.
 // ---------------------------------------------------------------------------
-interface AdaptiveSearchResult {
-  venues: BatchPlaceResult[];
-  finalRadiusMeters: number;
+interface TieredSearchResult {
+  venues: BatchPlaceResult[];        // concatenated nearby → mid → far (in order)
+  usedRadiusMeters: number;          // the actual radius used for Google
+  stats: ConciergeSearchStats;
 }
 
-async function searchPlacesAdaptive(
+async function searchPlacesWithTiers(
   buildQueriesAtRadius: (radiusMeters: number) => PlacesSearchQuery[],
   googleKey: string,
   excludePlaceIds: string[],
   maxRadiusMeters: number,
-): Promise<AdaptiveSearchResult> {
-  const ladder = [5000, 10000, 20000].filter((r) => r <= maxRadiusMeters);
-  // Always include the hard cap so we can still widen to the destination's max
-  if (ladder.length === 0 || ladder[ladder.length - 1] < maxRadiusMeters) {
-    ladder.push(maxRadiusMeters);
+  searchLat: number,
+  searchLng: number,
+  svcClient: ReturnType<typeof createClient> | null,
+): Promise<TieredSearchResult> {
+  // Pick a single radius: the destination-capped max, never wider than 20km
+  // (explicit-location requests already cap at 20km in the handler, so this is
+  // only protective for destination-scale searches on very wide admin areas).
+  const radius = Math.min(maxRadiusMeters, 20000);
+  const queries = buildQueriesAtRadius(radius);
+  const { places, stats } = await searchPlacesBatch(
+    queries, googleKey, excludePlaceIds, svcClient,
+  );
+
+  // In-memory distance tiers so the AI can prefer nearby venues without a
+  // second API round. Tier thresholds mirror the old ladder (5 / 10 / max).
+  const buckets = { nearby: [] as BatchPlaceResult[], mid: [] as BatchPlaceResult[], far: [] as BatchPlaceResult[] };
+  for (const v of places) {
+    if (!v.location) { buckets.far.push(v); continue; }
+    const dKm = haversineKm(searchLat, searchLng, v.location.latitude, v.location.longitude);
+    if (dKm * 1000 <= 5000) buckets.nearby.push(v);
+    else if (dKm * 1000 <= 10000) buckets.mid.push(v);
+    else buckets.far.push(v);
   }
+  const sortByDist = (a: BatchPlaceResult, b: BatchPlaceResult) => {
+    if (!a.location) return 1;
+    if (!b.location) return -1;
+    return haversineKm(searchLat, searchLng, a.location.latitude, a.location.longitude) -
+      haversineKm(searchLat, searchLng, b.location.latitude, b.location.longitude);
+  };
+  buckets.nearby.sort(sortByDist);
+  buckets.mid.sort(sortByDist);
+  buckets.far.sort(sortByDist);
 
-  let venues: BatchPlaceResult[] = [];
-  let finalRadius = ladder[0];
-
-  for (let i = 0; i < ladder.length; i++) {
-    const radius = ladder[i];
-    finalRadius = radius;
-    const queries = buildQueriesAtRadius(radius);
-    venues = await searchPlacesBatch(queries, googleKey, excludePlaceIds);
-
-    // Good enough — stop widening
-    if (venues.length >= 15) break;
-
-    // Only widen if there's a larger step available
-    const next = ladder[i + 1];
-    if (!next) break;
-
-    // <5 venues: always widen. 5-14 venues: widen one more step if possible.
-    if (venues.length < 5) {
-      console.log(
-        `[concierge-suggest] Places thin at ${radius / 1000}km (${venues.length} venues), widening to ${next / 1000}km`,
-      );
-      continue;
-    }
-    console.log(
-      `[concierge-suggest] Places marginal at ${radius / 1000}km (${venues.length} venues), widening to ${next / 1000}km`,
-    );
-  }
-
-  return { venues, finalRadiusMeters: finalRadius };
+  return {
+    venues: [...buckets.nearby, ...buckets.mid, ...buckets.far],
+    usedRadiusMeters: radius,
+    stats,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1355,6 +1581,48 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Forbidden" }, 403);
     }
 
+    // Service-role client for places_cache + ai_request_log + RPC helpers.
+    const svcClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // ---- Rate limit + daily Places circuit breaker ----
+    // Both trip_builder_total and concierge_suggest_total feed the same
+    // per-user bucket — cost pressure is shared across features.
+    const rateLimit = Number.parseInt(Deno.env.get("RATE_LIMIT_TRIPS_PER_HOUR") ?? "", 10);
+    const effectiveRateLimit = Number.isFinite(rateLimit) && rateLimit > 0 ? rateLimit : DEFAULT_RATE_LIMIT_PER_HOUR;
+    // Concierge queries are cheaper than trip builds — allow 3× the hourly limit.
+    const effectiveConciergeLimit = effectiveRateLimit * 3;
+    const recentCount = await userGenerationsInLastHour(svcClient, user.id);
+    if (recentCount >= effectiveConciergeLimit) {
+      return jsonResponse(
+        {
+          error: "rate_limited",
+          message: `Slow down — you've sent ${recentCount} concierge/trip requests in the last hour. Try again in a few minutes.`,
+        },
+        429,
+      );
+    }
+
+    const dailyBudget = Number.parseFloat(Deno.env.get("PLACES_DAILY_BUDGET_USD") ?? "");
+    const effectiveBudget = Number.isFinite(dailyBudget) && dailyBudget > 0 ? dailyBudget : DEFAULT_PLACES_DAILY_BUDGET_USD;
+    const spentToday = await placesSpendLastDayUsd(svcClient);
+    if (spentToday > effectiveBudget) {
+      console.warn(
+        `[concierge-suggest] circuit breaker tripped: Places spend $${spentToday.toFixed(2)} > $${effectiveBudget.toFixed(2)}`,
+      );
+      return jsonResponse(
+        {
+          error: "at_capacity",
+          message: "We're at capacity right now — the concierge is taking a short break. Try again in a few hours.",
+        },
+        503,
+      );
+    }
+
+    const conciergeStartedAt = Date.now();
+
     // ---- Check cache for non-time-sensitive queries ----
     const timeSensitive =
       isTimeSensitiveQuery(query) ||
@@ -1504,7 +1772,7 @@ Deno.serve(async (req) => {
     // determine the max radius cap for IP / explicit-GPS searches.
     let destGeo: GeocodeResult | null = null;
     if (googleKey && context.destination) {
-      destGeo = await geocodeDestination(context.destination, googleKey);
+      destGeo = await geocodeDestination(context.destination, googleKey, svcClient, user.id);
       if (destGeo) {
         console.log(
           `[concierge-suggest] Geocoded "${context.destination}" → ${destGeo.lat},${destGeo.lng} scale=${destGeo.scale} maxRadius=${destGeo.maxRadius / 1000}km`,
@@ -1532,7 +1800,7 @@ Deno.serve(async (req) => {
 
     // Layer 0b: explicit specificLocation string — geocode it for center
     if (!searchLat && !searchLng && specificLocation && googleKey) {
-      const subGeo = await geocodeDestination(specificLocation, googleKey);
+      const subGeo = await geocodeDestination(specificLocation, googleKey, svcClient, user.id);
       console.log(
         `[location] layer 0b (specificLocation): tried=${JSON.stringify(specificLocation)} result=${subGeo ? `{lat:${subGeo.lat},lng:${subGeo.lng},scale:${subGeo.scale}}` : "null"}`,
       );
@@ -1558,6 +1826,8 @@ Deno.serve(async (req) => {
         const subGeo = await geocodeDestination(
           `${sub}, ${context.destination}`,
           googleKey,
+          svcClient,
+          user.id,
         );
         if (!subGeo) {
           console.log(
@@ -1646,11 +1916,13 @@ Deno.serve(async (req) => {
 
     let venueData: BatchPlaceResult[] = [];
     let finalSearchRadiusMeters = maxRadiusMeters;
+    let placesRankingStats: ConciergeSearchStats = { live_calls: 0, cache_hits: 0 };
+    let placesDetailsStats: ConciergeSearchStats = { live_calls: 0, cache_hits: 0 };
 
     if (googleKey && searchLat !== null && searchLng !== null) {
       const centerLat = searchLat;
       const centerLng = searchLng;
-      const adaptive = await searchPlacesAdaptive(
+      const tiered = await searchPlacesWithTiers(
         (radius) =>
           buildPlacesQueries(
             searchCategory,
@@ -1663,19 +1935,22 @@ Deno.serve(async (req) => {
         googleKey,
         excludePlaceIds,
         maxRadiusMeters,
+        centerLat,
+        centerLng,
+        svcClient,
       );
-      venueData = adaptive.venues;
-      finalSearchRadiusMeters = adaptive.finalRadiusMeters;
+      venueData = tiered.venues;
+      finalSearchRadiusMeters = tiered.usedRadiusMeters;
+      placesRankingStats = tiered.stats;
       console.log(
-        `[concierge-suggest] Places API returned ${venueData.length} venues for category="${searchCategory}" at radius=${finalSearchRadiusMeters / 1000}km`,
+        `[concierge-suggest] Places Essentials: ${venueData.length} venues at ${finalSearchRadiusMeters / 1000}km ` +
+        `(live=${placesRankingStats.live_calls}, cache_hits=${placesRankingStats.cache_hits})`,
       );
 
-      // FALLBACK: When category is "events" and Google Places returns fewer than
-      // 3 venues (the narrow terms "nightclub", "live music venue", "concert venue"
-      // often miss bars and beach clubs), run a second round with broader terms so
-      // the AI always has venues to mix with events.
+      // FALLBACK: Events category narrow terms often miss bars/beach clubs.
+      // Only fire when venues are thin; single extra round, same radius.
       if (searchCategory === "events" && venueData.length < 3) {
-        console.log(`[concierge-suggest] Events category has only ${venueData.length} venues — running broader fallback Places queries`);
+        console.log(`[concierge-suggest] Events venues thin (${venueData.length}) — broader fallback round`);
         const existingIds = venueData.map(v => v.id);
         const fallbackTerms = [
           `popular bar ${searchLocationName}`,
@@ -1693,16 +1968,42 @@ Deno.serve(async (req) => {
           textQuery: t,
           locationBias,
         }));
-        console.log(`[concierge-suggest] Fallback Places queries: ${JSON.stringify(fallbackTerms)}`);
-        const fallbackVenues = await searchPlacesBatch(
+        const { places: fallbackVenues, stats: fallbackStats } = await searchPlacesBatch(
           fallbackQueries,
           googleKey,
           [...excludePlaceIds, ...existingIds],
+          svcClient,
         );
-        console.log(`[concierge-suggest] Fallback Places returned ${fallbackVenues.length} additional venues`);
+        console.log(`[concierge-suggest] Fallback Places: +${fallbackVenues.length} venues`);
         venueData = [...venueData, ...fallbackVenues];
-        console.log(`[concierge-suggest] Total venues after fallback: ${venueData.length}`);
+        placesRankingStats = {
+          live_calls: placesRankingStats.live_calls + fallbackStats.live_calls,
+          cache_hits: placesRankingStats.cache_hits + fallbackStats.cache_hits,
+        };
       }
+
+      // HYDRATION pass — Pro fields for the top venues only. UI shows ≤5
+      // cards; we hydrate up to CONCIERGE_MAX_HYDRATIONS to leave headroom
+      // for excluded/fuzz-dropped picks. This is the main cost saving:
+      // prior code issued a fat field-mask on every ranking call; now we
+      // pay Pro cost for at most 8 venues even when 30+ candidates were
+      // scanned for ranking.
+      const topIds = venueData.slice(0, CONCIERGE_MAX_HYDRATIONS).map(v => v.id);
+      const idMap = new Map<string, BatchPlaceResult>();
+      for (const v of venueData) idMap.set(v.id, v);
+      const { hydrated, stats: hStats } = await hydrateConciergeFinalists(
+        topIds, idMap, googleKey, svcClient,
+      );
+      placesDetailsStats = hStats;
+      // Merge hydrated copies back
+      for (let i = 0; i < venueData.length; i++) {
+        const h = hydrated.get(venueData[i].id);
+        if (h) venueData[i] = h;
+      }
+      console.log(
+        `[concierge-suggest] Places Details: hydrated ${topIds.length} ` +
+        `(live=${hStats.live_calls}, cache_hits=${hStats.cache_hits})`,
+      );
     } else {
       console.log(`[concierge-suggest] Skipping Places API: googleKey=${!!googleKey}, lat=${searchLat}, lng=${searchLng}`);
     }
@@ -2271,6 +2572,65 @@ Suggest DIFFERENT venues and events only.`;
         "[concierge-suggest] insert assistant msg:",
         insertAssistantErr,
       );
+    }
+
+    // ---- Tier-aware Places cost logging ----
+    // One row per non-zero (sku, cached) pair so sum_places_spend_last_day()
+    // can aggregate. concierge_suggest_total provides the per-query digest
+    // for dashboards + rate-limit accounting.
+    try {
+      if (placesRankingStats.live_calls > 0) {
+        await logPlacesCall(svcClient, {
+          userId: user.id, feature: "concierge_suggest", sku: "search_essentials",
+          count: placesRankingStats.live_calls,
+        });
+      }
+      if (placesRankingStats.cache_hits > 0) {
+        await logPlacesCall(svcClient, {
+          userId: user.id, feature: "concierge_suggest", sku: "search_essentials",
+          count: placesRankingStats.cache_hits, cached: true,
+        });
+      }
+      if (placesDetailsStats.live_calls > 0) {
+        await logPlacesCall(svcClient, {
+          userId: user.id, feature: "concierge_suggest", sku: "details",
+          count: placesDetailsStats.live_calls,
+        });
+      }
+      if (placesDetailsStats.cache_hits > 0) {
+        await logPlacesCall(svcClient, {
+          userId: user.id, feature: "concierge_suggest", sku: "details",
+          count: placesDetailsStats.cache_hits, cached: true,
+        });
+      }
+
+      const totalRankCalls = placesRankingStats.live_calls + placesRankingStats.cache_hits;
+      const totalDetailCalls = placesDetailsStats.live_calls + placesDetailsStats.cache_hits;
+      const totalCacheHits = placesRankingStats.cache_hits + placesDetailsStats.cache_hits;
+      const totalPlacesCalls = totalRankCalls + totalDetailCalls;
+      const durationMs = Date.now() - conciergeStartedAt;
+
+      await svcClient.from("ai_request_log").insert({
+        user_id: user.id,
+        feature: "concierge_suggest_total",
+        model:
+          `aggregate;duration_ms=${durationMs}` +
+          `;places_ranking=${placesRankingStats.live_calls}/${totalRankCalls}` +
+          `;places_details=${placesDetailsStats.live_calls}/${totalDetailCalls}` +
+          `;places_cache_hits=${totalCacheHits}/${totalPlacesCalls || 1}` +
+          `;category=${searchCategory}`,
+        input_tokens: 0,
+        output_tokens: enriched.length,
+        // Sum of per-tier costs. Matches what logPlacesCall wrote so the
+        // daily circuit breaker sees identical totals regardless of which
+        // row it queries.
+        cost_usd:
+          (placesRankingStats.live_calls * 0.005) +
+          (placesDetailsStats.live_calls * 0.017),
+        cached: false,
+      });
+    } catch (logErr) {
+      console.error("[concierge-suggest] cost instrumentation failed:", logErr);
     }
 
     console.log(`[concierge-suggest] === RETURNING ${enriched.length} suggestions, summary="${(parsed.summary ?? "").slice(0, 80)}" ===`);

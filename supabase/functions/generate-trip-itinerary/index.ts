@@ -2,20 +2,35 @@
 //
 // Pipeline (non-alternatives_mode):
 //   1. parseIntent       — Claude Haiku extracts structured intent from form + free text
-//   2. buildSkeleton     — pure-code pacing skeleton (slots per day)
-//   3. buildPlacesQueries— pure-code Google Places query plan, deduped + capped at 20
-//   4. searchPlacesBatch — Google Places Text Search in parallel, dedup by place_id
-//   5. searchEvents      — Brave/Google CSE event search (optional, parallel)
-//   6. rankAndEnrich     — Claude Haiku assigns venues to slots + writes editorial copy
-//   7. markJuntoPicks    — pure code: rating/reviews/intent-match heuristic
-//   8. buildAffiliateUrl — pure code: types[] -> Booking/Viator/GetYourGuide/Maps
-//   9. validateActivities— drop hallucinations: missing place_id, > distance, not OPERATIONAL
+//   2. buildSkeleton     — pure-code pacing skeleton (slots per day, capped at 18)
+//   3. buildPlacesQueries— pure-code Google Places query plan, deduped + capped at 12
+//   4. searchPlacesBatch — Places Text Search with ESSENTIALS field mask (ranking pass)
+//   5. hydrateFinalists  — Place Details GET with PRO field mask for the ~15 venues
+//                          the ranker actually selects (photos, priceLevel, reviews)
+//   6. searchEvents      — Brave/Google CSE event search (optional, parallel)
+//   7. rankAndEnrich     — Claude Haiku assigns venues to slots + writes editorial copy
+//   8. markJuntoPicks    — pure code: rating/reviews/intent-match heuristic
+//   9. buildAffiliateUrl — pure code: types[] -> Booking/Viator/GetYourGuide/Maps
+//  10. validateActivities— drop hallucinations: missing place_id, > distance, not OPERATIONAL
+//
+// Cost shape (before this refactor → after):
+//   - 20 fat text searches × $0.032  → up to 12 essentials × $0.005 + ≤15 details × $0.017
+//     ≈ $0.64 → ≈ $0.32 on the Places line, plus 7d/30d cache sharing with concierge.
 //
 // All Claude calls go to direct Anthropic API (claude-haiku-4-5-20251001) with prompt
 // caching on the static system blocks. The `alternatives_mode` branch is preserved
 // verbatim and still uses Lovable AI Gateway / Gemini.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildGeocodeCacheKey,
+  buildSearchCacheKey,
+  cacheGet,
+  cacheSet,
+  logPlacesCall,
+  placesSpendLastDayUsd,
+  userGenerationsInLastHour,
+} from "../_shared/places/cache.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -284,9 +299,18 @@ const HAIKU_PRICING = {
   cache_read: 0.10 / 1_000_000,   // $0.10 / MTok
 };
 
-// Google Places (New) — Enterprise SKU because we request rating/userRatingCount/priceLevel
-const PLACES_PRICE_PER_CALL = 0.032;
-const MAX_PLACES_QUERIES_PER_TRIP = 20;
+// Google Places (New) pricing — two-pass strategy.
+// Ranking pass = Essentials field mask ($0.005/call); hydration pass =
+// Place Details GET per finalist with Pro field mask ($0.017/call).
+const PLACES_RANKING_COST_PER_CALL = 0.005;
+const PLACES_DETAILS_COST_PER_CALL = 0.017;
+const MAX_PLACES_QUERIES_PER_TRIP = 12; // was 20 — tighter budget; consolidated queries cover same ground
+const MAX_SLOTS_PER_TRIP = 18;          // hard cap regardless of duration/pace — cost + Ibiza timeout root cause
+const MAX_FINALIST_HYDRATIONS = 20;     // safety cap on details pass; real trips pick 11–15
+
+// Rate limit + circuit breaker defaults. Override via env if needed.
+const DEFAULT_RATE_LIMIT_PER_HOUR = 5;                 // generations per user per rolling hour
+const DEFAULT_PLACES_DAILY_BUDGET_USD = 50;            // rolling 24h Places spend hard cap
 
 // Affiliate URL templates
 const BOOKING_TEMPLATE = "https://www.booking.com/search.html?ss={loc}&aid={aid}";
@@ -381,6 +405,7 @@ type PoolKey =
   | "breakfast"
   | "lunch"
   | "dinner"
+  | "restaurants" // shared pool used for both lunch and dinner — the consolidated base query lives here
   | "attractions"
   | "nightlife"
   | "experiences"
@@ -1116,6 +1141,44 @@ function buildSkeleton(
     });
   }
 
+  return enforceSlotCap(days);
+}
+
+// Cap total slots at MAX_SLOTS_PER_TRIP. On trips that blow the cap (e.g. a
+// 5-day active nightlife itinerary that would otherwise emit 26 slots),
+// trim from the sides of the middle days where over-packing hurts the most:
+// drop afternoon_major_2 first, then nightlife on non-first/last days, then
+// rest slots. Always keeps breakfast / one major / one meal / dinner per day.
+function enforceSlotCap(days: DaySkeleton[]): DaySkeleton[] {
+  const totalSlots = () => days.reduce((n, d) => n + d.slots.length, 0);
+  if (totalSlots() <= MAX_SLOTS_PER_TRIP) return days;
+
+  const trimOrder: SlotType[] = ["afternoon_major", "nightlife", "rest", "morning_major"];
+  // Keep at least one activity of each trimable kind per trip to preserve
+  // the destination flavor; trim from long days first.
+  for (const kind of trimOrder) {
+    if (totalSlots() <= MAX_SLOTS_PER_TRIP) break;
+    const byLength = [...days].sort((a, b) => b.slots.length - a.slots.length);
+    for (const day of byLength) {
+      if (totalSlots() <= MAX_SLOTS_PER_TRIP) break;
+      // Find the LAST slot of this kind (second afternoon_major etc).
+      for (let i = day.slots.length - 1; i >= 0; i--) {
+        if (day.slots[i].type === kind) {
+          // Leave at least 3 slots per day (breakfast + one major + dinner).
+          if (day.slots.length <= 3) break;
+          day.slots.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+
+  if (totalSlots() > MAX_SLOTS_PER_TRIP) {
+    console.warn(
+      `[buildSkeleton] slot cap overrun after trim: ${totalSlots()}/${MAX_SLOTS_PER_TRIP}. ` +
+      `Shape may have atypical density.`,
+    );
+  }
   return days;
 }
 
@@ -1219,39 +1282,34 @@ function buildPlacesQueries(
     });
   }
 
-  // ---- Lunch (base + optional food-vibe specialization) ----
-  if (slotTypesSeen.has("lunch")) {
-    add("lunch:base", {
-      textQuery: `${foodPrefix}lunch restaurants ${city}`,
+  // ---- Meals: one consolidated "restaurants" query feeds both lunch and
+  //              dinner slots. The ranker picks meal-appropriate venues
+  //              from the shared pool based on slot.type + venue signals
+  //              (rating, types, price). Specialized tone/vibe queries
+  //              still run separately so the ranker has biased options
+  //              for dinner (romantic/lively) and lunch (foodie/street).
+  const hasMeal = slotTypesSeen.has("lunch") || slotTypesSeen.has("dinner");
+  if (hasMeal) {
+    add("restaurants:base", {
+      textQuery: `${foodPrefix}restaurants ${city}`,
+      includedType: "restaurant",
+      priceLevels,
+      locationBias,
+      poolKey: "restaurants",
+    });
+  }
+  if (slotTypesSeen.has("lunch") && foodVibe) {
+    add(`lunch:vibe:${foodVibe}`, {
+      textQuery: `${foodPrefix}${foodVibe} ${city}`,
       includedType: "restaurant",
       priceLevels,
       locationBias,
       poolKey: "lunch",
     });
-    if (foodVibe) {
-      add(`lunch:vibe:${foodVibe}`, {
-        textQuery: `${foodPrefix}${foodVibe} ${city}`,
-        includedType: "restaurant",
-        priceLevels,
-        locationBias,
-        poolKey: "lunch",
-      });
-    }
   }
-
-  // ---- Dinner (tone variant + broad fallback) ----
-  if (slotTypesSeen.has("dinner")) {
-    if (dinnerTone) {
-      add(`dinner:${dinnerTone}`, {
-        textQuery: `${foodPrefix}${dinnerTone} dinner restaurants ${city}`,
-        includedType: "restaurant",
-        priceLevels,
-        locationBias,
-        poolKey: "dinner",
-      });
-    }
-    add("dinner:base", {
-      textQuery: `${foodPrefix}dinner restaurants ${city}`,
+  if (slotTypesSeen.has("dinner") && dinnerTone) {
+    add(`dinner:${dinnerTone}`, {
+      textQuery: `${foodPrefix}${dinnerTone} dinner restaurants ${city}`,
       includedType: "restaurant",
       priceLevels,
       locationBias,
@@ -1338,10 +1396,25 @@ async function sha256Hex(s: string): Promise<string> {
     .join("");
 }
 
+// Module-level flag: set to true if the current GOOGLE_PLACES_API_KEY is not
+// enabled for the Geocoding API. Avoids retrying the cheaper endpoint on
+// every request for the duration of the isolate.
+let geocodingApiDisabled = false;
+
+// Try the Geocoding API first ($5/1K) and fall back to Places Text Search
+// ($20/1K for a Pro field mask on places:searchText). If REQUEST_DENIED
+// comes back we flip a module-level flag so subsequent calls in this
+// isolate skip straight to the fallback — no retry storm, no extra cost.
+//
+// NOTE for Oliver: to unlock the cheaper path, enable "Geocoding API" on
+// the GOOGLE_PLACES_API_KEY in Google Cloud Console. Until then this
+// function silently falls back and the per-trip cost stays at the old
+// Places-searchText level for the geocode step.
 async function geocodeDestination(
   googleKey: string,
   destination: string,
   svcClient: ReturnType<typeof createClient>,
+  userId: string,
 ): Promise<GeocodeResult> {
   const normalized = destination.trim().toLowerCase();
   if (!normalized) {
@@ -1351,22 +1424,74 @@ async function geocodeDestination(
       "empty destination after normalization",
     );
   }
-  const cacheKey = `geocode:v1:${await sha256Hex(normalized)}`;
 
-  // Cache lookup — fail loud on DB errors, miss silently on not-found.
-  const { data: cached, error: cacheErr } = await svcClient
-    .from("ai_response_cache")
-    .select("response_json")
-    .eq("cache_key", cacheKey)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle();
-  if (cacheErr) {
-    throw new Error(`ai_response_cache geocode lookup failed: ${cacheErr.message}`);
-  }
-  if (cached?.response_json) {
-    return cached.response_json as unknown as GeocodeResult;
+  // Shared places_cache lookup — same table concierge-suggest uses. A trip
+  // builder destination lookup now warms the cache for the concierge and
+  // vice versa.
+  const cacheKey = buildGeocodeCacheKey(destination);
+  const cached = await cacheGet<GeocodeResult>(svcClient, "geocode", cacheKey);
+  if (cached) {
+    await logPlacesCall(svcClient, { userId, feature: "trip_builder", sku: "geocode", cached: true });
+    return cached;
   }
 
+  // ---- Try Geocoding API first ----
+  if (!geocodingApiDisabled) {
+    try {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=${googleKey}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.status === "OK" && data.results?.[0]) {
+          const r = data.results[0];
+          const countryComp = (r.address_components as Array<{ short_name: string; types: string[] }> | undefined)
+            ?.find((c) => c.types?.includes("country"));
+          const vpBox = r.geometry?.viewport as {
+            northeast?: { lat: number; lng: number };
+            southwest?: { lat: number; lng: number };
+          } | undefined;
+          const result: GeocodeResult = {
+            lat: r.geometry.location.lat,
+            lng: r.geometry.location.lng,
+            country_code: countryComp?.short_name?.toLowerCase() ?? null,
+            viewport:
+              vpBox?.northeast && vpBox?.southwest
+                ? { northeast: vpBox.northeast, southwest: vpBox.southwest }
+                : null,
+          };
+          await cacheSet(svcClient, "geocode", cacheKey, result);
+          await logPlacesCall(svcClient, { userId, feature: "trip_builder", sku: "geocode" });
+          return result;
+        }
+        if (data?.status === "REQUEST_DENIED") {
+          // Key not enabled for Geocoding API — fall through and remember.
+          geocodingApiDisabled = true;
+          console.warn(
+            "[geocodeDestination] Geocoding API is REQUEST_DENIED for this key. " +
+            "Enable 'Geocoding API' on GOOGLE_PLACES_API_KEY to cut ~$0.015/trip. Falling back to places:searchText.",
+          );
+        } else if (data?.status === "ZERO_RESULTS") {
+          // Real no-match; skip the fallback only to avoid re-bill for the
+          // same empty answer.
+          throw new PipelineError(
+            "geocodeDestination",
+            "Could not resolve destination",
+            `Geocoding API returned ZERO_RESULTS for "${destination}"`,
+          );
+        } else {
+          console.warn(`[geocodeDestination] Geocoding status=${data?.status}; falling back to Places.`);
+        }
+      } else {
+        console.warn(`[geocodeDestination] Geocoding HTTP ${res.status}; falling back to Places.`);
+      }
+    } catch (err) {
+      // PipelineError bubbles — anything else we treat as a transient fall back.
+      if (err instanceof PipelineError) throw err;
+      console.warn("[geocodeDestination] Geocoding threw; falling back to Places:", (err as Error).message);
+    }
+  }
+
+  // ---- Fallback: Places searchText with a minimal mask ----
   const res = await fetch(
     "https://places.googleapis.com/v1/places:searchText",
     {
@@ -1434,17 +1559,9 @@ async function geocodeDestination(
         : null,
   };
 
-  // Write-through cache — 30 days.
-  const { error: cacheWriteErr } = await svcClient.from("ai_response_cache").insert({
-    cache_key: cacheKey,
-    response_json: result as unknown as Record<string, unknown>,
-    expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
-  });
-  if (cacheWriteErr && cacheWriteErr.code !== "23505") {
-    // 23505 = unique_violation (race); anything else is a real problem.
-    throw new Error(`ai_response_cache geocode insert failed: ${cacheWriteErr.message}`);
-  }
-
+  await cacheSet(svcClient, "geocode", cacheKey, result);
+  // Billed as Pro because Text Search with addressComponents is >= Pro tier.
+  await logPlacesCall(svcClient, { userId, feature: "trip_builder", sku: "search_pro" });
   return result;
 }
 
@@ -1462,11 +1579,22 @@ async function geocodeDestination(
 //
 // Per-query failures are logged and tolerated (individual HTTP 5xx shouldn't
 // sink the whole trip). Billing is logged at the call-count level by
-// logPlacesCalls in the main handler — the fail-loud contract applies there.
+// logPlacesByTier in the main handler — the fail-loud contract applies there.
 // ---------------------------------------------------------------------------
 
-const PLACES_FIELD_MASK =
-  "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.priceRange,places.types,places.photos,places.googleMapsUri,places.businessStatus,places.addressComponents";
+// RANKING pass — Essentials SKU only. Enough signal to sort and pick
+// finalists: rating/reviews drive Junto-Pick logic, but we can skip them
+// at ranking time because the ranker prompt steers on types + distance +
+// reviews descending (filled in at hydration). This is the big cost lever:
+// 20 fat-mask calls @ $0.032 → 12 essentials calls @ $0.005 = ~92% cut.
+const PLACES_RANKING_FIELD_MASK =
+  "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.businessStatus";
+
+// HYDRATION pass — Pro fields for the ~15 venues the ranker actually picked.
+// Called via the Place Details endpoint (/places/{id}) per finalist. We only
+// pay this per-finalist, not per ranking candidate.
+const PLACES_DETAILS_FIELD_MASK =
+  "id,displayName,formattedAddress,location,rating,userRatingCount,priceLevel,priceRange,types,photos,googleMapsUri,businessStatus,addressComponents";
 
 // Currency code → symbol for formatting Places priceRange strings. Falls back
 // to the raw code when unknown — "CHF 20-40" reads fine without a symbol.
@@ -1496,12 +1624,44 @@ function formatPlacesPriceRange(raw: unknown): string | null {
   return null;
 }
 
+interface PlacesBatchStats {
+  live_calls: number;
+  cache_hits: number;
+}
+
+// Ranking pass. One fetch per query with the Essentials field mask,
+// cached per (query,bucketed-latlng,radius,type,price) for 7 days.
+// Returns dedup'd BatchPlaceResult[]; hydration fields (rating, photos,
+// priceLevel, priceRange, addressComponents) are filled later by
+// hydrateFinalists for the venues the ranker actually picks.
 async function searchPlacesBatch(
   queries: PlacesSearchQuery[],
   googleKey: string,
-): Promise<BatchPlaceResult[]> {
+  svcClient: ReturnType<typeof createClient>,
+): Promise<{ places: BatchPlaceResult[]; stats: PlacesBatchStats }> {
+  const stats: PlacesBatchStats = { live_calls: 0, cache_hits: 0 };
+
   const perQueryResults = await Promise.all(
     queries.map(async (q) => {
+      const cacheKey = buildSearchCacheKey(
+        q.textQuery,
+        q.locationBias.circle.center.latitude,
+        q.locationBias.circle.center.longitude,
+        q.locationBias.circle.radius,
+        q.includedType,
+        q.priceLevels,
+      );
+      try {
+        const cached = await cacheGet<Array<Record<string, unknown>>>(svcClient, "search", cacheKey);
+        if (cached) {
+          stats.cache_hits++;
+          return cached;
+        }
+      } catch (cacheErr) {
+        // Don't fail the whole pipeline on a cache read error — just log and fetch live.
+        console.warn(`[searchPlacesBatch] cache lookup failed for "${q.textQuery}":`, (cacheErr as Error).message);
+      }
+
       try {
         const body = {
           textQuery: q.textQuery,
@@ -1515,7 +1675,7 @@ async function searchPlacesBatch(
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": googleKey,
-            "X-Goog-FieldMask": PLACES_FIELD_MASK,
+            "X-Goog-FieldMask": PLACES_RANKING_FIELD_MASK,
           },
           body: JSON.stringify(body),
         });
@@ -1525,8 +1685,13 @@ async function searchPlacesBatch(
           );
           return [] as Array<Record<string, unknown>>;
         }
+        stats.live_calls++;
         const data = (await res.json()) as { places?: Array<Record<string, unknown>> };
-        return data.places ?? [];
+        const places = data.places ?? [];
+        // Fire-and-forget cache write so the next trip/concierge query in the
+        // same bucket can skip Google.
+        cacheSet(svcClient, "search", cacheKey, places).catch(() => {});
+        return places;
       } catch (err) {
         console.error(`[searchPlacesBatch] threw for "${q.textQuery}":`, err);
         return [] as Array<Record<string, unknown>>;
@@ -1548,21 +1713,107 @@ async function searchPlacesBatch(
         formattedAddress: (p.formattedAddress as string) ?? null,
         location:
           (p.location as { latitude: number; longitude: number } | undefined) ?? null,
-        rating: (p.rating as number | null) ?? null,
-        userRatingCount: (p.userRatingCount as number | null) ?? null,
-        priceLevel: (p.priceLevel as string | null) ?? null,
-        priceRange: formatPlacesPriceRange(p.priceRange),
+        // Hydration fields start null — filled in by hydrateFinalists for
+        // the venues the ranker actually picks.
+        rating: null,
+        userRatingCount: null,
+        priceLevel: null,
+        priceRange: null,
         types: (p.types as string[] | undefined) ?? [],
-        photos: (p.photos as Array<{ name: string }> | undefined) ?? [],
-        googleMapsUri: (p.googleMapsUri as string | null) ?? null,
+        photos: [],
+        googleMapsUri: null,
         businessStatus: (p.businessStatus as string | null) ?? null,
-        addressComponents:
-          (p.addressComponents as AddressComponent[] | undefined) ?? [],
+        addressComponents: [],
         poolKey: pool,
       });
     }
   }
-  return out;
+  return { places: out, stats };
+}
+
+// Hydration pass. Per-finalist Place Details GET with the Pro field mask.
+// Results are cached in places_cache under the "details" tier for 30 days —
+// a venue that appears in multiple trips (or is also requested by the
+// concierge) only pays the Details cost once per month.
+//
+// Safe to run with empty input — returns the input map unchanged.
+async function hydrateFinalists(
+  placeIds: string[],
+  existingById: Map<string, BatchPlaceResult>,
+  googleKey: string,
+  svcClient: ReturnType<typeof createClient>,
+): Promise<{ hydrated: Map<string, BatchPlaceResult>; stats: PlacesBatchStats }> {
+  const stats: PlacesBatchStats = { live_calls: 0, cache_hits: 0 };
+  const hydrated = new Map(existingById);
+  const unique = Array.from(new Set(placeIds)).slice(0, MAX_FINALIST_HYDRATIONS);
+
+  if (unique.length === 0) return { hydrated, stats };
+
+  await Promise.all(
+    unique.map(async (id) => {
+      const base = existingById.get(id);
+      if (!base) return;
+
+      // Cache first
+      try {
+        const cached = await cacheGet<Record<string, unknown>>(svcClient, "details", id);
+        if (cached) {
+          stats.cache_hits++;
+          applyDetailsToBatch(base, cached);
+          hydrated.set(id, base);
+          return;
+        }
+      } catch (cacheErr) {
+        console.warn(`[hydrateFinalists] cache lookup failed for ${id}:`, (cacheErr as Error).message);
+      }
+
+      try {
+        const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": googleKey,
+            "X-Goog-FieldMask": PLACES_DETAILS_FIELD_MASK,
+          },
+        });
+        if (!res.ok) {
+          console.error(`[hydrateFinalists] HTTP ${res.status} for place_id=${id}`);
+          return;
+        }
+        stats.live_calls++;
+        const data = (await res.json()) as Record<string, unknown>;
+        applyDetailsToBatch(base, data);
+        hydrated.set(id, base);
+        cacheSet(svcClient, "details", id, data).catch(() => {});
+      } catch (err) {
+        console.error(`[hydrateFinalists] threw for place_id=${id}:`, err);
+      }
+    }),
+  );
+
+  return { hydrated, stats };
+}
+
+function applyDetailsToBatch(base: BatchPlaceResult, details: Record<string, unknown>): void {
+  const displayName = (details.displayName as { text?: string } | undefined)?.text;
+  if (displayName && !base.displayName) base.displayName = displayName;
+  if (!base.formattedAddress && typeof details.formattedAddress === "string") {
+    base.formattedAddress = details.formattedAddress;
+  }
+  const loc = details.location as { latitude: number; longitude: number } | undefined;
+  if (loc && !base.location) base.location = loc;
+  base.rating = (details.rating as number | null) ?? base.rating ?? null;
+  base.userRatingCount = (details.userRatingCount as number | null) ?? base.userRatingCount ?? null;
+  base.priceLevel = (details.priceLevel as string | null) ?? base.priceLevel ?? null;
+  base.priceRange = formatPlacesPriceRange(details.priceRange) ?? base.priceRange ?? null;
+  const types = details.types as string[] | undefined;
+  if (Array.isArray(types) && types.length) base.types = types;
+  const photos = details.photos as Array<{ name: string }> | undefined;
+  if (Array.isArray(photos) && photos.length) base.photos = photos;
+  base.googleMapsUri = (details.googleMapsUri as string | null) ?? base.googleMapsUri ?? null;
+  base.businessStatus = (details.businessStatus as string | null) ?? base.businessStatus ?? null;
+  const ac = details.addressComponents as AddressComponent[] | undefined;
+  if (Array.isArray(ac) && ac.length) base.addressComponents = ac;
 }
 
 // ---------------------------------------------------------------------------
@@ -2090,6 +2341,17 @@ interface VenueDigestEntry {
   lng: number | null;
 }
 
+function dedupeByIdKeepFirst(venues: BatchPlaceResult[]): BatchPlaceResult[] {
+  const seen = new Set<string>();
+  const out: BatchPlaceResult[] = [];
+  for (const v of venues) {
+    if (seen.has(v.id)) continue;
+    seen.add(v.id);
+    out.push(v);
+  }
+  return out;
+}
+
 function digestVenue(p: BatchPlaceResult): VenueDigestEntry {
   return {
     place_id: p.id,
@@ -2112,9 +2374,24 @@ function buildRankerUserMessage(
   currency: string,
   countryCode: string | null,
 ): string {
+  // Merge the consolidated "restaurants" pool into both lunch and dinner so
+  // the ranker sees a rich meal-venue pool under each slot (it picks
+  // meal-appropriate venues based on rating + types + opening signals).
+  // Tone/vibe-specific queries (dinner:romantic / lunch:vibe:foodie) stay
+  // in their own pools to preserve the biased options.
+  const merged = new Map(venuesByPool);
+  const shared = merged.get("restaurants") ?? [];
+  if (shared.length > 0) {
+    const lunch = merged.get("lunch") ?? [];
+    const dinner = merged.get("dinner") ?? [];
+    merged.set("lunch", dedupeByIdKeepFirst([...lunch, ...shared]));
+    merged.set("dinner", dedupeByIdKeepFirst([...dinner, ...shared]));
+    merged.delete("restaurants");
+  }
+
   // Condense pool: per pool, sort by (rating desc, reviews desc), cap at 15.
   const pool: Record<string, VenueDigestEntry[]> = {};
-  for (const [key, venues] of venuesByPool.entries()) {
+  for (const [key, venues] of merged.entries()) {
     const sorted = [...venues].sort((a, b) => {
       const ra = a.rating ?? 0, rb = b.rating ?? 0;
       if (rb !== ra) return rb - ra;
@@ -2185,7 +2462,18 @@ interface RawRankerActivity {
   dietary_notes: string | null;
 }
 
-function buildPhotoUrls(photos: Array<{ name: string }>, googleKey: string, max = 3): string[] {
+// Lazy photos: only build the URL for the first photo (the one rendered as
+// the activity card hero). Secondary photos stay in the venue pool as
+// { name } stubs; the frontend fetches additional photos on-demand via
+// get-place-details when the user opens the activity detail view.
+//
+// Photo media downloads are billed per-load by Google — constructing 3 URLs
+// that the browser never loads wouldn't directly cost money, BUT the `photos`
+// field in the *upstream* Text Search response pushes that SKU to Enterprise.
+// By dropping photos from the ranking field mask and only hydrating photo
+// names for finalists, we pay for 11–15 Details calls instead of 20 fat
+// searches, and the browser only loads the single hero photo.
+function buildPhotoUrls(photos: Array<{ name: string }>, googleKey: string, max = 1): string[] {
   if (!photos?.length) return [];
   return photos
     .slice(0, max)
@@ -2793,16 +3081,68 @@ function computeHaikuCost(usage: ClaudeUsage): number {
   );
 }
 
-async function logPlacesCalls(logger: LLMLogger, callCount: number): Promise<void> {
-  if (callCount <= 0) return;
-  await logger.log({
-    feature: "places_search",
-    model: "google-places-text-search",
-    input_tokens: 0,
-    output_tokens: 0,
-    cost_usd: callCount * PLACES_PRICE_PER_CALL,
-    cached: false,
-  });
+// Tier-aware Places cost accounting. Each row in ai_request_log becomes
+// feature='places_{sku}_trip_builder' so the daily-spend circuit breaker
+// (sum_places_spend_last_day SQL helper) can aggregate across skus.
+//
+// The logger argument is retained for totals accounting — the logger's
+// totals.cost_usd must include Places spend so trip_builder_total reflects
+// the true per-generation cost.
+async function logPlacesByTier(
+  svcClient: ReturnType<typeof createClient>,
+  logger: LLMLogger,
+  userId: string,
+  counts: {
+    search_essentials_live: number;
+    search_essentials_cache: number;
+    details_live: number;
+    details_cache: number;
+  },
+): Promise<void> {
+  const entries: Array<Promise<unknown>> = [];
+
+  if (counts.search_essentials_live > 0) {
+    entries.push(logPlacesCall(svcClient, {
+      userId, feature: "trip_builder", sku: "search_essentials",
+      count: counts.search_essentials_live,
+    }));
+    await logger.log({
+      feature: "places_search_essentials_trip_builder",
+      model: "google-places-search-essentials",
+      input_tokens: 0,
+      output_tokens: counts.search_essentials_live,
+      cost_usd: counts.search_essentials_live * PLACES_RANKING_COST_PER_CALL,
+      cached: false,
+    });
+  }
+  if (counts.search_essentials_cache > 0) {
+    entries.push(logPlacesCall(svcClient, {
+      userId, feature: "trip_builder", sku: "search_essentials",
+      count: counts.search_essentials_cache, cached: true,
+    }));
+  }
+  if (counts.details_live > 0) {
+    entries.push(logPlacesCall(svcClient, {
+      userId, feature: "trip_builder", sku: "details",
+      count: counts.details_live,
+    }));
+    await logger.log({
+      feature: "places_details_trip_builder",
+      model: "google-places-details",
+      input_tokens: 0,
+      output_tokens: counts.details_live,
+      cost_usd: counts.details_live * PLACES_DETAILS_COST_PER_CALL,
+      cached: false,
+    });
+  }
+  if (counts.details_cache > 0) {
+    entries.push(logPlacesCall(svcClient, {
+      userId, feature: "trip_builder", sku: "details",
+      count: counts.details_cache, cached: true,
+    }));
+  }
+
+  await Promise.all(entries);
 }
 
 // ---------------------------------------------------------------------------
@@ -3021,6 +3361,47 @@ Deno.serve(async (req) => {
     svcClientForLogging = svcClient;
     const logger = makeLLMLogger(svcClient, user.id);
 
+    // ---- Quotas: per-user rate limit + daily circuit breaker ----
+    //
+    // Rate limit: counts trip_builder_total + concierge_suggest_total in the
+    // last hour. If the user is above the configured cap, 429 with a
+    // friendly message. Value lives in env RATE_LIMIT_TRIPS_PER_HOUR so it
+    // can be raised for trusted users without a deploy.
+    //
+    // Circuit breaker: sums places_* cost_usd in the last 24h across the
+    // whole project. If over PLACES_DAILY_BUDGET_USD, refuse new builds.
+    // Protects against a runaway prompt/loop burning the daily budget.
+    const rateLimit = Number.parseInt(Deno.env.get("RATE_LIMIT_TRIPS_PER_HOUR") ?? "", 10);
+    const effectiveRateLimit = Number.isFinite(rateLimit) && rateLimit > 0 ? rateLimit : DEFAULT_RATE_LIMIT_PER_HOUR;
+    const recentCount = await userGenerationsInLastHour(svcClient, user.id);
+    if (recentCount >= effectiveRateLimit) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "rate_limited",
+          message: `Slow down — you've kicked off ${recentCount} generations in the last hour. Please try again in a few minutes.`,
+        },
+        429,
+      );
+    }
+
+    const dailyBudget = Number.parseFloat(Deno.env.get("PLACES_DAILY_BUDGET_USD") ?? "");
+    const effectiveBudget = Number.isFinite(dailyBudget) && dailyBudget > 0 ? dailyBudget : DEFAULT_PLACES_DAILY_BUDGET_USD;
+    const spentToday = await placesSpendLastDayUsd(svcClient);
+    if (spentToday > effectiveBudget) {
+      console.warn(
+        `[circuit_breaker] Places spend $${spentToday.toFixed(2)} exceeded daily cap $${effectiveBudget.toFixed(2)} — refusing generation`,
+      );
+      return jsonResponse(
+        {
+          success: false,
+          error: "at_capacity",
+          message: "We're at capacity right now — our planning engine is resting. Please try again in a few hours.",
+        },
+        503,
+      );
+    }
+
     // ---- Step 1: parse intent ----
     // In surprise mode we pass an empty destination hint — the surprise picker
     // runs next with the parsed vibes/must_haves/must_avoids and fills in
@@ -3086,12 +3467,12 @@ Deno.serve(async (req) => {
     // converts it into a structured { error, step, message } 500 response.
     loggedStep = "geocodeDestination";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
-    const geo = await geocodeDestination(googleKey, intent.destination, svcClient);
+    const geo = await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
 
-    // ---- Step 2b: pacing skeleton ----
+    // ---- Step 2b: pacing skeleton (slot count capped inside buildSkeleton) ----
     const skeleton = buildSkeleton(intent, numDays, startDate, geo.country_code);
 
-    // ---- Step 3 + 4: query plan + Places batch ----
+    // ---- Step 3 + 4: query plan + Places batch (RANKING pass, Essentials SKU) ----
     const queries = buildPlacesQueries(intent, skeleton, {
       lat: geo.lat,
       lng: geo.lng,
@@ -3106,12 +3487,60 @@ Deno.serve(async (req) => {
     // Step 4 + Step 5 in parallel
     loggedStep = "searchPlacesAndEvents";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
-    const [places, events] = await Promise.all([
-      searchPlacesBatch(queries, googleKey),
+    const [searchResult, events] = await Promise.all([
+      searchPlacesBatch(queries, googleKey, svcClient),
       searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
     ]);
+    const places = searchResult.places;
+    const rankingStats = searchResult.stats;
 
-    await logPlacesCalls(logger, queries.length);
+    // ---- Step 4b: HYDRATION pass — Place Details for ranker candidates ----
+    // Rank candidates by pool membership alone is too broad; we'd re-hydrate
+    // 100+ venues. Instead, pick up to MAX_FINALIST_HYDRATIONS per trip from
+    // the first venues in each pool (search results come back in relevance
+    // order from Google). Ranker still has coverage (breakfast, restaurants,
+    // attractions, etc.) while we pay Details cost only for the shortlist.
+    const finalistIds: string[] = [];
+    const seenFinalist = new Set<string>();
+    const byPool = new Map<PoolKey, BatchPlaceResult[]>();
+    for (const p of places) {
+      const pool = byPool.get(p.poolKey) ?? [];
+      pool.push(p);
+      byPool.set(p.poolKey, pool);
+    }
+    const maxPerPool = Math.max(3, Math.ceil(MAX_FINALIST_HYDRATIONS / Math.max(1, byPool.size)));
+    for (const pool of byPool.values()) {
+      for (const p of pool.slice(0, maxPerPool)) {
+        if (seenFinalist.has(p.id)) continue;
+        seenFinalist.add(p.id);
+        finalistIds.push(p.id);
+        if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+      }
+      if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+    }
+    const idToBase = new Map<string, BatchPlaceResult>();
+    for (const p of places) idToBase.set(p.id, p);
+    const { hydrated: hydratedById, stats: hydrationStats } = await hydrateFinalists(
+      finalistIds,
+      idToBase,
+      googleKey,
+      svcClient,
+    );
+
+    // Tier-aware cost instrumentation — one row per SKU category.
+    await logPlacesByTier(svcClient, logger, user.id, {
+      search_essentials_live: rankingStats.live_calls,
+      search_essentials_cache: rankingStats.cache_hits,
+      details_live: hydrationStats.live_calls,
+      details_cache: hydrationStats.cache_hits,
+    });
+
+    // Merge hydrated copies back into the ranker pool so rating / priceLevel /
+    // photos are available when the ranker writes editorial copy.
+    for (let i = 0; i < places.length; i++) {
+      const hydrated = hydratedById.get(places[i].id);
+      if (hydrated) places[i] = hydrated;
+    }
 
     // Group venues by pool for the ranker prompt
     const venuesByPool = new Map<PoolKey, BatchPlaceResult[]>();
@@ -3174,16 +3603,27 @@ Deno.serve(async (req) => {
     }
 
     // ---- Aggregated total log — one row per successful trip build ----
-    // ai_request_log is a flat table; we pack wall-time (ms) into the model
-    // label and keep Places-call / total-call counts in the existing fields so
-    // downstream SQL can sum without a migration bump.
+    // ai_request_log is a flat table; we pack wall-time (ms) and per-tier
+    // Places call counts into the model label so downstream SQL can grep
+    // per-trip cost detail without a migration bump. The hit rate gives
+    // immediate visibility into cache effectiveness after rollout.
     {
       const totals = logger.totals();
       const durationMs = Date.now() - pipelineStartedAt;
+      const totalRankingCalls = rankingStats.live_calls + rankingStats.cache_hits;
+      const totalDetailsCalls = hydrationStats.live_calls + hydrationStats.cache_hits;
+      const totalCacheHits = rankingStats.cache_hits + hydrationStats.cache_hits;
+      const totalPlacesCalls = totalRankingCalls + totalDetailsCalls;
+      const modelLabel =
+        `aggregate;duration_ms=${durationMs}` +
+        `;places_ranking=${rankingStats.live_calls}/${totalRankingCalls}` +
+        `;places_details=${hydrationStats.live_calls}/${totalDetailsCalls}` +
+        `;places_cache_hits=${totalCacheHits}/${totalPlacesCalls || 1}` +
+        `;sub_calls=${totals.call_count}`;
       const { error: totalErr } = await svcClient.from("ai_request_log").insert({
         user_id: user.id,
         feature: "trip_builder_total",
-        model: `aggregate;duration_ms=${durationMs};places_calls=${queries.length};sub_calls=${totals.call_count}`,
+        model: modelLabel,
         input_tokens: totals.input_tokens,
         output_tokens: totals.output_tokens,
         cost_usd: totals.cost_usd,
@@ -3206,7 +3646,10 @@ Deno.serve(async (req) => {
         budget_level: intent.budget_tier,
         pace: intent.pace,
         duration_ms: Date.now() - pipelineStartedAt,
-        places_calls: queries.length,
+        places_ranking_live: rankingStats.live_calls,
+        places_ranking_cache: rankingStats.cache_hits,
+        places_details_live: hydrationStats.live_calls,
+        places_details_cache: hydrationStats.cache_hits,
         llm_cost_usd: logger.totals().cost_usd,
       },
     });
