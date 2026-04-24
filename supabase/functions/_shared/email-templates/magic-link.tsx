@@ -94,7 +94,7 @@ const text = {
   lineHeight: '1.6',
   margin: '0 0 18px',
 }
-const buttonSection = { margin: '28px 0 8px' }
+const buttonSection = { margin: '28px 0 8px', textAlign: 'center' as const }
 const button = {
   backgroundColor: '#0D9488',
   backgroundImage: 'linear-gradient(135deg, #0D9488 0%, #0891b2 100%)',
