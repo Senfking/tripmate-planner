@@ -771,9 +771,9 @@ export default function TripList() {
   }
 
   /* ── Group trips by section ── */
-  const liveTrip = trips.find((t) => t.statusInfo.status === "live");
+  const liveTrips = trips.filter((t) => t.statusInfo.status === "live");
   const upcomingTrips = trips.filter(
-    (t) => t !== liveTrip && (t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming")
+    (t) => t.statusInfo.status === "countdown" || t.statusInfo.status === "upcoming"
   );
   const noDateTrips = trips.filter((t) => t.statusInfo.status === "no-dates");
   const pastTrips = trips.filter((t) => t.statusInfo.status === "ended");
@@ -789,9 +789,11 @@ export default function TripList() {
       </div>
 
       {/* ── Happening now ── */}
-      {liveTrip && (
-        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5">
-          <HeroCard trip={liveTrip} />
+      {liveTrips.length > 0 && (
+        <div className="mx-auto w-full max-w-md md:max-w-[900px] px-4 md:px-8 mt-4 md:mt-0 mb-5 space-y-3">
+          {liveTrips.map((trip) => (
+            <HeroCard key={trip.id} trip={trip} />
+          ))}
         </div>
       )}
 
