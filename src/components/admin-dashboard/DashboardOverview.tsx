@@ -3,14 +3,37 @@ import { useAdminData } from "@/hooks/useAdminQuery";
 import { StatCard, DateRangeFilter, Period, SectionHeader, Card, AdminSkeleton, EmptyState, C, mono, sans } from "./shared";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-/** Ensure chart data includes today (and fills any gaps with 0s) */
-function padToToday(data: any[] | undefined, valueKeys: string[]): any[] {
-  if (!data || data.length === 0) return [];
-  const today = new Date().toISOString().slice(0, 10);
-  const last = data[data.length - 1]?.date;
-  if (last >= today) return data;
-  const zeroes = Object.fromEntries(valueKeys.map(k => [k, 0]));
-  return [...data, { date: today, ...zeroes }];
+const PERIOD_DAYS: Record<string, number> = { "24h": 1, "7d": 7, "30d": 30, "90d": 90, "all": 365 };
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** Fill the entire period range with 0s for any missing days, ending today. */
+function fillRange(data: any[] | undefined, valueKeys: string[], period: string): any[] {
+  const days = PERIOD_DAYS[period] ?? 30;
+  const byDate = new Map<string, any>();
+  (data ?? []).forEach((row) => {
+    if (row?.date) byDate.set(row.date, row);
+  });
+  // For "all", anchor start to earliest data point if older than default window
+  let start: Date;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  if (period === "all" && data && data.length > 0) {
+    const earliest = data.reduce((min, r) => (r.date < min ? r.date : min), data[0].date);
+    start = new Date(earliest + "T00:00:00Z");
+  } else {
+    start = new Date(today);
+    start.setUTCDate(start.getUTCDate() - (days - 1));
+  }
+  const zeroes = Object.fromEntries(valueKeys.map((k) => [k, 0]));
+  const out: any[] = [];
+  for (let d = new Date(start); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
+    const key = isoDate(d);
+    out.push(byDate.get(key) ?? { date: key, ...zeroes });
+  }
+  return out;
 }
 
 export function DashboardOverview() {
@@ -21,9 +44,9 @@ export function DashboardOverview() {
   const { data: rawLanding, isLoading: landingLoading } = useAdminData("landing_views_chart", { period });
   const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
 
-  const growth = useMemo(() => padToToday(rawGrowth, ["count"]), [rawGrowth]);
-  const dauChart = useMemo(() => padToToday(rawDau, ["dau"]), [rawDau]);
-  const landingChart = useMemo(() => padToToday(rawLanding, ["count"]), [rawLanding]);
+  const growth = useMemo(() => fillRange(rawGrowth, ["count"], period), [rawGrowth, period]);
+  const dauChart = useMemo(() => fillRange(rawDau, ["dau"], period), [rawDau, period]);
+  const landingChart = useMemo(() => fillRange(rawLanding, ["count"], period), [rawLanding, period]);
 
   const trend = (current: number, prior: number) => prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
 
