@@ -49,6 +49,8 @@ function getTripStatus(start: string | null, end: string | null): { status: Trip
     if (days <= 60) return { status: "countdown", daysToGo: days };
     return { status: "upcoming" };
   }
+  // Start in the past with no end date → can't be classified as live; treat as undated
+  if (!e) return { status: "no-dates" };
   return { status: "upcoming" };
 }
 
