@@ -186,14 +186,8 @@ function RootRoute() {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
   if (user) return <Navigate to="/app/trips" replace />;
-  // Show landing page for unauthenticated users
-  return <LandingPage />;
-}
-
-// Lazy wrapper for Landing to avoid circular deps
-function LandingPage() {
-  const LandingComp = Landing;
-  return <LandingComp />;
+  // Landing page not ready — send unauthenticated users to /ref for now.
+  return <Navigate to="/ref" replace />;
 }
 
 function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
