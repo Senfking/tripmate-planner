@@ -81,10 +81,8 @@ function ErrorSpikeChart() {
 
   if (isLoading) return <AdminSkeleton rows={5} />;
 
-  const chartData = data || [];
-  if (chartData.length === 0) return <EmptyState message="No errors recorded yet" />;
-
-  const avg = chartData.reduce((s: number, d: any) => s + d.count, 0) / chartData.length;
+  const chartData = useMemo(() => fillErrorBuckets(data, chartPeriod), [data, chartPeriod]);
+  const avg = chartData.reduce((s: number, d: any) => s + d.count, 0) / Math.max(chartData.length, 1);
 
   return (
     <Card>
