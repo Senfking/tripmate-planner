@@ -289,8 +289,10 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
       setRevealing(true);
       setResults(normalized);
 
-      // Update URL to shareable plan link without full reload
-      if (planId) {
+      // Update URL to shareable plan link without full reload. Skip if tripId
+      // is missing — interpolating undefined would produce /app/trips/undefined/...
+      // which then cascades into UUID parse errors on the destination page.
+      if (planId && tripId) {
         navigate(`/app/trips/${tripId}/ai-plan/${planId}`, { replace: true });
       }
 

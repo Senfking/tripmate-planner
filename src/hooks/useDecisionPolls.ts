@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
+import { isValidTripId } from "@/lib/tripId";
 
 export type PollWithOptions = {
   id: string;
@@ -40,7 +41,7 @@ export function useDecisionPolls(tripId: string | undefined) {
         options: (p.poll_options || []).sort((a: any, b: any) => a.sort_order - b.sort_order),
       })) as PollWithOptions[];
     },
-    enabled: !!tripId && !!user,
+    enabled: isValidTripId(tripId) && !!user,
   });
 
   // Fetch vote counts for all polls in this trip at once
@@ -65,7 +66,7 @@ export function useDecisionPolls(tripId: string | undefined) {
       await Promise.all(rpcs);
       return results;
     },
-    enabled: !!tripId && !!user && (polls.data || []).length > 0,
+    enabled: isValidTripId(tripId) && !!user && (polls.data || []).length > 0,
   });
 
   // My votes across all decision polls
@@ -89,7 +90,7 @@ export function useDecisionPolls(tripId: string | undefined) {
       }
       return map;
     },
-    enabled: !!tripId && !!user && (polls.data || []).length > 0,
+    enabled: isValidTripId(tripId) && !!user && (polls.data || []).length > 0,
   });
 
   const createPoll = useMutation({

@@ -12,6 +12,7 @@ import { AdminTab } from "@/components/admin/AdminTab";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
+import { isValidTripId } from "@/lib/tripId";
 
 const SECTION_TITLES: Record<string, string> = {
   plan: "AI Plan",
@@ -41,7 +42,17 @@ export default function TripSection() {
   const { tripId, section } = useParams<{ tripId: string; section: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { connectionStatus, newItemIds } = useTripRealtime(tripId);
+  const tripIdValid = isValidTripId(tripId);
+
+  // Redirect away from URLs like /app/trips/undefined/expenses before any
+  // child queries fire with the literal string "undefined" as a uuid.
+  useEffect(() => {
+    if (tripId !== undefined && !tripIdValid) {
+      navigate("/app/trips", { replace: true });
+    }
+  }, [tripId, tripIdValid, navigate]);
+
+  const { connectionStatus, newItemIds } = useTripRealtime(tripIdValid ? tripId : undefined);
 
   const { data: trip, isLoading } = useQuery({
     queryKey: ["trip", tripId],
@@ -54,7 +65,7 @@ export default function TripSection() {
       if (error) throw error;
       return data;
     },
-    enabled: !!tripId && !!user,
+    enabled: tripIdValid && !!user,
   });
 
   const { data: myMembership } = useQuery({
@@ -69,7 +80,7 @@ export default function TripSection() {
       if (error) throw error;
       return data as { role: string; attendance_status: string };
     },
-    enabled: !!tripId && !!user,
+    enabled: tripIdValid && !!user,
   });
 
   const myRole = myMembership?.role;
@@ -85,7 +96,7 @@ export default function TripSection() {
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!tripId && !!user,
+    enabled: tripIdValid && !!user,
   });
 
   // Query linked AI plan for this trip
@@ -102,7 +113,7 @@ export default function TripSection() {
       if (error) throw error;
       return data as unknown as { id: string; result: AITripResult } | null;
     },
-    enabled: !!tripId && !!user && section === "plan",
+    enabled: tripIdValid && !!user && section === "plan",
   });
 
   if (!trip) {
