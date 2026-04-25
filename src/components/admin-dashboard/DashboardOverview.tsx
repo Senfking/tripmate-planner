@@ -44,9 +44,9 @@ export function DashboardOverview() {
   const { data: rawLanding, isLoading: landingLoading } = useAdminData("landing_views_chart", { period });
   const { data: activity, isLoading: actLoading } = useAdminData("recent_activity", {}, { refetchInterval: 60000 });
 
-  const growth = useMemo(() => padToToday(rawGrowth, ["count"]), [rawGrowth]);
-  const dauChart = useMemo(() => padToToday(rawDau, ["dau"]), [rawDau]);
-  const landingChart = useMemo(() => padToToday(rawLanding, ["count"]), [rawLanding]);
+  const growth = useMemo(() => fillRange(rawGrowth, ["count"], period), [rawGrowth, period]);
+  const dauChart = useMemo(() => fillRange(rawDau, ["dau"], period), [rawDau, period]);
+  const landingChart = useMemo(() => fillRange(rawLanding, ["count"], period), [rawLanding, period]);
 
   const trend = (current: number, prior: number) => prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
 
