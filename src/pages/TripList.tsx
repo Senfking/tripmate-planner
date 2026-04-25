@@ -39,9 +39,9 @@ function getTripStatus(start: string | null, end: string | null): { status: Trip
   // Ended: end date exists and is strictly before today
   if (e && isBefore(e, today)) return { status: "ended" };
 
-  // Live: today within [start, end], or start ≤ today with no end date
+  // Live: today within [start, end]. Without an end date we can't know if it's still ongoing,
+  // so treat start-without-end as upcoming/ended based on the start date only.
   if (e && isWithinInterval(today, { start: s, end: e })) return { status: "live" };
-  if (!e && !isAfter(s, today)) return { status: "live" };
 
   // Future
   if (isAfter(s, today)) {
