@@ -905,6 +905,33 @@ export type Database = {
           },
         ]
       }
+      places_cache: {
+        Row: {
+          cache_key: string
+          cache_tier: string
+          cached_at: string
+          data: Json
+          expires_at: string
+          id: string
+        }
+        Insert: {
+          cache_key: string
+          cache_tier: string
+          cached_at?: string
+          data: Json
+          expires_at: string
+          id?: string
+        }
+        Update: {
+          cache_key?: string
+          cache_tier?: string
+          cached_at?: string
+          data?: Json
+          expires_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       plan_activity_comments: {
         Row: {
           activity_key: string
@@ -1588,6 +1615,11 @@ export type Database = {
     }
     Functions: {
       check_error_spike: { Args: never; Returns: undefined }
+      cleanup_expired_places_cache: { Args: never; Returns: undefined }
+      count_user_trip_generations_last_hour: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       create_expense_line_items_with_claims: {
         Args: { _assignments?: Json; _expense_id: string; _items: Json }
         Returns: undefined
@@ -1691,6 +1723,7 @@ export type Database = {
       }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
       send_daily_digest: { Args: never; Returns: undefined }
+      sum_places_spend_last_day: { Args: never; Returns: number }
       update_member_role: {
         Args: { _new_role: string; _target_user_id: string; _trip_id: string }
         Returns: Json
