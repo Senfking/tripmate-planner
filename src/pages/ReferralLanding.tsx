@@ -280,6 +280,17 @@ export default function ReferralLanding() {
     if (err) setError(friendlyError(String(err)));
   };
 
+  const handleAppleSignIn = async () => {
+    setError(null);
+    setAppleLoading(true);
+    const callbackUrl = `${window.location.origin}/auth/callback${redirectAfterAuth ? `?redirect=${encodeURIComponent(redirectAfterAuth)}` : ""}`;
+    const { error: err } = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: callbackUrl,
+    });
+    setAppleLoading(false);
+    if (err) setError(friendlyError(String(err)));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
