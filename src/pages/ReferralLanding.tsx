@@ -531,6 +531,27 @@ export default function ReferralLanding() {
                   Continue with Google
                 </button>
 
+                {/* Apple OAuth */}
+                <button
+                  type="button"
+                  disabled={appleLoading}
+                  onClick={handleAppleSignIn}
+                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:scale-[0.97] transition-transform"
+                  style={{
+                    height: 52,
+                    fontSize: 15,
+                    background: "#000",
+                    color: "#fff",
+                  }}
+                >
+                  {appleLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <AppleIcon />
+                  )}
+                  Continue with Apple
+                </button>
+
                 {/* Divider */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.15)" }} />
