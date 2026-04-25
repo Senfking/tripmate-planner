@@ -287,7 +287,7 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
   );
 
   if (!hasValidCenter) {
-    return <div className="h-full w-full bg-accent" />;
+    return <div className="h-full w-full bg-muted" />;
   }
 
   return (
@@ -297,7 +297,7 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
       className="trip-results-map-root h-full w-full"
       zoomControl={false}
       attributionControl={false}
-      style={{ background: "hsl(var(--accent))", zIndex: 0, isolation: "isolate" }}
+      style={{ background: "hsl(var(--muted))", zIndex: 0, isolation: "isolate" }}
     >
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
