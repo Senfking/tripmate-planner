@@ -197,7 +197,10 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
       <div className="absolute bottom-0 left-0 right-0 z-[1200] pointer-events-none">
         <div className="p-4">
           <div className="pointer-events-auto bg-card/92 backdrop-blur-xl rounded-2xl border border-border shadow-2xl p-3 max-w-xl mx-auto">
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+            <div
+              className="flex gap-1.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ touchAction: "pan-x", WebkitOverflowScrolling: "touch" }}
+            >
               <button
                 onClick={() => setActiveDayIndex(-1)}
                 className={cn(
