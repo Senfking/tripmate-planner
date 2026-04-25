@@ -18,15 +18,33 @@ interface Props {
 
 export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities, state, onStateChange }: Props) {
   const [activeDayIndex, setActiveDayIndex] = useState(-1);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // On mobile, "partial" doesn't make sense (no side-by-side layout) — promote to "full".
+  useEffect(() => {
+    if (!isDesktop && state === "partial") onStateChange("full");
+  }, [isDesktop, state, onStateChange]);
 
   useEffect(() => {
     if (state === "closed") return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onStateChange(state === "full" ? "partial" : "closed");
+      if (e.key === "Escape") {
+        onStateChange(state === "full" && isDesktop ? "partial" : "closed");
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [state, onStateChange]);
+  }, [state, onStateChange, isDesktop]);
 
   useEffect(() => {
     if (state === "closed") setActiveDayIndex(-1);
@@ -156,13 +174,15 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
           <div className="flex-1" />
 
           <div className="pointer-events-auto flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => onStateChange("partial")}
-              className="h-10 w-10 rounded-xl border border-border bg-card/92 backdrop-blur-xl text-foreground shadow-2xl hover:bg-accent transition-colors flex items-center justify-center"
-              title="Back to partial map"
-            >
-              <Minimize2 className="h-4 w-4" />
-            </button>
+            {isDesktop && (
+              <button
+                onClick={() => onStateChange("partial")}
+                className="h-10 w-10 rounded-xl border border-border bg-card/92 backdrop-blur-xl text-foreground shadow-2xl hover:bg-accent transition-colors flex items-center justify-center"
+                title="Back to partial map"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={() => onStateChange("closed")}
               className="h-10 w-10 rounded-xl border border-border bg-card/92 backdrop-blur-xl text-foreground shadow-2xl hover:bg-accent transition-colors flex items-center justify-center"

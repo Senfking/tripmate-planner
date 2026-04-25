@@ -206,7 +206,14 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             </div>
             {/* Map toggle */}
             <button
-              onClick={() => setMapState(mapState === "closed" ? "partial" : "closed")}
+              onClick={() => {
+                if (mapState !== "closed") {
+                  setMapState("closed");
+                  return;
+                }
+                const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+                setMapState(isDesktop ? "partial" : "full");
+              }}
               className={cn(
                 "p-2 rounded-full transition-colors",
                 mapState !== "closed" ? "bg-primary/10 text-primary" : "hover:bg-accent text-muted-foreground"
