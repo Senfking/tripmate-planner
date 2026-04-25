@@ -79,10 +79,10 @@ function ErrorSpikeChart() {
   const [chartPeriod, setChartPeriod] = useState<"24h" | "30d">("24h");
   const { data, isLoading } = useAdminData("error_chart", { chart_period: chartPeriod }, { refetchInterval: 60000 });
 
-  if (isLoading) return <AdminSkeleton rows={5} />;
-
   const chartData = useMemo(() => fillErrorBuckets(data, chartPeriod), [data, chartPeriod]);
   const avg = chartData.reduce((s: number, d: any) => s + d.count, 0) / Math.max(chartData.length, 1);
+
+  if (isLoading) return <AdminSkeleton rows={5} />;
 
   return (
     <Card>
