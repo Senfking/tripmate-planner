@@ -1256,15 +1256,24 @@ Deno.serve(async (req) => {
           ? new Date(Date.now() - 24 * 3600000).toISOString()
           : new Date(Date.now() - 30 * 86400000).toISOString();
 
-        const { data } = await db.from("analytics_events")
-          .select("created_at, properties")
-          .eq("event_name", "app_error")
-          .filter("created_at", "gt", since)
-          .order("created_at", { ascending: true });
+        // Paginate through all matching rows (Supabase caps a single request at 1000).
+        const allRows: any[] = [];
+        const PAGE = 1000;
+        for (let from = 0; from < 50000; from += PAGE) {
+          const { data: chunk, error } = await db.from("analytics_events")
+            .select("created_at, properties")
+            .eq("event_name", "app_error")
+            .filter("created_at", "gt", since)
+            .order("created_at", { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (error || !chunk || chunk.length === 0) break;
+          allRows.push(...chunk);
+          if (chunk.length < PAGE) break;
+        }
 
         const buckets: Record<string, { count: number; breakdown: Record<string, number> }> = {};
 
-        (data || []).forEach((r: any) => {
+        allRows.forEach((r: any) => {
           const dt = new Date(r.created_at);
           const label = chartPeriod === "24h"
             ? dt.toISOString().substring(0, 13) + ":00"
