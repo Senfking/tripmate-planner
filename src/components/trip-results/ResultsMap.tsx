@@ -16,6 +16,7 @@ interface Props {
   mode: "overview" | "day";
   refinedCoords?: Map<string, { lat: number; lng: number }>;
   onPinClick?: (dayDate: string, activityIndex: number) => void;
+  interactive?: boolean;
 }
 
 function formatDayLabel(date: string, dayNumber?: number): string {
@@ -238,7 +239,7 @@ function MapController({
 }
 
 /* ── Main component ── */
-export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick }: Props) {
+export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick, interactive = true }: Props) {
   const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
 
   const getCoords = useCallback((dayDate: string, idx: number, a: AIActivity) => {
@@ -294,9 +295,15 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
     <MapContainer
       center={[result.map_center.lat, result.map_center.lng]}
       zoom={result.map_zoom || 6}
-      className="trip-results-map-root h-full w-full"
+      className={`trip-results-map-root h-full w-full ${interactive ? "" : "pointer-events-none"}`}
       zoomControl={false}
       attributionControl={false}
+      dragging={interactive}
+      touchZoom={interactive}
+      scrollWheelZoom={interactive}
+      doubleClickZoom={interactive}
+      boxZoom={interactive}
+      keyboard={interactive}
       style={{ background: "hsl(var(--muted))", zIndex: 0, isolation: "isolate" }}
     >
       <TileLayer

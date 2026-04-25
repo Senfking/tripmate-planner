@@ -25,6 +25,7 @@ export function DayMiniMap({ result, allDays, dayIndex, refinedCoords }: Props) 
         allDays={allDays}
         mode="day"
         refinedCoords={refinedCoords}
+        interactive={expanded}
       />
       {/* Controls overlay above Leaflet z-index */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1000 }}>
