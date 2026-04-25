@@ -1,7 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useAdminData } from "@/hooks/useAdminQuery";
 import { Card, AdminSkeleton, StatusPill, EmptyState, SectionHeader, C, mono, sans } from "./shared";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+
+/** Fill missing buckets in error chart with 0s. 24h => 24 hourly buckets, 30d => 30 daily buckets. */
+function fillErrorBuckets(data: any[] | undefined, period: "24h" | "30d"): any[] {
+  const byLabel = new Map<string, any>();
+  (data ?? []).forEach((row) => {
+    if (row?.label) byLabel.set(row.label, row);
+  });
+  const out: any[] = [];
+  const now = new Date();
+  if (period === "24h") {
+    // hourly buckets, label format "YYYY-MM-DD HH:00" (UTC, matching backend convention)
+    const start = new Date(now);
+    start.setUTCMinutes(0, 0, 0);
+    start.setUTCHours(start.getUTCHours() - 23);
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(start);
+      d.setUTCHours(start.getUTCHours() + i);
+      const iso = d.toISOString();
+      const label = `${iso.slice(0, 10)} ${iso.slice(11, 13)}:00`;
+      out.push(byLabel.get(label) ?? { label, count: 0, breakdown: {} });
+    }
+  } else {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const start = new Date(today);
+    start.setUTCDate(start.getUTCDate() - 29);
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(start);
+      d.setUTCDate(start.getUTCDate() + i);
+      const label = d.toISOString().slice(0, 10);
+      out.push(byLabel.get(label) ?? { label, count: 0, breakdown: {} });
+    }
+  }
+  return out;
+}
 
 // ─── Error Overview Section ───
 function ErrorOverview() {
