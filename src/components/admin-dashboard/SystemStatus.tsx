@@ -269,6 +269,44 @@ function RecentErrorsFeed() {
           );
         })}
       </div>
+
+      {/* Pagination footer */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", borderTop: `1px solid ${C.border}`, fontFamily: mono, fontSize: 11, color: C.muted }}>
+          <span>
+            {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, errors.length)} of {errors.length}
+          </span>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={() => { setExpandedId(null); setPage(Math.max(0, safePage - 1)); }}
+              disabled={safePage === 0}
+              style={{
+                fontFamily: mono, fontSize: 11, padding: "4px 10px", borderRadius: 4,
+                cursor: safePage === 0 ? "not-allowed" : "pointer",
+                background: "transparent", color: safePage === 0 ? C.border : C.tealLight,
+                border: `1px solid ${C.border}`, opacity: safePage === 0 ? 0.5 : 1,
+              }}
+            >
+              ← Prev
+            </button>
+            <span style={{ alignSelf: "center", padding: "0 8px" }}>
+              {safePage + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => { setExpandedId(null); setPage(Math.min(totalPages - 1, safePage + 1)); }}
+              disabled={safePage >= totalPages - 1}
+              style={{
+                fontFamily: mono, fontSize: 11, padding: "4px 10px", borderRadius: 4,
+                cursor: safePage >= totalPages - 1 ? "not-allowed" : "pointer",
+                background: "transparent", color: safePage >= totalPages - 1 ? C.border : C.tealLight,
+                border: `1px solid ${C.border}`, opacity: safePage >= totalPages - 1 ? 0.5 : 1,
+              }}
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
