@@ -29,26 +29,22 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const adminUserId = Deno.env.get("ADMIN_USER_ID")!;
 
-  // Decode JWT to get caller identity (no SDK dependency)
-  const token = authHeader.replace("Bearer ", "");
-  let callerId: string;
-  try {
-    const payloadB64 = token.split(".")[1];
-    const payload = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
-    callerId = payload.sub;
-    // Check expiry
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-      return err("Token expired", 401);
-    }
-  } catch {
+  // Verify JWT signature against Supabase JWKS via the auth API,
+  // then check the verified user.id against the admin allowlist.
+  // Never trust the token's claims without signature verification.
+  const token = authHeader.slice("Bearer ".length).trim();
+  const authClient = createClient(supabaseUrl, anonKey);
+  const { data: userData, error: authErr } = await authClient.auth.getUser(token);
+  if (authErr || !userData?.user) {
     return err("Invalid token", 401);
   }
-  if (!callerId || callerId !== adminUserId) {
-    console.error("Not admin:", callerId, "expected:", adminUserId);
+  const callerId = userData.user.id;
+  if (callerId !== adminUserId) {
+    console.error("Not admin:", callerId);
     return err("Forbidden", 403);
   }
 
-  // Service role client for unrestricted access
+  // Service role client for unrestricted access — only after admin verification
   const db = createClient(supabaseUrl, serviceKey);
 
   const body = await req.json();
