@@ -162,8 +162,11 @@ const FEED_FILTERS = [
   { key: "query_error", label: "Query Errors" },
 ];
 
+const PAGE_SIZE = 20;
+
 function RecentErrorsFeed() {
   const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { data, isLoading } = useAdminData("error_feed", { error_filter: filter }, { refetchInterval: 60000 });
 
@@ -172,6 +175,10 @@ function RecentErrorsFeed() {
   const errors = data || [];
   if (errors.length === 0) return <EmptyState message="No errors recorded yet" />;
 
+  const totalPages = Math.max(1, Math.ceil(errors.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageErrors = errors.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+
   return (
     <Card style={{ padding: 0 }}>
       {/* Filter pills */}
@@ -179,7 +186,7 @@ function RecentErrorsFeed() {
         {FEED_FILTERS.map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => { setFilter(f.key); setPage(0); }}
             style={{
               fontFamily: mono, fontSize: 11, padding: "4px 10px", borderRadius: 4, cursor: "pointer",
               background: filter === f.key ? `${C.teal}22` : "transparent",
@@ -193,8 +200,8 @@ function RecentErrorsFeed() {
       </div>
 
       {/* Error list */}
-      <div style={{ maxHeight: 500, overflowY: "auto" }}>
-        {errors.map((err: any) => {
+      <div>
+        {pageErrors.map((err: any) => {
           const props = err.properties || {};
           const severity = props.severity || "medium";
           const errType = props.type || "unknown";
@@ -262,6 +269,44 @@ function RecentErrorsFeed() {
           );
         })}
       </div>
+
+      {/* Pagination footer */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", borderTop: `1px solid ${C.border}`, fontFamily: mono, fontSize: 11, color: C.muted }}>
+          <span>
+            {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, errors.length)} of {errors.length}
+          </span>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={() => { setExpandedId(null); setPage(Math.max(0, safePage - 1)); }}
+              disabled={safePage === 0}
+              style={{
+                fontFamily: mono, fontSize: 11, padding: "4px 10px", borderRadius: 4,
+                cursor: safePage === 0 ? "not-allowed" : "pointer",
+                background: "transparent", color: safePage === 0 ? C.border : C.tealLight,
+                border: `1px solid ${C.border}`, opacity: safePage === 0 ? 0.5 : 1,
+              }}
+            >
+              ← Prev
+            </button>
+            <span style={{ alignSelf: "center", padding: "0 8px" }}>
+              {safePage + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => { setExpandedId(null); setPage(Math.min(totalPages - 1, safePage + 1)); }}
+              disabled={safePage >= totalPages - 1}
+              style={{
+                fontFamily: mono, fontSize: 11, padding: "4px 10px", borderRadius: 4,
+                cursor: safePage >= totalPages - 1 ? "not-allowed" : "pointer",
+                background: "transparent", color: safePage >= totalPages - 1 ? C.border : C.tealLight,
+                border: `1px solid ${C.border}`, opacity: safePage >= totalPages - 1 ? 0.5 : 1,
+              }}
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
