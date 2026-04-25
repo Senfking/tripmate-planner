@@ -200,7 +200,7 @@ function RecentErrorsFeed() {
   return (
     <Card style={{ padding: 0 }}>
       {/* Filter pills */}
-      <div style={{ display: "flex", gap: 6, padding: "16px 20px 12px", flexWrap: "wrap", borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ display: "flex", gap: 6, padding: "16px 20px 12px", flexWrap: "wrap", borderBottom: `1px solid ${C.border}`, alignItems: "center" }}>
         {FEED_FILTERS.map((f) => (
           <button
             key={f.key}
@@ -215,6 +215,24 @@ function RecentErrorsFeed() {
             {f.label}
           </button>
         ))}
+        <button
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(formatErrorsForCopy(errors));
+              toast.success(`Copied ${errors.length} error${errors.length === 1 ? "" : "s"} to clipboard`);
+            } catch {
+              toast.error("Failed to copy");
+            }
+          }}
+          style={{
+            marginLeft: "auto",
+            fontFamily: mono, fontSize: 11, padding: "4px 10px", borderRadius: 4, cursor: "pointer",
+            background: `${C.tealLight}11`, color: C.tealLight,
+            border: `1px solid ${C.tealLight}55`,
+          }}
+        >
+          📋 Copy all ({errors.length})
+        </button>
       </div>
 
       {/* Error list */}
