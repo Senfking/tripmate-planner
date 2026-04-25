@@ -1293,7 +1293,7 @@ Deno.serve(async (req) => {
           .select("id, created_at, user_id, properties")
           .eq("event_name", "app_error")
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(500);
 
         if (error_filter === "critical") {
           query = query.eq("properties->>severity", "critical");
