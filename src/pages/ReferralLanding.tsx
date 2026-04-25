@@ -153,6 +153,15 @@ function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
   );
 }
 
+/* ── Apple icon SVG ── */
+function AppleIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true">
+      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM260.9 79.7c25.7-30.5 23.4-58.3 22.6-68.3-22.7 1.3-49 15.4-64 32.8-16.5 18.7-26.2 41.8-24.1 67.8 24.5 1.9 46.9-10.7 65.5-32.3z"/>
+    </svg>
+  );
+}
+
 /* ── Google icon SVG ── */
 function GoogleIcon() {
   return (
@@ -187,6 +196,7 @@ export default function ReferralLanding() {
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
   const handleForgotPassword = async () => {
@@ -267,6 +277,17 @@ export default function ReferralLanding() {
       redirect_uri: callbackUrl,
     });
     setGoogleLoading(false);
+    if (err) setError(friendlyError(String(err)));
+  };
+
+  const handleAppleSignIn = async () => {
+    setError(null);
+    setAppleLoading(true);
+    const callbackUrl = `${window.location.origin}/auth/callback${redirectAfterAuth ? `?redirect=${encodeURIComponent(redirectAfterAuth)}` : ""}`;
+    const { error: err } = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: callbackUrl,
+    });
+    setAppleLoading(false);
     if (err) setError(friendlyError(String(err)));
   };
 
@@ -508,6 +529,27 @@ export default function ReferralLanding() {
                     <GoogleIcon />
                   )}
                   Continue with Google
+                </button>
+
+                {/* Apple OAuth */}
+                <button
+                  type="button"
+                  disabled={appleLoading}
+                  onClick={handleAppleSignIn}
+                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:scale-[0.97] transition-transform"
+                  style={{
+                    height: 52,
+                    fontSize: 15,
+                    background: "#000",
+                    color: "#fff",
+                  }}
+                >
+                  {appleLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <AppleIcon />
+                  )}
+                  Continue with Apple
                 </button>
 
                 {/* Divider */}
