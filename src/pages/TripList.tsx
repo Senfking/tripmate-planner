@@ -204,7 +204,9 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
               {trip.name}
             </p>
             <p className="text-sm text-white/70 mt-0.5">
-              {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
+              {trip.statusInfo.missingEnd
+                ? `Started ${format(parseISO(trip.tentative_start_date!), "MMM d, yyyy")} · end date?`
+                : formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
             </p>
             {trip.nextActivity && (
               <p className="text-xs text-white/60 mt-1">
