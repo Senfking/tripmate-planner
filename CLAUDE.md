@@ -62,7 +62,7 @@
 
 10. React Query's keepPreviousData makes state races invisible in the UI. A component can render with stale props while underlying queries are briefly broken. Useful for UX but dangerous for debugging — always verify prop freshness at mutation time, not just query data freshness.
 
-11. Fixing over-eager cache invalidation (PR #173) exposed a pre-existing bug: mutations with invalidateQueries alone don't update UI immediately when combined with keepPreviousData — the old data stays visible during the background refetch round-trip. Mutations that modify lists must use setQueryData for synchronous cache updates in onSuccess, then follow with invalidateQueries to confirm from server. The pattern applies to delete, update, and any mutation that changes list membership.
+11. Fixing over-eager cache invalidation (PR #173) exposed a pre-existing bug: mutations with invalidateQueries alone don't update UI immediately when combined with keepPreviousData — the old data stays visible during the background refetch round-trip. Mutations that modify lists must use setQueryData for synchronous cache updates in onSuccess, then follow with invalidateQueries to confirm from server. The pattern applies to delete, update, and any mutation that changes list membership. Reference implementations: `addExpense`, `updateExpense`, and `deleteExpense` in `src/hooks/useExpenses.ts` all follow this pattern — copy from there when adding new list mutations.
 
 ## Common Commands
 - npm run dev — start local dev server

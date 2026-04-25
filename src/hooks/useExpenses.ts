@@ -294,7 +294,7 @@ export function useExpenses(tripId: string) {
         supabase
           .from("expenses")
           .insert({ ...expenseData, trip_id } as any)
-          .select("id")
+          .select("*")
           .single();
 
       let { data: expense, error } = await insertExpense();
@@ -308,25 +308,50 @@ export function useExpenses(tripId: string) {
       }
 
       if (error) throw error;
+      const insertedExpense = expense as ExpenseRow;
 
       const splitRows = splits.map((s) => ({
-        expense_id: expense.id,
+        expense_id: insertedExpense.id,
         user_id: s.user_id,
         share_amount: s.share_amount,
       }));
-      const { error: sErr } = await supabase.from("expense_splits").insert(splitRows);
-      if (sErr) throw sErr;
+      const { data: insertedSplits, error: sErr } = await supabase
+        .from("expense_splits")
+        .insert(splitRows)
+        .select("*");
+      if (sErr) {
+        // Compensating delete: supabase-js can't atomically wrap the two
+        // inserts, and an expense without splits is invalid balance state.
+        try {
+          await supabase.from("expenses").delete().eq("id", insertedExpense.id);
+        } catch {}
+        throw sErr;
+      }
 
       // Save line items + claims if using "Split by item" mode
       if (lineItems && lineItems.length > 0) {
-        await saveLineItems(expense.id, lineItems, itemAssignments, quantityAssignments);
+        await saveLineItems(insertedExpense.id, lineItems, itemAssignments, quantityAssignments);
       }
+
+      return {
+        expense: insertedExpense,
+        splits: (insertedSplits ?? []) as SplitRow[],
+      };
     },
-    onSuccess: async (_data, params) => {
+    onSuccess: (result, params) => {
       const targetTripId = params.trip_id;
       trackEvent("expense_created", { trip_id: targetTripId, currency: params.currency, category: params.category }, user?.id);
-      await qc.invalidateQueries({ queryKey: ["expenses", targetTripId] });
-      await qc.invalidateQueries({ queryKey: ["expense-splits", targetTripId] });
+      // setQueryData required: invalidate-only doesn't update the UI in
+      // time when paired with placeholderData: keepPreviousData. See
+      // CLAUDE.md "Resolved Bugs" note 11.
+      qc.setQueryData<ExpenseRow[]>(["expenses", targetTripId], (old) =>
+        old ? [result.expense, ...old] : [result.expense]
+      );
+      qc.setQueryData<SplitRow[]>(["expense-splits", targetTripId], (old) =>
+        old ? [...old, ...result.splits] : result.splits
+      );
+      qc.invalidateQueries({ queryKey: ["expenses", targetTripId] });
+      qc.invalidateQueries({ queryKey: ["expense-splits", targetTripId] });
       qc.invalidateQueries({ queryKey: ["expenses-summary", targetTripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense added");
