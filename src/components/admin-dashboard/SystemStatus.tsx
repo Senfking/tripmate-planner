@@ -2,6 +2,24 @@ import React, { useState, useMemo } from "react";
 import { useAdminData } from "@/hooks/useAdminQuery";
 import { Card, AdminSkeleton, StatusPill, EmptyState, SectionHeader, C, mono, sans } from "./shared";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { toast } from "sonner";
+
+function formatErrorsForCopy(errors: any[]): string {
+  return errors.map((err, i) => {
+    const p = err.properties || {};
+    const lines = [
+      `### Error ${i + 1} — ${err.created_at}`,
+      `Severity: ${p.severity || "medium"}  Type: ${p.type || "unknown"}`,
+      `User: ${err.display_name || "—"}`,
+      p.route ? `Route: ${p.route}` : null,
+      `Message: ${p.message || "(none)"}`,
+      p.component ? `Component: ${p.component}` : null,
+      p.queryKey ? `Query key: ${p.queryKey}` : null,
+      p.stack ? `Stack:\n${p.stack}` : null,
+    ].filter(Boolean);
+    return lines.join("\n");
+  }).join("\n\n---\n\n");
+}
 
 /** Fill missing buckets in error chart with 0s. 24h => 24 hourly buckets, 30d => 30 daily buckets. */
 function fillErrorBuckets(data: any[] | undefined, period: "24h" | "30d"): any[] {
