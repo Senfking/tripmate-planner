@@ -27,7 +27,10 @@ import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
 
-function getTripStatus(start: string | null, end: string | null): { status: TripStatus; daysToGo?: number } {
+function getTripStatus(
+  start: string | null,
+  end: string | null,
+): { status: TripStatus; daysToGo?: number; missingEnd?: boolean } {
   // No start_date → draft (can't classify on the timeline)
   if (!start) return { status: "no-dates" };
   const today = new Date();
@@ -39,8 +42,7 @@ function getTripStatus(start: string | null, end: string | null): { status: Trip
   // Ended: end date exists and is strictly before today
   if (e && isBefore(e, today)) return { status: "ended" };
 
-  // Live: today within [start, end]. Without an end date we can't know if it's still ongoing,
-  // so treat start-without-end as upcoming/ended based on the start date only.
+  // Live: today within [start, end]
   if (e && isWithinInterval(today, { start: s, end: e })) return { status: "live" };
 
   // Future
@@ -49,8 +51,8 @@ function getTripStatus(start: string | null, end: string | null): { status: Trip
     if (days <= 60) return { status: "countdown", daysToGo: days };
     return { status: "upcoming" };
   }
-  // Start in the past with no end date → can't be classified as live; treat as undated
-  if (!e) return { status: "no-dates" };
+  // Start in the past with no end date → assume still ongoing; flag missing end date
+  if (!e) return { status: "live", missingEnd: true };
   return { status: "upcoming" };
 }
 
@@ -202,7 +204,9 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
               {trip.name}
             </p>
             <p className="text-sm text-white/70 mt-0.5">
-              {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
+              {trip.statusInfo.missingEnd
+                ? `Started ${format(parseISO(trip.tentative_start_date!), "MMM d, yyyy")} · end date?`
+                : formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
             </p>
             {trip.nextActivity && (
               <p className="text-xs text-white/60 mt-1">
