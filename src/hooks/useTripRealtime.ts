@@ -212,7 +212,10 @@ export function useTripRealtime(tripId: string | undefined) {
   const userId = user?.id;
 
   useEffect(() => {
-    if (!tripId || !userId) return;
+    // Treat the literal string "undefined" (interpolated into the URL) as
+    // not a valid trip id — we don't want a realtime channel filtered to
+    // trip_id=eq.undefined.
+    if (!tripId || tripId === "undefined" || !userId) return;
 
     const channel = supabase.channel(`trip-realtime-${tripId}`);
     channelRef.current = channel;

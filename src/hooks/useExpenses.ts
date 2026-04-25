@@ -8,6 +8,7 @@ import { saveLineItems } from "@/hooks/useLineItemClaims";
 import { parseRates, fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { friendlyErrorMessage, isAuthOrRlsError } from "@/lib/supabaseErrors";
 import { ensureFreshSession, forceRefreshSession } from "@/lib/sessionRefresh";
+import { isValidTripId } from "@/lib/tripId";
 
 export interface ExpenseRow {
   id: string;
@@ -61,7 +62,7 @@ export function useExpenses(tripId: string) {
       if (error) throw error;
       return data as ExpenseRow[];
     },
-    enabled: !!tripId && !!user,
+    enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
   });
 
@@ -112,7 +113,7 @@ export function useExpenses(tripId: string) {
         attendanceStatus: (m as any).attendance_status ?? "pending",
       })) as MemberProfile[];
     },
-    enabled: !!tripId && !!user,
+    enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
   });
 
@@ -128,7 +129,7 @@ export function useExpenses(tripId: string) {
       if (error) throw error;
       return (data as any).settlement_currency as string || "EUR";
     },
-    enabled: !!tripId && !!user,
+    enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
   });
 
@@ -234,7 +235,7 @@ export function useExpenses(tripId: string) {
       if (error) throw error;
       return data;
     },
-    enabled: !!tripId && !!user,
+    enabled: isValidTripId(tripId) && !!user,
   });
 
   // Update settlement currency - any member can do this
@@ -258,6 +259,7 @@ export function useExpenses(tripId: string) {
   // Add expense
   const addExpense = useMutation({
     mutationFn: async (params: {
+      trip_id: string;
       title: string;
       amount: number;
       currency: string;
@@ -272,11 +274,15 @@ export function useExpenses(tripId: string) {
       itemAssignments?: Record<number, Set<string> | string[]>;
       quantityAssignments?: Record<number, Record<string, number>>;
     }) => {
-      if (!tripId) {
+      // Use the trip_id from params, not the closure-captured tripId. The hook
+      // can be torn down and re-created with a different tripId between when
+      // the form opens and when the user submits; the form's own tripId is the
+      // source of truth at mutation time.
+      const { splits, lineItems, itemAssignments, quantityAssignments, trip_id, ...expenseData } = params;
+
+      if (!isValidTripId(trip_id)) {
         throw new Error("Cannot add expense: trip context is missing. Please refresh the page.");
       }
-
-      const { splits, lineItems, itemAssignments, quantityAssignments, ...expenseData } = params;
 
       // Pre-flight: make sure the cached JWT isn't within its expiry window.
       // Without this, an insert fired immediately after returning from a
@@ -287,7 +293,7 @@ export function useExpenses(tripId: string) {
       const insertExpense = () =>
         supabase
           .from("expenses")
-          .insert({ ...expenseData, trip_id: tripId } as any)
+          .insert({ ...expenseData, trip_id } as any)
           .select("id")
           .single();
 
@@ -317,10 +323,11 @@ export function useExpenses(tripId: string) {
       }
     },
     onSuccess: async (_data, params) => {
-      trackEvent("expense_created", { trip_id: tripId, currency: params.currency, category: params.category }, user?.id);
-      await qc.invalidateQueries({ queryKey: ["expenses", tripId] });
-      await qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
-      qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
+      const targetTripId = params.trip_id;
+      trackEvent("expense_created", { trip_id: targetTripId, currency: params.currency, category: params.category }, user?.id);
+      await qc.invalidateQueries({ queryKey: ["expenses", targetTripId] });
+      await qc.invalidateQueries({ queryKey: ["expense-splits", targetTripId] });
+      qc.invalidateQueries({ queryKey: ["expenses-summary", targetTripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense added");
     },

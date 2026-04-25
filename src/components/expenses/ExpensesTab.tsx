@@ -633,7 +633,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   mySettlements.some((s) => `${s.from}→${s.to}` === p.pairKey)
                 )}
                 totalSettledOverall={totalSettledOverall}
-                onSettle={(data) => addExpense.mutate(data as any)}
+                onSettle={(data) => addExpense.mutate({ ...data, trip_id: tripId } as any)}
               />
             )}
             {otherSettlements.length > 0 && (
@@ -787,7 +787,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           if (data.id) {
             await updateExpense.mutateAsync(data as any);
           } else {
-            const result = await addExpense.mutateAsync(data as any);
+            const result = await addExpense.mutateAsync({ ...data, trip_id: tripId } as any);
             // After saving a receipt-scanned expense, offer cross-link if we have title + date
             if (isReceiptScan && data.title && data.incurred_on) {
               // Need to get the new expense id - fetch the latest expense matching

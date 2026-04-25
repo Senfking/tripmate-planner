@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInDays, parseISO } from "date-fns";
+import { isValidTripId } from "@/lib/tripId";
 
 export type RouteStop = {
   id: string;
@@ -35,7 +36,7 @@ export function useRouteStops(tripId: string | undefined) {
       if (error) throw error;
       return (data || []) as unknown as RouteStop[];
     },
-    enabled: !!tripId && !!user,
+    enabled: isValidTripId(tripId) && !!user,
   });
 
   const stops = stopsQuery.data || [];
