@@ -97,8 +97,11 @@ const codeToCity: Record<string, string> = {
 
 const HORIZONTAL_IDS = new Set(["decisions", "bookings"]);
 
-function SortableSection({ id, children }: { id: string; children: ReactNode }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
+function SortableSection({ id, editMode, children }: { id: string; editMode: boolean; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !editMode,
+  });
   const isHorizontal = HORIZONTAL_IDS.has(id);
   const elRef = useRef<HTMLDivElement>(null);
 
@@ -116,7 +119,7 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   const style = {
     transform: transform ? `translate3d(${tx}px, ${ty}px, 0)` : undefined,
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.6 : 1,
     zIndex: isDragging ? 10 : undefined,
   };
 
@@ -126,18 +129,31 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   }, [setNodeRef]);
 
   return (
-    <div ref={setRefs} style={style} className="relative group/sortable" {...attributes}>
-      {/* Drag handle — always visible on touch, on hover for desktop */}
-      <div
-        ref={setActivatorNodeRef}
-        {...listeners}
-        className="absolute top-1 left-1/2 -translate-x-1/2 z-10 opacity-60 md:opacity-0 md:group-hover/sortable:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
-        style={{ padding: "8px 16px" }}
-        aria-label="Drag to reorder"
-      >
-        <div className="w-10 h-1 rounded-full bg-foreground/40" />
-      </div>
+    <div
+      ref={setRefs}
+      style={style}
+      className={`relative ${editMode ? "animate-wiggle" : ""}`}
+      {...(editMode ? attributes : {})}
+    >
       {children}
+      {editMode && (
+        <>
+          {/* Block all interactions inside the card while editing */}
+          <div className="absolute inset-0 z-10 rounded-2xl bg-background/10" />
+          {/* Drag handle — full card surface acts as drag, with visible grip */}
+          <button
+            ref={setActivatorNodeRef}
+            {...listeners}
+            type="button"
+            className="absolute inset-0 z-20 flex items-center justify-end pr-3 rounded-2xl cursor-grab active:cursor-grabbing touch-none bg-foreground/[0.03] border-2 border-dashed border-foreground/20"
+            aria-label="Drag to reorder"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-background shadow-md border border-border">
+              <GripVertical className="h-4 w-4 text-foreground/70" />
+            </span>
+          </button>
+        </>
+      )}
     </div>
   );
 }
