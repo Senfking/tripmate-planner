@@ -13,7 +13,8 @@ import { ExpenseCard } from "./ExpenseCard";
 import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles, Users, Download, Settings2 } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles, Users, Download, Settings2, WifiOff } from "lucide-react";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +51,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   });
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const isOnline = useOnlineStatus();
 
   const allSameCurrency = useMemo(
     () => expenses.every((e) => e.currency === settlementCurrency),
@@ -386,6 +388,12 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
 
   return (
     <div className="space-y-4">
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <WifiOff className="h-3.5 w-3.5 shrink-0" />
+          <span>You're offline — showing last synced data. Balances may be out of date.</span>
+        </div>
+      )}
       {/* Balance hero - teal gradient card */}
       {canShowBalances && expenses.length > 0 && (
         <div

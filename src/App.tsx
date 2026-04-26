@@ -1,5 +1,7 @@
 import { useEffect, lazy, Suspense } from "react";
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -56,6 +58,10 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       staleTime: 1000 * 60 * 2, // 2 min default
+      // Hold cached data for 24h so an offline cold start has something to
+      // render. React Query GCs entries after gcTime; we want them to survive
+      // long tab closures so the persister can rehydrate them.
+      gcTime: 1000 * 60 * 60 * 24,
       throwOnError: false,
     },
     mutations: {
@@ -84,6 +90,14 @@ const queryClient = new QueryClient({
       });
     },
   }),
+});
+
+// localStorage persister — survives reloads and offline cold starts.
+// Bumping `buster` invalidates all stored entries on app upgrade.
+const persister = createSyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  key: "junto-rq-cache-v1",
+  throttleTime: 1000,
 });
 
 /** Pre-warm exchange rate cache after auth is ready. */
@@ -197,9 +211,21 @@ function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: 1000 * 60 * 60 * 24, // 24h
+        buster: "v1",
+        dehydrateOptions: {
+          // Don't persist failed/empty queries — they'd just rehydrate to nothing.
+          shouldDehydrateQuery: (query) =>
+            query.state.status === "success" && query.state.data !== undefined,
+        },
+      }}
+    >
       <AppInner />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </ErrorBoundary>
 );
 
