@@ -11,12 +11,33 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Defense-in-depth: even with verify_jwt = true on the Supabase gateway,
+  // ANY valid Supabase JWT passes (including the published anon key).
+  // This function fans into Twilio + admin_notifications inserts and is
+  // only ever called by:
+  //   1. DB trigger notify_new_user
+  //   2. pg_cron functions check_error_spike, send_daily_digest
+  //
+  // All three callers use the service role key in their Authorization
+  // header. Reject anything else here so a leaked anon key, a logged-in
+  // user, or a third party with their own JWT cannot trigger admin alerts.
+  // The frontend feedback path goes through submit-feedback-alert, which
+  // applies per-user auth + rate limiting before re-entering this code
+  // path internally (out of scope for this gate).
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const auth = req.headers.get("Authorization") || "";
+  if (auth !== `Bearer ${serviceRoleKey}`) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const body = await req.json();
     const trigger = body.trigger as string;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const db = createClient(supabaseUrl, serviceRoleKey);
 
     let notification: {
