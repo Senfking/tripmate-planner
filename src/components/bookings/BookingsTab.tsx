@@ -265,7 +265,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               <Lock className={`h-3.5 w-3.5 shrink-0 ${isPrivate ? "text-amber-600" : "text-muted-foreground"}`} />
               <div className="flex-1 text-left">
                 <p className={`text-[13px] font-medium ${isPrivate ? "text-amber-700 dark:text-amber-400" : ""}`}>
-                  {isPrivate ? "Private — only you can see this" : "Shared with trip"}
+                  {isPrivate ? "Private. Only you can see this" : "Shared with the trip"}
                 </p>
               </div>
               <div className={`h-5 w-9 rounded-full transition-colors flex items-center ${
@@ -276,7 +276,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs max-w-[200px]">
-            Private documents are only visible to you — other trip members won't see them
+            Private documents stay visible only to you. Other trip members will not see them.
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
