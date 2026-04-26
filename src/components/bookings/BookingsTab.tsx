@@ -379,42 +379,86 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     );
   }
 
-  // Empty state
+  // Empty state — premium, AI-forward
   if (attachments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 px-2">
-        <p className="text-4xl">📄</p>
-        <div>
-          <p className="text-lg font-semibold text-foreground">No docs saved yet</p>
-          <p className="text-sm text-muted-foreground mt-1">Upload a confirmation to get started</p>
-        </div>
-        <div className="w-full max-w-xs space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 rounded-lg border py-2.5 text-[13px] font-medium hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
-            >
-              <Camera className="h-4 w-4 text-[#0D9488]" />
-              Take photo
-            </button>
-            <button
-              type="button"
-              onClick={() => galleryInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 rounded-lg border py-2.5 text-[13px] font-medium hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
-            >
-              <Upload className="h-4 w-4 text-[#0D9488]" />
-              Upload file
-            </button>
+      <div className="px-1 pt-6 pb-10">
+        {/* Hero card */}
+        <div className="relative overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6">
+          {/* Soft glow */}
+          <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#0D9488]/15 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-[#0D9488]/10 blur-3xl" />
+
+          <div className="relative flex flex-col items-center text-center">
+            {/* AI badge */}
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#0D9488]/25 bg-background/70 backdrop-blur px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#0D9488]">
+              <Sparkles className="h-3 w-3" />
+              Powered by Junto AI
+            </div>
+
+            <h2 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground leading-tight">
+              All your bookings,<br />
+              <span className="text-[#0D9488]">instantly organised</span>
+            </h2>
+            <p className="mt-2 max-w-[280px] text-[13.5px] leading-relaxed text-muted-foreground">
+              Snap or upload any confirmation — flights, hotels, tours. Junto reads it and files it for the whole crew.
+            </p>
+
+            {/* Primary CTAs */}
+            <div className="mt-5 grid w-full max-w-xs grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0D9488] py-3 text-[13.5px] font-semibold text-white shadow-[0_6px_20px_-6px_rgba(13,148,136,0.5)] transition-transform active:scale-[0.97]"
+              >
+                <Camera className="h-4 w-4" />
+                Snap photo
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-[#0D9488]/30 bg-background py-3 text-[13.5px] font-semibold text-[#0D9488] transition-colors hover:bg-[#0D9488]/[0.06] active:scale-[0.97]"
+              >
+                <Upload className="h-4 w-4" />
+                Upload file
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground/80">PDF, JPG, PNG · screenshots work too</p>
           </div>
+        </div>
+
+        {/* Benefit list */}
+        <ul className="mt-6 space-y-2.5 px-2">
+          {[
+            { icon: Sparkles, title: "Auto-extracts the details", desc: "Dates, times, confirmation #, addresses." },
+            { icon: Plane, title: "Smart arrivals timeline", desc: "We line up flights so the group knows who lands when." },
+            { icon: Lock, title: "Private when you need it", desc: "Mark sensitive docs visible only to you." },
+          ].map(({ icon: Icon, title, desc }) => (
+            <li key={title} className="flex items-start gap-3 rounded-xl border border-border/60 bg-card/50 p-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#0D9488]/10">
+                <Icon className="h-4 w-4 text-[#0D9488]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-foreground leading-tight">{title}</p>
+                <p className="mt-0.5 text-[12px] text-muted-foreground leading-snug">{desc}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* Secondary manual CTA — visible but clearly secondary */}
+        <div className="mt-6 flex flex-col items-center gap-1.5">
+          <p className="text-[11.5px] uppercase tracking-[0.14em] text-muted-foreground/60">No confirmation handy?</p>
           <button
             type="button"
             onClick={openManualForm}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-muted/50 active:scale-[0.97]"
           >
-            or add details manually
+            <Plus className="h-3.5 w-3.5" />
+            Add booking manually
           </button>
         </div>
+
         {manualFormModal}
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
         <input ref={galleryInputRef} type="file" accept={ACCEPT_ALL} className="hidden" onChange={handleFile} />
