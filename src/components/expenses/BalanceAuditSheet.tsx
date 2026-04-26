@@ -15,7 +15,7 @@ interface Props {
   members: MemberProfile[];
   settlementCurrency: string;
   rates: Rates;
-  ratesFetchedAt: Date | null;
+  ratesFetchedAtMs: number | null;
 }
 
 interface AuditLine {
@@ -30,7 +30,7 @@ interface AuditLine {
 
 export function BalanceAuditSheet({
   open, onOpenChange, userId, displayName, expenses, splits,
-  members, settlementCurrency, rates, ratesFetchedAt,
+  members, settlementCurrency, rates, ratesFetchedAtMs,
 }: Props) {
   const [showPaidDetail, setShowPaidDetail] = useState(false);
   const [showOwedDetail, setShowOwedDetail] = useState(false);
@@ -85,7 +85,7 @@ export function BalanceAuditSheet({
     return { paid, owed, totalPaid, totalOwed, netBalance, foreignCurrencies: [...foreignCurrencies] };
   }, [expenses, splits, userId, settlementCurrency, rates, profileMap]);
 
-  const ratesDateStr = ratesFetchedAt ? format(ratesFetchedAt, "d MMM yyyy") : null;
+  const ratesDateStr = ratesFetchedAtMs ? format(ratesFetchedAtMs, "d MMM yyyy") : null;
 
   const renderRow = (line: AuditLine, i: number, section: "paid" | "owed") => {
     const isForeign = line.originalCurrency !== settlementCurrency;

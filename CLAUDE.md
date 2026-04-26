@@ -47,6 +47,7 @@
 - Supabase `TOKEN_REFRESHED` fires on every tab focus. Auth handlers must compare `user.id` before calling `setUser`/`setSession`, or downstream consumers will unmount/remount with empty data.
 - Never call `queryClient.invalidateQueries()` without a filter on `TOKEN_REFRESHED` — it flushes every cache entry and forces skeleton flashes across the app. Reserve full invalidation for `SIGNED_IN`.
 - React Query list queries that users see after tab switches should set `placeholderData: keepPreviousData` so transient state resets don't flash skeletons over loaded data.
+- queryFn results must be JSON-serializable. No `Date`, `Set`, `Map`, or other non-JSON-safe types — they break the localStorage persister. Use ISO strings or epoch milliseconds for timestamps.
 
 ### Known Architecture Issues
 
