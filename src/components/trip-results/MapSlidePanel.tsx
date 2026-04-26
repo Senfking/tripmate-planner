@@ -156,7 +156,10 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
         />
       </div>
 
-      <div className="absolute inset-x-0 top-0 z-[1200] p-4 pointer-events-none">
+      <div
+        className="absolute inset-x-0 top-0 z-[1200] px-4 pb-4 pointer-events-none"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}
+      >
         <div className="flex items-start gap-3">
           <div className="pointer-events-auto bg-card/92 backdrop-blur-xl rounded-2xl border border-border shadow-2xl px-5 py-4 max-w-sm">
             <h2 className="text-base font-bold text-foreground truncate">{result.trip_title}</h2>
