@@ -73,6 +73,12 @@
 - Filtered out: offline failures and 401/403 responses. These are handled by the retry/auth flow and would be noise. Form validation errors don't reach these paths.
 - All Sentry calls go through helpers in `src/lib/sentry.ts` — don't call `Sentry.captureException` directly so tagging stays consistent.
 
+### Env files
+- `.env` is tracked and holds **non-secret** Vite client config (Supabase URL/anon key, VAPID public key). Don't put secrets here.
+- `.env.local` is gitignored (`.env.*` rule with a `!.env.example` exception) — put secrets and per-developer overrides here. `VITE_SENTRY_DSN` lives in `.env.local`.
+- `.env.example` documents which vars exist; copy to `.env.local` and fill in.
+- For Lovable hosted builds, env vars from `.env.local` are not in the checked-out repo. Set `VITE_SENTRY_DSN` in Lovable's environment variable UI for the deployed build, or it ships without Sentry. (Edge Function secrets remain in the Supabase Dashboard UI per the Supabase rule above — that is unrelated to Vite client envs.)
+
 ## Common Commands
 - npm run dev — start local dev server
 - npm run build — production build
