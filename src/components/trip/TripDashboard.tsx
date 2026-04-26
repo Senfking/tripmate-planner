@@ -870,18 +870,18 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       <div className="px-4 md:max-w-[700px] md:mx-auto md:px-8 flex flex-col gap-3">
 
         {/* Rearrange toggle */}
-        <div className="flex justify-end -mb-1">
+        <div className="flex justify-end -mb-2 -mt-1">
           <button
             type="button"
             onClick={() => setEditMode((v) => !v)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-colors ${
               editMode
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                ? "text-primary"
+                : "text-muted-foreground/60 hover:text-foreground"
             }`}
             aria-pressed={editMode}
           >
-            {editMode ? <><Check className="h-3.5 w-3.5" /> Done</> : <><ArrowUpDown className="h-3.5 w-3.5" /> Rearrange</>}
+            {editMode ? <><Check className="h-3 w-3" /> Done</> : <><ArrowUpDown className="h-3 w-3" /> Rearrange</>}
           </button>
         </div>
 
