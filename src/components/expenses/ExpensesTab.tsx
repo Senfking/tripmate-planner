@@ -533,7 +533,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                     className="mt-3 h-8 px-4 text-[12px] bg-white/15 hover:bg-white/25 text-white border-0"
                     onClick={() => setSettleOpen(true)}
                   >
-                    View settlements
+                    Settle up
                   </Button>
                 </div>
               )}
