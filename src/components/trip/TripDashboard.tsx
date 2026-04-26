@@ -929,37 +929,38 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             {activeId ? <DragPreview>{renderSection(activeId)}</DragPreview> : null}
           </DragOverlay>
         </DndContext>
+
+        {/* Subtle inline Rearrange affordance — sits quietly below the cards */}
+        {!editMode && (
+          <button
+            type="button"
+            onClick={() => setEditMode(true)}
+            aria-label="Rearrange dashboard"
+            className="self-center mt-2 mb-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            <ArrowUpDown className="h-3 w-3" strokeWidth={1.75} />
+            Rearrange
+          </button>
+        )}
       </div>
 
-      {/* Floating Rearrange / Done button — premium minimal */}
-      <div
-        className="fixed left-1/2 -translate-x-1/2 z-40"
-        style={{ bottom: `calc(env(safe-area-inset-bottom, 0px) + 84px)` }}
-      >
-        <button
-          type="button"
-          onClick={() => setEditMode((v) => !v)}
-          aria-pressed={editMode}
-          aria-label={editMode ? "Done rearranging" : "Rearrange dashboard"}
-          className={`group flex items-center gap-2 rounded-full border border-border/60 bg-background/85 backdrop-blur-xl px-4 h-10 text-[13px] font-medium transition-all duration-300 ease-out ${
-            editMode
-              ? "text-primary shadow-[0_8px_28px_-6px_hsl(var(--primary)/0.35)]"
-              : "text-foreground/70 hover:text-foreground shadow-[0_4px_18px_-4px_rgba(0,0,0,0.12)] hover:shadow-[0_6px_22px_-4px_rgba(0,0,0,0.18)]"
-          }`}
+      {/* Floating Done pill — only while editing, so users can confirm easily */}
+      {editMode && (
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-40 animate-fade-in"
+          style={{ bottom: `calc(env(safe-area-inset-bottom, 0px) + 84px)` }}
         >
-          {editMode ? (
-            <>
-              <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-              <span>Done</span>
-            </>
-          ) : (
-            <>
-              <ArrowUpDown className="h-3.5 w-3.5" strokeWidth={2} />
-              <span>Rearrange</span>
-            </>
-          )}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setEditMode(false)}
+            aria-label="Done rearranging"
+            className="flex items-center gap-2 rounded-full border border-border/60 bg-background/85 backdrop-blur-xl px-4 h-10 text-[13px] font-semibold text-primary shadow-[0_8px_28px_-6px_hsl(var(--primary)/0.35)] transition-all duration-300 ease-out"
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Done
+          </button>
+        </div>
+      )}
 
       {/* Concierge Panel */}
       <ConciergePanel
