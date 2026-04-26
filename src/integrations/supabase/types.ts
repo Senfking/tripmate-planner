@@ -696,6 +696,7 @@ export type Database = {
           created_at: string
           hint_rating: string | null
           id: string
+          metadata: Json | null
           rating: number
           read_at: string | null
           route: string | null
@@ -715,6 +716,7 @@ export type Database = {
           created_at?: string
           hint_rating?: string | null
           id?: string
+          metadata?: Json | null
           rating?: number
           read_at?: string | null
           route?: string | null
@@ -734,6 +736,7 @@ export type Database = {
           created_at?: string
           hint_rating?: string | null
           id?: string
+          metadata?: Json | null
           rating?: number
           read_at?: string | null
           route?: string | null
