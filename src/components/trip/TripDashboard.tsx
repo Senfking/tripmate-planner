@@ -209,7 +209,15 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     useSensor(TouchSensor, { activationConstraint: { delay: 80, tolerance: 6 } }),
   );
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      try { navigator.vibrate?.(8); } catch { /* ignore */ }
+    }
+  }, []);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setSectionOrder((prev) => {
@@ -220,6 +228,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
       return next;
     });
   }, [STORAGE_KEY]);
+
+  const handleDragCancel = useCallback(() => setActiveId(null), []);
 
   const { data: aiPlanData } = useQuery({
     queryKey: ["trip-ai-plan", tripId],
