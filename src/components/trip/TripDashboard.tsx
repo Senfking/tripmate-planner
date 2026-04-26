@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import {
   Sparkles, AlertTriangle, Vote, FileText, Receipt, ChevronRight,
-  Plane,
+  Plane, GripVertical, Check, ArrowUpDown,
 } from "lucide-react";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances } from "@/lib/settlementCalc";
