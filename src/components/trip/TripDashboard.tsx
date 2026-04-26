@@ -1,4 +1,8 @@
-import { useState, useCallback, useMemo, useRef, Component, type ReactNode } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect, Component, type ReactNode } from "react";
+import decisionsCardJpg from "@/assets/decisions-card.jpg";
+import decisionsCardWebp from "@/assets/decisions-card.webp";
+import bookingsCardJpg from "@/assets/bookings-card.jpg";
+import bookingsCardWebp from "@/assets/bookings-card.webp";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
