@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      spacing: {
+        "safe-t": "env(safe-area-inset-top, 0px)",
+        "safe-b": "env(safe-area-inset-bottom, 0px)",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
