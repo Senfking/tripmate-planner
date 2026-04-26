@@ -64,6 +64,10 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
     packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions : [],
     total_activities: typeof raw.total_activities === "number" ? raw.total_activities : 0,
     budget_tier: raw.budget_tier,
+    destination_image_url:
+      typeof raw.destination_image_url === "string" && raw.destination_image_url.length > 0
+        ? raw.destination_image_url
+        : null,
   };
 }
 
@@ -189,6 +193,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           destination,
           tentative_start_date: firstDest?.start_date || null,
           tentative_end_date: lastDest?.end_date || null,
+          destination_image_url: results.destination_image_url ?? null,
         } as any)
         .select()
         .single();

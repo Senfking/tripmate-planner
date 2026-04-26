@@ -31,6 +31,7 @@ interface TripBoundary {
   tripEndDate: string | null;
   tripDestination: string | null;
   tripCoverImagePath: string | null;
+  tripDestinationImageUrl: string | null;
   routeStopDests: string[];
 }
 interface DestBoundary { destination: string; tripName: string; tripEmoji: string | null; tripId: string }
@@ -158,6 +159,7 @@ const Itinerary = () => {
       tripEndDate: g.tripEndDate,
       tripDestination: g.tripDestination,
       tripCoverImagePath: g.tripCoverImagePath,
+      tripDestinationImageUrl: g.tripDestinationImageUrl,
       routeStopDests,
     };
 
@@ -322,6 +324,7 @@ const Itinerary = () => {
                       tripEndDate={trip.tripEndDate}
                       tripDestination={trip.tripDestination}
                       tripCoverImagePath={trip.tripCoverImagePath}
+                      tripDestinationImageUrl={trip.tripDestinationImageUrl}
                       routeStopDests={trip.routeStopDests}
                     />
                   ))}
@@ -458,6 +461,7 @@ const Itinerary = () => {
                       tripEndDate={trip.tripEndDate}
                       tripDestination={trip.tripDestination}
                       tripCoverImagePath={trip.tripCoverImagePath}
+                      tripDestinationImageUrl={trip.tripDestinationImageUrl}
                       routeStopDests={trip.routeStopDests}
                     />
                   ))}

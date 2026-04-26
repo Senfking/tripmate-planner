@@ -95,7 +95,25 @@ const PHOTO_DB: [string[], string][] = [
 
 export const DEFAULT_TRIP_PHOTO = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80";
 
-export function resolvePhoto(tripName: string, routeStopDests: string[]): string {
+// Resolve the cover photo for a trip. Priority order:
+//   1. destinationImageUrl  — auto-resolved per-destination URL stored on
+//      trips.destination_image_url by generate-trip-itinerary (Google Place
+//      Photos with Wikimedia Commons fallback). Specific to the actual city.
+//   2. PHOTO_DB keyword match — legacy country/region-level Unsplash mapping.
+//      Kept as a final fallback for legacy trips that have neither a user
+//      cover_image_path nor an auto-resolved destination_image_url.
+//   3. DEFAULT_TRIP_PHOTO   — generic travel image.
+//
+// Callers handle the user-uploaded cover (cover_image_path) ahead of this
+// function, e.g. `coverSignedUrl || resolvePhoto(...)`.
+export function resolvePhoto(
+  tripName: string,
+  routeStopDests: string[],
+  destinationImageUrl?: string | null,
+): string {
+  if (typeof destinationImageUrl === "string" && destinationImageUrl.trim().length > 0) {
+    return destinationImageUrl;
+  }
   const nameLower = tripName.toLowerCase();
   for (const [keywords, url] of PHOTO_DB) {
     if (keywords.some((kw) => nameLower.includes(kw))) return url;

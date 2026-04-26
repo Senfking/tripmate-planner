@@ -570,7 +570,13 @@ export default function TripList() {
 
       const enriched: EnrichedTrip[] = data.map((t) => {
         const statusInfo = getTripStatus(t.tentative_start_date, t.tentative_end_date);
-        const photoUrl = signedUrlMap[t.id] || resolvePhoto(t.name, stopDestsMap[t.id] ?? []);
+        const photoUrl =
+          signedUrlMap[t.id] ||
+          resolvePhoto(
+            t.name,
+            stopDestsMap[t.id] ?? [],
+            (t as any).destination_image_url ?? null,
+          );
         const tripMembers = (membersByTrip[t.id] ?? []).map((m) => ({
           ...m,
           profile: profileMap.get(m.user_id),

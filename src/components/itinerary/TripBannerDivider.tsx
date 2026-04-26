@@ -11,6 +11,8 @@ interface TripBannerProps {
   tripEndDate: string | null;
   tripDestination: string | null;
   tripCoverImagePath: string | null;
+  /** Auto-resolved per-destination cover URL (trips.destination_image_url) */
+  tripDestinationImageUrl?: string | null;
   /** Destination names from route stops for photo resolution fallback */
   routeStopDests: string[];
 }
@@ -22,10 +24,11 @@ export function TripStartBanner({
   tripEndDate,
   tripDestination,
   tripCoverImagePath,
+  tripDestinationImageUrl,
   routeStopDests,
 }: TripBannerProps) {
   const { data: signedUrl } = useTripCoverUrl(tripId, tripCoverImagePath);
-  const fallbackPhoto = resolvePhoto(tripName, routeStopDests);
+  const fallbackPhoto = resolvePhoto(tripName, routeStopDests, tripDestinationImageUrl ?? null);
   const photoUrl = signedUrl || fallbackPhoto;
 
   const dateLabel = (() => {
@@ -74,10 +77,11 @@ export function TripEndBanner({
   tripId,
   tripName,
   tripCoverImagePath,
+  tripDestinationImageUrl,
   routeStopDests,
 }: TripBannerProps) {
   const { data: signedUrl } = useTripCoverUrl(tripId, tripCoverImagePath);
-  const fallbackPhoto = resolvePhoto(tripName, routeStopDests);
+  const fallbackPhoto = resolvePhoto(tripName, routeStopDests, tripDestinationImageUrl ?? null);
   const photoUrl = signedUrl || fallbackPhoto;
 
   return (

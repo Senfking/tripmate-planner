@@ -330,7 +330,13 @@ export default function TripHome() {
 
   const visibleMembers = members?.slice(0, 5) ?? [];
   const memberCount = members?.length ?? 0;
-  const coverPhoto = coverSignedUrl || resolvePhoto(trip.name, routeStops ?? []);
+  const coverPhoto =
+    coverSignedUrl ||
+    resolvePhoto(
+      trip.name,
+      routeStops ?? [],
+      (trip as any)?.destination_image_url ?? null,
+    );
 
   const attendanceBadge = myAttendanceStatus && myAttendanceStatus !== "pending"
     ? ATTENDANCE_BADGE[myAttendanceStatus]

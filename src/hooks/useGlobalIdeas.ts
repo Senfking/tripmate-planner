@@ -44,7 +44,7 @@ export function useGlobalIdeas() {
       const [{ data: trips }, { data: ideas }, { data: routeStops }] = await Promise.all([
         supabase
           .from("trips")
-          .select("id, name, emoji")
+          .select("id, name, emoji, destination_image_url")
           .in("id", tripIds),
         (supabase.from("trip_ideas" as any) as any)
           .select("trip_id, status")
@@ -80,7 +80,11 @@ export function useGlobalIdeas() {
             tripId: t.id,
             tripName: t.name,
             tripEmoji: t.emoji,
-            photoUrl: resolvePhoto(t.name, stopsByTrip.get(t.id) ?? []),
+            photoUrl: resolvePhoto(
+              t.name,
+              stopsByTrip.get(t.id) ?? [],
+              (t as any).destination_image_url ?? null,
+            ),
             suggestedCount: counts.suggested,
             plannedCount: counts.planned,
             totalCount: total,

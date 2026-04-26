@@ -1494,6 +1494,7 @@ export type Database = {
           cover_image_path: string | null
           created_at: string
           destination: string | null
+          destination_image_url: string | null
           emoji: string | null
           enabled_modules: Json
           id: string
@@ -1513,6 +1514,7 @@ export type Database = {
           cover_image_path?: string | null
           created_at?: string
           destination?: string | null
+          destination_image_url?: string | null
           emoji?: string | null
           enabled_modules?: Json
           id?: string
@@ -1532,6 +1534,7 @@ export type Database = {
           cover_image_path?: string | null
           created_at?: string
           destination?: string | null
+          destination_image_url?: string | null
           emoji?: string | null
           enabled_modules?: Json
           id?: string
