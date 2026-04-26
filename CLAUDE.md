@@ -29,8 +29,8 @@
 - Empty states: every list/table must have a designed empty state with a CTA.
 - All modals scrollable and usable at 375px viewport width.
 
-### Admin notifications
-- Feedback alerts (WhatsApp + admin_notifications body) must be formatted as a copyable message — single block Oliver can long-press / select-all and forward without reformatting. Include the full feedback body, category, and feedback_id so the message stands alone.
+### Response format
+- Investigation reports, diagnostic findings, and any "feedback" you give the user must be formatted as a single copyable message — Oliver pastes them straight into a fresh Claude chat. That means: self-contained (assume zero prior context), no references to "above" / "earlier in this conversation" / "the report I gave", no live tool-call links, plain markdown only. Include file paths with line numbers, full migration filenames, full env var names, full SQL — whatever is needed for a cold reader to act on it.
 
 ### AI Features
 - System prompts stored as constants, not inline strings.
