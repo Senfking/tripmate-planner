@@ -1,6 +1,7 @@
 import { trackEvent } from "@/lib/analytics";
 import { ensureFreshSession, forceRefreshSession } from "@/lib/sessionRefresh";
 import { isAuthOrRlsError } from "@/lib/supabaseErrors";
+import { pushError } from "@/lib/errorBuffer";
 
 // Centralized resilience wrapper for any Supabase call (query OR a single
 // op inside a mutation). Use it instead of re-implementing the
@@ -73,24 +74,41 @@ export function logSupabaseFailure(
   retried: boolean,
 ): void {
   const e = err as Record<string, unknown> | null;
+  const code = typeof e?.code === "string" ? e.code : null;
+  const status = typeof e?.status === "number" ? e.status : null;
+  const message = typeof e?.message === "string" ? e.message.slice(0, 300) : null;
+  const route = typeof window !== "undefined" ? window.location.pathname : null;
+
   trackEvent(
     "supabase_op_error",
     {
       op: opts.name,
       retried,
-      code: typeof e?.code === "string" ? e.code : null,
-      status: typeof e?.status === "number" ? e.status : null,
+      code,
+      status,
       name: typeof e?.name === "string" ? e.name : null,
-      message: typeof e?.message === "string" ? e.message.slice(0, 300) : null,
+      message,
       details: typeof e?.details === "string" ? e.details.slice(0, 300) : null,
       hint: typeof e?.hint === "string" ? e.hint.slice(0, 200) : null,
       online: typeof navigator !== "undefined" ? navigator.onLine : null,
       display_mode: getDisplayMode(),
-      route: typeof window !== "undefined" ? window.location.pathname : null,
+      route,
       ...opts.context,
     },
     opts.userId,
   );
+
+  // Push to in-memory buffer so a feedback submission within the next ~60s
+  // automatically captures this failure as context.
+  pushError({
+    source: "supabase_op",
+    name: opts.name,
+    message,
+    code,
+    status,
+    route,
+    extra: { retried, ...opts.context },
+  });
 }
 
 function getDisplayMode(): "standalone" | "browser" | null {

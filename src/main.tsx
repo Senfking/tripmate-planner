@@ -3,15 +3,23 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { trackEvent } from "@/lib/analytics";
+import { pushError } from "@/lib/errorBuffer";
 
 // Global error listeners - fire-and-forget, never block
 window.addEventListener("unhandledrejection", (event) => {
+  const message = event.reason?.message || String(event.reason);
   trackEvent("app_error", {
     type: "unhandled_promise_rejection",
-    message: event.reason?.message || String(event.reason),
+    message,
     stack: event.reason?.stack?.slice(0, 500),
     route: window.location.pathname,
     severity: "high",
+  });
+  pushError({
+    source: "unhandled_rejection",
+    name: event.reason?.name || "UnhandledRejection",
+    message: message?.slice(0, 300) ?? null,
+    route: window.location.pathname,
   });
 });
 
@@ -23,6 +31,13 @@ window.addEventListener("error", (event) => {
     line: event.lineno,
     route: window.location.pathname,
     severity: "high",
+  });
+  pushError({
+    source: "uncaught_exception",
+    name: "Error",
+    message: event.message?.slice(0, 300) ?? null,
+    route: window.location.pathname,
+    extra: { filename: event.filename, line: event.lineno },
   });
 });
 
