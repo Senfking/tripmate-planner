@@ -179,6 +179,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const todayStr = today.toISOString().split("T")[0];
   const [builderOpen, setBuilderOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   // ─── Sortable section ordering (hooks must be before early returns) ───
   const STORAGE_KEY = `dashboard-order-${tripId}`;
