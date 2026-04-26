@@ -1,4 +1,10 @@
 // SW update: silent activation, no page reload on tab switch
+import { initSentry } from "@/lib/sentry";
+
+// Initialize Sentry as the very first thing so early-boot errors are captured.
+// No-op when VITE_SENTRY_DSN isn't set (dev/local).
+initSentry();
+
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
