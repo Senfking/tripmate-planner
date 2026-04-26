@@ -305,12 +305,14 @@ const HAIKU_PRICING = {
 const PLACES_RANKING_COST_PER_CALL = 0.005;
 const PLACES_DETAILS_COST_PER_CALL = 0.017;
 const MAX_PLACES_QUERIES_PER_TRIP = 12; // was 20 — tighter budget; consolidated queries cover same ground
-// Slot budget scales with trip length so longer trips don't get gutted. Ceiling
-// of 28 preserves the original Ibiza-timeout protection (the 14-day failure
-// case that motivated PR #179 emitted 50+ slots). 5-day balanced now lands at
-// 20 = 10 meals + 8 activities + 2 transit; 7-day at 28; 4-day at 16.
+// Slot budget scales with trip length so longer trips don't get gutted.
+// Ceiling raised from 28 → 36 (PR #197 → here): the AbortController already
+// caps each Anthropic call at the remaining 150s pipeline budget, so the
+// original Ibiza-timeout concern is structurally handled regardless of slot
+// count. 36 keeps 10–14-day trips feeling full instead of clipped.
+// 5-day balanced lands at 20; 7-day at 28; 9-day+ now lands at 36.
 const SLOTS_PER_DAY_BUDGET = 4;
-const MAX_SLOTS_CEILING = 28;
+const MAX_SLOTS_CEILING = 36;
 const MAX_FINALIST_HYDRATIONS = 20;     // safety cap on details pass; real trips pick 11–15
 
 // Rate limit + circuit breaker defaults. Override via env if needed.
@@ -2691,9 +2693,10 @@ async function rankAndEnrich(
     [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
     RANKER_TOOL,
-    // 28-slot trips emit ~5.6k tokens of activity copy + ~1.5k of trip-level
-    // fields; 12k gives headroom against truncation when the model is verbose.
-    12_000,
+    // 36-slot trips emit ~9k tokens of activity copy + ~1.5k of trip-level
+    // fields. 16k gives ~50% headroom against truncation when the model is
+    // verbose on long itineraries (Haiku output is cheap; truncation is not).
+    16_000,
     pipelineStartedAt,
     "rankAndEnrich",
   );
