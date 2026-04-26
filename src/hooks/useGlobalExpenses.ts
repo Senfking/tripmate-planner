@@ -55,7 +55,7 @@ export function useGlobalExpenses() {
       const [{ data: trips }, { data: expenses }, { data: routeStops }] = await Promise.all([
         supabase
           .from("trips")
-          .select("id, name, emoji, settlement_currency")
+          .select("id, name, emoji, settlement_currency, destination_image_url")
           .in("id", tripIds),
         supabase
           .from("expenses")
@@ -159,7 +159,11 @@ export function useGlobalExpenses() {
           tripEmoji: trip.emoji,
           currency: sc,
           net,
-          photoUrl: resolvePhoto(trip.name, stopDestsMap[tripId] ?? []),
+          photoUrl: resolvePhoto(
+            trip.name,
+            stopDestsMap[tripId] ?? [],
+            (trip as any).destination_image_url ?? null,
+          ),
         });
         overallNet += net;
       }

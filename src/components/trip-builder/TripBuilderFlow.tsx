@@ -93,6 +93,10 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
     packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions : [],
     total_activities: typeof raw.total_activities === "number" ? raw.total_activities : 0,
     budget_tier: raw.budget_tier,
+    destination_image_url:
+      typeof raw.destination_image_url === "string" && raw.destination_image_url.length > 0
+        ? raw.destination_image_url
+        : null,
   };
 }
 
@@ -283,6 +287,30 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         }
       } catch (saveErr) {
         console.error("[TripBuilder] Unexpected error saving AI plan:", saveErr);
+      }
+
+      // Best-effort: stamp the auto-resolved cover image onto the existing
+      // trip row so list/dashboard views pick it up immediately. Only set it
+      // when the column is currently empty — don't clobber a previously
+      // resolved URL on regenerate.
+      if (tripId && normalized.destination_image_url) {
+        try {
+          const { data: existing } = await (supabase
+            .from("trips")
+            .select("destination_image_url")
+            .eq("id", tripId)
+            .maybeSingle() as any);
+          const current = (existing as { destination_image_url?: string | null } | null)
+            ?.destination_image_url ?? null;
+          if (!current) {
+            await supabase
+              .from("trips")
+              .update({ destination_image_url: normalized.destination_image_url } as any)
+              .eq("id", tripId);
+          }
+        } catch (coverErr) {
+          console.warn("[TripBuilder] Failed to persist destination_image_url:", coverErr);
+        }
       }
 
       setSavedPlanId(planId);

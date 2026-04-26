@@ -100,6 +100,10 @@ export interface AITripResult {
   // Used by budgetCalc to pick a per-night accommodation default when Places
   // returns no hotel pricing. Optional so older cached plans still typecheck.
   budget_tier?: "budget" | "mid-range" | "premium" | "luxury";
+  // Auto-resolved per-destination cover image (Google Place Photos with
+  // Wikimedia Commons fallback). Persisted to trips.destination_image_url at
+  // trip-creation time. Optional so older cached plans still typecheck.
+  destination_image_url?: string | null;
 }
 
 export function useResultsState(tripId: string) {

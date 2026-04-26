@@ -1382,6 +1382,10 @@ interface GeocodeResult {
   lat: number;
   lng: number;
   country_code: string | null;
+  // Captured opportunistically. Used by resolveDestinationImageUrl to fetch a
+  // Google Place Photo for the trip cover. Optional because cached entries
+  // written before this field existed will deserialize without it.
+  place_id?: string | null;
   viewport: {
     northeast: { lat: number; lng: number };
     southwest: { lat: number; lng: number };
@@ -1454,6 +1458,7 @@ async function geocodeDestination(
             lat: r.geometry.location.lat,
             lng: r.geometry.location.lng,
             country_code: countryComp?.short_name?.toLowerCase() ?? null,
+            place_id: typeof r.place_id === "string" && r.place_id.length > 0 ? r.place_id : null,
             viewport:
               vpBox?.northeast && vpBox?.southwest
                 ? { northeast: vpBox.northeast, southwest: vpBox.southwest }
@@ -1500,7 +1505,7 @@ async function geocodeDestination(
         "Content-Type": "application/json",
         "X-Goog-Api-Key": googleKey,
         "X-Goog-FieldMask":
-          "places.location,places.types,places.displayName,places.formattedAddress,places.addressComponents,places.viewport",
+          "places.id,places.location,places.types,places.displayName,places.formattedAddress,places.addressComponents,places.viewport",
       },
       body: JSON.stringify({ textQuery: destination, maxResultCount: 1 }),
     },
@@ -1518,6 +1523,7 @@ async function geocodeDestination(
   }
   const data = (await res.json()) as {
     places?: Array<{
+      id?: string;
       location?: { latitude: number; longitude: number };
       types?: string[];
       displayName?: { text?: string };
@@ -1550,6 +1556,7 @@ async function geocodeDestination(
     lat: first.location.latitude,
     lng: first.location.longitude,
     country_code: countryComp?.shortText?.toLowerCase() ?? null,
+    place_id: typeof first.id === "string" && first.id.length > 0 ? first.id : null,
     viewport:
       vp?.low && vp?.high
         ? {
@@ -1563,6 +1570,149 @@ async function geocodeDestination(
   // Billed as Pro because Text Search with addressComponents is >= Pro tier.
   await logPlacesCall(svcClient, { userId, feature: "trip_builder", sku: "search_pro" });
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// resolveDestinationImageUrl
+//
+// Returns a stable, publicly-fetchable URL for the destination cover image.
+// This is the replacement for the country-keyword PHOTO_DB lookup in
+// src/lib/tripPhoto.ts — works for any destination Google indexes (Hamburg,
+// Tbilisi, Cusco, Marrakech, Da Nang, …) without maintaining an allowlist.
+//
+// Strategy:
+//   1. Google Place Photos (preferred). One Place Details call (PRO mask:
+//      photos only) -> photos[0].name -> Place Photo Media at maxWidthPx=1600.
+//      We download the binary and re-host it in the trip-attachments bucket
+//      under covers/_ai/<sha256(place_id)>.jpg, then sign a 1-year URL.
+//      Re-hosting is necessary because the Places photoUri is documented as
+//      short-lived and we want the URL stored in trips.destination_image_url
+//      to remain valid. The bucket SELECT policy keys on trip membership, so
+//      reads of the /_ai/ path go through signed URLs (which bypass RLS).
+//   2. Wikimedia Commons (fallback, no API key). Wikipedia REST returns the
+//      lead image of the city's article; the URL lives on
+//      upload.wikimedia.org and is permanent.
+//   3. Null (caller falls back to the legacy keyword table).
+//
+// Never throws. Failures log and return null so the cover photo step cannot
+// fail trip generation.
+// ---------------------------------------------------------------------------
+
+const AI_COVER_BUCKET = "trip-attachments";
+const AI_COVER_PREFIX = "covers/_ai";
+const AI_COVER_SIGNED_URL_SECONDS = 365 * 24 * 60 * 60; // 1 year
+
+async function resolveDestinationImageUrl(
+  placeId: string | null | undefined,
+  destination: string,
+  googleKey: string,
+  svcClient: ReturnType<typeof createClient>,
+): Promise<string | null> {
+  // ---- Step 1: Google Place Photos ----
+  if (placeId) {
+    try {
+      const detailsRes = await fetch(
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+        {
+          method: "GET",
+          headers: {
+            "X-Goog-Api-Key": googleKey,
+            "X-Goog-FieldMask": "photos",
+          },
+        },
+      );
+      if (detailsRes.ok) {
+        const detailsData = (await detailsRes.json()) as {
+          photos?: Array<{ name?: string }>;
+        };
+        const photoName = detailsData?.photos?.[0]?.name;
+        if (photoName) {
+          const mediaUrl =
+            `https://places.googleapis.com/v1/${photoName}/media` +
+            `?maxWidthPx=1600&key=${encodeURIComponent(googleKey)}`;
+          const photoRes = await fetch(mediaUrl, { redirect: "follow" });
+          if (photoRes.ok) {
+            const blob = await photoRes.blob();
+            const placeIdHash = (await sha256Hex(placeId)).slice(0, 32);
+            const storagePath = `${AI_COVER_PREFIX}/${placeIdHash}.jpg`;
+            const { error: upErr } = await svcClient.storage
+              .from(AI_COVER_BUCKET)
+              .upload(storagePath, blob, {
+                contentType: blob.type || "image/jpeg",
+                upsert: true,
+              });
+            if (!upErr) {
+              const { data: signed, error: signErr } = await svcClient.storage
+                .from(AI_COVER_BUCKET)
+                .createSignedUrl(storagePath, AI_COVER_SIGNED_URL_SECONDS);
+              if (!signErr && signed?.signedUrl) {
+                return signed.signedUrl;
+              }
+              console.warn(
+                "[resolveDestinationImageUrl] createSignedUrl failed:",
+                signErr?.message ?? "unknown",
+              );
+            } else {
+              console.warn(
+                "[resolveDestinationImageUrl] storage upload failed:",
+                upErr.message,
+              );
+            }
+          } else {
+            console.warn(
+              `[resolveDestinationImageUrl] Place Photo Media HTTP ${photoRes.status}`,
+            );
+          }
+        }
+      } else {
+        console.warn(
+          `[resolveDestinationImageUrl] Place Details HTTP ${detailsRes.status}`,
+        );
+      }
+    } catch (err) {
+      console.warn(
+        "[resolveDestinationImageUrl] Place Photos path threw, falling back to Wikimedia:",
+        (err as Error).message,
+      );
+    }
+  }
+
+  // ---- Step 2: Wikimedia Commons fallback ----
+  try {
+    const cleanTitle = destination.split(",")[0].trim().replace(/\s+/g, "_");
+    if (!cleanTitle) return null;
+    const wikiUrl =
+      `https://en.wikipedia.org/w/api.php?action=query&format=json` +
+      `&prop=pageimages&piprop=original&pithumbsize=1600&redirects=1` +
+      `&titles=${encodeURIComponent(cleanTitle)}&origin=*`;
+    const wikiRes = await fetch(wikiUrl);
+    if (wikiRes.ok) {
+      const wikiData = (await wikiRes.json()) as {
+        query?: {
+          pages?: Record<
+            string,
+            { original?: { source?: string }; thumbnail?: { source?: string } }
+          >;
+        };
+      };
+      const pages = wikiData?.query?.pages ?? {};
+      for (const page of Object.values(pages)) {
+        const src = page?.original?.source ?? page?.thumbnail?.source;
+        if (typeof src === "string" && src.length > 0) return src;
+      }
+    } else {
+      console.warn(
+        `[resolveDestinationImageUrl] Wikimedia HTTP ${wikiRes.status}`,
+      );
+    }
+  } catch (err) {
+    console.warn(
+      "[resolveDestinationImageUrl] Wikimedia fallback threw:",
+      (err as Error).message,
+    );
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -3589,11 +3739,37 @@ Deno.serve(async (req) => {
     loggedStep = "validateActivities";
     const validated = validateActivities(ranked, allPlacesById, { lat: geo.lat, lng: geo.lng });
 
+    // ---- Resolve destination cover image (best-effort, never throws) ----
+    // Sourced from Google Place Photos with Wikimedia Commons fallback. The
+    // result is merged into the cached payload so subsequent cache hits for
+    // the same intent return the same photo URL. Failure -> null, and the
+    // frontend falls back to its legacy keyword table.
+    let destinationImageUrl: string | null = null;
+    try {
+      destinationImageUrl = await resolveDestinationImageUrl(
+        geo.place_id ?? null,
+        intent.destination,
+        googleKey,
+        svcClient,
+      );
+    } catch (e) {
+      console.warn(
+        "[generate-trip-itinerary] resolveDestinationImageUrl threw:",
+        (e as Error).message,
+      );
+      destinationImageUrl = null;
+    }
+
+    const responsePayload: Record<string, unknown> = {
+      ...validated,
+      destination_image_url: destinationImageUrl,
+    };
+
     // ---- Cache write (fail loud, AFTER validation passes) ----
     {
       const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
         cache_key: cacheKey,
-        response_json: validated,
+        response_json: responsePayload,
         expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
       });
       if (cacheInsErr) {
@@ -3654,7 +3830,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    return jsonResponse({ success: true, ...validated });
+    return jsonResponse({ success: true, ...responsePayload });
   } catch (e) {
     console.error("generate-trip-itinerary error:", e);
 
