@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { pushError } from "@/lib/errorBuffer";
 
 interface Props {
   children: ReactNode;
@@ -43,6 +44,17 @@ export class ErrorBoundary extends Component<Props, State> {
       route: window.location.pathname,
       severity: "critical",
     }, this.props.userId || undefined);
+
+    pushError({
+      source: "react_crash",
+      name: error.name || "Error",
+      message: error.message ?? null,
+      route: window.location.pathname,
+      extra: {
+        component: info.componentStack?.split("\n")[1]?.trim(),
+        stack: error.stack?.slice(0, 500),
+      },
+    });
   }
 
   handleReset = () => {

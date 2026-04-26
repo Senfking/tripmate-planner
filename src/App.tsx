@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
+import { pushError } from "@/lib/errorBuffer";
 import ScrollToTop from "@/components/ScrollToTop";
 import { Loader2 } from "lucide-react";
 
@@ -70,12 +71,19 @@ const queryClient = new QueryClient({
   },
   queryCache: new QueryCache({
     onError: (error, query) => {
+      const queryKey = JSON.stringify(query.queryKey).slice(0, 100);
       trackEvent("app_error", {
         type: "query_error",
         message: error.message,
-        query_key: JSON.stringify(query.queryKey).slice(0, 100),
+        query_key: queryKey,
         route: window.location.pathname,
         severity: "medium",
+      });
+      pushError({
+        source: "query_cache",
+        name: queryKey,
+        message: error.message?.slice(0, 300) ?? null,
+        route: window.location.pathname,
       });
     },
   }),
@@ -86,15 +94,19 @@ const queryClient = new QueryClient({
     // failures from analytics_events without console access.
     onError: (error, _variables, _context, mutation) => {
       const e = error as unknown as Record<string, unknown> | null;
+      const code = typeof e?.code === "string" ? e.code : null;
+      const status = typeof e?.status === "number" ? e.status : null;
+      const message = typeof e?.message === "string" ? e.message.slice(0, 300) : null;
+      const mutation_key = JSON.stringify(mutation.options.mutationKey || "unknown").slice(0, 100);
       trackEvent("app_error", {
         type: "mutation_error",
-        mutation_key: JSON.stringify(mutation.options.mutationKey || "unknown").slice(0, 100),
+        mutation_key,
         route: window.location.pathname,
         severity: "medium",
-        code: typeof e?.code === "string" ? e.code : null,
-        status: typeof e?.status === "number" ? e.status : null,
+        code,
+        status,
         name: typeof e?.name === "string" ? e.name : null,
-        message: typeof e?.message === "string" ? e.message.slice(0, 300) : null,
+        message,
         details: typeof e?.details === "string" ? e.details.slice(0, 300) : null,
         hint: typeof e?.hint === "string" ? e.hint.slice(0, 200) : null,
         online: typeof navigator !== "undefined" ? navigator.onLine : null,
@@ -102,6 +114,14 @@ const queryClient = new QueryClient({
           typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches
             ? "standalone"
             : "browser",
+      });
+      pushError({
+        source: "mutation_cache",
+        name: mutation_key,
+        message,
+        code,
+        status,
+        route: window.location.pathname,
       });
     },
   }),

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { getRecentErrors } from "@/lib/errorBuffer";
 import {
   Drawer,
   DrawerContent,
@@ -32,8 +33,6 @@ export function FeedbackWidget() {
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [aiMessage, setAiMessage] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
   const [analyzingScreenshot, setAnalyzingScreenshot] = useState(false);
   const [screenshotHint, setScreenshotHint] = useState<string | null>(null);
   const [screenshotAnalysisFailed, setScreenshotAnalysisFailed] = useState(false);
@@ -131,8 +130,6 @@ export function FeedbackWidget() {
     setMessage("");
     setScreenshotFile(null);
     setScreenshotPreview(null);
-    setAiMessage(null);
-    setAiLoading(false);
     setSubmitting(false);
     setAnalyzingScreenshot(false);
     setScreenshotHint(null);
@@ -327,6 +324,25 @@ export function FeedbackWidget() {
         }
       }
 
+      // Build the metadata payload: recent error context (from the in-memory
+      // ring buffer) + environment hints. Helps admins triage bug reports
+      // without asking users to paste console output.
+      const recentErrors = getRecentErrors();
+      const displayMode =
+        typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches
+          ? "standalone"
+          : "browser";
+      const metadata = {
+        recent_errors: recentErrors,
+        route: window.location.pathname,
+        display_mode: displayMode,
+        online: typeof navigator !== "undefined" ? navigator.onLine : null,
+        user_agent:
+          typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 300) : null,
+        screenshot_hint: screenshotHint,
+        captured_at: new Date().toISOString(),
+      };
+
       // Retry insert up to 3 times with exponential backoff to handle transient failures
       let inserted: { id: string } | null = null;
       let insertErr: any = null;
@@ -343,7 +359,11 @@ export function FeedbackWidget() {
             status: "new",
             rating: 0,
             hint_rating: screenshotHintRating,
-          })
+            // metadata is a JSONB column added in
+            // 20260426114007_feedback_metadata_and_server_side_analysis.sql.
+            // Cast through `any` until generated types are regenerated.
+            metadata,
+          } as any)
           .select("id")
           .single();
 
@@ -368,12 +388,18 @@ export function FeedbackWidget() {
       }
 
       setStep("success");
-      setAiLoading(true);
 
-      // Fire admin notification as a fallback in case the DB trigger is missing.
-      // The Edge Function deduplicates by feedback_id, so this is safe even if
-      // the trigger also fires. Delay 3s so the DB trigger has time to insert
-      // first - prevents race-condition duplicates in the dedup check.
+      // Fire admin notification (push/WhatsApp). The DB trigger
+      // trg_notify_new_feedback also fires this via check-admin-alerts; the
+      // Edge Function deduplicates by feedback_id. Delay 3s so the trigger
+      // has time to insert its row first.
+      //
+      // Submit-time analyze-feedback invocation removed: admin AI analysis
+      // (ai_summary, ai_severity, ai_category, ai_fix) now runs server-side
+      // via the trg_analyze_new_feedback AFTER INSERT trigger added in
+      // 20260426114007_feedback_metadata_and_server_side_analysis.sql.
+      // The user-facing success message is now static — saves an Anthropic
+      // call on every submission.
       setTimeout(async () => {
         try {
           const { data: alertData } = await supabase.functions.invoke("check-admin-alerts", {
@@ -392,30 +418,10 @@ export function FeedbackWidget() {
           console.warn("Admin alert fallback failed:", e);
         }
       }, 3000);
-
-      try {
-        const { data: aiData } = await supabase.functions.invoke("analyze-feedback", {
-          body: {
-            feedbackId: inserted.id,
-            category,
-            message: message.trim(),
-            route: window.location.pathname,
-            screenshot_hint: screenshotHint,
-          },
-        });
-        if (aiData?.user_message) {
-          setAiMessage(aiData.user_message);
-        } else {
-          setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
-        }
-      } catch {
-        setAiMessage("Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.");
-      }
     } catch (err: any) {
       console.error("Feedback submission error:", err);
       toast.error("Something went wrong. Please try again.");
     } finally {
-      setAiLoading(false);
       setSubmitting(false);
     }
   };
@@ -640,13 +646,9 @@ export function FeedbackWidget() {
               lineHeight: 1.7,
             }}
           >
-            {aiLoading ? (
-              <p className="text-sm text-muted-foreground italic animate-pulse">
-                Oliver is reading this...
-              </p>
-            ) : (
-              <p className="whitespace-pre-line text-foreground">{aiMessage}</p>
-            )}
+            <p className="whitespace-pre-line text-foreground">
+              Oliver reads every single one of these. Seriously, he's a bit obsessive about it. You'll probably see changes soon.
+            </p>
           </div>
 
           <button
