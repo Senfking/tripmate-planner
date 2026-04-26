@@ -213,8 +213,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 80, tolerance: 6 } }),
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
