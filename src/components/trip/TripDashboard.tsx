@@ -787,14 +787,15 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
           >
             <div className="h-[80px] relative overflow-hidden bg-muted">
               <picture>
-                <source srcSet="/images/decisions-card.webp" type="image/webp" />
+                <source srcSet={decisionsCardWebp} type="image/webp" />
                 <img
-                  src="/images/decisions-card.jpg"
+                  src={decisionsCardJpg}
                   alt=""
                   width={600}
                   height={266}
                   loading="eager"
-                  decoding="async"
+                  decoding="sync"
+                  fetchPriority="high"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               </picture>
