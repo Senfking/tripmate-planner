@@ -28,21 +28,45 @@ import { CSS } from "@dnd-kit/utilities";
 
 
 // Error boundary for the trip builder
-class BuilderErrorBoundary extends Component<{ children: ReactNode; onClose: () => void }, { hasError: boolean }> {
+class BuilderErrorBoundary extends Component<
+  { children: ReactNode; onClose: () => void },
+  { hasError: boolean; error: Error | null; componentStack: string | null }
+> {
   constructor(props: { children: ReactNode; onClose: () => void }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null, componentStack: null };
   }
-  static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch(err: Error) { console.error("TripBuilder crashed:", err); }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(err: Error, info: React.ErrorInfo) {
+    console.error("[BuilderErrorBoundary] Caught error:", err);
+    console.error("[BuilderErrorBoundary] name:", err.name);
+    console.error("[BuilderErrorBoundary] message:", err.message);
+    console.error("[BuilderErrorBoundary] stack:\n" + (err.stack ?? "(no stack)"));
+    console.error("[BuilderErrorBoundary] componentStack:" + (info.componentStack ?? "(none)"));
+    this.setState({ componentStack: info.componentStack ?? null });
+  }
   render() {
     if (this.state.hasError) {
+      const { error, componentStack } = this.state;
       return (
         <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-6">
-          <div className="text-center max-w-sm space-y-4">
+          <div className="text-center max-w-md space-y-4">
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
             <h2 className="text-lg font-semibold">Something went wrong</h2>
             <p className="text-sm text-muted-foreground">The trip builder encountered an error.</p>
+            {error && (
+              <details className="rounded-lg border border-border bg-muted/30 p-3 text-left text-xs">
+                <summary className="cursor-pointer font-medium select-none break-words">
+                  {error.name}: {error.message}
+                </summary>
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-muted-foreground">
+{error.stack || "(no stack)"}
+{componentStack ? `\n--- Component stack ---${componentStack}` : ""}
+                </pre>
+              </details>
+            )}
             <Button onClick={this.props.onClose} className="rounded-xl">Close</Button>
           </div>
         </div>
