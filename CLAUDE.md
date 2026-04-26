@@ -30,7 +30,7 @@
 - All modals scrollable and usable at 375px viewport width.
 
 ### Response format
-- Investigation reports, diagnostic findings, and any "feedback" you give the user must be formatted as a single copyable message — Oliver pastes them straight into a fresh Claude chat. That means: self-contained (assume zero prior context), no references to "above" / "earlier in this conversation" / "the report I gave", no live tool-call links, plain markdown only. Include file paths with line numbers, full migration filenames, full env var names, full SQL — whatever is needed for a cold reader to act on it.
+- Investigation reports, diagnostic findings, and any "feedback" you give the user must be wrapped in a SINGLE fenced code block (one ``` open, one ``` close, no nested fences inside) so mobile chat UIs render a one-tap "copy code" button. Use indentation, > quotes, or plain prose for SQL / code samples inside — never inner triple-backticks. The block must also be self-contained: assume zero prior context, no references to "above" / "earlier in this conversation" / "the report I gave", no live tool-call links, plain text only. Include file paths with line numbers, full migration filenames, full env var names, full SQL — whatever a cold reader pasted into a fresh Claude chat needs to act on it.
 
 ### AI Features
 - System prompts stored as constants, not inline strings.
