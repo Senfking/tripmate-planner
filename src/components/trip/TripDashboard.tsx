@@ -127,15 +127,15 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
 
   return (
     <div ref={setRefs} style={style} className="relative group/sortable" {...attributes}>
-      {/* Drag handle — only this triggers drag */}
+      {/* Drag handle — always visible on touch, on hover for desktop */}
       <div
         ref={setActivatorNodeRef}
         {...listeners}
-        className="absolute top-1 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover/sortable:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
-        style={{ padding: "4px 12px" }}
+        className="absolute top-1 left-1/2 -translate-x-1/2 z-10 opacity-60 md:opacity-0 md:group-hover/sortable:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
+        style={{ padding: "8px 16px" }}
         aria-label="Drag to reorder"
       >
-        <div className="w-8 h-1 rounded-full bg-white/40" />
+        <div className="w-10 h-1 rounded-full bg-foreground/40" />
       </div>
       {children}
     </div>
@@ -196,8 +196,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -762,8 +762,19 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
             className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
           >
-            <div className="h-[80px] relative overflow-hidden">
-              <img src="/images/decisions-card.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="h-[80px] relative overflow-hidden bg-muted">
+              <picture>
+                <source srcSet="/images/decisions-card.webp" type="image/webp" />
+                <img
+                  src="/images/decisions-card.jpg"
+                  alt=""
+                  width={600}
+                  height={266}
+                  loading="eager"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </picture>
             </div>
             <div className="p-3">
               <p className="font-semibold text-[14px] text-foreground">Decisions</p>
@@ -780,8 +791,19 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
             className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
           >
-            <div className="h-[80px] relative overflow-hidden">
-              <img src="/images/bookings-card.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="h-[80px] relative overflow-hidden bg-muted">
+              <picture>
+                <source srcSet="/images/bookings-card.webp" type="image/webp" />
+                <img
+                  src="/images/bookings-card.jpg"
+                  alt=""
+                  width={600}
+                  height={266}
+                  loading="eager"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </picture>
             </div>
             <div className="p-3">
               <p className="font-semibold text-[14px] text-foreground">Bookings</p>
