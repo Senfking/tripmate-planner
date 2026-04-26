@@ -106,8 +106,8 @@ export default {
           to: { transform: "translateX(0)" },
         },
         "wiggle": {
-          "0%, 100%": { transform: "rotate(-0.6deg)" },
-          "50%": { transform: "rotate(0.6deg)" },
+          "0%, 100%": { transform: "rotate(-0.25deg)" },
+          "50%": { transform: "rotate(0.25deg)" },
         },
       },
       animation: {
@@ -121,7 +121,7 @@ export default {
         "slide-up": "slide-up 300ms ease-out",
         "slide-in-left": "slide-in-left 300ms ease-out",
         "slide-in-right": "slide-in-right 300ms ease-out",
-        "wiggle": "wiggle 0.4s ease-in-out infinite",
+        "wiggle": "wiggle 1.4s ease-in-out infinite",
       },
     },
   },
