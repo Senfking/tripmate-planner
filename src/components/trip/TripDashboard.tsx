@@ -762,8 +762,19 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
             className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
           >
-            <div className="h-[80px] relative overflow-hidden">
-              <img src="/images/decisions-card.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="h-[80px] relative overflow-hidden bg-muted">
+              <picture>
+                <source srcSet="/images/decisions-card.webp" type="image/webp" />
+                <img
+                  src="/images/decisions-card.jpg"
+                  alt=""
+                  width={600}
+                  height={266}
+                  loading="eager"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </picture>
             </div>
             <div className="p-3">
               <p className="font-semibold text-[14px] text-foreground">Decisions</p>
