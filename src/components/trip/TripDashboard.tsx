@@ -127,15 +127,15 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
 
   return (
     <div ref={setRefs} style={style} className="relative group/sortable" {...attributes}>
-      {/* Drag handle — only this triggers drag */}
+      {/* Drag handle — always visible on touch, on hover for desktop */}
       <div
         ref={setActivatorNodeRef}
         {...listeners}
-        className="absolute top-1 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover/sortable:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
-        style={{ padding: "4px 12px" }}
+        className="absolute top-1 left-1/2 -translate-x-1/2 z-10 opacity-60 md:opacity-0 md:group-hover/sortable:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
+        style={{ padding: "8px 16px" }}
         aria-label="Drag to reorder"
       >
-        <div className="w-8 h-1 rounded-full bg-white/40" />
+        <div className="w-10 h-1 rounded-full bg-foreground/40" />
       </div>
       {children}
     </div>
