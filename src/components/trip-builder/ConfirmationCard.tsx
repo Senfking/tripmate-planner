@@ -1,7 +1,12 @@
+import { useEffect, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { differenceInDays } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import type { PremiumInputData } from "./PremiumTripInput";
+
+// Hard cap on the LLM call. On timeout, the deterministic summary stays.
+const LLM_TIMEOUT_MS = 4000;
 
 type Props = {
   data: PremiumInputData;
@@ -168,7 +173,62 @@ function buildSummary(data: PremiumInputData): string {
 }
 
 export function ConfirmationCard({ data, onConfirm, onEdit }: Props) {
-  const summary = buildSummary(data);
+  const deterministicSummary = useMemo(() => buildSummary(data), [data]);
+  const [llmSummary, setLlmSummary] = useState<string | null>(null);
+
+  // Render the deterministic summary instantly, fire the LLM call in parallel,
+  // and swap to the LLM version on success. Any timeout/error stays silent —
+  // the deterministic version is always a valid fallback.
+  useEffect(() => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+    let cancelled = false;
+
+    const duration = data.dateRange?.from && data.dateRange?.to
+      ? differenceInDays(data.dateRange.to, data.dateRange.from) + 1
+      : null;
+
+    // Send only the first clause of the avoid field; the model handles the
+    // rewrite. The deterministic generator already does this — match it.
+    const avoid = data.dealBreakers
+      ? data.dealBreakers.split(/[,;.\n]/)[0]?.trim() ?? ""
+      : "";
+
+    (async () => {
+      try {
+        const { data: res, error } = await supabase.functions.invoke<{ summary?: string }>(
+          "confirm-trip-summary",
+          {
+            body: {
+              destination: data.destination,
+              duration,
+              party: data.travelParty,
+              vibes: data.vibes,
+              avoid,
+            },
+            // supabase-js v2.30+ forwards this to the underlying fetch.
+            signal: controller.signal,
+          },
+        );
+        if (cancelled || controller.signal.aborted) return;
+        if (error) return;
+        const next = typeof res?.summary === "string" ? res.summary.trim() : "";
+        if (next) setLlmSummary(next);
+      } catch {
+        // Silent — deterministic summary remains visible.
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [data]);
+
+  const summary = llmSummary ?? deterministicSummary;
 
   return (
     <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-6">
@@ -183,7 +243,14 @@ export function ConfirmationCard({ data, onConfirm, onEdit }: Props) {
           <p className="font-semibold text-foreground text-[15px]">Just confirming</p>
         </div>
 
-        <p className="text-sm text-foreground leading-relaxed mb-6">{summary}</p>
+        {/* Keying on summary text remounts the <p> when the LLM result lands,
+            which replays animate-fade-in for a soft swap. */}
+        <p
+          key={summary}
+          className="text-sm text-foreground leading-relaxed mb-6 animate-fade-in"
+        >
+          {summary}
+        </p>
 
         <div className="flex gap-3">
           <Button variant="ghost" onClick={onEdit} className="flex-1 h-11 rounded-xl text-sm">
