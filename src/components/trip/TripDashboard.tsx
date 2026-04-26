@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import {
   Sparkles, AlertTriangle, Vote, FileText, Receipt, ChevronRight,
-  Plane,
+  Plane, GripVertical, Check, ArrowUpDown,
 } from "lucide-react";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances } from "@/lib/settlementCalc";
@@ -97,8 +97,11 @@ const codeToCity: Record<string, string> = {
 
 const HORIZONTAL_IDS = new Set(["decisions", "bookings"]);
 
-function SortableSection({ id, children }: { id: string; children: ReactNode }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
+function SortableSection({ id, editMode, children }: { id: string; editMode: boolean; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !editMode,
+  });
   const isHorizontal = HORIZONTAL_IDS.has(id);
   const elRef = useRef<HTMLDivElement>(null);
 
@@ -116,7 +119,7 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   const style = {
     transform: transform ? `translate3d(${tx}px, ${ty}px, 0)` : undefined,
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.6 : 1,
     zIndex: isDragging ? 10 : undefined,
   };
 
@@ -126,18 +129,31 @@ function SortableSection({ id, children }: { id: string; children: ReactNode }) 
   }, [setNodeRef]);
 
   return (
-    <div ref={setRefs} style={style} className="relative group/sortable" {...attributes}>
-      {/* Drag handle — always visible on touch, on hover for desktop */}
-      <div
-        ref={setActivatorNodeRef}
-        {...listeners}
-        className="absolute top-1 left-1/2 -translate-x-1/2 z-10 opacity-60 md:opacity-0 md:group-hover/sortable:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
-        style={{ padding: "8px 16px" }}
-        aria-label="Drag to reorder"
-      >
-        <div className="w-10 h-1 rounded-full bg-foreground/40" />
-      </div>
+    <div
+      ref={setRefs}
+      style={style}
+      className={`relative ${editMode ? "animate-wiggle" : ""}`}
+      {...(editMode ? attributes : {})}
+    >
       {children}
+      {editMode && (
+        <>
+          {/* Block all interactions inside the card while editing */}
+          <div className="absolute inset-0 z-10 rounded-2xl bg-background/10" />
+          {/* Drag handle — full card surface acts as drag, with visible grip */}
+          <button
+            ref={setActivatorNodeRef}
+            {...listeners}
+            type="button"
+            className="absolute inset-0 z-20 flex items-center justify-end pr-3 rounded-2xl cursor-grab active:cursor-grabbing touch-none bg-foreground/[0.03] border-2 border-dashed border-foreground/20"
+            aria-label="Drag to reorder"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-background shadow-md border border-border">
+              <GripVertical className="h-4 w-4 text-foreground/70" />
+            </span>
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -163,6 +179,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const todayStr = today.toISOString().split("T")[0];
   const [builderOpen, setBuilderOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   // ─── Sortable section ordering (hooks must be before early returns) ───
   const STORAGE_KEY = `dashboard-order-${tripId}`;
@@ -196,8 +213,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 80, tolerance: 6 } }),
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -852,6 +869,21 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
       <div className="px-4 md:max-w-[700px] md:mx-auto md:px-8 flex flex-col gap-3">
 
+        {/* Rearrange toggle */}
+        <div className="flex justify-end -mb-1">
+          <button
+            type="button"
+            onClick={() => setEditMode((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+              editMode
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            }`}
+            aria-pressed={editMode}
+          >
+            {editMode ? <><Check className="h-3.5 w-3.5" /> Done</> : <><ArrowUpDown className="h-3.5 w-3.5" /> Rearrange</>}
+          </button>
+        </div>
 
         {/* ─── REORDERABLE SECTIONS ─── */}
         <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={handleDragEnd}>
@@ -865,14 +897,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                 return (
                   <SortableContext key="decisions-bookings-ctx" items={pairOrder} strategy={horizontalListSortingStrategy}>
                     <div className="grid grid-cols-2 gap-3">
-                      <SortableSection id={id}>{renderSection(id)}</SortableSection>
-                      <SortableSection id={otherId}>{renderSection(otherId)}</SortableSection>
+                      <SortableSection id={id} editMode={editMode}>{renderSection(id)}</SortableSection>
+                      <SortableSection id={otherId} editMode={editMode}>{renderSection(otherId)}</SortableSection>
                     </div>
                   </SortableContext>
                 );
               }
               return (
-                <SortableSection key={id} id={id}>{renderSection(id)}</SortableSection>
+                <SortableSection key={id} id={id} editMode={editMode}>{renderSection(id)}</SortableSection>
               );
             })}
           </SortableContext>

@@ -105,6 +105,10 @@ export default {
           from: { transform: "translateX(100%)" },
           to: { transform: "translateX(0)" },
         },
+        "wiggle": {
+          "0%, 100%": { transform: "rotate(-0.6deg)" },
+          "50%": { transform: "rotate(0.6deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -117,6 +121,7 @@ export default {
         "slide-up": "slide-up 300ms ease-out",
         "slide-in-left": "slide-in-left 300ms ease-out",
         "slide-in-right": "slide-in-right 300ms ease-out",
+        "wiggle": "wiggle 0.4s ease-in-out infinite",
       },
     },
   },
