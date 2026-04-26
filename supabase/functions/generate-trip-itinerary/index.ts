@@ -2,7 +2,7 @@
 //
 // Pipeline (non-alternatives_mode):
 //   1. parseIntent       — Claude Haiku extracts structured intent from form + free text
-//   2. buildSkeleton     — pure-code pacing skeleton (slots per day, capped at 18)
+//   2. buildSkeleton     — pure-code pacing skeleton, slot cap scales with trip length
 //   3. buildPlacesQueries— pure-code Google Places query plan, deduped + capped at 12
 //   4. searchPlacesBatch — Places Text Search with ESSENTIALS field mask (ranking pass)
 //   5. hydrateFinalists  — Place Details GET with PRO field mask for the ~15 venues
@@ -305,7 +305,12 @@ const HAIKU_PRICING = {
 const PLACES_RANKING_COST_PER_CALL = 0.005;
 const PLACES_DETAILS_COST_PER_CALL = 0.017;
 const MAX_PLACES_QUERIES_PER_TRIP = 12; // was 20 — tighter budget; consolidated queries cover same ground
-const MAX_SLOTS_PER_TRIP = 18;          // hard cap regardless of duration/pace — cost + Ibiza timeout root cause
+// Slot budget scales with trip length so longer trips don't get gutted. Ceiling
+// of 28 preserves the original Ibiza-timeout protection (the 14-day failure
+// case that motivated PR #179 emitted 50+ slots). 5-day balanced now lands at
+// 20 = 10 meals + 8 activities + 2 transit; 7-day at 28; 4-day at 16.
+const SLOTS_PER_DAY_BUDGET = 4;
+const MAX_SLOTS_CEILING = 28;
 const MAX_FINALIST_HYDRATIONS = 20;     // safety cap on details pass; real trips pick 11–15
 
 // Rate limit + circuit breaker defaults. Override via env if needed.
@@ -1092,9 +1097,10 @@ function buildSkeleton(
       slots.push({ type: "afternoon_major", start_time: hhmm(16, 0), duration_minutes: 120, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
     } else if (isLast) {
-      // Departure day: one short morning highlight, lunch, then departure buffer.
-      slots.push({ type: "breakfast", start_time: hhmm(9, 0), duration_minutes: 45, region_tag_for_queries: primary });
-      slots.push({ type: "morning_major", start_time: hhmm(10, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      // Departure day: morning highlight, farewell lunch, then departure buffer.
+      // Breakfast is dropped — the day already has lunch + a transit anchor;
+      // morning_major is the more valuable slot before flight time.
+      slots.push({ type: "morning_major", start_time: hhmm(9, 30), duration_minutes: 120, region_tag_for_queries: primary });
       slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
       slots.push({ type: "departure", start_time: hhmm(15, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
     } else if (isRest) {
@@ -1144,38 +1150,71 @@ function buildSkeleton(
   return enforceSlotCap(days);
 }
 
-// Cap total slots at MAX_SLOTS_PER_TRIP. On trips that blow the cap (e.g. a
-// 5-day active nightlife itinerary that would otherwise emit 26 slots),
-// trim from the sides of the middle days where over-packing hurts the most:
-// drop afternoon_major_2 first, then nightlife on non-first/last days, then
-// rest slots. Always keeps breakfast / one major / one meal / dinner per day.
-function enforceSlotCap(days: DaySkeleton[]): DaySkeleton[] {
-  const totalSlots = () => days.reduce((n, d) => n + d.slots.length, 0);
-  if (totalSlots() <= MAX_SLOTS_PER_TRIP) return days;
+// Per-day-aware slot budget. The flat 18 cap (PR #179) starved activities on
+// trips ≥5 days because the trim order didn't include meals — every cap hit
+// shed activities while keeping all breakfast/lunch/dinner slots. We now scale
+// the budget with trip length and trim meals first.
+function computeSlotBudget(numDays: number): number {
+  return Math.min(numDays * SLOTS_PER_DAY_BUDGET, MAX_SLOTS_CEILING);
+}
 
-  const trimOrder: SlotType[] = ["afternoon_major", "nightlife", "rest", "morning_major"];
-  // Keep at least one activity of each trimable kind per trip to preserve
-  // the destination flavor; trim from long days first.
+// Activity slot types — at least one must remain per non-rest day. Used by
+// enforceSlotCap to detect over-trimming.
+const ACTIVITY_SLOT_TYPES: ReadonlySet<SlotType> = new Set([
+  "morning_major",
+  "afternoon_major",
+  "nightlife",
+]);
+
+// Cap total slots at computeSlotBudget(numDays). Trim meals (breakfast, lunch)
+// before activities — they're the redundant ones when over budget. Dinner is
+// the social anchor of last resort and is never trimmed. On non-rest days we
+// always keep at least one activity slot regardless of trim order.
+function enforceSlotCap(days: DaySkeleton[]): DaySkeleton[] {
+  const budget = computeSlotBudget(days.length);
+  const totalSlots = () => days.reduce((n, d) => n + d.slots.length, 0);
+  if (totalSlots() <= budget) return days;
+
+  const trimOrder: SlotType[] = [
+    "breakfast",
+    "lunch",
+    "afternoon_major",
+    "morning_major",
+    "nightlife",
+    "rest",
+  ];
+
+  const countActivitySlots = (day: DaySkeleton): number =>
+    day.slots.reduce((n, s) => n + (ACTIVITY_SLOT_TYPES.has(s.type) ? 1 : 0), 0);
+
   for (const kind of trimOrder) {
-    if (totalSlots() <= MAX_SLOTS_PER_TRIP) break;
+    if (totalSlots() <= budget) break;
     const byLength = [...days].sort((a, b) => b.slots.length - a.slots.length);
     for (const day of byLength) {
-      if (totalSlots() <= MAX_SLOTS_PER_TRIP) break;
-      // Find the LAST slot of this kind (second afternoon_major etc).
+      if (totalSlots() <= budget) break;
+      // Walk back-to-front so we drop the last instance first (e.g. the
+      // second afternoon_major on an active day).
       for (let i = day.slots.length - 1; i >= 0; i--) {
-        if (day.slots[i].type === kind) {
-          // Leave at least 3 slots per day (breakfast + one major + dinner).
-          if (day.slots.length <= 3) break;
-          day.slots.splice(i, 1);
+        if (day.slots[i].type !== kind) continue;
+        // For activity types, never strip the day's last activity — every
+        // non-rest day must retain at least one thing to do.
+        const isRestDay = day.slots.some((s) => s.type === "rest");
+        if (
+          ACTIVITY_SLOT_TYPES.has(kind) &&
+          !isRestDay &&
+          countActivitySlots(day) <= 1
+        ) {
           break;
         }
+        day.slots.splice(i, 1);
+        break;
       }
     }
   }
 
-  if (totalSlots() > MAX_SLOTS_PER_TRIP) {
+  if (totalSlots() > budget) {
     console.warn(
-      `[buildSkeleton] slot cap overrun after trim: ${totalSlots()}/${MAX_SLOTS_PER_TRIP}. ` +
+      `[buildSkeleton] slot cap overrun after trim: ${totalSlots()}/${budget}. ` +
       `Shape may have atypical density.`,
     );
   }
@@ -2652,7 +2691,9 @@ async function rankAndEnrich(
     [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
     RANKER_TOOL,
-    8192,
+    // 28-slot trips emit ~5.6k tokens of activity copy + ~1.5k of trip-level
+    // fields; 12k gives headroom against truncation when the model is verbose.
+    12_000,
     pipelineStartedAt,
     "rankAndEnrich",
   );
