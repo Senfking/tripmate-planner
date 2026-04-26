@@ -401,7 +401,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               <span className="text-[#0D9488]">instantly organised</span>
             </h2>
             <p className="mt-2 max-w-[280px] text-[13.5px] leading-relaxed text-muted-foreground">
-              Snap or upload any confirmation — flights, hotels, tours. Junto reads it and files it for the whole crew.
+              Snap or upload any confirmation. Flights, hotels, tours. Junto reads it and files it for the whole crew.
             </p>
 
             {/* Primary CTAs */}
@@ -424,18 +424,44 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               </button>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground/80">PDF, JPG, PNG · screenshots work too</p>
+
+            {/* Privacy toggle — available from the very first upload */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivate((p) => !p)}
+                    className={cn(
+                      "mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium transition-all",
+                      isPrivate
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ring-1 ring-amber-300/50"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <Lock className="h-3 w-3" />
+                    {isPrivate ? "Private upload" : "Shared with the crew"}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs max-w-[220px]">
+                  {isPrivate
+                    ? "Only you will see your next upload. Tap to share it with the trip instead."
+                    : "Tap to keep your next upload private. Only you will see it."}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
         {/* Benefit list */}
         <ul className="mt-6 space-y-2.5 px-2">
           {[
-            { icon: Sparkles, title: "Auto-extracts the details", desc: "Dates, times, confirmation #, addresses." },
-            { icon: Plane, title: "Smart arrivals timeline", desc: "We line up flights so the group knows who lands when." },
-            { icon: Lock, title: "Private when you need it", desc: "Mark sensitive docs visible only to you." },
+            { icon: Sparkles, title: "Pulls out the details for you", desc: "Dates, times, confirmation numbers and addresses." },
+            { icon: Plane, title: "Smart arrivals timeline", desc: "Flights line up so the group knows who lands when." },
+            { icon: Lock, title: "Private when you need it", desc: "Keep sensitive docs visible only to you." },
           ].map(({ icon: Icon, title, desc }) => (
-            <li key={title} className="flex items-start gap-3 rounded-xl border border-border/60 bg-card/50 p-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#0D9488]/10">
+            <li key={title} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/50 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0D9488]/10">
                 <Icon className="h-4 w-4 text-[#0D9488]" />
               </div>
               <div className="min-w-0">
