@@ -44,6 +44,69 @@ export interface MemberProfile {
 
 
 
+// Wraps a query body in:
+//  1. ensureFreshSession() pre-flight (avoids the JWT expiry race that fires
+//     when a backgrounded tab resumes faster than auto-refresh).
+//  2. forceRefreshSession() + retry-once on auth/RLS errors.
+//  3. TEMPORARY trackEvent log on terminal failure so we can see what's
+//     actually breaking the expenses page in browser. Remove the trackEvent
+//     in a follow-up once production data confirms (or refutes) the
+//     auth-race hypothesis.
+async function withAuthRetry<T>(
+  exec: () => Promise<T>,
+  queryName: string,
+  context: Record<string, unknown>,
+  userId?: string,
+): Promise<T> {
+  await ensureFreshSession();
+  try {
+    return await exec();
+  } catch (err) {
+    if (isAuthOrRlsError(err)) {
+      await forceRefreshSession();
+      try {
+        return await exec();
+      } catch (retryErr) {
+        logExpensesQueryFailure(queryName, retryErr, { ...context, retried: true }, userId);
+        throw retryErr;
+      }
+    }
+    logExpensesQueryFailure(queryName, err, context, userId);
+    throw err;
+  }
+}
+
+// TEMPORARY diagnostic logger — capture the real error shape for the
+// "Couldn't load expenses" UI we sometimes hit in browser. Strip after we've
+// seen real data.
+function logExpensesQueryFailure(
+  queryName: string,
+  err: unknown,
+  context: Record<string, unknown>,
+  userId?: string,
+) {
+  const e = err as Record<string, unknown> | null;
+  trackEvent(
+    "expenses_query_error",
+    {
+      query: queryName,
+      code: typeof e?.code === "string" ? e.code : null,
+      status: typeof e?.status === "number" ? e.status : null,
+      name: typeof e?.name === "string" ? e.name : null,
+      message: typeof e?.message === "string" ? e.message.slice(0, 300) : null,
+      details: typeof e?.details === "string" ? e.details.slice(0, 300) : null,
+      hint: typeof e?.hint === "string" ? e.hint.slice(0, 200) : null,
+      online: typeof navigator !== "undefined" ? navigator.onLine : null,
+      display_mode:
+        typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches
+          ? "standalone"
+          : "browser",
+      ...context,
+    },
+    userId,
+  );
+}
+
 export function useExpenses(tripId: string) {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -52,16 +115,22 @@ export function useExpenses(tripId: string) {
   // Fetch expenses
   const expensesQuery = useQuery({
     queryKey: ["expenses", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("*")
-        .eq("trip_id", tripId)
-        .order("incurred_on", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return data as ExpenseRow[];
-    },
+    queryFn: () =>
+      withAuthRetry(
+        async () => {
+          const { data, error } = await supabase
+            .from("expenses")
+            .select("*")
+            .eq("trip_id", tripId)
+            .order("incurred_on", { ascending: false })
+            .limit(500);
+          if (error) throw error;
+          return data as ExpenseRow[];
+        },
+        "expenses",
+        { trip_id: tripId },
+        user?.id,
+      ),
     enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
   });
@@ -69,50 +138,62 @@ export function useExpenses(tripId: string) {
   // Fetch all splits for this trip's expenses
   const splitsQuery = useQuery({
     queryKey: ["expense-splits", tripId],
-    queryFn: async () => {
-      // Read expense IDs from query cache to avoid stale closure
-      const cachedExpenses = qc.getQueryData<ExpenseRow[]>(["expenses", tripId]);
-      const expenseIds = (cachedExpenses ?? expensesQuery.data)?.map((e) => e.id) || [];
-      if (expenseIds.length === 0) return [] as SplitRow[];
-      const { data, error } = await supabase
-        .from("expense_splits")
-        .select("*")
-        .in("expense_id", expenseIds);
-      if (error) throw error;
-      return data as SplitRow[];
-    },
+    queryFn: () =>
+      withAuthRetry(
+        async () => {
+          // Read expense IDs from query cache to avoid stale closure
+          const cachedExpenses = qc.getQueryData<ExpenseRow[]>(["expenses", tripId]);
+          const expenseIds = (cachedExpenses ?? expensesQuery.data)?.map((e) => e.id) || [];
+          if (expenseIds.length === 0) return [] as SplitRow[];
+          const { data, error } = await supabase
+            .from("expense_splits")
+            .select("*")
+            .in("expense_id", expenseIds);
+          if (error) throw error;
+          return data as SplitRow[];
+        },
+        "expense_splits",
+        { trip_id: tripId },
+        user?.id,
+      ),
     enabled: !!expensesQuery.data,
   });
 
   // Fetch trip members with profiles
   const membersQuery = useQuery({
     queryKey: ["members", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trip_members")
-        .select("user_id, role, joined_at, attendance_status")
-        .eq("trip_id", tripId)
-        .order("joined_at");
-      if (error) throw error;
+    queryFn: () =>
+      withAuthRetry(
+        async () => {
+          const { data, error } = await supabase
+            .from("trip_members")
+            .select("user_id, role, joined_at, attendance_status")
+            .eq("trip_id", tripId)
+            .order("joined_at");
+          if (error) throw error;
 
-      const userIds = data.map((m) => m.user_id);
-      const { data: profiles, error: pErr } = await supabase
-        .rpc("get_public_profiles", { _user_ids: userIds });
-      if (pErr) throw pErr;
+          const userIds = data.map((m) => m.user_id);
+          const { data: profiles, error: pErr } = await supabase
+            .rpc("get_public_profiles", { _user_ids: userIds });
+          if (pErr) throw pErr;
 
-      const profileMap = Object.fromEntries(
-        (profiles || []).map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url }])
-      );
+          const profileMap = Object.fromEntries(
+            (profiles || []).map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url }])
+          );
 
-      return data.map((m) => ({
-        userId: m.user_id,
-        displayName: profileMap[m.user_id]?.name || "Member",
-        avatarUrl: profileMap[m.user_id]?.avatar || null,
-        role: m.role,
-        joinedAt: m.joined_at,
-        attendanceStatus: (m as any).attendance_status ?? "pending",
-      })) as MemberProfile[];
-    },
+          return data.map((m) => ({
+            userId: m.user_id,
+            displayName: profileMap[m.user_id]?.name || "Member",
+            avatarUrl: profileMap[m.user_id]?.avatar || null,
+            role: m.role,
+            joinedAt: m.joined_at,
+            attendanceStatus: (m as any).attendance_status ?? "pending",
+          })) as MemberProfile[];
+        },
+        "members",
+        { trip_id: tripId },
+        user?.id,
+      ),
     enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
   });
@@ -120,15 +201,21 @@ export function useExpenses(tripId: string) {
   // Fetch settlement currency from trip
   const settlementQuery = useQuery({
     queryKey: ["settlement-currency", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trips")
-        .select("settlement_currency")
-        .eq("id", tripId)
-        .single();
-      if (error) throw error;
-      return (data as any).settlement_currency as string || "EUR";
-    },
+    queryFn: () =>
+      withAuthRetry(
+        async () => {
+          const { data, error } = await supabase
+            .from("trips")
+            .select("settlement_currency")
+            .eq("id", tripId)
+            .single();
+          if (error) throw error;
+          return (data as any).settlement_currency as string || "EUR";
+        },
+        "settlement_currency",
+        { trip_id: tripId },
+        user?.id,
+      ),
     enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
   });

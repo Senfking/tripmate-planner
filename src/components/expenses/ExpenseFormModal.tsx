@@ -125,9 +125,13 @@ export function ExpenseFormModal({
     autoGrowNotes();
   }, [notes, autoGrowNotes]);
 
+  // Default selection covers everyone who hasn't explicitly opted out. Members
+  // whose attendance is still "pending" (the default for newly invited
+  // people) need to be included or the equal-split form pre-checks only the
+  // one or two members who happen to have RSVP'd.
   const defaultSelectedMemberIds = useMemo(
     () => members
-      .filter((member) => member.attendanceStatus === "going" || member.attendanceStatus === "maybe")
+      .filter((member) => member.attendanceStatus !== "not_going")
       .map((member) => member.userId),
     [members],
   );
