@@ -92,6 +92,14 @@ const queryClient = new QueryClient({
   }),
 });
 
+// localStorage persister — survives reloads and offline cold starts.
+// Bumping `buster` invalidates all stored entries on app upgrade.
+const persister = createSyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  key: "junto-rq-cache-v1",
+  throttleTime: 1000,
+});
+
 /** Pre-warm exchange rate cache after auth is ready. */
 function ExchangeRatePrefetch() {
   const qc = useQueryClient();
@@ -203,9 +211,21 @@ function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: 1000 * 60 * 60 * 24, // 24h
+        buster: "v1",
+        dehydrateOptions: {
+          // Don't persist failed/empty queries — they'd just rehydrate to nothing.
+          shouldDehydrateQuery: (query) =>
+            query.state.status === "success" && query.state.data !== undefined,
+        },
+      }}
+    >
       <AppInner />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </ErrorBoundary>
 );
 
