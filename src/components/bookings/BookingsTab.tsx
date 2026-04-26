@@ -360,8 +360,8 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs max-w-[200px]">
                   {isPrivate
-                    ? "Next upload will be private — only you can see it"
-                    : "Tap to make next upload private (only visible to you)"}
+                    ? "Your next upload will stay private. Only you can see it."
+                    : "Tap to keep your next upload private. Only you will see it."}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
