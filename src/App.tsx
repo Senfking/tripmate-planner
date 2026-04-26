@@ -13,6 +13,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { pushError } from "@/lib/errorBuffer";
+import { captureSupabaseFailure } from "@/lib/sentry";
 import ScrollToTop from "@/components/ScrollToTop";
 import { Loader2 } from "lucide-react";
 
@@ -122,6 +123,16 @@ const queryClient = new QueryClient({
         code,
         status,
         route: window.location.pathname,
+      });
+      captureSupabaseFailure(error, {
+        op: `mutation:${mutation_key}`,
+        code,
+        status,
+        name: typeof e?.name === "string" ? e.name : null,
+        message,
+        details: typeof e?.details === "string" ? e.details.slice(0, 300) : null,
+        hint: typeof e?.hint === "string" ? e.hint.slice(0, 200) : null,
+        mutation_key,
       });
     },
   }),

@@ -65,6 +65,14 @@
 
 11. Fixing over-eager cache invalidation (PR #173) exposed a pre-existing bug: mutations with invalidateQueries alone don't update UI immediately when combined with keepPreviousData — the old data stays visible during the background refetch round-trip. Mutations that modify lists must use setQueryData for synchronous cache updates in onSuccess, then follow with invalidateQueries to confirm from server. The pattern applies to delete, update, and any mutation that changes list membership. Reference implementations: `addExpense`, `updateExpense`, and `deleteExpense` in `src/hooks/useExpenses.ts` all follow this pattern — copy from there when adding new list mutations.
 
+### Observability (Sentry)
+- Frontend errors are reported via `@sentry/react`, initialized in `src/main.tsx` before React renders.
+- DSN read from `VITE_SENTRY_DSN`. If unset, Sentry is a no-op — keeps dev/local out of the project.
+- `environment` is `import.meta.env.MODE`; `release` is the build-time `__BUILD_TS__`. `tracesSampleRate: 0.1`. Replay and Profiling are intentionally disabled.
+- Capture sites: `ErrorBoundary.componentDidCatch`, `BuilderErrorBoundary` (TripDashboard), `BuilderBoundary` (ItineraryTab), `safeQuery.logSupabaseFailure`, and `App.tsx` `MutationCache.onError`. Each event is tagged with `route`, `display_mode`, `online`, and `user_id` (when available).
+- Filtered out: offline failures and 401/403 responses. These are handled by the retry/auth flow and would be noise. Form validation errors don't reach these paths.
+- All Sentry calls go through helpers in `src/lib/sentry.ts` — don't call `Sentry.captureException` directly so tagging stays consistent.
+
 ## Common Commands
 - npm run dev — start local dev server
 - npm run build — production build

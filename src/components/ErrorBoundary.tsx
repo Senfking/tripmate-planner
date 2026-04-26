@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { pushError } from "@/lib/errorBuffer";
+import { captureReactError } from "@/lib/sentry";
 
 interface Props {
   children: ReactNode;
@@ -35,6 +36,8 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error("[ErrorBoundary] route:", window.location.pathname);
 
     this.setState({ componentStack: info.componentStack ?? null });
+
+    captureReactError(error, info.componentStack, this.props.userId);
 
     trackEvent("app_error", {
       type: "react_crash",

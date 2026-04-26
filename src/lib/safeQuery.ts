@@ -2,6 +2,7 @@ import { trackEvent } from "@/lib/analytics";
 import { ensureFreshSession, forceRefreshSession } from "@/lib/sessionRefresh";
 import { isAuthOrRlsError } from "@/lib/supabaseErrors";
 import { pushError } from "@/lib/errorBuffer";
+import { captureSupabaseFailure } from "@/lib/sentry";
 
 // Centralized resilience wrapper for any Supabase call (query OR a single
 // op inside a mutation). Use it instead of re-implementing the
@@ -108,6 +109,19 @@ export function logSupabaseFailure(
     status,
     route,
     extra: { retried, ...opts.context },
+  });
+
+  captureSupabaseFailure(err, {
+    op: opts.name,
+    retried,
+    code,
+    status,
+    name: typeof e?.name === "string" ? e.name : null,
+    message,
+    details: typeof e?.details === "string" ? e.details.slice(0, 300) : null,
+    hint: typeof e?.hint === "string" ? e.hint.slice(0, 200) : null,
+    user_id: opts.userId ?? null,
+    ...opts.context,
   });
 }
 

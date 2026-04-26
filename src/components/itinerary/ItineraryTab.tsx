@@ -15,6 +15,7 @@ import { ImportItineraryModal } from "./ImportItineraryModal";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { captureReactError } from "@/lib/sentry";
 import { useNavigate } from "react-router-dom";
 
 // Error boundary so the builder never crashes the itinerary page
@@ -35,6 +36,7 @@ class BuilderBoundary extends Component<
     console.error("[ItineraryBuilderBoundary] message:", err.message);
     console.error("[ItineraryBuilderBoundary] stack:\n" + (err.stack ?? "(no stack)"));
     console.error("[ItineraryBuilderBoundary] componentStack:" + (info.componentStack ?? "(none)"));
+    captureReactError(err, info.componentStack);
     this.setState({ componentStack: info.componentStack ?? null });
   }
   render() {

@@ -32,6 +32,7 @@ import { resolvePhoto } from "@/lib/tripPhoto";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
+import { captureReactError } from "@/lib/sentry";
 import {
   DndContext, rectIntersection, PointerSensor, TouchSensor,
   useSensor, useSensors, DragOverlay, type DragEndEvent, type DragStartEvent,
@@ -61,6 +62,7 @@ class BuilderErrorBoundary extends Component<
     console.error("[BuilderErrorBoundary] message:", err.message);
     console.error("[BuilderErrorBoundary] stack:\n" + (err.stack ?? "(no stack)"));
     console.error("[BuilderErrorBoundary] componentStack:" + (info.componentStack ?? "(none)"));
+    captureReactError(err, info.componentStack);
     this.setState({ componentStack: info.componentStack ?? null });
   }
   render() {
