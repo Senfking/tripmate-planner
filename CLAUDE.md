@@ -29,6 +29,9 @@
 - Empty states: every list/table must have a designed empty state with a CTA.
 - All modals scrollable and usable at 375px viewport width.
 
+### Admin notifications
+- Feedback alerts (WhatsApp + admin_notifications body) must be formatted as a copyable message — single block Oliver can long-press / select-all and forward without reformatting. Include the full feedback body, category, and feedback_id so the message stands alone.
+
 ### AI Features
 - System prompts stored as constants, not inline strings.
 - All LLM responses validated against a schema before use.
