@@ -7,14 +7,12 @@ import { requestOpenFeedback } from "@/lib/feedbackEvents";
 // Rich error toast body. Used by showErrorToast (sonner via toast.custom)
 // and by the Radix Toaster when an error toast carries a structured payload.
 //
-// UX:
-//   - Friendly title prominently
-//   - "Show details" affordance below
-//   - On tap, expands a panel:
-//       · For regular users: only a "Send to support" button (the error
-//         context is attached automatically through requestOpenFeedback).
-//       · For admins: full technical detail (code/status/route/timestamp/
-//         message/hint), plus Copy-JSON for fast triage.
+// Premium visual style — Linear / Vercel / Notion influenced:
+//   · Off-white surface, soft layered shadow, subtle backdrop blur
+//   · Tight type hierarchy in IBM Plex Sans
+//   · Smooth ~250ms enter (handled by sonner)
+//   · Status icon (red AlertCircle) sits next to the title
+//   · Action buttons inherit Junto's teal primary
 //
 // Mobile-first: the surrounding sonner Toaster handles safe-area top
 // (see src/components/ui/sonner.tsx), so this body does not need its own
@@ -23,6 +21,7 @@ import { requestOpenFeedback } from "@/lib/feedbackEvents";
 const TEAL = "#0D9488";
 const TEAL_DARK = "#0F766E";
 const TOAST_FONT = "'IBM Plex Sans', Inter, system-ui, sans-serif";
+const TOAST_MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 
 export interface ErrorToastDetails {
   /** PostgREST/Postgres error code, if any */
@@ -68,8 +67,6 @@ export function ErrorToastContent({ toastId, friendly, details }: Props) {
       )
     : false;
 
-  // Always allow expanding so the user can reach "Send to support". Admins
-  // additionally see the technical panel inside the expanded view.
   const fullJson = details
     ? JSON.stringify(
         {
@@ -125,20 +122,38 @@ export function ErrorToastContent({ toastId, friendly, details }: Props) {
 
   return (
     <div
-      className="w-full rounded-2xl border border-destructive/30 bg-background shadow-lg overflow-hidden"
+      className="w-full rounded-2xl border border-gray-100 overflow-hidden"
       role="alert"
-      style={{ minWidth: 0, fontFamily: TOAST_FONT }}
+      style={{
+        minWidth: 0,
+        fontFamily: TOAST_FONT,
+        background: "rgba(255, 255, 255, 0.92)",
+        backdropFilter: "saturate(180%) blur(20px)",
+        WebkitBackdropFilter: "saturate(180%) blur(20px)",
+        boxShadow:
+          "0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -8px rgba(15, 23, 42, 0.12), 0 24px 48px -16px rgba(15, 23, 42, 0.08)",
+      }}
     >
-      <div className="flex items-start gap-2.5 px-3 py-2.5">
-        <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" aria-hidden />
+      <div className="flex items-start gap-2.5 px-3.5 py-3">
+        <span
+          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+          style={{ background: "rgba(220, 38, 38, 0.10)" }}
+          aria-hidden
+        >
+          <AlertCircle className="h-3.5 w-3.5" style={{ color: "#DC2626" }} />
+        </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground break-words leading-snug">
+          <p
+            className="text-[13.5px] font-semibold tracking-[-0.005em] leading-snug break-words"
+            style={{ color: "#0F172A" }}
+          >
             {friendly}
           </p>
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-medium transition-colors"
+            style={{ color: expanded ? "#0F172A" : "#64748B" }}
             aria-expanded={expanded}
           >
             <ChevronDown
@@ -152,7 +167,10 @@ export function ErrorToastContent({ toastId, friendly, details }: Props) {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="text-muted-foreground hover:text-foreground transition-colors p-0.5 -m-0.5 shrink-0"
+          className="shrink-0 rounded-md p-1 -m-1 transition-colors"
+          style={{ color: "#94A3B8" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#0F172A")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#94A3B8")}
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -163,19 +181,25 @@ export function ErrorToastContent({ toastId, friendly, details }: Props) {
         style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-border/60 px-3 py-2.5 space-y-2.5">
-            {/* User-facing summary — plain sans, not mono. */}
-            <p className="text-[12px] text-muted-foreground leading-relaxed break-words">
-              Something went wrong on our end. If this keeps happening, send it
-              to support and we'll take a look.
+          <div
+            className="px-3.5 py-3 space-y-3"
+            style={{ borderTop: "1px solid rgba(15, 23, 42, 0.06)" }}
+          >
+            <p
+              className="text-[12px] leading-relaxed break-words"
+              style={{ color: "#64748B" }}
+            >
+              Something went wrong on our end. If this keeps happening, send
+              it to support and we&apos;ll take a look.
             </p>
 
             <button
               type="button"
               onClick={sendToSupport}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-semibold text-white transition-opacity hover:opacity-90"
               style={{
                 background: `linear-gradient(180deg, ${TEAL} 0%, ${TEAL_DARK} 100%)`,
+                boxShadow: "0 1px 2px rgba(13, 148, 136, 0.25)",
               }}
             >
               <LifeBuoy className="h-3.5 w-3.5" />
@@ -183,8 +207,14 @@ export function ErrorToastContent({ toastId, friendly, details }: Props) {
             </button>
 
             {isAdmin && hasTechnicalDetails && details && (
-              <div className="pt-2 mt-1 border-t border-border/60 space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider font-semibold text-[color:var(--admin-label,#6B7280)]">
+              <div
+                className="pt-3 mt-1 space-y-1.5"
+                style={{ borderTop: "1px solid rgba(15, 23, 42, 0.06)" }}
+              >
+                <p
+                  className="text-[10px] uppercase tracking-[0.08em] font-semibold"
+                  style={{ color: "#94A3B8" }}
+                >
                   Admin · technical detail
                 </p>
                 <DetailRow label="Code" value={details.code ?? null} />
@@ -200,20 +230,32 @@ export function ErrorToastContent({ toastId, friendly, details }: Props) {
                 />
                 {details.message && (
                   <div className="pt-1">
-                    <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/70 mb-0.5">
+                    <p
+                      className="text-[10px] uppercase tracking-[0.08em] font-semibold mb-0.5"
+                      style={{ color: "#94A3B8" }}
+                    >
                       Message
                     </p>
-                    <p className="text-[11px] text-foreground break-words whitespace-pre-wrap font-mono">
+                    <p
+                      className="text-[11px] break-words whitespace-pre-wrap"
+                      style={{ color: "#0F172A", fontFamily: TOAST_MONO }}
+                    >
                       {details.message}
                     </p>
                   </div>
                 )}
                 {details.hint && (
                   <div className="pt-1">
-                    <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/70 mb-0.5">
+                    <p
+                      className="text-[10px] uppercase tracking-[0.08em] font-semibold mb-0.5"
+                      style={{ color: "#94A3B8" }}
+                    >
                       Hint
                     </p>
-                    <p className="text-[11px] text-foreground break-words whitespace-pre-wrap font-mono">
+                    <p
+                      className="text-[11px] break-words whitespace-pre-wrap"
+                      style={{ color: "#0F172A", fontFamily: TOAST_MONO }}
+                    >
                       {details.hint}
                     </p>
                   </div>
@@ -223,7 +265,12 @@ export function ErrorToastContent({ toastId, friendly, details }: Props) {
                   <button
                     type="button"
                     onClick={copy}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/40 hover:bg-muted px-2 py-1 text-[11px] font-medium text-foreground transition-colors"
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors"
+                    style={{
+                      color: "#0F172A",
+                      background: "rgba(15, 23, 42, 0.04)",
+                      border: "1px solid rgba(15, 23, 42, 0.06)",
+                    }}
                   >
                     {copied ? (
                       <>
@@ -249,10 +296,18 @@ function DetailRow({ label, value }: { label: string; value: string | number | n
   if (value == null || value === "") return null;
   return (
     <div className="flex items-baseline gap-2 text-[11px]">
-      <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/70 w-12 shrink-0">
+      <span
+        className="text-[10px] uppercase tracking-[0.08em] font-semibold w-12 shrink-0"
+        style={{ color: "#94A3B8" }}
+      >
         {label}
       </span>
-      <span className="text-foreground break-words font-mono">{String(value)}</span>
+      <span
+        className="break-words"
+        style={{ color: "#0F172A", fontFamily: TOAST_MONO }}
+      >
+        {String(value)}
+      </span>
     </div>
   );
 }
