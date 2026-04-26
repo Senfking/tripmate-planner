@@ -33,7 +33,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
   const location = useLocation();
   const { user } = useAuth();
   const {
-    expenses, splits, members, settlementCurrency, rates, ratesFetchedAt,
+    expenses, splits, members, settlementCurrency, rates, ratesFetchedAtMs,
     ratesError, ratesStale, ratesEmpty, ratesLoading, refreshingRates, refreshRates,
     cachedCurrencyCodes, itineraryItems, isLoading, isError, refetch,
     isFetchingExpenses, isExpensesSuccess,
@@ -597,7 +597,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                 splits={splits}
                 members={members}
                 rates={rates}
-                ratesFetchedAt={ratesFetchedAt}
+                ratesFetchedAtMs={ratesFetchedAtMs}
               />
             </div>
           </CollapsibleContent>

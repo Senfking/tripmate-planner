@@ -12,10 +12,10 @@ interface Props {
   splits: SplitRow[];
   members: MemberProfile[];
   rates: Rates;
-  ratesFetchedAt: Date | null;
+  ratesFetchedAtMs: number | null;
 }
 
-export function BalancesSummary({ balances, currency, expenses, splits, members, rates, ratesFetchedAt }: Props) {
+export function BalancesSummary({ balances, currency, expenses, splits, members, rates, ratesFetchedAtMs }: Props) {
   const { user } = useAuth();
   const [auditUserId, setAuditUserId] = useState<string | null>(null);
 
@@ -78,7 +78,7 @@ export function BalancesSummary({ balances, currency, expenses, splits, members,
           members={members}
           settlementCurrency={currency}
           rates={rates}
-          ratesFetchedAt={ratesFetchedAt}
+          ratesFetchedAtMs={ratesFetchedAtMs}
         />
       )}
     </>

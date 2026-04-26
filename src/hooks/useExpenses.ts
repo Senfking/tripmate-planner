@@ -138,9 +138,11 @@ export function useExpenses(tripId: string) {
 
   const ratesQuery = useQuery({
     queryKey: ["exchange-rates-trip", settlementCurrency],
+    // fetchedAtMs is epoch milliseconds, not a Date — query results must be
+    // JSON-serializable so they survive the localStorage persister round-trip.
     queryFn: async (): Promise<{
       rates: Record<string, number>;
-      fetchedAt: Date | null;
+      fetchedAtMs: number | null;
       source: "cache" | "live" | "none";
     }> => {
       const eurRates = await qc.fetchQuery({
@@ -155,13 +157,13 @@ export function useExpenses(tripId: string) {
         .eq("base_currency", "EUR")
         .maybeSingle();
 
-      const fetchedAt = eurMeta?.fetched_at ? new Date(eurMeta.fetched_at) : null;
+      const fetchedAtMs = eurMeta?.fetched_at ? new Date(eurMeta.fetched_at).getTime() : null;
       const source: "cache" | "live" | "none" =
-        Object.keys(eurRates).length === 0 ? "none" : fetchedAt ? "cache" : "live";
+        Object.keys(eurRates).length === 0 ? "none" : fetchedAtMs ? "cache" : "live";
 
       const rates = crossCalculateRates(eurRates, settlementCurrency);
       const effectiveSource = Object.keys(rates).length === 0 ? "none" : source;
-      return { rates, fetchedAt, source: effectiveSource };
+      return { rates, fetchedAtMs, source: effectiveSource };
     },
     // No staleTime here - the expensive DB call is already cached for 1hr by
     // the inner qc.fetchQuery(["exchange-rates", "EUR"]).  The outer query is
@@ -193,10 +195,10 @@ export function useExpenses(tripId: string) {
   });
 
   const rates = ratesQuery.data?.rates || {};
-  const ratesFetchedAt = ratesQuery.data?.fetchedAt || null;
+  const ratesFetchedAtMs = ratesQuery.data?.fetchedAtMs ?? null;
   const ratesSource = ratesQuery.data?.source || "none";
-  const ratesStale = ratesSource === "cache" && ratesFetchedAt
-    ? Date.now() - ratesFetchedAt.getTime() > 12 * 60 * 60 * 1000
+  const ratesStale = ratesSource === "cache" && ratesFetchedAtMs != null
+    ? Date.now() - ratesFetchedAtMs > 12 * 60 * 60 * 1000
     : false;
   const ratesEmpty = ratesSource === "none" && !ratesQuery.isLoading;
 
@@ -461,7 +463,7 @@ export function useExpenses(tripId: string) {
     members: membersQuery.data || [],
     settlementCurrency,
     rates,
-    ratesFetchedAt,
+    ratesFetchedAtMs,
     ratesStale: ratesStale && !allSameCurrency,
     ratesEmpty: ratesEmpty && !allSameCurrency,
     ratesError: ratesQuery.isError,

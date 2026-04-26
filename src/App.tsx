@@ -216,7 +216,7 @@ const App = () => (
       persistOptions={{
         persister,
         maxAge: 1000 * 60 * 60 * 24, // 24h
-        buster: "v1",
+        buster: "v2",
         dehydrateOptions: {
           // Don't persist failed/empty queries — they'd just rehydrate to nothing.
           shouldDehydrateQuery: (query) =>
