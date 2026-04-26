@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import {
   DndContext, rectIntersection, PointerSensor, TouchSensor,
-  useSensor, useSensors, type DragEndEvent,
+  useSensor, useSensors, DragOverlay, type DragEndEvent, type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy,
