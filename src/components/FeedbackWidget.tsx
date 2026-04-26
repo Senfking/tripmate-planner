@@ -423,35 +423,35 @@ export function FeedbackWidget() {
 
       setStep("success");
 
-      // Fire admin notification (push/WhatsApp). The DB trigger
-      // trg_notify_new_feedback also fires this via check-admin-alerts; the
-      // Edge Function deduplicates by feedback_id. Delay 3s so the trigger
-      // has time to insert its row first.
+      // Fire admin notification (push/WhatsApp) via submit-feedback-alert.
       //
-      // Submit-time analyze-feedback invocation removed: admin AI analysis
-      // (ai_summary, ai_severity, ai_category, ai_fix) now runs server-side
-      // via the trg_analyze_new_feedback AFTER INSERT trigger added in
-      // 20260426114007_feedback_metadata_and_server_side_analysis.sql.
-      // The user-facing success message is now static — saves an Anthropic
-      // call on every submission.
-      setTimeout(async () => {
-        try {
-          const { data: alertData } = await supabase.functions.invoke("check-admin-alerts", {
-            body: {
-              trigger: "feedback",
-              feedback_id: inserted.id,
-              body: message.trim().substring(0, 200),
-              category,
-              severity: "medium",
-            },
-          });
-          if (alertData?.whatsapp_error) {
-            console.warn("Admin alert WhatsApp failed:", alertData.whatsapp_error);
-          }
-        } catch (e) {
-          console.warn("Admin alert fallback failed:", e);
+      // We previously called check-admin-alerts directly from the client,
+      // but that function is now locked behind verify_jwt + an internal
+      // service-role-key bearer check (see
+      // supabase/functions/check-admin-alerts/index.ts) — anonymous JWTs
+      // and ordinary user JWTs are rejected. submit-feedback-alert is the
+      // authenticated, rate-limited (3 / 10 min / user) gateway that
+      // re-derives the user from their JWT, validates feedback ownership,
+      // reads body/category from the DB (NOT request body), and inserts
+      // the admin_notifications row + Twilio.
+      //
+      // Submit-time analyze-feedback invocation removed earlier; admin AI
+      // enrichment runs server-side via the trg_analyze_new_feedback
+      // AFTER INSERT trigger.
+      try {
+        const { data: alertData } = await supabase.functions.invoke("submit-feedback-alert", {
+          body: { feedback_id: inserted.id },
+        });
+        if (alertData?.whatsapp_error) {
+          console.warn("Admin alert WhatsApp failed:", alertData.whatsapp_error);
+        } else if (alertData?.error === "rate_limited") {
+          // User hit the per-user cap. Feedback row is still in the DB —
+          // admin will see it via the dashboard, just without a Twilio.
+          console.warn("Admin alert rate-limited:", alertData);
         }
-      }, 3000);
+      } catch (e) {
+        console.warn("submit-feedback-alert invoke failed:", e);
+      }
     } catch (err: any) {
       console.error("Feedback submission error:", err);
       showErrorToast(err, "Couldn't send feedback. Tap details for the reason.");

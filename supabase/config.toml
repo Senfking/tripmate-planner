@@ -5,3 +5,13 @@ project_id = "dwtbqomfleihcvkfoopm"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  # Locked behind verify_jwt + an internal SUPABASE_SERVICE_ROLE_KEY bearer
+  # check (see supabase/functions/check-admin-alerts/index.ts). Anonymous
+  # / regular-user JWTs are rejected.
+  [functions.check-admin-alerts]
+    verify_jwt = true
+  # Authenticated, rate-limited gateway that fronts the admin Twilio + notification
+  # path for the FRONTEND feedback widget. See
+  # supabase/functions/submit-feedback-alert/index.ts.
+  [functions.submit-feedback-alert]
+    verify_jwt = true
