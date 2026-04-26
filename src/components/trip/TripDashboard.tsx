@@ -869,6 +869,21 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
       <div className="px-4 md:max-w-[700px] md:mx-auto md:px-8 flex flex-col gap-3">
 
+        {/* Rearrange toggle */}
+        <div className="flex justify-end -mb-1">
+          <button
+            type="button"
+            onClick={() => setEditMode((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+              editMode
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            }`}
+            aria-pressed={editMode}
+          >
+            {editMode ? <><Check className="h-3.5 w-3.5" /> Done</> : <><ArrowUpDown className="h-3.5 w-3.5" /> Rearrange</>}
+          </button>
+        </div>
 
         {/* ─── REORDERABLE SECTIONS ─── */}
         <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={handleDragEnd}>
@@ -882,14 +897,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                 return (
                   <SortableContext key="decisions-bookings-ctx" items={pairOrder} strategy={horizontalListSortingStrategy}>
                     <div className="grid grid-cols-2 gap-3">
-                      <SortableSection id={id}>{renderSection(id)}</SortableSection>
-                      <SortableSection id={otherId}>{renderSection(otherId)}</SortableSection>
+                      <SortableSection id={id} editMode={editMode}>{renderSection(id)}</SortableSection>
+                      <SortableSection id={otherId} editMode={editMode}>{renderSection(otherId)}</SortableSection>
                     </div>
                   </SortableContext>
                 );
               }
               return (
-                <SortableSection key={id} id={id}>{renderSection(id)}</SortableSection>
+                <SortableSection key={id} id={id} editMode={editMode}>{renderSection(id)}</SortableSection>
               );
             })}
           </SortableContext>
