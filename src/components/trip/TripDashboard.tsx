@@ -101,59 +101,50 @@ function SortableSection({ id, editMode, children }: { id: string; editMode: boo
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled: !editMode,
+    animateLayoutChanges: () => true,
   });
-  const isHorizontal = HORIZONTAL_IDS.has(id);
-  const elRef = useRef<HTMLDivElement>(null);
 
-  let tx = 0;
-  let ty = 0;
-  if (transform) {
-    if (isHorizontal) {
-      const w = elRef.current?.offsetWidth ?? 180;
-      tx = Math.max(-w, Math.min(w, transform.x));
-    } else {
-      ty = transform.y;
-    }
-  }
-
-  const style = {
-    transform: transform ? `translate3d(${tx}px, ${ty}px, 0)` : undefined,
-    transition,
-    opacity: isDragging ? 0.6 : 1,
-    zIndex: isDragging ? 10 : undefined,
+  // Use dnd-kit's CSS.Transform for proper sortable animation of OTHER items.
+  // The dragged item itself is rendered in DragOverlay, so we hide it here.
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition ?? "transform 220ms cubic-bezier(0.2, 0, 0, 1)",
+    opacity: isDragging ? 0 : 1,
   };
-
-  const setRefs = useCallback((node: HTMLDivElement | null) => {
-    (elRef as { current: HTMLDivElement | null }).current = node;
-    setNodeRef(node);
-  }, [setNodeRef]);
 
   return (
     <div
-      ref={setRefs}
+      ref={setNodeRef}
       style={style}
-      className={`relative ${editMode ? "animate-wiggle" : ""}`}
+      className={`relative ${editMode && !isDragging ? "animate-wiggle" : ""}`}
       {...(editMode ? attributes : {})}
     >
       {children}
       {editMode && (
-        <>
-          {/* Block all interactions inside the card while editing */}
-          <div className="absolute inset-0 z-10 rounded-2xl bg-background/10" />
-          {/* Drag handle — full card surface acts as drag, with visible grip */}
-          <button
-            ref={setActivatorNodeRef}
-            {...listeners}
-            type="button"
-            className="absolute inset-0 z-20 flex items-center justify-end pr-3 rounded-2xl cursor-grab active:cursor-grabbing touch-none bg-foreground/[0.03] border-2 border-dashed border-foreground/20"
-            aria-label="Drag to reorder"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-background shadow-md border border-border">
-              <GripVertical className="h-4 w-4 text-foreground/70" />
-            </span>
-          </button>
-        </>
+        <button
+          ref={setActivatorNodeRef}
+          {...listeners}
+          type="button"
+          className="absolute inset-0 z-20 rounded-2xl cursor-grab active:cursor-grabbing touch-none ring-1 ring-foreground/10"
+          aria-label="Drag to reorder"
+        />
       )}
+    </div>
+  );
+}
+
+// Lightweight static clone for the DragOverlay (no sortable hooks)
+function DragPreview({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="relative rounded-2xl"
+      style={{
+        boxShadow: "0 20px 50px -10px rgba(0,0,0,0.25), 0 8px 20px -8px rgba(0,0,0,0.18)",
+        transform: "scale(1.02)",
+        cursor: "grabbing",
+      }}
+    >
+      {children}
     </div>
   );
 }
