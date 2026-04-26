@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "@/hooks/use-toast";
+import { showErrorToast } from "@/lib/supabaseErrors";
 
 /* ───────── helpers ───────── */
 
@@ -518,8 +519,8 @@ const More = () => {
       const file = new File([blob], "avatar.jpg", { type: blob.type || "image/jpeg" });
       setCropFile(file);
       setShowCropDrawer(true);
-    } catch {
-      toast({ title: "Failed to load current photo", variant: "destructive" });
+    } catch (err) {
+      showErrorToast(err, "Failed to load current photo");
     }
   };
 
@@ -547,8 +548,8 @@ const More = () => {
       await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
       await refreshProfile();
       toast({ title: "Profile photo updated" });
-    } catch {
-      toast({ title: "Failed to upload photo", variant: "destructive" });
+    } catch (err) {
+      showErrorToast(err, "Failed to upload photo");
     }
   };
 
@@ -564,7 +565,7 @@ const More = () => {
     if (!user?.email) return;
     const { error } = await supabase.auth.resetPasswordForEmail(user.email);
     if (error) {
-      toast({ title: error.message, variant: "destructive" });
+      showErrorToast(error, "Couldn't send reset email");
     } else {
       toast({ title: "Password reset email sent - check your inbox" });
     }
@@ -574,7 +575,7 @@ const More = () => {
     if (!newEmail.trim()) return;
     const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
     if (error) {
-      toast({ title: error.message, variant: "destructive" });
+      showErrorToast(error, "Couldn't change email");
     } else {
       toast({ title: `Confirmation sent to ${newEmail.trim()}` });
       setShowEmailDrawer(false);
@@ -616,15 +617,15 @@ const More = () => {
         if (errData?.error === "sole_owner") {
           setSoleOwnedTrips(errData.trips);
         } else {
-          toast({ title: errData?.message || "Failed to delete account", variant: "destructive" });
+          showErrorToast(res.error ?? errData, errData?.message || "Failed to delete account");
         }
         setDeleting(false);
         return;
       }
       toast({ title: "Account deleted" });
       navigate("/ref", { replace: true });
-    } catch {
-      toast({ title: "Something went wrong", variant: "destructive" });
+    } catch (err) {
+      showErrorToast(err, "Couldn't delete account");
       setDeleting(false);
     }
   };

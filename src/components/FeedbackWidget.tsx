@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getRecentErrors } from "@/lib/errorBuffer";
+import { showErrorToast } from "@/lib/supabaseErrors";
 import {
   Drawer,
   DrawerContent,
@@ -343,27 +344,34 @@ export function FeedbackWidget() {
         captured_at: new Date().toISOString(),
       };
 
-      // Retry insert up to 3 times with exponential backoff to handle transient failures
+      // Base payload — the columns that have always existed on `feedback`.
+      // `metadata` is layered on top via `insertPayload` and stripped on the
+      // metadata-missing fallback so feedback keeps working if the
+      // 20260426114007 migration hasn't been applied to this env yet.
+      const basePayload = {
+        user_id: user.id,
+        body: message.trim(),
+        category,
+        route: window.location.pathname,
+        app_version: (import.meta as any).env?.VITE_APP_VERSION ?? "1.0.0",
+        screenshot_url: screenshotUrl,
+        status: "new",
+        rating: 0,
+        hint_rating: screenshotHintRating,
+      };
+      let insertPayload: Record<string, unknown> = { ...basePayload, metadata };
+
+      // Retry insert up to 3 times with exponential backoff to handle transient failures.
+      // On a "metadata column doesn't exist" error (PGRST204 / 42703 / message
+      // mentioning the metadata column), drop metadata and retry — this lets
+      // feedback keep working if the new migration hasn't shipped to this
+      // env yet, at the cost of losing error context for that one submission.
       let inserted: { id: string } | null = null;
       let insertErr: any = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         const result = await supabase
           .from("feedback")
-          .insert({
-            user_id: user.id,
-            body: message.trim(),
-            category,
-            route: window.location.pathname,
-            app_version: (import.meta as any).env?.VITE_APP_VERSION ?? "1.0.0",
-            screenshot_url: screenshotUrl,
-            status: "new",
-            rating: 0,
-            hint_rating: screenshotHintRating,
-            // metadata is a JSONB column added in
-            // 20260426114007_feedback_metadata_and_server_side_analysis.sql.
-            // Cast through `any` until generated types are regenerated.
-            metadata,
-          } as any)
+          .insert(insertPayload as any)
           .select("id")
           .single();
 
@@ -371,6 +379,26 @@ export function FeedbackWidget() {
         insertErr = result.error;
 
         if (!insertErr && inserted) break;
+
+        const errMsg = (insertErr?.message ?? "").toLowerCase();
+        const errCode = insertErr?.code;
+        const isMissingMetadata =
+          ("metadata" in insertPayload) &&
+          (errCode === "PGRST204" ||
+            errCode === "42703" ||
+            (errMsg.includes("metadata") &&
+              (errMsg.includes("schema cache") || errMsg.includes("does not exist") || errMsg.includes("column"))));
+        if (isMissingMetadata) {
+          // Migration hasn't been applied — drop metadata and try once more
+          // immediately (don't waste the backoff window on a known-cause failure).
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[feedback] metadata column missing, retrying without it. Apply migration 20260426114007.",
+          );
+          const { metadata: _drop, ...withoutMetadata } = insertPayload;
+          insertPayload = withoutMetadata;
+          continue;
+        }
 
         // Wait before retrying (500ms, 1500ms)
         if (attempt < 2) {
@@ -380,9 +408,15 @@ export function FeedbackWidget() {
 
       if (insertErr || !inserted) {
         console.error("Feedback insert failed after retries:", insertErr);
-        toast.error(insertErr?.message?.includes("row-level security")
-          ? "Permission error - please log out and back in."
-          : "Something went wrong. Please try again.");
+        // Surface the real error — code/status/message/hint — via the rich
+        // toast UI. No more opaque "Something went wrong" with no path to
+        // diagnosis.
+        showErrorToast(
+          insertErr,
+          insertErr?.message?.includes("row-level security")
+            ? "Permission error — please log out and back in."
+            : "Couldn't send feedback. Tap details for the reason.",
+        );
         setSubmitting(false);
         return;
       }
@@ -420,7 +454,7 @@ export function FeedbackWidget() {
       }, 3000);
     } catch (err: any) {
       console.error("Feedback submission error:", err);
-      toast.error("Something went wrong. Please try again.");
+      showErrorToast(err, "Couldn't send feedback. Tap details for the reason.");
     } finally {
       setSubmitting(false);
     }
