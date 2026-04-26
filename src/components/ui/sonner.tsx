@@ -79,13 +79,33 @@ const Toaster = ({ ...props }: ToasterProps) => {
       mobileOffset={offset}
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      style={
+        {
+          // Premium Junto styling for sonner's built-in toast variants
+          // (success/info/warning). toast.custom variants render their own shells.
+          "--normal-bg": "rgba(255, 255, 255, 0.92)",
+          "--normal-border": "rgb(243, 244, 246)",
+          "--normal-text": "#0F172A",
+          "--success-bg": "rgba(255, 255, 255, 0.92)",
+          "--success-border": "rgb(243, 244, 246)",
+          "--success-text": "#0F172A",
+          fontFamily: "'IBM Plex Sans', Inter, system-ui, sans-serif",
+        } as React.CSSProperties
+      }
       toastOptions={{
+        duration: 4000,
+        unstyled: false,
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+            "group toast !rounded-2xl !border !border-gray-100 !backdrop-blur-xl !shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-8px_rgba(15,23,42,0.12),0_24px_48px_-16px_rgba(15,23,42,0.08)] !text-[13.5px] !font-medium !tracking-[-0.005em] !px-3.5 !py-3 animate-in fade-in-0 slide-in-from-top-2 duration-[250ms] ease-out",
+          title: "!text-[13.5px] !font-semibold !tracking-[-0.005em]",
+          description: "!text-[12px] !text-slate-500 !leading-relaxed",
+          actionButton:
+            "!bg-gradient-to-b !from-[#0D9488] !to-[#0F766E] !text-white !rounded-xl !px-3 !py-1.5 !text-[12px] !font-semibold",
+          cancelButton:
+            "!bg-slate-100 !text-slate-700 !rounded-xl !px-3 !py-1.5 !text-[12px] !font-medium",
+          success: "!text-slate-900",
+          error: "!text-slate-900",
         },
       }}
       {...props}
