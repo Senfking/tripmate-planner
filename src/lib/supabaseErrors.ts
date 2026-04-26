@@ -4,6 +4,7 @@
 
 import { toast } from "sonner";
 import { ErrorToastContent, type ErrorToastDetails } from "@/components/ErrorToastContent";
+import { SuccessToastContent } from "@/components/SuccessToastContent";
 import { createElement } from "react";
 
 type MaybeError = unknown;
@@ -162,5 +163,17 @@ export function showErrorToast(err: MaybeError, fallback: string): void {
   toast.custom(
     (id) => createElement(ErrorToastContent, { toastId: id, friendly, details }),
     { duration },
+  );
+}
+
+// Premium success toast — visual twin of showErrorToast. Use this in place
+// of `toast.success(...)` when you want the polished Junto look. Existing
+// `toast.success` calls continue to work and inherit the refined styling
+// from src/components/ui/sonner.tsx.
+export function showSuccessToast(title: string, description?: string): void {
+  toast.custom(
+    (id) =>
+      createElement(SuccessToastContent, { toastId: id, title, description }),
+    { duration: 4000 },
   );
 }
