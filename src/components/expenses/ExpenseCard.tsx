@@ -70,10 +70,11 @@ export function ExpenseCard({
   const isSettlement = expense.category === "settlement";
   const isPayer = expense.payer_id === user?.id;
   const mySplit = user ? splits.find((s) => s.user_id === user.id) : null;
-  const splitsReady = splits.length > 0 || !isPayer;
   const youLentAmount = isPayer && mySplit
     ? expense.amount - mySplit.share_amount
-    : isPayer && !splitsReady ? null : isPayer ? expense.amount : 0;
+    : isPayer
+    ? expense.amount
+    : 0;
 
   const canModify = expense.payer_id === user?.id || myRole === "owner" || myRole === "admin";
 
@@ -102,12 +103,7 @@ export function ExpenseCard({
               </p>
             </div>
             <div className="text-right shrink-0">
-              {!isSettlement && isPayer && youLentAmount === null ? (
-                <>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
-                  <p className="text-[17px] font-bold text-foreground text-muted-foreground/50">…</p>
-                </>
-              ) : !isSettlement && isPayer && youLentAmount != null && youLentAmount > 0 ? (
+              {!isSettlement && isPayer && youLentAmount > 0 ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
                   <p className="text-[17px] font-bold text-foreground">{formatCurrency(youLentAmount, expense.currency)}</p>
