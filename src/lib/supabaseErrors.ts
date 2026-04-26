@@ -4,6 +4,7 @@
 
 import { toast } from "sonner";
 import { ErrorToastContent, type ErrorToastDetails } from "@/components/ErrorToastContent";
+import { SuccessToastContent } from "@/components/SuccessToastContent";
 import { createElement } from "react";
 
 type MaybeError = unknown;
