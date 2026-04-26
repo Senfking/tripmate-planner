@@ -647,3 +647,17 @@ html.dark, html.dark body, html.dark #root {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
+/* iOS PWA toast safe-area override.
+ * env(safe-area-inset-top) sometimes resolves to 0 in installed standalone
+ * mode despite viewport-fit=cover; this floors the offset to 60px so toasts
+ * always clear the dynamic island / notch. !important is required because
+ * sonner sets `top` via inline style on the viewport element. */
+@media (display-mode: standalone) {
+  [data-sonner-toaster][data-y-position="top"] {
+    top: max(env(safe-area-inset-top, 60px), 60px) !important;
+  }
+  [data-toast-viewport] {
+    padding-top: max(env(safe-area-inset-top, 60px), 60px) !important;
+  }
+}
