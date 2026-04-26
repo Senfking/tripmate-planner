@@ -3,6 +3,8 @@
 // of toasts. Add new mappings as real error strings surface in production.
 
 import { toast } from "sonner";
+import { ErrorToastContent, type ErrorToastDetails } from "@/components/ErrorToastContent";
+import { createElement } from "react";
 
 type MaybeError = unknown;
 
@@ -116,30 +118,49 @@ export function technicalErrorSummary(err: MaybeError): string | undefined {
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-// Replaces `toast.error(friendlyErrorMessage(e, "Failed to X"))` everywhere.
-// Shows the friendly message as the title, the technical summary
-// (code/status/message) as the description, and a "Copy" action that
-// copies the full message to clipboard. Always shows the description so
-// developers and testers can diagnose without a console — sonner toasts
-// auto-dismiss within seconds anyway.
+function getDetails(err: MaybeError): ErrorToastDetails | undefined {
+  if (!err) return undefined;
+  const e = err as Record<string, unknown> | null;
+  const route = typeof window !== "undefined" ? window.location.pathname : null;
+  const out: ErrorToastDetails = {
+    code: typeof e?.code === "string" ? e.code : null,
+    status: typeof e?.status === "number" ? e.status : null,
+    name: typeof e?.name === "string" ? e.name : null,
+    message: getMessage(err) || null,
+    hint: typeof e?.hint === "string" ? e.hint : null,
+    route,
+    capturedAt: new Date().toISOString(),
+  };
+  // Only return when there's at least one usable signal
+  if (out.code || out.status || out.message || out.hint || out.name) {
+    return out;
+  }
+  return undefined;
+}
+
+// THE error-toast helper. Replaces `toast.error(friendlyErrorMessage(...))`
+// at every call site. Renders ErrorToastContent: friendly title prominently,
+// "Show details" affordance below, expandable panel with code/status/route/
+// timestamp/message/hint, and a Copy-JSON button.
+//
+// Sonner via toast.custom — the surrounding Toaster (src/components/ui/sonner.tsx)
+// already handles iOS PWA safe-area top, so the toast lands below the
+// dynamic island in standalone mode.
+//
+// Components that previously used the Radix `useToast` for destructive
+// toasts should also call this — there's a single error-toast UI in the
+// app now.
 export function showErrorToast(err: MaybeError, fallback: string): void {
   const friendly = friendlyErrorMessage(err, fallback);
-  const technical = technicalErrorSummary(err);
+  const details = getDetails(err);
 
-  toast.error(friendly, {
-    description: technical,
-    duration: 6000,
-    action: technical
-      ? {
-          label: "Copy",
-          onClick: () => {
-            try {
-              navigator.clipboard?.writeText(technical);
-            } catch {
-              // ignore — clipboard may be unavailable in some webviews
-            }
-          },
-        }
-      : undefined,
-  });
+  // Longer duration when there ARE details so users have time to expand
+  // and copy. Plain validation errors (no underlying err) auto-dismiss
+  // sooner.
+  const duration = details ? 12000 : 5000;
+
+  toast.custom(
+    (id) => createElement(ErrorToastContent, { toastId: id, friendly, details }),
+    { duration },
+  );
 }

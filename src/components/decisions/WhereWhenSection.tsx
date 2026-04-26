@@ -49,6 +49,7 @@ import {
   DrawerFooter,
 } from "@/components/ui/drawer";
 import { toast } from "@/hooks/use-toast";
+import { showErrorToast } from "@/lib/supabaseErrors";
 
 type Props = {
   tripId: string;
@@ -287,8 +288,8 @@ export function WhereWhenSection({ tripId, myRole, isRouteLocked }: Props) {
     try {
       await createProposal.mutateAsync(data);
       toast({ title: data.startDate ? "Destination & dates suggested" : "Destination suggested" });
-    } catch {
-      toast({ title: "Failed to add destination", variant: "destructive" });
+    } catch (err) {
+      showErrorToast(err, "Failed to add destination");
       throw new Error("failed");
     }
   };
