@@ -106,8 +106,8 @@ export default {
           to: { transform: "translateX(0)" },
         },
         "wiggle": {
-          "0%, 100%": { transform: "rotate(-0.6deg)" },
-          "50%": { transform: "rotate(0.6deg)" },
+          "0%, 100%": { transform: "rotate(-0.25deg)" },
+          "50%": { transform: "rotate(0.25deg)" },
         },
       },
       animation: {
