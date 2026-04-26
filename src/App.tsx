@@ -1,5 +1,7 @@
 import { useEffect, lazy, Suspense } from "react";
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -56,6 +58,10 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       staleTime: 1000 * 60 * 2, // 2 min default
+      // Hold cached data for 24h so an offline cold start has something to
+      // render. React Query GCs entries after gcTime; we want them to survive
+      // long tab closures so the persister can rehydrate them.
+      gcTime: 1000 * 60 * 60 * 24,
       throwOnError: false,
     },
     mutations: {
