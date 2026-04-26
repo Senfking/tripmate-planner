@@ -9,6 +9,11 @@ import { toast } from "sonner";
 import { getRecentErrors } from "@/lib/errorBuffer";
 import { showErrorToast } from "@/lib/supabaseErrors";
 import {
+  OPEN_FEEDBACK_EVENT,
+  type FeedbackErrorContext,
+  type OpenFeedbackOptions,
+} from "@/lib/feedbackEvents";
+import {
   Drawer,
   DrawerContent,
   DrawerHeader,
@@ -40,6 +45,7 @@ export function FeedbackWidget() {
   const [isAppScreenshot, setIsAppScreenshot] = useState(true);
   const [screenshotHintRating, setScreenshotHintRating] = useState<'up' | 'down' | null>(null);
   const [pwaHintOpen, setPwaHintOpen] = useState(false);
+  const [errorContext, setErrorContext] = useState<FeedbackErrorContext | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -123,6 +129,29 @@ export function FeedbackWidget() {
 
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Listen for global "open feedback" requests fired from the error toast's
+  // "Send to support" button. The error context is stashed and attached to
+  // the feedback row's metadata on submit so the user doesn't have to retype
+  // anything technical. Declared before the `!user` early return to keep
+  // hook order stable across renders.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<OpenFeedbackOptions>).detail || {};
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+        resetTimerRef.current = null;
+      }
+      const cat: Category = detail.category ?? "bug";
+      setCategory(cat);
+      setStep("describe");
+      if (detail.prefill) setMessage(detail.prefill);
+      if (detail.errorContext) setErrorContext(detail.errorContext);
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_FEEDBACK_EVENT, handler);
+    return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, handler);
+  }, []);
+
   if (!user) return null;
 
   const reset = () => {
@@ -138,6 +167,7 @@ export function FeedbackWidget() {
     setIsAppScreenshot(true);
     setScreenshotHintRating(null);
     setPwaHintOpen(false);
+    setErrorContext(null);
   };
 
   const clearResetTimer = () => {
@@ -342,6 +372,11 @@ export function FeedbackWidget() {
           typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 300) : null,
         screenshot_hint: screenshotHint,
         captured_at: new Date().toISOString(),
+        // Set when the user opened the widget from an error toast's
+        // "Send to support" button — ground-truth error context that may
+        // not appear in `recent_errors` (the toast captures errors from
+        // call sites that don't push to the in-memory buffer).
+        error_context: errorContext ?? null,
       };
 
       // Base payload — the columns that have always existed on `feedback`.
