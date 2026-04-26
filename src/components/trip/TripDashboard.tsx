@@ -171,6 +171,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const [builderOpen, setBuilderOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // ─── Sortable section ordering (hooks must be before early returns) ───
   const STORAGE_KEY = `dashboard-order-${tripId}`;
