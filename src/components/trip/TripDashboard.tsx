@@ -3,6 +3,18 @@ import decisionsCardJpg from "@/assets/decisions-card.jpg";
 import decisionsCardWebp from "@/assets/decisions-card.webp";
 import bookingsCardJpg from "@/assets/bookings-card.jpg";
 import bookingsCardWebp from "@/assets/bookings-card.webp";
+
+// Preload + decode card images once per session — kept in the browser image cache
+// so subsequent mounts (route changes, edit-mode toggles, reorders) display instantly.
+if (typeof window !== "undefined") {
+  const supportsWebp = document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp");
+  [supportsWebp ? decisionsCardWebp : decisionsCardJpg, supportsWebp ? bookingsCardWebp : bookingsCardJpg].forEach((src) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = src;
+    if ("decode" in img) img.decode().catch(() => { /* ignore */ });
+  });
+}
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
