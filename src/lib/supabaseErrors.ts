@@ -165,3 +165,15 @@ export function showErrorToast(err: MaybeError, fallback: string): void {
     { duration },
   );
 }
+
+// Premium success toast — visual twin of showErrorToast. Use this in place
+// of `toast.success(...)` when you want the polished Junto look. Existing
+// `toast.success` calls continue to work and inherit the refined styling
+// from src/components/ui/sonner.tsx.
+export function showSuccessToast(title: string, description?: string): void {
+  toast.custom(
+    (id) =>
+      createElement(SuccessToastContent, { toastId: id, title, description }),
+    { duration: 4000 },
+  );
+}
