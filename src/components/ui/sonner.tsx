@@ -3,6 +3,10 @@ import { Toaster as Sonner, toast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
+const SAFE_TOP = "calc(env(safe-area-inset-top, 0px) + 16px)";
+const SAFE_BOTTOM = "calc(env(safe-area-inset-bottom, 0px) + 16px)";
+const SAFE_OFFSET = { top: SAFE_TOP, bottom: SAFE_BOTTOM, left: 16, right: 16 };
+
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
 
@@ -11,7 +15,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       position="top-center"
       expand={false}
       visibleToasts={3}
-      offset="calc(env(safe-area-inset-top, 0px) + 56px)"
+      offset={SAFE_OFFSET}
+      mobileOffset={SAFE_OFFSET}
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       toastOptions={{
