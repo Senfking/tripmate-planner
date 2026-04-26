@@ -871,24 +871,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
       <div className="px-4 md:max-w-[700px] md:mx-auto md:px-8 flex flex-col gap-3">
 
-        {/* Rearrange toggle */}
-        <div className="flex justify-end -mb-2 -mt-1">
-          <button
-            type="button"
-            onClick={() => setEditMode((v) => !v)}
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-colors ${
-              editMode
-                ? "text-primary"
-                : "text-muted-foreground/60 hover:text-foreground"
-            }`}
-            aria-pressed={editMode}
-          >
-            {editMode ? <><Check className="h-3 w-3" /> Done</> : <><ArrowUpDown className="h-3 w-3" /> Rearrange</>}
-          </button>
-        </div>
-
         {/* ─── REORDERABLE SECTIONS ─── */}
-        <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={rectIntersection}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
           <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
             {visibleOrder.map((id) => {
               if (id === "decisions" || id === "bookings") {
@@ -910,7 +900,47 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               );
             })}
           </SortableContext>
+
+          <DragOverlay
+            dropAnimation={{
+              duration: 260,
+              easing: "cubic-bezier(0.2, 0, 0, 1)",
+            }}
+            zIndex={60}
+          >
+            {activeId ? <DragPreview>{renderSection(activeId)}</DragPreview> : null}
+          </DragOverlay>
         </DndContext>
+      </div>
+
+      {/* Floating Rearrange / Done button — premium minimal */}
+      <div
+        className="fixed left-1/2 -translate-x-1/2 z-40"
+        style={{ bottom: `calc(env(safe-area-inset-bottom, 0px) + 84px)` }}
+      >
+        <button
+          type="button"
+          onClick={() => setEditMode((v) => !v)}
+          aria-pressed={editMode}
+          aria-label={editMode ? "Done rearranging" : "Rearrange dashboard"}
+          className={`group flex items-center gap-2 rounded-full border border-border/60 bg-background/85 backdrop-blur-xl px-4 h-10 text-[13px] font-medium transition-all duration-300 ease-out ${
+            editMode
+              ? "text-primary shadow-[0_8px_28px_-6px_hsl(var(--primary)/0.35)]"
+              : "text-foreground/70 hover:text-foreground shadow-[0_4px_18px_-4px_rgba(0,0,0,0.12)] hover:shadow-[0_6px_22px_-4px_rgba(0,0,0,0.18)]"
+          }`}
+        >
+          {editMode ? (
+            <>
+              <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+              <span>Done</span>
+            </>
+          ) : (
+            <>
+              <ArrowUpDown className="h-3.5 w-3.5" strokeWidth={2} />
+              <span>Rearrange</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Concierge Panel */}
