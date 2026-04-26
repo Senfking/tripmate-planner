@@ -113,8 +113,12 @@ export function DecisionsFlow({
       ? { text: `${prefPolls.length} question${prefPolls.length > 1 ? "s" : ""}`, variant: "muted" as const }
       : { text: "Add one", variant: "muted" as const };
 
+  const isEmpty = !hasRouteStops && prefPolls.length === 0 && !routeLocked;
+
   return (
     <div className="space-y-3">
+      {isEmpty && <DecisionsEmptyHero />}
+
       {/* Step 1: Where & When */}
       <div id="decisions-step-1">
         <StepSection
@@ -148,6 +152,58 @@ export function DecisionsFlow({
           <PreferencesContent tripId={tripId} myRole={myRole} highlightedPollId={highlightTarget?.startsWith("poll-") ? highlightTarget.replace("poll-", "") : undefined} />
         </StepSection>
       </div>
+    </div>
+  );
+}
+
+import { Sparkles, MapPin, Vote, Users } from "lucide-react";
+
+function DecisionsEmptyHero() {
+  return (
+    <div className="px-1 pt-2 pb-4">
+      {/* Hero card */}
+      <div className="relative overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6">
+        <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#0D9488]/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-[#0D9488]/10 blur-3xl" />
+
+        <div className="relative flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#0D9488]/25 bg-background/70 backdrop-blur px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#0D9488]">
+            <Sparkles className="h-3 w-3" />
+            Decide together
+          </div>
+
+          <h2 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground leading-tight">
+            Plan the trip,<br />
+            <span className="text-[#0D9488]">without the group chat chaos</span>
+          </h2>
+          <p className="mt-2 max-w-[300px] text-[13.5px] leading-relaxed text-muted-foreground">
+            Pick where to go, when to travel, and settle the small stuff. Everyone votes, the route locks in, and Junto carries the answers into your itinerary.
+          </p>
+        </div>
+      </div>
+
+      {/* Benefit list */}
+      <ul className="mt-6 space-y-2.5 px-2">
+        {[
+          { icon: MapPin, title: "Build the route together", desc: "Propose stops and dates. The group reacts, the favourite locks in." },
+          { icon: Vote, title: "Quick polls for anything", desc: "Hotel or hostel, beach day or hike. Ask, vote, move on." },
+          { icon: Users, title: "Your crew stays in sync", desc: "Every decision is visible to everyone, no chat scrolling required." },
+        ].map(({ icon: Icon, title, desc }) => (
+          <li key={title} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/50 p-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0D9488]/10">
+              <Icon className="h-4 w-4 text-[#0D9488]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-foreground leading-tight">{title}</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground leading-snug">{desc}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-5 text-center text-[11.5px] uppercase tracking-[0.14em] text-muted-foreground/60">
+        Start below with where & when
+      </p>
     </div>
   );
 }
