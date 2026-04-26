@@ -74,10 +74,10 @@
 - All Sentry calls go through helpers in `src/lib/sentry.ts` — don't call `Sentry.captureException` directly so tagging stays consistent.
 
 ### Env files
-- `.env` is tracked and holds **non-secret** Vite client config (Supabase URL/anon key, VAPID public key). Don't put secrets here.
-- `.env.local` is gitignored (`.env.*` rule with a `!.env.example` exception) — put secrets and per-developer overrides here. `VITE_SENTRY_DSN` lives in `.env.local`.
-- `.env.example` documents which vars exist; copy to `.env.local` and fill in.
-- For Lovable hosted builds, env vars from `.env.local` are not in the checked-out repo. Set `VITE_SENTRY_DSN` in Lovable's environment variable UI for the deployed build, or it ships without Sentry. (Edge Function secrets remain in the Supabase Dashboard UI per the Supabase rule above — that is unrelated to Vite client envs.)
+- **`VITE_`-prefixed vars go in the tracked `.env`.** Vite inlines them into the client bundle at build time, so they are public anyway. Lovable's hosted builds use the checked-out `.env` — Lovable's Secrets UI does **not** accept `VITE_`-prefixed vars (they're build-time, not runtime). This applies to `VITE_SUPABASE_*`, `VITE_VAPID_PUBLIC_KEY`, `VITE_SENTRY_DSN`, etc. Public-by-design values only — never a service-role key or anything that should stay server-side.
+- **Non-`VITE_` secrets go in Lovable's Secrets UI** (or the Supabase Dashboard for Edge Function secrets). Anything server-side: service-role keys, third-party API keys consumed by Edge Functions, webhook signing secrets.
+- `.env.local` is gitignored (`.env.*` rule with a `!.env.example` exception) — use it for per-developer overrides only. Mirroring `VITE_SENTRY_DSN` in `.env.local` is fine for local consistency, but the tracked `.env` is the source of truth for builds.
+- `.env.example` documents which vars exist; copy to `.env.local` if you want a local override, otherwise the tracked `.env` defaults are picked up automatically.
 
 ## Common Commands
 - npm run dev — start local dev server
