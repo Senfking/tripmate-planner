@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { saveLineItems } from "@/hooks/useLineItemClaims";
 import { parseRates, fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
-import { friendlyErrorMessage, isAuthOrRlsError } from "@/lib/supabaseErrors";
-import { ensureFreshSession, forceRefreshSession } from "@/lib/sessionRefresh";
+import { showErrorToast } from "@/lib/supabaseErrors";
+import { withAuthRetry } from "@/lib/safeQuery";
 import { isValidTripId } from "@/lib/tripId";
 
 export interface ExpenseRow {
@@ -44,69 +44,6 @@ export interface MemberProfile {
 
 
 
-// Wraps a query body in:
-//  1. ensureFreshSession() pre-flight (avoids the JWT expiry race that fires
-//     when a backgrounded tab resumes faster than auto-refresh).
-//  2. forceRefreshSession() + retry-once on auth/RLS errors.
-//  3. TEMPORARY trackEvent log on terminal failure so we can see what's
-//     actually breaking the expenses page in browser. Remove the trackEvent
-//     in a follow-up once production data confirms (or refutes) the
-//     auth-race hypothesis.
-async function withAuthRetry<T>(
-  exec: () => Promise<T>,
-  queryName: string,
-  context: Record<string, unknown>,
-  userId?: string,
-): Promise<T> {
-  await ensureFreshSession();
-  try {
-    return await exec();
-  } catch (err) {
-    if (isAuthOrRlsError(err)) {
-      await forceRefreshSession();
-      try {
-        return await exec();
-      } catch (retryErr) {
-        logExpensesQueryFailure(queryName, retryErr, { ...context, retried: true }, userId);
-        throw retryErr;
-      }
-    }
-    logExpensesQueryFailure(queryName, err, context, userId);
-    throw err;
-  }
-}
-
-// TEMPORARY diagnostic logger — capture the real error shape for the
-// "Couldn't load expenses" UI we sometimes hit in browser. Strip after we've
-// seen real data.
-function logExpensesQueryFailure(
-  queryName: string,
-  err: unknown,
-  context: Record<string, unknown>,
-  userId?: string,
-) {
-  const e = err as Record<string, unknown> | null;
-  trackEvent(
-    "expenses_query_error",
-    {
-      query: queryName,
-      code: typeof e?.code === "string" ? e.code : null,
-      status: typeof e?.status === "number" ? e.status : null,
-      name: typeof e?.name === "string" ? e.name : null,
-      message: typeof e?.message === "string" ? e.message.slice(0, 300) : null,
-      details: typeof e?.details === "string" ? e.details.slice(0, 300) : null,
-      hint: typeof e?.hint === "string" ? e.hint.slice(0, 200) : null,
-      online: typeof navigator !== "undefined" ? navigator.onLine : null,
-      display_mode:
-        typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches
-          ? "standalone"
-          : "browser",
-      ...context,
-    },
-    userId,
-  );
-}
-
 export function useExpenses(tripId: string) {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -127,9 +64,7 @@ export function useExpenses(tripId: string) {
           if (error) throw error;
           return data as ExpenseRow[];
         },
-        "expenses",
-        { trip_id: tripId },
-        user?.id,
+        { name: "expenses_select", context: { trip_id: tripId }, userId: user?.id },
       ),
     enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
@@ -152,9 +87,7 @@ export function useExpenses(tripId: string) {
           if (error) throw error;
           return data as SplitRow[];
         },
-        "expense_splits",
-        { trip_id: tripId },
-        user?.id,
+        { name: "expense_splits_select", context: { trip_id: tripId }, userId: user?.id },
       ),
     enabled: !!expensesQuery.data,
   });
@@ -190,9 +123,7 @@ export function useExpenses(tripId: string) {
             attendanceStatus: (m as any).attendance_status ?? "pending",
           })) as MemberProfile[];
         },
-        "members",
-        { trip_id: tripId },
-        user?.id,
+        { name: "members_select", context: { trip_id: tripId }, userId: user?.id },
       ),
     enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
@@ -212,9 +143,7 @@ export function useExpenses(tripId: string) {
           if (error) throw error;
           return (data as any).settlement_currency as string || "EUR";
         },
-        "settlement_currency",
-        { trip_id: tripId },
-        user?.id,
+        { name: "settlement_currency_select", context: { trip_id: tripId }, userId: user?.id },
       ),
     enabled: isValidTripId(tripId) && !!user,
     placeholderData: keepPreviousData,
@@ -329,23 +258,33 @@ export function useExpenses(tripId: string) {
 
   // Update settlement currency - any member can do this
   const updateSettlementCurrency = useMutation({
-    mutationFn: async (currency: string) => {
-      const { error } = await supabase
-        .from("trips")
-        .update({ settlement_currency: currency } as any)
-        .eq("id", tripId);
-      if (error) throw error;
-    },
+    mutationFn: (currency: string) =>
+      withAuthRetry(
+        async () => {
+          const { error } = await supabase
+            .from("trips")
+            .update({ settlement_currency: currency } as any)
+            .eq("id", tripId);
+          if (error) throw error;
+        },
+        { name: "settlement_currency_update", context: { trip_id: tripId, currency }, userId: user?.id },
+      ),
     onSuccess: (_data, currency) => {
       trackEvent("settlement_currency_changed", { trip_id: tripId, currency }, user?.id);
       qc.invalidateQueries({ queryKey: ["settlement-currency", tripId] });
       qc.invalidateQueries({ queryKey: ["exchange-rates"] });
       toast.success("Settlement currency updated");
     },
-    onError: () => toast.error("Failed to update currency"),
+    onError: (e) => showErrorToast(e, "Failed to update currency"),
   });
 
   // Add expense
+  //
+  // Each Supabase call is wrapped in withAuthRetry individually rather than
+  // wrapping the whole mutationFn — the helper retries on auth errors, and
+  // an outer-level retry would re-INSERT the expense row, leaving an
+  // orphaned duplicate if the splits insert (or line-items RPC) is what
+  // actually failed.
   const addExpense = useMutation({
     mutationFn: async (params: {
       trip_id: string;
@@ -373,42 +312,39 @@ export function useExpenses(tripId: string) {
         throw new Error("Cannot add expense: trip context is missing. Please refresh the page.");
       }
 
-      // Pre-flight: make sure the cached JWT isn't within its expiry window.
-      // Without this, an insert fired immediately after returning from a
-      // backgrounded tab can race the auth client's auto-refresh and get
-      // rejected as an RLS violation.
-      await ensureFreshSession();
-
-      const insertExpense = () =>
-        supabase
-          .from("expenses")
-          .insert({ ...expenseData, trip_id } as any)
-          .select("*")
-          .single();
-
-      let { data: expense, error } = await insertExpense();
-
-      // Recovery path: if the first attempt failed with an auth/RLS error,
-      // the client likely had a stale token. Force a refresh and retry once
-      // before surfacing the error to the user.
-      if (error && isAuthOrRlsError(error)) {
-        await forceRefreshSession();
-        ({ data: expense, error } = await insertExpense());
-      }
-
-      if (error) throw error;
-      const insertedExpense = expense as ExpenseRow;
+      const insertedExpense = await withAuthRetry<ExpenseRow>(
+        async () => {
+          const { data, error } = await supabase
+            .from("expenses")
+            .insert({ ...expenseData, trip_id } as any)
+            .select("*")
+            .single();
+          if (error) throw error;
+          return data as ExpenseRow;
+        },
+        { name: "expense_insert", context: { trip_id, currency: params.currency, category: params.category }, userId: user?.id },
+      );
 
       const splitRows = splits.map((s) => ({
         expense_id: insertedExpense.id,
         user_id: s.user_id,
         share_amount: s.share_amount,
       }));
-      const { data: insertedSplits, error: sErr } = await supabase
-        .from("expense_splits")
-        .insert(splitRows)
-        .select("*");
-      if (sErr) {
+
+      let insertedSplits: SplitRow[];
+      try {
+        insertedSplits = await withAuthRetry<SplitRow[]>(
+          async () => {
+            const { data, error } = await supabase
+              .from("expense_splits")
+              .insert(splitRows)
+              .select("*");
+            if (error) throw error;
+            return (data ?? []) as SplitRow[];
+          },
+          { name: "expense_splits_insert", context: { trip_id, expense_id: insertedExpense.id, split_count: splitRows.length }, userId: user?.id },
+        );
+      } catch (sErr) {
         // Compensating delete: supabase-js can't atomically wrap the two
         // inserts, and an expense without splits is invalid balance state.
         try {
@@ -419,12 +355,15 @@ export function useExpenses(tripId: string) {
 
       // Save line items + claims if using "Split by item" mode
       if (lineItems && lineItems.length > 0) {
-        await saveLineItems(insertedExpense.id, lineItems, itemAssignments, quantityAssignments);
+        await withAuthRetry(
+          () => saveLineItems(insertedExpense.id, lineItems, itemAssignments, quantityAssignments),
+          { name: "expense_line_items_save", context: { trip_id, expense_id: insertedExpense.id, item_count: lineItems.length }, userId: user?.id },
+        );
       }
 
       return {
         expense: insertedExpense,
-        splits: (insertedSplits ?? []) as SplitRow[],
+        splits: insertedSplits,
       };
     },
     onSuccess: (result, params) => {
@@ -445,10 +384,12 @@ export function useExpenses(tripId: string) {
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
       toast.success("Expense added");
     },
-    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to add expense")),
+    onError: (e) => showErrorToast(e, "Failed to add expense"),
   });
 
-  // Update expense
+  // Update expense — both ops are idempotent (UPDATE with same values, RPC
+  // that replaces splits in a single transaction), so withAuthRetry is safe
+  // at the per-call granularity.
   const updateExpense = useMutation({
     mutationFn: async (params: {
       id: string;
@@ -464,27 +405,27 @@ export function useExpenses(tripId: string) {
     }) => {
       const { id, splits, ...expenseData } = params;
 
-      await ensureFreshSession();
+      await withAuthRetry(
+        async () => {
+          const { error } = await supabase
+            .from("expenses")
+            .update({ ...expenseData, updated_at: new Date().toISOString() } as any)
+            .eq("id", id);
+          if (error) throw error;
+        },
+        { name: "expense_update", context: { trip_id: tripId, expense_id: id }, userId: user?.id },
+      );
 
-      const runUpdate = () =>
-        supabase
-          .from("expenses")
-          .update({ ...expenseData, updated_at: new Date().toISOString() } as any)
-          .eq("id", id);
-
-      let { error } = await runUpdate();
-      if (error && isAuthOrRlsError(error)) {
-        await forceRefreshSession();
-        ({ error } = await runUpdate());
-      }
-      if (error) throw error;
-
-      // Atomically replace splits in a single DB transaction
-      const { error: sErr } = await (supabase.rpc as any)("replace_expense_splits", {
-        _expense_id: id,
-        _splits: splits.map((s) => ({ user_id: s.user_id, share_amount: s.share_amount })),
-      });
-      if (sErr) throw sErr;
+      await withAuthRetry(
+        async () => {
+          const { error: sErr } = await (supabase.rpc as any)("replace_expense_splits", {
+            _expense_id: id,
+            _splits: splits.map((s) => ({ user_id: s.user_id, share_amount: s.share_amount })),
+          });
+          if (sErr) throw sErr;
+        },
+        { name: "expense_splits_replace", context: { trip_id: tripId, expense_id: id, split_count: splits.length }, userId: user?.id },
+      );
     },
     onSuccess: (_data, params) => {
       const { id, splits, ...expenseData } = params;
@@ -498,16 +439,26 @@ export function useExpenses(tripId: string) {
       trackEvent("expense_updated", { trip_id: tripId, expense_id: id }, user?.id);
       toast.success("Expense updated");
     },
-    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to update expense")),
+    onError: (e) => showErrorToast(e, "Failed to update expense"),
   });
 
-  // Delete expense
+  // Delete expense — DELETE is idempotent.
   const deleteExpense = useMutation({
     mutationFn: async (id: string) => {
-      const { error: sErr } = await supabase.from("expense_splits").delete().eq("expense_id", id);
-      if (sErr) throw sErr;
-      const { error } = await supabase.from("expenses").delete().eq("id", id);
-      if (error) throw error;
+      await withAuthRetry(
+        async () => {
+          const { error } = await supabase.from("expense_splits").delete().eq("expense_id", id);
+          if (error) throw error;
+        },
+        { name: "expense_splits_delete", context: { trip_id: tripId, expense_id: id }, userId: user?.id },
+      );
+      await withAuthRetry(
+        async () => {
+          const { error } = await supabase.from("expenses").delete().eq("id", id);
+          if (error) throw error;
+        },
+        { name: "expense_delete", context: { trip_id: tripId, expense_id: id }, userId: user?.id },
+      );
     },
     onSuccess: (_data, id) => {
       qc.setQueryData<ExpenseRow[]>(["expenses", tripId], (old) =>
@@ -523,7 +474,7 @@ export function useExpenses(tripId: string) {
       trackEvent("expense_deleted", { trip_id: tripId, expense_id: id }, user?.id);
       toast.success("Expense deleted");
     },
-    onError: (e) => toast.error(friendlyErrorMessage(e, "Failed to delete expense")),
+    onError: (e) => showErrorToast(e, "Failed to delete expense"),
   });
 
   // Manual refresh function

@@ -80,13 +80,28 @@ const queryClient = new QueryClient({
     },
   }),
   mutationCache: new MutationCache({
+    // Catch-all logger for any mutation that ISN'T already wrapped in
+    // withAuthRetry (which has its own richer log via supabase_op_error).
+    // Captures the full Postgres/PostgREST error shape so we can diagnose
+    // failures from analytics_events without console access.
     onError: (error, _variables, _context, mutation) => {
+      const e = error as unknown as Record<string, unknown> | null;
       trackEvent("app_error", {
         type: "mutation_error",
-        message: error.message,
         mutation_key: JSON.stringify(mutation.options.mutationKey || "unknown").slice(0, 100),
         route: window.location.pathname,
         severity: "medium",
+        code: typeof e?.code === "string" ? e.code : null,
+        status: typeof e?.status === "number" ? e.status : null,
+        name: typeof e?.name === "string" ? e.name : null,
+        message: typeof e?.message === "string" ? e.message.slice(0, 300) : null,
+        details: typeof e?.details === "string" ? e.details.slice(0, 300) : null,
+        hint: typeof e?.hint === "string" ? e.hint.slice(0, 200) : null,
+        online: typeof navigator !== "undefined" ? navigator.onLine : null,
+        display_mode:
+          typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches
+            ? "standalone"
+            : "browser",
       });
     },
   }),

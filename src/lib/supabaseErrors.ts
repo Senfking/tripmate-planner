@@ -2,6 +2,8 @@
 // Keeps technical terms ("row-level security", status codes, SQL state) out
 // of toasts. Add new mappings as real error strings surface in production.
 
+import { toast } from "sonner";
+
 type MaybeError = unknown;
 
 function getMessage(err: MaybeError): string {
@@ -97,4 +99,47 @@ export function friendlyErrorMessage(err: MaybeError, fallback: string): string 
 
   // Fall back to caller-provided message rather than leaking the raw error.
   return fallback;
+}
+
+// Compact "code · status · message" string from a Supabase/PostgREST error
+// for the toast description. Returns undefined if no useful detail is
+// available (so the caller can omit the description entirely).
+export function technicalErrorSummary(err: MaybeError): string | undefined {
+  if (!err) return undefined;
+  const code = getCode(err);
+  const status = getStatus(err);
+  const message = getMessage(err);
+  const parts: string[] = [];
+  if (code) parts.push(`code ${code}`);
+  if (status) parts.push(`status ${status}`);
+  if (message) parts.push(message.length > 180 ? message.slice(0, 180) + "…" : message);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+// Replaces `toast.error(friendlyErrorMessage(e, "Failed to X"))` everywhere.
+// Shows the friendly message as the title, the technical summary
+// (code/status/message) as the description, and a "Copy" action that
+// copies the full message to clipboard. Always shows the description so
+// developers and testers can diagnose without a console — sonner toasts
+// auto-dismiss within seconds anyway.
+export function showErrorToast(err: MaybeError, fallback: string): void {
+  const friendly = friendlyErrorMessage(err, fallback);
+  const technical = technicalErrorSummary(err);
+
+  toast.error(friendly, {
+    description: technical,
+    duration: 6000,
+    action: technical
+      ? {
+          label: "Copy",
+          onClick: () => {
+            try {
+              navigator.clipboard?.writeText(technical);
+            } catch {
+              // ignore — clipboard may be unavailable in some webviews
+            }
+          },
+        }
+      : undefined,
+  });
 }
