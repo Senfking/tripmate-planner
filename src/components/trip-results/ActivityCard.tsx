@@ -302,7 +302,7 @@ export function ActivityCard({
           {/* Reactions & Comments */}
           {planId && actKey && (
             <>
-              <ActivityReactions planId={planId} activityKey={actKey} />
+              {!isDraft && <ActivityReactions planId={planId} activityKey={actKey} />}
               <ActivityComments planId={planId} activityKey={actKey} isDraft={isDraft} />
             </>
           )}
