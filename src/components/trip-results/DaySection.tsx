@@ -16,6 +16,7 @@ import type { AIDay, AIActivity, AITripResult } from "./useResultsState";
 interface Props {
   day: AIDay;
   planId?: string | null;
+  isDraft?: boolean;
   destinationName: string;
   result: AITripResult;
   allDays: AIDay[];
