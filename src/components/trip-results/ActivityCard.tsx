@@ -45,6 +45,7 @@ export function ActivityCard({
   day,
   index,
   planId,
+  isDraft = false,
   dayIndex,
   activityIndex,
   onRequestChange,
