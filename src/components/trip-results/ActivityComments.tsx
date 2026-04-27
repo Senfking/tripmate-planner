@@ -111,6 +111,20 @@ export function ActivityComments({ planId, activityKey, isDraft = false }: Props
 
   const count = comments.length;
 
+  if (isDraft) {
+    return (
+      <div className="px-3.5 pb-2">
+        <span
+          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60"
+          title="Available once you create the trip"
+        >
+          <Lock className="h-3 w-3" />
+          <span>Comments unlock after you create the trip</span>
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="px-3.5 pb-2">
       <button
