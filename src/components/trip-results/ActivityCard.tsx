@@ -12,6 +12,7 @@ interface Props {
   day: AIDay;
   index: number;
   planId?: string | null;
+  isDraft?: boolean;
   dayIndex?: number;
   activityIndex?: number;
   onRequestChange: () => void;
