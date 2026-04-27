@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageSquare, Send, Trash2, ChevronDown } from "lucide-react";
+import { MessageSquare, Send, Trash2, ChevronDown, Lock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   placeholder?: string;
   compact?: boolean;
   maxShown?: number;
+  isDraft?: boolean;
 }
 
 interface Comment {
