@@ -303,7 +303,7 @@ export function ActivityCard({
           {planId && actKey && (
             <>
               <ActivityReactions planId={planId} activityKey={actKey} />
-              <ActivityComments planId={planId} activityKey={actKey} />
+              <ActivityComments planId={planId} activityKey={actKey} isDraft={isDraft} />
             </>
           )}
 
