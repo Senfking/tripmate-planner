@@ -130,7 +130,7 @@ export function DaySection({
               <span className="text-xs text-muted-foreground font-mono">
                 {dateStr} · {visibleActivities.length} {visibleActivities.length === 1 ? "Experience" : "Experiences"}
               </span>
-              {planId && (
+              {planId && !isDraft && (
                 <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
               )}
             </div>
