@@ -141,27 +141,36 @@ export function TripDiscussion({ planId, activityKey, placeholder = "Add a comme
         </div>
       ))}
 
-      {/* Input */}
-      <div className="flex gap-2 items-end">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value.slice(0, 500))}
-          placeholder={placeholder}
-          maxLength={500}
-          className="flex-1 px-2.5 py-1.5 text-[11px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && text.trim()) { e.stopPropagation(); handleSend(); }
-          }}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!text.trim()}
-          className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30 hover:bg-[#0D9488]/90 transition-colors"
-        >
-          <Send className="h-3 w-3" />
-        </button>
-      </div>
+      {/* Input or draft notice */}
+      {isDraft ? (
+        <div className="flex items-start gap-2 rounded-lg bg-muted/40 border border-dashed border-border px-3 py-2.5">
+          <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Comments unlock once you create the trip. Save it and invite your group to start the conversation.
+          </p>
+        </div>
+      ) : (
+        <div className="flex gap-2 items-end">
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, 500))}
+            placeholder={placeholder}
+            maxLength={500}
+            className="flex-1 px-2.5 py-1.5 text-[11px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && text.trim()) { e.stopPropagation(); handleSend(); }
+            }}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!text.trim()}
+            className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30 hover:bg-[#0D9488]/90 transition-colors"
+          >
+            <Send className="h-3 w-3" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
