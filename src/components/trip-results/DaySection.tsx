@@ -190,6 +190,7 @@ export function DaySection({
                     day={day}
                     index={i}
                     planId={planId || null}
+                    isDraft={isDraft}
                     dayIndex={dayIndex}
                     activityIndex={i}
                     onRequestChange={() => onRequestChange(day.date, i, activity)}
