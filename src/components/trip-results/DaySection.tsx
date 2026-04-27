@@ -170,6 +170,7 @@ export function DaySection({
                   activityKey={`day-${dayIndex}`}
                   placeholder="Comment on this day..."
                   compact
+                  isDraft={isDraft}
                 />
               </div>
             )}
