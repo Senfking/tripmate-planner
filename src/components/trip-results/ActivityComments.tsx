@@ -25,7 +25,7 @@ function getInitialColor(name: string) {
   return `hsl(${(code * 37) % 360}, 55%, 55%)`;
 }
 
-export function ActivityComments({ planId, activityKey }: Props) {
+export function ActivityComments({ planId, activityKey, isDraft = false }: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
