@@ -59,6 +59,7 @@ function DayThumbnail({ activity, location }: { activity: AIActivity; location: 
 export function DaySection({
   day,
   planId,
+  isDraft = false,
   destinationName,
   result,
   allDays,
