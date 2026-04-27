@@ -27,7 +27,7 @@ function getInitialColor(name: string) {
   return `hsl(${(code * 37) % 360}, 55%, 55%)`;
 }
 
-export function TripDiscussion({ planId, activityKey, placeholder = "Add a comment...", compact = false, maxShown }: Props) {
+export function TripDiscussion({ planId, activityKey, placeholder = "Add a comment...", compact = false, maxShown, isDraft = false }: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
