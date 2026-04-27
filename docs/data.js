@@ -115,6 +115,17 @@ DONE_GROUPS.push({
 // WHAT'S NEXT — linear, work top-to-bottom
 // ═══════════════════════════════════════════════════════════
 
+// — VERIFY FIRST: are the v11 bug entries still real? —
+
+NEXT_TASKS.push({
+  title: "Verify v11 bugs against current build (reproduce items 2–6 one by one)",
+  tags: ["Bug","Claude Code"],
+  section: "Verify",
+  note: "v11 bug entries 2–6 below were copied through to v12 without independent reproduction. For each: open the running app, attempt the repro, confirm whether it's still reproducible, partial, or already fixed. Drop fixed items; demote unverified-cosmetic ones; promote anything that turns out to be worse than v11 captured.",
+  why: "Working a phantom bug burns the same time as a real one. CLAUDE.md mandates 'Diagnosis First' — this is that gate for the next sprint.",
+  detail: "<strong>Refresh / direct-nav crash (item 3 below)</strong> has the strongest counter-signal: CLAUDE.md says 'Every route component must independently fetch its data… use useParams() to extract tripId and query Supabase directly.' If that pattern is in place, the crash is already fixed and the item should be dropped.<br><br><strong>Expense hero math (item 4)</strong> — recent commit f0163d8 fixed adjacent expense logic; check whether the YOU PAID / YOUR SHARE numbers actually mismatch in a multi-member multi-currency trip before re-prompting Claude Code.<br><br><strong>CSV export empty (item 5)</strong> — invoke the export-expenses-csv edge function manually; if the file is non-empty, the bug is stale.<br><br><strong>Edit/Delete confusion (item 6)</strong> — pure visual check on itinerary cards on iPhone Safari.<br><br><strong>Trip dates not saving (item 2)</strong> — create a fresh trip with explicit picker dates; check the trips row in DB."
+});
+
 // — Trust-critical bugs first (acquisition: every one of these breaks first impression) —
 
 NEXT_TASKS.push({
