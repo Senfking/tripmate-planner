@@ -16,6 +16,7 @@ import type { AIDay, AIActivity, AITripResult } from "./useResultsState";
 interface Props {
   day: AIDay;
   planId?: string | null;
+  isDraft?: boolean;
   destinationName: string;
   result: AITripResult;
   allDays: AIDay[];
@@ -58,6 +59,7 @@ function DayThumbnail({ activity, location }: { activity: AIActivity; location: 
 export function DaySection({
   day,
   planId,
+  isDraft = false,
   destinationName,
   result,
   allDays,
@@ -128,7 +130,7 @@ export function DaySection({
               <span className="text-xs text-muted-foreground font-mono">
                 {dateStr} · {visibleActivities.length} {visibleActivities.length === 1 ? "Experience" : "Experiences"}
               </span>
-              {planId && (
+              {planId && !isDraft && (
                 <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
               )}
             </div>
@@ -168,6 +170,7 @@ export function DaySection({
                   activityKey={`day-${dayIndex}`}
                   placeholder="Comment on this day..."
                   compact
+                  isDraft={isDraft}
                 />
               </div>
             )}
@@ -187,6 +190,7 @@ export function DaySection({
                     day={day}
                     index={i}
                     planId={planId || null}
+                    isDraft={isDraft}
                     dayIndex={dayIndex}
                     activityIndex={i}
                     onRequestChange={() => onRequestChange(day.date, i, activity)}

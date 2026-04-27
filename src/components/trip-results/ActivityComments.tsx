@@ -2,12 +2,13 @@ import { useState, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageSquare, Send, Trash2 } from "lucide-react";
+import { MessageSquare, Send, Trash2, Lock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Props {
   planId: string;
   activityKey: string;
+  isDraft?: boolean;
 }
 
 interface Comment {
@@ -24,7 +25,7 @@ function getInitialColor(name: string) {
   return `hsl(${(code * 37) % 360}, 55%, 55%)`;
 }
 
-export function ActivityComments({ planId, activityKey }: Props) {
+export function ActivityComments({ planId, activityKey, isDraft = false }: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -109,6 +110,20 @@ export function ActivityComments({ planId, activityKey }: Props) {
   if (!planId) return null;
 
   const count = comments.length;
+
+  if (isDraft) {
+    return (
+      <div className="px-3.5 pb-2">
+        <span
+          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60"
+          title="Available once you create the trip"
+        >
+          <Lock className="h-3 w-3" />
+          <span>Comments unlock after you create the trip</span>
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="px-3.5 pb-2">

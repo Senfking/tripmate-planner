@@ -12,6 +12,7 @@ interface Props {
   day: AIDay;
   index: number;
   planId?: string | null;
+  isDraft?: boolean;
   dayIndex?: number;
   activityIndex?: number;
   onRequestChange: () => void;
@@ -44,6 +45,7 @@ export function ActivityCard({
   day,
   index,
   planId,
+  isDraft = false,
   dayIndex,
   activityIndex,
   onRequestChange,
@@ -300,8 +302,8 @@ export function ActivityCard({
           {/* Reactions & Comments */}
           {planId && actKey && (
             <>
-              <ActivityReactions planId={planId} activityKey={actKey} />
-              <ActivityComments planId={planId} activityKey={actKey} />
+              {!isDraft && <ActivityReactions planId={planId} activityKey={actKey} />}
+              <ActivityComments planId={planId} activityKey={actKey} isDraft={isDraft} />
             </>
           )}
 

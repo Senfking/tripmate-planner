@@ -464,6 +464,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   <DaySection
                     day={day}
                     planId={planId || null}
+                    isDraft={!!standalone}
                     destinationName={dest.name}
                     result={result}
                     allDays={allDays}
@@ -607,8 +608,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       />
 
       {/* Overlays (outside flex layout) */}
-      {/* Group Activity floating button */}
-      {planId && (
+      {/* Group Activity floating button — disabled in draft mode */}
+      {planId && !standalone && (
         <button
           onClick={() => setGroupActivityOpen(true)}
           className="fixed bottom-20 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground shadow-xl hover:bg-primary/90 hover:scale-105 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
@@ -620,8 +621,22 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         </button>
       )}
 
-      {/* Group Activity Panel */}
-      {groupActivityOpen && planId && (
+      {planId && standalone && (
+        <button
+          onClick={() => toast.info("Create the trip to chat with your group", {
+            description: "Save it as a trip and invite your travel buddies to start chatting.",
+          })}
+          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-muted text-muted-foreground border border-border shadow-lg hover:bg-muted/80 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
+          title="Group chat unlocks after creating the trip"
+        >
+          <Users className="h-4 w-4 opacity-60" />
+          <span className="text-xs font-semibold">Group Chat</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-background/80 font-medium">Locked</span>
+        </button>
+      )}
+
+      {/* Group Activity Panel — never opens in draft mode */}
+      {groupActivityOpen && planId && !standalone && (
         <GroupActivityPanel
           planId={planId}
           result={result}
