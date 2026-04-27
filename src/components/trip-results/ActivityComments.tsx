@@ -2,12 +2,13 @@ import { useState, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageSquare, Send, Trash2 } from "lucide-react";
+import { MessageSquare, Send, Trash2, Lock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Props {
   planId: string;
   activityKey: string;
+  isDraft?: boolean;
 }
 
 interface Comment {
