@@ -515,6 +515,27 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
 
   const { count: unhandledMandatoryCount } = useUnhandledMandatoryCount(tripId, uploadedReqNames);
 
+  // Pull the same queries to compute a combined VISA & ENTRY count
+  // (manual attachments + AI-suggested docs + user confirmations). React Query
+  // dedupes these by key so this is cheap.
+  const { data: tripIso } = useQuery({
+    queryKey: ["trip-destination-iso", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trips").select("destination_country_iso").eq("id", tripId).single();
+      if (error) throw error;
+      return data as { destination_country_iso: string | null };
+    },
+    enabled: !!user,
+  });
+  const { data: passports } = useTripTravellerPassports(tripId);
+  const myPassportCount = (passports ?? []).filter((p) => p.user_id === user?.id).length;
+  const entryReqEnabled = myPassportCount > 0 && !!tripIso?.destination_country_iso;
+  const { data: entryReqData } = useEntryRequirements({ tripId, enabled: entryReqEnabled });
+  const { data: entryReqAcks } = useEntryReqAcks(tripId);
+  const aiDocCount = entryReqData?.documents_needed?.length ?? 0;
+  const ackCount = entryReqAcks?.length ?? 0;
+
   const scrollToVisa = () => {
     const el = document.getElementById("visa-entry-section");
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
