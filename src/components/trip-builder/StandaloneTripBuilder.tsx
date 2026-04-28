@@ -68,6 +68,10 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
       typeof raw.destination_image_url === "string" && raw.destination_image_url.length > 0
         ? raw.destination_image_url
         : null,
+    destination_country_iso:
+      typeof raw.destination_country_iso === "string" && raw.destination_country_iso.length === 2
+        ? raw.destination_country_iso.toUpperCase()
+        : null,
   };
 }
 
@@ -184,6 +188,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           tentative_start_date: firstDest?.start_date || null,
           tentative_end_date: lastDest?.end_date || null,
           destination_image_url: results.destination_image_url ?? null,
+          destination_country_iso: results.destination_country_iso ?? null,
         } as any)
         .select()
         .single();

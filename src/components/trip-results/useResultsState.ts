@@ -104,6 +104,11 @@ export interface AITripResult {
   // Wikimedia Commons fallback). Persisted to trips.destination_image_url at
   // trip-creation time. Optional so older cached plans still typecheck.
   destination_image_url?: string | null;
+  // ISO-3166-1 alpha-2 destination country, derived from the geocode step in
+  // generate-trip-itinerary. Persisted to trips.destination_country_iso so
+  // the get-entry-requirements Edge Function can resolve by trip_id. Optional
+  // so older cached plans still typecheck.
+  destination_country_iso?: string | null;
 }
 
 export function useResultsState(tripId: string) {
