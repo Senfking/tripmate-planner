@@ -611,6 +611,7 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     tool_choice: { type: "tool", name: tool.name },
   };
 
+  const callStart = Date.now();
   try {
     let res: Response;
     try {
@@ -661,6 +662,8 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
       throw new Error(`Anthropic API error ${res.status} for tool "${tool.name}". Body: ${snippet}`);
     }
 
+    const fetchHeadersMs = Date.now() - callStart;
+
     let data: Record<string, unknown>;
     try {
       data = await res.json();
@@ -692,6 +695,13 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
           ? (data as any).usage.cache_read_input_tokens
           : 0,
     };
+
+    const totalMs = Date.now() - callStart;
+    console.log(
+      `[timing] llm.${step} fetch_headers_ms=${fetchHeadersMs} total_ms=${totalMs} ` +
+        `input_tokens=${usage.input_tokens} output_tokens=${usage.output_tokens} ` +
+        `cache_read=${usage.cache_read_input_tokens} max_tokens=${maxTokens}`,
+    );
 
     const blocks: Array<Record<string, unknown>> = Array.isArray((data as any)?.content)
       ? ((data as any).content as Array<Record<string, unknown>>)
@@ -1473,9 +1483,11 @@ async function geocodeDestination(
   // Shared places_cache lookup — same table concierge-suggest uses. A trip
   // builder destination lookup now warms the cache for the concierge and
   // vice versa.
+  const fnStart = Date.now();
   const cacheKey = buildGeocodeCacheKey(destination);
   const cached = await cacheGet<GeocodeResult>(svcClient, "geocode", cacheKey);
   if (cached) {
+    console.log(`[timing] geocode cached ms=${Date.now() - fnStart}`);
     await logPlacesCall(svcClient, { userId, feature: "trip_builder", sku: "geocode", cached: true });
     return cached;
   }
@@ -1484,6 +1496,7 @@ async function geocodeDestination(
   if (!geocodingApiDisabled) {
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=${googleKey}`;
+      const apiStart = Date.now();
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -1506,6 +1519,9 @@ async function geocodeDestination(
                 : null,
           };
           await cacheSet(svcClient, "geocode", cacheKey, result);
+          console.log(
+            `[timing] geocode geocoding_api fetch_ms=${Date.now() - apiStart} total_ms=${Date.now() - fnStart}`,
+          );
           await logPlacesCall(svcClient, { userId, feature: "trip_builder", sku: "geocode" });
           return result;
         }
@@ -1538,6 +1554,7 @@ async function geocodeDestination(
   }
 
   // ---- Fallback: Places searchText with a minimal mask ----
+  const fbStart = Date.now();
   const res = await fetch(
     "https://places.googleapis.com/v1/places:searchText",
     {
@@ -1608,6 +1625,9 @@ async function geocodeDestination(
   };
 
   await cacheSet(svcClient, "geocode", cacheKey, result);
+  console.log(
+    `[timing] geocode places_fallback fetch_ms=${Date.now() - fbStart} total_ms=${Date.now() - fnStart}`,
+  );
   // Billed as Pro because Text Search with addressComponents is >= Pro tier.
   await logPlacesCall(svcClient, { userId, feature: "trip_builder", sku: "search_pro" });
   return result;
@@ -1831,9 +1851,12 @@ async function searchPlacesBatch(
   svcClient: ReturnType<typeof createClient>,
 ): Promise<{ places: BatchPlaceResult[]; stats: PlacesBatchStats }> {
   const stats: PlacesBatchStats = { live_calls: 0, cache_hits: 0 };
+  const batchStart = Date.now();
 
   const perQueryResults = await Promise.all(
     queries.map(async (q) => {
+      const qStart = Date.now();
+      const qLabel = q.textQuery.slice(0, 40).replace(/"/g, "'");
       const cacheKey = buildSearchCacheKey(
         q.textQuery,
         q.locationBias.circle.center.latitude,
@@ -1846,6 +1869,9 @@ async function searchPlacesBatch(
         const cached = await cacheGet<Array<Record<string, unknown>>>(svcClient, "search", cacheKey);
         if (cached) {
           stats.cache_hits++;
+          console.log(
+            `[timing] places.search cached q="${qLabel}" pool=${q.poolKey} ms=${Date.now() - qStart}`,
+          );
           return cached;
         }
       } catch (cacheErr) {
@@ -1861,6 +1887,7 @@ async function searchPlacesBatch(
           locationBias: q.locationBias,
           maxResultCount: 10,
         };
+        const fetchStart = Date.now();
         const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
           method: "POST",
           headers: {
@@ -1874,11 +1901,18 @@ async function searchPlacesBatch(
           console.error(
             `[searchPlacesBatch] HTTP ${res.status} for "${q.textQuery}" (${q.poolKey})`,
           );
+          console.log(
+            `[timing] places.search live q="${qLabel}" pool=${q.poolKey} ms=${Date.now() - qStart} status=${res.status}`,
+          );
           return [] as Array<Record<string, unknown>>;
         }
         stats.live_calls++;
         const data = (await res.json()) as { places?: Array<Record<string, unknown>> };
         const places = data.places ?? [];
+        console.log(
+          `[timing] places.search live q="${qLabel}" pool=${q.poolKey} ` +
+            `fetch_ms=${Date.now() - fetchStart} total_ms=${Date.now() - qStart} results=${places.length}`,
+        );
         // Fire-and-forget cache write so the next trip/concierge query in the
         // same bucket can skip Google.
         cacheSet(svcClient, "search", cacheKey, places).catch(() => {});
@@ -1888,6 +1922,11 @@ async function searchPlacesBatch(
         return [] as Array<Record<string, unknown>>;
       }
     }),
+  );
+
+  console.log(
+    `[timing] places.search.total queries=${queries.length} ` +
+      `live=${stats.live_calls} cache=${stats.cache_hits} ms=${Date.now() - batchStart}`,
   );
 
   const seen = new Set<string>();
@@ -1940,8 +1979,11 @@ async function hydrateFinalists(
 
   if (unique.length === 0) return { hydrated, stats };
 
+  const batchStart = Date.now();
+
   await Promise.all(
     unique.map(async (id) => {
+      const callStart = Date.now();
       const base = existingById.get(id);
       if (!base) return;
 
@@ -1952,6 +1994,7 @@ async function hydrateFinalists(
           stats.cache_hits++;
           applyDetailsToBatch(base, cached);
           hydrated.set(id, base);
+          console.log(`[timing] places.details cached id=${id} ms=${Date.now() - callStart}`);
           return;
         }
       } catch (cacheErr) {
@@ -1959,6 +2002,7 @@ async function hydrateFinalists(
       }
 
       try {
+        const fetchStart = Date.now();
         const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`, {
           method: "GET",
           headers: {
@@ -1969,17 +2013,28 @@ async function hydrateFinalists(
         });
         if (!res.ok) {
           console.error(`[hydrateFinalists] HTTP ${res.status} for place_id=${id}`);
+          console.log(
+            `[timing] places.details live id=${id} ms=${Date.now() - callStart} status=${res.status}`,
+          );
           return;
         }
         stats.live_calls++;
         const data = (await res.json()) as Record<string, unknown>;
         applyDetailsToBatch(base, data);
         hydrated.set(id, base);
+        console.log(
+          `[timing] places.details live id=${id} fetch_ms=${Date.now() - fetchStart} total_ms=${Date.now() - callStart}`,
+        );
         cacheSet(svcClient, "details", id, data).catch(() => {});
       } catch (err) {
         console.error(`[hydrateFinalists] threw for place_id=${id}:`, err);
       }
     }),
+  );
+
+  console.log(
+    `[timing] places.details.total ids=${unique.length} ` +
+      `live=${stats.live_calls} cache=${stats.cache_hits} ms=${Date.now() - batchStart}`,
   );
 
   return { hydrated, stats };
@@ -3498,6 +3553,16 @@ Deno.serve(async (req) => {
     // =========================================================================
     const pipelineStartedAt = Date.now();
 
+    // Per-stage timing breakdown — emitted as a single [timing-summary] JSON
+    // line at end of pipeline so a cold-cache run can be diagnosed from logs.
+    const stageTimings: Record<string, number> = {};
+    const tStage = (label: string, t0: number) => {
+      const ms = Date.now() - t0;
+      stageTimings[label] = ms;
+      console.log(`[timing] stage.${label} ms=${ms} cumulative_ms=${Date.now() - pipelineStartedAt}`);
+      return ms;
+    };
+
     // ---- Validate inputs and resolve dates ----
     const surpriseMe = body.surprise_me === true;
     const rawDest = (body.destination || "").trim();
@@ -3596,6 +3661,8 @@ Deno.serve(async (req) => {
       );
     }
 
+    tStage("auth_validate_quotas", pipelineStartedAt);
+
     // ---- Step 1: parse intent ----
     // In surprise mode we pass an empty destination hint — the surprise picker
     // runs next with the parsed vibes/must_haves/must_avoids and fills in
@@ -3603,6 +3670,7 @@ Deno.serve(async (req) => {
     // extracted must_avoids the ranker will later enforce.
     loggedStep = "parseIntent";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
+    const tParseIntent = Date.now();
     const intent = await parseIntent(
       anthropicKey,
       body,
@@ -3610,12 +3678,14 @@ Deno.serve(async (req) => {
       logger,
       pipelineStartedAt,
     );
+    tStage("parse_intent", tParseIntent);
     if (intent.destination) loggedDestination = intent.destination;
 
     // ---- Step 1.5: surprise destination picker (only when surprise_me) ----
     if (surpriseMe) {
       loggedStep = "pickSurpriseDestination";
       checkPipelineTimeout(pipelineStartedAt, loggedStep);
+      const tSurprise = Date.now();
       intent.destination = await pickSurpriseDestination(
         anthropicKey,
         intent,
@@ -3623,12 +3693,14 @@ Deno.serve(async (req) => {
         logger,
         pipelineStartedAt,
       );
+      tStage("pick_surprise", tSurprise);
       loggedDestination = intent.destination;
     }
 
     // ---- Cache check by intent hash (BEFORE Places spend) ----
     loggedStep = "cacheLookup";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
+    const tCacheLookup = Date.now();
     const cacheKey = await buildIntentCacheKey(intent, numDays);
     {
       const { data: cached, error: cacheErr } = await svcClient
@@ -3643,6 +3715,10 @@ Deno.serve(async (req) => {
         throw new Error(`ai_response_cache lookup failed: ${cacheErr.message}`);
       }
       if (cached?.response_json) {
+        tStage("cache_lookup_hit", tCacheLookup);
+        console.log(
+          `[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stages: stageTimings })}`,
+        );
         await logger.log({
           feature: "trip_builder_cache_hit",
           model: "cache",
@@ -3654,6 +3730,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: true, ...(cached.response_json as Record<string, unknown>) });
       }
     }
+    tStage("cache_lookup_miss", tCacheLookup);
 
     // ---- Step 2a: geocode (must run before buildSkeleton so MEAL_PATTERNS
     //               gets the country_code rather than parsing the string) ----
@@ -3661,12 +3738,17 @@ Deno.serve(async (req) => {
     // converts it into a structured { error, step, message } 500 response.
     loggedStep = "geocodeDestination";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
+    const tGeocode = Date.now();
     const geo = await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
+    tStage("geocode", tGeocode);
 
     // ---- Step 2b: pacing skeleton (slot count capped inside buildSkeleton) ----
+    const tSkeleton = Date.now();
     const skeleton = buildSkeleton(intent, numDays, startDate, geo.country_code);
+    tStage("build_skeleton", tSkeleton);
 
     // ---- Step 3 + 4: query plan + Places batch (RANKING pass, Essentials SKU) ----
+    const tQueryPlan = Date.now();
     const queries = buildPlacesQueries(intent, skeleton, {
       lat: geo.lat,
       lng: geo.lng,
@@ -3677,14 +3759,17 @@ Deno.serve(async (req) => {
         `[generate-trip-itinerary] query planner produced ${queries.length} queries, exceeding cap ${MAX_PLACES_QUERIES_PER_TRIP}`,
       );
     }
+    tStage("build_queries", tQueryPlan);
 
     // Step 4 + Step 5 in parallel
     loggedStep = "searchPlacesAndEvents";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
+    const tSearch = Date.now();
     const [searchResult, events] = await Promise.all([
       searchPlacesBatch(queries, googleKey, svcClient),
       searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
     ]);
+    tStage("search_places_and_events", tSearch);
     const places = searchResult.places;
     const rankingStats = searchResult.stats;
 
@@ -3714,12 +3799,14 @@ Deno.serve(async (req) => {
     }
     const idToBase = new Map<string, BatchPlaceResult>();
     for (const p of places) idToBase.set(p.id, p);
+    const tHydrate = Date.now();
     const { hydrated: hydratedById, stats: hydrationStats } = await hydrateFinalists(
       finalistIds,
       idToBase,
       googleKey,
       svcClient,
     );
+    tStage("hydrate_finalists", tHydrate);
 
     // Tier-aware cost instrumentation — one row per SKU category.
     await logPlacesByTier(svcClient, logger, user.id, {
@@ -3749,6 +3836,7 @@ Deno.serve(async (req) => {
     // ---- Step 6: rank + enrich ----
     loggedStep = "rankAndEnrich";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
+    const tRank = Date.now();
     const ranked = await rankAndEnrich(
       anthropicKey,
       intent,
@@ -3760,8 +3848,10 @@ Deno.serve(async (req) => {
       logger,
       pipelineStartedAt,
     );
+    tStage("rank_and_enrich", tRank);
 
     // ---- Step 7-9: junto picks, affiliate URLs, validation ----
+    const tJunto = Date.now();
     markJuntoPicks(ranked, intent);
 
     const affEnv = { booking: bookingAid, viator: viatorMcid, gyg: gygPid };
@@ -3780,14 +3870,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    tStage("junto_and_affiliate", tJunto);
+
     loggedStep = "validateActivities";
+    const tValidate = Date.now();
     const validated = validateActivities(ranked, allPlacesById, { lat: geo.lat, lng: geo.lng });
+    tStage("validate", tValidate);
 
     // ---- Resolve destination cover image (best-effort, never throws) ----
     // Sourced from Google Place Photos with Wikimedia Commons fallback. The
     // result is merged into the cached payload so subsequent cache hits for
     // the same intent return the same photo URL. Failure -> null, and the
     // frontend falls back to its legacy keyword table.
+    const tImage = Date.now();
     let destinationImageUrl: string | null = null;
     try {
       destinationImageUrl = await resolveDestinationImageUrl(
@@ -3803,6 +3898,7 @@ Deno.serve(async (req) => {
       );
       destinationImageUrl = null;
     }
+    tStage("resolve_destination_image", tImage);
 
     const responsePayload: Record<string, unknown> = {
       ...validated,
@@ -3810,6 +3906,7 @@ Deno.serve(async (req) => {
     };
 
     // ---- Cache write (fail loud, AFTER validation passes) ----
+    const tCacheWrite = Date.now();
     {
       const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
         cache_key: cacheKey,
@@ -3821,6 +3918,22 @@ Deno.serve(async (req) => {
         throw new Error(`ai_response_cache insert failed: ${cacheInsErr.message}`);
       }
     }
+    tStage("cache_write", tCacheWrite);
+
+    // Final breakdown — single JSON line so cold-cache runs can be diagnosed
+    // from a single log search. cumulative_ms in each stage line gives the
+    // running clock; this summary makes ratios easy to read.
+    console.log(
+      `[timing-summary] ${JSON.stringify({
+        total_ms: Date.now() - pipelineStartedAt,
+        cache_hit: false,
+        destination: intent.destination,
+        num_days: numDays,
+        queries: queries.length,
+        finalists: finalistIds.length,
+        stages: stageTimings,
+      })}`,
+    );
 
     // ---- Aggregated total log — one row per successful trip build ----
     // ai_request_log is a flat table; we pack wall-time (ms) and per-tier
