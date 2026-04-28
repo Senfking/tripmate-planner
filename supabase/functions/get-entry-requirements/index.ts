@@ -14,9 +14,16 @@
 // "most permissive" result (visa_required: no > depends > yes > unknown).
 // Single-passport requests skip the merge step.
 //
+// Two input shapes are supported:
+//   - trip_id path (production): { trip_id, purpose? } — the function
+//     resolves nationalities + destination + trip_length_days from the DB
+//     after a membership check.
+//   - direct path (testing / admin): { nationalities, destination_country,
+//     trip_length_days, purpose }.
+//
 // Auth: verify_jwt = true (set in supabase/config.toml). We additionally
 // validate the JWT on the function side so we can record user_id in
-// ai_request_log.
+// ai_request_log and membership-check trip_id requests.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -525,6 +532,22 @@ async function lookupOne(
 
 // ---------------------------------------------------------------------------
 // Request validation.
+//
+// Two input shapes are accepted:
+//
+//   1. trip_id path (production):
+//      { trip_id: string, purpose?: "tourism" }
+//      The function resolves nationalities + destination_country +
+//      trip_length_days from the database (membership-checked).
+//
+//   2. direct path (testing / admin):
+//      { nationalities: string[], destination_country: string,
+//        trip_length_days: number, purpose: "tourism" }
+//      Caller supplies everything explicitly; no DB lookups.
+//
+// If the body contains BOTH trip_id and a nationalities array, trip_id wins
+// — the DB is the source of truth and we don't want callers stuffing
+// inconsistent values past the membership check.
 // ---------------------------------------------------------------------------
 
 interface ValidatedRequest {
@@ -532,15 +555,15 @@ interface ValidatedRequest {
   destination_country: string;
   trip_length_days: number;
   purpose: "tourism";
+  // Set when the request came in via the trip_id path; used purely for
+  // logging / response metadata so callers can tell the two paths apart.
+  source_trip_id: string | null;
 }
 
-function validateRequest(body: unknown): ValidatedRequest {
-  if (!body || typeof body !== "object") {
-    throw new Error("Request body must be an object");
-  }
-  const b = body as Record<string, unknown>;
+const DEFAULT_TRIP_LENGTH_DAYS = 7;
 
-  const natRaw = b.nationalities;
+function validateDirectRequest(body: Record<string, unknown>): ValidatedRequest {
+  const natRaw = body.nationalities;
   if (!Array.isArray(natRaw) || natRaw.length === 0) {
     throw new Error("nationalities must be a non-empty array of ISO country codes");
   }
@@ -553,21 +576,20 @@ function validateRequest(body: unknown): ValidatedRequest {
   if (nationalities.length > 4) {
     throw new Error("nationalities supports up to 4 passports per request");
   }
-  // De-dupe
   const uniqueNationalities = Array.from(new Set(nationalities));
 
-  const dest = b.destination_country;
+  const dest = body.destination_country;
   if (typeof dest !== "string" || dest.trim().length < 2) {
     throw new Error("destination_country must be an ISO country code");
   }
 
-  const len = b.trip_length_days;
+  const len = body.trip_length_days;
   if (typeof len !== "number" || !Number.isFinite(len) || len <= 0 || len > 365) {
     throw new Error("trip_length_days must be a positive number <= 365");
   }
 
   // MVP only supports tourism. Future: business, transit, study, work.
-  const purpose = b.purpose;
+  const purpose = body.purpose;
   if (purpose !== "tourism") {
     throw new Error("purpose must be 'tourism' (other purposes not yet supported)");
   }
@@ -577,6 +599,114 @@ function validateRequest(body: unknown): ValidatedRequest {
     destination_country: normalizeIso(dest),
     trip_length_days: Math.round(len),
     purpose,
+    source_trip_id: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// trip_id resolution path. Service-role client is required so we can read
+// the trip + caller's passports across RLS — but we always membership-check
+// the caller before trusting any of the data we read.
+// ---------------------------------------------------------------------------
+
+async function resolveFromTripId(
+  svcClient: ReturnType<typeof createClient>,
+  authUserId: string,
+  tripId: string,
+  purpose: "tourism",
+): Promise<ValidatedRequest> {
+  const { data: isMember, error: memberErr } = await svcClient.rpc("is_trip_member", {
+    _trip_id: tripId,
+    _user_id: authUserId,
+  });
+  if (memberErr) {
+    throw new Error(`Membership check failed: ${memberErr.message}`);
+  }
+  if (!isMember) {
+    // Same response shape as the auth path — don't leak existence of the trip.
+    const err = new Error("Forbidden: not a member of this trip");
+    (err as Error & { status?: number }).status = 403;
+    throw err;
+  }
+
+  const { data: trip, error: tripErr } = await svcClient
+    .from("trips")
+    .select("id, destination_country_iso, tentative_start_date, tentative_end_date")
+    .eq("id", tripId)
+    .maybeSingle();
+  if (tripErr) {
+    throw new Error(`Trip lookup failed: ${tripErr.message}`);
+  }
+  if (!trip) {
+    const err = new Error("Trip not found");
+    (err as Error & { status?: number }).status = 404;
+    throw err;
+  }
+
+  const destinationIso = (trip as Record<string, unknown>).destination_country_iso;
+  if (typeof destinationIso !== "string" || destinationIso.length !== 2) {
+    const err = new Error(
+      "Trip has no destination_country_iso set yet. Re-generate the trip or supply destination_country directly.",
+    );
+    (err as Error & { status?: number }).status = 422;
+    throw err;
+  }
+
+  // Caller's passports on this trip. is_primary rows take precedence; if none
+  // are flagged primary, fall back to all of the caller's rows on the trip.
+  const { data: passports, error: passErr } = await svcClient
+    .from("trip_traveller_passports")
+    .select("nationality_iso, is_primary")
+    .eq("trip_id", tripId)
+    .eq("user_id", authUserId);
+  if (passErr) {
+    throw new Error(`Passport lookup failed: ${passErr.message}`);
+  }
+  if (!Array.isArray(passports) || passports.length === 0) {
+    const err = new Error(
+      "No passports recorded for you on this trip. Add a passport before requesting entry requirements.",
+    );
+    (err as Error & { status?: number }).status = 422;
+    throw err;
+  }
+
+  const primaryRows = passports.filter(
+    (p): p is { nationality_iso: string; is_primary: boolean } =>
+      !!p && typeof (p as Record<string, unknown>).nationality_iso === "string",
+  );
+  const useRows = primaryRows.some((p) => p.is_primary)
+    ? primaryRows.filter((p) => p.is_primary)
+    : primaryRows;
+
+  const nationalities = Array.from(
+    new Set(useRows.map((p) => normalizeIso(p.nationality_iso))),
+  ).slice(0, 4);
+
+  if (nationalities.length === 0) {
+    throw new Error("Passport rows had no usable nationality_iso values");
+  }
+
+  // Trip length from dates when both present; default to 7 otherwise.
+  let tripLengthDays = DEFAULT_TRIP_LENGTH_DAYS;
+  const start = (trip as Record<string, unknown>).tentative_start_date;
+  const end = (trip as Record<string, unknown>).tentative_end_date;
+  if (typeof start === "string" && typeof end === "string") {
+    const startMs = Date.parse(start);
+    const endMs = Date.parse(end);
+    if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs >= startMs) {
+      const days = Math.round((endMs - startMs) / 86_400_000) + 1;
+      if (days > 0 && days <= 365) {
+        tripLengthDays = days;
+      }
+    }
+  }
+
+  return {
+    nationalities,
+    destination_country: normalizeIso(destinationIso),
+    trip_length_days: tripLengthDays,
+    purpose,
+    source_trip_id: tripId,
   };
 }
 
@@ -621,19 +751,46 @@ Deno.serve(async (req) => {
     }
 
     const rawBody = await req.json().catch(() => null);
-    let validated: ValidatedRequest;
-    try {
-      validated = validateRequest(rawBody);
-    } catch (e) {
-      return jsonResponse(
-        { error: e instanceof Error ? e.message : "Invalid request" },
-        400,
-      );
+    if (!rawBody || typeof rawBody !== "object") {
+      return jsonResponse({ error: "Request body must be an object" }, 400);
     }
+    const body = rawBody as Record<string, unknown>;
 
     const svcClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
+
+    const purposeRaw = body.purpose ?? "tourism";
+    if (purposeRaw !== "tourism") {
+      return jsonResponse(
+        { error: "purpose must be 'tourism' (other purposes not yet supported)" },
+        400,
+      );
+    }
+
+    let validated: ValidatedRequest;
+    const tripIdRaw = body.trip_id;
+    try {
+      if (typeof tripIdRaw === "string" && tripIdRaw.trim().length > 0) {
+        validated = await resolveFromTripId(
+          svcClient,
+          authUser.id,
+          tripIdRaw.trim(),
+          "tourism",
+        );
+      } else {
+        validated = validateDirectRequest(body);
+      }
+    } catch (e) {
+      const status =
+        typeof (e as { status?: unknown })?.status === "number"
+          ? ((e as { status: number }).status)
+          : 400;
+      return jsonResponse(
+        { error: e instanceof Error ? e.message : "Invalid request" },
+        status,
+      );
+    }
 
     // Run per-nationality lookups in parallel. Each one is independently
     // cached, so concurrency only fans out on cache misses.
@@ -660,6 +817,7 @@ Deno.serve(async (req) => {
         recommended_passport: only.nationality,
         per_passport: { [only.nationality]: only.result },
         cached: allCached,
+        source_trip_id: validated.source_trip_id,
         disclaimer:
           "This information is AI-generated and may be out of date or incomplete. Always verify entry requirements with the destination country's embassy or official immigration authority before travel.",
       });
@@ -676,6 +834,7 @@ Deno.serve(async (req) => {
       recommended_passport: merged.recommended_passport,
       per_passport: perPassportMap,
       cached: allCached,
+      source_trip_id: validated.source_trip_id,
       disclaimer:
         "This information is AI-generated and may be out of date or incomplete. Always verify entry requirements with the destination country's embassy or official immigration authority before travel.",
     });

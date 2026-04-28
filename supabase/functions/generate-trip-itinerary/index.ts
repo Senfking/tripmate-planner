@@ -4834,9 +4834,27 @@ Deno.serve(async (req) => {
     const destinationImageUrl: string | null = await destinationImageUrlPromise;
     tStage("resolve_destination_image", tImage);
 
+    // ISO-3166-1 alpha-2 destination country, derived from the geocode step.
+    // Persisted to trips.destination_country_iso when a trip is created from
+    // this result so get-entry-requirements can resolve the destination by
+    // trip_id without re-parsing the free-text destination string. We don't
+    // fail the pipeline if it's missing — log a warning and let the column
+    // stay null; the visa lookup will gracefully require the client to pass
+    // destination_country directly in that case.
+    const destinationCountryIso = geo.country_code
+      ? geo.country_code.toUpperCase()
+      : null;
+    if (!destinationCountryIso) {
+      console.warn(
+        "[generate-trip-itinerary] geocode returned no country_code; " +
+          "trips.destination_country_iso will be null for this trip",
+      );
+    }
+
     const responsePayload: Record<string, unknown> = {
       ...validated,
       destination_image_url: destinationImageUrl,
+      destination_country_iso: destinationCountryIso,
     };
 
     // ---- Cache write (fail loud, AFTER validation passes) ----
