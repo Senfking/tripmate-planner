@@ -48,6 +48,12 @@ const BUDGET_OPTIONS: { key: BudgetLevel; label: string; symbol: string }[] = [
   { key: "luxury" as BudgetLevel, label: "Luxury", symbol: "$$$$" },
 ];
 
+const PACE_OPTIONS: { key: PaceLevel; label: string; tag: string; intensity: 1 | 2 | 3 }[] = [
+  { key: "relaxed", label: "Light", tag: "leave room to wander", intensity: 1 },
+  { key: "balanced", label: "Balanced", tag: "a few highlights per day", intensity: 2 },
+  { key: "packed", label: "Active", tag: "every slot filled", intensity: 3 },
+];
+
 const VIBE_OPTIONS = [
   { emoji: "🍜", label: "Food" },
   { emoji: "🏛️", label: "Culture" },
