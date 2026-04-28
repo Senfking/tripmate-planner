@@ -478,7 +478,7 @@ function DesktopGreetingHeader({
 }
 
 /* ─── Main Page ─── */
-
+export default function TripList() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
