@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { ensureFreshSession } from "@/lib/sessionRefresh";
+import { setCurrentUserId } from "@/lib/admin";
 
 type NotificationPreferences = {
   new_activity: boolean;
@@ -82,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const newUserId = newSession?.user?.id ?? null;
         const prevUserId = prevUserIdRef.current;
         prevUserIdRef.current = newUserId;
+        setCurrentUserId(newUserId);
 
         // Preserve the user reference when identity hasn't changed.
         // TOKEN_REFRESHED (fires on tab focus / near-expiry) hands us a NEW
@@ -138,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(({ data: { session: existing } }) => {
         setSession(existing);
         setUser(existing?.user ?? null);
+        setCurrentUserId(existing?.user?.id ?? null);
         if (existing?.user) {
           fetchProfile(existing.user.id);
         }
@@ -180,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
+    setCurrentUserId(null);
   }, []);
 
   const value = useMemo(() => ({
