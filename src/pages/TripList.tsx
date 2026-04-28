@@ -366,6 +366,117 @@ function JoinDrawer({
   );
 }
 
+/* ─── Desktop greeting + new-trip entry ─── */
+function DesktopGreetingHeader({
+  greeting,
+  subtitle,
+  hasOnlyDrafts,
+  onJoin,
+  onPlanWithAI,
+  onPlanStepByStep,
+}: {
+  greeting: string;
+  subtitle: string;
+  hasOnlyDrafts: boolean;
+  onJoin: () => void;
+  onPlanWithAI: (destination: string) => void;
+  onPlanStepByStep: () => void;
+}) {
+  const [destination, setDestination] = useState("");
+
+  if (hasOnlyDrafts) {
+    return (
+      <div className="hidden md:block pt-8 pb-6 px-8 max-w-[900px] mx-auto w-full">
+        <div className="flex items-end justify-between gap-6 mb-5">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+          </div>
+          <button
+            onClick={onJoin}
+            className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Hash className="h-3.5 w-3.5" />
+            Join with code
+          </button>
+        </div>
+        <div
+          className="rounded-2xl p-6 border border-border"
+          style={{
+            background: "linear-gradient(135deg, rgba(13,148,136,0.08), rgba(8,145,178,0.04))",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4" style={{ color: "#0D9488" }} />
+            <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#0D9488" }}>
+              Ready when you are
+            </span>
+          </div>
+          <h2 className="text-xl font-bold text-foreground">Where to next?</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Describe a trip and Junto AI will plan it — or pick up a draft below.
+          </p>
+          <div className="mt-4 flex gap-2">
+            <div className="flex-1 rounded-xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-border overflow-hidden">
+              <RotatingPlaceholder
+                value={destination}
+                onChange={setDestination}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && destination.trim()) onPlanWithAI(destination.trim());
+                }}
+              />
+            </div>
+            <Button
+              onClick={() => onPlanWithAI(destination.trim())}
+              className="h-12 px-5 rounded-xl font-semibold text-white text-sm shrink-0"
+              style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+            >
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Plan with AI
+            </Button>
+          </div>
+          <button
+            onClick={onPlanStepByStep}
+            className="mt-3 text-sm font-medium bg-transparent border-none cursor-pointer"
+            style={{ color: "#0D9488" }}
+          >
+            or plan step by step →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hidden md:flex items-end justify-between gap-4 pt-6 pb-4 px-8 max-w-[900px] mx-auto w-full">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onJoin}
+          className="text-muted-foreground hover:text-foreground gap-1.5"
+        >
+          <Hash className="h-3.5 w-3.5" />
+          Join
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => onPlanWithAI("")}
+          className="gap-1.5 text-white font-semibold"
+          style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          New trip
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 export default function TripList() {
   const { user, profile } = useAuth();
@@ -788,11 +899,16 @@ export default function TripList() {
     <div className="relative min-h-dvh flex flex-col bg-background">
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
-      {/* Desktop compact greeting - replaces hero */}
-      <div className="hidden md:block pt-6 pb-4 px-8 max-w-[900px] mx-auto">
-        <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
-      </div>
+      {/* Desktop greeting + new-trip entry */}
+      <DesktopGreetingHeader
+        greeting={greeting}
+        subtitle={subtitle}
+        hasOnlyDrafts={liveTrips.length === 0 && upcomingTrips.length === 0 && noDateTrips.length === 0 && pastTrips.length === 0 && (drafts?.length ?? 0) > 0}
+        onJoin={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
+        onPlanWithAI={(dest) => { setBuilderInitDest(dest); setShowBuilder(true); }}
+        onPlanStepByStep={() => navigate("/app/trips/new")}
+      />
+
 
       {/* ── Happening now ── */}
       {liveTrips.length > 0 && (
