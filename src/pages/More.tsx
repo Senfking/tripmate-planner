@@ -13,6 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CurrencyPicker } from "@/components/expenses/CurrencyPicker";
+import { NationalitiesPicker } from "@/components/profile/NationalitiesPicker";
+import { countryName } from "@/lib/countries";
 import {
   Drawer,
   DrawerContent,
@@ -37,6 +39,7 @@ import {
   Hash,
   ArrowLeft,
   Bell,
+  Globe,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "@/hooks/use-toast";
@@ -376,6 +379,10 @@ const More = () => {
 
   const [showCurrency, setShowCurrency] = useState(false);
 
+  const [showNationalities, setShowNationalities] = useState(false);
+  const [nationalitiesValue, setNationalitiesValue] = useState<string[]>([]);
+  const [savingNationalities, setSavingNationalities] = useState(false);
+
   const [showEmailDrawer, setShowEmailDrawer] = useState(false);
   const [newEmail, setNewEmail] = useState("");
 
@@ -498,6 +505,23 @@ const More = () => {
     setSavingName(false);
     setEditingName(false);
     toast({ title: "Display name updated" });
+  };
+
+  const handleSaveNationalities = async () => {
+    if (!user) return;
+    setSavingNationalities(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ nationalities: nationalitiesValue })
+      .eq("id", user.id);
+    setSavingNationalities(false);
+    if (error) {
+      showErrorToast(error, "Couldn't save nationalities");
+      return;
+    }
+    await refreshProfile();
+    setShowNationalities(false);
+    toast({ title: "Nationalities updated" });
   };
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -819,6 +843,50 @@ const More = () => {
               <SettingRow icon={KeyRound} label="Change password" onClick={handleResetPassword} />
               <SettingRow icon={Mail} label="Change email" onClick={() => setShowEmailDrawer(true)} />
             </>
+          )}
+
+          {/* Nationalities */}
+          {showNationalities ? (
+            <div className="px-4 py-3 space-y-2">
+              <p className="text-xs text-muted-foreground">Nationalities</p>
+              <NationalitiesPicker
+                value={nationalitiesValue}
+                onChange={setNationalitiesValue}
+                disabled={savingNationalities}
+              />
+              <p className="text-xs text-muted-foreground">
+                Used for personalized travel and visa info. Not shared with other users.
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" onClick={handleSaveNationalities} disabled={savingNationalities}>
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowNationalities(false);
+                    setNationalitiesValue(profile?.nationalities ?? []);
+                  }}
+                  disabled={savingNationalities}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <SettingRow
+              icon={Globe}
+              label={
+                profile?.nationalities && profile.nationalities.length > 0
+                  ? `Nationalities: ${profile.nationalities.map((c) => countryName(c)).join(", ")}`
+                  : "Add nationalities (optional)"
+              }
+              onClick={() => {
+                setNationalitiesValue(profile?.nationalities ?? []);
+                setShowNationalities(true);
+              }}
+            />
           )}
 
           <SettingRow icon={Hash} label="Join a trip" onClick={() => navigate("/join")} />

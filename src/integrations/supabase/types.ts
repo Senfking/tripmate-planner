@@ -1090,6 +1090,7 @@ export type Database = {
           display_name: string | null
           feature_flags: Json
           id: string
+          nationalities: string[]
           notification_preferences: Json
           referral_code: string | null
           referred_by: string | null
@@ -1107,6 +1108,7 @@ export type Database = {
           display_name?: string | null
           feature_flags?: Json
           id: string
+          nationalities?: string[]
           notification_preferences?: Json
           referral_code?: string | null
           referred_by?: string | null
@@ -1124,6 +1126,7 @@ export type Database = {
           display_name?: string | null
           feature_flags?: Json
           id?: string
+          nationalities?: string[]
           notification_preferences?: Json
           referral_code?: string | null
           referred_by?: string | null

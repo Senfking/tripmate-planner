@@ -21,6 +21,7 @@ type Profile = {
   subscription_tier: string;
   notification_preferences: NotificationPreferences;
   referral_code: string | null;
+  nationalities: string[];
 };
 
 interface AuthContextValue {
@@ -36,7 +37,7 @@ interface AuthContextValue {
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const PROFILE_SELECT = "id, display_name, avatar_url, default_currency, subscription_tier, notification_preferences, referral_code";
+const PROFILE_SELECT = "id, display_name, avatar_url, default_currency, subscription_tier, notification_preferences, referral_code, nationalities";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           route_confirmed: true,
           decisions_reminder: true,
         },
+        nationalities: ((data as any).nationalities as string[] | null) ?? [],
       });
     }
   }, []);
