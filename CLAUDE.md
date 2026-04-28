@@ -82,6 +82,17 @@
 ## Common Commands
 - npm run dev — start local dev server
 - npm run build — production build
+- npm run test:e2e — run Playwright E2E suite (auto-starts dev server)
+- npm run test:e2e:smoke — only @smoke-tagged tests
+- npm run test:e2e:ui — Playwright interactive UI mode
+- npm run test:e2e:report — open last HTML report
+
+### E2E test env vars
+- Lives in `.env.local` for local runs; mirror as CI secrets later.
+- `TEST_BASE_URL` — override target (default: `http://localhost:8080`). Set to `https://junto.pro` for prod smoke runs.
+- `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` — only required for tests that need a pre-seeded account; the signup test creates its own users.
+- `TEST_SUPABASE_SERVICE_ROLE_KEY` — used only for cleanup (delete orphan test users/trips). Never commit; never bundle into client code. If unset, cleanup helpers no-op with a single warning.
+- See `tests/e2e/README.md` for full setup, including how to provision a persistent test user.
 
 ## Diagnosis First
 Always diagnose before fixing. Read the relevant code, understand the current state, then propose changes. Don't assume the build doc or any external description reflects the current codebase accurately.
