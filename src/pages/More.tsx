@@ -40,6 +40,7 @@ import {
   ArrowLeft,
   Bell,
   Globe,
+  Gift,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "@/hooks/use-toast";
