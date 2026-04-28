@@ -1836,6 +1836,13 @@ async function geocodeDestination(
   }
 
   // ---- Try Geocoding API first ----
+  //
+  // OPS NOTE: if logs show repeated `Geocoding API REQUEST_DENIED` warnings
+  // below, the GOOGLE_PLACES_API_KEY needs the **Geocoding API** explicitly
+  // enabled in the Google Cloud Console (it's a separate API from Places).
+  // Until enabled, every cold-cache trip pays an extra ~$0.02 Places search
+  // call as the fallback. This is a manual ops task — don't try to fix from
+  // code.
   if (!geocodingApiDisabled) {
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=${googleKey}`;
@@ -3527,6 +3534,46 @@ function buildAffiliateUrl(
 const VALIDATION_MAX_KM_FROM_CENTER = 200;
 const VALIDATION_DROP_THRESHOLD = 0.20;
 
+// Per-day validator used by the streaming pipeline so days can be emitted to
+// the client as they arrive without waiting for all days. Mirrors the
+// per-activity rules from validateActivities but skips the trip-wide drop
+// threshold check (that runs once at end after all days are in).
+function validateDayActivitiesInline(
+  activities: EnrichedActivity[],
+  allPlaces: Map<string, BatchPlaceResult>,
+  center: { lat: number; lng: number },
+): { kept: EnrichedActivity[]; dropped: number } {
+  const kept: EnrichedActivity[] = [];
+  let dropped = 0;
+  for (const act of activities) {
+    const isEvent = !act.place_id;
+    if (!isEvent && !allPlaces.has(act.place_id)) {
+      console.warn(`[stream.validate] drop "${act.title}" — place_id not in pool`);
+      dropped++;
+      continue;
+    }
+    const place = act.place_id ? allPlaces.get(act.place_id) ?? null : null;
+    if (place?.location) {
+      const d = haversineKm(
+        center.lat, center.lng,
+        place.location.latitude, place.location.longitude,
+      );
+      if (d > VALIDATION_MAX_KM_FROM_CENTER) {
+        console.warn(`[stream.validate] drop "${act.title}" — ${d.toFixed(0)} km from center`);
+        dropped++;
+        continue;
+      }
+    }
+    if (place?.businessStatus && place.businessStatus !== "OPERATIONAL") {
+      console.warn(`[stream.validate] drop "${act.title}" — businessStatus=${place.businessStatus}`);
+      dropped++;
+      continue;
+    }
+    kept.push(act);
+  }
+  return { kept, dropped };
+}
+
 function validateActivities(
   result: PipelineResult,
   allPlaces: Map<string, BatchPlaceResult>,
@@ -4008,6 +4055,499 @@ Deno.serve(async (req) => {
     }
 
     tStage("auth_validate_quotas", pipelineStartedAt);
+
+    // =========================================================================
+    // STREAMING BRANCH — Server-Sent Events for the standalone trip builder
+    //
+    // Triggered by `Accept: text/event-stream`. Emits:
+    //   event: progress     { stage, ...detail }       (UX heartbeats)
+    //   event: meta         { destination, country_code, dates: [...], skeleton, currency, num_days }
+    //   event: image        { url }                    (when destination cover resolves)
+    //   event: day          { day_number, date, theme, activities }  (one per closed day)
+    //   event: trip_complete { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, total_activities, map_center, map_zoom, currency, budget_tier }
+    //   event: error        { error, step, message }
+    //   event: ping         {}                         (10s keepalive)
+    //
+    // The full payload is also written to ai_response_cache so non-streaming
+    // callers (TripBuilderFlow, useResultsState) keep working from the same
+    // intent-keyed cache.
+    // =========================================================================
+    const wantsStream = (req.headers.get("accept") ?? "").toLowerCase().includes("text/event-stream");
+    if (wantsStream) {
+      const encoder = new TextEncoder();
+      const closedRef = { closed: false };
+      const stream = new ReadableStream({
+        async start(controller) {
+          const send = (event: string, data: unknown) => {
+            if (closedRef.closed) return;
+            try {
+              controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+            } catch (e) {
+              console.error("[stream] enqueue failed:", (e as Error).message);
+            }
+          };
+          const ping = setInterval(() => {
+            if (closedRef.closed) return;
+            try { controller.enqueue(encoder.encode(`event: ping\ndata: {}\n\n`)); } catch {}
+          }, 10_000);
+
+          let stepLabel = "stream_init";
+          try {
+            send("progress", { stage: "parsing_intent" });
+
+            // ---- parseIntent in parallel with geocode (non-surprise) ----
+            const tParseIntent = Date.now();
+            const earlyGeocodePromise: Promise<GeocodeResult> | null = !surpriseMe && rawDest
+              ? geocodeDestination(googleKey, rawDest, svcClient, user.id).catch((e) => { throw e; })
+              : null;
+            stepLabel = "parseIntent";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const intent = await parseIntent(anthropicKey, body, surpriseMe ? "" : rawDest, logger, pipelineStartedAt);
+            tStage("parse_intent", tParseIntent);
+            if (intent.destination) loggedDestination = intent.destination;
+
+            if (surpriseMe) {
+              send("progress", { stage: "picking_destination" });
+              stepLabel = "pickSurpriseDestination";
+              checkPipelineTimeout(pipelineStartedAt, stepLabel);
+              const tSurprise = Date.now();
+              intent.destination = await pickSurpriseDestination(anthropicKey, intent, numDays, logger, pipelineStartedAt);
+              tStage("pick_surprise", tSurprise);
+              loggedDestination = intent.destination;
+              send("progress", { stage: "destination_picked", destination: intent.destination });
+            }
+
+            // ---- Cache lookup ----
+            stepLabel = "cacheLookup";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const tCacheLookup = Date.now();
+            const cacheKey = await buildIntentCacheKey(intent, numDays);
+            const { data: cached, error: cacheErr } = await svcClient
+              .from("ai_response_cache")
+              .select("response_json")
+              .eq("cache_key", cacheKey)
+              .gt("expires_at", new Date().toISOString())
+              .maybeSingle();
+            if (cacheErr) {
+              throw new Error(`ai_response_cache lookup failed: ${cacheErr.message}`);
+            }
+            if (cached?.response_json) {
+              tStage("cache_lookup_hit", tCacheLookup);
+              const payload = cached.response_json as Record<string, any>;
+              const dest = payload?.destinations?.[0];
+              send("meta", {
+                destination: payload?.destinations?.[0]?.name ?? intent.destination,
+                country_code: null,
+                num_days: dest?.days?.length ?? numDays,
+                skeleton: (dest?.days ?? []).map((d: any) => ({
+                  day_number: d.day_number,
+                  date: d.date,
+                  theme: d.theme ?? "",
+                })),
+                currency: payload?.currency ?? "USD",
+                from_cache: true,
+              });
+              send("image", { url: payload?.destination_image_url ?? null });
+              for (const d of dest?.days ?? []) send("day", d);
+              const juntoPlaceIds: string[] = [];
+              for (const day of dest?.days ?? []) {
+                for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
+              }
+              send("trip_complete", {
+                trip_title: payload?.trip_title ?? "",
+                trip_summary: payload?.trip_summary ?? "",
+                accommodation: dest?.accommodation ?? null,
+                packing_suggestions: payload?.packing_suggestions ?? [],
+                junto_pick_place_ids: juntoPlaceIds,
+                daily_budget_estimate: payload?.daily_budget_estimate ?? 0,
+                total_activities: payload?.total_activities ?? 0,
+                map_center: payload?.map_center ?? null,
+                map_zoom: payload?.map_zoom ?? 12,
+                currency: payload?.currency ?? "USD",
+                budget_tier: payload?.budget_tier ?? intent.budget_tier,
+                destination_image_url: payload?.destination_image_url ?? null,
+                from_cache: true,
+              });
+              await logger.log({
+                feature: "trip_builder_cache_hit", model: "cache",
+                input_tokens: 0, output_tokens: 0, cost_usd: 0, cached: true,
+              });
+              console.log(`[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stream: true, stages: stageTimings })}`);
+              return;
+            }
+            tStage("cache_lookup_miss", tCacheLookup);
+
+            // ---- Geocode + skeleton + queries ----
+            send("progress", { stage: "geocoding" });
+            stepLabel = "geocodeDestination";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const tGeocode = Date.now();
+            const geo: GeocodeResult = earlyGeocodePromise
+              ? await earlyGeocodePromise
+              : await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
+            tStage("geocode", tGeocode);
+
+            const tSkeleton = Date.now();
+            const skeleton = buildSkeleton(intent, numDays, startDate, geo.country_code);
+            tStage("build_skeleton", tSkeleton);
+
+            send("meta", {
+              destination: intent.destination,
+              country_code: geo.country_code,
+              num_days: numDays,
+              skeleton: skeleton.map((d) => ({ day_number: d.day_number, date: d.date, theme: d.theme })),
+              currency: resolveTripCurrency(geo.country_code),
+              from_cache: false,
+            });
+
+            // ---- Image in parallel with everything below ----
+            const imagePromise: Promise<string | null> = resolveDestinationImageUrl(
+              geo.place_id ?? null, intent.destination, googleKey, svcClient,
+            ).catch((e) => {
+              console.warn("[stream.image] threw:", (e as Error).message);
+              return null;
+            });
+            imagePromise.then((url) => send("image", { url }));
+
+            // ---- Places search + hydrate + events ----
+            send("progress", { stage: "searching_venues" });
+            const tQueryPlan = Date.now();
+            const queries = buildPlacesQueries(intent, skeleton, { lat: geo.lat, lng: geo.lng, name: intent.destination });
+            tStage("build_queries", tQueryPlan);
+
+            stepLabel = "searchPlacesAndEvents";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const tSearch = Date.now();
+            const [searchResult, events] = await Promise.all([
+              searchPlacesBatch(queries, googleKey, svcClient),
+              searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
+            ]);
+            tStage("search_places_and_events", tSearch);
+            const places = searchResult.places;
+            const rankingStats = searchResult.stats;
+
+            send("progress", { stage: "hydrating_finalists", venues: places.length });
+            const finalistIds: string[] = [];
+            const seenFinalist = new Set<string>();
+            const byPool = new Map<PoolKey, BatchPlaceResult[]>();
+            for (const p of places) {
+              const pool = byPool.get(p.poolKey) ?? [];
+              pool.push(p);
+              byPool.set(p.poolKey, pool);
+            }
+            const maxPerPool = Math.max(3, Math.ceil(MAX_FINALIST_HYDRATIONS / Math.max(1, byPool.size)));
+            for (const pool of byPool.values()) {
+              for (const p of pool.slice(0, maxPerPool)) {
+                if (seenFinalist.has(p.id)) continue;
+                seenFinalist.add(p.id);
+                finalistIds.push(p.id);
+                if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+              }
+              if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+            }
+            const idToBase = new Map<string, BatchPlaceResult>();
+            for (const p of places) idToBase.set(p.id, p);
+            const tHydrate = Date.now();
+            const { hydrated: hydratedById, stats: hydrationStats } = await hydrateFinalists(finalistIds, idToBase, googleKey, svcClient);
+            tStage("hydrate_finalists", tHydrate);
+
+            await logPlacesByTier(svcClient, logger, user.id, {
+              search_essentials_live: rankingStats.live_calls, search_essentials_cache: rankingStats.cache_hits,
+              details_live: hydrationStats.live_calls, details_cache: hydrationStats.cache_hits,
+            });
+
+            for (let i = 0; i < places.length; i++) {
+              const h = hydratedById.get(places[i].id);
+              if (h) places[i] = h;
+            }
+            const venuesByPool = new Map<PoolKey, BatchPlaceResult[]>();
+            for (const p of places) {
+              const pool = venuesByPool.get(p.poolKey) ?? [];
+              pool.push(p);
+              venuesByPool.set(p.poolKey, pool);
+            }
+            const allPlacesById = new Map<string, BatchPlaceResult>();
+            for (const p of places) allPlacesById.set(p.id, p);
+            const placeById = new Map<string, BatchPlaceResult>();
+            for (const venues of venuesByPool.values()) for (const v of venues) placeById.set(v.id, v);
+
+            // ---- Streaming rank: emit days as they close ----
+            send("progress", { stage: "ranking" });
+            stepLabel = "rankAndEnrich";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const tRank = Date.now();
+
+            const currency = resolveTripCurrency(geo.country_code);
+            const affEnv = { booking: bookingAid, viator: viatorMcid, gyg: gygPid };
+            const ranked_days: RankedDay[] = [];
+            const seenIds = new Set<string>();
+            const emittedDayNumbers = new Set<number>();
+            const allActivities: EnrichedActivity[] = [];
+            let totalDropped = 0;
+
+            const handleDay = (rawDay: { day_number?: number; theme?: string; activities?: RawRankerActivity[] }) => {
+              if (typeof rawDay.day_number !== "number") return;
+              if (emittedDayNumbers.has(rawDay.day_number)) return;
+              const day = skeleton.find((d) => d.day_number === rawDay.day_number);
+              if (!day) return;
+              const theme = rawDay.theme?.trim() || day.theme;
+              const activities: EnrichedActivity[] = [];
+              const rawActs = Array.isArray(rawDay.activities) ? rawDay.activities : [];
+              for (let i = 0; i < day.slots.length; i++) {
+                const slot = day.slots[i];
+                const rawAct = rawActs.find((a) => a?.slot_index === i);
+                if (!rawAct) continue;
+                if (rawAct.place_id && seenIds.has(rawAct.place_id)) continue;
+                const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
+                if (!rawAct.is_event && rawAct.place_id && !place) continue;
+                const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
+                if (!activity) continue;
+                if (place) seenIds.add(place.id);
+                const aff = buildAffiliateUrl(
+                  activity.place_id ? allPlacesById.get(activity.place_id) ?? null : null,
+                  affEnv, activity.event_url,
+                );
+                activity.booking_url = aff.booking_url;
+                activity.booking_partner = aff.booking_partner;
+                activities.push(activity);
+              }
+              const validated = validateDayActivitiesInline(activities, allPlacesById, { lat: geo.lat, lng: geo.lng });
+              totalDropped += validated.dropped;
+              const rankedDay: RankedDay = { date: day.date, day_number: day.day_number, theme, activities: validated.kept };
+              ranked_days.push(rankedDay);
+              emittedDayNumbers.add(rawDay.day_number);
+              for (const a of validated.kept) allActivities.push(a);
+              send("day", rankedDay);
+            };
+
+            const parser = new TripStreamParser((dayJson) => {
+              try {
+                const parsed = JSON.parse(dayJson);
+                handleDay(parsed);
+              } catch (e) {
+                console.warn(`[stream.parser] day JSON.parse failed: ${(e as Error).message}`);
+              }
+            });
+
+            const { json: fullJson, usage } = await callClaudeHaikuStreaming(
+              anthropicKey,
+              [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+              buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
+              RANKER_TOOL,
+              16_000,
+              pipelineStartedAt,
+              "rankAndEnrich",
+              (chunk) => parser.feed(chunk),
+            );
+
+            await logger.log({
+              feature: "trip_builder_rank", model: HAIKU_MODEL,
+              input_tokens: usage.input_tokens, output_tokens: usage.output_tokens,
+              cost_usd: computeHaikuCost(usage),
+              cached: usage.cache_read_input_tokens > 0,
+            });
+            tStage("rank_and_enrich", tRank);
+
+            // ---- Final full-parse to recover trip-level fields + late days ----
+            let raw: RawRankerOutput;
+            try {
+              raw = JSON.parse(fullJson) as RawRankerOutput;
+            } catch (e) {
+              throw new Error(`[stream] final tool JSON parse failed: ${(e as Error).message}`);
+            }
+
+            // Catch any days the streaming parser missed (defensive — shouldn't happen)
+            for (const d of raw.days ?? []) {
+              if (!emittedDayNumbers.has(d.day_number)) handleDay(d as any);
+            }
+            // Re-sort by day_number for downstream rollups
+            ranked_days.sort((a, b) => a.day_number - b.day_number);
+
+            // Trip-wide drop threshold check (mirrors validateActivities)
+            const totalBefore = ranked_days.reduce((n, d) => n + d.activities.length, 0) + totalDropped;
+            if (totalBefore > 0 && totalDropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
+              throw new Error(`Validation dropped ${totalDropped}/${totalBefore} activities (>${(VALIDATION_DROP_THRESHOLD * 100).toFixed(0)}%) — pool too thin`);
+            }
+
+            // ---- Accommodation ----
+            let accommodation: EnrichedActivity | undefined;
+            if (raw.accommodation?.place_id) {
+              const place = placeById.get(raw.accommodation.place_id) ?? null;
+              if (place) {
+                const fakeSlot: PacingSlot = {
+                  type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
+                };
+                const hydrated = hydrateActivity(
+                  {
+                    slot_index: -1, slot_type: "lodging", place_id: raw.accommodation.place_id, is_event: false,
+                    title: raw.accommodation.title, description: raw.accommodation.description,
+                    pro_tip: raw.accommodation.pro_tip, why_for_you: raw.accommodation.why_for_you,
+                    skip_if: raw.accommodation.skip_if, category: "accommodation",
+                    estimated_cost_per_person: raw.accommodation.estimated_cost_per_person,
+                    dietary_notes: raw.accommodation.dietary_notes,
+                  },
+                  fakeSlot, place, googleKey, currency,
+                );
+                if (hydrated) {
+                  const aff = buildAffiliateUrl(place, affEnv, hydrated.event_url);
+                  hydrated.booking_url = aff.booking_url;
+                  hydrated.booking_partner = aff.booking_partner;
+                  accommodation = hydrated;
+                }
+              }
+            }
+
+            // ---- Trip-level rollups + junto picks ----
+            const total_activities = ranked_days.reduce((n, d) => n + d.activities.length, 0);
+            const dailySpend = ranked_days.map((d) => d.activities.reduce((s, a) => s + (a.estimated_cost_per_person || 0), 0));
+            const daily_budget_estimate = ranked_days.length > 0
+              ? Math.round(dailySpend.reduce((s, n) => s + n, 0) / ranked_days.length)
+              : 0;
+
+            const destinationFinal: RankedDestination = {
+              name: intent.destination,
+              start_date: skeleton[0]?.date ?? "",
+              end_date: skeleton[skeleton.length - 1]?.date ?? "",
+              intro: raw.trip_summary?.trim() ?? "",
+              days: ranked_days,
+              accommodation,
+            };
+            const pipelineResult: PipelineResult = {
+              trip_title: raw.trip_title?.trim() ?? intent.destination,
+              trip_summary: raw.trip_summary?.trim() ?? "",
+              destinations: [destinationFinal],
+              map_center: { lat: geo.lat, lng: geo.lng },
+              map_zoom: 12,
+              daily_budget_estimate,
+              currency,
+              packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions.slice(0, 10) : [],
+              total_activities,
+              budget_tier: intent.budget_tier,
+            };
+
+            markJuntoPicks(pipelineResult, intent);
+
+            const juntoPlaceIds: string[] = [];
+            for (const day of ranked_days) {
+              for (const a of day.activities) if (a.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
+            }
+
+            // ---- Image (await final URL) ----
+            const destinationImageUrl = await imagePromise;
+
+            // ---- Cache write ----
+            const responsePayload: Record<string, unknown> = {
+              ...pipelineResult, destination_image_url: destinationImageUrl,
+            };
+            const tCacheWrite = Date.now();
+            const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
+              cache_key: cacheKey, response_json: responsePayload,
+              expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+            });
+            if (cacheInsErr) {
+              console.error("[stream] cache insert failed:", cacheInsErr);
+              // Non-fatal at this point — we've already streamed days and are about to send trip_complete.
+            }
+            tStage("cache_write", tCacheWrite);
+
+            // ---- Final event ----
+            send("trip_complete", {
+              trip_title: pipelineResult.trip_title,
+              trip_summary: pipelineResult.trip_summary,
+              accommodation: accommodation ?? null,
+              packing_suggestions: pipelineResult.packing_suggestions,
+              junto_pick_place_ids: juntoPlaceIds,
+              daily_budget_estimate,
+              total_activities,
+              map_center: pipelineResult.map_center,
+              map_zoom: pipelineResult.map_zoom,
+              currency,
+              budget_tier: pipelineResult.budget_tier,
+              destination_image_url: destinationImageUrl,
+              from_cache: false,
+            });
+
+            // ---- Logging (async, best-effort, after we've sent the final event) ----
+            const totals = logger.totals();
+            const durationMs = Date.now() - pipelineStartedAt;
+            const totalRankingCalls = rankingStats.live_calls + rankingStats.cache_hits;
+            const totalDetailsCalls = hydrationStats.live_calls + hydrationStats.cache_hits;
+            const totalCacheHits = rankingStats.cache_hits + hydrationStats.cache_hits;
+            const totalPlacesCalls = totalRankingCalls + totalDetailsCalls;
+            const modelLabel =
+              `aggregate_stream;duration_ms=${durationMs}` +
+              `;places_ranking=${rankingStats.live_calls}/${totalRankingCalls}` +
+              `;places_details=${hydrationStats.live_calls}/${totalDetailsCalls}` +
+              `;places_cache_hits=${totalCacheHits}/${totalPlacesCalls || 1}` +
+              `;sub_calls=${totals.call_count}`;
+            await svcClient.from("ai_request_log").insert({
+              user_id: user.id, feature: "trip_builder_total", model: modelLabel,
+              input_tokens: totals.input_tokens, output_tokens: totals.output_tokens,
+              cost_usd: totals.cost_usd, cached: false,
+            }).then((r: { error: { message: string } | null }) => {
+              if (r.error) console.error("[stream.ai_request_log] insert failed:", r.error);
+            });
+            await svcClient.from("analytics_events").insert({
+              event_name: "ai_trip_builder", user_id: user.id,
+              properties: {
+                source: "generated_stream", destination: intent.destination, days: numDays,
+                budget_level: intent.budget_tier, pace: intent.pace, duration_ms: durationMs,
+                places_ranking_live: rankingStats.live_calls, places_ranking_cache: rankingStats.cache_hits,
+                places_details_live: hydrationStats.live_calls, places_details_cache: hydrationStats.cache_hits,
+                llm_cost_usd: totals.cost_usd, days_emitted_streaming: emittedDayNumbers.size,
+              },
+            });
+
+            console.log(
+              `[timing-summary] ${JSON.stringify({
+                total_ms: durationMs, cache_hit: false, stream: true,
+                destination: intent.destination, num_days: numDays,
+                queries: queries.length, finalists: finalistIds.length,
+                stages: stageTimings,
+              })}`,
+            );
+          } catch (e) {
+            console.error("[stream] pipeline error:", e);
+            const err = e as Error;
+            const isPipelineErr = err instanceof PipelineError;
+            send("error", {
+              error: "trip_build_failed",
+              step: isPipelineErr ? (err as PipelineError).step : stepLabel,
+              message: isPipelineErr ? (err as PipelineError).userMessage : "Something went wrong building your trip. Please try again.",
+            });
+            if (svcClientForLogging) {
+              logGenerationError(svcClientForLogging, {
+                user_id: loggedUserId, destination: loggedDestination,
+                step: isPipelineErr ? (err as PipelineError).step : stepLabel,
+                error_message: isPipelineErr ? (err as PipelineError).userMessage : err?.message ?? String(err),
+                error_raw: {
+                  name: err?.name ?? "Error", message: err?.message ?? String(err),
+                  stack: err?.stack ?? null, is_pipeline_error: isPipelineErr, stream: true,
+                },
+                duration_ms: Date.now() - requestStartedAt,
+              }).catch(() => {});
+            }
+          } finally {
+            clearInterval(ping);
+            closedRef.closed = true;
+            try { controller.close(); } catch {}
+          }
+        },
+        cancel() {
+          closedRef.closed = true;
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          ...corsHeaders,
+          "content-type": "text/event-stream",
+          "cache-control": "no-cache, no-transform",
+          "x-accel-buffering": "no",
+          "connection": "keep-alive",
+        },
+      });
+    }
 
     // ---- Step 1: parse intent (in parallel with geocode on non-surprise mode) ----
     // In surprise mode we pass an empty destination hint — the surprise picker
