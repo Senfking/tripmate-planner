@@ -21,6 +21,7 @@ type Profile = {
   subscription_tier: string;
   notification_preferences: NotificationPreferences;
   referral_code: string | null;
+  nationalities: string[];
 };
 
 interface AuthContextValue {
