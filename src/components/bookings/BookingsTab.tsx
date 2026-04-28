@@ -19,6 +19,8 @@ import { Camera, Loader2, Search, Plane, Hotel, Compass, Car, Shield, HeartPulse
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { EntryRequirementsBlock, useUnhandledMandatoryCount } from "./EntryRequirementsBlock";
+import { useEntryRequirements, useEntryReqAcks } from "@/hooks/useEntryRequirements";
+import { useTripTravellerPassports } from "@/hooks/useTripTravellerPassports";
 
 const FILTERS: { value: string; label: string; icon?: React.ElementType }[] = [
   { value: "all", label: "All" },
