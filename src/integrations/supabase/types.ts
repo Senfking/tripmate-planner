@@ -1351,6 +1351,38 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_entry_requirement_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          id: string
+          requirement_name: string
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          id?: string
+          requirement_name: string
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          id?: string
+          requirement_name?: string
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_entry_requirement_acknowledgments_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_last_seen: {
         Row: {
           last_seen_at: string

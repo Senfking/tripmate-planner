@@ -15,9 +15,12 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Compass, Car, Shield, HeartPulse, CreditCard, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Compass, Car, Shield, HeartPulse, CreditCard, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { EntryRequirementsBlock, useUnhandledMandatoryCount } from "./EntryRequirementsBlock";
+import { useEntryRequirements, useEntryReqAcks } from "@/hooks/useEntryRequirements";
+import { useTripTravellerPassports } from "@/hooks/useTripTravellerPassports";
 
 const FILTERS: { value: string; label: string; icon?: React.ElementType }[] = [
   { value: "all", label: "All" },
@@ -123,11 +126,18 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     );
   };
 
-  const openManualForm = () => {
-    setManualTitle("");
-    setManualType("other");
-    setManualNotes("");
+  const openManualForm = (prefill?: { title?: string; type?: string; notes?: string }) => {
+    setManualTitle(prefill?.title ?? "");
+    setManualType(prefill?.type ?? "other");
+    setManualNotes(prefill?.notes ?? "");
     setShowManualForm(true);
+  };
+
+  // Quick action used by AI-suggested entry requirement rows: opens the manual form
+  // pre-filled with the document name and type=visa, so the user can attach a file
+  // through the existing flow.
+  const openManualFormForRequirement = (requirementName: string) => {
+    openManualForm({ title: requirementName, type: "visa" });
   };
 
   const BOOKING_TYPES = [
@@ -492,8 +502,77 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     );
   }
 
+  // ── AI entry-requirements awareness ──
+  // Track which AI-suggested requirement names already have a visa-typed
+  // attachment uploaded by the current user (matched on title, case-insensitive).
+  const uploadedReqNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of attachments) {
+      if (a.type === "visa" && a.title) set.add(a.title.toLowerCase());
+    }
+    return set;
+  }, [attachments]);
+
+  const { count: unhandledMandatoryCount } = useUnhandledMandatoryCount(tripId, uploadedReqNames);
+
+  // Pull the same queries to compute a combined VISA & ENTRY count
+  // (manual attachments + AI-suggested docs + user confirmations). React Query
+  // dedupes these by key so this is cheap.
+  const { data: tripIso } = useQuery({
+    queryKey: ["trip-destination-iso", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trips").select("destination_country_iso").eq("id", tripId).single();
+      if (error) throw error;
+      return data as { destination_country_iso: string | null };
+    },
+    enabled: !!user,
+  });
+  const { data: passports } = useTripTravellerPassports(tripId);
+  const myPassportCount = (passports ?? []).filter((p) => p.user_id === user?.id).length;
+  const entryReqEnabled = myPassportCount > 0 && !!tripIso?.destination_country_iso;
+  const { data: entryReqData } = useEntryRequirements({ tripId, enabled: entryReqEnabled });
+  const { data: entryReqAcks } = useEntryReqAcks(tripId);
+  const aiDocCount = entryReqData?.documents_needed?.length ?? 0;
+  const ackCount = entryReqAcks?.length ?? 0;
+
+  const scrollToVisa = () => {
+    const el = document.getElementById("visa-entry-section");
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Always-visible visa group when we have AI suggestions to render OR existing attachments.
+  // The render below handles "no attachments yet" by injecting a synthetic empty section.
+  const hasVisaItems = groupedSections.some((s) => s.type === "visa");
+  const showSyntheticVisaGroup = isGroupedView && !hasVisaItems;
+
+  const renderVisaGroupBody = (items: AttachmentRow[]) => (
+    <div className="space-y-2 mt-1">
+      <EntryRequirementsBlock
+        tripId={tripId}
+        onUploadForRequirement={openManualFormForRequirement}
+      />
+      {items.map(renderCard)}
+    </div>
+  );
+
   return (
     <div className="space-y-3">
+      {/* Dashboard banner: mandatory AI-suggested docs need attention */}
+      {unhandledMandatoryCount > 0 && (
+        <button
+          type="button"
+          onClick={scrollToVisa}
+          className="w-full flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-left text-[12.5px] text-amber-900 hover:bg-amber-100 transition-colors dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span className="flex-1 font-medium">
+            {unhandledMandatoryCount} required entry document{unhandledMandatoryCount > 1 ? "s" : ""} need attention
+          </span>
+          <span className="text-[11px] font-semibold underline">View</span>
+        </button>
+      )}
+
       {uploadBar}
       {manualFormModal}
 
@@ -586,8 +665,9 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         <div className="space-y-1">
           {groupedSections.map((section, idx) => {
             const isCollapsed = collapsedSections.has(section.type);
+            const isVisa = section.type === "visa";
             return (
-              <div key={section.type}>
+              <div key={section.type} id={isVisa ? "visa-entry-section" : undefined}>
                 {idx > 0 && <div className="h-px bg-border my-3" />}
                 <button
                   type="button"
@@ -601,7 +681,9 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                 >
                   <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</span>
-                  <span className="text-[11px] text-muted-foreground/60">{section.items.length}</span>
+                  <span className="text-[11px] text-muted-foreground/60">
+                    {isVisa ? section.items.length + aiDocCount + ackCount : section.items.length}
+                  </span>
                   <div className="flex-1" />
                   <ChevronDown className={cn(
                     "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
@@ -613,22 +695,50 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                   isCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]"
                 )}>
                   <div className="overflow-hidden">
-                    <div className="space-y-2 mt-1">
-                      {section.items.map(renderCard)}
-                    </div>
+                    {isVisa ? (
+                      renderVisaGroupBody(section.items)
+                    ) : (
+                      <div className="space-y-2 mt-1">
+                        {section.items.map(renderCard)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
+
+          {/* Synthetic visa group when there are no visa attachments yet but
+              we still want to surface AI-suggested entry requirements. */}
+          {showSyntheticVisaGroup && (
+            <div id="visa-entry-section">
+              {groupedSections.length > 0 && <div className="h-px bg-border my-3" />}
+              <div className="flex items-center gap-2 py-1.5 px-0.5">
+                <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Visa & Entry
+                </span>
+                <span className="text-[11px] text-muted-foreground/60">{aiDocCount + ackCount}</span>
+              </div>
+              {renderVisaGroupBody([])}
+            </div>
+          )}
         </div>
       )}
 
       {/* Flat list */}
       {!isGroupedView && (
         <div className="space-y-2">
+          {filter === "visa" && (
+            <div id="visa-entry-section">
+              <EntryRequirementsBlock
+                tripId={tripId}
+                onUploadForRequirement={openManualFormForRequirement}
+              />
+            </div>
+          )}
           {filtered.map(renderCard)}
-          {filtered.length === 0 && attachments.length > 0 && (
+          {filtered.length === 0 && attachments.length > 0 && filter !== "visa" && (
             <p className="text-center text-sm text-muted-foreground py-8">
               No results matching your filter
             </p>
