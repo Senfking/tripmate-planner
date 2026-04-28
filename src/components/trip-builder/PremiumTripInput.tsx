@@ -274,6 +274,64 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
           </div>
         </div>
 
+        {/* Pace */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <label className="text-[13px] font-semibold text-foreground">How packed?</label>
+            <span className="text-xs text-muted-foreground">Daily intensity</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {PACE_OPTIONS.map((opt) => {
+              const selected = pace === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => setPace(selected ? null : opt.key)}
+                  aria-pressed={selected}
+                  className={cn(
+                    "flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.96]",
+                    "border",
+                    selected
+                      ? "text-primary-foreground border-transparent shadow-md"
+                      : "bg-card text-foreground border-border hover:border-primary/40"
+                  )}
+                  style={selected ? { background: "var(--gradient-primary)" } : undefined}
+                  title={opt.tag}
+                >
+                  <span className="flex items-end gap-0.5" aria-hidden="true">
+                    {[1, 2, 3].map((i) => {
+                      const active = i <= opt.intensity;
+                      const heights = ["h-1.5", "h-2.5", "h-3.5"];
+                      return (
+                        <span
+                          key={i}
+                          className={cn(
+                            "w-1 rounded-full",
+                            heights[i - 1],
+                            active
+                              ? selected
+                                ? "bg-primary-foreground"
+                                : "bg-primary"
+                              : selected
+                              ? "bg-primary-foreground/30"
+                              : "bg-muted-foreground/30"
+                          )}
+                        />
+                      );
+                    })}
+                  </span>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          {pace && (
+            <p className="text-xs text-muted-foreground pl-1 animate-fade-in">
+              {PACE_OPTIONS.find((o) => o.key === pace)?.tag}
+            </p>
+          )}
+        </div>
+
         {/* Vibes */}
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
