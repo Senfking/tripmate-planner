@@ -65,7 +65,7 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
   );
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+    <div id="travellers-section" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-[15px] text-foreground">Travellers</h3>
         {totalWithPassports === 0 && (
