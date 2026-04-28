@@ -5,6 +5,7 @@
 import { toast } from "sonner";
 import { ErrorToastContent, type ErrorToastDetails } from "@/components/ErrorToastContent";
 import { SuccessToastContent } from "@/components/SuccessToastContent";
+import { isCurrentUserAdmin } from "@/lib/admin";
 import { createElement } from "react";
 
 type MaybeError = unknown;
@@ -160,8 +161,15 @@ export function showErrorToast(err: MaybeError, fallback: string): void {
   // sooner.
   const duration = details ? 12000 : 5000;
 
+  // isAdmin is captured at toast-creation time. It can't be read from a hook
+  // inside ErrorToastContent because sonner renders custom toasts in a tree
+  // that doesn't reliably inherit React Query / Auth context providers
+  // (JUNTO-7). The admin id is mirrored to a module-level store by
+  // AuthProvider.
+  const isAdmin = isCurrentUserAdmin();
+
   toast.custom(
-    (id) => createElement(ErrorToastContent, { toastId: id, friendly, details }),
+    (id) => createElement(ErrorToastContent, { toastId: id, friendly, details, isAdmin }),
     { duration },
   );
 }

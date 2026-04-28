@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { AlertCircle, ChevronDown, Copy, Check, X, LifeBuoy } from "lucide-react";
 import { toast } from "sonner";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { requestOpenFeedback } from "@/lib/feedbackEvents";
 
 // Rich error toast body. Used by showErrorToast (sonner via toast.custom)
@@ -49,12 +48,18 @@ interface Props {
   friendly: string;
   /** Structured technical details, if any */
   details?: ErrorToastDetails;
+  /**
+   * Whether to show the admin-only technical detail panel. Computed by the
+   * caller (showErrorToast) — must NOT be derived via a hook here, because
+   * sonner renders this component in a tree that doesn't reliably inherit
+   * QueryClient / Auth context providers (JUNTO-7).
+   */
+  isAdmin?: boolean;
 }
 
-export function ErrorToastContent({ toastId, friendly, details }: Props) {
+export function ErrorToastContent({ toastId, friendly, details, isAdmin = false }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
-  const isAdmin = useIsAdmin();
 
   const hasTechnicalDetails = details
     ? Boolean(
