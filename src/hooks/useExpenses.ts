@@ -10,6 +10,29 @@ import { showErrorToast } from "@/lib/supabaseErrors";
 import { withAuthRetry } from "@/lib/safeQuery";
 import { isValidTripId } from "@/lib/tripId";
 
+// Belt-and-suspenders gate alongside `enabled: isValidTripId(tripId)`. JUNTO-3
+// observed `op="members_select"` firing with the literal string "undefined" as
+// a uuid, even though every query here already gates on isValidTripId. The
+// remaining bypass paths are (a) cached tabs running pre-PR-#181 code and
+// (b) React Query refetches that re-invoke the latest queryFn closure after
+// the parent has re-rendered with an invalidated tripId. Validating again at
+// the queryFn boundary stops the bad request from reaching Supabase.
+function tripIdGuard(tripId: string, op: string, userId: string | undefined): boolean {
+  if (isValidTripId(tripId)) return true;
+  trackEvent(
+    "app_error",
+    {
+      type: "invalid_trip_id_query",
+      op,
+      trip_id: tripId,
+      route: typeof window !== "undefined" ? window.location.pathname : null,
+      severity: "low",
+    },
+    userId,
+  );
+  return false;
+}
+
 export interface ExpenseRow {
   id: string;
   trip_id: string;
@@ -55,6 +78,7 @@ export function useExpenses(tripId: string) {
     queryFn: () =>
       withAuthRetry(
         async () => {
+          if (!tripIdGuard(tripId, "expenses_select", user?.id)) return [] as ExpenseRow[];
           const { data, error } = await supabase
             .from("expenses")
             .select("*")
@@ -98,6 +122,7 @@ export function useExpenses(tripId: string) {
     queryFn: () =>
       withAuthRetry(
         async () => {
+          if (!tripIdGuard(tripId, "members_select", user?.id)) return [] as MemberProfile[];
           const { data, error } = await supabase
             .from("trip_members")
             .select("user_id, role, joined_at, attendance_status")
@@ -135,6 +160,7 @@ export function useExpenses(tripId: string) {
     queryFn: () =>
       withAuthRetry(
         async () => {
+          if (!tripIdGuard(tripId, "settlement_currency_select", user?.id)) return "EUR";
           const { data, error } = await supabase
             .from("trips")
             .select("settlement_currency")
@@ -244,6 +270,7 @@ export function useExpenses(tripId: string) {
   const itineraryQuery = useQuery({
     queryKey: ["itinerary-items-for-expenses", tripId],
     queryFn: async () => {
+      if (!tripIdGuard(tripId, "itinerary_items_for_expenses_select", user?.id)) return [];
       const { data, error } = await supabase
         .from("itinerary_items")
         .select("id, title, day_date, start_time")
