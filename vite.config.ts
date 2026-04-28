@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { build as viteBuild } from "vite";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import fs from "fs";
 
 const buildTimestamp = Date.now().toString(36);
@@ -61,29 +62,52 @@ function serviceWorkerPlugin(): Plugin {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  define: {
-    __BUILD_TS__: JSON.stringify(buildTimestamp),
-  },
-  server: {
-    host: "::",
-    port: 8080,
-    hmr: {
-      overlay: false,
+export default defineConfig(({ mode }) => {
+  // Sentry sourcemap upload is opt-in: only runs when SENTRY_AUTH_TOKEN is set.
+  // Without it, builds proceed normally (sourcemaps are still emitted to dist
+  // so the next build with the token will upload them).
+  const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
+  const enableSentryUpload = mode === "production" && Boolean(sentryAuthToken);
+
+  return {
+    define: {
+      __BUILD_TS__: JSON.stringify(buildTimestamp),
     },
-  },
-  plugins: [
-    react(),
-    mode === "development" && componentTagger(),
-    serviceWorkerPlugin(),
-  ].filter(Boolean),
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react/jsx-runtime', '@tanstack/react-query'],
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    server: {
+      host: "::",
+      port: 8080,
+      hmr: {
+        overlay: false,
+      },
     },
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
-  },
-}));
+    build: {
+      // Required for Sentry to symbolicate stack traces. Without this the
+      // captured stacks show minified names like "Dg" (JUNTO-3) and are
+      // effectively unreadable. "hidden" emits .map files (so the Sentry
+      // plugin can upload them) without injecting sourceMappingURL comments,
+      // so browsers don't auto-load them and source isn't leaked publicly.
+      sourcemap: "hidden",
+    },
+    plugins: [
+      react(),
+      mode === "development" && componentTagger(),
+      serviceWorkerPlugin(),
+      enableSentryUpload &&
+        sentryVitePlugin({
+          authToken: sentryAuthToken,
+          org: "junto-0n",
+          project: "junto",
+          release: { name: buildTimestamp },
+        }),
+    ].filter(Boolean),
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react/jsx-runtime', '@tanstack/react-query'],
+    },
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+      dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+    },
+  };
+});

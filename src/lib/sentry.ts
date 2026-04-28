@@ -15,6 +15,20 @@ export function initSentry(): void {
     release: typeof __BUILD_TS__ !== "undefined" ? __BUILD_TS__ : undefined,
     integrations: [Sentry.browserTracingIntegration()],
     tracesSampleRate: 0.1,
+    beforeSend(event, hint) {
+      // Supabase Auth's cross-tab lock fires this when another tab takes over
+      // the auth-token mutex (e.g. after a token refresh). It's expected
+      // behavior, not an error worth paging on. Drop it before it reaches
+      // the project.
+      const message =
+        (hint?.originalException as Error | undefined)?.message ??
+        event.message ??
+        "";
+      if (typeof message === "string" && /Lock '.*' was released because another request stole it/i.test(message)) {
+        return null;
+      }
+      return event;
+    },
   });
 
   initialized = true;
