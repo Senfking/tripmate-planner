@@ -15,9 +15,10 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRef } from "react";
-import { Camera, Loader2, Search, Plane, Hotel, Compass, Car, Shield, HeartPulse, CreditCard, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { Camera, Loader2, Search, Plane, Hotel, Compass, Car, Shield, HeartPulse, CreditCard, File, Sparkles, Upload, Plus, Lock, ChevronDown, SlidersHorizontal, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { EntryRequirementsBlock, useUnhandledMandatoryCount } from "./EntryRequirementsBlock";
 
 const FILTERS: { value: string; label: string; icon?: React.ElementType }[] = [
   { value: "all", label: "All" },
