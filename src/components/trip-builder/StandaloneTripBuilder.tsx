@@ -5,14 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
-import { parseEdgeError } from "@/lib/parseEdgeError";
 
 import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
 import { ConfirmationCard } from "./ConfirmationCard";
-import { GeneratingScreen } from "./GeneratingScreen";
+import { StreamingGeneratingScreen } from "./StreamingGeneratingScreen";
 import { BlankTripModal } from "./BlankTripModal";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
+import { useStreamingTripGeneration } from "@/hooks/useStreamingTripGeneration";
 
 function normalizeAIResponse(raw: Record<string, any>): AITripResult {
   const destinations = Array.isArray(raw.destinations) ? raw.destinations : [];
@@ -86,11 +86,12 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
 
   const [phase, setPhase] = useState<Phase>(draftResult ? "results" : "input");
   const [inputData, setInputData] = useState<PremiumInputData | null>(null);
-  const [genError, setGenError] = useState<string | null>(null);
   const [results, setResults] = useState<AITripResult | null>(draftResult ?? null);
   const [savedPlanId, setSavedPlanId] = useState<string | null>(draftPlanId ?? null);
   const [creatingTrip, setCreatingTrip] = useState(false);
   const [blankModalOpen, setBlankModalOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
+  const streaming = useStreamingTripGeneration();
 
   const handleStartBlank = useCallback(() => {
     setBlankModalOpen(true);
@@ -101,75 +102,64 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     setPhase("confirming");
   }, []);
 
+  const buildPayload = useCallback((data: PremiumInputData) => ({
+    trip_id: null,
+    destination: data.destination,
+    surprise_me: false,
+    start_date: data.dateRange?.from?.toISOString().split("T")[0] || null,
+    end_date: data.dateRange?.to?.toISOString().split("T")[0] || null,
+    flexible: false,
+    duration_days: null,
+    budget_level: data.budgetLevel || "mid-range",
+    vibes: data.vibes,
+    pace: "balanced",
+    dietary: [],
+    notes: data.dealBreakers || "",
+    free_text: data.freeText || "",
+    group_size:
+      data.travelParty === "solo" ? 1
+      : data.travelParty === "couple" ? 2
+      : data.travelParty === "group" ? 6
+      : data.travelParty === "family" ? 4
+      : data.travelParty === "friends" ? 4
+      : 1,
+    travel_party: data.travelParty,
+    kids_ages: data.kidsAges || undefined,
+  }), []);
+
   const handleConfirm = useCallback(async () => {
     if (!inputData) return;
+    const payload = buildPayload(inputData);
+    setPendingPayload(payload);
     setPhase("generating");
-    setGenError(null);
+    streaming.reset();
+    await streaming.start(payload);
+  }, [inputData, buildPayload, streaming]);
 
-    try {
-      const payload = {
-        trip_id: null,
-        destination: inputData.destination,
-        surprise_me: false,
-        start_date: inputData.dateRange?.from?.toISOString().split("T")[0] || null,
-        end_date: inputData.dateRange?.to?.toISOString().split("T")[0] || null,
-        flexible: false,
-        duration_days: null,
-        budget_level: inputData.budgetLevel || "mid-range",
-        vibes: inputData.vibes,
-        pace: "balanced",
-        dietary: [],
-        notes: inputData.dealBreakers || "",
-        free_text: inputData.freeText || "",
-        group_size: inputData.travelParty === "solo" ? 1
-          : inputData.travelParty === "couple" ? 2
-          : inputData.travelParty === "group" ? 6
-          : inputData.travelParty === "family" ? 4
-          : inputData.travelParty === "friends" ? 4
-          : 1,
-        travel_party: inputData.travelParty,
-        kids_ages: inputData.kidsAges || undefined,
-      };
-
-      const { data, error } = await supabase.functions.invoke("generate-trip-itinerary", { body: payload });
-      if (error) throw error;
-      if (data?.error) {
-        // 200 OK with logical error in body — safety net (PR #168 returns
-        // non-2xx for these cases, which goes through the `error` path above).
-        const msg = typeof data.message === "string" && data.message.trim().length > 0
-          ? data.message
-          : data.error;
-        throw new Error(msg);
-      }
-      if (!data) throw new Error("No data returned");
-
-      const normalized = normalizeAIResponse(data);
-
-      let planId: string | null = null;
-      try {
-        const userId = user?.id;
-        if (userId) {
-          const { data: inserted, error: insertError } = await (supabase
-            .from("ai_trip_plans" as any)
-            .insert({ trip_id: null, created_by: userId, prompt: payload, result: normalized }) as any)
-            .select("id")
-            .single();
-          if (!insertError) planId = inserted?.id ?? null;
-        }
-      } catch (saveErr) {
-        console.error("[StandaloneBuilder] Failed to save plan:", saveErr);
-      }
-
-      setSavedPlanId(planId);
+  // When streaming completes, persist the result + transition to the results
+  // phase. The streaming UI hands us the assembled AITripResult via onComplete.
+  const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
+    if (!pendingPayload || !user) {
       setResults(normalized);
       setPhase("results");
-      trackEvent("ai_trip_generated", { standalone: true, destination: inputData.destination });
-    } catch (err: any) {
-      console.warn("[trip-builder error]", err);
-      const parsed = await parseEdgeError(err, "Failed to generate itinerary. Please try again.");
-      setGenError(parsed.message);
+      return;
     }
-  }, [inputData, user]);
+    let planId: string | null = null;
+    try {
+      const { data: inserted, error: insertError } = await (supabase
+        .from("ai_trip_plans" as any)
+        .insert({ trip_id: null, created_by: user.id, prompt: pendingPayload, result: normalized }) as any)
+        .select("id")
+        .single();
+      if (!insertError) planId = inserted?.id ?? null;
+    } catch (saveErr) {
+      console.error("[StandaloneBuilder] Failed to save plan:", saveErr);
+    }
+    setSavedPlanId(planId);
+    setResults(normalized);
+    setPhase("results");
+    trackEvent("ai_trip_generated", { standalone: true, destination: inputData?.destination, streamed: true });
+  }, [pendingPayload, user, inputData]);
 
   const handleCreateTrip = useCallback(async () => {
     if (!results) {
@@ -252,14 +242,15 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     );
   }
 
-  // Generating view
-  if (phase === "generating" || genError) {
+  // Generating view (live SSE streaming)
+  if (phase === "generating") {
     return (
       <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <GeneratingScreen
+        <StreamingGeneratingScreen
           destination={inputData?.destination || ""}
-          error={genError}
+          state={streaming.state}
           onRetry={handleConfirm}
+          onComplete={handleStreamComplete}
         />
       </div>
     );
