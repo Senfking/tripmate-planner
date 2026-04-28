@@ -170,6 +170,37 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   const isSearching = search.trim().length > 0;
   const isGroupedView = filter === "all" && !isSearching;
 
+  // ── AI entry-requirements awareness ──
+  // These hooks must run on every render — keep them above any early return
+  // so the hook order stays stable when the empty-state branch toggles.
+  const uploadedReqNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of attachments) {
+      if (a.type === "visa" && a.title) set.add(a.title.toLowerCase());
+    }
+    return set;
+  }, [attachments]);
+
+  const { count: unhandledMandatoryCount } = useUnhandledMandatoryCount(tripId, uploadedReqNames);
+
+  const { data: tripIso } = useQuery({
+    queryKey: ["trip-destination-iso", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trips").select("destination_country_iso").eq("id", tripId).single();
+      if (error) throw error;
+      return data as { destination_country_iso: string | null };
+    },
+    enabled: !!user,
+  });
+  const { data: passports } = useTripTravellerPassports(tripId);
+  const myPassportCount = (passports ?? []).filter((p) => p.user_id === user?.id).length;
+  const entryReqEnabled = myPassportCount > 0 && !!tripIso?.destination_country_iso;
+  const { data: entryReqData } = useEntryRequirements({ tripId, enabled: entryReqEnabled });
+  const { data: entryReqAcks } = useEntryReqAcks(tripId);
+  const aiDocCount = entryReqData?.documents_needed?.length ?? 0;
+  const ackCount = entryReqAcks?.length ?? 0;
+
   const filtered = useMemo(() => {
     let list = attachments;
     if (filter === "mine") list = list.filter((a) => a.created_by === user?.id);
@@ -501,40 +532,6 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       </div>
     );
   }
-
-  // ── AI entry-requirements awareness ──
-  // Track which AI-suggested requirement names already have a visa-typed
-  // attachment uploaded by the current user (matched on title, case-insensitive).
-  const uploadedReqNames = useMemo(() => {
-    const set = new Set<string>();
-    for (const a of attachments) {
-      if (a.type === "visa" && a.title) set.add(a.title.toLowerCase());
-    }
-    return set;
-  }, [attachments]);
-
-  const { count: unhandledMandatoryCount } = useUnhandledMandatoryCount(tripId, uploadedReqNames);
-
-  // Pull the same queries to compute a combined VISA & ENTRY count
-  // (manual attachments + AI-suggested docs + user confirmations). React Query
-  // dedupes these by key so this is cheap.
-  const { data: tripIso } = useQuery({
-    queryKey: ["trip-destination-iso", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trips").select("destination_country_iso").eq("id", tripId).single();
-      if (error) throw error;
-      return data as { destination_country_iso: string | null };
-    },
-    enabled: !!user,
-  });
-  const { data: passports } = useTripTravellerPassports(tripId);
-  const myPassportCount = (passports ?? []).filter((p) => p.user_id === user?.id).length;
-  const entryReqEnabled = myPassportCount > 0 && !!tripIso?.destination_country_iso;
-  const { data: entryReqData } = useEntryRequirements({ tripId, enabled: entryReqEnabled });
-  const { data: entryReqAcks } = useEntryReqAcks(tripId);
-  const aiDocCount = entryReqData?.documents_needed?.length ?? 0;
-  const ackCount = entryReqAcks?.length ?? 0;
 
   const scrollToVisa = () => {
     const el = document.getElementById("visa-entry-section");
