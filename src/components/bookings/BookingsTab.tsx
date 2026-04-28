@@ -681,7 +681,9 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                 >
                   <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">{section.label}</span>
-                  <span className="text-[11px] text-muted-foreground/60">{section.items.length}</span>
+                  <span className="text-[11px] text-muted-foreground/60">
+                    {isVisa ? section.items.length + aiDocCount + ackCount : section.items.length}
+                  </span>
                   <div className="flex-1" />
                   <ChevronDown className={cn(
                     "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
