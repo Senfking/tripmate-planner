@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import type { BudgetLevel } from "./useTripBuilderDefaults";
+import type { BudgetLevel, PaceLevel } from "./useTripBuilderDefaults";
 
 /* ─── Types ───────────────────────────────────────── */
 
