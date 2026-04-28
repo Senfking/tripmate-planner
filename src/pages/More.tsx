@@ -506,6 +506,23 @@ const More = () => {
     toast({ title: "Display name updated" });
   };
 
+  const handleSaveNationalities = async () => {
+    if (!user) return;
+    setSavingNationalities(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ nationalities: nationalitiesValue })
+      .eq("id", user.id);
+    setSavingNationalities(false);
+    if (error) {
+      showErrorToast(error, "Couldn't save nationalities");
+      return;
+    }
+    await refreshProfile();
+    setShowNationalities(false);
+    toast({ title: "Nationalities updated" });
+  };
+
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
