@@ -19,6 +19,7 @@ export type PremiumInputData = {
   travelParty: TravelParty | null;
   kidsAges: string;
   budgetLevel: BudgetLevel | null;
+  pace: PaceLevel | null;
   vibes: string[];
   dealBreakers: string;
   freeText: string;
