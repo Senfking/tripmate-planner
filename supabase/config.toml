@@ -15,3 +15,7 @@ project_id = "dwtbqomfleihcvkfoopm"
   # supabase/functions/submit-feedback-alert/index.ts.
   [functions.submit-feedback-alert]
     verify_jwt = true
+  # MVP visa / entry requirements lookup. See
+  # supabase/functions/get-entry-requirements/index.ts.
+  [functions.get-entry-requirements]
+    verify_jwt = true
