@@ -325,6 +325,20 @@ const MAX_SLOTS_CEILING: Record<Intent["pace"], number> = {
   balanced: 36,
   active: 42,
 };
+
+// Per-pace ranker max_tokens. Activity copy averages ~250 tokens × slot count
+// plus ~1.5k trip-level fields. Active 42-slot trips push ~12k output, so 16k
+// is too tight — 18k restores ~50% headroom against truncation. Leisurely
+// tops out at 18 slots (~6k output); 12k stays well clear and shaves a bit
+// of headroom we don't need. Used by both the JSON path (rankAndEnrich) and
+// the streaming path (callClaudeHaikuStreaming) — module-scoped so the two
+// stay in lockstep.
+const RANK_MAX_TOKENS: Record<Intent["pace"], number> = {
+  leisurely: 12_000,
+  balanced: 16_000,
+  active: 18_000,
+};
+
 const MAX_FINALIST_HYDRATIONS = 20;     // safety cap on details pass; real trips pick 11–15
 
 // Rate limit + circuit breaker defaults. Override via env if needed.
@@ -3263,17 +3277,6 @@ async function rankAndEnrich(
     for (const v of venues) placeById.set(v.id, v);
   }
 
-  // Per-pace max_tokens. Activity copy averages ~250 tokens × slot count, plus
-  // ~1.5k trip-level fields. Active 42-slot trips push ~12k of output, so 16k
-  // is too tight — bump to 18k. Leisurely tops out at 18 slots (~6k output);
-  // 12k stays well clear of truncation while shaving headroom we don't need.
-  // Haiku output is cheap; truncation is expensive (a re-rank costs the whole
-  // pipeline budget). When in doubt, err generous.
-  const RANK_MAX_TOKENS: Record<Intent["pace"], number> = {
-    leisurely: 12_000,
-    balanced: 16_000,
-    active: 18_000,
-  };
   const result = await callClaudeHaiku<RawRankerOutput>(
     anthropicKey,
     [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
@@ -4359,7 +4362,7 @@ Deno.serve(async (req) => {
               [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
               buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
               RANKER_TOOL,
-              16_000,
+              RANK_MAX_TOKENS[intent.pace],
               pipelineStartedAt,
               "rankAndEnrich",
               (chunk) => parser.feed(chunk),
