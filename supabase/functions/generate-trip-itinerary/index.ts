@@ -736,8 +736,351 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
 }
 
 // ---------------------------------------------------------------------------
-// Intent parser — static, cache-friendly system prompt
+// Streaming Anthropic call — used by the SSE pipeline so the rankAndEnrich
+// tool input can be parsed & emitted day-by-day as it arrives.
+//
+// Anthropic's Messages API streams tool_use blocks as a sequence of events:
+//   - content_block_start { type: "tool_use", id, name, input: {} }
+//   - content_block_delta { delta: { type: "input_json_delta", partial_json: "..." } }
+//   - content_block_stop
+//   - message_delta { delta: { stop_reason } }
+//   - message_stop
+// We concatenate `partial_json` strings to reconstruct the full tool input.
+//
+// Caller passes:
+//   - onPartial(chunk): called with each partial_json string. Caller can run
+//     an incremental parser to detect day boundaries.
+// On completion the full reconstructed JSON string is returned along with
+// usage tokens, mirroring callClaudeHaiku's shape.
 // ---------------------------------------------------------------------------
+
+async function callClaudeHaikuStreaming(
+  apiKey: string,
+  systemBlocks: ClaudeSystemBlock[],
+  userContent: string,
+  tool: ClaudeTool,
+  maxTokens: number,
+  pipelineStartedAt: number,
+  step: string,
+  onPartial: (chunk: string) => void,
+): Promise<{ json: string; usage: ClaudeUsage }> {
+  if (!apiKey) {
+    throw new Error("callClaudeHaikuStreaming: ANTHROPIC_API_KEY is empty");
+  }
+  if (systemBlocks.length === 0) {
+    throw new Error("callClaudeHaikuStreaming: at least one system block is required");
+  }
+
+  const remaining =
+    PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+  if (remaining <= 0) {
+    throw new PipelineError(
+      step,
+      "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
+      `pipeline budget exhausted before "${step}" Anthropic streaming call (elapsed ${Date.now() - pipelineStartedAt}ms)`,
+    );
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), remaining);
+
+  const body = {
+    model: HAIKU_MODEL,
+    max_tokens: maxTokens,
+    system: systemBlocks,
+    messages: [{ role: "user", content: userContent }],
+    tools: [
+      {
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.input_schema,
+      },
+    ],
+    tool_choice: { type: "tool", name: tool.name },
+    stream: true,
+  };
+
+  const callStart = Date.now();
+  let firstByteAt = 0;
+  let firstDeltaAt = 0;
+  let usage: ClaudeUsage = {
+    input_tokens: 0,
+    output_tokens: 0,
+    cache_creation_input_tokens: 0,
+    cache_read_input_tokens: 0,
+  };
+  const accumulator: string[] = [];
+  let totalLen = 0;
+
+  try {
+    let res: Response;
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": ANTHROPIC_VERSION,
+          "content-type": "application/json",
+          "accept": "text/event-stream",
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      const err = e as Error;
+      if (controller.signal.aborted || err?.name === "AbortError") {
+        throw new PipelineError(
+          step,
+          "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
+          `Anthropic streaming fetch aborted after ${remaining}ms budget during step "${step}"`,
+        );
+      }
+      throw new Error(`Anthropic network error calling streaming "${tool.name}": ${err.message}`);
+    }
+
+    firstByteAt = Date.now();
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      const snippet = errBody.slice(0, 500);
+      throw new Error(`Anthropic streaming error ${res.status} for "${tool.name}". Body: ${snippet}`);
+    }
+
+    if (!res.body) {
+      throw new Error(`Anthropic streaming response had no body for "${tool.name}"`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuf = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      sseBuf += decoder.decode(value, { stream: true });
+
+      // SSE frames are separated by blank lines (\n\n). Process whole frames.
+      let nl: number;
+      while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
+        const frame = sseBuf.slice(0, nl);
+        sseBuf = sseBuf.slice(nl + 2);
+
+        // Frame is one or more "field: value" lines. We care about `data:`.
+        let eventName: string | null = null;
+        let dataLine: string | null = null;
+        for (const rawLine of frame.split("\n")) {
+          if (rawLine.startsWith("event:")) {
+            eventName = rawLine.slice(6).trim();
+          } else if (rawLine.startsWith("data:")) {
+            dataLine = rawLine.slice(5).trim();
+          }
+        }
+        if (!dataLine) continue;
+        if (dataLine === "[DONE]") continue;
+
+        let payload: Record<string, unknown>;
+        try {
+          payload = JSON.parse(dataLine);
+        } catch {
+          continue;
+        }
+
+        const type = (payload.type as string) ?? eventName ?? "";
+
+        if (type === "content_block_delta") {
+          const delta = payload.delta as { type?: string; partial_json?: string } | undefined;
+          if (delta?.type === "input_json_delta" && typeof delta.partial_json === "string") {
+            if (!firstDeltaAt) firstDeltaAt = Date.now();
+            accumulator.push(delta.partial_json);
+            totalLen += delta.partial_json.length;
+            try {
+              onPartial(delta.partial_json);
+            } catch (e) {
+              console.error(`[stream.${step}] onPartial threw:`, e);
+            }
+          }
+        } else if (type === "message_start") {
+          const msg = payload.message as { usage?: Record<string, unknown> } | undefined;
+          const u = msg?.usage as Record<string, number> | undefined;
+          if (u) {
+            usage.input_tokens = u.input_tokens ?? usage.input_tokens;
+            usage.cache_creation_input_tokens = u.cache_creation_input_tokens ?? usage.cache_creation_input_tokens;
+            usage.cache_read_input_tokens = u.cache_read_input_tokens ?? usage.cache_read_input_tokens;
+          }
+        } else if (type === "message_delta") {
+          const u = payload.usage as Record<string, number> | undefined;
+          if (u) {
+            usage.output_tokens = u.output_tokens ?? usage.output_tokens;
+          }
+        } else if (type === "error") {
+          const err = payload.error as { message?: string; type?: string } | undefined;
+          throw new Error(
+            `Anthropic stream error during "${tool.name}": ${err?.type ?? "unknown"} ${err?.message ?? ""}`,
+          );
+        }
+      }
+    }
+
+    const json = accumulator.join("");
+    console.log(
+      `[timing] llm.${step}.stream ttfb_ms=${firstByteAt - callStart} ` +
+        `ttft_ms=${firstDeltaAt ? firstDeltaAt - callStart : -1} ` +
+        `total_ms=${Date.now() - callStart} ` +
+        `input_tokens=${usage.input_tokens} output_tokens=${usage.output_tokens} ` +
+        `cache_read=${usage.cache_read_input_tokens} bytes=${totalLen}`,
+    );
+    return { json, usage };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TripStreamParser — incremental JSON parser for the rankAndEnrich tool input.
+//
+// Schema (from RANKER_TOOL):
+//   { trip_title, trip_summary, packing_suggestions, accommodation, days: [...] }
+//
+// Goal: emit each completed `days[N]` object as soon as its closing `}` arrives,
+// so downstream code can hydrate + emit a `day` SSE frame to the client without
+// waiting for the entire 9-12k-token output.
+//
+// State machine handles:
+//   - JSON string scanning with backslash escapes
+//   - Brace/bracket depth counting
+//   - Detecting the `days` key by walking back from the `[` at root depth and
+//     matching the immediately-preceding `"<key>" :` pattern
+//
+// Property emission order is model-controlled — RANKER_SYSTEM_PROMPT nudges
+// Haiku to emit `days` first, but if the model emits other keys before `days`
+// the parser simply skips past them (their bytes are kept in the buffer but
+// don't trigger emission).
+// ---------------------------------------------------------------------------
+
+class TripStreamParser {
+  private buf = "";
+  private pos = 0;
+  private inString = false;
+  private escapeNext = false;
+  private depth = 0;
+  private daysArrayActive = false;
+  private daysArrayDepth = -1;
+  private currentDayStart = -1;
+  private daysSeen = 0;
+
+  constructor(private onDay: (json: string) => void) {}
+
+  feed(chunk: string): void {
+    this.buf += chunk;
+    while (this.pos < this.buf.length) {
+      const c = this.buf[this.pos];
+
+      if (this.inString) {
+        if (this.escapeNext) {
+          this.escapeNext = false;
+        } else if (c === "\\") {
+          this.escapeNext = true;
+        } else if (c === '"') {
+          this.inString = false;
+        }
+        this.pos++;
+        continue;
+      }
+
+      if (c === '"') {
+        this.inString = true;
+        this.pos++;
+        continue;
+      }
+
+      if (c === "{" || c === "[") {
+        if (
+          c === "[" &&
+          !this.daysArrayActive &&
+          this.depth === 1 &&
+          this.precedingKeyIs("days")
+        ) {
+          this.daysArrayActive = true;
+          this.daysArrayDepth = this.depth;
+        }
+
+        if (
+          this.daysArrayActive &&
+          c === "{" &&
+          this.depth === this.daysArrayDepth
+        ) {
+          this.currentDayStart = this.pos;
+        }
+
+        this.depth++;
+        this.pos++;
+        continue;
+      }
+
+      if (c === "}" || c === "]") {
+        this.depth--;
+
+        if (
+          this.daysArrayActive &&
+          c === "]" &&
+          this.depth === this.daysArrayDepth - 1
+        ) {
+          this.daysArrayActive = false;
+          this.daysArrayDepth = -1;
+        }
+
+        if (
+          this.daysArrayActive &&
+          c === "}" &&
+          this.depth === this.daysArrayDepth &&
+          this.currentDayStart >= 0
+        ) {
+          const dayJson = this.buf.slice(this.currentDayStart, this.pos + 1);
+          this.currentDayStart = -1;
+          this.daysSeen++;
+          try {
+            this.onDay(dayJson);
+          } catch (e) {
+            console.error(`[TripStreamParser] onDay threw on day ${this.daysSeen}:`, (e as Error).message);
+          }
+        }
+
+        this.pos++;
+        continue;
+      }
+
+      this.pos++;
+    }
+  }
+
+  full(): string {
+    return this.buf;
+  }
+
+  daysEmitted(): number {
+    return this.daysSeen;
+  }
+
+  private precedingKeyIs(key: string): boolean {
+    let i = this.pos - 1;
+    while (i >= 0 && /\s/.test(this.buf[i])) i--;
+    if (i < 0 || this.buf[i] !== ":") return false;
+    i--;
+    while (i >= 0 && /\s/.test(this.buf[i])) i--;
+    if (i < 0 || this.buf[i] !== '"') return false;
+    const closeQuote = i;
+    i--;
+    while (i >= 0) {
+      if (this.buf[i] === '"' && (i === 0 || this.buf[i - 1] !== "\\")) {
+        return this.buf.slice(i + 1, closeQuote) === key;
+      }
+      i--;
+    }
+    return false;
+  }
+}
+
+
 
 const INTENT_SYSTEM_PROMPT = `You are extracting structured travel preferences from a user's trip-builder form submission.
 
@@ -1493,6 +1836,13 @@ async function geocodeDestination(
   }
 
   // ---- Try Geocoding API first ----
+  //
+  // OPS NOTE: if logs show repeated `Geocoding API REQUEST_DENIED` warnings
+  // below, the GOOGLE_PLACES_API_KEY needs the **Geocoding API** explicitly
+  // enabled in the Google Cloud Console (it's a separate API from Places).
+  // Until enabled, every cold-cache trip pays an extra ~$0.02 Places search
+  // call as the fallback. This is a manual ops task — don't try to fix from
+  // code.
   if (!geocodingApiDisabled) {
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=${googleKey}`;
@@ -2489,7 +2839,10 @@ TRIP SUMMARY:
 - trip_summary: 2–3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. No adjective spam.
 - packing_suggestions: 5–8 items, weather-specific and activity-specific. Not "comfortable shoes" — "closed-toe walking shoes for the cobblestones on Rua das Flores".
 
-OUTPUT: you MUST call the emit_trip tool with the full structured response. Do not include any text outside the tool call.`;
+OUTPUT: you MUST call the emit_trip tool with the full structured response. Do not include any text outside the tool call.
+
+OUTPUT ORDERING (STREAMING-AWARE):
+- Emit the "days" field FIRST in the tool input, before "trip_title", "trip_summary", "packing_suggestions", and "accommodation". The frontend streams day cards into the UI as soon as each day's JSON closes — every property emitted before "days" delays the user's first visible card. The order MUST be: days, then accommodation, then trip_title, trip_summary, packing_suggestions.`;
 
 // ---------------------------------------------------------------------------
 // Tool schema — forces the model into a structured emit_trip call.
@@ -3181,6 +3534,46 @@ function buildAffiliateUrl(
 const VALIDATION_MAX_KM_FROM_CENTER = 200;
 const VALIDATION_DROP_THRESHOLD = 0.20;
 
+// Per-day validator used by the streaming pipeline so days can be emitted to
+// the client as they arrive without waiting for all days. Mirrors the
+// per-activity rules from validateActivities but skips the trip-wide drop
+// threshold check (that runs once at end after all days are in).
+function validateDayActivitiesInline(
+  activities: EnrichedActivity[],
+  allPlaces: Map<string, BatchPlaceResult>,
+  center: { lat: number; lng: number },
+): { kept: EnrichedActivity[]; dropped: number } {
+  const kept: EnrichedActivity[] = [];
+  let dropped = 0;
+  for (const act of activities) {
+    const isEvent = !act.place_id;
+    if (!isEvent && !allPlaces.has(act.place_id)) {
+      console.warn(`[stream.validate] drop "${act.title}" — place_id not in pool`);
+      dropped++;
+      continue;
+    }
+    const place = act.place_id ? allPlaces.get(act.place_id) ?? null : null;
+    if (place?.location) {
+      const d = haversineKm(
+        center.lat, center.lng,
+        place.location.latitude, place.location.longitude,
+      );
+      if (d > VALIDATION_MAX_KM_FROM_CENTER) {
+        console.warn(`[stream.validate] drop "${act.title}" — ${d.toFixed(0)} km from center`);
+        dropped++;
+        continue;
+      }
+    }
+    if (place?.businessStatus && place.businessStatus !== "OPERATIONAL") {
+      console.warn(`[stream.validate] drop "${act.title}" — businessStatus=${place.businessStatus}`);
+      dropped++;
+      continue;
+    }
+    kept.push(act);
+  }
+  return { kept, dropped };
+}
+
 function validateActivities(
   result: PipelineResult,
   allPlaces: Map<string, BatchPlaceResult>,
@@ -3663,14 +4056,519 @@ Deno.serve(async (req) => {
 
     tStage("auth_validate_quotas", pipelineStartedAt);
 
-    // ---- Step 1: parse intent ----
+    // =========================================================================
+    // STREAMING BRANCH — Server-Sent Events for the standalone trip builder
+    //
+    // Triggered by `Accept: text/event-stream`. Emits:
+    //   event: progress     { stage, ...detail }       (UX heartbeats)
+    //   event: meta         { destination, country_code, dates: [...], skeleton, currency, num_days }
+    //   event: image        { url }                    (when destination cover resolves)
+    //   event: day          { day_number, date, theme, activities }  (one per closed day)
+    //   event: trip_complete { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, total_activities, map_center, map_zoom, currency, budget_tier }
+    //   event: error        { error, step, message }
+    //   event: ping         {}                         (10s keepalive)
+    //
+    // The full payload is also written to ai_response_cache so non-streaming
+    // callers (TripBuilderFlow, useResultsState) keep working from the same
+    // intent-keyed cache.
+    // =========================================================================
+    const wantsStream = (req.headers.get("accept") ?? "").toLowerCase().includes("text/event-stream");
+    if (wantsStream) {
+      const encoder = new TextEncoder();
+      const closedRef = { closed: false };
+      const stream = new ReadableStream({
+        async start(controller) {
+          const send = (event: string, data: unknown) => {
+            if (closedRef.closed) return;
+            try {
+              controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+            } catch (e) {
+              console.error("[stream] enqueue failed:", (e as Error).message);
+            }
+          };
+          const ping = setInterval(() => {
+            if (closedRef.closed) return;
+            try { controller.enqueue(encoder.encode(`event: ping\ndata: {}\n\n`)); } catch {}
+          }, 10_000);
+
+          let stepLabel = "stream_init";
+          try {
+            send("progress", { stage: "parsing_intent" });
+
+            // ---- parseIntent in parallel with geocode (non-surprise) ----
+            const tParseIntent = Date.now();
+            const earlyGeocodePromise: Promise<GeocodeResult> | null = !surpriseMe && rawDest
+              ? geocodeDestination(googleKey, rawDest, svcClient, user.id).catch((e) => { throw e; })
+              : null;
+            stepLabel = "parseIntent";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const intent = await parseIntent(anthropicKey, body, surpriseMe ? "" : rawDest, logger, pipelineStartedAt);
+            tStage("parse_intent", tParseIntent);
+            if (intent.destination) loggedDestination = intent.destination;
+
+            if (surpriseMe) {
+              send("progress", { stage: "picking_destination" });
+              stepLabel = "pickSurpriseDestination";
+              checkPipelineTimeout(pipelineStartedAt, stepLabel);
+              const tSurprise = Date.now();
+              intent.destination = await pickSurpriseDestination(anthropicKey, intent, numDays, logger, pipelineStartedAt);
+              tStage("pick_surprise", tSurprise);
+              loggedDestination = intent.destination;
+              send("progress", { stage: "destination_picked", destination: intent.destination });
+            }
+
+            // ---- Cache lookup ----
+            stepLabel = "cacheLookup";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const tCacheLookup = Date.now();
+            const cacheKey = await buildIntentCacheKey(intent, numDays);
+            const { data: cached, error: cacheErr } = await svcClient
+              .from("ai_response_cache")
+              .select("response_json")
+              .eq("cache_key", cacheKey)
+              .gt("expires_at", new Date().toISOString())
+              .maybeSingle();
+            if (cacheErr) {
+              throw new Error(`ai_response_cache lookup failed: ${cacheErr.message}`);
+            }
+            if (cached?.response_json) {
+              tStage("cache_lookup_hit", tCacheLookup);
+              const payload = cached.response_json as Record<string, any>;
+              const dest = payload?.destinations?.[0];
+              send("meta", {
+                destination: payload?.destinations?.[0]?.name ?? intent.destination,
+                country_code: null,
+                num_days: dest?.days?.length ?? numDays,
+                skeleton: (dest?.days ?? []).map((d: any) => ({
+                  day_number: d.day_number,
+                  date: d.date,
+                  theme: d.theme ?? "",
+                })),
+                currency: payload?.currency ?? "USD",
+                from_cache: true,
+              });
+              send("image", { url: payload?.destination_image_url ?? null });
+              for (const d of dest?.days ?? []) send("day", d);
+              const juntoPlaceIds: string[] = [];
+              for (const day of dest?.days ?? []) {
+                for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
+              }
+              send("trip_complete", {
+                trip_title: payload?.trip_title ?? "",
+                trip_summary: payload?.trip_summary ?? "",
+                accommodation: dest?.accommodation ?? null,
+                packing_suggestions: payload?.packing_suggestions ?? [],
+                junto_pick_place_ids: juntoPlaceIds,
+                daily_budget_estimate: payload?.daily_budget_estimate ?? 0,
+                total_activities: payload?.total_activities ?? 0,
+                map_center: payload?.map_center ?? null,
+                map_zoom: payload?.map_zoom ?? 12,
+                currency: payload?.currency ?? "USD",
+                budget_tier: payload?.budget_tier ?? intent.budget_tier,
+                destination_image_url: payload?.destination_image_url ?? null,
+                from_cache: true,
+              });
+              await logger.log({
+                feature: "trip_builder_cache_hit", model: "cache",
+                input_tokens: 0, output_tokens: 0, cost_usd: 0, cached: true,
+              });
+              console.log(`[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stream: true, stages: stageTimings })}`);
+              return;
+            }
+            tStage("cache_lookup_miss", tCacheLookup);
+
+            // ---- Geocode + skeleton + queries ----
+            send("progress", { stage: "geocoding" });
+            stepLabel = "geocodeDestination";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const tGeocode = Date.now();
+            const geo: GeocodeResult = earlyGeocodePromise
+              ? await earlyGeocodePromise
+              : await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
+            tStage("geocode", tGeocode);
+
+            const tSkeleton = Date.now();
+            const skeleton = buildSkeleton(intent, numDays, startDate, geo.country_code);
+            tStage("build_skeleton", tSkeleton);
+
+            send("meta", {
+              destination: intent.destination,
+              country_code: geo.country_code,
+              num_days: numDays,
+              skeleton: skeleton.map((d) => ({ day_number: d.day_number, date: d.date, theme: d.theme })),
+              currency: resolveTripCurrency(geo.country_code),
+              from_cache: false,
+            });
+
+            // ---- Image in parallel with everything below ----
+            const imagePromise: Promise<string | null> = resolveDestinationImageUrl(
+              geo.place_id ?? null, intent.destination, googleKey, svcClient,
+            ).catch((e) => {
+              console.warn("[stream.image] threw:", (e as Error).message);
+              return null;
+            });
+            imagePromise.then((url) => send("image", { url }));
+
+            // ---- Places search + hydrate + events ----
+            send("progress", { stage: "searching_venues" });
+            const tQueryPlan = Date.now();
+            const queries = buildPlacesQueries(intent, skeleton, { lat: geo.lat, lng: geo.lng, name: intent.destination });
+            tStage("build_queries", tQueryPlan);
+
+            stepLabel = "searchPlacesAndEvents";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const tSearch = Date.now();
+            const [searchResult, events] = await Promise.all([
+              searchPlacesBatch(queries, googleKey, svcClient),
+              searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
+            ]);
+            tStage("search_places_and_events", tSearch);
+            const places = searchResult.places;
+            const rankingStats = searchResult.stats;
+
+            send("progress", { stage: "hydrating_finalists", venues: places.length });
+            const finalistIds: string[] = [];
+            const seenFinalist = new Set<string>();
+            const byPool = new Map<PoolKey, BatchPlaceResult[]>();
+            for (const p of places) {
+              const pool = byPool.get(p.poolKey) ?? [];
+              pool.push(p);
+              byPool.set(p.poolKey, pool);
+            }
+            const maxPerPool = Math.max(3, Math.ceil(MAX_FINALIST_HYDRATIONS / Math.max(1, byPool.size)));
+            for (const pool of byPool.values()) {
+              for (const p of pool.slice(0, maxPerPool)) {
+                if (seenFinalist.has(p.id)) continue;
+                seenFinalist.add(p.id);
+                finalistIds.push(p.id);
+                if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+              }
+              if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+            }
+            const idToBase = new Map<string, BatchPlaceResult>();
+            for (const p of places) idToBase.set(p.id, p);
+            const tHydrate = Date.now();
+            const { hydrated: hydratedById, stats: hydrationStats } = await hydrateFinalists(finalistIds, idToBase, googleKey, svcClient);
+            tStage("hydrate_finalists", tHydrate);
+
+            await logPlacesByTier(svcClient, logger, user.id, {
+              search_essentials_live: rankingStats.live_calls, search_essentials_cache: rankingStats.cache_hits,
+              details_live: hydrationStats.live_calls, details_cache: hydrationStats.cache_hits,
+            });
+
+            for (let i = 0; i < places.length; i++) {
+              const h = hydratedById.get(places[i].id);
+              if (h) places[i] = h;
+            }
+            const venuesByPool = new Map<PoolKey, BatchPlaceResult[]>();
+            for (const p of places) {
+              const pool = venuesByPool.get(p.poolKey) ?? [];
+              pool.push(p);
+              venuesByPool.set(p.poolKey, pool);
+            }
+            const allPlacesById = new Map<string, BatchPlaceResult>();
+            for (const p of places) allPlacesById.set(p.id, p);
+            const placeById = new Map<string, BatchPlaceResult>();
+            for (const venues of venuesByPool.values()) for (const v of venues) placeById.set(v.id, v);
+
+            // ---- Streaming rank: emit days as they close ----
+            send("progress", { stage: "ranking" });
+            stepLabel = "rankAndEnrich";
+            checkPipelineTimeout(pipelineStartedAt, stepLabel);
+            const tRank = Date.now();
+
+            const currency = resolveTripCurrency(geo.country_code);
+            const affEnv = { booking: bookingAid, viator: viatorMcid, gyg: gygPid };
+            const ranked_days: RankedDay[] = [];
+            const seenIds = new Set<string>();
+            const emittedDayNumbers = new Set<number>();
+            const allActivities: EnrichedActivity[] = [];
+            let totalDropped = 0;
+
+            const handleDay = (rawDay: { day_number?: number; theme?: string; activities?: RawRankerActivity[] }) => {
+              if (typeof rawDay.day_number !== "number") return;
+              if (emittedDayNumbers.has(rawDay.day_number)) return;
+              const day = skeleton.find((d) => d.day_number === rawDay.day_number);
+              if (!day) return;
+              const theme = rawDay.theme?.trim() || day.theme;
+              const activities: EnrichedActivity[] = [];
+              const rawActs = Array.isArray(rawDay.activities) ? rawDay.activities : [];
+              for (let i = 0; i < day.slots.length; i++) {
+                const slot = day.slots[i];
+                const rawAct = rawActs.find((a) => a?.slot_index === i);
+                if (!rawAct) continue;
+                if (rawAct.place_id && seenIds.has(rawAct.place_id)) continue;
+                const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
+                if (!rawAct.is_event && rawAct.place_id && !place) continue;
+                const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
+                if (!activity) continue;
+                if (place) seenIds.add(place.id);
+                const aff = buildAffiliateUrl(
+                  activity.place_id ? allPlacesById.get(activity.place_id) ?? null : null,
+                  affEnv, activity.event_url,
+                );
+                activity.booking_url = aff.booking_url;
+                activity.booking_partner = aff.booking_partner;
+                activities.push(activity);
+              }
+              const validated = validateDayActivitiesInline(activities, allPlacesById, { lat: geo.lat, lng: geo.lng });
+              totalDropped += validated.dropped;
+              const rankedDay: RankedDay = { date: day.date, day_number: day.day_number, theme, activities: validated.kept };
+              ranked_days.push(rankedDay);
+              emittedDayNumbers.add(rawDay.day_number);
+              for (const a of validated.kept) allActivities.push(a);
+              send("day", rankedDay);
+            };
+
+            const parser = new TripStreamParser((dayJson) => {
+              try {
+                const parsed = JSON.parse(dayJson);
+                handleDay(parsed);
+              } catch (e) {
+                console.warn(`[stream.parser] day JSON.parse failed: ${(e as Error).message}`);
+              }
+            });
+
+            const { json: fullJson, usage } = await callClaudeHaikuStreaming(
+              anthropicKey,
+              [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+              buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
+              RANKER_TOOL,
+              16_000,
+              pipelineStartedAt,
+              "rankAndEnrich",
+              (chunk) => parser.feed(chunk),
+            );
+
+            await logger.log({
+              feature: "trip_builder_rank", model: HAIKU_MODEL,
+              input_tokens: usage.input_tokens, output_tokens: usage.output_tokens,
+              cost_usd: computeHaikuCost(usage),
+              cached: usage.cache_read_input_tokens > 0,
+            });
+            tStage("rank_and_enrich", tRank);
+
+            // ---- Final full-parse to recover trip-level fields + late days ----
+            let raw: RawRankerOutput;
+            try {
+              raw = JSON.parse(fullJson) as RawRankerOutput;
+            } catch (e) {
+              throw new Error(`[stream] final tool JSON parse failed: ${(e as Error).message}`);
+            }
+
+            // Catch any days the streaming parser missed (defensive — shouldn't happen)
+            for (const d of raw.days ?? []) {
+              if (!emittedDayNumbers.has(d.day_number)) handleDay(d as any);
+            }
+            // Re-sort by day_number for downstream rollups
+            ranked_days.sort((a, b) => a.day_number - b.day_number);
+
+            // Trip-wide drop threshold check (mirrors validateActivities)
+            const totalBefore = ranked_days.reduce((n, d) => n + d.activities.length, 0) + totalDropped;
+            if (totalBefore > 0 && totalDropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
+              throw new Error(`Validation dropped ${totalDropped}/${totalBefore} activities (>${(VALIDATION_DROP_THRESHOLD * 100).toFixed(0)}%) — pool too thin`);
+            }
+
+            // ---- Accommodation ----
+            let accommodation: EnrichedActivity | undefined;
+            if (raw.accommodation?.place_id) {
+              const place = placeById.get(raw.accommodation.place_id) ?? null;
+              if (place) {
+                const fakeSlot: PacingSlot = {
+                  type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
+                };
+                const hydrated = hydrateActivity(
+                  {
+                    slot_index: -1, slot_type: "lodging", place_id: raw.accommodation.place_id, is_event: false,
+                    title: raw.accommodation.title, description: raw.accommodation.description,
+                    pro_tip: raw.accommodation.pro_tip, why_for_you: raw.accommodation.why_for_you,
+                    skip_if: raw.accommodation.skip_if, category: "accommodation",
+                    estimated_cost_per_person: raw.accommodation.estimated_cost_per_person,
+                    dietary_notes: raw.accommodation.dietary_notes,
+                  },
+                  fakeSlot, place, googleKey, currency,
+                );
+                if (hydrated) {
+                  const aff = buildAffiliateUrl(place, affEnv, hydrated.event_url);
+                  hydrated.booking_url = aff.booking_url;
+                  hydrated.booking_partner = aff.booking_partner;
+                  accommodation = hydrated;
+                }
+              }
+            }
+
+            // ---- Trip-level rollups + junto picks ----
+            const total_activities = ranked_days.reduce((n, d) => n + d.activities.length, 0);
+            const dailySpend = ranked_days.map((d) => d.activities.reduce((s, a) => s + (a.estimated_cost_per_person || 0), 0));
+            const daily_budget_estimate = ranked_days.length > 0
+              ? Math.round(dailySpend.reduce((s, n) => s + n, 0) / ranked_days.length)
+              : 0;
+
+            const destinationFinal: RankedDestination = {
+              name: intent.destination,
+              start_date: skeleton[0]?.date ?? "",
+              end_date: skeleton[skeleton.length - 1]?.date ?? "",
+              intro: raw.trip_summary?.trim() ?? "",
+              days: ranked_days,
+              accommodation,
+            };
+            const pipelineResult: PipelineResult = {
+              trip_title: raw.trip_title?.trim() ?? intent.destination,
+              trip_summary: raw.trip_summary?.trim() ?? "",
+              destinations: [destinationFinal],
+              map_center: { lat: geo.lat, lng: geo.lng },
+              map_zoom: 12,
+              daily_budget_estimate,
+              currency,
+              packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions.slice(0, 10) : [],
+              total_activities,
+              budget_tier: intent.budget_tier,
+            };
+
+            markJuntoPicks(pipelineResult, intent);
+
+            const juntoPlaceIds: string[] = [];
+            for (const day of ranked_days) {
+              for (const a of day.activities) if (a.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
+            }
+
+            // ---- Image (await final URL) ----
+            const destinationImageUrl = await imagePromise;
+
+            // ---- Cache write ----
+            const responsePayload: Record<string, unknown> = {
+              ...pipelineResult, destination_image_url: destinationImageUrl,
+            };
+            const tCacheWrite = Date.now();
+            const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
+              cache_key: cacheKey, response_json: responsePayload,
+              expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+            });
+            if (cacheInsErr) {
+              console.error("[stream] cache insert failed:", cacheInsErr);
+              // Non-fatal at this point — we've already streamed days and are about to send trip_complete.
+            }
+            tStage("cache_write", tCacheWrite);
+
+            // ---- Final event ----
+            send("trip_complete", {
+              trip_title: pipelineResult.trip_title,
+              trip_summary: pipelineResult.trip_summary,
+              accommodation: accommodation ?? null,
+              packing_suggestions: pipelineResult.packing_suggestions,
+              junto_pick_place_ids: juntoPlaceIds,
+              daily_budget_estimate,
+              total_activities,
+              map_center: pipelineResult.map_center,
+              map_zoom: pipelineResult.map_zoom,
+              currency,
+              budget_tier: pipelineResult.budget_tier,
+              destination_image_url: destinationImageUrl,
+              from_cache: false,
+            });
+
+            // ---- Logging (async, best-effort, after we've sent the final event) ----
+            const totals = logger.totals();
+            const durationMs = Date.now() - pipelineStartedAt;
+            const totalRankingCalls = rankingStats.live_calls + rankingStats.cache_hits;
+            const totalDetailsCalls = hydrationStats.live_calls + hydrationStats.cache_hits;
+            const totalCacheHits = rankingStats.cache_hits + hydrationStats.cache_hits;
+            const totalPlacesCalls = totalRankingCalls + totalDetailsCalls;
+            const modelLabel =
+              `aggregate_stream;duration_ms=${durationMs}` +
+              `;places_ranking=${rankingStats.live_calls}/${totalRankingCalls}` +
+              `;places_details=${hydrationStats.live_calls}/${totalDetailsCalls}` +
+              `;places_cache_hits=${totalCacheHits}/${totalPlacesCalls || 1}` +
+              `;sub_calls=${totals.call_count}`;
+            await svcClient.from("ai_request_log").insert({
+              user_id: user.id, feature: "trip_builder_total", model: modelLabel,
+              input_tokens: totals.input_tokens, output_tokens: totals.output_tokens,
+              cost_usd: totals.cost_usd, cached: false,
+            }).then((r: { error: { message: string } | null }) => {
+              if (r.error) console.error("[stream.ai_request_log] insert failed:", r.error);
+            });
+            await svcClient.from("analytics_events").insert({
+              event_name: "ai_trip_builder", user_id: user.id,
+              properties: {
+                source: "generated_stream", destination: intent.destination, days: numDays,
+                budget_level: intent.budget_tier, pace: intent.pace, duration_ms: durationMs,
+                places_ranking_live: rankingStats.live_calls, places_ranking_cache: rankingStats.cache_hits,
+                places_details_live: hydrationStats.live_calls, places_details_cache: hydrationStats.cache_hits,
+                llm_cost_usd: totals.cost_usd, days_emitted_streaming: emittedDayNumbers.size,
+              },
+            });
+
+            console.log(
+              `[timing-summary] ${JSON.stringify({
+                total_ms: durationMs, cache_hit: false, stream: true,
+                destination: intent.destination, num_days: numDays,
+                queries: queries.length, finalists: finalistIds.length,
+                stages: stageTimings,
+              })}`,
+            );
+          } catch (e) {
+            console.error("[stream] pipeline error:", e);
+            const err = e as Error;
+            const isPipelineErr = err instanceof PipelineError;
+            send("error", {
+              error: "trip_build_failed",
+              step: isPipelineErr ? (err as PipelineError).step : stepLabel,
+              message: isPipelineErr ? (err as PipelineError).userMessage : "Something went wrong building your trip. Please try again.",
+            });
+            if (svcClientForLogging) {
+              logGenerationError(svcClientForLogging, {
+                user_id: loggedUserId, destination: loggedDestination,
+                step: isPipelineErr ? (err as PipelineError).step : stepLabel,
+                error_message: isPipelineErr ? (err as PipelineError).userMessage : err?.message ?? String(err),
+                error_raw: {
+                  name: err?.name ?? "Error", message: err?.message ?? String(err),
+                  stack: err?.stack ?? null, is_pipeline_error: isPipelineErr, stream: true,
+                },
+                duration_ms: Date.now() - requestStartedAt,
+              }).catch(() => {});
+            }
+          } finally {
+            clearInterval(ping);
+            closedRef.closed = true;
+            try { controller.close(); } catch {}
+          }
+        },
+        cancel() {
+          closedRef.closed = true;
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          ...corsHeaders,
+          "content-type": "text/event-stream",
+          "cache-control": "no-cache, no-transform",
+          "x-accel-buffering": "no",
+          "connection": "keep-alive",
+        },
+      });
+    }
+
+    // ---- Step 1: parse intent (in parallel with geocode on non-surprise mode) ----
     // In surprise mode we pass an empty destination hint — the surprise picker
     // runs next with the parsed vibes/must_haves/must_avoids and fills in
     // intent.destination. This ordering means the picker sees the same
     // extracted must_avoids the ranker will later enforce.
+    //
+    // Perf: when the user typed a destination, geocoding rawDest is independent
+    // of intent extraction. Kick geocode off in parallel and await later.
+    // Trades a fraction of a Places API call on cache hits (~$0.005) for ~1.5s
+    // off cold-cache TTFB. Geocode is itself cached for 30 days, so a hot
+    // destination pays nothing.
+    const tParseIntent = Date.now();
+    const earlyGeocodePromise: Promise<GeocodeResult> | null = !surpriseMe && rawDest
+      ? geocodeDestination(googleKey, rawDest, svcClient, user.id).catch((e) => {
+          // Surface the rejection later when we await — not now.
+          throw e;
+        })
+      : null;
     loggedStep = "parseIntent";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
-    const tParseIntent = Date.now();
     const intent = await parseIntent(
       anthropicKey,
       body,
@@ -3736,10 +4634,16 @@ Deno.serve(async (req) => {
     //               gets the country_code rather than parsing the string) ----
     // Throws PipelineError on API failure or no-match; top-level catch
     // converts it into a structured { error, step, message } 500 response.
+    //
+    // Non-surprise mode: we kicked off geocoding rawDest in parallel with
+    // parseIntent — await that promise here. Surprise mode: we don't know the
+    // destination until pickSurpriseDestination runs, so we geocode now.
     loggedStep = "geocodeDestination";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const tGeocode = Date.now();
-    const geo = await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
+    const geo: GeocodeResult = earlyGeocodePromise
+      ? await earlyGeocodePromise
+      : await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
     tStage("geocode", tGeocode);
 
     // ---- Step 2b: pacing skeleton (slot count capped inside buildSkeleton) ----
@@ -3833,6 +4737,24 @@ Deno.serve(async (req) => {
     const allPlacesById = new Map<string, BatchPlaceResult>();
     for (const p of places) allPlacesById.set(p.id, p);
 
+    // ---- Resolve destination cover image — kick off in parallel with rank ----
+    // The image fetch (Place Photos + Wikimedia fallback) is best-effort and
+    // contributes ~1-2s when not cached. Running it concurrently with the
+    // 30-50s rankAndEnrich call hides its latency entirely.
+    const tImage = Date.now();
+    const destinationImageUrlPromise: Promise<string | null> = resolveDestinationImageUrl(
+      geo.place_id ?? null,
+      intent.destination,
+      googleKey,
+      svcClient,
+    ).catch((e) => {
+      console.warn(
+        "[generate-trip-itinerary] resolveDestinationImageUrl threw:",
+        (e as Error).message,
+      );
+      return null;
+    });
+
     // ---- Step 6: rank + enrich ----
     loggedStep = "rankAndEnrich";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
@@ -3877,27 +4799,11 @@ Deno.serve(async (req) => {
     const validated = validateActivities(ranked, allPlacesById, { lat: geo.lat, lng: geo.lng });
     tStage("validate", tValidate);
 
-    // ---- Resolve destination cover image (best-effort, never throws) ----
-    // Sourced from Google Place Photos with Wikimedia Commons fallback. The
-    // result is merged into the cached payload so subsequent cache hits for
-    // the same intent return the same photo URL. Failure -> null, and the
-    // frontend falls back to its legacy keyword table.
-    const tImage = Date.now();
-    let destinationImageUrl: string | null = null;
-    try {
-      destinationImageUrl = await resolveDestinationImageUrl(
-        geo.place_id ?? null,
-        intent.destination,
-        googleKey,
-        svcClient,
-      );
-    } catch (e) {
-      console.warn(
-        "[generate-trip-itinerary] resolveDestinationImageUrl threw:",
-        (e as Error).message,
-      );
-      destinationImageUrl = null;
-    }
+    // ---- Resolve destination cover image (kicked off in parallel with rank) ----
+    // The promise was started before rankAndEnrich; awaited here. Failures are
+    // swallowed inside the promise and resolve to null — the frontend falls
+    // back to its legacy keyword table.
+    const destinationImageUrl: string | null = await destinationImageUrlPromise;
     tStage("resolve_destination_image", tImage);
 
     const responsePayload: Record<string, unknown> = {
