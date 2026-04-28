@@ -70,8 +70,14 @@
 - DSN read from `VITE_SENTRY_DSN`. If unset, Sentry is a no-op — keeps dev/local out of the project.
 - `environment` is `import.meta.env.MODE`; `release` is the build-time `__BUILD_TS__`. `tracesSampleRate: 0.1`. Replay and Profiling are intentionally disabled.
 - Capture sites: `ErrorBoundary.componentDidCatch`, `BuilderErrorBoundary` (TripDashboard), `BuilderBoundary` (ItineraryTab), `safeQuery.logSupabaseFailure`, and `App.tsx` `MutationCache.onError`. Each event is tagged with `route`, `display_mode`, `online`, and `user_id` (when available).
-- Filtered out: offline failures and 401/403 responses. These are handled by the retry/auth flow and would be noise. Form validation errors don't reach these paths.
+- Filtered out: offline failures and 401/403 responses. These are handled by the retry/auth flow and would be noise. Form validation errors don't reach these paths. Also dropped in `beforeSend`: Supabase Auth's `Lock 'lock:sb-...-auth-token' was released because another request stole it` — fires whenever a second tab takes the token-refresh mutex, expected library behavior, not a real error.
 - All Sentry calls go through helpers in `src/lib/sentry.ts` — don't call `Sentry.captureException` directly so tagging stays consistent.
+- **Sourcemaps**: `vite.config.ts` sets `build.sourcemap: "hidden"` (emits `.map` files but no `sourceMappingURL` comment, so browsers don't auto-load source on the public site). `@sentry/vite-plugin` uploads them at build time, gated on `SENTRY_AUTH_TOKEN` — when the token is unset (local/dev/PR builds) the plugin is skipped and the build still succeeds. Org/project hardcoded as `junto-0n` / `junto`; release tied to `__BUILD_TS__`.
+- **`SENTRY_AUTH_TOKEN` setup** (Lovable Secrets UI, not `.env` — it's a build-time secret, not a `VITE_` var):
+  - Create a Sentry [user auth token or internal integration token](https://docs.sentry.io/account/auth-tokens/).
+  - Required scopes per Sentry's plugin docs: `project:releases` (create release + upload artifacts) and `project:write` (associate commits to release). `org:read` is also required for organisation lookup.
+  - Add the token to Lovable's Secrets UI as `SENTRY_AUTH_TOKEN`. Do **not** add it to `.env` (would leak in the client bundle if anyone accidentally prefixed it `VITE_`).
+  - The next production build picks it up; symbolicated stacks land on Sentry events captured against that build's `__BUILD_TS__` release.
 
 ### Env files
 - **`VITE_`-prefixed vars go in the tracked `.env`.** Vite inlines them into the client bundle at build time, so they are public anyway. Lovable's hosted builds use the checked-out `.env` — Lovable's Secrets UI does **not** accept `VITE_`-prefixed vars (they're build-time, not runtime). This applies to `VITE_SUPABASE_*`, `VITE_VAPID_PUBLIC_KEY`, `VITE_SENTRY_DSN`, etc. Public-by-design values only — never a service-role key or anything that should stay server-side.
