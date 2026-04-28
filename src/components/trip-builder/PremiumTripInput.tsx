@@ -49,9 +49,9 @@ const BUDGET_OPTIONS: { key: BudgetLevel; label: string; symbol: string }[] = [
 ];
 
 const PACE_OPTIONS: { key: PaceLevel; label: string; tag: string; desc: string; intensity: 1 | 2 | 3 }[] = [
-  { key: "relaxed", label: "Light", tag: "leave room to wander", desc: "Just food anchors — lunch & dinner, the rest of the day is open.", intensity: 1 },
-  { key: "balanced", label: "Balanced", tag: "a few highlights per day", desc: "2–3 activities plus meals, with breathing room between stops.", intensity: 2 },
-  { key: "packed", label: "Active", tag: "every slot filled", desc: "4–5 activities per day, morning to night — see as much as possible.", intensity: 3 },
+  { key: "relaxed", label: "Light", tag: "leave room to wander", desc: "1 anchor activity per day plus meals — lots of free time to wander.", intensity: 1 },
+  { key: "balanced", label: "Balanced", tag: "a few highlights per day", desc: "2 activities per day plus meals — one in the morning, one in the afternoon.", intensity: 2 },
+  { key: "packed", label: "Active", tag: "morning to night", desc: "3 activities per day plus meals — morning, afternoon, and evening.", intensity: 3 },
 ];
 
 const VIBE_OPTIONS = [
