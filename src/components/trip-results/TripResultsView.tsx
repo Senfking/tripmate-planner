@@ -250,6 +250,40 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           />
         )}
 
+        {/* Hero destination image */}
+        {result.destination_image_url && (
+          <div
+            className={cn("px-4 pt-4", rc)}
+            style={revealStyle("hero")}
+          >
+            <div className="relative overflow-hidden rounded-2xl shadow-lg ring-1 ring-border/50 group">
+              <div className="aspect-[16/10] sm:aspect-[2/1] w-full bg-muted">
+                <img
+                  src={result.destination_image_url}
+                  alt={`${result.destinations[0]?.name ?? result.trip_title} cover`}
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                  loading="eager"
+                />
+              </div>
+              {/* Gradient scrim */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+              {/* Title overlay */}
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                <div className="flex items-center gap-1.5 text-white/85 text-[11px] font-mono mb-1.5">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">
+                    {result.destinations.map((d) => d.name).join(" · ")}
+                  </span>
+                </div>
+                <h2 className="text-white text-xl sm:text-2xl font-bold leading-tight drop-shadow-sm">
+                  {result.trip_title}
+                </h2>
+                <p className="text-white/80 text-[11px] font-mono mt-1">{dateRange}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stat pills */}
         <div className={cn("px-4 pt-4 pb-2", rc)} style={revealStyle("stats")}>
           <div className="flex flex-wrap gap-2">
