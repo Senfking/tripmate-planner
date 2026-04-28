@@ -736,8 +736,351 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
 }
 
 // ---------------------------------------------------------------------------
-// Intent parser — static, cache-friendly system prompt
+// Streaming Anthropic call — used by the SSE pipeline so the rankAndEnrich
+// tool input can be parsed & emitted day-by-day as it arrives.
+//
+// Anthropic's Messages API streams tool_use blocks as a sequence of events:
+//   - content_block_start { type: "tool_use", id, name, input: {} }
+//   - content_block_delta { delta: { type: "input_json_delta", partial_json: "..." } }
+//   - content_block_stop
+//   - message_delta { delta: { stop_reason } }
+//   - message_stop
+// We concatenate `partial_json` strings to reconstruct the full tool input.
+//
+// Caller passes:
+//   - onPartial(chunk): called with each partial_json string. Caller can run
+//     an incremental parser to detect day boundaries.
+// On completion the full reconstructed JSON string is returned along with
+// usage tokens, mirroring callClaudeHaiku's shape.
 // ---------------------------------------------------------------------------
+
+async function callClaudeHaikuStreaming(
+  apiKey: string,
+  systemBlocks: ClaudeSystemBlock[],
+  userContent: string,
+  tool: ClaudeTool,
+  maxTokens: number,
+  pipelineStartedAt: number,
+  step: string,
+  onPartial: (chunk: string) => void,
+): Promise<{ json: string; usage: ClaudeUsage }> {
+  if (!apiKey) {
+    throw new Error("callClaudeHaikuStreaming: ANTHROPIC_API_KEY is empty");
+  }
+  if (systemBlocks.length === 0) {
+    throw new Error("callClaudeHaikuStreaming: at least one system block is required");
+  }
+
+  const remaining =
+    PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+  if (remaining <= 0) {
+    throw new PipelineError(
+      step,
+      "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
+      `pipeline budget exhausted before "${step}" Anthropic streaming call (elapsed ${Date.now() - pipelineStartedAt}ms)`,
+    );
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), remaining);
+
+  const body = {
+    model: HAIKU_MODEL,
+    max_tokens: maxTokens,
+    system: systemBlocks,
+    messages: [{ role: "user", content: userContent }],
+    tools: [
+      {
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.input_schema,
+      },
+    ],
+    tool_choice: { type: "tool", name: tool.name },
+    stream: true,
+  };
+
+  const callStart = Date.now();
+  let firstByteAt = 0;
+  let firstDeltaAt = 0;
+  let usage: ClaudeUsage = {
+    input_tokens: 0,
+    output_tokens: 0,
+    cache_creation_input_tokens: 0,
+    cache_read_input_tokens: 0,
+  };
+  const accumulator: string[] = [];
+  let totalLen = 0;
+
+  try {
+    let res: Response;
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": ANTHROPIC_VERSION,
+          "content-type": "application/json",
+          "accept": "text/event-stream",
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      const err = e as Error;
+      if (controller.signal.aborted || err?.name === "AbortError") {
+        throw new PipelineError(
+          step,
+          "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
+          `Anthropic streaming fetch aborted after ${remaining}ms budget during step "${step}"`,
+        );
+      }
+      throw new Error(`Anthropic network error calling streaming "${tool.name}": ${err.message}`);
+    }
+
+    firstByteAt = Date.now();
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      const snippet = errBody.slice(0, 500);
+      throw new Error(`Anthropic streaming error ${res.status} for "${tool.name}". Body: ${snippet}`);
+    }
+
+    if (!res.body) {
+      throw new Error(`Anthropic streaming response had no body for "${tool.name}"`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuf = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      sseBuf += decoder.decode(value, { stream: true });
+
+      // SSE frames are separated by blank lines (\n\n). Process whole frames.
+      let nl: number;
+      while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
+        const frame = sseBuf.slice(0, nl);
+        sseBuf = sseBuf.slice(nl + 2);
+
+        // Frame is one or more "field: value" lines. We care about `data:`.
+        let eventName: string | null = null;
+        let dataLine: string | null = null;
+        for (const rawLine of frame.split("\n")) {
+          if (rawLine.startsWith("event:")) {
+            eventName = rawLine.slice(6).trim();
+          } else if (rawLine.startsWith("data:")) {
+            dataLine = rawLine.slice(5).trim();
+          }
+        }
+        if (!dataLine) continue;
+        if (dataLine === "[DONE]") continue;
+
+        let payload: Record<string, unknown>;
+        try {
+          payload = JSON.parse(dataLine);
+        } catch {
+          continue;
+        }
+
+        const type = (payload.type as string) ?? eventName ?? "";
+
+        if (type === "content_block_delta") {
+          const delta = payload.delta as { type?: string; partial_json?: string } | undefined;
+          if (delta?.type === "input_json_delta" && typeof delta.partial_json === "string") {
+            if (!firstDeltaAt) firstDeltaAt = Date.now();
+            accumulator.push(delta.partial_json);
+            totalLen += delta.partial_json.length;
+            try {
+              onPartial(delta.partial_json);
+            } catch (e) {
+              console.error(`[stream.${step}] onPartial threw:`, e);
+            }
+          }
+        } else if (type === "message_start") {
+          const msg = payload.message as { usage?: Record<string, unknown> } | undefined;
+          const u = msg?.usage as Record<string, number> | undefined;
+          if (u) {
+            usage.input_tokens = u.input_tokens ?? usage.input_tokens;
+            usage.cache_creation_input_tokens = u.cache_creation_input_tokens ?? usage.cache_creation_input_tokens;
+            usage.cache_read_input_tokens = u.cache_read_input_tokens ?? usage.cache_read_input_tokens;
+          }
+        } else if (type === "message_delta") {
+          const u = payload.usage as Record<string, number> | undefined;
+          if (u) {
+            usage.output_tokens = u.output_tokens ?? usage.output_tokens;
+          }
+        } else if (type === "error") {
+          const err = payload.error as { message?: string; type?: string } | undefined;
+          throw new Error(
+            `Anthropic stream error during "${tool.name}": ${err?.type ?? "unknown"} ${err?.message ?? ""}`,
+          );
+        }
+      }
+    }
+
+    const json = accumulator.join("");
+    console.log(
+      `[timing] llm.${step}.stream ttfb_ms=${firstByteAt - callStart} ` +
+        `ttft_ms=${firstDeltaAt ? firstDeltaAt - callStart : -1} ` +
+        `total_ms=${Date.now() - callStart} ` +
+        `input_tokens=${usage.input_tokens} output_tokens=${usage.output_tokens} ` +
+        `cache_read=${usage.cache_read_input_tokens} bytes=${totalLen}`,
+    );
+    return { json, usage };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TripStreamParser — incremental JSON parser for the rankAndEnrich tool input.
+//
+// Schema (from RANKER_TOOL):
+//   { trip_title, trip_summary, packing_suggestions, accommodation, days: [...] }
+//
+// Goal: emit each completed `days[N]` object as soon as its closing `}` arrives,
+// so downstream code can hydrate + emit a `day` SSE frame to the client without
+// waiting for the entire 9-12k-token output.
+//
+// State machine handles:
+//   - JSON string scanning with backslash escapes
+//   - Brace/bracket depth counting
+//   - Detecting the `days` key by walking back from the `[` at root depth and
+//     matching the immediately-preceding `"<key>" :` pattern
+//
+// Property emission order is model-controlled — RANKER_SYSTEM_PROMPT nudges
+// Haiku to emit `days` first, but if the model emits other keys before `days`
+// the parser simply skips past them (their bytes are kept in the buffer but
+// don't trigger emission).
+// ---------------------------------------------------------------------------
+
+class TripStreamParser {
+  private buf = "";
+  private pos = 0;
+  private inString = false;
+  private escapeNext = false;
+  private depth = 0;
+  private daysArrayActive = false;
+  private daysArrayDepth = -1;
+  private currentDayStart = -1;
+  private daysSeen = 0;
+
+  constructor(private onDay: (json: string) => void) {}
+
+  feed(chunk: string): void {
+    this.buf += chunk;
+    while (this.pos < this.buf.length) {
+      const c = this.buf[this.pos];
+
+      if (this.inString) {
+        if (this.escapeNext) {
+          this.escapeNext = false;
+        } else if (c === "\\") {
+          this.escapeNext = true;
+        } else if (c === '"') {
+          this.inString = false;
+        }
+        this.pos++;
+        continue;
+      }
+
+      if (c === '"') {
+        this.inString = true;
+        this.pos++;
+        continue;
+      }
+
+      if (c === "{" || c === "[") {
+        if (
+          c === "[" &&
+          !this.daysArrayActive &&
+          this.depth === 1 &&
+          this.precedingKeyIs("days")
+        ) {
+          this.daysArrayActive = true;
+          this.daysArrayDepth = this.depth;
+        }
+
+        if (
+          this.daysArrayActive &&
+          c === "{" &&
+          this.depth === this.daysArrayDepth
+        ) {
+          this.currentDayStart = this.pos;
+        }
+
+        this.depth++;
+        this.pos++;
+        continue;
+      }
+
+      if (c === "}" || c === "]") {
+        this.depth--;
+
+        if (
+          this.daysArrayActive &&
+          c === "]" &&
+          this.depth === this.daysArrayDepth - 1
+        ) {
+          this.daysArrayActive = false;
+          this.daysArrayDepth = -1;
+        }
+
+        if (
+          this.daysArrayActive &&
+          c === "}" &&
+          this.depth === this.daysArrayDepth &&
+          this.currentDayStart >= 0
+        ) {
+          const dayJson = this.buf.slice(this.currentDayStart, this.pos + 1);
+          this.currentDayStart = -1;
+          this.daysSeen++;
+          try {
+            this.onDay(dayJson);
+          } catch (e) {
+            console.error(`[TripStreamParser] onDay threw on day ${this.daysSeen}:`, (e as Error).message);
+          }
+        }
+
+        this.pos++;
+        continue;
+      }
+
+      this.pos++;
+    }
+  }
+
+  full(): string {
+    return this.buf;
+  }
+
+  daysEmitted(): number {
+    return this.daysSeen;
+  }
+
+  private precedingKeyIs(key: string): boolean {
+    let i = this.pos - 1;
+    while (i >= 0 && /\s/.test(this.buf[i])) i--;
+    if (i < 0 || this.buf[i] !== ":") return false;
+    i--;
+    while (i >= 0 && /\s/.test(this.buf[i])) i--;
+    if (i < 0 || this.buf[i] !== '"') return false;
+    const closeQuote = i;
+    i--;
+    while (i >= 0) {
+      if (this.buf[i] === '"' && (i === 0 || this.buf[i - 1] !== "\\")) {
+        return this.buf.slice(i + 1, closeQuote) === key;
+      }
+      i--;
+    }
+    return false;
+  }
+}
+
+
 
 const INTENT_SYSTEM_PROMPT = `You are extracting structured travel preferences from a user's trip-builder form submission.
 
@@ -2489,7 +2832,10 @@ TRIP SUMMARY:
 - trip_summary: 2–3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. No adjective spam.
 - packing_suggestions: 5–8 items, weather-specific and activity-specific. Not "comfortable shoes" — "closed-toe walking shoes for the cobblestones on Rua das Flores".
 
-OUTPUT: you MUST call the emit_trip tool with the full structured response. Do not include any text outside the tool call.`;
+OUTPUT: you MUST call the emit_trip tool with the full structured response. Do not include any text outside the tool call.
+
+OUTPUT ORDERING (STREAMING-AWARE):
+- Emit the "days" field FIRST in the tool input, before "trip_title", "trip_summary", "packing_suggestions", and "accommodation". The frontend streams day cards into the UI as soon as each day's JSON closes — every property emitted before "days" delays the user's first visible card. The order MUST be: days, then accommodation, then trip_title, trip_summary, packing_suggestions.`;
 
 // ---------------------------------------------------------------------------
 // Tool schema — forces the model into a structured emit_trip call.
@@ -3663,14 +4009,26 @@ Deno.serve(async (req) => {
 
     tStage("auth_validate_quotas", pipelineStartedAt);
 
-    // ---- Step 1: parse intent ----
+    // ---- Step 1: parse intent (in parallel with geocode on non-surprise mode) ----
     // In surprise mode we pass an empty destination hint — the surprise picker
     // runs next with the parsed vibes/must_haves/must_avoids and fills in
     // intent.destination. This ordering means the picker sees the same
     // extracted must_avoids the ranker will later enforce.
+    //
+    // Perf: when the user typed a destination, geocoding rawDest is independent
+    // of intent extraction. Kick geocode off in parallel and await later.
+    // Trades a fraction of a Places API call on cache hits (~$0.005) for ~1.5s
+    // off cold-cache TTFB. Geocode is itself cached for 30 days, so a hot
+    // destination pays nothing.
+    const tParseIntent = Date.now();
+    const earlyGeocodePromise: Promise<GeocodeResult> | null = !surpriseMe && rawDest
+      ? geocodeDestination(googleKey, rawDest, svcClient, user.id).catch((e) => {
+          // Surface the rejection later when we await — not now.
+          throw e;
+        })
+      : null;
     loggedStep = "parseIntent";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
-    const tParseIntent = Date.now();
     const intent = await parseIntent(
       anthropicKey,
       body,
@@ -3736,10 +4094,16 @@ Deno.serve(async (req) => {
     //               gets the country_code rather than parsing the string) ----
     // Throws PipelineError on API failure or no-match; top-level catch
     // converts it into a structured { error, step, message } 500 response.
+    //
+    // Non-surprise mode: we kicked off geocoding rawDest in parallel with
+    // parseIntent — await that promise here. Surprise mode: we don't know the
+    // destination until pickSurpriseDestination runs, so we geocode now.
     loggedStep = "geocodeDestination";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const tGeocode = Date.now();
-    const geo = await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
+    const geo: GeocodeResult = earlyGeocodePromise
+      ? await earlyGeocodePromise
+      : await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
     tStage("geocode", tGeocode);
 
     // ---- Step 2b: pacing skeleton (slot count capped inside buildSkeleton) ----
@@ -3833,6 +4197,24 @@ Deno.serve(async (req) => {
     const allPlacesById = new Map<string, BatchPlaceResult>();
     for (const p of places) allPlacesById.set(p.id, p);
 
+    // ---- Resolve destination cover image — kick off in parallel with rank ----
+    // The image fetch (Place Photos + Wikimedia fallback) is best-effort and
+    // contributes ~1-2s when not cached. Running it concurrently with the
+    // 30-50s rankAndEnrich call hides its latency entirely.
+    const tImage = Date.now();
+    const destinationImageUrlPromise: Promise<string | null> = resolveDestinationImageUrl(
+      geo.place_id ?? null,
+      intent.destination,
+      googleKey,
+      svcClient,
+    ).catch((e) => {
+      console.warn(
+        "[generate-trip-itinerary] resolveDestinationImageUrl threw:",
+        (e as Error).message,
+      );
+      return null;
+    });
+
     // ---- Step 6: rank + enrich ----
     loggedStep = "rankAndEnrich";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
@@ -3877,27 +4259,11 @@ Deno.serve(async (req) => {
     const validated = validateActivities(ranked, allPlacesById, { lat: geo.lat, lng: geo.lng });
     tStage("validate", tValidate);
 
-    // ---- Resolve destination cover image (best-effort, never throws) ----
-    // Sourced from Google Place Photos with Wikimedia Commons fallback. The
-    // result is merged into the cached payload so subsequent cache hits for
-    // the same intent return the same photo URL. Failure -> null, and the
-    // frontend falls back to its legacy keyword table.
-    const tImage = Date.now();
-    let destinationImageUrl: string | null = null;
-    try {
-      destinationImageUrl = await resolveDestinationImageUrl(
-        geo.place_id ?? null,
-        intent.destination,
-        googleKey,
-        svcClient,
-      );
-    } catch (e) {
-      console.warn(
-        "[generate-trip-itinerary] resolveDestinationImageUrl threw:",
-        (e as Error).message,
-      );
-      destinationImageUrl = null;
-    }
+    // ---- Resolve destination cover image (kicked off in parallel with rank) ----
+    // The promise was started before rankAndEnrich; awaited here. Failures are
+    // swallowed inside the promise and resolve to null — the frontend falls
+    // back to its legacy keyword table.
+    const destinationImageUrl: string | null = await destinationImageUrlPromise;
     tStage("resolve_destination_image", tImage);
 
     const responsePayload: Record<string, unknown> = {
