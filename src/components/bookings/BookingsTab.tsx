@@ -124,11 +124,18 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     );
   };
 
-  const openManualForm = () => {
-    setManualTitle("");
-    setManualType("other");
-    setManualNotes("");
+  const openManualForm = (prefill?: { title?: string; type?: string; notes?: string }) => {
+    setManualTitle(prefill?.title ?? "");
+    setManualType(prefill?.type ?? "other");
+    setManualNotes(prefill?.notes ?? "");
     setShowManualForm(true);
+  };
+
+  // Quick action used by AI-suggested entry requirement rows: opens the manual form
+  // pre-filled with the document name and type=visa, so the user can attach a file
+  // through the existing flow.
+  const openManualFormForRequirement = (requirementName: string) => {
+    openManualForm({ title: requirementName, type: "visa" });
   };
 
   const BOOKING_TYPES = [
