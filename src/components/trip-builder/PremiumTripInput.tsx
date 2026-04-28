@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import type { DateRange } from "react-day-picker";
-import { MapPin, Sparkles, ChevronDown, AlertCircle, ArrowRight } from "lucide-react";
+import { MapPin, Sparkles, ChevronDown, AlertCircle, ArrowRight, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
