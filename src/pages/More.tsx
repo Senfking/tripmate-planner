@@ -378,6 +378,10 @@ const More = () => {
 
   const [showCurrency, setShowCurrency] = useState(false);
 
+  const [showNationalities, setShowNationalities] = useState(false);
+  const [nationalitiesValue, setNationalitiesValue] = useState<string[]>([]);
+  const [savingNationalities, setSavingNationalities] = useState(false);
+
   const [showEmailDrawer, setShowEmailDrawer] = useState(false);
   const [newEmail, setNewEmail] = useState("");
 
