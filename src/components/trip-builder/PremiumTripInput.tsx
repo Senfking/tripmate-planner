@@ -129,11 +129,12 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
       travelParty,
       kidsAges: kidsAges.trim(),
       budgetLevel,
+      pace,
       vibes,
       dealBreakers: dealBreakers.trim(),
       freeText: freeText.trim(),
     });
-  }, [destination, dateRange, travelParty, kidsAges, budgetLevel, vibes, dealBreakers, freeText, canGenerate, destMissing, onGenerate]);
+  }, [destination, dateRange, travelParty, kidsAges, budgetLevel, pace, vibes, dealBreakers, freeText, canGenerate, destMissing, onGenerate]);
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 pb-32">
