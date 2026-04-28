@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import type { DateRange } from "react-day-picker";
-import { MapPin, Sparkles, ChevronDown, AlertCircle, ArrowRight } from "lucide-react";
+import { MapPin, Sparkles, ChevronDown, AlertCircle, ArrowRight, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -48,10 +48,10 @@ const BUDGET_OPTIONS: { key: BudgetLevel; label: string; symbol: string }[] = [
   { key: "luxury" as BudgetLevel, label: "Luxury", symbol: "$$$$" },
 ];
 
-const PACE_OPTIONS: { key: PaceLevel; label: string; tag: string; intensity: 1 | 2 | 3 }[] = [
-  { key: "relaxed", label: "Light", tag: "leave room to wander", intensity: 1 },
-  { key: "balanced", label: "Balanced", tag: "a few highlights per day", intensity: 2 },
-  { key: "packed", label: "Active", tag: "every slot filled", intensity: 3 },
+const PACE_OPTIONS: { key: PaceLevel; label: string; tag: string; desc: string; intensity: 1 | 2 | 3 }[] = [
+  { key: "relaxed", label: "Light", tag: "leave room to wander", desc: "Just food anchors — lunch & dinner, the rest of the day is open.", intensity: 1 },
+  { key: "balanced", label: "Balanced", tag: "a few highlights per day", desc: "2–3 activities plus meals, with breathing room between stops.", intensity: 2 },
+  { key: "packed", label: "Active", tag: "every slot filled", desc: "4–5 activities per day, morning to night — see as much as possible.", intensity: 3 },
 ];
 
 const VIBE_OPTIONS = [
@@ -83,6 +83,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   const [moreOpen, setMoreOpen] = useState(false);
   const [freeTextOpen, setFreeTextOpen] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  const [paceInfoOpen, setPaceInfoOpen] = useState(false);
 
   const destRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
@@ -277,9 +278,48 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
         {/* Pace */}
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
-            <label className="text-[13px] font-semibold text-foreground">How packed?</label>
-            <span className="text-xs text-muted-foreground">Daily intensity</span>
+            <div className="flex items-center gap-1.5">
+              <label className="text-[13px] font-semibold text-foreground">Daily pace</label>
+              <button
+                type="button"
+                onClick={() => setPaceInfoOpen((v) => !v)}
+                aria-label="What does each pace mean?"
+                aria-expanded={paceInfoOpen}
+                className="inline-flex items-center justify-center h-5 w-5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors active:scale-95"
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground">How busy each day feels</span>
           </div>
+          {paceInfoOpen && (
+            <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-2 animate-fade-in">
+              {PACE_OPTIONS.map((opt) => (
+                <div key={opt.key} className="flex items-start gap-2.5">
+                  <span className="flex items-end gap-0.5 mt-1.5 shrink-0" aria-hidden="true">
+                    {[1, 2, 3].map((i) => {
+                      const active = i <= opt.intensity;
+                      const heights = ["h-1.5", "h-2.5", "h-3.5"];
+                      return (
+                        <span
+                          key={i}
+                          className={cn(
+                            "w-1 rounded-full",
+                            heights[i - 1],
+                            active ? "bg-primary" : "bg-muted-foreground/30"
+                          )}
+                        />
+                      );
+                    })}
+                  </span>
+                  <p className="text-xs text-foreground leading-snug">
+                    <span className="font-semibold">{opt.label}</span>
+                    <span className="text-muted-foreground"> — {opt.desc}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             {PACE_OPTIONS.map((opt) => {
               const selected = pace === opt.key;
