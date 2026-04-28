@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Search, Star, X } from "lucide-react";
-import { CircleFlag } from "react-circle-flags";
+import { CountryFlag } from "@/components/ui/CountryFlag";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
