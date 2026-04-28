@@ -28,6 +28,7 @@ import { DashboardSkeleton } from "./DashboardSkeleton";
 import { calcNetBalances } from "@/lib/settlementCalc";
 import { fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { SharedItemsSection } from "./SharedItemsSection";
+import { TravellersSection } from "./TravellersSection";
 import { resolvePhoto } from "@/lib/tripPhoto";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
@@ -193,7 +194,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
   // ─── Sortable section ordering (hooks must be before early returns) ───
   const STORAGE_KEY = `dashboard-order-${tripId}`;
-  const DEFAULT_ORDER = ["ai-hero", "expenses", "flights", "decisions", "bookings", "itinerary", "packing"];
+  const DEFAULT_ORDER = ["ai-hero", "expenses", "flights", "travellers", "decisions", "bookings", "itinerary", "packing"];
 
   const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
     try {
@@ -870,6 +871,9 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
       case "packing":
         return <SharedItemsSection tripId={tripId} />;
+
+      case "travellers":
+        return <TravellersSection tripId={tripId} myRole={myRole} />;
 
       default:
         return null;
