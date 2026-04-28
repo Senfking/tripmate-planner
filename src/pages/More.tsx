@@ -845,6 +845,50 @@ const More = () => {
             </>
           )}
 
+          {/* Nationalities */}
+          {showNationalities ? (
+            <div className="px-4 py-3 space-y-2">
+              <p className="text-xs text-muted-foreground">Nationalities</p>
+              <NationalitiesPicker
+                value={nationalitiesValue}
+                onChange={setNationalitiesValue}
+                disabled={savingNationalities}
+              />
+              <p className="text-xs text-muted-foreground">
+                Used for personalized travel and visa info. Not shared with other users.
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" onClick={handleSaveNationalities} disabled={savingNationalities}>
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowNationalities(false);
+                    setNationalitiesValue(profile?.nationalities ?? []);
+                  }}
+                  disabled={savingNationalities}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <SettingRow
+              icon={Globe}
+              label={
+                profile?.nationalities && profile.nationalities.length > 0
+                  ? `Nationalities: ${profile.nationalities.map((c) => countryName(c)).join(", ")}`
+                  : "Add nationalities (optional)"
+              }
+              onClick={() => {
+                setNationalitiesValue(profile?.nationalities ?? []);
+                setShowNationalities(true);
+              }}
+            />
+          )}
+
           <SettingRow icon={Hash} label="Join a trip" onClick={() => navigate("/join")} />
         </CardContent>
       </Card>
