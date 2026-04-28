@@ -718,6 +718,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                 <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
                   Visa & Entry
                 </span>
+                <span className="text-[11px] text-muted-foreground/60">{aiDocCount + ackCount}</span>
               </div>
               {renderVisaGroupBody([])}
             </div>
