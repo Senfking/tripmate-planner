@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Search, Star, X } from "lucide-react";
-import { CircleFlag } from "react-circle-flags";
+import { CountryFlag } from "@/components/ui/CountryFlag";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,12 +106,7 @@ export function PassportEditModal({
                 key={code}
                 className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-2.5 py-2"
               >
-                <CircleFlag
-                  countryCode={code.toLowerCase()}
-                  height="24"
-                  width="24"
-                  className="h-6 w-6 shrink-0 rounded-full"
-                />
+                <CountryFlag code={code} size={24} className="shrink-0" />
                 <span className="font-mono text-[11px] font-semibold text-foreground w-7">
                   {code}
                 </span>
@@ -173,12 +168,7 @@ export function PassportEditModal({
                     selected ? "bg-[#0D9488]/[0.06]" : "hover:bg-muted/60",
                   )}
                 >
-                  <CircleFlag
-                    countryCode={c.code.toLowerCase()}
-                    height="20"
-                    width="20"
-                    className="h-5 w-5 shrink-0 rounded-full"
-                  />
+                  <CountryFlag code={c.code} size={20} className="shrink-0" />
                   <span className="text-sm text-foreground flex-1 truncate">{c.name}</span>
                   <span className="font-mono text-[10.5px] text-muted-foreground">{c.code}</span>
                   <Check

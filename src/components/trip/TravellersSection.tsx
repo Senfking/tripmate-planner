@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, User, Pencil, ShieldCheck } from "lucide-react";
-import { CircleFlag } from "react-circle-flags";
+import { CountryFlag } from "@/components/ui/CountryFlag";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -127,12 +127,7 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
                               : "inline-flex items-center gap-1 rounded-full bg-muted pl-0.5 pr-1.5 py-0.5"
                           }
                         >
-                          <CircleFlag
-                            countryCode={code.toLowerCase()}
-                            height="20"
-                            width="20"
-                            className="h-5 w-5 rounded-full"
-                          />
+                          <CountryFlag code={code} size={20} />
                           <span
                             className={
                               r.is_primary
