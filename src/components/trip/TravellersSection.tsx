@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, User, Pencil } from "lucide-react";
+import { Plus, User, Pencil, ShieldCheck } from "lucide-react";
+import { CircleFlag } from "react-circle-flags";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useTripTravellerPassports, type TravellerPassport } from "@/hooks/useTripTravellerPassports";
+import { countryName } from "@/lib/countries";
 import { PassportEditModal } from "./PassportEditModal";
 
 interface TravellersSectionProps {
@@ -43,6 +45,20 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
     enabled: !!tripId,
   });
 
+  const { data: trip } = useQuery({
+    queryKey: ["trip-destination-iso", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trips")
+        .select("destination_country_iso")
+        .eq("id", tripId)
+        .single();
+      if (error) throw error;
+      return data as { destination_country_iso: string | null };
+    },
+    enabled: !!tripId,
+  });
+
   const { data: passports } = useTripTravellerPassports(tripId);
 
   const passportsByUser = useMemo(() => {
@@ -64,26 +80,29 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
     [passportsByUser],
   );
 
+  const myHasPassport = userId ? (passportsByUser.get(userId)?.length ?? 0) > 0 : false;
+  const showVisaHint = myHasPassport && !!trip?.destination_country_iso;
+
   return (
     <div id="travellers-section" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-[15px] text-foreground">Travellers</h3>
+      <div className="flex items-baseline justify-between mb-1">
+        <h3 className="font-semibold text-[15px] text-foreground">Who's traveling</h3>
         {totalWithPassports === 0 && (
           <span className="text-[11px] text-muted-foreground">Optional</span>
         )}
       </div>
-
-      {totalWithPassports === 0 && (
-        <p className="text-[12px] text-muted-foreground mb-3 leading-relaxed">
-          Add passport info to get personalized visa and entry guidance
-        </p>
-      )}
+      <p className="text-[12px] text-muted-foreground mb-3 leading-relaxed">
+        {totalWithPassports === 0
+          ? "Add your nationality to get personalized visa and entry guidance"
+          : "Add nationalities to see personalized entry requirements"}
+      </p>
 
       <div className="space-y-2">
         {(members ?? []).map((m) => {
           const rows = passportsByUser.get(m.userId) ?? [];
           const canEdit = m.userId === userId || isAdminOrOwner;
           const sorted = [...rows].sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
+          const hasNats = sorted.length > 0;
           return (
             <div
               key={m.userId}
@@ -94,50 +113,87 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{m.displayName}</p>
-                {sorted.length > 0 ? (
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {sorted.map((r) => (
-                      <span
-                        key={r.id}
-                        className={
-                          r.is_primary
-                            ? "font-mono text-[10px] font-semibold tracking-wide rounded px-1.5 py-0.5 bg-[#0D9488] text-white"
-                            : "font-mono text-[10px] font-semibold tracking-wide rounded px-1.5 py-0.5 bg-muted text-muted-foreground"
-                        }
-                      >
-                        {r.nationality_iso.toUpperCase()}
-                      </span>
-                    ))}
+                {hasNats ? (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    {sorted.map((r) => {
+                      const code = r.nationality_iso.toUpperCase();
+                      return (
+                        <span
+                          key={r.id}
+                          title={`${countryName(code)}${r.is_primary ? " (Primary)" : ""}`}
+                          className={
+                            r.is_primary
+                              ? "inline-flex items-center gap-1 rounded-full bg-[#0D9488]/10 ring-1 ring-[#0D9488]/30 pl-0.5 pr-1.5 py-0.5"
+                              : "inline-flex items-center gap-1 rounded-full bg-muted pl-0.5 pr-1.5 py-0.5"
+                          }
+                        >
+                          <CircleFlag
+                            countryCode={code.toLowerCase()}
+                            height="20"
+                            width="20"
+                            className="h-5 w-5 rounded-full"
+                          />
+                          <span
+                            className={
+                              r.is_primary
+                                ? "font-mono text-[10px] font-semibold tracking-wide text-[#0D9488]"
+                                : "font-mono text-[10px] font-semibold tracking-wide text-muted-foreground"
+                            }
+                          >
+                            {code}
+                          </span>
+                        </span>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground mt-0.5">No passport added</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">No nationality added</p>
                 )}
               </div>
               {canEdit ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditingUserId(m.userId)}
-                  className="h-8 px-2 text-[#0D9488] hover:bg-[#0D9488]/10 hover:text-[#0D9488]"
-                >
-                  {sorted.length === 0 ? (
-                    <>
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      <span className="text-xs">Add passport</span>
-                    </>
-                  ) : (
-                    <>
-                      <Pencil className="h-3.5 w-3.5 mr-1" />
-                      <span className="text-xs">Edit</span>
-                    </>
-                  )}
-                </Button>
+                hasNats ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditingUserId(m.userId)}
+                    className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Edit nationalities"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingUserId(m.userId)}
+                    className="h-8 px-2 text-[#0D9488] hover:bg-[#0D9488]/10 hover:text-[#0D9488]"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Add nationality</span>
+                  </Button>
+                )
               ) : null}
             </div>
           );
         })}
       </div>
+
+      {showVisaHint && (
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById("visa-entry-section");
+            el?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          className="mt-3 w-full flex items-center gap-2 rounded-xl bg-[#0D9488]/[0.06] hover:bg-[#0D9488]/[0.1] transition-colors px-3 py-2 text-left"
+        >
+          <ShieldCheck className="h-3.5 w-3.5 text-[#0D9488] shrink-0" />
+          <span className="text-[12px] font-medium text-[#0D9488] flex-1">
+            Visa requirements available
+          </span>
+          <span className="text-[11px] text-[#0D9488]/80">View →</span>
+        </button>
+      )}
 
       {editingMember && editingUserId && (
         <PassportEditModal

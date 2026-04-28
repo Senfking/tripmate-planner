@@ -79,11 +79,27 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
 
   const destName = countryName(trip?.destination_country_iso);
 
-  // Empty state: no passport
-  if (!hasPassport && hasDestIso) {
+  // Empty state: no destination country ISO — make it visible (was silent before)
+  if (!hasDestIso) {
+    return (
+      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-900 leading-snug dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-200">
+        <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">Set destination country to see entry requirements</p>
+          <p className="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
+            We need the destination country to look up visa and document rules. Edit the trip
+            destination from the trip overview to enable this.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state: destination set but user has no nationality
+  if (!hasPassport) {
     return (
       <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
-        Add passport info to see personalized entry requirements.{" "}
+        Add your nationality to see personalized entry requirements.{" "}
         <button
           type="button"
           onClick={() => {
@@ -92,14 +108,11 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
           }}
           className="font-medium text-[#0D9488] hover:underline"
         >
-          Go to Travellers →
+          Go to Who's traveling →
         </button>
       </div>
     );
   }
-
-  // No destination set — silent
-  if (!hasDestIso) return null;
 
   // Loading
   if (isLoading) {
