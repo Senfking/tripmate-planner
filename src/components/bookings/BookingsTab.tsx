@@ -642,8 +642,9 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
         <div className="space-y-1">
           {groupedSections.map((section, idx) => {
             const isCollapsed = collapsedSections.has(section.type);
+            const isVisa = section.type === "visa";
             return (
-              <div key={section.type}>
+              <div key={section.type} id={isVisa ? "visa-entry-section" : undefined}>
                 {idx > 0 && <div className="h-px bg-border my-3" />}
                 <button
                   type="button"
@@ -669,22 +670,49 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
                   isCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]"
                 )}>
                   <div className="overflow-hidden">
-                    <div className="space-y-2 mt-1">
-                      {section.items.map(renderCard)}
-                    </div>
+                    {isVisa ? (
+                      renderVisaGroupBody(section.items)
+                    ) : (
+                      <div className="space-y-2 mt-1">
+                        {section.items.map(renderCard)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
+
+          {/* Synthetic visa group when there are no visa attachments yet but
+              we still want to surface AI-suggested entry requirements. */}
+          {showSyntheticVisaGroup && (
+            <div id="visa-entry-section">
+              {groupedSections.length > 0 && <div className="h-px bg-border my-3" />}
+              <div className="flex items-center gap-2 py-1.5 px-0.5">
+                <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Visa & Entry
+                </span>
+              </div>
+              {renderVisaGroupBody([])}
+            </div>
+          )}
         </div>
       )}
 
       {/* Flat list */}
       {!isGroupedView && (
         <div className="space-y-2">
+          {filter === "visa" && (
+            <div id="visa-entry-section">
+              <EntryRequirementsBlock
+                tripId={tripId}
+                onUploadForRequirement={openManualFormForRequirement}
+              />
+            </div>
+          )}
           {filtered.map(renderCard)}
-          {filtered.length === 0 && attachments.length > 0 && (
+          {filtered.length === 0 && attachments.length > 0 && filter !== "visa" && (
             <p className="text-center text-sm text-muted-foreground py-8">
               No results matching your filter
             </p>
