@@ -14,6 +14,24 @@ interface State {
   componentStack: string | null;
 }
 
+// Errors thrown by Vite's lazy() when a chunk hash on the CDN no longer
+// matches the one referenced by the live tab — typically because Lovable
+// redeployed. The app code on the user's tab is stale; the only safe
+// recovery is a hard reload to pick up the new chunk manifest.
+const STALE_CHUNK_RE =
+  /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk \d+ failed/i;
+
+function isStaleChunkError(err: unknown): boolean {
+  if (!err) return false;
+  const message =
+    err instanceof Error
+      ? err.message
+      : typeof err === "string"
+        ? err
+        : "";
+  return STALE_CHUNK_RE.test(message);
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -25,6 +43,21 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    this.setState({ componentStack: info.componentStack ?? null });
+
+    // Stale chunk after a redeploy: don't capture as a React crash — it's a
+    // routine "user has an old tab" event. Track it so we know how often it
+    // happens, but skip Sentry and the dev console noise.
+    if (isStaleChunkError(error)) {
+      trackEvent("app_error", {
+        type: "stale_chunk",
+        message: error.message,
+        route: window.location.pathname,
+        severity: "low",
+      }, this.props.userId || undefined);
+      return;
+    }
+
     // Print every relevant field as its own console.error call so browsers
     // that collapse multi-arg console output (and Sentry/source-map tooling)
     // still surface the message, stack, and component stack in full.
@@ -34,8 +67,6 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error("[ErrorBoundary] stack:\n" + (error.stack ?? "(no stack)"));
     console.error("[ErrorBoundary] componentStack:" + (info.componentStack ?? "(none)"));
     console.error("[ErrorBoundary] route:", window.location.pathname);
-
-    this.setState({ componentStack: info.componentStack ?? null });
 
     captureReactError(error, info.componentStack, this.props.userId);
 
@@ -71,6 +102,27 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       const { error, componentStack } = this.state;
+
+      // Stale-chunk path: the user's tab is running pre-redeploy code that
+      // can't reach the new chunk hashes. Offer an opt-in reload — never
+      // auto-reload, since the user might have unsaved input.
+      if (isStaleChunkError(error)) {
+        return (
+          <div className="flex min-h-screen w-screen flex-col items-center justify-center gap-4 p-6 text-center">
+            <h1 className="text-xl font-semibold">App was updated</h1>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Reload to get the latest version.
+            </p>
+            <button
+              onClick={this.handleHardReload}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Reload
+            </button>
+          </div>
+        );
+      }
+
       return (
         <div className="flex min-h-screen w-screen flex-col items-center justify-center gap-4 p-6 text-center">
           <h1 className="text-xl font-semibold">Something went wrong</h1>
