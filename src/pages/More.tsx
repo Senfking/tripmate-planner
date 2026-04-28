@@ -787,6 +787,82 @@ const More = () => {
         </CardContent>
       </Card>
 
+      {/* ── SECTION 1.5: Invite friends (HERO) ── */}
+      {profile?.referral_code && (
+        <Card className="overflow-hidden border-0 shadow-lg">
+          <div className="relative bg-gradient-to-br from-primary via-primary to-[hsl(var(--primary)/0.85)] p-5 text-primary-foreground">
+            {/* Decorative blobs */}
+            <div className="pointer-events-none absolute -top-12 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-16 -left-10 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+
+            <div className="relative space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider backdrop-blur-sm">
+                    <Gift className="h-3 w-3" />
+                    Early access perk
+                  </div>
+                  <h2 className="mt-2.5 text-[22px] font-bold leading-tight">
+                    Invite friends.<br />Earn free Pro.
+                  </h2>
+                  <p className="mt-1.5 text-sm text-primary-foreground/85 leading-snug">
+                    Help us grow Junto — every friend who joins unlocks Pro features for you when we launch.
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center gap-3 rounded-2xl bg-white/15 backdrop-blur-sm px-4 py-3">
+                <div className="flex-1 text-center">
+                  <p className="text-2xl font-bold leading-none">{referralCount}</p>
+                  <p className="text-[11px] text-primary-foreground/80 mt-1">friends joined</p>
+                </div>
+                <div className="h-8 w-px bg-white/30" />
+                <div className="flex-1 text-center">
+                  <p className="text-2xl font-bold leading-none">{referralCount}</p>
+                  <p className="text-[11px] text-primary-foreground/80 mt-1">rewards earned</p>
+                </div>
+              </div>
+
+              {/* Code */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 rounded-xl bg-white/95 px-3 py-2.5 text-center font-mono text-base font-semibold tracking-[0.2em] text-foreground">
+                  {profile.referral_code}
+                </div>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  onClick={handleCopyReferral}
+                  className="shrink-0 h-11 w-11 bg-white/95 hover:bg-white text-foreground"
+                  aria-label="Copy referral code"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white shadow-md font-semibold h-11"
+                  onClick={handleShareWhatsApp}
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  Share on WhatsApp
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="gap-2 bg-white/95 hover:bg-white text-foreground h-11 px-4"
+                  onClick={handleCopyReferralLink}
+                  aria-label="Copy invite link"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* ── SECTION 2: Account Settings ── */}
       <Card>
         <CardContent className="p-0 divide-y divide-border">
