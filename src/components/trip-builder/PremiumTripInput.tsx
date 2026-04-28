@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import type { BudgetLevel } from "./useTripBuilderDefaults";
+import type { BudgetLevel, PaceLevel } from "./useTripBuilderDefaults";
 
 /* ─── Types ───────────────────────────────────────── */
 
@@ -19,6 +19,7 @@ export type PremiumInputData = {
   travelParty: TravelParty | null;
   kidsAges: string;
   budgetLevel: BudgetLevel | null;
+  pace: PaceLevel | null;
   vibes: string[];
   dealBreakers: string;
   freeText: string;
@@ -47,6 +48,12 @@ const BUDGET_OPTIONS: { key: BudgetLevel; label: string; symbol: string }[] = [
   { key: "luxury" as BudgetLevel, label: "Luxury", symbol: "$$$$" },
 ];
 
+const PACE_OPTIONS: { key: PaceLevel; label: string; tag: string; intensity: 1 | 2 | 3 }[] = [
+  { key: "relaxed", label: "Light", tag: "leave room to wander", intensity: 1 },
+  { key: "balanced", label: "Balanced", tag: "a few highlights per day", intensity: 2 },
+  { key: "packed", label: "Active", tag: "every slot filled", intensity: 3 },
+];
+
 const VIBE_OPTIONS = [
   { emoji: "🍜", label: "Food" },
   { emoji: "🏛️", label: "Culture" },
@@ -68,6 +75,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   const [travelParty, setTravelParty] = useState<TravelParty | null>(null);
   const [kidsAges, setKidsAges] = useState("");
   const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | null>(null);
+  const [pace, setPace] = useState<PaceLevel | null>(null);
   const [vibes, setVibes] = useState<string[]>([]);
   const [vibeWarning, setVibeWarning] = useState(false);
   const [dealBreakers, setDealBreakers] = useState("");
@@ -121,11 +129,12 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
       travelParty,
       kidsAges: kidsAges.trim(),
       budgetLevel,
+      pace,
       vibes,
       dealBreakers: dealBreakers.trim(),
       freeText: freeText.trim(),
     });
-  }, [destination, dateRange, travelParty, kidsAges, budgetLevel, vibes, dealBreakers, freeText, canGenerate, destMissing, onGenerate]);
+  }, [destination, dateRange, travelParty, kidsAges, budgetLevel, pace, vibes, dealBreakers, freeText, canGenerate, destMissing, onGenerate]);
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 pb-32">
@@ -263,6 +272,64 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
               );
             })}
           </div>
+        </div>
+
+        {/* Pace */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <label className="text-[13px] font-semibold text-foreground">How packed?</label>
+            <span className="text-xs text-muted-foreground">Daily intensity</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {PACE_OPTIONS.map((opt) => {
+              const selected = pace === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => setPace(selected ? null : opt.key)}
+                  aria-pressed={selected}
+                  className={cn(
+                    "flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.96]",
+                    "border",
+                    selected
+                      ? "text-primary-foreground border-transparent shadow-md"
+                      : "bg-card text-foreground border-border hover:border-primary/40"
+                  )}
+                  style={selected ? { background: "var(--gradient-primary)" } : undefined}
+                  title={opt.tag}
+                >
+                  <span className="flex items-end gap-0.5" aria-hidden="true">
+                    {[1, 2, 3].map((i) => {
+                      const active = i <= opt.intensity;
+                      const heights = ["h-1.5", "h-2.5", "h-3.5"];
+                      return (
+                        <span
+                          key={i}
+                          className={cn(
+                            "w-1 rounded-full",
+                            heights[i - 1],
+                            active
+                              ? selected
+                                ? "bg-primary-foreground"
+                                : "bg-primary"
+                              : selected
+                              ? "bg-primary-foreground/30"
+                              : "bg-muted-foreground/30"
+                          )}
+                        />
+                      );
+                    })}
+                  </span>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          {pace && (
+            <p className="text-xs text-muted-foreground pl-1 animate-fade-in">
+              {PACE_OPTIONS.find((o) => o.key === pace)?.tag}
+            </p>
+          )}
         </div>
 
         {/* Vibes */}
