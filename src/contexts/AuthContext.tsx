@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           route_confirmed: true,
           decisions_reminder: true,
         },
+        nationalities: ((data as any).nationalities as string[] | null) ?? [],
       });
     }
   }, []);
