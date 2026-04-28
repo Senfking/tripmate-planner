@@ -75,6 +75,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   const [travelParty, setTravelParty] = useState<TravelParty | null>(null);
   const [kidsAges, setKidsAges] = useState("");
   const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | null>(null);
+  const [pace, setPace] = useState<PaceLevel | null>(null);
   const [vibes, setVibes] = useState<string[]>([]);
   const [vibeWarning, setVibeWarning] = useState(false);
   const [dealBreakers, setDealBreakers] = useState("");
