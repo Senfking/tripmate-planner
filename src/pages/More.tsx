@@ -39,6 +39,7 @@ import {
   Hash,
   ArrowLeft,
   Bell,
+  Globe,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "@/hooks/use-toast";
