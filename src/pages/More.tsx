@@ -13,6 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CurrencyPicker } from "@/components/expenses/CurrencyPicker";
+import { NationalitiesPicker } from "@/components/profile/NationalitiesPicker";
+import { countryName } from "@/lib/countries";
 import {
   Drawer,
   DrawerContent,
