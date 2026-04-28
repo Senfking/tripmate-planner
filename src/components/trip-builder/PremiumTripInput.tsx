@@ -83,6 +83,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   const [moreOpen, setMoreOpen] = useState(false);
   const [freeTextOpen, setFreeTextOpen] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  const [paceInfoOpen, setPaceInfoOpen] = useState(false);
 
   const destRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
