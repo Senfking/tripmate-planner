@@ -42,39 +42,56 @@ export function useUpdatePassport() {
     mutationFn: async ({ tripId, userId, nationalityCodes, primaryCode, existing }: SavePassportArgs) => {
       const desired = new Set(nationalityCodes.map((c) => c.toUpperCase()));
       const existingByCode = new Map(existing.map((r) => [r.nationality_iso.toUpperCase(), r]));
+      const normalizedPrimary = primaryCode ? primaryCode.toUpperCase() : null;
 
-      // Delete rows not in desired set
+      // 1. Delete rows not in desired set.
       const toDelete = existing.filter((r) => !desired.has(r.nationality_iso.toUpperCase())).map((r) => r.id);
       if (toDelete.length > 0) {
         const { error } = await supabase.from("trip_traveller_passports").delete().in("id", toDelete);
         if (error) throw error;
       }
 
-      // Insert new rows
+      // 2. Clear the previous primary BEFORE inserting / setting the new one.
+      // The partial unique index idx_trip_traveller_passports_primary_account
+      // forbids two is_primary=true rows for the same (trip_id, user_id), so
+      // any insert or update that sets a new primary must be preceded by an
+      // unset of the previous primary row whenever the primary is changing.
+      const previousPrimaryRow = existing.find(
+        (r) => r.is_primary && r.nationality_iso.toUpperCase() !== normalizedPrimary,
+      );
+      if (previousPrimaryRow) {
+        const { error } = await supabase
+          .from("trip_traveller_passports")
+          .update({ is_primary: false })
+          .eq("id", previousPrimaryRow.id);
+        if (error) throw error;
+      }
+
+      // 3. Insert new rows with is_primary=false. The primary flag is applied
+      // as a separate step (4) so the partial unique index can't fire on insert.
       const toInsert = [...desired]
         .filter((code) => !existingByCode.has(code))
         .map((code) => ({
           trip_id: tripId,
           user_id: userId,
           nationality_iso: code,
-          is_primary: code === primaryCode,
+          is_primary: false,
         }));
       if (toInsert.length > 0) {
         const { error } = await supabase.from("trip_traveller_passports").insert(toInsert);
         if (error) throw error;
       }
 
-      // Update primary flags on existing rows that remain
-      const toUpdate = existing.filter((r) => desired.has(r.nationality_iso.toUpperCase()));
-      for (const row of toUpdate) {
-        const shouldBePrimary = row.nationality_iso.toUpperCase() === primaryCode;
-        if (row.is_primary !== shouldBePrimary) {
-          const { error } = await supabase
-            .from("trip_traveller_passports")
-            .update({ is_primary: shouldBePrimary })
-            .eq("id", row.id);
-          if (error) throw error;
-        }
+      // 4. Set the new primary, scoped by (trip_id, user_id, nationality_iso)
+      // so it works whether the row was just inserted or pre-existed.
+      if (normalizedPrimary && desired.has(normalizedPrimary)) {
+        const { error } = await supabase
+          .from("trip_traveller_passports")
+          .update({ is_primary: true })
+          .eq("trip_id", tripId)
+          .eq("user_id", userId)
+          .eq("nationality_iso", normalizedPrimary);
+        if (error) throw error;
       }
     },
     onSuccess: (_data, vars) => {
