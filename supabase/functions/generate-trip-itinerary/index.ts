@@ -305,14 +305,26 @@ const HAIKU_PRICING = {
 const PLACES_RANKING_COST_PER_CALL = 0.005;
 const PLACES_DETAILS_COST_PER_CALL = 0.017;
 const MAX_PLACES_QUERIES_PER_TRIP = 12; // was 20 — tighter budget; consolidated queries cover same ground
-// Slot budget scales with trip length so longer trips don't get gutted.
-// Ceiling raised from 28 → 36 (PR #197 → here): the AbortController already
-// caps each Anthropic call at the remaining 150s pipeline budget, so the
-// original Ibiza-timeout concern is structurally handled regardless of slot
-// count. 36 keeps 10–14-day trips feeling full instead of clipped.
-// 5-day balanced lands at 20; 7-day at 28; 9-day+ now lands at 36.
-const SLOTS_PER_DAY_BUDGET = 4;
-const MAX_SLOTS_CEILING = 36;
+// Slot budget scales with trip length AND with the user's chosen pace, so
+// longer/packed trips don't get gutted and shorter/leisurely trips don't get
+// padded with filler.
+//   leisurely → "light": lunch + dinner anchors only on full days
+//   balanced  → today's default shape (morning + lunch + afternoon + dinner)
+//   active    → "packed": morning + lunch + 2× afternoon + dinner (+ optional nightlife)
+// 5-day lands at: leisurely 12 / balanced 20 / active 27.
+// Ceilings hit at: leisurely 8d / balanced 9d / active 8d.
+// The AbortController already caps each Anthropic call at the remaining 150s
+// pipeline budget, so the active ceiling of 42 is structurally bounded.
+const SLOTS_PER_DAY_BUDGET: Record<Intent["pace"], number> = {
+  leisurely: 2.5,
+  balanced: 4,
+  active: 5.5,
+};
+const MAX_SLOTS_CEILING: Record<Intent["pace"], number> = {
+  leisurely: 18,
+  balanced: 36,
+  active: 42,
+};
 const MAX_FINALIST_HYDRATIONS = 20;     // safety cap on details pass; real trips pick 11–15
 
 // Rate limit + circuit breaker defaults. Override via env if needed.
@@ -1122,11 +1134,12 @@ function buildSkeleton(
       slots.push({ type: "rest", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
     } else if (intent.pace === "leisurely") {
-      // Leisurely: late breakfast, one morning sight, lunch, one afternoon sight, dinner.
-      slots.push({ type: "breakfast", start_time: hhmm(10, 0), duration_minutes: 60, region_tag_for_queries: primary });
-      slots.push({ type: "morning_major", start_time: hhmm(11, 30), duration_minutes: 120, region_tag_for_queries: primary });
+      // Leisurely / "light": food anchors only on full interior days. No
+      // morning_major, no afternoon_major, no breakfast — the user explicitly
+      // asked for minimal pre-planning. Arrival and departure days keep their
+      // bookend activity (handled in the isFirst/isLast branches above) so
+      // transit days don't collapse to lunch + dinner around a flight.
       slots.push({ type: "lunch", start_time: hhmm(lunchStart, 30), duration_minutes: 90, region_tag_for_queries: primary });
-      slots.push({ type: "afternoon_major", start_time: hhmm(15, 30), duration_minutes: 120, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
     } else if (intent.pace === "active") {
       // Active: early start, morning + two afternoon majors, optional nightlife.
@@ -1159,15 +1172,19 @@ function buildSkeleton(
     });
   }
 
-  return enforceSlotCap(days);
+  return enforceSlotCap(days, intent.pace);
 }
 
-// Per-day-aware slot budget. The flat 18 cap (PR #179) starved activities on
-// trips ≥5 days because the trim order didn't include meals — every cap hit
-// shed activities while keeping all breakfast/lunch/dinner slots. We now scale
-// the budget with trip length and trim meals first.
-function computeSlotBudget(numDays: number): number {
-  return Math.min(numDays * SLOTS_PER_DAY_BUDGET, MAX_SLOTS_CEILING);
+// Per-day-aware, per-pace slot budget. The flat 18 cap (PR #179) starved
+// activities on trips ≥5 days because the trim order didn't include meals —
+// every cap hit shed activities while keeping all breakfast/lunch/dinner
+// slots. The budget now scales with trip length AND with the user's pace
+// (leisurely: 2.5/d cap 18, balanced: 4/d cap 36, active: 5.5/d cap 42).
+function computeSlotBudget(numDays: number, pace: Intent["pace"]): number {
+  return Math.min(
+    Math.floor(numDays * SLOTS_PER_DAY_BUDGET[pace]),
+    MAX_SLOTS_CEILING[pace],
+  );
 }
 
 // Activity slot types — at least one must remain per non-rest day. Used by
@@ -1178,12 +1195,12 @@ const ACTIVITY_SLOT_TYPES: ReadonlySet<SlotType> = new Set([
   "nightlife",
 ]);
 
-// Cap total slots at computeSlotBudget(numDays). Trim meals (breakfast, lunch)
-// before activities — they're the redundant ones when over budget. Dinner is
-// the social anchor of last resort and is never trimmed. On non-rest days we
-// always keep at least one activity slot regardless of trim order.
-function enforceSlotCap(days: DaySkeleton[]): DaySkeleton[] {
-  const budget = computeSlotBudget(days.length);
+// Cap total slots at computeSlotBudget(numDays, pace). Trim meals (breakfast,
+// lunch) before activities — they're the redundant ones when over budget.
+// Dinner is the social anchor of last resort and is never trimmed. On non-rest
+// days we always keep at least one activity slot regardless of trim order.
+function enforceSlotCap(days: DaySkeleton[], pace: Intent["pace"]): DaySkeleton[] {
+  const budget = computeSlotBudget(days.length, pace);
   const totalSlots = () => days.reduce((n, d) => n + d.slots.length, 0);
   if (totalSlots() <= budget) return days;
 
@@ -2893,15 +2910,23 @@ async function rankAndEnrich(
     for (const v of venues) placeById.set(v.id, v);
   }
 
+  // Per-pace max_tokens. Activity copy averages ~250 tokens × slot count, plus
+  // ~1.5k trip-level fields. Active 42-slot trips push ~12k of output, so 16k
+  // is too tight — bump to 18k. Leisurely tops out at 18 slots (~6k output);
+  // 12k stays well clear of truncation while shaving headroom we don't need.
+  // Haiku output is cheap; truncation is expensive (a re-rank costs the whole
+  // pipeline budget). When in doubt, err generous.
+  const RANK_MAX_TOKENS: Record<Intent["pace"], number> = {
+    leisurely: 12_000,
+    balanced: 16_000,
+    active: 18_000,
+  };
   const result = await callClaudeHaiku<RawRankerOutput>(
     anthropicKey,
     [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
     RANKER_TOOL,
-    // 36-slot trips emit ~9k tokens of activity copy + ~1.5k of trip-level
-    // fields. 16k gives ~50% headroom against truncation when the model is
-    // verbose on long itineraries (Haiku output is cheap; truncation is not).
-    16_000,
+    RANK_MAX_TOKENS[intent.pace],
     pipelineStartedAt,
     "rankAndEnrich",
   );
