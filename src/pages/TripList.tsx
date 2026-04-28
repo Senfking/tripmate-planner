@@ -788,11 +788,16 @@ export default function TripList() {
     <div className="relative min-h-dvh flex flex-col bg-background">
       <TabHeroHeader title={greeting} subtitle={subtitle} pills={tripsPills} />
 
-      {/* Desktop compact greeting - replaces hero */}
-      <div className="hidden md:block pt-6 pb-4 px-8 max-w-[900px] mx-auto">
-        <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
-      </div>
+      {/* Desktop greeting + new-trip entry */}
+      <DesktopGreetingHeader
+        greeting={greeting}
+        subtitle={subtitle}
+        hasOnlyDrafts={liveTrips.length === 0 && upcomingTrips.length === 0 && noDateTrips.length === 0 && pastTrips.length === 0 && (drafts?.length ?? 0) > 0}
+        onJoin={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
+        onPlanWithAI={(dest) => { setBuilderInitDest(dest); setShowBuilder(true); }}
+        onPlanStepByStep={() => navigate("/app/trips/new")}
+      />
+
 
       {/* ── Happening now ── */}
       {liveTrips.length > 0 && (
