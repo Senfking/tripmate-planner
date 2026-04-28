@@ -500,6 +500,30 @@ export type Database = {
         }
         Relationships: []
       }
+      entry_requirements_cache: {
+        Row: {
+          cache_key: string
+          expires_at: string
+          generated_at: string
+          id: string
+          response_json: Json
+        }
+        Insert: {
+          cache_key: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          response_json: Json
+        }
+        Update: {
+          cache_key?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          response_json?: Json
+        }
+        Relationships: []
+      }
       exchange_rate_cache: {
         Row: {
           base_currency: string
@@ -907,6 +931,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      place_details_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          query_text: string
+          response: Json
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          query_text: string
+          response: Json
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          query_text?: string
+          response?: Json
+        }
+        Relationships: []
       }
       places_cache: {
         Row: {
@@ -1491,12 +1539,51 @@ export type Database = {
           },
         ]
       }
+      trip_traveller_passports: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          nationality_iso: string
+          traveller_name: string | null
+          trip_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          nationality_iso: string
+          traveller_name?: string | null
+          trip_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          nationality_iso?: string
+          traveller_name?: string | null
+          trip_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_traveller_passports_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           cover_focal_point: string | null
           cover_image_path: string | null
           created_at: string
           destination: string | null
+          destination_country_iso: string | null
           destination_image_url: string | null
           emoji: string | null
           enabled_modules: Json
@@ -1517,6 +1604,7 @@ export type Database = {
           cover_image_path?: string | null
           created_at?: string
           destination?: string | null
+          destination_country_iso?: string | null
           destination_image_url?: string | null
           emoji?: string | null
           enabled_modules?: Json
@@ -1537,6 +1625,7 @@ export type Database = {
           cover_image_path?: string | null
           created_at?: string
           destination?: string | null
+          destination_country_iso?: string | null
           destination_image_url?: string | null
           emoji?: string | null
           enabled_modules?: Json
@@ -1624,6 +1713,10 @@ export type Database = {
     }
     Functions: {
       check_error_spike: { Args: never; Returns: undefined }
+      cleanup_expired_entry_requirements_cache: {
+        Args: never
+        Returns: undefined
+      }
       cleanup_expired_places_cache: { Args: never; Returns: undefined }
       count_user_trip_generations_last_hour: {
         Args: { p_user_id: string }
