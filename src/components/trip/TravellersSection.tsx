@@ -182,7 +182,7 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
         <button
           type="button"
           onClick={() => {
-            const el = document.getElementById("bookings-visa-entry");
+            const el = document.getElementById("visa-entry-section");
             el?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
           className="mt-3 w-full flex items-center gap-2 rounded-xl bg-[#0D9488]/[0.06] hover:bg-[#0D9488]/[0.1] transition-colors px-3 py-2 text-left"
