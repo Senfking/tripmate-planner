@@ -974,66 +974,6 @@ const More = () => {
         </CardContent>
       </Card>
 
-      {/* ── SECTION 6: Invite friends ── */}
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <p className="text-sm font-medium text-foreground">Invite friends to Junto</p>
-          {profile?.referral_code && (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 rounded-lg bg-muted px-3 py-2 font-mono text-sm tracking-widest text-foreground">
-                  {profile.referral_code}
-                </div>
-                <Button size="icon" variant="outline" onClick={handleCopyReferral} className="shrink-0">
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="rounded-2xl border border-[#0D9488]/20 bg-white p-4 shadow-sm dark:bg-card">
-                <div className="flex items-center justify-center">
-                  <div className="flex-1 text-center py-1">
-                    <p className="text-[28px] font-bold leading-none text-[#0D9488]">{referralCount}</p>
-                    <p className="text-xs text-muted-foreground mt-1.5">friends invited</p>
-                  </div>
-                  <div className="h-10 w-px bg-border shrink-0" />
-                  <div className="flex-1 text-center py-1">
-                    {referralCount > 0 ? (
-                      <p className="text-[28px] font-bold leading-none text-[#0D9488]">{referralCount}</p>
-                    ) : (
-                      <p className="text-sm font-medium text-muted-foreground leading-none">Coming soon</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1.5">rewards earned</p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground text-center mt-3">
-                  Invite friends - earn free Pro when we launch.
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="flex-1 gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white"
-                  onClick={handleShareWhatsApp}
-                >
-                  <WhatsAppIcon className="h-4 w-4" />
-                  WhatsApp
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 gap-2"
-                  onClick={handleCopyReferralLink}
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy link
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
       {/* ── SECTION 7: Danger Zone ── */}
       <Collapsible>
         <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/5 transition-colors">
