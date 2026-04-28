@@ -116,7 +116,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     duration_days: null,
     budget_level: data.budgetLevel || "mid-range",
     vibes: data.vibes,
-    pace: "balanced",
+    pace: data.pace || "balanced",
     dietary: [],
     notes: data.dealBreakers || "",
     free_text: data.freeText || "",
