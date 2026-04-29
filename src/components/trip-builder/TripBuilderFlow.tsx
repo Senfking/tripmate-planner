@@ -6,8 +6,6 @@ import { ArrowLeft, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { parseEdgeError } from "@/lib/parseEdgeError";
 
 import { useTripBuilderDefaults, type BudgetLevel, type PaceLevel } from "./useTripBuilderDefaults";
 import { parseFreeText } from "./parseFreeText";
@@ -18,87 +16,16 @@ import { StepBudget } from "./StepBudget";
 import { StepVibes } from "./StepVibes";
 import { StepPace } from "./StepPace";
 import { StepExtras } from "./StepExtras";
-import { GeneratingScreen } from "./GeneratingScreen";
+import { StreamingGeneratingScreen } from "./StreamingGeneratingScreen";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
+import { useStreamingTripGeneration } from "@/hooks/useStreamingTripGeneration";
 
 type Props = {
   tripId: string;
   onClose: () => void;
   onSuccess?: (data: any, planId?: string) => void;
 };
-
-/**
- * Normalizes the raw Edge Function response into a valid AITripResult.
- *
- * The edge function returns `{ success: true, ...itinerary }` — the itinerary
- * fields are spread at the top level. The AI-generated JSON *should* match the
- * AITripResult schema, but since an LLM produces it, fields may be missing,
- * named differently, or have unexpected types. This function provides safe
- * defaults so TripResultsView never crashes on undefined property access.
- */
-function normalizeAIResponse(raw: Record<string, any>): AITripResult {
-  // Destinations: the core data — must be an array
-  const destinations = Array.isArray(raw.destinations) ? raw.destinations : [];
-
-  // Ensure every destination has the required nested structure
-  const safeDestinations = destinations.map((dest: any) => ({
-    name: dest?.name || "Unknown destination",
-    start_date: dest?.start_date || "",
-    end_date: dest?.end_date || dest?.start_date || "",
-    intro: dest?.intro || "",
-    days: Array.isArray(dest?.days)
-      ? dest.days.map((day: any) => ({
-          date: day?.date || "",
-          day_number: day?.day_number || 0,
-          theme: day?.theme || "",
-          activities: Array.isArray(day?.activities) ? day.activities : [],
-        }))
-      : [],
-    accommodation: dest?.accommodation || undefined,
-    transport_to_next: dest?.transport_to_next || undefined,
-    cost_profile: dest?.cost_profile || undefined,
-  }));
-
-  // map_center: the AI might omit it, use `center`, or use lat/longitude keys
-  let mapCenter = raw.map_center;
-  if (!mapCenter || typeof mapCenter.lat !== "number") {
-    // Fallback: try to derive from first activity with coordinates
-    for (const dest of safeDestinations) {
-      for (const day of dest.days) {
-        for (const act of day.activities) {
-          if (act.latitude != null && act.longitude != null) {
-            mapCenter = { lat: act.latitude, lng: act.longitude };
-            break;
-          }
-        }
-        if (mapCenter?.lat != null) break;
-      }
-      if (mapCenter?.lat != null) break;
-    }
-  }
-  // Final fallback
-  if (!mapCenter || typeof mapCenter.lat !== "number") {
-    mapCenter = { lat: 0, lng: 0 };
-  }
-
-  return {
-    trip_title: raw.trip_title || raw.title || "Your Trip",
-    trip_summary: raw.trip_summary || raw.summary || "",
-    destinations: safeDestinations,
-    map_center: mapCenter,
-    map_zoom: typeof raw.map_zoom === "number" ? raw.map_zoom : 6,
-    daily_budget_estimate: typeof raw.daily_budget_estimate === "number" ? raw.daily_budget_estimate : 0,
-    currency: raw.currency || "USD",
-    packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions : [],
-    total_activities: typeof raw.total_activities === "number" ? raw.total_activities : 0,
-    budget_tier: raw.budget_tier,
-    destination_image_url:
-      typeof raw.destination_image_url === "string" && raw.destination_image_url.length > 0
-        ? raw.destination_image_url
-        : null,
-  };
-}
 
 type Answers = {
   destination: string;
@@ -121,12 +48,12 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   const defaults = useTripBuilderDefaults(tripId);
   const [step, setStep] = useState(0);
   const [generating, setGenerating] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
   const [results, setResults] = useState<AITripResult | null>(null);
-  const [revealing, setRevealing] = useState(false);
   const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [prefilledSteps, setPrefilledSteps] = useState<Set<number>>(new Set());
+  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
+  const streaming = useStreamingTripGeneration();
 
   const [answers, setAnswers] = useState<Answers>({
     destination: "",
@@ -221,118 +148,95 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
   }, [defaults.budgetLevel]);
 
   const handleGenerate = useCallback(async () => {
+    const payload = {
+      trip_id: tripId,
+      destination: answers.surpriseMe ? null : answers.destination,
+      surprise_me: answers.surpriseMe,
+      start_date: answers.flexible ? null : (answers.dateRange?.from?.toISOString().split("T")[0] || null),
+      end_date: answers.flexible ? null : (answers.dateRange?.to?.toISOString().split("T")[0] || null),
+      flexible: answers.flexible,
+      duration_days: answers.flexible ? answers.flexibleDuration : null,
+      budget_level: answers.budgetLevel,
+      vibes: answers.vibes,
+      pace: answers.pace,
+      dietary: answers.dietary,
+      notes: answers.notes,
+      free_text: answers.freeText,
+      group_size: defaults.groupSize || 1,
+    };
+    setPendingPayload(payload);
     setGenerating(true);
-    setGenError(null);
+    streaming.reset();
+    await streaming.start(payload);
+  }, [tripId, answers, defaults.groupSize, streaming]);
 
+  // Fires when the streaming pipeline emits trip_complete and the hook has
+  // assembled the full AITripResult. Does the post-generation work that the
+  // old buffered handler did inline: persist the plan, stamp the cover
+  // image onto the trip row, navigate to the shareable URL, fire onSuccess.
+  const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
+    let planId: string | null = null;
     try {
-      const payload = {
-        trip_id: tripId,
-        destination: answers.surpriseMe ? null : answers.destination,
-        surprise_me: answers.surpriseMe,
-        start_date: answers.flexible ? null : (answers.dateRange?.from?.toISOString().split("T")[0] || null),
-        end_date: answers.flexible ? null : (answers.dateRange?.to?.toISOString().split("T")[0] || null),
-        flexible: answers.flexible,
-        duration_days: answers.flexible ? answers.flexibleDuration : null,
-        budget_level: answers.budgetLevel,
-        vibes: answers.vibes,
-        pace: answers.pace,
-        dietary: answers.dietary,
-        notes: answers.notes,
-        free_text: answers.freeText,
-        group_size: defaults.groupSize || 1,
-      };
-
-      const { data, error } = await supabase.functions.invoke("generate-trip-itinerary", {
-        body: payload,
-      });
-
-      if (error) throw error;
-      if (data?.error) {
-        // 200 OK with logical error in body — keep as a safety net even though
-        // PR #168 returns non-2xx for these cases.
-        const msg = typeof data.message === "string" && data.message.trim().length > 0
-          ? data.message
-          : data.error;
-        throw new Error(msg);
-      }
-      if (!data) throw new Error("No data returned from generate-trip-itinerary");
-
-      const normalized = normalizeAIResponse(data);
-
-      // Persist the generated plan so it can be revisited, shared, or
-      // referenced later. We do this client-side rather than in the Edge
-      // Function so the insert runs under the user's auth context and
-      // RLS naturally enforces trip membership.
-      let planId: string | null = null;
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        const userId = userData?.user?.id;
-        if (userId) {
-          const { data: inserted, error: insertError } = await (supabase
-            .from("ai_trip_plans" as any)
-            .insert({
-              trip_id: tripId,
-              created_by: userId,
-              prompt: payload,
-              result: normalized,
-            }) as any)
-            .select("id")
-            .single();
-
-          if (insertError) {
-            console.error("[TripBuilder] Failed to save AI plan:", insertError);
-          } else {
-            planId = inserted?.id ?? null;
-          }
-        }
-      } catch (saveErr) {
-        console.error("[TripBuilder] Unexpected error saving AI plan:", saveErr);
-      }
-
-      // Best-effort: stamp the auto-resolved cover image onto the existing
-      // trip row so list/dashboard views pick it up immediately. Only set it
-      // when the column is currently empty — don't clobber a previously
-      // resolved URL on regenerate.
-      if (tripId && normalized.destination_image_url) {
-        try {
-          const { data: existing } = await (supabase
-            .from("trips")
-            .select("destination_image_url")
-            .eq("id", tripId)
-            .maybeSingle() as any);
-          const current = (existing as { destination_image_url?: string | null } | null)
-            ?.destination_image_url ?? null;
-          if (!current) {
-            await supabase
-              .from("trips")
-              .update({ destination_image_url: normalized.destination_image_url } as any)
-              .eq("id", tripId);
-          }
-        } catch (coverErr) {
-          console.warn("[TripBuilder] Failed to persist destination_image_url:", coverErr);
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (userId && pendingPayload) {
+        const { data: inserted, error: insertError } = await (supabase
+          .from("ai_trip_plans" as any)
+          .insert({
+            trip_id: tripId,
+            created_by: userId,
+            prompt: pendingPayload,
+            result: normalized,
+          }) as any)
+          .select("id")
+          .single();
+        if (insertError) {
+          console.error("[TripBuilder] Failed to save AI plan:", insertError);
+        } else {
+          planId = inserted?.id ?? null;
         }
       }
-
-      setSavedPlanId(planId);
-      setRevealing(true);
-      setResults(normalized);
-
-      // Update URL to shareable plan link without full reload. Skip if tripId
-      // is missing — interpolating undefined would produce /app/trips/undefined/...
-      // which then cascades into UUID parse errors on the destination page.
-      if (planId && tripId) {
-        navigate(`/app/trips/${tripId}/ai-plan/${planId}`, { replace: true });
-      }
-
-      onSuccess?.(normalized, planId ?? undefined);
-    } catch (err: any) {
-      console.warn("[trip-builder error]", err);
-      const parsed = await parseEdgeError(err, "Failed to generate itinerary. Please try again.");
-      setGenError(parsed.message);
-    } finally {
-      setGenerating(false);
+    } catch (saveErr) {
+      console.error("[TripBuilder] Unexpected error saving AI plan:", saveErr);
     }
-  }, [tripId, answers, defaults.groupSize, onSuccess, onClose]);
+
+    // Best-effort: stamp the auto-resolved cover image onto the existing
+    // trip row so list/dashboard views pick it up immediately. Only set it
+    // when the column is currently empty — don't clobber a previously
+    // resolved URL on regenerate.
+    if (tripId && normalized.destination_image_url) {
+      try {
+        const { data: existing } = await (supabase
+          .from("trips")
+          .select("destination_image_url")
+          .eq("id", tripId)
+          .maybeSingle() as any);
+        const current = (existing as { destination_image_url?: string | null } | null)
+          ?.destination_image_url ?? null;
+        if (!current) {
+          await supabase
+            .from("trips")
+            .update({ destination_image_url: normalized.destination_image_url } as any)
+            .eq("id", tripId);
+        }
+      } catch (coverErr) {
+        console.warn("[TripBuilder] Failed to persist destination_image_url:", coverErr);
+      }
+    }
+
+    setSavedPlanId(planId);
+    setResults(normalized);
+    setGenerating(false);
+
+    // Update URL to shareable plan link without full reload. Skip if tripId
+    // is missing — interpolating undefined would produce /app/trips/undefined/...
+    // which then cascades into UUID parse errors on the destination page.
+    if (planId && tripId) {
+      navigate(`/app/trips/${tripId}/ai-plan/${planId}`, { replace: true });
+    }
+
+    onSuccess?.(normalized, planId ?? undefined);
+  }, [tripId, pendingPayload, navigate, onSuccess]);
 
   const toggleVibe = useCallback((v: string) => {
     setAnswers((prev) => ({
@@ -369,7 +273,6 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         onRegenerate={(prompt) => {
           setResults(null);
           setSavedPlanId(null);
-          setRevealing(false);
           if (prompt) setAnswers(prev => ({ ...prev, freeText: prompt, notes: prompt }));
           handleGenerate();
         }}
@@ -377,22 +280,20 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           // Go back to questionnaire with answers pre-filled (they're already in state)
           setResults(null);
           setSavedPlanId(null);
-          setRevealing(false);
           setStep(1); // Start at destination step
         }}
-        revealMode={revealing}
-        onRevealComplete={() => setRevealing(false)}
       />
     );
   }
 
-  if (generating || genError) {
+  if (generating) {
     return (
       <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <GeneratingScreen
+        <StreamingGeneratingScreen
           destination={answers.surpriseMe ? "" : answers.destination}
-          error={genError}
+          state={streaming.state}
           onRetry={handleGenerate}
+          onComplete={handleStreamComplete}
         />
       </div>
     );

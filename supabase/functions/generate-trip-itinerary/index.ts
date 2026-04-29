@@ -4194,6 +4194,10 @@ Deno.serve(async (req) => {
                 currency: payload?.currency ?? "USD",
                 budget_tier: payload?.budget_tier ?? intent.budget_tier,
                 destination_image_url: payload?.destination_image_url ?? null,
+                destination_country_iso:
+                  typeof payload?.destination_country_iso === "string"
+                    ? payload.destination_country_iso
+                    : null,
                 from_cache: true,
               });
               await logger.log({
@@ -4479,6 +4483,13 @@ Deno.serve(async (req) => {
             tStage("cache_write", tCacheWrite);
 
             // ---- Final event ----
+            // ISO-3166-1 alpha-2 destination country (PR #206) — same value
+            // the JSON path adds to its responsePayload, surfaced here so the
+            // streaming consumer persists trips.destination_country_iso just
+            // like the buffered consumer does.
+            const destinationCountryIso = geo.country_code
+              ? geo.country_code.toUpperCase()
+              : null;
             send("trip_complete", {
               trip_title: pipelineResult.trip_title,
               trip_summary: pipelineResult.trip_summary,
@@ -4492,6 +4503,7 @@ Deno.serve(async (req) => {
               currency,
               budget_tier: pipelineResult.budget_tier,
               destination_image_url: destinationImageUrl,
+              destination_country_iso: destinationCountryIso,
               from_cache: false,
             });
 
