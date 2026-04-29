@@ -83,6 +83,11 @@ export function friendlyErrorMessage(err: MaybeError, fallback: string): string 
   }
   if (!raw) return fallback;
 
+  // NoAffectedRowsError (silent RLS rejection) carries its own user-facing
+  // message — the call site's fallback is too generic ("Failed to delete
+  // trip" obscures that the action quietly did nothing).
+  if (getCode(err) === "PGRST_NO_AFFECTED_ROWS") return raw;
+
   if (isAuthOrRlsError(err)) {
     return "Your session expired. Please refresh the page and try again.";
   }

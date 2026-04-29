@@ -8,6 +8,7 @@ import { saveLineItems } from "@/hooks/useLineItemClaims";
 import { parseRates, fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { showErrorToast } from "@/lib/supabaseErrors";
 import { withAuthRetry } from "@/lib/safeQuery";
+import { expectAffectedRows } from "@/lib/safeMutate";
 import { isValidTripId } from "@/lib/tripId";
 
 // Belt-and-suspenders gate alongside `enabled: isValidTripId(tripId)`. JUNTO-3
@@ -288,11 +289,14 @@ export function useExpenses(tripId: string) {
     mutationFn: (currency: string) =>
       withAuthRetry(
         async () => {
-          const { error } = await supabase
-            .from("trips")
-            .update({ settlement_currency: currency } as any)
-            .eq("id", tripId);
-          if (error) throw error;
+          expectAffectedRows(
+            await supabase
+              .from("trips")
+              .update({ settlement_currency: currency } as any)
+              .eq("id", tripId)
+              .select("id"),
+            "Settlement currency could not be updated. Please refresh and try again.",
+          );
         },
         { name: "settlement_currency_update", context: { trip_id: tripId, currency }, userId: user?.id },
       ),
@@ -434,11 +438,14 @@ export function useExpenses(tripId: string) {
 
       await withAuthRetry(
         async () => {
-          const { error } = await supabase
-            .from("expenses")
-            .update({ ...expenseData, updated_at: new Date().toISOString() } as any)
-            .eq("id", id);
-          if (error) throw error;
+          expectAffectedRows(
+            await supabase
+              .from("expenses")
+              .update({ ...expenseData, updated_at: new Date().toISOString() } as any)
+              .eq("id", id)
+              .select("id"),
+            "Expense could not be updated. Please refresh and try again.",
+          );
         },
         { name: "expense_update", context: { trip_id: tripId, expense_id: id }, userId: user?.id },
       );
@@ -472,6 +479,9 @@ export function useExpenses(tripId: string) {
   // Delete expense — DELETE is idempotent.
   const deleteExpense = useMutation({
     mutationFn: async (id: string) => {
+      // The splits delete may legitimately affect zero rows (an expense can be
+      // saved without splits in some legacy paths). Only the expenses delete
+      // must affect a row — that's the user-visible action.
       await withAuthRetry(
         async () => {
           const { error } = await supabase.from("expense_splits").delete().eq("expense_id", id);
@@ -481,8 +491,10 @@ export function useExpenses(tripId: string) {
       );
       await withAuthRetry(
         async () => {
-          const { error } = await supabase.from("expenses").delete().eq("id", id);
-          if (error) throw error;
+          expectAffectedRows(
+            await supabase.from("expenses").delete().eq("id", id).select("id"),
+            "Expense could not be deleted. Please refresh and try again.",
+          );
         },
         { name: "expense_delete", context: { trip_id: tripId, expense_id: id }, userId: user?.id },
       );

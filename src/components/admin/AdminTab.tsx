@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { friendlyErrorMessage } from "@/lib/supabaseErrors";
+import { expectAffectedRows } from "@/lib/safeMutate";
 import { useState } from "react";
 import { Copy, Loader2, Info, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
@@ -195,8 +196,14 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
 
   const deleteTrip = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("trips").delete().eq("id", tripId);
-      if (error) throw error;
+      // .select() forces PostgREST to return the deleted rows. Without it an
+      // RLS rejection silently returns `data: []` with `error: null` and the
+      // UI falsely confirms the deletion. expectAffectedRows throws on the
+      // empty case so onError fires and the user sees a real toast.
+      expectAffectedRows(
+        await supabase.from("trips").delete().eq("id", tripId).select("id"),
+        "Trip could not be deleted. Please refresh and try again.",
+      );
     },
     onSuccess: () => {
       trackEvent("trip_deleted", { trip_id: tripId }, user?.id);

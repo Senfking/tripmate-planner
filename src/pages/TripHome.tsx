@@ -25,6 +25,7 @@ import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime"
 import { toast } from "sonner";
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useTripCoverUrl } from "@/hooks/useTripCoverUrl";
+import { expectAffectedRows } from "@/lib/safeMutate";
 import { cn } from "@/lib/utils";
 
 function getInitial(name: string | null | undefined) {
@@ -197,8 +198,10 @@ export default function TripHome() {
       const path = `covers/${tripId}/cover.${ext}`;
       const { error: upErr } = await supabase.storage.from("trip-attachments").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { error: dbErr } = await supabase.from("trips").update({ cover_image_path: path } as any).eq("id", tripId);
-      if (dbErr) throw dbErr;
+      expectAffectedRows(
+        await supabase.from("trips").update({ cover_image_path: path } as any).eq("id", tripId).select("id"),
+        "Cover photo could not be saved. Please refresh and try again.",
+      );
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
       toast.success("Cover photo updated!");
@@ -214,8 +217,10 @@ export default function TripHome() {
     if (!tripId) return;
     setCoverMenuOpen(false);
     try {
-      const { error } = await supabase.from("trips").update({ cover_image_path: null } as any).eq("id", tripId);
-      if (error) throw error;
+      expectAffectedRows(
+        await supabase.from("trips").update({ cover_image_path: null } as any).eq("id", tripId).select("id"),
+        "Cover photo could not be reset. Please refresh and try again.",
+      );
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
       toast.success("Cover photo reset to default");
@@ -231,8 +236,10 @@ export default function TripHome() {
       const path = `covers/${tripId}/cover.jpg`;
       const { error: upErr } = await supabase.storage.from("trip-attachments").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
       if (upErr) throw upErr;
-      const { error: dbErr } = await supabase.from("trips").update({ cover_image_path: path } as any).eq("id", tripId);
-      if (dbErr) throw dbErr;
+      expectAffectedRows(
+        await supabase.from("trips").update({ cover_image_path: path } as any).eq("id", tripId).select("id"),
+        "Cover photo could not be saved. Please refresh and try again.",
+      );
       qc.invalidateQueries({ queryKey: ["trip", tripId] });
       qc.invalidateQueries({ queryKey: ["trip-cover-url", tripId] });
       setCroppingCover(false);
