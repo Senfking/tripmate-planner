@@ -45,7 +45,16 @@ const SLIDES = [
     headline: ["Make memories", "together."],
     subhead: "From planning to post-trip, every moment in one shared space.",
   },
+/* ── Value-prop rotator (independent of the video carousel). Lives in
+   the glass card — short benefit statements that cycle on their own
+   timing so users get more reading variety than the headline alone. ── */
+const STATEMENTS = [
+  { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip. Itinerary, decisions, everything." },
+  { problem: "Splitting costs always gets awkward.", solution: "Log expenses, scan receipts with Junto AI, and settle up in any currency." },
+  { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas, all in one place." },
+  { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
 ];
+
 
 /* ── Video slideshow - only mount active + next to save resources ── */
 function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
