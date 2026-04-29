@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { friendlyErrorMessage } from "@/lib/supabaseErrors";
+import { withAuthRetry } from "@/lib/safeQuery";
 import { useState } from "react";
 import { Copy, Loader2, Info, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
@@ -194,9 +195,34 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
   });
 
   const deleteTrip = useMutation({
+    // Two failure modes the previous version silently swallowed:
+    //   1. PostgREST returns HTTP 200 with no rows when RLS blocks DELETE.
+    //      Without `.select()` the supabase-js error is null, the mutation
+    //      "succeeds", the toast says "Trip deleted", but the row is still
+    //      there. We add `.select("id")` and treat 0 rows as a real failure.
+    //   2. A backgrounded tab can resume with a JWT past expiry; auth.uid()
+    //      evaluates to NULL during the policy check and the row matches no
+    //      DELETE policy. withAuthRetry pre-flights ensureFreshSession and,
+    //      on a permission-shaped error, force-refreshes and retries once.
+    //
+    // The thrown message includes "permission denied" so isAuthOrRlsError
+    // matches and the retry path engages — covers the case where the first
+    // ensureFreshSession didn't quite stick before the request went out.
     mutationFn: async () => {
-      const { error } = await supabase.from("trips").delete().eq("id", tripId);
-      if (error) throw error;
+      await withAuthRetry(
+        async () => {
+          const { data, error } = await supabase
+            .from("trips")
+            .delete()
+            .eq("id", tripId)
+            .select("id");
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            throw new Error("permission denied — delete returned no rows");
+          }
+        },
+        { name: "delete_trip", context: { trip_id: tripId }, userId: user?.id },
+      );
     },
     onSuccess: () => {
       trackEvent("trip_deleted", { trip_id: tripId }, user?.id);
