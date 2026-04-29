@@ -39,13 +39,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    const normalizedQuery = typeof query === "string" ? query.trim() : "";
-    if (!normalizedQuery) {
+    const rawQuery = typeof query === "string" ? query : "";
+    if (!rawQuery.trim()) {
       return new Response(JSON.stringify({ error: "query is required" }), {
         status: 400,
         headers: JSON_HEADERS,
       });
     }
+
+    // Normalize the query the same way buildSearchCacheKey does so that
+    // "Eiffel Tower", "  eiffel tower ", "Eiffel-Tower!" all collapse to the
+    // same cache row. Strips diacritics + non-alphanumerics. Without this,
+    // case/punctuation drift caused cache misses on essentially identical
+    // requests.
+    const normalizedQuery = rawQuery
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
     const supabase = getServiceClient();
 
