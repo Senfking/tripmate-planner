@@ -534,17 +534,21 @@ export default function ReferralLanding() {
             </div>
           </div>
 
-          {/* Statement dots */}
+          {/* Slide dots — track the video/headline carousel (5 slides).
+              Previously these tracked the value-prop card rotator (4
+              statements); switched to the slide carousel since that's
+              what users perceive as the primary "where am I" indicator
+              for the page. */}
           <div className="flex items-center justify-center mt-3" style={{ gap: 6 }}>
-            {STATEMENTS.map((_, i) => (
+            {SLIDES.map((_, i) => (
               <span
                 key={i}
                 className="transition-all duration-300"
                 style={{
-                  width: i === statementIndex ? 20 : 4,
+                  width: i === activeIndex ? 20 : 4,
                   height: 4,
-                  borderRadius: i === statementIndex ? 2 : "50%",
-                  background: i === statementIndex ? "white" : "rgba(255,255,255,0.3)",
+                  borderRadius: i === activeIndex ? 2 : "50%",
+                  background: i === activeIndex ? "white" : "rgba(255,255,255,0.3)",
                 }}
               />
             ))}
