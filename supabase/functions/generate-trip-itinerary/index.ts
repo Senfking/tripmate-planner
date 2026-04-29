@@ -1,25 +1,32 @@
 // generate-trip-itinerary — source-of-truth pipeline (Places-first, Claude Haiku ranker)
 //
 // Pipeline (non-alternatives_mode):
-//   1. parseIntent       — Claude Haiku extracts structured intent from form + free text
-//   2. buildSkeleton     — pure-code pacing skeleton, slot cap scales with trip length
-//   3. buildPlacesQueries— pure-code Google Places query plan, deduped + capped at 12
-//   4. searchPlacesBatch — Places Text Search with ESSENTIALS field mask (ranking pass)
-//   5. hydrateFinalists  — Place Details GET with PRO field mask for the ~15 venues
-//                          the ranker actually selects (photos, priceLevel, reviews)
-//   6. searchEvents      — Brave/Google CSE event search (optional, parallel)
-//   7. rankAndEnrich     — Claude Haiku assigns venues to slots + writes editorial copy
-//   8. markJuntoPicks    — pure code: rating/reviews/intent-match heuristic
-//   9. buildAffiliateUrl — pure code: types[] -> Booking/Viator/GetYourGuide/Maps
-//  10. validateActivities— drop hallucinations: missing place_id, > distance, not OPERATIONAL
+//   1. parseIntent          — Claude Haiku extracts structured intent from form + free text
+//   2. buildSkeleton        — pure-code pacing skeleton, slot cap scales with trip length
+//   3. buildPlacesQueries   — pure-code Google Places query plan, deduped + capped at 12
+//   4. searchPlacesBatch    — Places Text Search with ESSENTIALS field mask (ranking pass)
+//   5. hydrateFinalists     — Place Details GET with PRO field mask for the ~15 venues
+//                             the ranker actually selects (photos, priceLevel, reviews)
+//   6. searchEvents         — Brave/Google CSE event search (optional, parallel)
+//   7. rankInParallel       — N parallel Claude Haiku per-day calls + 1 metadata call.
+//                             Replaces the monolithic 60s "all days at once" call so
+//                             cold-cache wall time drops from ~60s to ~20s. Streaming
+//                             pipeline emits each day SSE frame as soon as its tool
+//                             input arrives.
+//   8. markJuntoPicks       — pure code: rating/reviews/intent-match heuristic
+//   9. buildAffiliateUrl    — pure code: types[] -> Booking/Viator/GetYourGuide/Maps
+//  10. validateActivities   — drop hallucinations: missing place_id, > distance, not OPERATIONAL
 //
-// Cost shape (before this refactor → after):
-//   - 20 fat text searches × $0.032  → up to 12 essentials × $0.005 + ≤15 details × $0.017
+// Cost shape:
+//   - Places: 20 fat text searches × $0.032  → up to 12 essentials × $0.005 + ≤15 details × $0.017
 //     ≈ $0.64 → ≈ $0.32 on the Places line, plus 7d/30d cache sharing with concierge.
+//   - Anthropic: prompt caching on the per-day system prompt + the shared user-content
+//     block keeps subsequent parallel calls cheap. Day calls fire with ~3-4k max_tokens;
+//     metadata call with 1.5k. Total wall time on cold-cache 4-day = max(15-20s).
 //
 // All Claude calls go to direct Anthropic API (claude-haiku-4-5-20251001) with prompt
-// caching on the static system blocks. The `alternatives_mode` branch is preserved
-// verbatim and still uses Lovable AI Gateway / Gemini.
+// caching on the static system blocks + shared user-content block. The
+// `alternatives_mode` branch is preserved verbatim and still uses Lovable AI Gateway / Gemini.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
@@ -330,19 +337,6 @@ const MAX_SLOTS_CEILING: Record<Intent["pace"], number> = {
   active: 42,
 };
 
-// Per-pace ranker max_tokens. Activity copy averages ~250 tokens × slot count
-// plus ~1.5k trip-level fields. Active 42-slot trips push ~12k output, so 16k
-// is too tight — 18k restores ~50% headroom against truncation. Leisurely
-// tops out at 18 slots (~6k output); 12k stays well clear and shaves a bit
-// of headroom we don't need. Used by both the JSON path (rankAndEnrich) and
-// the streaming path (callClaudeHaikuStreaming) — module-scoped so the two
-// stay in lockstep.
-const RANK_MAX_TOKENS: Record<Intent["pace"], number> = {
-  leisurely: 12_000,
-  balanced: 16_000,
-  active: 18_000,
-};
-
 const MAX_FINALIST_HYDRATIONS = 20;     // safety cap on details pass; real trips pick 11–15
 
 // Rate limit + circuit breaker defaults. Override via env if needed.
@@ -577,6 +571,31 @@ type ClaudeSystemBlock = {
   cache_control?: { type: "ephemeral" };
 };
 
+// User content can be a plain string (single text block) or a structured array
+// with optional cache_control breakpoints. Multipart content lets per-day
+// callers cache the shared venue pool while only the per-day instruction
+// varies, so subsequent calls in the same window get a cache hit on the
+// expensive prefix. Anthropic permits up to 4 cache_control breakpoints across
+// system + user content combined.
+type ClaudeUserContentBlock = {
+  type: "text";
+  text: string;
+  cache_control?: { type: "ephemeral" };
+};
+type ClaudeUserContent = string | ClaudeUserContentBlock[];
+
+function normalizeUserContent(content: ClaudeUserContent):
+  | string
+  | ClaudeUserContentBlock[] {
+  if (typeof content === "string") return content;
+  // Drop empty blocks (an empty cached block is wasted overhead) and
+  // collapse trivial 1-block arrays back to a string.
+  const blocks = content.filter((b) => typeof b.text === "string" && b.text.length > 0);
+  if (blocks.length === 0) return "";
+  if (blocks.length === 1 && !blocks[0].cache_control) return blocks[0].text;
+  return blocks;
+}
+
 // ---------------------------------------------------------------------------
 // Stubs — implemented in subsequent commits
 // ---------------------------------------------------------------------------
@@ -596,7 +615,7 @@ type ClaudeSystemBlock = {
 async function callClaudeHaiku<T = Record<string, unknown>>(
   apiKey: string,
   systemBlocks: ClaudeSystemBlock[],
-  userContent: string,
+  userContent: ClaudeUserContent,
   tool: ClaudeTool,
   maxTokens: number,
   pipelineStartedAt: number,
@@ -630,7 +649,7 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     model: HAIKU_MODEL,
     max_tokens: maxTokens,
     system: systemBlocks,
-    messages: [{ role: "user", content: userContent }],
+    messages: [{ role: "user", content: normalizeUserContent(userContent) }],
     tools: [
       {
         name: tool.name,
@@ -764,352 +783,6 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     clearTimeout(timeoutId);
   }
 }
-
-// ---------------------------------------------------------------------------
-// Streaming Anthropic call — used by the SSE pipeline so the rankAndEnrich
-// tool input can be parsed & emitted day-by-day as it arrives.
-//
-// Anthropic's Messages API streams tool_use blocks as a sequence of events:
-//   - content_block_start { type: "tool_use", id, name, input: {} }
-//   - content_block_delta { delta: { type: "input_json_delta", partial_json: "..." } }
-//   - content_block_stop
-//   - message_delta { delta: { stop_reason } }
-//   - message_stop
-// We concatenate `partial_json` strings to reconstruct the full tool input.
-//
-// Caller passes:
-//   - onPartial(chunk): called with each partial_json string. Caller can run
-//     an incremental parser to detect day boundaries.
-// On completion the full reconstructed JSON string is returned along with
-// usage tokens, mirroring callClaudeHaiku's shape.
-// ---------------------------------------------------------------------------
-
-async function callClaudeHaikuStreaming(
-  apiKey: string,
-  systemBlocks: ClaudeSystemBlock[],
-  userContent: string,
-  tool: ClaudeTool,
-  maxTokens: number,
-  pipelineStartedAt: number,
-  step: string,
-  onPartial: (chunk: string) => void,
-): Promise<{ json: string; usage: ClaudeUsage }> {
-  if (!apiKey) {
-    throw new Error("callClaudeHaikuStreaming: ANTHROPIC_API_KEY is empty");
-  }
-  if (systemBlocks.length === 0) {
-    throw new Error("callClaudeHaikuStreaming: at least one system block is required");
-  }
-
-  const remaining =
-    PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
-  if (remaining <= 0) {
-    throw new PipelineError(
-      step,
-      "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
-      `pipeline budget exhausted before "${step}" Anthropic streaming call (elapsed ${Date.now() - pipelineStartedAt}ms)`,
-    );
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), remaining);
-
-  const body = {
-    model: HAIKU_MODEL,
-    max_tokens: maxTokens,
-    system: systemBlocks,
-    messages: [{ role: "user", content: userContent }],
-    tools: [
-      {
-        name: tool.name,
-        description: tool.description,
-        input_schema: tool.input_schema,
-      },
-    ],
-    tool_choice: { type: "tool", name: tool.name },
-    stream: true,
-  };
-
-  const callStart = Date.now();
-  let firstByteAt = 0;
-  let firstDeltaAt = 0;
-  let usage: ClaudeUsage = {
-    input_tokens: 0,
-    output_tokens: 0,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: 0,
-  };
-  const accumulator: string[] = [];
-  let totalLen = 0;
-
-  try {
-    let res: Response;
-    try {
-      res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": ANTHROPIC_VERSION,
-          "content-type": "application/json",
-          "accept": "text/event-stream",
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-    } catch (e) {
-      const err = e as Error;
-      if (controller.signal.aborted || err?.name === "AbortError") {
-        throw new PipelineError(
-          step,
-          "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
-          `Anthropic streaming fetch aborted after ${remaining}ms budget during step "${step}"`,
-        );
-      }
-      throw new Error(`Anthropic network error calling streaming "${tool.name}": ${err.message}`);
-    }
-
-    firstByteAt = Date.now();
-
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "");
-      const snippet = errBody.slice(0, 500);
-      throw new Error(`Anthropic streaming error ${res.status} for "${tool.name}". Body: ${snippet}`);
-    }
-
-    if (!res.body) {
-      throw new Error(`Anthropic streaming response had no body for "${tool.name}"`);
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let sseBuf = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      sseBuf += decoder.decode(value, { stream: true });
-
-      // SSE frames are separated by blank lines (\n\n). Process whole frames.
-      let nl: number;
-      while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
-        const frame = sseBuf.slice(0, nl);
-        sseBuf = sseBuf.slice(nl + 2);
-
-        // Frame is one or more "field: value" lines. We care about `data:`.
-        let eventName: string | null = null;
-        let dataLine: string | null = null;
-        for (const rawLine of frame.split("\n")) {
-          if (rawLine.startsWith("event:")) {
-            eventName = rawLine.slice(6).trim();
-          } else if (rawLine.startsWith("data:")) {
-            dataLine = rawLine.slice(5).trim();
-          }
-        }
-        if (!dataLine) continue;
-        if (dataLine === "[DONE]") continue;
-
-        let payload: Record<string, unknown>;
-        try {
-          payload = JSON.parse(dataLine);
-        } catch {
-          continue;
-        }
-
-        const type = (payload.type as string) ?? eventName ?? "";
-
-        if (type === "content_block_delta") {
-          const delta = payload.delta as { type?: string; partial_json?: string } | undefined;
-          if (delta?.type === "input_json_delta" && typeof delta.partial_json === "string") {
-            if (!firstDeltaAt) firstDeltaAt = Date.now();
-            accumulator.push(delta.partial_json);
-            totalLen += delta.partial_json.length;
-            try {
-              onPartial(delta.partial_json);
-            } catch (e) {
-              console.error(`[stream.${step}] onPartial threw:`, e);
-            }
-          }
-        } else if (type === "message_start") {
-          const msg = payload.message as { usage?: Record<string, unknown> } | undefined;
-          const u = msg?.usage as Record<string, number> | undefined;
-          if (u) {
-            usage.input_tokens = u.input_tokens ?? usage.input_tokens;
-            usage.cache_creation_input_tokens = u.cache_creation_input_tokens ?? usage.cache_creation_input_tokens;
-            usage.cache_read_input_tokens = u.cache_read_input_tokens ?? usage.cache_read_input_tokens;
-          }
-        } else if (type === "message_delta") {
-          const u = payload.usage as Record<string, number> | undefined;
-          if (u) {
-            usage.output_tokens = u.output_tokens ?? usage.output_tokens;
-          }
-        } else if (type === "error") {
-          const err = payload.error as { message?: string; type?: string } | undefined;
-          throw new Error(
-            `Anthropic stream error during "${tool.name}": ${err?.type ?? "unknown"} ${err?.message ?? ""}`,
-          );
-        }
-      }
-    }
-
-    const json = accumulator.join("");
-    console.log(
-      `[timing] llm.${step}.stream ttfb_ms=${firstByteAt - callStart} ` +
-        `ttft_ms=${firstDeltaAt ? firstDeltaAt - callStart : -1} ` +
-        `total_ms=${Date.now() - callStart} ` +
-        `input_tokens=${usage.input_tokens} output_tokens=${usage.output_tokens} ` +
-        `cache_read=${usage.cache_read_input_tokens} bytes=${totalLen}`,
-    );
-    return { json, usage };
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// TripStreamParser — incremental JSON parser for the rankAndEnrich tool input.
-//
-// Schema (from RANKER_TOOL):
-//   { trip_title, trip_summary, packing_suggestions, accommodation, days: [...] }
-//
-// Goal: emit each completed `days[N]` object as soon as its closing `}` arrives,
-// so downstream code can hydrate + emit a `day` SSE frame to the client without
-// waiting for the entire 9-12k-token output.
-//
-// State machine handles:
-//   - JSON string scanning with backslash escapes
-//   - Brace/bracket depth counting
-//   - Detecting the `days` key by walking back from the `[` at root depth and
-//     matching the immediately-preceding `"<key>" :` pattern
-//
-// Property emission order is model-controlled — RANKER_SYSTEM_PROMPT nudges
-// Haiku to emit `days` first, but if the model emits other keys before `days`
-// the parser simply skips past them (their bytes are kept in the buffer but
-// don't trigger emission).
-// ---------------------------------------------------------------------------
-
-class TripStreamParser {
-  private buf = "";
-  private pos = 0;
-  private inString = false;
-  private escapeNext = false;
-  private depth = 0;
-  private daysArrayActive = false;
-  private daysArrayDepth = -1;
-  private currentDayStart = -1;
-  private daysSeen = 0;
-
-  constructor(private onDay: (json: string) => void) {}
-
-  feed(chunk: string): void {
-    this.buf += chunk;
-    while (this.pos < this.buf.length) {
-      const c = this.buf[this.pos];
-
-      if (this.inString) {
-        if (this.escapeNext) {
-          this.escapeNext = false;
-        } else if (c === "\\") {
-          this.escapeNext = true;
-        } else if (c === '"') {
-          this.inString = false;
-        }
-        this.pos++;
-        continue;
-      }
-
-      if (c === '"') {
-        this.inString = true;
-        this.pos++;
-        continue;
-      }
-
-      if (c === "{" || c === "[") {
-        if (
-          c === "[" &&
-          !this.daysArrayActive &&
-          this.depth === 1 &&
-          this.precedingKeyIs("days")
-        ) {
-          this.daysArrayActive = true;
-          this.daysArrayDepth = this.depth;
-        }
-
-        if (
-          this.daysArrayActive &&
-          c === "{" &&
-          this.depth === this.daysArrayDepth
-        ) {
-          this.currentDayStart = this.pos;
-        }
-
-        this.depth++;
-        this.pos++;
-        continue;
-      }
-
-      if (c === "}" || c === "]") {
-        this.depth--;
-
-        if (
-          this.daysArrayActive &&
-          c === "]" &&
-          this.depth === this.daysArrayDepth - 1
-        ) {
-          this.daysArrayActive = false;
-          this.daysArrayDepth = -1;
-        }
-
-        if (
-          this.daysArrayActive &&
-          c === "}" &&
-          this.depth === this.daysArrayDepth &&
-          this.currentDayStart >= 0
-        ) {
-          const dayJson = this.buf.slice(this.currentDayStart, this.pos + 1);
-          this.currentDayStart = -1;
-          this.daysSeen++;
-          try {
-            this.onDay(dayJson);
-          } catch (e) {
-            console.error(`[TripStreamParser] onDay threw on day ${this.daysSeen}:`, (e as Error).message);
-          }
-        }
-
-        this.pos++;
-        continue;
-      }
-
-      this.pos++;
-    }
-  }
-
-  full(): string {
-    return this.buf;
-  }
-
-  daysEmitted(): number {
-    return this.daysSeen;
-  }
-
-  private precedingKeyIs(key: string): boolean {
-    let i = this.pos - 1;
-    while (i >= 0 && /\s/.test(this.buf[i])) i--;
-    if (i < 0 || this.buf[i] !== ":") return false;
-    i--;
-    while (i >= 0 && /\s/.test(this.buf[i])) i--;
-    if (i < 0 || this.buf[i] !== '"') return false;
-    const closeQuote = i;
-    i--;
-    while (i >= 0) {
-      if (this.buf[i] === '"' && (i === 0 || this.buf[i - 1] !== "\\")) {
-        return this.buf.slice(i + 1, closeQuote) === key;
-      }
-      i--;
-    }
-    return false;
-  }
-}
-
 
 
 const INTENT_SYSTEM_PROMPT = `You are extracting structured travel preferences from a user's trip-builder form submission.
@@ -2837,74 +2510,9 @@ function clampCostPerPerson(
   return llmCost;
 }
 
-// ---------------------------------------------------------------------------
-// Static system prompt (cache_control: ephemeral). Keep stable — every edit
-// busts the prompt cache across the whole codebase.
-// ---------------------------------------------------------------------------
-
-const RANKER_SYSTEM_PROMPT = `You are an editorial trip curator for Junto. Your job is to pick venues from the provided venue pool and write specific, honest, opinionated copy for each slot in the day skeleton.
-
-ABSOLUTE RULES — violating any of these makes your output useless:
-1. Every activity you emit MUST reference a place_id that appears in the provided venue pool. NEVER invent a place_id. If the pool truly has no fit for a slot, emit place_id=null AND set is_event=false — the validator will drop the slot. Events from the events list are the only case where place_id may be null AND is_event=true.
-2. Never assign the same place_id to two different slots in the same trip. The only exception: accommodation may repeat across nights — but pick one lodging venue for the whole destination.
-3. Honor start_time and duration_minutes from the skeleton slot exactly as given. Do not reshape pacing. Your job is editorial, not scheduling.
-4. Filter venues that violate intent.must_avoids BEFORE picking. If the only remaining pool candidates violate must_avoids, pick the least-bad and say so honestly in why_for_you.
-5. slot_type must match the skeleton — if the slot is "dinner", do not pick a museum.
-6. Pick exactly one activity per slot in the skeleton. If a slot is "arrival", "departure", "transit_buffer", or "rest", emit an activity whose category reflects the downtime (e.g. "transit" or "rest") with a short helpful description ("Arrive, check in, unpack" / "Return to the hotel; you've earned it"). place_id=null is acceptable for pure-downtime slots — set is_event=false.
-
-PACE DISCIPLINE — RESPECT THE EMPTY SPACE:
-- intent.pace tells you how full the user wants their days to feel. The skeleton already encodes this — light-pace days have only an afternoon anchor + dinner; balanced has morning + lunch + afternoon + dinner; active stacks three anchors plus all three meals.
-- When intent.pace = "leisurely" (Light), the empty space is INTENTIONAL. Do not densify the day through prose. Banned: "After lunch, swing by the cathedral and the museum before dinner" when only one afternoon slot exists. Banned: pro_tips that effectively schedule a second activity ("On your way to dinner, stop at the market and the viewpoint"). One anchor means one anchor — describe it well and let the rest of the day breathe.
-- When intent.pace = "leisurely", trip_summary should reflect the looseness ("a few intentional anchors, lots of unscheduled time to wander"). Do not write a packed-itinerary narrative for a light trip.
-- When intent.pace = "active", you can be more directive in pro_tips about chaining the day's anchors — that user wants the structure.
-- This rule overrides any temptation to "fill the page" with extra recommendations even when the venue pool has more good candidates than slots. Quality over quantity.
-
-EDITORIAL VOICE — MANDATORY, NOT OPTIONAL:
-- Never generic. "Great restaurant" is banned. "A cozy spot" is banned. "Popular with locals" is banned unless you can name the specific local tradition, regular dish, or community ritual that makes it popular. Every description cites something specific to THAT venue: a signature dish, a view, a founder's name, an architectural detail, a ritual, the year it opened, the pastry that sells out by 10am.
-- why_for_you MUST reference a concrete signal from the user's parsed intent — a vibe, a must_have, a dietary preference, a pace descriptor, or their group_composition. If no real match exists, say so honestly: "No strong match on your stated vibes; picked because the dinner pool was thin and this is the strongest remaining option." Do NOT fabricate a match.
-- pro_tip MUST be actionable and specific. Banned: "Consider booking ahead", "Arrive early", "Check their website". Required format examples: "Book 2 weeks ahead for a terrace table overlooking the plaza", "Order the black cod miso — it's what regulars come back for", "Arrive 15 minutes before the 11am tour to beat the noon bus", "Ask for the chef's tasting if the bar counter is open — not on the printed menu".
-- skip_if is OPTIONAL but HONEST negative signal. Include only when there's a real caveat — do not invent caveats. Good examples: "Skip if you dislike communal seating", "Skip if you're vegetarian — the menu is 90 % seafood", "Skip if stairs are hard for you — the climb has 400 steps". Empty string or null when no genuine caveat.
-- description is 2–3 sentences, evocative but concrete. No travel-brochure adjectives ("stunning", "breathtaking", "world-class", "iconic", "must-see") unless immediately grounded in a specific observation. "Stunning view" is banned. "The rooftop terrace frames the cathedral bell tower dead center at sunset" is fine.
-
-COST GUIDANCE:
-- estimated_cost_per_person is an HONEST expected spend in the trip's local currency (provided in the user message). Google's priceLevel is the anchor: 1 ≈ cheap, 2 ≈ moderate, 3 ≈ expensive, 4 ≈ very expensive.
-- The system will CLAMP your number against currency bands after you respond. Staying within ±20 % of the band upper bound is safe; going wildly over is wasted work because we'll clamp it.
-- For lodging, cost is per room per night (assume a standard double).
-- For attractions with free admission, use 0.
-- For bars/nightlife, cost is a reasonable 2-drink average.
-- NEVER quote USD when the trip currency is something else. The user message tells you which currency to use.
-
-DIETARY:
-- If intent.dietary contains values (vegan, vegetarian, halal, kosher, gluten-free, etc.), only pick food venues that plausibly serve them — or annotate dietary_notes with a specific caveat such as "vegetarian options available but menu is heavily meat-focused".
-- dietary_notes is OPTIONAL. Only fill it for food activities when there's a real dietary consideration for THIS user.
-
-MUST-AVOIDS HANDLING (specific examples):
-- "tourist traps" → skip venues that are obviously the top tourist sight (the ones every major travel blog puts first). Prefer the 4.3–4.6 neighborhood gem over the 4.7 megasight. When you must pick a popular sight, justify it in why_for_you.
-- "chain restaurants" → skip venues whose displayName matches a globally recognized chain (Starbucks, McDonald's, Hard Rock Cafe, etc.). Local-only franchise chains are okay if distinctive.
-- "crowds" → prefer venues with 50–500 reviews where the rating is still ≥ 4.2. Avoid 5000-review megasights.
-- "loud" → avoid venues with "lively" / "bustling" / "party" markers in types/displayName.
-
-JUNTO PICKS:
-- is_junto_pick is computed later by code — do NOT set it yourself. Leave it out of your output.
-
-ACCOMMODATION:
-- Pick ONE lodging for the whole destination from the "lodging" pool. Prefer rating ≥ 4.3, reviews 100+, and a priceLevel consistent with intent.budget_tier. If the pool is thin, pick the best available and note the limitation.
-
-EVENTS (may be empty):
-- The events list contains snippets from web search — dates are often missing or wrong. Only slot an event into the itinerary when there's a nightlife slot for it AND the event appears genuinely relevant to the trip's vibes. When you do include an event, set is_event=true and place_id=null.
-
-TRIP SUMMARY:
-- trip_title: 4–7 words, evocative, grounded in one specific thing the user is doing (a ritual, a season, a neighborhood). Not "Amazing Portugal Getaway". Try "Porto's Riverside Food & Port Nights".
-- trip_summary: 2–3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. No adjective spam.
-- packing_suggestions: 5–8 items, weather-specific and activity-specific. Not "comfortable shoes" — "closed-toe walking shoes for the cobblestones on Rua das Flores".
-
-OUTPUT: you MUST call the emit_trip tool with the full structured response. Do not include any text outside the tool call.
-
-OUTPUT ORDERING (STREAMING-AWARE):
-- Emit the "days" field FIRST in the tool input, before "trip_title", "trip_summary", "packing_suggestions", and "accommodation". The frontend streams day cards into the UI as soon as each day's JSON closes — every property emitted before "days" delays the user's first visible card. The order MUST be: days, then accommodation, then trip_title, trip_summary, packing_suggestions.`;
 
 // ---------------------------------------------------------------------------
-// Tool schema — forces the model into a structured emit_trip call.
+// Activity schema reused by the per-day ranker tool below.
 // ---------------------------------------------------------------------------
 
 const RANKER_ACTIVITY_SCHEMA: Record<string, unknown> = {
@@ -2931,12 +2539,117 @@ const RANKER_ACTIVITY_SCHEMA: Record<string, unknown> = {
   additionalProperties: false,
 };
 
-const RANKER_TOOL: ClaudeTool = {
-  name: "emit_trip",
-  description: "Emit the full ranked & enriched trip. Call this exactly once.",
+// ---------------------------------------------------------------------------
+// Parallel per-day rank prompts (Part 1).
+//
+// To shrink wall time on cold trips, we replace the single 60s "all days at
+// once" Anthropic call with N parallel per-day calls + 1 trip-metadata call.
+// Each call generates a much smaller payload (~1 day worth of slots, or just
+// the trip-level fields) and the slowest dominates wall time → first day
+// renders ~3x faster.
+//
+// Caching strategy:
+//   - System prompts are tagged cache_control: ephemeral. The per-day system
+//     prompt is the SAME across all N calls in a single trip, so the second
+//     and later parallel calls can hit Anthropic's prompt cache for the
+//     prefix. (First-call writes the cache; concurrent calls within the same
+//     trip race the write but still benefit on subsequent identical-prefix
+//     trips within the 5-minute TTL.)
+//   - The shared user-content block (intent + venue pool + events) is also
+//     tagged cache_control on day calls so it caches across the N calls.
+//   - The per-day instruction (skeleton for that day) is the only varying
+//     part — it stays uncached.
+//
+// ---------------------------------------------------------------------------
+
+const RANKER_DAY_SYSTEM_PROMPT = `You are an editorial trip curator for Junto. You receive a single day's pacing skeleton and a venue pool, and you must pick venues for each slot and write specific, honest, opinionated copy. The other days of this trip are being generated in parallel by separate calls — focus on YOUR day.
+
+ABSOLUTE RULES — violating any of these makes your output useless:
+1. Every activity you emit MUST reference a place_id that appears in the provided venue pool. NEVER invent a place_id. If the pool truly has no fit for a slot, emit place_id=null AND set is_event=false — the validator will drop the slot. Events from the events list are the only case where place_id may be null AND is_event=true.
+2. Honor start_time and duration_minutes from the skeleton slot exactly as given. Do not reshape pacing. Your job is editorial, not scheduling.
+3. Filter venues that violate intent.must_avoids BEFORE picking. If the only remaining pool candidates violate must_avoids, pick the least-bad and say so honestly in why_for_you.
+4. slot_type must match the skeleton — if the slot is "dinner", do not pick a museum.
+5. Pick exactly one activity per slot in the skeleton. If a slot is "arrival", "departure", "transit_buffer", or "rest", emit an activity whose category reflects the downtime (e.g. "transit" or "rest") with a short helpful description ("Arrive, check in, unpack" / "Return to the hotel; you've earned it"). place_id=null is acceptable for pure-downtime slots — set is_event=false.
+6. Do not pick the venue listed in shared.accommodation_place_id — that's the lodging for the whole trip and is emitted separately.
+7. Avoid the venues listed in shared.avoid_place_ids — those are reserved for or already used by other days. If a slot has no good fallback, you may use one anyway, but trip-wide dedup will drop duplicates and the slot will read as empty.
+
+PACE DISCIPLINE — RESPECT THE EMPTY SPACE:
+- intent.pace tells you how full the user wants their days to feel. The skeleton already encodes this — light-pace days have only an afternoon anchor + dinner; balanced has morning + lunch + afternoon + dinner; active stacks three anchors plus all three meals.
+- When intent.pace = "leisurely" (Light), the empty space is INTENTIONAL. Do not densify the day through prose. Banned: "After lunch, swing by the cathedral and the museum before dinner" when only one afternoon slot exists. Banned: pro_tips that effectively schedule a second activity ("On your way to dinner, stop at the market and the viewpoint"). One anchor means one anchor — describe it well and let the rest of the day breathe.
+- When intent.pace = "active", you can be more directive in pro_tips about chaining the day's anchors — that user wants the structure.
+
+EDITORIAL VOICE — MANDATORY, NOT OPTIONAL:
+- Never generic. "Great restaurant" is banned. "A cozy spot" is banned. "Popular with locals" is banned unless you can name the specific local tradition, regular dish, or community ritual that makes it popular. Every description cites something specific to THAT venue: a signature dish, a view, a founder's name, an architectural detail, a ritual, the year it opened, the pastry that sells out by 10am.
+- why_for_you MUST reference a concrete signal from the user's parsed intent — a vibe, a must_have, a dietary preference, a pace descriptor, or their group_composition. If no real match exists, say so honestly. Do NOT fabricate a match.
+- pro_tip MUST be actionable and specific. Banned: "Consider booking ahead", "Arrive early", "Check their website". Required format examples: "Book 2 weeks ahead for a terrace table overlooking the plaza", "Order the black cod miso — it's what regulars come back for", "Arrive 15 minutes before the 11am tour to beat the noon bus".
+- skip_if is OPTIONAL but HONEST. Empty string or null when no genuine caveat.
+- description is 2–3 sentences, evocative but concrete. No travel-brochure adjectives ("stunning", "breathtaking", "world-class", "iconic", "must-see") unless immediately grounded in a specific observation.
+
+COST GUIDANCE:
+- estimated_cost_per_person is an HONEST expected spend in the trip's local currency (provided in shared.currency). Google's priceLevel is the anchor: 1 ≈ cheap, 2 ≈ moderate, 3 ≈ expensive, 4 ≈ very expensive.
+- The system will CLAMP your number against currency bands after you respond. Going wildly over the band is wasted work.
+- For attractions with free admission, use 0.
+- For bars/nightlife, cost is a reasonable 2-drink average.
+- NEVER quote USD when the trip currency is something else.
+
+DIETARY:
+- If intent.dietary contains values, only pick food venues that plausibly serve them — or annotate dietary_notes with a specific caveat.
+- dietary_notes is OPTIONAL. Only fill it for food activities when there's a real consideration.
+
+MUST-AVOIDS HANDLING:
+- "tourist traps" → skip the obvious top sights. Prefer the 4.3–4.6 neighborhood gem over the 4.7 megasight. Justify popular sights in why_for_you.
+- "chain restaurants" → skip globally recognized chains.
+- "crowds" → prefer venues with 50–500 reviews where rating is still ≥ 4.2.
+- "loud" → avoid venues with "lively" / "bustling" / "party" markers.
+
+JUNTO PICKS:
+- is_junto_pick is computed later by code — do NOT set it yourself.
+
+EVENTS (may be empty):
+- The events list contains snippets from web search — dates often missing or wrong. Only slot an event when there's a nightlife slot for it AND the event genuinely fits the trip's vibes. When you do include an event, set is_event=true and place_id=null.
+
+OUTPUT: you MUST call the emit_day tool with the day's structured response. Do not include any text outside the tool call.`;
+
+const RANKER_METADATA_SYSTEM_PROMPT = `You are an editorial trip curator for Junto. You write the trip-level fields (title, summary, packing list) and pick the trip's accommodation. The per-day itinerary is being generated in parallel by separate calls — you do not see the chosen day activities. Lean on the user's parsed intent + the venue pool to write copy that fits the WHOLE trip arc.
+
+ABSOLUTE RULES:
+1. accommodation.place_id MUST come from the lodging pool. NEVER invent a place_id. If the lodging pool is empty, set place_id=null and explain in description.
+2. trip_title is 4–7 words, evocative, grounded in one specific thing the user is doing (a ritual, a season, a neighborhood). Not "Amazing Portugal Getaway". Try "Porto's Riverside Food & Port Nights".
+3. trip_summary is 2–3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. No adjective spam.
+4. packing_suggestions is 5–8 items, weather-specific and activity-specific. Not "comfortable shoes" — "closed-toe walking shoes for the cobblestones on Rua das Flores".
+5. Honor intent.pace, intent.budget_tier, and intent.must_avoids in the trip narrative.
+6. NEVER quote USD when the trip currency is something else.
+
+ACCOMMODATION:
+- Pick ONE lodging for the whole destination from the lodging pool. Prefer rating ≥ 4.3, reviews 100+, and a priceLevel consistent with intent.budget_tier. If the pool is thin, pick the best available and note the limitation.
+- description, pro_tip, why_for_you follow the same EDITORIAL VOICE rules as activities: cite specific details, no travel-brochure adjectives, no generic phrases. estimated_cost_per_person is per room per night in the trip's local currency.
+
+OUTPUT: call the emit_trip_metadata tool exactly once. No prose outside the tool call.`;
+
+// Per-day tool schema. activities[] reuses the same RANKER_ACTIVITY_SCHEMA the
+// monolithic ranker uses, so the rest of the pipeline (hydration, validation,
+// affiliate URL building) doesn't need to change.
+const RANKER_DAY_TOOL: ClaudeTool = {
+  name: "emit_day",
+  description: "Emit one day's ranked itinerary. Call exactly once.",
   input_schema: {
     type: "object",
-    required: ["trip_title", "trip_summary", "packing_suggestions", "accommodation", "days"],
+    required: ["day_number", "theme", "activities"],
+    properties: {
+      day_number: { type: "integer" },
+      theme: { type: "string" },
+      activities: { type: "array", items: RANKER_ACTIVITY_SCHEMA },
+    },
+    additionalProperties: false,
+  },
+};
+
+const RANKER_METADATA_TOOL: ClaudeTool = {
+  name: "emit_trip_metadata",
+  description: "Emit trip-level metadata + accommodation. Call exactly once.",
+  input_schema: {
+    type: "object",
+    required: ["trip_title", "trip_summary", "packing_suggestions", "accommodation"],
     properties: {
       trip_title: { type: "string", description: "4–7 words, specific, grounded." },
       trip_summary: { type: "string", description: "2–3 sentences, concrete." },
@@ -2961,26 +2674,20 @@ const RANKER_TOOL: ClaudeTool = {
         },
         additionalProperties: false,
       },
-      days: {
-        type: "array",
-        items: {
-          type: "object",
-          required: ["day_number", "theme", "activities"],
-          properties: {
-            day_number: { type: "integer" },
-            theme: { type: "string" },
-            activities: {
-              type: "array",
-              items: RANKER_ACTIVITY_SCHEMA,
-            },
-          },
-          additionalProperties: false,
-        },
-      },
     },
     additionalProperties: false,
   },
 };
+
+// Per-pace ranker max_tokens — per-day call budget. Active days top out around
+// 7 slots × ~250 tokens of editorial = ~1.8k output; we set 4k to leave plenty
+// of headroom for verbose copy without truncation.
+const DAY_MAX_TOKENS: Record<Intent["pace"], number> = {
+  leisurely: 2_500,
+  balanced: 3_500,
+  active: 4_500,
+};
+const METADATA_MAX_TOKENS = 1_500;
 
 // ---------------------------------------------------------------------------
 // User-message builder. All dynamic content goes HERE, not in the system
@@ -3024,19 +2731,25 @@ function digestVenue(p: BatchPlaceResult): VenueDigestEntry {
   };
 }
 
-function buildRankerUserMessage(
+// Shared context text used across all parallel per-day calls + the metadata
+// call. By keeping this string identical and tagged with cache_control on the
+// caller side, Anthropic's prompt cache can serve every call after the first
+// from cache (~10x cheaper, ~50% faster TTFB).
+//
+// IMPORTANT: this string MUST be deterministic for a given (intent, pool,
+// events) triplet. Object key order in JSON.stringify matters; we pin it
+// explicitly above.
+function buildSharedContextText(
   intent: Intent,
-  skeleton: DaySkeleton[],
   venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
   events: EventCandidate[],
   currency: string,
   countryCode: string | null,
 ): string {
-  // Merge the consolidated "restaurants" pool into both lunch and dinner so
-  // the ranker sees a rich meal-venue pool under each slot (it picks
-  // meal-appropriate venues based on rating + types + opening signals).
-  // Tone/vibe-specific queries (dinner:romantic / lunch:vibe:foodie) stay
-  // in their own pools to preserve the biased options.
+  // Merge consolidated "restaurants" pool into both lunch and dinner so each
+  // per-day call sees a rich meal pool under each slot. Tone/vibe-specific
+  // queries (dinner:romantic / lunch:vibe:foodie) stay in their own pools to
+  // preserve biased options.
   const merged = new Map(venuesByPool);
   const shared = merged.get("restaurants") ?? [];
   if (shared.length > 0) {
@@ -3047,7 +2760,6 @@ function buildRankerUserMessage(
     merged.delete("restaurants");
   }
 
-  // Condense pool: per pool, sort by (rating desc, reviews desc), cap at 15.
   const pool: Record<string, VenueDigestEntry[]> = {};
   for (const [key, venues] of merged.entries()) {
     const sorted = [...venues].sort((a, b) => {
@@ -3072,18 +2784,6 @@ function buildRankerUserMessage(
       group_composition: intent.group_composition,
       raw_notes: intent.raw_notes,
     },
-    skeleton: skeleton.map((d) => ({
-      day_number: d.day_number,
-      date: d.date,
-      theme: d.theme,
-      slots: d.slots.map((s, i) => ({
-        slot_index: i,
-        type: s.type,
-        start_time: s.start_time,
-        duration_minutes: s.duration_minutes,
-        region_tag: s.region_tag_for_queries,
-      })),
-    })),
     venue_pool_by_category: pool,
     events: events.map((e) => ({
       name: e.name,
@@ -3096,7 +2796,56 @@ function buildRankerUserMessage(
       confidence: e.confidence,
     })),
   };
-  return `Rank, assign, and enrich this trip. Return exactly one emit_trip tool call.\n\n${JSON.stringify(payload)}`;
+  return `Trip context (shared across all per-day calls):\n${JSON.stringify(payload)}`;
+}
+
+// Per-day instruction. Tells the LLM which day to generate, which venue is
+// reserved for accommodation (so it doesn't duplicate it as a slot pick), and
+// which place_ids earlier-resolved days have claimed (best-effort dedup hint
+// — the runtime also dedupes after the fact).
+function buildDayInstruction(
+  day: DaySkeleton,
+  accommodationPlaceId: string | null,
+  avoidPlaceIds: string[],
+): string {
+  const slotPayload = {
+    day: {
+      day_number: day.day_number,
+      date: day.date,
+      theme: day.theme,
+      slots: day.slots.map((s, i) => ({
+        slot_index: i,
+        type: s.type,
+        start_time: s.start_time,
+        duration_minutes: s.duration_minutes,
+        region_tag: s.region_tag_for_queries,
+      })),
+    },
+    shared: {
+      accommodation_place_id: accommodationPlaceId,
+      avoid_place_ids: avoidPlaceIds,
+    },
+  };
+  return `Generate THIS day only. Call emit_day exactly once.\n${JSON.stringify(slotPayload)}`;
+}
+
+function buildMetadataInstruction(
+  intent: Intent,
+  numDays: number,
+  startDate: string,
+  endDate: string,
+): string {
+  const payload = {
+    trip_shape: {
+      destination: intent.destination,
+      num_days: numDays,
+      start_date: startDate,
+      end_date: endDate,
+      pace: intent.pace,
+      budget_tier: intent.budget_tier,
+    },
+  };
+  return `Generate trip-level metadata + accommodation. Call emit_trip_metadata exactly once.\n${JSON.stringify(payload)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -3273,19 +3022,168 @@ interface RawRankerAccommodation {
   dietary_notes: string | null;
 }
 
-interface RawRankerOutput {
+
+// ---------------------------------------------------------------------------
+// Parallel rank — N per-day calls + 1 metadata call, all in flight at once.
+// ---------------------------------------------------------------------------
+
+interface RawRankerDay {
+  day_number: number;
+  theme: string;
+  activities: RawRankerActivity[];
+}
+
+interface RawTripMetadata {
   trip_title: string;
   trip_summary: string;
   packing_suggestions: string[];
   accommodation: RawRankerAccommodation;
-  days: Array<{
-    day_number: number;
-    theme: string;
-    activities: RawRankerActivity[];
-  }>;
 }
 
-async function rankAndEnrich(
+// Pick the best lodging upfront (pure code, no LLM) so per-day calls can be
+// told which place_id to skip + the metadata call can edit copy for it. Sort
+// by (rating desc, reviews desc) and take the top — same heuristic the
+// existing ranker leans on, but we don't need an LLM round-trip for the pick.
+function pickAccommodationPlaceId(
+  venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
+): string | null {
+  const lodging = venuesByPool.get("lodging") ?? [];
+  if (lodging.length === 0) return null;
+  const sorted = [...lodging].sort((a, b) => {
+    const ra = a.rating ?? 0, rb = b.rating ?? 0;
+    if (rb !== ra) return rb - ra;
+    return (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0);
+  });
+  return sorted[0]?.id ?? null;
+}
+
+// One per-day Anthropic call. Returns the raw tool input on success, null on
+// any failure (caller decides whether to retry / skeleton-fallback).
+//
+// Uses prompt caching on the system block + the shared user-content block so
+// the second-and-later parallel calls can hit Anthropic's prompt cache for
+// the expensive prefix. The per-day instruction varies and stays uncached.
+async function rankDay(
+  anthropicKey: string,
+  intent: Intent,
+  day: DaySkeleton,
+  sharedContext: string,
+  accommodationPlaceId: string | null,
+  avoidPlaceIds: string[],
+  pipelineStartedAt: number,
+  step: string,
+): Promise<{ data: RawRankerDay | null; usage: ClaudeUsage }> {
+  const result = await callClaudeHaiku<RawRankerDay>(
+    anthropicKey,
+    [{ type: "text", text: RANKER_DAY_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    [
+      { type: "text", text: sharedContext, cache_control: { type: "ephemeral" } },
+      { type: "text", text: buildDayInstruction(day, accommodationPlaceId, avoidPlaceIds) },
+    ],
+    RANKER_DAY_TOOL,
+    DAY_MAX_TOKENS[intent.pace],
+    pipelineStartedAt,
+    step,
+  );
+  return result;
+}
+
+// Trip-level fields + accommodation. Runs in parallel with the per-day calls.
+async function rankTripMetadata(
+  anthropicKey: string,
+  intent: Intent,
+  numDays: number,
+  startDate: string,
+  endDate: string,
+  sharedContext: string,
+  pipelineStartedAt: number,
+): Promise<{ data: RawTripMetadata | null; usage: ClaudeUsage }> {
+  return await callClaudeHaiku<RawTripMetadata>(
+    anthropicKey,
+    [{ type: "text", text: RANKER_METADATA_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    [
+      { type: "text", text: sharedContext, cache_control: { type: "ephemeral" } },
+      { type: "text", text: buildMetadataInstruction(intent, numDays, startDate, endDate) },
+    ],
+    RANKER_METADATA_TOOL,
+    METADATA_MAX_TOKENS,
+    pipelineStartedAt,
+    "rankTripMetadata",
+  );
+}
+
+// Per-day Promise wrapper that retries once on transient failure (parse,
+// network, or 5xx) before resolving to a skeleton-only fallback. This keeps
+// "one bad day" from sinking the whole trip, per CLAUDE.md AI Features rule:
+// "Wrap all AI calls in try/catch with user-facing toast errors."
+//
+// Returns:
+//   { day_number, theme, activities, source: "llm"|"fallback" }
+//   - source="llm" → activities populated by the model
+//   - source="fallback" → empty activities; caller decides skeleton-only
+//     rendering or per-day error event
+async function rankDayWithRetry(
+  anthropicKey: string,
+  intent: Intent,
+  day: DaySkeleton,
+  sharedContext: string,
+  accommodationPlaceId: string | null,
+  avoidPlaceIds: string[],
+  pipelineStartedAt: number,
+  logger: LLMLogger,
+): Promise<{
+  raw: RawRankerDay | null;
+  usage: ClaudeUsage;
+  source: "llm" | "fallback";
+}> {
+  const step = `rankDay#${day.day_number}`;
+  let lastErr: unknown = null;
+  let lastUsage: ClaudeUsage | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const result = await rankDay(
+        anthropicKey,
+        intent,
+        day,
+        sharedContext,
+        accommodationPlaceId,
+        avoidPlaceIds,
+        pipelineStartedAt,
+        step,
+      );
+      lastUsage = result.usage;
+      // Best-effort log per attempt so the cost dashboard sees retries.
+      await logger.log({
+        feature: `trip_builder_rank_day`,
+        model: HAIKU_MODEL,
+        input_tokens: result.usage.input_tokens,
+        output_tokens: result.usage.output_tokens,
+        cost_usd: computeHaikuCost(result.usage),
+        cached: result.usage.cache_read_input_tokens > 0,
+      }).catch((e) => console.error(`[${step}] logger.log failed:`, (e as Error).message));
+      if (result.data) {
+        return { raw: result.data, usage: result.usage, source: "llm" };
+      }
+      // No tool input — treat as transient and retry once.
+      lastErr = new Error("rankDay returned no tool input");
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[${step}] attempt ${attempt + 1} failed:`, (e as Error).message);
+    }
+  }
+  console.error(`[${step}] both attempts failed; falling back to skeleton-only:`, (lastErr as Error)?.message);
+  return {
+    raw: null,
+    usage: lastUsage ?? { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+    source: "fallback",
+  };
+}
+
+// rankInParallel — parallel orchestrator used by the non-streaming JSON path.
+// Returns a fully-assembled PipelineResult (still pre-junto-picks, pre-validate,
+// pre-affiliate-decorate; the caller chains those steps the same way it did
+// for the old monolithic rankAndEnrich).
+async function rankInParallel(
   anthropicKey: string,
   intent: Intent,
   skeleton: DaySkeleton[],
@@ -3293,59 +3191,69 @@ async function rankAndEnrich(
   events: EventCandidate[],
   googleKey: string,
   geo: GeocodeResult,
+  startDate: string,
+  endDate: string,
   logger: LLMLogger,
   pipelineStartedAt: number,
 ): Promise<PipelineResult> {
   const currency = resolveTripCurrency(geo.country_code);
+  const numDays = skeleton.length;
 
-  // Build an id → place map spanning every pool so hydration can resolve
-  // place_ids regardless of which pool the ranker drew from.
   const placeById = new Map<string, BatchPlaceResult>();
-  for (const venues of venuesByPool.values()) {
-    for (const v of venues) placeById.set(v.id, v);
-  }
+  for (const venues of venuesByPool.values()) for (const v of venues) placeById.set(v.id, v);
 
-  const result = await callClaudeHaiku<RawRankerOutput>(
-    anthropicKey,
-    [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-    buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
-    RANKER_TOOL,
-    RANK_MAX_TOKENS[intent.pace],
-    pipelineStartedAt,
-    "rankAndEnrich",
+  const accommodationPlaceId = pickAccommodationPlaceId(venuesByPool);
+  const sharedContext = buildSharedContextText(intent, venuesByPool, events, currency, geo.country_code);
+
+  // Fire all N+1 in parallel.
+  const dayPromises = skeleton.map((day) =>
+    rankDayWithRetry(
+      anthropicKey, intent, day, sharedContext, accommodationPlaceId, [],
+      pipelineStartedAt, logger,
+    ).then((res) => ({ day, ...res })),
   );
-
-  await logger.log({
-    feature: "trip_builder_rank",
-    model: HAIKU_MODEL,
-    input_tokens: result.usage.input_tokens,
-    output_tokens: result.usage.output_tokens,
-    cost_usd: computeHaikuCost(result.usage),
-    cached: result.usage.cache_read_input_tokens > 0,
+  const metadataPromise = rankTripMetadata(
+    anthropicKey, intent, numDays, startDate, endDate, sharedContext, pipelineStartedAt,
+  ).then(async (res) => {
+    if (res.usage) {
+      await logger.log({
+        feature: "trip_builder_rank_metadata", model: HAIKU_MODEL,
+        input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
+        cost_usd: computeHaikuCost(res.usage),
+        cached: res.usage.cache_read_input_tokens > 0,
+      }).catch(() => {});
+    }
+    return res;
+  }).catch((e) => {
+    console.error("[rankInParallel] metadata failed:", (e as Error).message);
+    return {
+      data: null,
+      usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+    };
   });
 
-  if (!result.data) {
-    throw new Error("rankAndEnrich: Claude returned no tool input");
-  }
-  const raw = result.data;
+  const settledDays = await Promise.all(dayPromises);
+  const metaResult = await metadataPromise;
+  const meta = metaResult.data;
 
-  // ---- Assemble days, honoring skeleton slot order ----
-  const ranked_days: RankedDay[] = [];
+  // ---- Walk in skeleton order so trip-wide dedup is deterministic ----
   const seenIds = new Set<string>();
-  for (const day of skeleton) {
-    const rawDay = raw.days.find((d) => d.day_number === day.day_number);
+  const ranked_days: RankedDay[] = [];
+  settledDays.sort((a, b) => a.day.day_number - b.day.day_number);
+
+  for (const settled of settledDays) {
+    const day = settled.day;
+    const rawDay = settled.raw;
     const theme = rawDay?.theme?.trim() || day.theme;
     const activities: EnrichedActivity[] = [];
-    const rawActs = rawDay?.activities ?? [];
+    const rawActs = Array.isArray(rawDay?.activities) ? rawDay!.activities : [];
     for (let i = 0; i < day.slots.length; i++) {
       const slot = day.slots[i];
-      const rawAct = rawActs.find((a) => a.slot_index === i);
+      const rawAct = rawActs.find((a) => a?.slot_index === i);
       if (!rawAct) continue;
-      // Reject duplicate place_ids across the trip (ranker was instructed not
-      // to reuse venues; guard in case it ignored the rule).
       if (rawAct.place_id && seenIds.has(rawAct.place_id)) continue;
+      if (accommodationPlaceId && rawAct.place_id === accommodationPlaceId) continue;
       const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
-      // Non-event activities need a pool-resident place.
       if (!rawAct.is_event && rawAct.place_id && !place) continue;
       const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
       if (!activity) continue;
@@ -3353,43 +3261,34 @@ async function rankAndEnrich(
       activities.push(activity);
     }
     ranked_days.push({
-      date: day.date,
-      day_number: day.day_number,
-      theme,
-      activities,
+      date: day.date, day_number: day.day_number, theme, activities,
     });
   }
 
   // ---- Accommodation ----
   let accommodation: EnrichedActivity | undefined;
-  if (raw.accommodation.place_id) {
-    const place = placeById.get(raw.accommodation.place_id) ?? null;
+  const accomPlaceId = meta?.accommodation?.place_id ?? accommodationPlaceId;
+  if (accomPlaceId) {
+    const place = placeById.get(accomPlaceId) ?? null;
     if (place) {
       const fakeSlot: PacingSlot = {
-        type: "lodging",
-        start_time: "15:00",
-        duration_minutes: 0,
+        type: "lodging", start_time: "15:00", duration_minutes: 0,
         region_tag_for_queries: "primary",
       };
       const hydrated = hydrateActivity(
         {
-          slot_index: -1,
-          slot_type: "lodging",
-          place_id: raw.accommodation.place_id,
-          is_event: false,
-          title: raw.accommodation.title,
-          description: raw.accommodation.description,
-          pro_tip: raw.accommodation.pro_tip,
-          why_for_you: raw.accommodation.why_for_you,
-          skip_if: raw.accommodation.skip_if,
+          slot_index: -1, slot_type: "lodging",
+          place_id: accomPlaceId, is_event: false,
+          title: meta?.accommodation?.title ?? place.displayName ?? "Hotel",
+          description: meta?.accommodation?.description ?? "",
+          pro_tip: meta?.accommodation?.pro_tip ?? "",
+          why_for_you: meta?.accommodation?.why_for_you ?? "",
+          skip_if: meta?.accommodation?.skip_if ?? null,
           category: "accommodation",
-          estimated_cost_per_person: raw.accommodation.estimated_cost_per_person,
-          dietary_notes: raw.accommodation.dietary_notes,
+          estimated_cost_per_person: meta?.accommodation?.estimated_cost_per_person ?? 0,
+          dietary_notes: meta?.accommodation?.dietary_notes ?? null,
         },
-        fakeSlot,
-        place,
-        googleKey,
-        currency,
+        fakeSlot, place, googleKey, currency,
       );
       if (hydrated) accommodation = hydrated;
     }
@@ -3397,7 +3296,6 @@ async function rankAndEnrich(
 
   // ---- Trip-level rollups ----
   const total_activities = ranked_days.reduce((n, d) => n + d.activities.length, 0);
-  const numDays = skeleton.length;
   const dailySpend = ranked_days.map((d) =>
     d.activities.reduce((s, a) => s + (a.estimated_cost_per_person || 0), 0),
   );
@@ -3409,20 +3307,20 @@ async function rankAndEnrich(
     name: intent.destination,
     start_date: skeleton[0]?.date ?? "",
     end_date: skeleton[skeleton.length - 1]?.date ?? "",
-    intro: raw.trip_summary?.trim() ?? "",
+    intro: meta?.trip_summary?.trim() ?? "",
     days: ranked_days,
     accommodation,
   };
 
   return {
-    trip_title: raw.trip_title?.trim() ?? intent.destination,
-    trip_summary: raw.trip_summary?.trim() ?? "",
+    trip_title: meta?.trip_title?.trim() || intent.destination,
+    trip_summary: meta?.trip_summary?.trim() ?? "",
     destinations: [destination],
     map_center: { lat: geo.lat, lng: geo.lng },
     map_zoom: 12,
     daily_budget_estimate,
     currency,
-    packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions.slice(0, 10) : [],
+    packing_suggestions: Array.isArray(meta?.packing_suggestions) ? meta!.packing_suggestions.slice(0, 10) : [],
     total_activities,
     budget_tier: intent.budget_tier,
   };
@@ -4379,7 +4277,19 @@ Deno.serve(async (req) => {
             const placeById = new Map<string, BatchPlaceResult>();
             for (const venues of venuesByPool.values()) for (const v of venues) placeById.set(v.id, v);
 
-            // ---- Streaming rank: emit days as they close ----
+            // ---- Parallel rank: N per-day calls + 1 metadata call ----
+            //
+            // Cold-cache wall time used to be 60s for the whole trip because the
+            // monolithic ranker generated all days serially in one call. Splitting
+            // by day means wall time = max(per-day call) ≈ 15-20s. As soon as
+            // each day's tool input arrives, we hydrate + emit the SSE `day`
+            // event so the UI can render progressively.
+            //
+            // Trip-wide place-id dedup is enforced at receipt time: days are
+            // emitted in skeleton order (day_number ascending), so day 1 always
+            // gets first pick on any contested venue. Later days that the model
+            // accidentally collided on get the duplicate slot dropped (the
+            // skeleton remains visible; just no activity in that slot).
             send("progress", { stage: "ranking" });
             stepLabel = "rankAndEnrich";
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
@@ -4390,22 +4300,27 @@ Deno.serve(async (req) => {
             const ranked_days: RankedDay[] = [];
             const seenIds = new Set<string>();
             const emittedDayNumbers = new Set<number>();
-            const allActivities: EnrichedActivity[] = [];
             let totalDropped = 0;
+            // skeleton-only-fallback days, used in the post-loop drop-threshold
+            // calculation so a fully-failed day doesn't get treated as garbage.
+            let fallbackDays = 0;
 
-            const handleDay = (rawDay: { day_number?: number; theme?: string; activities?: RawRankerActivity[] }) => {
-              if (typeof rawDay.day_number !== "number") return;
-              if (emittedDayNumbers.has(rawDay.day_number)) return;
-              const day = skeleton.find((d) => d.day_number === rawDay.day_number);
-              if (!day) return;
-              const theme = rawDay.theme?.trim() || day.theme;
+            const accommodationPlaceId = pickAccommodationPlaceId(venuesByPool);
+            const sharedContext = buildSharedContextText(intent, venuesByPool, events, currency, geo.country_code);
+
+            const hydrateAndEmit = (rawDay: RawRankerDay | null, day: DaySkeleton) => {
+              if (emittedDayNumbers.has(day.day_number)) return;
+              const theme = rawDay?.theme?.trim() || day.theme;
               const activities: EnrichedActivity[] = [];
-              const rawActs = Array.isArray(rawDay.activities) ? rawDay.activities : [];
+              const rawActs = Array.isArray(rawDay?.activities) ? rawDay!.activities : [];
               for (let i = 0; i < day.slots.length; i++) {
                 const slot = day.slots[i];
                 const rawAct = rawActs.find((a) => a?.slot_index === i);
                 if (!rawAct) continue;
+                // Trip-wide dedup: in day-number order, day 1 wins.
                 if (rawAct.place_id && seenIds.has(rawAct.place_id)) continue;
+                // Don't let per-day calls double-book the lodging place.
+                if (accommodationPlaceId && rawAct.place_id === accommodationPlaceId) continue;
                 const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
                 if (!rawAct.is_event && rawAct.place_id && !place) continue;
                 const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
@@ -4423,59 +4338,66 @@ Deno.serve(async (req) => {
               totalDropped += validated.dropped;
               const rankedDay: RankedDay = { date: day.date, day_number: day.day_number, theme, activities: validated.kept };
               ranked_days.push(rankedDay);
-              emittedDayNumbers.add(rawDay.day_number);
-              for (const a of validated.kept) allActivities.push(a);
+              emittedDayNumbers.add(day.day_number);
               send("day", rankedDay);
             };
 
-            const parser = new TripStreamParser((dayJson) => {
-              try {
-                const parsed = JSON.parse(dayJson);
-                handleDay(parsed);
-              } catch (e) {
-                console.warn(`[stream.parser] day JSON.parse failed: ${(e as Error).message}`);
+            // Track per-day promises so we can emit each day in skeleton order
+            // (day 1 first, then day 2, etc.) — this preserves the dedup
+            // ordering invariant even if day 3's call returns before day 1's.
+            const dayPromises = skeleton.map((day, idx) => {
+              // The avoid_place_ids hint is best-effort. We don't actually
+              // know which places earlier days have claimed at submit time
+              // (parallel), so the strict dedup happens at receipt time. We
+              // pass an empty list — the LLM gets to pick freely from the
+              // pool, and the post-receipt walk drops dupes.
+              return rankDayWithRetry(
+                anthropicKey, intent, day, sharedContext, accommodationPlaceId,
+                [], pipelineStartedAt, logger,
+              ).then((res) => ({ idx, day, ...res }));
+            });
+
+            // Metadata call fires in parallel with day calls. Awaited at end.
+            const metadataPromise = rankTripMetadata(
+              anthropicKey, intent, numDays, startDate, endDate,
+              sharedContext, pipelineStartedAt,
+            ).then(async (res) => {
+              if (res.usage) {
+                await logger.log({
+                  feature: "trip_builder_rank_metadata", model: HAIKU_MODEL,
+                  input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
+                  cost_usd: computeHaikuCost(res.usage),
+                  cached: res.usage.cache_read_input_tokens > 0,
+                }).catch((e) => console.error("[stream.metadata] logger.log failed:", (e as Error).message));
               }
+              return res;
+            }).catch((e) => {
+              console.error("[stream.metadata] failed:", (e as Error).message);
+              return {
+                data: null,
+                usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+              };
             });
 
-            const { json: fullJson, usage } = await callClaudeHaikuStreaming(
-              anthropicKey,
-              [{ type: "text", text: RANKER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-              buildRankerUserMessage(intent, skeleton, venuesByPool, events, currency, geo.country_code),
-              RANKER_TOOL,
-              RANK_MAX_TOKENS[intent.pace],
-              pipelineStartedAt,
-              "rankAndEnrich",
-              (chunk) => parser.feed(chunk),
-            );
-
-            await logger.log({
-              feature: "trip_builder_rank", model: HAIKU_MODEL,
-              input_tokens: usage.input_tokens, output_tokens: usage.output_tokens,
-              cost_usd: computeHaikuCost(usage),
-              cached: usage.cache_read_input_tokens > 0,
-            });
+            // Emit days strictly in skeleton order. We await each promise in
+            // sequence; concurrency comes from the fact that ALL promises
+            // were already started above. The await is just for serializing
+            // the emit order.
+            for (const p of dayPromises) {
+              const settled = await p;
+              if (settled.source === "fallback") fallbackDays++;
+              hydrateAndEmit(settled.raw, settled.day);
+            }
+            ranked_days.sort((a, b) => a.day_number - b.day_number);
             tStage("rank_and_enrich", tRank);
 
-            // ---- Final full-parse to recover trip-level fields + late days ----
-            let raw: RawRankerOutput;
-            try {
-              raw = JSON.parse(fullJson) as RawRankerOutput;
-            } catch (e) {
-              throw new Error(`[stream] final tool JSON parse failed: ${(e as Error).message}`);
-            }
-
-            // Catch any days the streaming parser missed (defensive — shouldn't happen)
-            for (const d of raw.days ?? []) {
-              if (!emittedDayNumbers.has(d.day_number)) handleDay(d as any);
-            }
-            // Re-sort by day_number for downstream rollups
-            ranked_days.sort((a, b) => a.day_number - b.day_number);
-
             // Trip-wide drop threshold check (mirrors validateActivities).
-            // A fully-empty result (`totalBefore === 0`) used to slip past
-            // this guard and get cached as a "successful" zero-activity trip;
-            // we now refuse it explicitly so the user sees an error and the
-            // empty payload never reaches ai_response_cache.
+            // Skeleton-fallback days don't count as "dropped" — they're
+            // intentionally empty, not garbage. Only real validation drops
+            // count against the threshold. A fully-empty result
+            // (`totalBefore === 0`) — every day fell back to skeleton AND
+            // produced zero activities — is refused outright (per PR #225)
+            // so the empty payload never reaches ai_response_cache.
             const totalBefore = ranked_days.reduce((n, d) => n + d.activities.length, 0) + totalDropped;
             if (totalBefore === 0) {
               throw new Error("Ranker returned 0 activities for the whole trip — refusing to cache empty result");
@@ -4483,23 +4405,35 @@ Deno.serve(async (req) => {
             if (totalDropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
               throw new Error(`Validation dropped ${totalDropped}/${totalBefore} activities (>${(VALIDATION_DROP_THRESHOLD * 100).toFixed(0)}%) — pool too thin`);
             }
+            if (fallbackDays > 0) {
+              console.warn(`[stream.rank] ${fallbackDays}/${numDays} days fell back to skeleton-only`);
+            }
 
-            // ---- Accommodation ----
+            // ---- Metadata + accommodation ----
+            const metadataResult = await metadataPromise;
+            const meta = metadataResult.data;
+
             let accommodation: EnrichedActivity | undefined;
-            if (raw.accommodation?.place_id) {
-              const place = placeById.get(raw.accommodation.place_id) ?? null;
+            const accomRaw = meta?.accommodation;
+            const accomPlaceId = accomRaw?.place_id ?? accommodationPlaceId;
+            if (accomPlaceId) {
+              const place = placeById.get(accomPlaceId) ?? null;
               if (place) {
                 const fakeSlot: PacingSlot = {
                   type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
                 };
                 const hydrated = hydrateActivity(
                   {
-                    slot_index: -1, slot_type: "lodging", place_id: raw.accommodation.place_id, is_event: false,
-                    title: raw.accommodation.title, description: raw.accommodation.description,
-                    pro_tip: raw.accommodation.pro_tip, why_for_you: raw.accommodation.why_for_you,
-                    skip_if: raw.accommodation.skip_if, category: "accommodation",
-                    estimated_cost_per_person: raw.accommodation.estimated_cost_per_person,
-                    dietary_notes: raw.accommodation.dietary_notes,
+                    slot_index: -1, slot_type: "lodging",
+                    place_id: accomPlaceId, is_event: false,
+                    title: accomRaw?.title ?? place.displayName ?? "Hotel",
+                    description: accomRaw?.description ?? "",
+                    pro_tip: accomRaw?.pro_tip ?? "",
+                    why_for_you: accomRaw?.why_for_you ?? "",
+                    skip_if: accomRaw?.skip_if ?? null,
+                    category: "accommodation",
+                    estimated_cost_per_person: accomRaw?.estimated_cost_per_person ?? 0,
+                    dietary_notes: accomRaw?.dietary_notes ?? null,
                   },
                   fakeSlot, place, googleKey, currency,
                 );
@@ -4523,19 +4457,19 @@ Deno.serve(async (req) => {
               name: intent.destination,
               start_date: skeleton[0]?.date ?? "",
               end_date: skeleton[skeleton.length - 1]?.date ?? "",
-              intro: raw.trip_summary?.trim() ?? "",
+              intro: meta?.trip_summary?.trim() ?? "",
               days: ranked_days,
               accommodation,
             };
             const pipelineResult: PipelineResult = {
-              trip_title: raw.trip_title?.trim() ?? intent.destination,
-              trip_summary: raw.trip_summary?.trim() ?? "",
+              trip_title: meta?.trip_title?.trim() || intent.destination,
+              trip_summary: meta?.trip_summary?.trim() ?? "",
               destinations: [destinationFinal],
               map_center: { lat: geo.lat, lng: geo.lng },
               map_zoom: 12,
               daily_budget_estimate,
               currency,
-              packing_suggestions: Array.isArray(raw.packing_suggestions) ? raw.packing_suggestions.slice(0, 10) : [],
+              packing_suggestions: Array.isArray(meta?.packing_suggestions) ? meta!.packing_suggestions.slice(0, 10) : [],
               total_activities,
               budget_tier: intent.budget_tier,
             };
@@ -4869,11 +4803,11 @@ Deno.serve(async (req) => {
       return null;
     });
 
-    // ---- Step 6: rank + enrich ----
+    // ---- Step 6: rank + enrich (N parallel per-day calls + 1 metadata call) ----
     loggedStep = "rankAndEnrich";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const tRank = Date.now();
-    const ranked = await rankAndEnrich(
+    const ranked = await rankInParallel(
       anthropicKey,
       intent,
       skeleton,
@@ -4881,6 +4815,8 @@ Deno.serve(async (req) => {
       events,
       googleKey,
       geo,
+      startDate,
+      endDate,
       logger,
       pipelineStartedAt,
     );
