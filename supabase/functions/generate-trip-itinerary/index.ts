@@ -4105,23 +4105,66 @@ Deno.serve(async (req) => {
       const encoder = new TextEncoder();
       const closedRef = { closed: false };
       const stream = new ReadableStream({
-        async start(controller) {
-          const send = (event: string, data: unknown) => {
+        // SYNC start. The previous async start kept the stream in "starting"
+        // state for the entire pipeline duration on Deno Deploy / Supabase
+        // Functions, which meant enqueued chunks were not flushed to the
+        // gateway until start() resolved — making a 60s pipeline look like a
+        // 60s buffered response to the client. Returning synchronously
+        // unblocks the response body and chunks flush as they're enqueued.
+        // The pipeline now runs as a fire-and-forget promise inside
+        // runStreamingPipeline (declared below; hoisted).
+        start(controller) {
+          const enqueue = (chunk: string) => {
             if (closedRef.closed) return;
             try {
-              controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+              controller.enqueue(encoder.encode(chunk));
             } catch (e) {
               console.error("[stream] enqueue failed:", (e as Error).message);
             }
           };
-          const ping = setInterval(() => {
-            if (closedRef.closed) return;
-            try { controller.enqueue(encoder.encode(`event: ping\ndata: {}\n\n`)); } catch {}
-          }, 10_000);
+          const send = (event: string, data: unknown) =>
+            enqueue(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
-          let stepLabel = "stream_init";
-          try {
-            send("progress", { stage: "parsing_intent" });
+          // First flush BEFORE any await — comment frame per SSE spec
+          // (clients silently ignore lines starting with ":"). Pins
+          // first-byte time at <100ms so the gateway commits to streaming
+          // mode before the long-running pipeline starts.
+          enqueue(": connected\n\n");
+
+          const ping = setInterval(
+            () => enqueue("event: ping\ndata: {}\n\n"),
+            10_000,
+          );
+
+          // Fire-and-forget. start() returns synchronously after this line.
+          // runStreamingPipeline owns the pipeline error handling (sends
+          // event: error on throw); the .catch here is a defensive net for
+          // anything that escapes that try/catch. The .finally tears down
+          // the heartbeat + closes the controller regardless.
+          runStreamingPipeline()
+            .catch((e) => {
+              const err = e as Error;
+              const isPipelineErr = err instanceof PipelineError;
+              try {
+                send("error", {
+                  error: "trip_build_failed",
+                  step: isPipelineErr ? (err as PipelineError).step : "stream",
+                  message: isPipelineErr
+                    ? (err as PipelineError).userMessage
+                    : "Something went wrong building your trip. Please try again.",
+                });
+              } catch {}
+            })
+            .finally(() => {
+              clearInterval(ping);
+              closedRef.closed = true;
+              try { controller.close(); } catch {}
+            });
+
+          async function runStreamingPipeline(): Promise<void> {
+            let stepLabel = "stream_init";
+            try {
+              send("progress", { stage: "parsing_intent" });
 
             // ---- parseIntent in parallel with geocode (non-surprise) ----
             const tParseIntent = Date.now();
@@ -4555,10 +4598,9 @@ Deno.serve(async (req) => {
                 duration_ms: Date.now() - requestStartedAt,
               }).catch(() => {});
             }
-          } finally {
-            clearInterval(ping);
-            closedRef.closed = true;
-            try { controller.close(); } catch {}
+          }
+            // ping/close teardown lives on the outer .finally() attached to
+            // runStreamingPipeline()'s promise (see start() above).
           }
         },
         cancel() {
