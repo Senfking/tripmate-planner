@@ -9,17 +9,42 @@ import { Loader2 } from "lucide-react";
 import posterImage from "@/assets/video-poster.png";
 
 
-/* ── Verified working video sources (diverse scenery) ── */
-const VIDEOS = [
-  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
-  "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",
-];
-
-const STATEMENTS = [
-  { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip. Itinerary, decisions, everything." },
-  { problem: "Splitting costs always gets awkward.", solution: "Log expenses, scan receipts with Junto AI, and settle up in any currency." },
-  { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas, all in one place." },
-  { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
+/* ── Hero slides: each pairs a destination video with on-vibe copy.
+   Videos are Pexels SD (360p), all <1.5MB. Only the first video preloads
+   on mount; the rest get preload="none" until the carousel reaches them
+   (see AutoPlayVideo). Keeps initial page weight tiny on the unauth
+   landing where LCP matters most. ── */
+const SLIDES = [
+  {
+    // ocean / coast — original hero clip, sets the tone
+    video: "https://videos.pexels.com/video-files/1093662/1093662-sd_640_360_30fps.mp4",
+    headline: ["Plan trips", "together."],
+    subhead: "Ditch the group chat chaos. Plan, split & decide, all in one place.",
+  },
+  {
+    // city / urban — original second clip
+    video: "https://videos.pexels.com/video-files/2519660/2519660-sd_640_360_24fps.mp4",
+    headline: ["Discover", "hidden gems."],
+    subhead: "AI-powered itineraries tailored to your group's vibe.",
+  },
+  {
+    // food / culture — pizza & wine with friends
+    video: "https://videos.pexels.com/video-files/7314884/7314884-sd_640_360_25fps.mp4",
+    headline: ["Split costs", "effortlessly."],
+    subhead: "Track expenses, settle up, no awkward math.",
+  },
+  {
+    // group / people — friends hanging out
+    video: "https://videos.pexels.com/video-files/4918986/4918986-sd_640_360_30fps.mp4",
+    headline: ["Decide as", "a group."],
+    subhead: "Vote on activities, pick favorites, no more endless debates.",
+  },
+  {
+    // mountains / nature — hiking landscape
+    video: "https://videos.pexels.com/video-files/855128/855128-sd_640_360_24fps.mp4",
+    headline: ["Make memories", "together."],
+    subhead: "From planning to post-trip, every moment in one shared space.",
+  },
 ];
 
 /* ── Video slideshow - only mount active + next to save resources ── */
