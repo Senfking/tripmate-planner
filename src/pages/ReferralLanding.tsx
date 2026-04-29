@@ -45,6 +45,8 @@ const SLIDES = [
     headline: ["Make memories", "together."],
     subhead: "From planning to post-trip, every moment in one shared space.",
   },
+];
+
 /* ── Value-prop rotator (independent of the video carousel). Lives in
    the glass card — short benefit statements that cycle on their own
    timing so users get more reading variety than the headline alone. ── */
