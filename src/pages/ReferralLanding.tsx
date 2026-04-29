@@ -293,21 +293,36 @@ export default function ReferralLanding() {
     })();
   }, [code]);
 
-  // Single interval drives both the background video carousel AND the
-  // headline/subhead pair on top of it — each slide owns its copy now.
-  // 5.5s feels right: long enough to read the headline, short enough that
-  // the variety registers.
+  // Background video carousel — also drives the headline/subhead overlay
+  // since each slide carries its own copy. 5.5s per slide feels right:
+  // long enough to read, short enough that the variety registers across
+  // 5 slides without dragging.
   useEffect(() => {
     const interval = setInterval(() => {
       // Quick fade-out → swap → fade-in for the headline overlay so the
-      // text doesn't pop. The video crossfade is handled separately in
-      // VideoSlideshow on a 1.5s curve.
-      setStatementVisible(false);
+      // copy doesn't pop. The video itself crossfades on a 1.5s curve in
+      // VideoSlideshow, so the headline ends up reappearing roughly when
+      // the new background settles.
+      setHeadlineVisible(false);
       setTimeout(() => {
         setActiveIndex((prev) => (prev + 1) % SLIDES.length);
-        setStatementVisible(true);
+        setHeadlineVisible(true);
       }, 350);
     }, 5500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Independent rotator for the value-prop glass card. Decoupled from
+  // the video carousel on purpose — gives users more reading variety
+  // and avoids two pieces of copy swapping at the exact same moment.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatementVisible(false);
+      setTimeout(() => {
+        setStatementIndex((i) => (i + 1) % STATEMENTS.length);
+        setStatementVisible(true);
+      }, 400);
+    }, 4500);
     return () => clearInterval(interval);
   }, []);
 
