@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil, Share2, Settings } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil, Share2, Settings, Calendar, Clock } from "lucide-react";
 import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
@@ -342,6 +342,21 @@ export default function TripHome() {
     ? ATTENDANCE_BADGE[myAttendanceStatus]
     : null;
 
+  // Header chips: number of days inferred from tentative dates. Inclusive of
+  // both ends so a same-day trip reads "1 day". null when both dates are
+  // missing (date-flexible trips) so we just hide the chip rather than
+  // shipping a misleading "1 day" placeholder.
+  const numDays = (() => {
+    const start = trip?.tentative_start_date;
+    const end = trip?.tentative_end_date;
+    if (!start && !end) return null;
+    if (start && end) {
+      const ms = new Date(end).getTime() - new Date(start).getTime();
+      return Math.max(1, Math.round(ms / 86_400_000) + 1);
+    }
+    return 1;
+  })();
+
   return (
     <div className="flex flex-col min-h-dvh animate-slide-in bg-background">
       {/* Crop overlay */}
@@ -354,11 +369,14 @@ export default function TripHome() {
         />
       )}
 
-      {/* ─── COVER PHOTO — no text overlay ─── */}
+      {/* ─── HERO PHOTO — full-bleed, no text overlay (matches StreamingGeneratingScreen) ───
+        Title + dates + chips render in the dedicated header section below so the
+        photo reads as a clean, large-format hero and the type sits on the page
+        background instead of being overlaid on the image. */}
       <div
         ref={heroRef}
-        className="relative w-full overflow-hidden rounded-b-2xl"
-        style={{ height: 200 }}
+        className="relative w-full overflow-hidden"
+        style={{ height: "42vh", minHeight: 280 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
@@ -367,18 +385,18 @@ export default function TripHome() {
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => { e.currentTarget.src = DEFAULT_TRIP_PHOTO; }}
         />
-        {/* Top gradient for nav buttons */}
+        {/* Top gradient — keeps nav buttons readable on light photos */}
         <div className="absolute inset-x-0 top-0 h-20" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.3), transparent)" }} />
-        {/* Bottom gradient + trip name/date overlay */}
-        <div className="absolute inset-x-0 bottom-0 h-24" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent)" }} />
-        <div className="absolute bottom-0 inset-x-0 px-4 pb-3">
-          <p className="text-white text-[18px] font-bold leading-tight drop-shadow-sm truncate">
-            {trip?.destination || trip?.name}
-          </p>
-          <p className="text-white/80 text-[13px] mt-0.5 drop-shadow-sm">
-            {formatDateRange(trip?.tentative_start_date ?? null, trip?.tentative_end_date ?? null)}
-          </p>
-        </div>
+        {/* Bottom fade-to-background — same recipe as StreamingGeneratingScreen
+          so the bottom of the photo dissolves into the page surface and the
+          title section reads as a continuation of the hero. */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.6) 25%, transparent 55%)",
+          }}
+        />
 
         {/* Back button */}
         <button
@@ -446,8 +464,42 @@ export default function TripHome() {
         )}
       </div>
 
-      {/* ─── TRIP INFO (below photo, on white background) ─── */}
-      <div className="px-4 pt-3 pb-2 md:max-w-[700px] md:mx-auto md:px-8">
+      {/* ─── TRIP HEADER (eyebrow + title + chips) ───
+        Mirrors StreamingGeneratingScreen's bottom-of-hero composition: a small
+        primary-color eyebrow, a large title, and metadata chips. The negative
+        margin pulls the section up into the gradient fade so the title looks
+        anchored to the photo rather than floating beneath it. */}
+      <div className="px-4 -mt-6 md:max-w-[700px] md:mx-auto md:px-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+          My trip
+        </p>
+        <h1 className="text-3xl lg:text-4xl font-bold text-foreground leading-tight">
+          {trip?.destination || trip?.name}
+        </h1>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {numDays !== null && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
+              <Clock className="h-3 w-3" />
+              {numDays} {numDays === 1 ? "day" : "days"}
+            </span>
+          )}
+          {trip?.destination && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
+              <MapPin className="h-3 w-3" />
+              {trip.destination}
+            </span>
+          )}
+          {(trip?.tentative_start_date || trip?.tentative_end_date) && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
+              <Calendar className="h-3 w-3" />
+              {formatDateRange(trip?.tentative_start_date ?? null, trip?.tentative_end_date ?? null)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ─── TRIP INFO (members + attendance badge) ─── */}
+      <div className="px-4 pt-4 pb-2 md:max-w-[700px] md:mx-auto md:px-8">
         {/* Members + attendance badge row */}
         <div className="flex items-center gap-3">
           <button
