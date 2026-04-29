@@ -2297,9 +2297,19 @@ async function searchPlacesBatch(
           `[timing] places.search live q="${qLabel}" pool=${q.poolKey} ` +
             `fetch_ms=${Date.now() - fetchStart} total_ms=${Date.now() - qStart} results=${places.length}`,
         );
-        // Fire-and-forget cache write so the next trip/concierge query in the
-        // same bucket can skip Google.
-        cacheSet(svcClient, "search", cacheKey, places).catch(() => {});
+        // Awaited cache write — fire-and-forget used to be cancelled by the
+        // Edge Functions runtime when the function exited, leaving the cache
+        // empty between trips. Awaiting inside this map closure still keeps
+        // the OUTER Promise.all parallel (each query awaits its own write
+        // before resolving its result), at the cost of ~50-100ms per query
+        // wall time (writes run concurrently with the other queries' fetches).
+        try {
+          await cacheSet(svcClient, "search", cacheKey, places);
+        } catch (writeErr) {
+          // cacheSet swallows errors itself, but defensively double-catch in
+          // case future rewrites add a throw.
+          console.warn(`[searchPlacesBatch] cache write threw for "${q.textQuery}":`, (writeErr as Error).message);
+        }
         return places;
       } catch (err) {
         console.error(`[searchPlacesBatch] threw for "${q.textQuery}":`, err);
@@ -2409,7 +2419,15 @@ async function hydrateFinalists(
         console.log(
           `[timing] places.details live id=${id} fetch_ms=${Date.now() - fetchStart} total_ms=${Date.now() - callStart}`,
         );
-        cacheSet(svcClient, "details", id, data).catch(() => {});
+        // Awaited cache write — see searchPlacesBatch for rationale (the
+        // fire-and-forget version raced the Edge Functions runtime exit and
+        // many writes never landed, which is why production logs showed
+        // cache=0 on second-trip-to-same-destination tests).
+        try {
+          await cacheSet(svcClient, "details", id, data);
+        } catch (writeErr) {
+          console.warn(`[hydrateFinalists] cache write threw for ${id}:`, (writeErr as Error).message);
+        }
       } catch (err) {
         console.error(`[hydrateFinalists] threw for place_id=${id}:`, err);
       }

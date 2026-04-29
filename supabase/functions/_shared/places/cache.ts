@@ -38,7 +38,11 @@ export const PLACES_COST: Record<string, number> = {
 };
 
 export const CACHE_TTL_DAYS: Record<CacheTier, number> = {
-  search: 7,
+  search: 30,   // bumped from 7 → 30 (Q2 perf push). Restaurants and attractions
+                // around a city change much slower than 7 days; warming the cache
+                // longer keeps the per-trip Places spend near zero on repeat
+                // destinations. Cache rows past TTL are pruned by the daily
+                // cleanup_expired_places_cache cron.
   details: 30,
   geocode: 30,
   photo: 30,
@@ -61,8 +65,28 @@ export function bucketLatLng(lat: number, lng: number): string {
   return `${r(lat)},${r(lng)}`;
 }
 
+// Aggressively normalize a free-text query so that "Romantic dinner Paris",
+// "  romantic dinner paris ", "Romantic-Dinner Paris!" all collapse to the
+// same cache key. Without this, near-identical queries from different intent
+// shapes used to bypass the cache and re-hit Google. Steps:
+//   1. lower-case
+//   2. strip diacritics (NFD + remove combining marks) — "Café" → "cafe"
+//   3. replace any non-alphanumeric run with a single space
+//   4. collapse whitespace
+//   5. trim
+function normalizeQueryForCache(s: string): string {
+  return s
+    .normalize("NFD")
+    // Strip Unicode "Combining Diacritical Marks" (U+0300..U+036F).
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function buildSearchCacheKey(
-  normalizedQuery: string,
+  rawQuery: string,
   lat: number,
   lng: number,
   radiusMeters: number,
@@ -71,11 +95,11 @@ export function buildSearchCacheKey(
 ): string {
   const typeTag = includedType ? `t=${includedType};` : "";
   const priceTag = priceLevels?.length ? `p=${[...priceLevels].sort().join(",")};` : "";
-  return `${normalizedQuery.toLowerCase().trim()}|${bucketLatLng(lat, lng)}|r=${Math.round(radiusMeters / 1000)}km|${typeTag}${priceTag}`;
+  return `${normalizeQueryForCache(rawQuery)}|${bucketLatLng(lat, lng)}|r=${Math.round(radiusMeters / 1000)}km|${typeTag}${priceTag}`;
 }
 
 export function buildGeocodeCacheKey(destination: string): string {
-  return destination.toLowerCase().trim();
+  return normalizeQueryForCache(destination);
 }
 
 export interface CacheEntry<T = unknown> {
@@ -131,7 +155,13 @@ export async function cacheSet<T>(
     // Don't throw — cache writes are best-effort; a failure here should not
     // take down a user trip build. Log loudly so we notice in Supabase logs.
     console.error(`[places_cache] upsert failed (tier=${tier} key=${key.slice(0, 80)}):`, error.message);
+    return;
   }
+  // Success log lets us grep for `cache_write_ok tier=` in Supabase logs to
+  // confirm the cache is actually populating after a deploy. Previously we
+  // only logged on error, so a silent "writes never happen" bug would never
+  // surface.
+  console.log(`[places_cache] cache_write_ok tier=${tier} key=${key.slice(0, 80)} ttl_days=${ttlDays}`);
 }
 
 // Log a single Places API call to ai_request_log so the daily-spend circuit
