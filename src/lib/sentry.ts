@@ -13,20 +13,8 @@ export function initSentry(): void {
     dsn,
     environment: import.meta.env.MODE,
     release: typeof __BUILD_TS__ !== "undefined" ? __BUILD_TS__ : undefined,
-    integrations: [
-      Sentry.browserTracingIntegration({
-        // Resource timing for images is captured by default — `resource.img`
-        // is NOT in `ignoreResourceSpans`. Listing the defaults explicitly so
-        // a future contributor doesn't accidentally drop image spans when
-        // adjusting this option.
-        ignoreResourceSpans: ["resource.script", "resource.css"],
-      }),
-    ],
-    // Diagnostic window: bumped from 0.1 → 0.5 for 7 days starting 2026-04-29
-    // to surface page transactions, slow image loads, and INP events. Revert
-    // to 0.1 on or before 2026-05-06.
-    tracesSampleRate: 0.5,
-    tracePropagationTargets: ["localhost", /^\//, /^https:\/\/junto\.pro/, /^https:\/\/.*\.supabase\.co/],
+    integrations: [Sentry.browserTracingIntegration()],
+    tracesSampleRate: 0.1,
     beforeSend(event, hint) {
       // Supabase Auth's cross-tab lock fires this when another tab takes over
       // the auth-token mutex (e.g. after a token refresh). It's expected
