@@ -81,7 +81,7 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
   );
 }
 
-function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
+function AutoPlayVideo({ src, active, eager }: { src: string; active: boolean; eager: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
 
