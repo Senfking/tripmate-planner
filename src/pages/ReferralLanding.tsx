@@ -153,7 +153,10 @@ function AutoPlayVideo({ src, active, eager }: { src: string; active: boolean; e
         disablePictureInPicture
         controls={false}
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-        preload={active ? "auto" : "metadata"}
+        // First slide preloads to get LCP frame fast. Other slides only
+        // start fetching once they become active (carousel reaches them),
+        // keeping initial network weight to one ~600KB video.
+        preload={active ? "auto" : eager ? "metadata" : "none"}
         poster={posterImage}
         className="ref-hero-video absolute inset-0 h-full w-full object-cover"
         style={{
