@@ -442,28 +442,58 @@ export default function ReferralLanding() {
             </div>
           )}
 
-          {/* Headline */}
-          <h1
-            className="text-white font-bold"
-            style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}
-          >
-            Plan trips
-            <br />
-            together.
-          </h1>
+          {/* Headline + subhead — rotates with the background video.
+              Wrapped in a grid so the tallest copy reserves vertical
+              space; otherwise the CTA below jumps each time the slide
+              changes (some headlines are 2 lines, some subheads wrap to
+              3). The visible layer is absolutely positioned over it. */}
+          <div className="relative">
+            {/* Reservoir: all slides rendered invisibly so the container
+                always sizes to the tallest headline+subhead pair. */}
+            <div aria-hidden="true" className="pointer-events-none invisible grid">
+              {SLIDES.map((slide, i) => (
+                <div key={i} className="[grid-area:1/1]">
+                  <h2 className="font-bold" style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}>
+                    {slide.headline[0]}
+                    <br />
+                    {slide.headline[1]}
+                  </h2>
+                  <p className="mt-2" style={{ fontSize: 15, lineHeight: 1.5 }}>
+                    {slide.subhead}
+                  </p>
+                </div>
+              ))}
+            </div>
 
-          {/* Subline */}
-          <p
-            className="mt-2"
-            style={{
-              fontSize: 15,
-              lineHeight: 1.5,
-              color: "rgba(255,255,255,0.75)",
-              textShadow: "0 1px 8px rgba(0,0,0,0.5)",
-            }}
-          >
-            Ditch the group chat chaos. Plan, split & decide, all in one place.
-          </p>
+            {/* Visible layer */}
+            <div
+              className="absolute inset-0"
+              style={{
+                opacity: headlineVisible ? 1 : 0,
+                transition: "opacity 0.35s ease-in-out",
+              }}
+            >
+              <h1
+                className="text-white font-bold"
+                style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}
+              >
+                {SLIDES[activeIndex].headline[0]}
+                <br />
+                {SLIDES[activeIndex].headline[1]}
+              </h1>
+              <p
+                className="mt-2"
+                style={{
+                  fontSize: 15,
+                  lineHeight: 1.5,
+                  color: "rgba(255,255,255,0.75)",
+                  textShadow: "0 1px 8px rgba(0,0,0,0.5)",
+                }}
+              >
+                {SLIDES[activeIndex].subhead}
+              </p>
+            </div>
+          </div>
 
           {/* Rotating statement panel */}
           <div
