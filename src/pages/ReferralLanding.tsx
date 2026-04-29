@@ -64,13 +64,16 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
 
   return (
     <>
-      {VIDEOS.map((src, i) => {
+      {SLIDES.map((slide, i) => {
         if (!visible.has(i)) return null;
         return (
           <AutoPlayVideo
-            key={src}
-            src={src}
+            key={slide.video}
+            src={slide.video}
             active={i === activeIndex}
+            // Only the first slide preloads on mount; the rest lazy-load
+            // when the carousel first advances to them. Critical for LCP.
+            eager={i === 0}
           />
         );
       })}
