@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { showErrorToast } from "@/lib/supabaseErrors";
 import { withAuthRetry } from "@/lib/safeQuery";
+import { expectAffectedRows } from "@/lib/safeMutate";
 
 export interface ItineraryItem {
   id: string;
@@ -95,19 +96,22 @@ export function useItinerary(tripId: string) {
     }) =>
       withAuthRetry(
         async () => {
-          const { error } = await supabase
-            .from("itinerary_items")
-            .update({
-              title: item.title,
-              start_time: item.start_time || null,
-              end_time: item.end_time || null,
-              location_text: item.location_text || null,
-              notes: item.notes || null,
-              status: item.status || "idea",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", item.id);
-          if (error) throw error;
+          expectAffectedRows(
+            await supabase
+              .from("itinerary_items")
+              .update({
+                title: item.title,
+                start_time: item.start_time || null,
+                end_time: item.end_time || null,
+                location_text: item.location_text || null,
+                notes: item.notes || null,
+                status: item.status || "idea",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", item.id)
+              .select("id"),
+            "Activity could not be updated. Please refresh and try again.",
+          );
         },
         { name: "itinerary_item_update", context: { trip_id: tripId, item_id: item.id, status: item.status ?? "idea" }, userId: user?.id },
       ),
@@ -126,8 +130,10 @@ export function useItinerary(tripId: string) {
     mutationFn: (id: string) =>
       withAuthRetry(
         async () => {
-          const { error } = await supabase.from("itinerary_items").delete().eq("id", id);
-          if (error) throw error;
+          expectAffectedRows(
+            await supabase.from("itinerary_items").delete().eq("id", id).select("id"),
+            "Activity could not be deleted. Please refresh and try again.",
+          );
         },
         { name: "itinerary_item_delete", context: { trip_id: tripId, item_id: id }, userId: user?.id },
       ),

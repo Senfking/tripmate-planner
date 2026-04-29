@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { friendlyErrorMessage } from "@/lib/supabaseErrors";
+import { expectAffectedRows } from "@/lib/safeMutate";
 
 export type AttachmentRow = {
   id: string;
@@ -154,11 +155,14 @@ export function useAttachments(tripId: string) {
           .from("trip-attachments")
           .remove([attachment.file_path]);
       }
-      const { error } = await supabase
-        .from("attachments")
-        .delete()
-        .eq("id", attachment.id);
-      if (error) throw error;
+      expectAffectedRows(
+        await supabase
+          .from("attachments")
+          .delete()
+          .eq("id", attachment.id)
+          .select("id"),
+        "This item could not be deleted. Please refresh and try again.",
+      );
     },
     onSuccess: (_data, attachment) => {
       qc.setQueryData<AttachmentRow[]>(key, (old) =>
@@ -200,11 +204,14 @@ export function useAttachments(tripId: string) {
 
   const updateNotes = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
-      const { error } = await supabase
-        .from("attachments")
-        .update({ notes: notes || null })
-        .eq("id", id);
-      if (error) throw error;
+      expectAffectedRows(
+        await supabase
+          .from("attachments")
+          .update({ notes: notes || null })
+          .eq("id", id)
+          .select("id"),
+        "Notes could not be saved. Please refresh and try again.",
+      );
     },
     onSuccess: (_data, vars) => {
       qc.setQueryData<AttachmentRow[]>(key, (old) =>
@@ -218,11 +225,14 @@ export function useAttachments(tripId: string) {
 
   const updatePrivacy = useMutation({
     mutationFn: async ({ id, is_private }: { id: string; is_private: boolean }) => {
-      const { error } = await supabase
-        .from("attachments")
-        .update({ is_private })
-        .eq("id", id);
-      if (error) throw error;
+      expectAffectedRows(
+        await supabase
+          .from("attachments")
+          .update({ is_private })
+          .eq("id", id)
+          .select("id"),
+        "Privacy could not be updated. Please refresh and try again.",
+      );
     },
     onSuccess: (_data, vars) => {
       qc.setQueryData<AttachmentRow[]>(key, (old) =>
@@ -236,11 +246,14 @@ export function useAttachments(tripId: string) {
 
   const updateType = useMutation({
     mutationFn: async ({ id, type }: { id: string; type: string }) => {
-      const { error } = await supabase
-        .from("attachments")
-        .update({ type })
-        .eq("id", id);
-      if (error) throw error;
+      expectAffectedRows(
+        await supabase
+          .from("attachments")
+          .update({ type })
+          .eq("id", id)
+          .select("id"),
+        "Category could not be updated. Please refresh and try again.",
+      );
     },
     onSuccess: (_data, vars) => {
       qc.setQueryData<AttachmentRow[]>(key, (old) =>
