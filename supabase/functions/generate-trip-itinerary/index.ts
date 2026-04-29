@@ -3697,7 +3697,16 @@ function validateActivities(
     }
   }
 
-  if (totalBefore > 0 && dropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
+  // Fail loud on a fully empty trip too — `totalBefore === 0` used to skip
+  // this check, which let zero-activity outputs ship as "success" and be
+  // cached for 7 days. Better to surface an error and re-run than to poison
+  // the response cache with an empty itinerary.
+  if (totalBefore === 0) {
+    throw new Error(
+      "validateActivities: 0 activities returned across the whole trip — refusing to ship empty result",
+    );
+  }
+  if (dropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
     throw new Error(
       `validateActivities: dropped ${dropped}/${totalBefore} (${Math.round(100 * dropped / totalBefore)}%) activities — upstream pipeline is producing garbage`,
     );
@@ -4462,9 +4471,16 @@ Deno.serve(async (req) => {
             // Re-sort by day_number for downstream rollups
             ranked_days.sort((a, b) => a.day_number - b.day_number);
 
-            // Trip-wide drop threshold check (mirrors validateActivities)
+            // Trip-wide drop threshold check (mirrors validateActivities).
+            // A fully-empty result (`totalBefore === 0`) used to slip past
+            // this guard and get cached as a "successful" zero-activity trip;
+            // we now refuse it explicitly so the user sees an error and the
+            // empty payload never reaches ai_response_cache.
             const totalBefore = ranked_days.reduce((n, d) => n + d.activities.length, 0) + totalDropped;
-            if (totalBefore > 0 && totalDropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
+            if (totalBefore === 0) {
+              throw new Error("Ranker returned 0 activities for the whole trip — refusing to cache empty result");
+            }
+            if (totalDropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
               throw new Error(`Validation dropped ${totalDropped}/${totalBefore} activities (>${(VALIDATION_DROP_THRESHOLD * 100).toFixed(0)}%) — pool too thin`);
             }
 
