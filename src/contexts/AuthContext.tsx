@@ -3,7 +3,7 @@ import type { User, Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
-import { ensureFreshSession } from "@/lib/sessionRefresh";
+import { ensureFreshSession, VISIBILITY_BUFFER_SECONDS } from "@/lib/sessionRefresh";
 import { setCurrentUserId } from "@/lib/admin";
 
 type NotificationPreferences = {
@@ -150,8 +150,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       });
 
+    // Refresh the JWT when the tab returns to the foreground. Browsers
+    // throttle Supabase's autoRefreshToken interval while backgrounded, so a
+    // mutation fired right after tab-return can hit RLS with an expired token.
+    // Postgres treats that as auth.uid() = NULL — the request affects 0 rows
+    // and PostgREST returns no error, so the UI silently "succeeds" (e.g.
+    // trip delete confirms but the row remains). ensureFreshSession dedupes
+    // via an inFlight promise so concurrent mutations awaiting the same
+    // refresh share one network round-trip.
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      ensureFreshSession(VISIBILITY_BUFFER_SECONDS).then(async (outcome) => {
+        if (outcome === "failed") {
+          // Refresh attempt errored (e.g. refresh token revoked / network
+          // partition that didn't recover). Sign out so ProtectedRoute sends
+          // the user back to login instead of leaving them stuck with stale
+          // credentials that will keep failing every mutation.
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // signOut already failed-soft; nothing else we can do here.
+          }
+        }
+      });
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [fetchProfile]);
 

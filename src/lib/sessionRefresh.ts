@@ -9,30 +9,37 @@ import { supabase } from "@/integrations/supabase/client";
 // violates row-level security policy". Calling this on `visibilitychange`
 // and before critical mutations closes that race.
 
-const EXPIRY_BUFFER_SECONDS = 60;
+const DEFAULT_BUFFER_SECONDS = 60;
+// Tab-return refresh uses a wider window so a mutation triggered immediately
+// after the tab becomes visible doesn't race a JWT that's about to expire.
+export const VISIBILITY_BUFFER_SECONDS = 300;
 
-let inFlight: Promise<void> | null = null;
+let inFlight: Promise<RefreshOutcome> | null = null;
 
-export async function ensureFreshSession(): Promise<void> {
+export type RefreshOutcome = "fresh" | "refreshed" | "failed" | "no-session";
+
+export async function ensureFreshSession(
+  bufferSeconds: number = DEFAULT_BUFFER_SECONDS,
+): Promise<RefreshOutcome> {
   if (inFlight) return inFlight;
 
-  inFlight = (async () => {
+  inFlight = (async (): Promise<RefreshOutcome> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) return "no-session";
 
       const expiresAt = session.expires_at;
-      if (!expiresAt) return;
+      if (!expiresAt) return "fresh";
 
       const nowSec = Math.floor(Date.now() / 1000);
       const secondsLeft = expiresAt - nowSec;
 
-      if (secondsLeft <= EXPIRY_BUFFER_SECONDS) {
-        await supabase.auth.refreshSession();
-      }
+      if (secondsLeft > bufferSeconds) return "fresh";
+
+      const { error } = await supabase.auth.refreshSession();
+      return error ? "failed" : "refreshed";
     } catch {
-      // Swallow — a failed refresh should not crash the caller. The next
-      // request will surface the auth error on its own if needed.
+      return "failed";
     } finally {
       inFlight = null;
     }
