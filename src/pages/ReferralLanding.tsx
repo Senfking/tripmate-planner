@@ -9,18 +9,54 @@ import { Loader2 } from "lucide-react";
 import posterImage from "@/assets/video-poster.png";
 
 
-/* ── Verified working video sources (diverse scenery) ── */
-const VIDEOS = [
-  "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
-  "https://videos.pexels.com/video-files/2519660/2519660-hd_1920_1080_24fps.mp4",
+/* ── Hero slides: each pairs a destination video with on-vibe copy.
+   Videos are Pexels SD (360p), all <1.5MB. Only the first video preloads
+   on mount; the rest get preload="none" until the carousel reaches them
+   (see AutoPlayVideo). Keeps initial page weight tiny on the unauth
+   landing where LCP matters most. ── */
+const SLIDES = [
+  {
+    // ocean / coast — original hero clip, sets the tone
+    video: "https://videos.pexels.com/video-files/1093662/1093662-sd_640_360_30fps.mp4",
+    headline: ["Plan trips", "together."],
+    subhead: "Ditch the group chat chaos. Plan, split & decide, all in one place.",
+  },
+  {
+    // city / urban — original second clip
+    video: "https://videos.pexels.com/video-files/2519660/2519660-sd_640_360_24fps.mp4",
+    headline: ["Discover", "hidden gems."],
+    subhead: "AI-powered itineraries tailored to your group's vibe.",
+  },
+  {
+    // food / culture — pizza & wine with friends
+    video: "https://videos.pexels.com/video-files/7314884/7314884-sd_640_360_25fps.mp4",
+    headline: ["Split costs", "effortlessly."],
+    subhead: "Track expenses, settle up, no awkward math.",
+  },
+  {
+    // group / people — friends hanging out
+    video: "https://videos.pexels.com/video-files/4918986/4918986-sd_640_360_30fps.mp4",
+    headline: ["Decide as", "a group."],
+    subhead: "Vote on activities, pick favorites, no more endless debates.",
+  },
+  {
+    // mountains / nature — hiking landscape
+    video: "https://videos.pexels.com/video-files/855128/855128-sd_640_360_24fps.mp4",
+    headline: ["Make memories", "together."],
+    subhead: "From planning to post-trip, every moment in one shared space.",
+  },
 ];
 
+/* ── Value-prop rotator (independent of the video carousel). Lives in
+   the glass card — short benefit statements that cycle on their own
+   timing so users get more reading variety than the headline alone. ── */
 const STATEMENTS = [
   { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip. Itinerary, decisions, everything." },
   { problem: "Splitting costs always gets awkward.", solution: "Log expenses, scan receipts with Junto AI, and settle up in any currency." },
   { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas, all in one place." },
   { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
 ];
+
 
 /* ── Video slideshow - only mount active + next to save resources ── */
 function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
@@ -39,13 +75,16 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
 
   return (
     <>
-      {VIDEOS.map((src, i) => {
+      {SLIDES.map((slide, i) => {
         if (!visible.has(i)) return null;
         return (
           <AutoPlayVideo
-            key={src}
-            src={src}
+            key={slide.video}
+            src={slide.video}
             active={i === activeIndex}
+            // Only the first slide preloads on mount; the rest lazy-load
+            // when the carousel first advances to them. Critical for LCP.
+            eager={i === 0}
           />
         );
       })}
@@ -53,7 +92,7 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
   );
 }
 
-function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
+function AutoPlayVideo({ src, active, eager }: { src: string; active: boolean; eager: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
 
@@ -125,7 +164,10 @@ function AutoPlayVideo({ src, active }: { src: string; active: boolean }) {
         disablePictureInPicture
         controls={false}
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-        preload={active ? "auto" : "metadata"}
+        // First slide preloads to get LCP frame fast. Other slides only
+        // start fetching once they become active (carousel reaches them),
+        // keeping initial network weight to one ~600KB video.
+        preload={active ? "auto" : eager ? "metadata" : "none"}
         poster={posterImage}
         className="ref-hero-video absolute inset-0 h-full w-full object-cover"
         style={{
@@ -184,6 +226,9 @@ export default function ReferralLanding() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [statementIndex, setStatementIndex] = useState(0);
   const [statementVisible, setStatementVisible] = useState(true);
+  // Headline overlay fade is decoupled from the value-prop card fade —
+  // each rotates on its own timer and would clash if they shared state.
+  const [headlineVisible, setHeadlineVisible] = useState(true);
   const [formOpen, setFormOpen] = useState(!!code);
 
   // Auth state
@@ -251,13 +296,28 @@ export default function ReferralLanding() {
     })();
   }, [code]);
 
+  // Background video carousel — also drives the headline/subhead overlay
+  // since each slide carries its own copy. 5.5s per slide feels right:
+  // long enough to read, short enough that the variety registers across
+  // 5 slides without dragging.
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % VIDEOS.length);
-    }, 6000);
+      // Quick fade-out → swap → fade-in for the headline overlay so the
+      // copy doesn't pop. The video itself crossfades on a 1.5s curve in
+      // VideoSlideshow, so the headline ends up reappearing roughly when
+      // the new background settles.
+      setHeadlineVisible(false);
+      setTimeout(() => {
+        setActiveIndex((prev) => (prev + 1) % SLIDES.length);
+        setHeadlineVisible(true);
+      }, 350);
+    }, 5500);
     return () => clearInterval(interval);
   }, []);
 
+  // Independent rotator for the value-prop glass card. Decoupled from
+  // the video carousel on purpose — gives users more reading variety
+  // and avoids two pieces of copy swapping at the exact same moment.
   useEffect(() => {
     const interval = setInterval(() => {
       setStatementVisible(false);
@@ -382,28 +442,58 @@ export default function ReferralLanding() {
             </div>
           )}
 
-          {/* Headline */}
-          <h1
-            className="text-white font-bold"
-            style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}
-          >
-            Plan trips
-            <br />
-            together.
-          </h1>
+          {/* Headline + subhead — rotates with the background video.
+              Wrapped in a grid so the tallest copy reserves vertical
+              space; otherwise the CTA below jumps each time the slide
+              changes (some headlines are 2 lines, some subheads wrap to
+              3). The visible layer is absolutely positioned over it. */}
+          <div className="relative">
+            {/* Reservoir: all slides rendered invisibly so the container
+                always sizes to the tallest headline+subhead pair. */}
+            <div aria-hidden="true" className="pointer-events-none invisible grid">
+              {SLIDES.map((slide, i) => (
+                <div key={i} className="[grid-area:1/1]">
+                  <h2 className="font-bold" style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}>
+                    {slide.headline[0]}
+                    <br />
+                    {slide.headline[1]}
+                  </h2>
+                  <p className="mt-2" style={{ fontSize: 15, lineHeight: 1.5 }}>
+                    {slide.subhead}
+                  </p>
+                </div>
+              ))}
+            </div>
 
-          {/* Subline */}
-          <p
-            className="mt-2"
-            style={{
-              fontSize: 15,
-              lineHeight: 1.5,
-              color: "rgba(255,255,255,0.75)",
-              textShadow: "0 1px 8px rgba(0,0,0,0.5)",
-            }}
-          >
-            Ditch the group chat chaos. Plan, split & decide, all in one place.
-          </p>
+            {/* Visible layer */}
+            <div
+              className="absolute inset-0"
+              style={{
+                opacity: headlineVisible ? 1 : 0,
+                transition: "opacity 0.35s ease-in-out",
+              }}
+            >
+              <h1
+                className="text-white font-bold"
+                style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}
+              >
+                {SLIDES[activeIndex].headline[0]}
+                <br />
+                {SLIDES[activeIndex].headline[1]}
+              </h1>
+              <p
+                className="mt-2"
+                style={{
+                  fontSize: 15,
+                  lineHeight: 1.5,
+                  color: "rgba(255,255,255,0.75)",
+                  textShadow: "0 1px 8px rgba(0,0,0,0.5)",
+                }}
+              >
+                {SLIDES[activeIndex].subhead}
+              </p>
+            </div>
+          </div>
 
           {/* Rotating statement panel */}
           <div
@@ -444,17 +534,21 @@ export default function ReferralLanding() {
             </div>
           </div>
 
-          {/* Statement dots */}
+          {/* Slide dots — track the video/headline carousel (5 slides).
+              Previously these tracked the value-prop card rotator (4
+              statements); switched to the slide carousel since that's
+              what users perceive as the primary "where am I" indicator
+              for the page. */}
           <div className="flex items-center justify-center mt-3" style={{ gap: 6 }}>
-            {STATEMENTS.map((_, i) => (
+            {SLIDES.map((_, i) => (
               <span
                 key={i}
                 className="transition-all duration-300"
                 style={{
-                  width: i === statementIndex ? 20 : 4,
+                  width: i === activeIndex ? 20 : 4,
                   height: 4,
-                  borderRadius: i === statementIndex ? 2 : "50%",
-                  background: i === statementIndex ? "white" : "rgba(255,255,255,0.3)",
+                  borderRadius: i === activeIndex ? 2 : "50%",
+                  background: i === activeIndex ? "white" : "rgba(255,255,255,0.3)",
                 }}
               />
             ))}
