@@ -23,22 +23,22 @@ const OPTIONS: Option[] = [
   {
     key: "relaxed",
     label: "Light",
-    tag: "just food anchors",
-    desc: "Lunch and dinner spots, leave the days open",
+    tag: "lots of free time",
+    desc: "1 activity + dinner. Most of the day is yours.",
     intensity: 1,
   },
   {
     key: "balanced",
     label: "Balanced",
     tag: "a few highlights per day",
-    desc: "2–3 activities + meals, room to wander",
+    desc: "2 activities + lunch + dinner. Room to wander between.",
     intensity: 2,
   },
   {
     key: "packed",
     label: "Active",
-    tag: "packed itinerary",
-    desc: "4–5 activities per day, every slot filled",
+    tag: "morning to night",
+    desc: "3 activities + breakfast, lunch, dinner. Every part of the day used.",
     intensity: 3,
   },
 ];

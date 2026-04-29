@@ -305,24 +305,28 @@ const HAIKU_PRICING = {
 const PLACES_RANKING_COST_PER_CALL = 0.005;
 const PLACES_DETAILS_COST_PER_CALL = 0.017;
 const MAX_PLACES_QUERIES_PER_TRIP = 12; // was 20 — tighter budget; consolidated queries cover same ground
-// Slot budget scales with trip length AND with the user's chosen pace, so
-// longer/packed trips don't get gutted and shorter/leisurely trips don't get
-// padded with filler.
-//   leisurely → "light": lunch + dinner anchors only on full days
-//   balanced  → today's default shape (morning + lunch + afternoon + dinner)
-//   active    → "packed": morning + lunch + 2× afternoon + dinner (+ optional nightlife)
-// 5-day lands at: leisurely 12 / balanced 20 / active 27.
-// Ceilings hit at: leisurely 8d / balanced 9d / active 8d.
-// The AbortController already caps each Anthropic call at the remaining 150s
-// pipeline budget, so the active ceiling of 42 is structurally bounded.
+// Slot budget scales with trip length AND with the user's chosen pace. Light
+// trips should feel light — empty afternoons are a feature, not a bug — so
+// the per-day allowance is tight and the ceiling caps short. Balanced is the
+// reference shape (morning anchor + lunch + afternoon anchor + dinner). Active
+// is the densest: three anchors stacked around all three meals.
+//
+//   leisurely → "Light":    1 anchor + dinner only on full days     (~2/day)
+//   balanced  → "Balanced": 2 anchors + lunch + dinner               (~4/day)
+//   active    → "Active":   3 anchors + breakfast + lunch + dinner   (~6-7/day)
+//
+// Ceilings (cap kicks in at): leisurely 4d / balanced 6d / active 6d.
+// Bookend (arrival/departure) days override pace — travel days have natural
+// constraints. The cap may overrun on light trips by a few slots due to
+// bookend overhead; warning is logged but accepted.
 const SLOTS_PER_DAY_BUDGET: Record<Intent["pace"], number> = {
-  leisurely: 2.5,
+  leisurely: 2,
   balanced: 4,
-  active: 5.5,
+  active: 7,
 };
 const MAX_SLOTS_CEILING: Record<Intent["pace"], number> = {
-  leisurely: 18,
-  balanced: 36,
+  leisurely: 8,
+  balanced: 24,
   active: 42,
 };
 
@@ -1491,12 +1495,12 @@ function buildSkeleton(
       slots.push({ type: "rest", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
     } else if (intent.pace === "leisurely") {
-      // Leisurely / "light": food anchors only on full interior days. No
-      // morning_major, no afternoon_major, no breakfast — the user explicitly
-      // asked for minimal pre-planning. Arrival and departure days keep their
-      // bookend activity (handled in the isFirst/isLast branches above) so
-      // transit days don't collapse to lunch + dinner around a flight.
-      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 30), duration_minutes: 90, region_tag_for_queries: primary });
+      // Leisurely / "Light": one afternoon anchor + dinner. No breakfast, no
+      // lunch, no morning slot, no second afternoon — the empty space is the
+      // whole point. Users on this pace want loose middle days. Arrival and
+      // departure days keep their bookend shape (isFirst/isLast branches
+      // above) so travel days don't collapse around a flight.
+      slots.push({ type: "afternoon_major", start_time: hhmm(15, 0), duration_minutes: 120, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
     } else if (intent.pace === "active") {
       // Active: early start, morning + two afternoon majors, optional nightlife.
@@ -1510,15 +1514,14 @@ function buildSkeleton(
         slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
       }
     } else {
-      // Balanced (default): breakfast, morning + afternoon major, dinner, optional nightlife.
-      slots.push({ type: "breakfast", start_time: hhmm(9, 0), duration_minutes: 45, region_tag_for_queries: primary });
+      // Balanced (default): morning anchor + lunch + afternoon anchor + dinner.
+      // Breakfast and nightlife are not part of the balanced shape — those are
+      // active-pace concerns. Four slots is the reference shape; everything
+      // else is calibrated against this.
       slots.push({ type: "morning_major", start_time: hhmm(10, 0), duration_minutes: 150, region_tag_for_queries: primary });
       slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
       slots.push({ type: "afternoon_major", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
-      if (wantsNightlife && !isFirst) {
-        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 90, region_tag_for_queries: primary });
-      }
     }
 
     days.push({
@@ -2830,6 +2833,13 @@ ABSOLUTE RULES — violating any of these makes your output useless:
 4. Filter venues that violate intent.must_avoids BEFORE picking. If the only remaining pool candidates violate must_avoids, pick the least-bad and say so honestly in why_for_you.
 5. slot_type must match the skeleton — if the slot is "dinner", do not pick a museum.
 6. Pick exactly one activity per slot in the skeleton. If a slot is "arrival", "departure", "transit_buffer", or "rest", emit an activity whose category reflects the downtime (e.g. "transit" or "rest") with a short helpful description ("Arrive, check in, unpack" / "Return to the hotel; you've earned it"). place_id=null is acceptable for pure-downtime slots — set is_event=false.
+
+PACE DISCIPLINE — RESPECT THE EMPTY SPACE:
+- intent.pace tells you how full the user wants their days to feel. The skeleton already encodes this — light-pace days have only an afternoon anchor + dinner; balanced has morning + lunch + afternoon + dinner; active stacks three anchors plus all three meals.
+- When intent.pace = "leisurely" (Light), the empty space is INTENTIONAL. Do not densify the day through prose. Banned: "After lunch, swing by the cathedral and the museum before dinner" when only one afternoon slot exists. Banned: pro_tips that effectively schedule a second activity ("On your way to dinner, stop at the market and the viewpoint"). One anchor means one anchor — describe it well and let the rest of the day breathe.
+- When intent.pace = "leisurely", trip_summary should reflect the looseness ("a few intentional anchors, lots of unscheduled time to wander"). Do not write a packed-itinerary narrative for a light trip.
+- When intent.pace = "active", you can be more directive in pro_tips about chaining the day's anchors — that user wants the structure.
+- This rule overrides any temptation to "fill the page" with extra recommendations even when the venue pool has more good candidates than slots. Quality over quantity.
 
 EDITORIAL VOICE — MANDATORY, NOT OPTIONAL:
 - Never generic. "Great restaurant" is banned. "A cozy spot" is banned. "Popular with locals" is banned unless you can name the specific local tradition, regular dish, or community ritual that makes it popular. Every description cites something specific to THAT venue: a signature dish, a view, a founder's name, an architectural detail, a ritual, the year it opened, the pastry that sells out by 10am.
