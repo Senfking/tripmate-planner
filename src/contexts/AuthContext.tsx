@@ -176,7 +176,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch {
             // signOut already failed-soft; nothing else we can do here.
           }
+          return;
         }
+        if (outcome === "no-session") return;
+        // Auth is fresh — refetch active queries so the UI updates with
+        // server-side changes the user might have missed while away. This
+        // bypasses the per-query staleTime, which is intentional: returning
+        // to the app is a strong signal the user wants current data, and
+        // refetchOnWindowFocus alone won't fire when staleTime hasn't
+        // elapsed. Scoped to "active" so unmounted screens stay quiet.
+        queryClient.refetchQueries({ type: "active" });
       });
     };
     const onVisibilityChange = () => {
