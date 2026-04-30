@@ -158,8 +158,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // trip delete confirms but the row remains). ensureFreshSession dedupes
     // via an inFlight promise so concurrent mutations awaiting the same
     // refresh share one network round-trip.
-    const onVisibilityChange = () => {
-      if (document.visibilityState !== "visible") return;
+    //
+    // iOS standalone PWAs are the worst case here: visibilitychange is
+    // unreliable on app-switch (the WebView gets suspended whole), and
+    // returning to the app sometimes fires only `focus` or `pageshow`
+    // (persisted=true on bfcache restore). Listen for all three; the dedupe
+    // means firing the same refresh from multiple events is cheap.
+    const refreshOnReturn = () => {
       ensureFreshSession(VISIBILITY_BUFFER_SECONDS).then(async (outcome) => {
         if (outcome === "failed") {
           // Refresh attempt errored (e.g. refresh token revoked / network
@@ -174,11 +179,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       });
     };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshOnReturn();
+    };
+    const onPageShow = (e: PageTransitionEvent) => {
+      // persisted=true means the page was restored from bfcache (Safari/iOS
+      // back/forward, sometimes app-switch). persisted=false fires on every
+      // initial load — refreshing then is harmless (dedupe + buffer check)
+      // and cheap, so don't bother gating on it.
+      void e;
+      refreshOnReturn();
+    };
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", refreshOnReturn);
+    window.addEventListener("pageshow", onPageShow);
 
     return () => {
       subscription.unsubscribe();
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", refreshOnReturn);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, [fetchProfile]);
 
