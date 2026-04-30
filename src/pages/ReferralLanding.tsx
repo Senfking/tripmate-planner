@@ -42,8 +42,11 @@ const SLIDES = [
     subhead: "Vote on activities, pick favorites, no more endless debates.",
   },
   {
-    // mountains / nature — only 720p24 exists for this clip (~2.7 MB).
-    video: "https://videos.pexels.com/video-files/855128/855128-hd_1280_720_24fps.mp4",
+    // friends on beach — 3 people walking together at the shore, warm
+    // golden tones, natural camera movement. 1080p30 (~4.6 MB), in line
+    // with the other premium 1080p slides. Replaces the previous mountain
+    // clip which didn't visually match the "make memories together" copy.
+    video: "https://videos.pexels.com/video-files/8456080/8456080-hd_1920_1080_30fps.mp4",
     headline: ["Make memories", "together."],
     subhead: "From planning to post-trip, every moment in one shared space.",
   },
