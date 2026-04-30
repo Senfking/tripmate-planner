@@ -16,32 +16,34 @@ import posterImage from "@/assets/video-poster.png";
    landing where LCP matters most. ── */
 const SLIDES = [
   {
-    // ocean / coast — original hero clip, sets the tone
-    video: "https://videos.pexels.com/video-files/1093662/1093662-sd_640_360_30fps.mp4",
+    // ocean / coast — 1080p30, ~5.2 MB
+    video: "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
     headline: ["Plan trips", "together."],
     subhead: "Ditch the group chat chaos. Plan, split & decide, all in one place.",
   },
   {
-    // city / urban — original second clip
-    video: "https://videos.pexels.com/video-files/2519660/2519660-sd_640_360_24fps.mp4",
+    // city / urban — best available is 720p24 (~5.0 MB); no small 1080p
+    // variant exists for this clip on Pexels (1080p jumps to ~10 MB).
+    video: "https://videos.pexels.com/video-files/2519660/2519660-hd_1280_720_24fps.mp4",
     headline: ["Discover", "hidden gems."],
     subhead: "AI-powered itineraries tailored to your group's vibe.",
   },
   {
-    // food / culture — pizza & wine with friends
-    video: "https://videos.pexels.com/video-files/7314884/7314884-sd_640_360_25fps.mp4",
+    // food / culture — 720p25 (~6.5 MB); 1080p variant is 14 MB so we
+    // hold at 720p to keep the carousel snappy.
+    video: "https://videos.pexels.com/video-files/7314884/7314884-hd_1280_720_25fps.mp4",
     headline: ["Split costs", "effortlessly."],
     subhead: "Track expenses, settle up, no awkward math.",
   },
   {
-    // group / people — friends hanging out
-    video: "https://videos.pexels.com/video-files/4918986/4918986-sd_640_360_30fps.mp4",
+    // group / people — 1080p30, ~4.4 MB
+    video: "https://videos.pexels.com/video-files/4918986/4918986-hd_1920_1080_30fps.mp4",
     headline: ["Decide as", "a group."],
     subhead: "Vote on activities, pick favorites, no more endless debates.",
   },
   {
-    // mountains / nature — hiking landscape
-    video: "https://videos.pexels.com/video-files/855128/855128-sd_640_360_24fps.mp4",
+    // mountains / nature — only 720p24 exists for this clip (~2.7 MB).
+    video: "https://videos.pexels.com/video-files/855128/855128-hd_1280_720_24fps.mp4",
     headline: ["Make memories", "together."],
     subhead: "From planning to post-trip, every moment in one shared space.",
   },
