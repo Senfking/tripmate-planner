@@ -58,33 +58,60 @@ const STATEMENTS = [
 ];
 
 
-/* ── Video slideshow - only mount active + next to save resources ── */
-function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
-  const prevIndex = useRef(activeIndex);
-  const [visible, setVisible] = useState<Set<number>>(new Set([activeIndex]));
-
+/* ── Detect slow connections so we can fall back to static posters
+   for slides 2+ instead of streaming multiple videos. The first
+   video still plays — only the secondary slides degrade. ── */
+function useFastConnection() {
+  const [fast, setFast] = useState(true);
   useEffect(() => {
-    // Keep both previous and current visible during crossfade
-    setVisible(new Set([prevIndex.current, activeIndex]));
-    const timer = setTimeout(() => {
-      prevIndex.current = activeIndex;
-      setVisible(new Set([activeIndex]));
-    }, 1600);
-    return () => clearTimeout(timer);
-  }, [activeIndex]);
+    const nav = navigator as Navigator & {
+      connection?: { effectiveType?: string; saveData?: boolean; addEventListener?: (t: string, fn: () => void) => void; removeEventListener?: (t: string, fn: () => void) => void };
+    };
+    const conn = nav.connection;
+    const evaluate = () => {
+      if (!conn) { setFast(true); return; }
+      if (conn.saveData) { setFast(false); return; }
+      // Treat 4g (and unknown) as fast; 2g/3g/slow-2g as slow.
+      const et = conn.effectiveType;
+      setFast(!et || et === "4g");
+    };
+    evaluate();
+    conn?.addEventListener?.("change", evaluate);
+    return () => conn?.removeEventListener?.("change", evaluate);
+  }, []);
+  return fast;
+}
+
+/* ── Video slideshow ──
+   Strategy:
+   - All videos mount once and stay mounted (so transitions don't tear
+     down/rebuild <video> elements mid-crossfade).
+   - preload="metadata" for every video gets the first frame + headers
+     (~50–100KB each) so the slide is paintable immediately.
+   - The *next* slide upgrades to preload="auto" while the current one
+     plays, so by the time the carousel advances it's already buffered.
+   - Crossfade (opacity 1→0 over 700ms) hides any residual buffer hitch.
+   - On slow connections, slides 2+ render the poster image only. ── */
+function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
+  const fast = useFastConnection();
+  const nextIndex = (activeIndex + 1) % SLIDES.length;
 
   return (
     <>
       {SLIDES.map((slide, i) => {
-        if (!visible.has(i)) return null;
+        const isActive = i === activeIndex;
+        const isNext = i === nextIndex;
+        // Slow connection: only slide 0 is a real video; the rest are
+        // poster-only crossfades. Keeps the cinematic feel without
+        // streaming multiple files over a 3g link.
+        const videoEnabled = fast || i === 0;
         return (
           <AutoPlayVideo
             key={slide.video}
             src={slide.video}
-            active={i === activeIndex}
-            // Only the first slide preloads on mount; the rest lazy-load
-            // when the carousel first advances to them. Critical for LCP.
-            eager={i === 0}
+            active={isActive}
+            preloadNext={isNext}
+            videoEnabled={videoEnabled}
           />
         );
       })}
@@ -92,11 +119,31 @@ function VideoSlideshow({ activeIndex }: { activeIndex: number }) {
   );
 }
 
-function AutoPlayVideo({ src, active, eager }: { src: string; active: boolean; eager: boolean }) {
+function AutoPlayVideo({
+  src,
+  active,
+  preloadNext,
+  videoEnabled,
+}: {
+  src: string;
+  active: boolean;
+  preloadNext: boolean;
+  videoEnabled: boolean;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
 
+  // Decide how aggressively to fetch this video. Active = full auto so
+  // it plays through; next-up = also auto so it's buffered before we
+  // crossfade to it; otherwise just metadata for the poster frame.
+  const preload: "auto" | "metadata" | "none" = !videoEnabled
+    ? "none"
+    : active || preloadNext
+      ? "auto"
+      : "metadata";
+
   useEffect(() => {
+    if (!videoEnabled) return;
     const v = ref.current;
     if (!v) return;
 
@@ -106,91 +153,78 @@ function AutoPlayVideo({ src, active, eager }: { src: string; active: boolean; e
     v.setAttribute("muted", "");
     v.setAttribute("playsinline", "");
     v.setAttribute("webkit-playsinline", "true");
-
-    const attemptPlay = async () => {
-      try {
-        await v.play();
-      } catch {
-        setReady(false);
-      }
-    };
-
-    const handleCanPlay = () => {
-      setReady(true);
-      void attemptPlay();
-    };
-
-    v.addEventListener("canplay", handleCanPlay);
-    void attemptPlay();
-
-    return () => {
-      v.removeEventListener("canplay", handleCanPlay);
-    };
-  }, [src]);
+  }, [src, videoEnabled]);
 
   useEffect(() => {
+    if (!videoEnabled) return;
     const v = ref.current;
     if (!v) return;
 
     if (active) {
+      // Make sure we start from the beginning when re-entering a slide
+      // so the loop doesn't show a frozen middle frame.
+      try { v.currentTime = 0; } catch { /* some browsers throw before metadata */ }
       void v.play().catch(() => setReady(false));
     } else {
       v.pause();
     }
-  }, [active]);
+  }, [active, videoEnabled]);
 
   return (
     <div
       className="absolute inset-0"
       style={{
         opacity: active ? 1 : 0,
-        transition: "opacity 1.5s ease-in-out",
+        // Slightly snappier crossfade — long enough to mask buffer
+        // hitches, short enough that the slideshow feels intentional.
+        transition: "opacity 700ms ease-in-out",
         WebkitTransform: "translateZ(0)",
         transform: "translateZ(0)",
-        backgroundImage: ready ? undefined : `url(${posterImage})`,
+        backgroundImage: `url(${posterImage})`,
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
       }}
     >
-      <video
-        ref={ref}
-        autoPlay
-        loop
-        muted
-        playsInline
-        tabIndex={-1}
-        aria-hidden="true"
-        disablePictureInPicture
-        controls={false}
-        controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-        // First slide preloads to get LCP frame fast. Other slides only
-        // start fetching once they become active (carousel reaches them),
-        // keeping initial network weight to one ~600KB video.
-        preload={active ? "auto" : eager ? "metadata" : "none"}
-        poster={posterImage}
-        className="ref-hero-video absolute inset-0 h-full w-full object-cover"
-        style={{
-          opacity: ready ? 1 : 0,
-          pointerEvents: "none",
-          WebkitTransform: "translateZ(0)",
-          transform: "translateZ(0)",
-        }}
-        src={src}
-        onContextMenu={(e) => e.preventDefault()}
-        onLoadedData={() => setReady(true)}
-        onPlaying={() => setReady(true)}
-        onPause={() => {
-          if (active) {
-            const v = ref.current;
-            if (v) void v.play().catch(() => setReady(false));
-          }
-        }}
-        onError={(e) => {
-          setReady(false);
-          (e.currentTarget as HTMLVideoElement).style.display = "none";
-        }}
-      />
+      {videoEnabled && (
+        <video
+          ref={ref}
+          autoPlay
+          loop
+          muted
+          playsInline
+          tabIndex={-1}
+          aria-hidden="true"
+          disablePictureInPicture
+          controls={false}
+          controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+          preload={preload}
+          poster={posterImage}
+          className="ref-hero-video absolute inset-0 h-full w-full object-cover"
+          style={{
+            opacity: ready ? 1 : 0,
+            transition: "opacity 400ms ease-in-out",
+            pointerEvents: "none",
+            WebkitTransform: "translateZ(0)",
+            transform: "translateZ(0)",
+          }}
+          src={src}
+          onContextMenu={(e) => e.preventDefault()}
+          onLoadedData={() => setReady(true)}
+          onCanPlay={() => setReady(true)}
+          onPlaying={() => setReady(true)}
+          onPause={() => {
+            if (active) {
+              const v = ref.current;
+              if (v) void v.play().catch(() => setReady(false));
+            }
+          }}
+          onError={(e) => {
+            setReady(false);
+            (e.currentTarget as HTMLVideoElement).style.display = "none";
+          }}
+        />
+      )}
     </div>
   );
 }
