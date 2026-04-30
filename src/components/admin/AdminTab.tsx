@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 import { expectAffectedRows } from "@/lib/safeMutate";
+import { ensureFreshSession } from "@/lib/sessionRefresh";
 import { useState } from "react";
 import { Copy, Loader2, Info, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
@@ -196,6 +197,13 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
 
   const deleteTrip = useMutation({
     mutationFn: async () => {
+      // Pre-flight refresh: on iOS PWA the AuthProvider's focus/pageshow
+      // listener may not have fired yet (or the user clicked Delete before
+      // the in-flight refresh completed). ensureFreshSession dedupes via the
+      // inFlight promise — if a refresh is already running we await it; if
+      // the JWT is fresh enough this is a single getSession() call.
+      await ensureFreshSession();
+
       // .select() forces PostgREST to return the deleted rows. Without it an
       // RLS rejection silently returns `data: []` with `error: null` and the
       // UI falsely confirms the deletion. expectAffectedRows throws on the
