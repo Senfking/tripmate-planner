@@ -784,7 +784,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
         totalActivities={totalActivities}
         state={mapState}
-        onStateChange={setMapState}
+        onStateChange={(s) => {
+          setMapState(s);
+          if (s === "closed") setMapActiveDayIndex(-1);
+        }}
+        activeDayIndex={mapActiveDayIndex}
+        onActiveDayChange={setMapActiveDayIndex}
       />
 
       {/* Overlays (outside flex layout) */}
