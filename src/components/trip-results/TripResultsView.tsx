@@ -512,31 +512,40 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   const primaryDisplay = showConverted
                     ? `~${formatBudget(converted!, userCurrency)}`
                     : `~${currency}${costBreakdown.total.toLocaleString()}`;
-                  const subtitleNative = `~${currency}${costBreakdown.total.toLocaleString()}`;
-                  const dailyConverted = convertToUserCurrency(costBreakdown.dailyAvg);
-                  const dailyDisplay =
-                    showConverted && dailyConverted !== null
-                      ? `~${formatBudget(dailyConverted, userCurrency)}/day`
-                      : `~${currency}${costBreakdown.dailyAvg.toLocaleString()}/day`;
+
+                  const activitiesConv = convertToUserCurrency(costBreakdown.activitiesTotal);
+                  const stayConv = convertToUserCurrency(costBreakdown.accommodationTotal);
+                  const dailyConv = convertToUserCurrency(costBreakdown.dailyAvg);
+
+                  const activitiesDisplay = showConverted && activitiesConv !== null
+                    ? `~${formatBudget(activitiesConv, userCurrency)}`
+                    : `~${currency}${costBreakdown.activitiesTotal.toLocaleString()}`;
+                  const stayDisplay = showConverted && stayConv !== null
+                    ? `~${formatBudget(stayConv, userCurrency)}`
+                    : `~${currency}${costBreakdown.accommodationTotal.toLocaleString()}`;
+                  const dailyDisplay = showConverted && dailyConv !== null
+                    ? `~${formatBudget(dailyConv, userCurrency)}/day`
+                    : `~${currency}${costBreakdown.dailyAvg.toLocaleString()}/day`;
+
                   return (
                     <>
                       <div className="text-base font-semibold text-foreground">
                         {primaryDisplay}
                         <span className="text-sm font-normal text-muted-foreground"> per person</span>
                       </div>
-                      {showConverted && (
-                        <div className="text-[11px] text-muted-foreground/80 mt-0.5 font-mono">
-                          {subtitleNative} in {currency}
-                        </div>
-                      )}
                       <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-                        Activities ~{currency}{costBreakdown.activitiesTotal.toLocaleString()}
+                        Activities {activitiesDisplay}
                         {costBreakdown.accommodationTotal > 0 && (
-                          <> · Stay ~{currency}{costBreakdown.accommodationTotal.toLocaleString()}</>
+                          <> · Stay {stayDisplay}</>
                         )}
                         {" · "}
                         {dailyDisplay}
                       </div>
+                      {showConverted && (
+                        <div className="text-[10px] text-muted-foreground/60 mt-0.5 font-mono">
+                          ≈ {currency} {costBreakdown.total.toLocaleString()} locally
+                        </div>
+                      )}
                     </>
                   );
                 })()}
