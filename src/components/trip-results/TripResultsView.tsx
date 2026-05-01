@@ -723,6 +723,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   dailyAvg={costBreakdown.dailyAvg}
                   currency={currency}
                   categories={costBreakdown.categories}
+                  userCurrency={userCurrency}
+                  convertToUserCurrency={convertToUserCurrency}
+                  formatBudget={formatBudget}
                 />
               </div>
               <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
