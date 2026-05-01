@@ -183,20 +183,17 @@ Deno.serve(async (req) => {
     if (supabase) {
       const { data: cached } = await supabase
         .from("ai_response_cache")
-        .select("response_json, created_at")
+        .select("response_json, expires_at")
         .eq("cache_key", cacheKey)
+        .gt("expires_at", new Date().toISOString())
         .maybeSingle();
 
       if (cached?.response_json) {
-        const ageMs = Date.now() - new Date(cached.created_at as string).getTime();
-        // 30-day cache — destination cost-of-living shifts slowly.
-        if (ageMs < 30 * 24 * 60 * 60 * 1000) {
-          return jsonResponse({
-            success: true,
-            cached: true,
-            tiers: cached.response_json,
-          });
-        }
+        return jsonResponse({
+          success: true,
+          cached: true,
+          tiers: cached.response_json,
+        });
       }
     }
 
