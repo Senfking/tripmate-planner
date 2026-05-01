@@ -34,51 +34,98 @@ const BUDGET_TIERS: { value: TierValue; label: string; hint: string }[] = [
   { value: "luxury", label: "Luxury", hint: "5★ stays, fine dining" },
 ];
 
-// Multipliers applied to the trip's existing daily budget (which already
-// encodes destination cost-of-living) to derive a tier-appropriate target.
-const TIER_MULTIPLIERS: Record<TierValue, number> = {
-  budget: 0.5,
-  "mid-range": 1.0,
-  premium: 2.0,
-  luxury: 4.0,
-};
-
-function computeTierBudget(baseDaily: number, baseTier: TierValue, targetTier: TierValue): number {
-  if (!baseDaily || baseDaily <= 0) return 0;
-  // Normalize: scale base down to a "mid-range equivalent" then up to target tier.
-  const midEquivalent = baseDaily / TIER_MULTIPLIERS[baseTier];
-  return Math.round(midEquivalent * TIER_MULTIPLIERS[targetTier]);
+interface TierBudgets {
+  budget: number;
+  midRange: number;
+  premium: number;
+  luxury: number;
 }
+
+const TIER_TO_KEY: Record<TierValue, keyof TierBudgets> = {
+  budget: "budget",
+  "mid-range": "midRange",
+  premium: "premium",
+  luxury: "luxury",
+};
 
 export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props) {
   const initialTier = (result.budget_tier ?? "mid-range") as TierValue;
   const baseDaily = Number(result.daily_budget_estimate) || 0;
+  const currency = result.currency || "USD";
 
   const [tier, setTier] = useState<TierValue>(initialTier);
   const [dailyBudget, setDailyBudget] = useState<string>(
     baseDaily ? String(baseDaily) : ""
   );
-  // Tracks the last auto-populated value so we can detect manual overrides.
-  const [lastAutoValue, setLastAutoValue] = useState<string>(
-    baseDaily ? String(baseDaily) : ""
-  );
   const [refinement, setRefinement] = useState("");
+
+  // Destination-aware tier defaults from the AI gateway. Null until loaded;
+  // remains null on failure so the auto-populate behavior simply doesn't fire.
+  const [tierBudgets, setTierBudgets] = useState<TierBudgets | null>(null);
+  const [budgetsLoading, setBudgetsLoading] = useState(true);
+  // Tracks the last value we auto-filled so we can distinguish a manual edit
+  // from a tier-driven fill. If they diverge, the user has overridden.
+  const lastAutoValueRef = useRef<string>(baseDaily ? String(baseDaily) : "");
+
+  // Compose a destination string from the trip — first city covers most cases;
+  // multi-stop trips fall back to a comma-joined list (capped to 3 to keep the
+  // prompt focused).
+  const destinationLabel = useMemo(() => {
+    const names = (result.destinations ?? [])
+      .map((d) => d?.name)
+      .filter((n): n is string => typeof n === "string" && n.trim().length > 0);
+    if (names.length === 0) return result.trip_title || "";
+    return names.slice(0, 3).join(", ");
+  }, [result.destinations, result.trip_title]);
+
+  const numDays = useMemo(() => {
+    return (result.destinations ?? []).reduce((acc, d) => acc + (d?.days?.length || 0), 0) || 1;
+  }, [result.destinations]);
+
+  // Fetch tier defaults once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    if (!destinationLabel) {
+      setBudgetsLoading(false);
+      return;
+    }
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("get-tier-budgets", {
+          body: { destination: destinationLabel, currency, numDays },
+        });
+        if (cancelled) return;
+        if (error || !data?.success || !data?.tiers) {
+          setTierBudgets(null);
+        } else {
+          setTierBudgets(data.tiers as TierBudgets);
+        }
+      } catch {
+        if (!cancelled) setTierBudgets(null);
+      } finally {
+        if (!cancelled) setBudgetsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [destinationLabel, currency, numDays]);
 
   const handleTierChange = (next: TierValue) => {
     setTier(next);
-    if (!baseDaily) return;
+    if (!tierBudgets) return;
+    const suggested = String(tierBudgets[TIER_TO_KEY[next]]);
     // Only auto-populate when the user hasn't manually overridden the field.
-    const isUntouched = dailyBudget.trim() === "" || dailyBudget === lastAutoValue;
+    const isUntouched =
+      dailyBudget.trim() === "" || dailyBudget === lastAutoValueRef.current;
     if (isUntouched) {
-      const suggested = String(computeTierBudget(baseDaily, initialTier, next));
       setDailyBudget(suggested);
-      setLastAutoValue(suggested);
+      lastAutoValueRef.current = suggested;
     }
   };
 
   const handleDailyBudgetChange = (value: string) => {
     setDailyBudget(value);
-    // Any keystroke that diverges from the last auto value counts as manual.
   };
 
   // Pick 3 sample suggestions to show as chips, rotating each open
