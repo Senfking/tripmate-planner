@@ -463,8 +463,8 @@ export default function TripHome() {
       </div>
 
       {/* ─── TRIP HEADER (title overlay on hero image) ─── */}
-      <div className="relative -mt-32 px-6 pb-3 pointer-events-none md:max-w-[700px] md:mx-auto md:px-8">
-        <h1 className="text-2xl lg:text-3xl font-medium text-white leading-tight drop-shadow-md">
+      <div className="relative -mt-28 px-6 pb-8 pointer-events-none md:max-w-[700px] md:mx-auto md:px-8">
+        <h1 className="text-[26px] lg:text-3xl font-light text-white leading-[1.15] tracking-tight" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.45)" }}>
           {trip?.destination || trip?.name}
         </h1>
       </div>
