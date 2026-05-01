@@ -335,9 +335,27 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
         />
       )}
 
+      <ActivityMarkers
+        activitiesForMap={activitiesForMap}
+        mode={mode}
+      />
+    </MapContainer>
+  );
+}
+
+/* ── Markers with click-to-center behavior ── */
+function ActivityMarkers({
+  activitiesForMap,
+  mode,
+}: {
+  activitiesForMap: (AIActivity & { _dayDate: string; _idx: number; _dayNumber: number })[];
+  mode: "overview" | "day";
+}) {
+  const map = useMap();
+
+  return (
+    <>
       {activitiesForMap.map((act) => {
-        // In day mode show just activity number (1, 2, 3...)
-        // In overview show D1.1, D1.2, D2.1 etc. so user knows day + order
         const pinLabel = mode === "day"
           ? String(act._idx + 1)
           : `D${act._dayNumber}.${act._idx + 1}`;
@@ -348,6 +366,17 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
             key={`${act._dayDate}-${act._idx}`}
             position={[act.latitude!, act.longitude!]}
             icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
+            eventHandlers={{
+              click: () => {
+                // Center the marker, biasing upward so the popup (which opens above the pin)
+                // sits comfortably in view rather than getting clipped at the top.
+                const targetZoom = Math.max(map.getZoom(), 14);
+                const point = map.project([act.latitude!, act.longitude!], targetZoom);
+                // Shift down by ~140px so the popup floating above the pin is fully visible.
+                const adjusted = map.unproject([point.x, point.y - 140], targetZoom);
+                map.setView(adjusted, targetZoom, { animate: true });
+              },
+            }}
           >
             <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
               <PopupContent activity={act} dayLabel={dayLabel} />
@@ -355,6 +384,13 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
           </Marker>
         );
       })}
+    </>
+  );
+}
+
+// Render fallback (kept so the original return structure stays valid)
+function _Unused() {
+  return null;
     </MapContainer>
   );
 }
