@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, User, Pencil, ShieldCheck } from "lucide-react";
+import { Plus, User, Pencil, ShieldCheck, ChevronDown } from "lucide-react";
 import { CountryFlag } from "@/components/ui/CountryFlag";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useTripTravellerPassports, type TravellerPassport } from "@/hooks/useTripTravellerPassports";
 import { countryName } from "@/lib/countries";
 import { PassportEditModal } from "./PassportEditModal";
+
+const INITIAL_VISIBLE = 4;
 
 interface TravellersSectionProps {
   tripId: string;
@@ -17,6 +20,11 @@ interface TravellersSectionProps {
 interface MemberLite {
   userId: string;
   displayName: string;
+  avatarUrl: string | null;
+}
+
+function getInitial(name: string | null | undefined) {
+  return (name || "?").charAt(0).toUpperCase();
 }
 
 export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
@@ -24,6 +32,7 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
   const userId = user?.id;
   const isAdminOrOwner = myRole === "owner" || myRole === "admin";
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const { data: members } = useQuery({
     queryKey: ["trip-travellers-members", tripId],
@@ -36,10 +45,13 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
       if (error) throw error;
       const ids = data.map((m) => m.user_id);
       const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: ids });
-      const map = new Map(profiles?.map((p) => [p.id, p.display_name || "Member"]) ?? []);
+      const map = new Map(
+        profiles?.map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url ?? null }]) ?? []
+      );
       return data.map<MemberLite>((m) => ({
         userId: m.user_id,
-        displayName: map.get(m.user_id) ?? "Member",
+        displayName: map.get(m.user_id)?.name ?? "Member",
+        avatarUrl: map.get(m.user_id)?.avatar ?? null,
       }));
     },
     enabled: !!tripId,
@@ -98,7 +110,7 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
       </p>
 
       <div className="space-y-2">
-        {(members ?? []).map((m) => {
+        {(expanded ? (members ?? []) : (members ?? []).slice(0, INITIAL_VISIBLE)).map((m) => {
           const rows = passportsByUser.get(m.userId) ?? [];
           const canEdit = m.userId === userId || isAdminOrOwner;
           const sorted = [...rows].sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
@@ -108,9 +120,12 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
               key={m.userId}
               className="flex items-center gap-3 rounded-xl border border-gray-100 px-3 py-2.5"
             >
-              <div className="h-8 w-8 rounded-full bg-[#0D9488]/10 flex items-center justify-center shrink-0">
-                <User className="h-4 w-4 text-[#0D9488]" />
-              </div>
+              <Avatar className="h-8 w-8 shrink-0">
+                {m.avatarUrl && <AvatarImage src={m.avatarUrl} alt={m.displayName} />}
+                <AvatarFallback className="bg-[#0D9488]/10 text-[#0D9488] text-xs font-medium">
+                  {getInitial(m.displayName)}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{m.displayName}</p>
                 {hasNats ? (
@@ -172,6 +187,17 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
           );
         })}
       </div>
+
+      {(members?.length ?? 0) > INITIAL_VISIBLE && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 w-full flex items-center justify-center gap-1 rounded-xl py-2 text-[12px] font-medium text-[#0D9488] hover:bg-[#0D9488]/[0.06] transition-colors"
+        >
+          {expanded ? "Show less" : `Show ${(members?.length ?? 0) - INITIAL_VISIBLE} more`}
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      )}
 
       {showVisaHint && (
         <button
