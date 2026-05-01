@@ -180,7 +180,7 @@ export default function TripSection() {
       case "expenses":
         return <ExpensesTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
       case "admin":
-        return <AdminTab tripId={trip.id} myRole={myRole} tripName={trip.name} />;
+        return <AdminTab tripId={trip.id} myRole={myRole} tripName={(trip as any).trip_name || trip.name} />;
       default:
         return null;
     }
