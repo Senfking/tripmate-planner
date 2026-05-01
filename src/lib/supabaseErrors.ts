@@ -175,7 +175,7 @@ export function showErrorToast(err: MaybeError, fallback: string): void {
 
   toast.custom(
     (id) => createElement(ErrorToastContent, { toastId: id, friendly, details, isAdmin }),
-    { duration },
+    { duration, className: "junto-rich-toast" },
   );
 }
 
@@ -187,6 +187,6 @@ export function showSuccessToast(title: string, description?: string): void {
   toast.custom(
     (id) =>
       createElement(SuccessToastContent, { toastId: id, title, description }),
-    { duration: 4000 },
+    { duration: 4000, className: "junto-rich-toast" },
   );
 }
