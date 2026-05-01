@@ -24,24 +24,61 @@ const SAMPLE_REFINEMENTS = [
   "Bump up the budget — premium stays and tasting menus",
 ];
 
-const BUDGET_TIERS: { value: "budget" | "mid-range" | "premium" | "luxury"; label: string; hint: string }[] = [
+type TierValue = "budget" | "mid-range" | "premium" | "luxury";
+
+const BUDGET_TIERS: { value: TierValue; label: string; hint: string }[] = [
   { value: "budget", label: "Budget", hint: "Hostels, street food" },
   { value: "mid-range", label: "Mid-range", hint: "3★ hotels, casual dining" },
   { value: "premium", label: "Premium", hint: "4★ stays, nice restaurants" },
   { value: "luxury", label: "Luxury", hint: "5★ stays, fine dining" },
 ];
 
+// Multipliers applied to the trip's existing daily budget (which already
+// encodes destination cost-of-living) to derive a tier-appropriate target.
+const TIER_MULTIPLIERS: Record<TierValue, number> = {
+  budget: 0.5,
+  "mid-range": 1.0,
+  premium: 2.0,
+  luxury: 4.0,
+};
+
+function computeTierBudget(baseDaily: number, baseTier: TierValue, targetTier: TierValue): number {
+  if (!baseDaily || baseDaily <= 0) return 0;
+  // Normalize: scale base down to a "mid-range equivalent" then up to target tier.
+  const midEquivalent = baseDaily / TIER_MULTIPLIERS[baseTier];
+  return Math.round(midEquivalent * TIER_MULTIPLIERS[targetTier]);
+}
+
 export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props) {
-  const initialTier = (result.budget_tier ?? "mid-range") as
-    | "budget"
-    | "mid-range"
-    | "premium"
-    | "luxury";
-  const [tier, setTier] = useState(initialTier);
+  const initialTier = (result.budget_tier ?? "mid-range") as TierValue;
+  const baseDaily = Number(result.daily_budget_estimate) || 0;
+
+  const [tier, setTier] = useState<TierValue>(initialTier);
   const [dailyBudget, setDailyBudget] = useState<string>(
-    result.daily_budget_estimate ? String(result.daily_budget_estimate) : ""
+    baseDaily ? String(baseDaily) : ""
+  );
+  // Tracks the last auto-populated value so we can detect manual overrides.
+  const [lastAutoValue, setLastAutoValue] = useState<string>(
+    baseDaily ? String(baseDaily) : ""
   );
   const [refinement, setRefinement] = useState("");
+
+  const handleTierChange = (next: TierValue) => {
+    setTier(next);
+    if (!baseDaily) return;
+    // Only auto-populate when the user hasn't manually overridden the field.
+    const isUntouched = dailyBudget.trim() === "" || dailyBudget === lastAutoValue;
+    if (isUntouched) {
+      const suggested = String(computeTierBudget(baseDaily, initialTier, next));
+      setDailyBudget(suggested);
+      setLastAutoValue(suggested);
+    }
+  };
+
+  const handleDailyBudgetChange = (value: string) => {
+    setDailyBudget(value);
+    // Any keystroke that diverges from the last auto value counts as manual.
+  };
 
   // Pick 3 sample suggestions to show as chips, rotating each open
   const samples = useMemo(() => {
