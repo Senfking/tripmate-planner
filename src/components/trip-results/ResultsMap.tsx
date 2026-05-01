@@ -368,25 +368,27 @@ function ActivityMarkers({
             icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
             eventHandlers={{
               click: () => {
-                // Popup opens ABOVE the pin and can be up to ~400px tall. We want the popup
-                // to sit fully inside the viewport, below the floating header card (~180px).
-                // Strategy: push the pin into the lower portion of the screen so the popup
-                // fills the upper portion without being clipped by the header.
+                // Popup opens above the pin. To visually CENTER the popup in the viewport,
+                // place the pin in the lower portion of the screen so the popup body lands
+                // around the vertical middle, clear of the floating header card at the top.
                 const targetZoom = Math.max(map.getZoom(), 14);
                 const size = map.getSize();
-                // Place the pin ~75% down the viewport (leaves ~75% of height above for popup).
-                const pinScreenY = size.y * 0.78;
-                const centerScreenY = size.y / 2;
-                // Vertical pixel offset between desired pin position and current center.
-                const dy = pinScreenY - centerScreenY;
+                // Pin sits ~88% down the viewport → popup (opens upward) centers nicely.
+                const pinScreenY = size.y * 0.88;
+                const dy = pinScreenY - size.y / 2;
                 const point = map.project([act.latitude!, act.longitude!], targetZoom);
-                // To move the pin DOWN on screen, shift the map center UP (smaller y).
                 const adjusted = map.unproject([point.x, point.y - dy], targetZoom);
                 map.setView(adjusted, targetZoom, { animate: true });
               },
             }}
           >
-            <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
+            <Popup
+              closeButton
+              className="premium-map-popup"
+              maxWidth={260}
+              minWidth={240}
+              autoPan={false}
+            >
               <PopupContent activity={act} dayLabel={dayLabel} />
             </Popup>
           </Marker>
