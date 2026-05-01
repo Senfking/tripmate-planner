@@ -146,19 +146,16 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   }, [inputData, buildPayload, streaming]);
 
   // When streaming completes, persist the trip as a `draft` row and navigate
-  // to its canonical /app/trips/[id] URL so it's bookmarkable, refreshable,
-  // and shareable. The trip dashboard at that route renders the builder
-  // result UI (Lovable PR) when status='draft'.
+  // to its canonical /app/trips/[id] URL. TripHome owns the draft results UI.
   //
-  // If the draft insert fails (e.g. transient RLS/network error) or the user
-  // is logged out, fall back to the in-component results phase: save the AI
-  // plan with trip_id=null (legacy behavior) and let the user promote via
-  // the existing "Create trip" button below, which opens the rename modal
-  // and INSERTs an active trip.
-  const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
-    if (!pendingPayload || !user) {
-      setResults(normalized);
-      setPhase("results");
+  // We deliberately do NOT fall back to rendering TripResultsView in-component
+  // anymore — that caused a visible flash between stream completion and
+  // navigation. Instead we show a brief "Opening your trip…" state, and on
+  // failure show a small error with a retry CTA.
+  const persistAndOpen = useCallback(async (normalized: AITripResult, payload: Record<string, unknown>) => {
+    if (!user) {
+      toast.error("You need to be signed in to save a trip.");
+      setPhase("open-error");
       return;
     }
 
@@ -191,7 +188,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
         .insert({
           trip_id: trip.id,
           created_by: user.id,
-          prompt: pendingPayload,
+          prompt: payload,
           result: normalized,
         }) as any);
 
@@ -205,27 +202,27 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       });
 
       navigate(`/app/trips/${trip.id}`, { replace: true });
-      return;
     } catch (saveErr) {
       console.error("[StandaloneBuilder] Failed to persist draft trip:", saveErr);
+      setPhase("open-error");
     }
+  }, [user, inputData, navigate]);
 
-    let planId: string | null = null;
-    try {
-      const { data: inserted, error: insertError } = await (supabase
-        .from("ai_trip_plans" as any)
-        .insert({ trip_id: null, created_by: user.id, prompt: pendingPayload, result: normalized }) as any)
-        .select("id")
-        .single();
-      if (!insertError) planId = inserted?.id ?? null;
-    } catch (saveErr) {
-      console.error("[StandaloneBuilder] Failed to save plan:", saveErr);
+  const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
+    if (!pendingPayload) return;
+    setPendingNormalized(normalized);
+    setPhase("opening");
+    await persistAndOpen(normalized, pendingPayload);
+  }, [pendingPayload, persistAndOpen]);
+
+  const handleRetryOpen = useCallback(async () => {
+    if (!pendingNormalized || !pendingPayload) {
+      setPhase("input");
+      return;
     }
-    setSavedPlanId(planId);
-    setResults(normalized);
-    setPhase("results");
-    trackEvent("ai_trip_generated", { standalone: true, destination: inputData?.destination, streamed: true });
-  }, [pendingPayload, user, inputData, navigate]);
+    setPhase("opening");
+    await persistAndOpen(pendingNormalized, pendingPayload);
+  }, [pendingNormalized, pendingPayload, persistAndOpen]);
 
   // Step 1: open the "Name your trip" modal (always shown before save).
   const handleCreateTrip = useCallback(() => {
