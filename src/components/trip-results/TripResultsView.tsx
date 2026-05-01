@@ -247,6 +247,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         className="relative w-full overflow-hidden h-[36vh] min-h-[260px] lg:h-[42vh]"
         style={revealStyle("hero")}
         data-results-header="true"
+        data-results-hero="true"
       >
         {result.destination_image_url ? (
           <img
