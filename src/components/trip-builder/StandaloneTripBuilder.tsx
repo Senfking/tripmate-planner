@@ -289,7 +289,39 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     onClose();
   }, [onClose]);
 
-  // Results view
+  // Brief transition shown after stream completes while we INSERT the draft
+  // trip and navigate to /app/trips/[id]. Prevents a flash of TripResultsView.
+  if (phase === "opening") {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Opening your trip…</p>
+      </div>
+    );
+  }
+
+  // Persist/navigate failed — give the user a way to retry without re-running
+  // the full AI generation.
+  if (phase === "open-error") {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-foreground">Couldn't open your trip</p>
+          <p className="text-sm text-muted-foreground">Something went wrong saving your draft. Please try again.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button onClick={handleRetryOpen}>Try again</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Results view (legacy: only reachable when the component is opened with a
+  // pre-existing draft via the `draftResult` prop). The post-stream-complete
+  // path no longer routes here — TripHome owns draft results rendering.
+
   if (phase === "results" && results) {
     return (
       <div className="fixed inset-0 z-[100]">
