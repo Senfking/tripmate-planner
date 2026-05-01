@@ -462,12 +462,9 @@ export default function TripHome() {
         )}
       </div>
 
-      {/* ─── TRIP HEADER (eyebrow + title overlay on hero image) ─── */}
-      <div className="relative -mt-24 px-6 pb-3 pointer-events-none md:max-w-[700px] md:mx-auto md:px-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-white/90 mb-1 drop-shadow">
-          My trip
-        </p>
-        <h1 className="text-3xl lg:text-4xl font-bold text-white leading-tight drop-shadow-md">
+      {/* ─── TRIP HEADER (title overlay on hero image) ─── */}
+      <div className="relative -mt-32 px-6 pb-3 pointer-events-none md:max-w-[700px] md:mx-auto md:px-8">
+        <h1 className="text-2xl lg:text-3xl font-medium text-white leading-tight drop-shadow-md">
           {trip?.destination || trip?.name}
         </h1>
       </div>
