@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Sparkles, Loader2, Wallet, Gauge, Wand2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { X, Sparkles, Loader2, Wallet, Gauge, Wand2, ChevronDown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,24 +48,37 @@ const TIER_TO_KEY: Record<TierValue, keyof TierBudgets> = {
   luxury: "luxury",
 };
 
+function formatAmount(currency: string, amount: number): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${Math.round(amount)}`;
+  }
+}
+
 export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props) {
   const initialTier = (result.budget_tier ?? "mid-range") as TierValue;
   const baseDaily = Number(result.daily_budget_estimate) || 0;
   const currency = result.currency || "USD";
 
   const [tier, setTier] = useState<TierValue>(initialTier);
-  const [dailyBudget, setDailyBudget] = useState<string>(
-    baseDaily ? String(baseDaily) : ""
-  );
   const [refinement, setRefinement] = useState("");
+
+  // Disclosure state for the "set exact daily target" power-user input.
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  // The manual override value. Empty string = no override active; tier default
+  // is the source of truth. A non-empty value here always wins over the tier
+  // default for both display and prompt construction.
+  const [manualBudget, setManualBudget] = useState<string>("");
 
   // Destination-aware tier defaults from the AI gateway. Null until loaded;
   // remains null on failure so the auto-populate behavior simply doesn't fire.
   const [tierBudgets, setTierBudgets] = useState<TierBudgets | null>(null);
   const [budgetsLoading, setBudgetsLoading] = useState(true);
-  // Tracks the last value we auto-filled so we can distinguish a manual edit
-  // from a tier-driven fill. If they diverge, the user has overridden.
-  const lastAutoValueRef = useRef<string>(baseDaily ? String(baseDaily) : "");
 
   // Compose a destination string from the trip — first city covers most cases;
   // multi-stop trips fall back to a comma-joined list (capped to 3 to keep the
@@ -111,21 +124,48 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
     };
   }, [destinationLabel, currency, numDays]);
 
-  const handleTierChange = (next: TierValue) => {
-    setTier(next);
-    if (!tierBudgets) return;
-    const suggested = String(tierBudgets[TIER_TO_KEY[next]]);
-    // Only auto-populate when the user hasn't manually overridden the field.
-    const isUntouched =
-      dailyBudget.trim() === "" || dailyBudget === lastAutoValueRef.current;
-    if (isUntouched) {
-      setDailyBudget(suggested);
-      lastAutoValueRef.current = suggested;
+  const tierDefaultAmount = tierBudgets ? tierBudgets[TIER_TO_KEY[tier]] : 0;
+  const tierCaption = tierBudgets ? `About ${formatAmount(currency, tierDefaultAmount)}/day` : "";
+
+  // Single source of truth for the budget signal sent to the LLM.
+  const hasManualOverride = manualBudget.trim() !== "" && Number(manualBudget) > 0;
+  const effectiveDailyAmount = hasManualOverride
+    ? Number(manualBudget)
+    : tierDefaultAmount;
+
+  const handleOpenOverride = () => {
+    setOverrideOpen(true);
+    // Pre-fill with the current tier default so the user has a starting point.
+    if (manualBudget.trim() === "" && tierDefaultAmount > 0) {
+      setManualBudget(String(tierDefaultAmount));
     }
   };
 
-  const handleDailyBudgetChange = (value: string) => {
-    setDailyBudget(value);
+  const handleResetOverride = () => {
+    setManualBudget("");
+    setOverrideOpen(false);
+  };
+
+  const tierChanged = tier !== initialTier;
+  const budgetChanged =
+    effectiveDailyAmount > 0 &&
+    Math.round(effectiveDailyAmount) !== Math.round(baseDaily);
+
+  const buildPrompt = () => {
+    const parts: string[] = [];
+    if (refinement.trim()) parts.push(refinement.trim());
+    // Send ONE coherent budget signal. Tier is always context for vibe/style;
+    // the numeric amount (manual override OR tier default) is the target.
+    if (tierChanged || budgetChanged) {
+      const amountStr = effectiveDailyAmount > 0
+        ? `targeting about ${currency}${Math.round(effectiveDailyAmount)} per person per day`
+        : "";
+      const tierStr = tierChanged
+        ? `Shift the trip to a ${tier} feel (style, accommodation class, dining tone)`
+        : `Keep the ${tier} feel`;
+      parts.push([tierStr, amountStr].filter(Boolean).join(" ") + ".");
+    }
+    return parts.join(" ");
   };
 
   // Pick 3 sample suggestions to show as chips, rotating each open
@@ -133,26 +173,6 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
     const shuffled = [...SAMPLE_REFINEMENTS].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 3);
   }, []);
-
-  const tierChanged = tier !== initialTier;
-  const budgetChanged =
-    Number(dailyBudget || 0) !== Number(result.daily_budget_estimate || 0) && dailyBudget.trim() !== "";
-
-  const buildPrompt = () => {
-    const parts: string[] = [];
-    if (refinement.trim()) parts.push(refinement.trim());
-    // Send ONE coherent budget signal: numeric target + tier as style/tone context.
-    if (tierChanged && budgetChanged) {
-      parts.push(
-        `Shift the trip to a ${tier} feel (style, accommodation class, dining tone) targeting about ${currency}${dailyBudget} per person per day.`
-      );
-    } else if (tierChanged) {
-      parts.push(`Shift the overall vibe to ${tier} (style, accommodation class, dining tone).`);
-    } else if (budgetChanged) {
-      parts.push(`Target a daily budget of about ${currency}${dailyBudget} per person.`);
-    }
-    return parts.join(" ");
-  };
 
   const canSubmit = (refinement.trim().length > 0 || tierChanged || budgetChanged) && !loading;
 
