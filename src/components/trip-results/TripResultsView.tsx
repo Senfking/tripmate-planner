@@ -189,23 +189,63 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {/* Timeline (desktop only) */}
       <ResultsTimeline nodes={timelineNodes} compact={mapState === "partial"} />
 
-      <div className={cn(
-        "max-w-[700px] mx-auto flex flex-col",
-        mapState === "partial" ? "lg:pl-9" : "lg:pl-[60px]"
-      )}>
-        {/* Header */}
-        <div data-results-header="true" className="sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border">
-          <div className={cn("flex items-center gap-3", rc)} style={revealStyle("title")}>
-            <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors">
-              <ArrowLeft className="h-5 w-5 text-foreground" />
-            </button>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-base font-bold text-foreground truncate">
-                {result.trip_title}
-              </h1>
-              <p className="text-xs text-muted-foreground font-mono">{dateRange}</p>
-            </div>
-            {/* Map toggle */}
+      {/* Hero destination image with floating glass-morphic controls.
+          The redundant sticky top bar (title + dates) was removed — title and
+          dates already live in the block below the hero. */}
+      <div
+        className="relative w-full overflow-hidden h-[36vh] min-h-[260px] lg:h-[42vh]"
+        style={revealStyle("hero")}
+        data-results-header="true"
+      >
+        {result.destination_image_url ? (
+          <img
+            src={result.destination_image_url}
+            alt={`${result.destinations[0]?.name ?? result.trip_title} cover`}
+            className="absolute inset-0 w-full h-full object-cover animate-fade-in"
+            loading="eager"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-muted/60 to-muted/20" />
+        )}
+
+        {/* Top fade so the glass controls always read against the photo */}
+        <div
+          className="absolute inset-x-0 top-0 h-24 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)",
+          }}
+        />
+
+        {/* Bottom fade into the page background for a smooth transition */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.85) 12%, hsl(var(--background) / 0.55) 28%, hsl(var(--background) / 0.2) 50%, transparent 75%)",
+          }}
+        />
+
+        {/* Floating glass controls — back (left) + map / dashboard / edit (right) */}
+        <div
+          className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+        >
+          <button
+            onClick={onClose}
+            aria-label="Back"
+            className="h-10 w-10 inline-flex items-center justify-center rounded-full text-white shadow-md transition-transform active:scale-95"
+            style={{
+              background: "rgba(255,255,255,0.18)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.22)",
+            }}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 if (mapState !== "closed") {
@@ -215,58 +255,48 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
                 setMapState(isDesktop ? "partial" : "full");
               }}
-              className={cn(
-                "p-2 rounded-full transition-colors",
-                mapState !== "closed" ? "bg-primary/10 text-primary" : "hover:bg-accent text-muted-foreground"
-              )}
-              title={mapState === "closed" ? "Show map" : "Hide map"}
+              aria-label={mapState === "closed" ? "Show map" : "Hide map"}
+              className="h-10 w-10 inline-flex items-center justify-center rounded-full text-white shadow-md transition-transform active:scale-95"
+              style={{
+                background: mapState !== "closed" ? "rgba(13,148,136,0.55)" : "rgba(255,255,255,0.18)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(255,255,255,0.22)",
+              }}
             >
-              <MapIcon className="h-4 w-4" />
+              <MapIcon className="h-4.5 w-4.5" />
             </button>
             {onDashboard && (
               <button
                 onClick={onDashboard}
-                className="p-2 rounded-full hover:bg-accent transition-colors"
-                title="Trip overview"
+                aria-label="Trip overview"
+                className="h-10 w-10 inline-flex items-center justify-center rounded-full text-white shadow-md transition-transform active:scale-95"
+                style={{
+                  background: "rgba(255,255,255,0.18)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(255,255,255,0.22)",
+                }}
               >
-                <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+                <LayoutDashboard className="h-4.5 w-4.5" />
               </button>
             )}
             <button
               onClick={() => setEditTripOpen(true)}
-              className="p-2 rounded-full hover:bg-accent transition-colors"
-              title="Edit trip"
+              aria-label="Edit trip"
+              className="h-10 w-10 inline-flex items-center justify-center rounded-full text-white shadow-md transition-transform active:scale-95"
+              style={{
+                background: "rgba(255,255,255,0.18)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(255,255,255,0.22)",
+              }}
             >
-              <PenLine className="h-4 w-4 text-muted-foreground" />
+              <PenLine className="h-4.5 w-4.5" />
             </button>
           </div>
         </div>
       </div>
-
-
-      {/* Hero destination image — full-bleed, matches StreamingGeneratingScreen
-        composition. Title sits below the image in body color so it stays
-        legible regardless of the photo. */}
-      {result.destination_image_url && (
-        <div
-          className="relative h-[32vh] min-h-[220px] lg:h-[38vh] w-full overflow-hidden"
-          style={revealStyle("hero")}
-        >
-          <img
-            src={result.destination_image_url}
-            alt={`${result.destinations[0]?.name ?? result.trip_title} cover`}
-            className="absolute inset-0 w-full h-full object-cover animate-fade-in"
-            loading="eager"
-          />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.85) 12%, hsl(var(--background) / 0.55) 28%, hsl(var(--background) / 0.2) 50%, transparent 75%)",
-            }}
-          />
-        </div>
-      )}
 
       {/* Title block — below hero, standard body color for max legibility. */}
       <div
