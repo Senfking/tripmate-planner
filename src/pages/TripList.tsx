@@ -60,8 +60,6 @@ function getTripStatus(
 type EnrichedTrip = {
   id: string;
   name: string;
-  itineraryTitle: string | null;
-  emoji: string | null;
   tentative_start_date: string | null;
   tentative_end_date: string | null;
   created_at: string;
@@ -204,11 +202,6 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
             <p className="text-2xl font-bold leading-tight text-white mt-0.5 line-clamp-2">
               {trip.name}
             </p>
-            {trip.itineraryTitle && trip.itineraryTitle !== trip.name && (
-              <p className="text-[12px] text-white/65 leading-tight mt-0.5 line-clamp-1 italic">
-                {trip.itineraryTitle}
-              </p>
-            )}
             <p className="text-sm text-white/70 mt-0.5">
               {trip.statusInfo.missingEnd
                 ? `Started ${format(parseISO(trip.tentative_start_date!), "MMM d, yyyy")} · end date?`
@@ -696,7 +689,6 @@ export default function TripList() {
         // Prefer the user-chosen `trip_name` (PR #231); fall back to the
         // legacy `name` so unmigrated rows still render.
         const displayName = ((t as any).trip_name as string | null) || t.name;
-        const itineraryTitle = ((t as any).itinerary_title as string | null) || null;
         const photoUrl =
           signedUrlMap[t.id] ||
           resolvePhoto(
@@ -711,8 +703,6 @@ export default function TripList() {
         return {
           id: t.id,
           name: displayName,
-          itineraryTitle,
-          emoji: t.emoji,
           tentative_start_date: t.tentative_start_date,
           tentative_end_date: t.tentative_end_date,
           created_at: t.created_at,
