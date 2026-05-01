@@ -8,13 +8,11 @@ const inputVariants = cva(
   {
     variants: {
       inputSize: {
-        // Default: 16px on mobile to prevent iOS Safari auto-zoom on focus,
-        // 14px on md+ where that zoom behaviour doesn't apply.
-        default: "h-10 px-3 py-2 text-base file:text-sm md:text-sm",
-        // Compact: 13px throughout. Use inside dense modals / inline forms
-        // where 16px inputs visually dominate the surrounding 11–13px UI.
-        // Trade-off: iOS Safari will auto-zoom on focus — acceptable in
-        // contextual forms, NOT in primary auth/signup flows.
+        // Default: 14px throughout. iOS Safari will auto-zoom on focus
+        // (zoom kicks in below 16px) — accepted trade-off to keep inputs
+        // visually consistent with the app's 11–13px utility type scale.
+        default: "h-10 px-3 py-2 text-[14px] file:text-sm",
+        // Compact: 13px. Use inside very dense inline forms.
         sm: "h-9 px-2.5 py-1.5 text-[13px] file:text-xs",
       },
     },
