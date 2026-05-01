@@ -35,7 +35,7 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
   const [expanded, setExpanded] = useState(false);
 
   const { data: members } = useQuery({
-    queryKey: ["trip-travellers-members", tripId],
+    queryKey: ["trip-travellers-members-v2", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
