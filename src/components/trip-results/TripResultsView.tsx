@@ -18,7 +18,7 @@ import { GroupActivityPanel } from "./GroupActivityPanel";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 import { computeTripBudget } from "@/lib/budgetCalc";
-import { ConciergeButton } from "@/components/concierge/ConciergeButton";
+// ConciergeButton intentionally not imported — floating "What to do?" pill removed.
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
