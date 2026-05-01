@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import { X, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
 import { stripEmoji } from "@/lib/stripEmoji";
@@ -77,7 +78,7 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
   };
 }
 
-type Phase = "input" | "confirming" | "generating" | "results";
+type Phase = "input" | "confirming" | "generating" | "opening" | "open-error" | "results";
 
 interface Props {
   onClose: () => void;
@@ -98,6 +99,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   const [blankModalOpen, setBlankModalOpen] = useState(false);
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
+  const [pendingNormalized, setPendingNormalized] = useState<AITripResult | null>(null);
   const streaming = useStreamingTripGeneration();
 
   const handleStartBlank = useCallback(() => {
@@ -144,19 +146,16 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   }, [inputData, buildPayload, streaming]);
 
   // When streaming completes, persist the trip as a `draft` row and navigate
-  // to its canonical /app/trips/[id] URL so it's bookmarkable, refreshable,
-  // and shareable. The trip dashboard at that route renders the builder
-  // result UI (Lovable PR) when status='draft'.
+  // to its canonical /app/trips/[id] URL. TripHome owns the draft results UI.
   //
-  // If the draft insert fails (e.g. transient RLS/network error) or the user
-  // is logged out, fall back to the in-component results phase: save the AI
-  // plan with trip_id=null (legacy behavior) and let the user promote via
-  // the existing "Create trip" button below, which opens the rename modal
-  // and INSERTs an active trip.
-  const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
-    if (!pendingPayload || !user) {
-      setResults(normalized);
-      setPhase("results");
+  // We deliberately do NOT fall back to rendering TripResultsView in-component
+  // anymore — that caused a visible flash between stream completion and
+  // navigation. Instead we show a brief "Opening your trip…" state, and on
+  // failure show a small error with a retry CTA.
+  const persistAndOpen = useCallback(async (normalized: AITripResult, payload: Record<string, unknown>) => {
+    if (!user) {
+      toast.error("You need to be signed in to save a trip.");
+      setPhase("open-error");
       return;
     }
 
@@ -189,7 +188,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
         .insert({
           trip_id: trip.id,
           created_by: user.id,
-          prompt: pendingPayload,
+          prompt: payload,
           result: normalized,
         }) as any);
 
@@ -203,27 +202,27 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       });
 
       navigate(`/app/trips/${trip.id}`, { replace: true });
-      return;
     } catch (saveErr) {
       console.error("[StandaloneBuilder] Failed to persist draft trip:", saveErr);
+      setPhase("open-error");
     }
+  }, [user, inputData, navigate]);
 
-    let planId: string | null = null;
-    try {
-      const { data: inserted, error: insertError } = await (supabase
-        .from("ai_trip_plans" as any)
-        .insert({ trip_id: null, created_by: user.id, prompt: pendingPayload, result: normalized }) as any)
-        .select("id")
-        .single();
-      if (!insertError) planId = inserted?.id ?? null;
-    } catch (saveErr) {
-      console.error("[StandaloneBuilder] Failed to save plan:", saveErr);
+  const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
+    if (!pendingPayload) return;
+    setPendingNormalized(normalized);
+    setPhase("opening");
+    await persistAndOpen(normalized, pendingPayload);
+  }, [pendingPayload, persistAndOpen]);
+
+  const handleRetryOpen = useCallback(async () => {
+    if (!pendingNormalized || !pendingPayload) {
+      setPhase("input");
+      return;
     }
-    setSavedPlanId(planId);
-    setResults(normalized);
-    setPhase("results");
-    trackEvent("ai_trip_generated", { standalone: true, destination: inputData?.destination, streamed: true });
-  }, [pendingPayload, user, inputData, navigate]);
+    setPhase("opening");
+    await persistAndOpen(pendingNormalized, pendingPayload);
+  }, [pendingNormalized, pendingPayload, persistAndOpen]);
 
   // Step 1: open the "Name your trip" modal (always shown before save).
   const handleCreateTrip = useCallback(() => {
@@ -290,7 +289,39 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     onClose();
   }, [onClose]);
 
-  // Results view
+  // Brief transition shown after stream completes while we INSERT the draft
+  // trip and navigate to /app/trips/[id]. Prevents a flash of TripResultsView.
+  if (phase === "opening") {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Opening your trip…</p>
+      </div>
+    );
+  }
+
+  // Persist/navigate failed — give the user a way to retry without re-running
+  // the full AI generation.
+  if (phase === "open-error") {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-foreground">Couldn't open your trip</p>
+          <p className="text-sm text-muted-foreground">Something went wrong saving your draft. Please try again.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button onClick={handleRetryOpen}>Try again</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Results view (legacy: only reachable when the component is opened with a
+  // pre-existing draft via the `draftResult` prop). The post-stream-complete
+  // path no longer routes here — TripHome owns draft results rendering.
+
   if (phase === "results" && results) {
     return (
       <div className="fixed inset-0 z-[100]">
