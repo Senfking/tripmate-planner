@@ -16,8 +16,9 @@
 //
 // Two input shapes are supported:
 //   - trip_id path (production): { trip_id, purpose? } — the function
-//     resolves nationalities + destination + trip_length_days from the DB
-//     after a membership check.
+//     resolves the caller's nationality (profile first, then
+//     trip_traveller_passports as fallback) plus destination +
+//     trip_length_days from the DB after a membership check.
 //   - direct path (testing / admin): { nationalities, destination_country,
 //     trip_length_days, purpose }.
 //
@@ -604,6 +605,65 @@ function validateDirectRequest(body: Record<string, unknown>): ValidatedRequest 
 }
 
 // ---------------------------------------------------------------------------
+// Caller nationality lookup. Profile-first; falls back to
+// trip_traveller_passports for accounts that haven't set profile nationality
+// yet. Returns up to 4 distinct uppercase ISO codes (matches the direct-path
+// validation cap).
+// ---------------------------------------------------------------------------
+
+async function resolveCallerNationalities(
+  svcClient: ReturnType<typeof createClient>,
+  authUserId: string,
+  tripId: string,
+): Promise<string[]> {
+  const { data: profile, error: profileErr } = await svcClient
+    .from("profiles")
+    .select("nationality_iso, secondary_nationality_iso")
+    .eq("id", authUserId)
+    .maybeSingle();
+  if (profileErr) {
+    throw new Error(`Profile lookup failed: ${profileErr.message}`);
+  }
+
+  const fromProfile: string[] = [];
+  const primary = (profile as Record<string, unknown> | null)?.nationality_iso;
+  const secondary = (profile as Record<string, unknown> | null)?.secondary_nationality_iso;
+  if (typeof primary === "string" && primary.trim().length === 2) {
+    fromProfile.push(normalizeIso(primary));
+  }
+  if (typeof secondary === "string" && secondary.trim().length === 2) {
+    fromProfile.push(normalizeIso(secondary));
+  }
+  if (fromProfile.length > 0) {
+    return Array.from(new Set(fromProfile)).slice(0, 4);
+  }
+
+  // Profile not populated — fall back to per-trip passports. is_primary rows
+  // take precedence; if none are flagged primary, use all rows.
+  const { data: passports, error: passErr } = await svcClient
+    .from("trip_traveller_passports")
+    .select("nationality_iso, is_primary")
+    .eq("trip_id", tripId)
+    .eq("user_id", authUserId);
+  if (passErr) {
+    throw new Error(`Passport lookup failed: ${passErr.message}`);
+  }
+  if (!Array.isArray(passports) || passports.length === 0) {
+    return [];
+  }
+
+  const usable = passports.filter(
+    (p): p is { nationality_iso: string; is_primary: boolean } =>
+      !!p && typeof (p as Record<string, unknown>).nationality_iso === "string",
+  );
+  const useRows = usable.some((p) => p.is_primary)
+    ? usable.filter((p) => p.is_primary)
+    : usable;
+
+  return Array.from(new Set(useRows.map((p) => normalizeIso(p.nationality_iso)))).slice(0, 4);
+}
+
+// ---------------------------------------------------------------------------
 // trip_id resolution path. Service-role client is required so we can read
 // the trip + caller's passports across RLS — but we always membership-check
 // the caller before trusting any of the data we read.
@@ -652,38 +712,20 @@ async function resolveFromTripId(
     throw err;
   }
 
-  // Caller's passports on this trip. is_primary rows take precedence; if none
-  // are flagged primary, fall back to all of the caller's rows on the trip.
-  const { data: passports, error: passErr } = await svcClient
-    .from("trip_traveller_passports")
-    .select("nationality_iso, is_primary")
-    .eq("trip_id", tripId)
-    .eq("user_id", authUserId);
-  if (passErr) {
-    throw new Error(`Passport lookup failed: ${passErr.message}`);
-  }
-  if (!Array.isArray(passports) || passports.length === 0) {
+  // Resolve the caller's nationality. Preferred source is the profile —
+  // nationality is account-level data and shouldn't have to be re-entered per
+  // trip. Fall back to trip_traveller_passports for users who haven't set a
+  // profile nationality yet (or for trips imported before the profile-level
+  // refactor). Free-text travellers on group trips still use
+  // trip_traveller_passports exclusively, but they aren't the caller — this
+  // function only reasons about the authenticated user's own passports.
+  const nationalities = await resolveCallerNationalities(svcClient, authUserId, tripId);
+  if (nationalities.length === 0) {
     const err = new Error(
-      "No passports recorded for you on this trip. Add a passport before requesting entry requirements.",
+      "No nationality on file. Add your nationality in account settings to see entry requirements.",
     );
     (err as Error & { status?: number }).status = 422;
     throw err;
-  }
-
-  const primaryRows = passports.filter(
-    (p): p is { nationality_iso: string; is_primary: boolean } =>
-      !!p && typeof (p as Record<string, unknown>).nationality_iso === "string",
-  );
-  const useRows = primaryRows.some((p) => p.is_primary)
-    ? primaryRows.filter((p) => p.is_primary)
-    : primaryRows;
-
-  const nationalities = Array.from(
-    new Set(useRows.map((p) => normalizeIso(p.nationality_iso))),
-  ).slice(0, 4);
-
-  if (nationalities.length === 0) {
-    throw new Error("Passport rows had no usable nationality_iso values");
   }
 
   // Trip length from dates when both present; default to 7 otherwise.
