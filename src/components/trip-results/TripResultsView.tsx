@@ -349,25 +349,34 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         </div>
       </div>
 
-      {/* Title block — below hero, standard body color for max legibility. */}
+      {/* Title block — below hero, standard body color for max legibility.
+          Wrapped in the same max-w-[700px] container as the body so the
+          headline aligns with the content (and clears the desktop timeline). */}
       <div
-        className={cn("px-4 lg:px-8 pt-4 pb-2", rc)}
-        style={revealStyle("hero")}
+        className={cn(
+          "max-w-[700px] mx-auto",
+          mapState === "partial" ? "lg:pl-9" : "lg:pl-[60px]"
+        )}
       >
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
-          Your trip
-        </p>
-        <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-          {result.trip_title}
-        </h1>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5 min-w-0">
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">
-              {result.destinations.map((d) => d.name).join(" · ")}
+        <div
+          className={cn("px-4 pt-4 pb-2", rc)}
+          style={revealStyle("hero")}
+        >
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+            Your trip
+          </p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+            {result.trip_title}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 min-w-0">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">
+                {result.destinations.map((d) => d.name).join(" · ")}
+              </span>
             </span>
-          </span>
-          <span className="font-mono text-xs">{dateRange}</span>
+            <span className="font-mono text-xs">{dateRange}</span>
+          </div>
         </div>
       </div>
 
