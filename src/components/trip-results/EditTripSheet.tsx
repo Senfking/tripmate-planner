@@ -134,7 +134,6 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
     return shuffled.slice(0, 3);
   }, []);
 
-  const currency = result.currency || "USD";
   const tierChanged = tier !== initialTier;
   const budgetChanged =
     Number(dailyBudget || 0) !== Number(result.daily_budget_estimate || 0) && dailyBudget.trim() !== "";
