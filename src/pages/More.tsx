@@ -1191,57 +1191,70 @@ const More = () => {
           <DrawerHeader>
             <DrawerTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Delete account
+              {deleteStep === 1 ? "Delete account permanently?" : "Are you sure?"}
             </DrawerTitle>
           </DrawerHeader>
           <div className="px-4 pb-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              This permanently deletes your account and all your data. This cannot be undone.
-            </p>
-
-            {soleOwnedTrips && soleOwnedTrips.length > 0 && (
-              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                <p className="font-medium">
-                  You are the owner of {soleOwnedTrips.length} trip(s):
-                </p>
-                <ul className="list-disc list-inside mt-1">
-                  {soleOwnedTrips.map((name) => (
-                    <li key={name}>{name}</li>
-                  ))}
-                </ul>
-                <p className="mt-2 text-xs">
-                  Transfer ownership or delete these trips first.
-                </p>
-              </div>
-            )}
-
-            {(!soleOwnedTrips || soleOwnedTrips.length === 0) && (
+            {soleOwnedTrips && soleOwnedTrips.length > 0 ? (
               <>
-                <p className="text-sm text-foreground font-medium">
-                  Type your email to confirm:
+                <p className="text-sm text-muted-foreground">
+                  This permanently deletes your account and all your data. This cannot be undone.
                 </p>
-                <Input
-                  type="email"
-                  placeholder={user?.email || ""}
-                  value={deleteEmail}
-                  onChange={(e) => setDeleteEmail(e.target.value)}
-                />
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  <p className="font-medium">
+                    You are the owner of {soleOwnedTrips.length} trip(s):
+                  </p>
+                  <ul className="list-disc list-inside mt-1">
+                    {soleOwnedTrips.map((name) => (
+                      <li key={name}>{name}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs">
+                    Transfer ownership or delete these trips first.
+                  </p>
+                </div>
               </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {deleteStep === 1
+                  ? "This will permanently delete your account and all your data (trips, itineraries, expenses, bookings). This action cannot be undone."
+                  : "Last chance — this can't be undone."}
+              </p>
             )}
           </div>
           <DrawerFooter>
             {(!soleOwnedTrips || soleOwnedTrips.length === 0) && (
               <Button
                 variant="destructive"
-                onClick={handleDeleteAccount}
-                disabled={deleting || deleteEmail !== user?.email}
+                onClick={() => {
+                  if (deleteStep === 1) {
+                    setDeleteStep(2);
+                  } else {
+                    handleDeleteAccount();
+                  }
+                }}
+                disabled={deleting || !deleteArmed}
               >
-                {deleting ? "Deleting…" : "Delete my account"}
+                {deleteStep === 1
+                  ? "Delete account"
+                  : deleting
+                  ? "Deleting…"
+                  : "Yes, delete forever"}
               </Button>
             )}
-            <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DrawerClose>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (deleteStep === 2) {
+                  setDeleteStep(1);
+                } else {
+                  setShowDeleteDrawer(false);
+                }
+              }}
+              disabled={deleting}
+            >
+              {deleteStep === 2 ? "Go back" : "Cancel"}
+            </Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
