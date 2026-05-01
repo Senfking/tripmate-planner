@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronRight, ChevronDown, PenLine, Plus } from "lucide-react";
+import { ChevronRight, ChevronDown, PenLine, Plus, Map as MapIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ActivityCard } from "./ActivityCard";
 import { TravelTimeConnector } from "./TravelTimeConnector";
-import { DayMiniMap } from "./DayMiniMap";
 import { DayReactionSummary } from "./DayReactionSummary";
 import { TripDiscussion } from "./TripDiscussion";
 import { EditDaySheet } from "./EditDaySheet";
