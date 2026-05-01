@@ -12,7 +12,7 @@ const textareaVariants = cva(
         default: "min-h-[80px] px-3 py-2 text-base md:text-sm",
         // Compact: 13px throughout. Use inside dense modals where the
         // textarea sits next to 11–13px labels and would otherwise dominate.
-        sm: "min-h-[64px] px-2.5 py-2 text-[13px] leading-snug",
+        sm: "min-h-[60px] px-2.5 py-2 text-[12px] leading-snug placeholder:text-[12px]",
       },
     },
     defaultVariants: { inputSize: "default" },
