@@ -141,14 +141,70 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     await streaming.start(payload);
   }, [inputData, buildPayload, streaming]);
 
-  // When streaming completes, persist the result + transition to the results
-  // phase. The streaming UI hands us the assembled AITripResult via onComplete.
+  // When streaming completes, persist the trip as a `draft` row and navigate
+  // to its canonical /app/trips/[id] URL so it's bookmarkable, refreshable,
+  // and shareable. The trip dashboard at that route renders the builder
+  // result UI (Lovable PR) when status='draft'.
+  //
+  // If the draft insert fails (e.g. transient RLS/network error) or the user
+  // is logged out, fall back to the in-component results phase: save the AI
+  // plan with trip_id=null (legacy behavior) and let the user promote via
+  // the existing "Create trip" button below, which INSERTs an active trip.
   const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
     if (!pendingPayload || !user) {
       setResults(normalized);
       setPhase("results");
       return;
     }
+
+    try {
+      const firstDest = normalized.destinations[0];
+      const lastDest = normalized.destinations[normalized.destinations.length - 1];
+      const destination = normalized.destinations.map((d) => d.name).join(", ");
+      const title = stripEmoji(normalized.trip_title) || "Your Trip";
+
+      const { data: trip, error: tripError } = await (supabase
+        .from("trips")
+        .insert({
+          name: title,
+          trip_name: title,
+          itinerary_title: title,
+          status: "draft",
+          destination,
+          tentative_start_date: firstDest?.start_date || null,
+          tentative_end_date: lastDest?.end_date || null,
+          destination_image_url: normalized.destination_image_url ?? null,
+          destination_country_iso: normalized.destination_country_iso ?? null,
+        } as any)
+        .select("id")
+        .single());
+
+      if (tripError || !trip) throw tripError ?? new Error("trip insert returned no row");
+
+      const { error: planError } = await (supabase
+        .from("ai_trip_plans" as any)
+        .insert({
+          trip_id: trip.id,
+          created_by: user.id,
+          prompt: pendingPayload,
+          result: normalized,
+        }) as any);
+
+      if (planError) throw planError;
+
+      trackEvent("ai_trip_generated", {
+        standalone: true,
+        destination: inputData?.destination,
+        streamed: true,
+        draft_trip_id: trip.id,
+      });
+
+      navigate(`/app/trips/${trip.id}`, { replace: true });
+      return;
+    } catch (saveErr) {
+      console.error("[StandaloneBuilder] Failed to persist draft trip:", saveErr);
+    }
+
     let planId: string | null = null;
     try {
       const { data: inserted, error: insertError } = await (supabase
@@ -164,7 +220,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     setResults(normalized);
     setPhase("results");
     trackEvent("ai_trip_generated", { standalone: true, destination: inputData?.destination, streamed: true });
-  }, [pendingPayload, user, inputData]);
+  }, [pendingPayload, user, inputData, navigate]);
 
   const handleCreateTrip = useCallback(async () => {
     if (!results) {
