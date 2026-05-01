@@ -287,13 +287,8 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
 
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-3.5">
           <p className="text-lg font-bold leading-tight text-white line-clamp-2">
-            {trip.emoji || "✈️"} {trip.name}
+            {trip.name}
           </p>
-          {trip.itineraryTitle && trip.itineraryTitle !== trip.name && (
-            <p className="text-[11px] text-white/60 leading-tight mt-0.5 line-clamp-1 italic">
-              {trip.itineraryTitle}
-            </p>
-          )}
           <p className="mt-0.5 text-sm text-white/70">
             {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
           </p>
@@ -1000,7 +995,7 @@ export default function TripList() {
                 {/* Bottom content */}
                 <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
                   <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">
-                    {trip.emoji ? `${trip.emoji} ` : ""}{trip.name}
+                    {trip.name}
                   </p>
                   <p className="text-[11px] text-white/75 mt-0.5">Dates TBD</p>
                 </div>
