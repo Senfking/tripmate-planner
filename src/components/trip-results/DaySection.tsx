@@ -232,15 +232,6 @@ export function DaySection({
               </button>
             )}
 
-            {/* Embedded mini-map */}
-            <div className="mx-4 mb-4">
-              <DayMiniMap
-                result={result}
-                allDays={allDays}
-                dayIndex={dayIndex}
-                refinedCoords={refinedCoords}
-              />
-            </div>
           </div>
         )}
       </div>
