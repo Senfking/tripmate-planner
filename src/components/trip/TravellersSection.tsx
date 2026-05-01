@@ -32,6 +32,7 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
   const userId = user?.id;
   const isAdminOrOwner = myRole === "owner" || myRole === "admin";
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const { data: members } = useQuery({
     queryKey: ["trip-travellers-members", tripId],
