@@ -18,7 +18,7 @@ import { GroupActivityPanel } from "./GroupActivityPanel";
 import { useResultsState } from "./useResultsState";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 import { computeTripBudget } from "@/lib/budgetCalc";
-import { ConciergeButton } from "@/components/concierge/ConciergeButton";
+// ConciergeButton intentionally not imported — floating "What to do?" pill removed.
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
@@ -190,7 +190,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       <ResultsTimeline nodes={timelineNodes} compact={mapState === "partial"} />
 
       <div className={cn(
-        "max-w-[700px] mx-auto min-h-full flex flex-col",
+        "max-w-[700px] mx-auto flex flex-col",
         mapState === "partial" ? "lg:pl-9" : "lg:pl-[60px]"
       )}>
         {/* Header */}
@@ -243,9 +243,10 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         </div>
       </div>
 
+
       {/* Hero destination image — full-bleed, matches StreamingGeneratingScreen
-        composition exactly so there's no visual jump between the streaming
-        and final review states. */}
+        composition. Title sits below the image in body color so it stays
+        legible regardless of the photo. */}
       {result.destination_image_url && (
         <div
           className="relative h-[42vh] min-h-[280px] w-full overflow-hidden"
@@ -261,28 +262,33 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.6) 30%, transparent 60%)",
+                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.4) 25%, transparent 55%)",
             }}
           />
-          <div className="absolute inset-x-0 bottom-0 p-5 lg:p-8 max-w-3xl mx-auto">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
-              Your trip
-            </p>
-            <h1 className="text-3xl lg:text-4xl font-bold text-foreground">
-              {result.trip_title}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" />
-                <span className="truncate">
-                  {result.destinations.map((d) => d.name).join(" · ")}
-                </span>
-              </span>
-              <span className="font-mono text-xs">{dateRange}</span>
-            </div>
-          </div>
         </div>
       )}
+
+      {/* Title block — below hero, standard body color for max legibility. */}
+      <div
+        className={cn("px-4 lg:px-8 pt-4 pb-2", rc)}
+        style={revealStyle("hero")}
+      >
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+          Your trip
+        </p>
+        <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+          {result.trip_title}
+        </h1>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 min-w-0">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {result.destinations.map((d) => d.name).join(" · ")}
+            </span>
+          </span>
+          <span className="font-mono text-xs">{dateRange}</span>
+        </div>
+      </div>
 
       <div className={cn(
         "max-w-[700px] mx-auto flex flex-col",
@@ -588,9 +594,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {/* Sticky bottom bar */}
       <div className={cn("fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]", rc)} style={revealStyle("complete")}>
         <div className="max-w-[700px] mx-auto relative">
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
-            {standalone ? (
-              <>
+          {standalone ? (
+            <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <CostBottomPanel
                   totalActivities={totalActivities}
                   total={costBreakdown.total}
@@ -598,55 +604,55 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   currency={currency}
                   categories={costBreakdown.categories}
                 />
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    onClick={onSaveDraft}
-                    className="h-9 px-4 rounded-xl text-[13px] font-semibold"
-                  >
-                    Save draft
-                  </Button>
-                  <Button
-                    onClick={onCreateTrip}
-                    disabled={creatingTrip}
-                    className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white"
-                  >
-                    {creatingTrip ? "Creating..." : "Create trip"}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex-1 min-w-0">
-                  <CostBottomPanel
-                    totalActivities={totalActivities}
-                    total={costBreakdown.total}
-                    dailyAvg={costBreakdown.dailyAvg}
-                    currency={currency}
-                    categories={costBreakdown.categories}
-                  />
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleShare}
-                    className="h-8 px-3 rounded-lg text-xs gap-1"
-                  >
-                    <Share2 className="h-3.5 w-3.5" /> Share
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditTripOpen(true)}
-                    className="h-8 px-3 rounded-lg text-xs gap-1"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={onSaveDraft}
+                  className="h-9 px-4 rounded-xl text-[13px] font-semibold flex-1 sm:flex-none"
+                >
+                  Save draft
+                </Button>
+                <Button
+                  onClick={onCreateTrip}
+                  disabled={creatingTrip}
+                  className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white flex-1 sm:flex-none"
+                >
+                  {creatingTrip ? "Creating..." : "Create trip"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <CostBottomPanel
+                  totalActivities={totalActivities}
+                  total={costBreakdown.total}
+                  dailyAvg={costBreakdown.dailyAvg}
+                  currency={currency}
+                  categories={costBreakdown.categories}
+                />
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  className="h-9 rounded-lg text-xs gap-1 flex-1 sm:flex-none sm:px-3"
+                >
+                  <Share2 className="h-3.5 w-3.5" /> Share
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditTripOpen(true)}
+                  className="h-9 rounded-lg text-xs gap-1 flex-1 sm:flex-none sm:px-3"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -733,18 +739,16 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         />
       )}
 
-      {/* Concierge */}
+      {/* Concierge panel kept for future re-entry; floating "What to do?" button
+          removed per spec to reduce hero-area clutter. */}
       {!standalone && (
-        <>
-          <ConciergeButton onClick={() => setConciergeOpen(true)} />
-          <ConciergePanel
-            tripId={tripId}
-            open={conciergeOpen}
-            onClose={() => setConciergeOpen(false)}
-            tripResult={result}
-            onAddToPlan={(dayDate, activity) => state.addLocalActivity(dayDate, activity)}
-          />
-        </>
+        <ConciergePanel
+          tripId={tripId}
+          open={conciergeOpen}
+          onClose={() => setConciergeOpen(false)}
+          tripResult={result}
+          onAddToPlan={(dayDate, activity) => state.addLocalActivity(dayDate, activity)}
+        />
       )}
     </div>,
     document.body
