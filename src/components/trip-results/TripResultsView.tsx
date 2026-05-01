@@ -24,6 +24,9 @@ import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
 import { MapSlidePanel, type MapState } from "./MapSlidePanel";
 import { EntryRequirementsPreview } from "./EntryRequirementsPreview";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { fetchEurRates } from "@/lib/fetchCrossRates";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -174,6 +177,54 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   }, [result]);
 
   const currency = result.currency || "USD";
+
+  // ---- Budget currency conversion ----
+  // Display the trip budget in the user's profile.default_currency primary,
+  // with the destination currency as a smaller subtitle. Uses the same
+  // EUR-based rate fetch that powers expense settlement.
+  const { profile } = useAuth();
+  const userCurrency = (profile?.default_currency || "EUR").toUpperCase();
+  const destCurrency = currency.toUpperCase();
+  const conversionEnabled = userCurrency !== destCurrency;
+
+  const { data: eurRates } = useQuery({
+    queryKey: ["budget-eur-rates"],
+    queryFn: fetchEurRates,
+    enabled: conversionEnabled,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  // Convert an amount in destCurrency → userCurrency via EUR.
+  // Returns null if rates unavailable so callers can fall back gracefully.
+  const convertToUserCurrency = useCallback(
+    (amount: number): number | null => {
+      if (!conversionEnabled) return amount;
+      if (!eurRates) return null;
+      const eurToDest = eurRates[destCurrency];
+      const eurToUser = eurRates[userCurrency];
+      if (!eurToDest || eurToDest <= 0 || !eurToUser || eurToUser <= 0) return null;
+      const amountInEur = amount / eurToDest;
+      return amountInEur * eurToUser;
+    },
+    [conversionEnabled, eurRates, destCurrency, userCurrency],
+  );
+
+  // Format a numeric amount with a localized currency symbol.
+  const formatBudget = useCallback(
+    (amount: number, code: string): string => {
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: code,
+          maximumFractionDigits: 0,
+        }).format(Math.round(amount));
+      } catch {
+        return `${code} ${Math.round(amount).toLocaleString()}`;
+      }
+    },
+    [],
+  );
+
 
   const hasPacking = (result.packing_suggestions?.length || 0) > 0;
 
@@ -439,18 +490,40 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 <CreditCard className="h-4.5 w-4.5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold text-foreground">
-                  ~{currency}{costBreakdown.total.toLocaleString()}
-                  <span className="text-sm font-normal text-muted-foreground"> per person</span>
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-                  Activities ~{currency}{costBreakdown.activitiesTotal.toLocaleString()}
-                  {costBreakdown.accommodationTotal > 0 && (
-                    <> · Stay ~{currency}{costBreakdown.accommodationTotal.toLocaleString()}</>
-                  )}
-                  {" · "}
-                  ~{currency}{costBreakdown.dailyAvg.toLocaleString()}/day
-                </div>
+                {(() => {
+                  const converted = convertToUserCurrency(costBreakdown.total);
+                  const showConverted = conversionEnabled && converted !== null;
+                  const primaryDisplay = showConverted
+                    ? `~${formatBudget(converted!, userCurrency)}`
+                    : `~${currency}${costBreakdown.total.toLocaleString()}`;
+                  const subtitleNative = `~${currency}${costBreakdown.total.toLocaleString()}`;
+                  const dailyConverted = convertToUserCurrency(costBreakdown.dailyAvg);
+                  const dailyDisplay =
+                    showConverted && dailyConverted !== null
+                      ? `~${formatBudget(dailyConverted, userCurrency)}/day`
+                      : `~${currency}${costBreakdown.dailyAvg.toLocaleString()}/day`;
+                  return (
+                    <>
+                      <div className="text-base font-semibold text-foreground">
+                        {primaryDisplay}
+                        <span className="text-sm font-normal text-muted-foreground"> per person</span>
+                      </div>
+                      {showConverted && (
+                        <div className="text-[11px] text-muted-foreground/80 mt-0.5 font-mono">
+                          {subtitleNative} in {currency}
+                        </div>
+                      )}
+                      <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+                        Activities ~{currency}{costBreakdown.activitiesTotal.toLocaleString()}
+                        {costBreakdown.accommodationTotal > 0 && (
+                          <> · Stay ~{currency}{costBreakdown.accommodationTotal.toLocaleString()}</>
+                        )}
+                        {" · "}
+                        {dailyDisplay}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <div className={`p-1.5 rounded-lg bg-muted/50 transition-transform duration-200 ${costOpen ? "rotate-180" : ""}`}>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
