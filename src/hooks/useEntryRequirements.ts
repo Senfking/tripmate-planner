@@ -11,16 +11,19 @@ export interface EntryRequirementDoc {
 
 export interface EntryRequirementsResult {
   summary?: string;
-  visa_required?: boolean;
+  // Server returns a string enum, not a boolean. The old `boolean` typing was
+  // wrong — left the field optional so older cached responses don't crash.
+  visa_required?: "yes" | "no" | "depends" | "unknown";
   documents_needed?: EntryRequirementDoc[];
   passport_validity?: string;
-  entry_form_required?: boolean;
+  entry_form_required?: { type: string; url: string } | null;
   embassy_url?: string;
-  additional_notes?: string;
+  additional_notes?: string[];
   confidence?: "high" | "medium" | "low" | "unknown";
   generated_at?: string;
   disclaimer?: string;
   source_trip_id?: string;
+  recommended_passport?: string;
 }
 
 export interface EntryReqAck {

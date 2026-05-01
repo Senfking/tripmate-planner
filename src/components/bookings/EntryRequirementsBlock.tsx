@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,8 @@ import {
   FileText,
   ShieldCheck,
   Check,
+  CheckCircle2,
+  ChevronDown,
   Upload,
   Sparkles,
   Loader2,
@@ -33,6 +35,15 @@ function countryName(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const match = COUNTRIES.find((c) => c.code === iso.toUpperCase());
   return match?.name ?? iso.toUpperCase();
+}
+
+// "Passport" itself is always listed as a doc (the LLM is instructed to
+// include it). For the "all clear" state we only care about non-passport
+// mandatory documents — those represent actual user action.
+function actionableDocCount(docs: EntryRequirementDoc[]): number {
+  return docs.filter(
+    (d) => d.mandatory && !/^passport(\s|$|:)/i.test(d.name.trim()),
+  ).length;
 }
 
 export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props) {
@@ -164,6 +175,30 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
   const disclaimerText =
     data.disclaimer ??
     "AI-generated guidance, not legal advice. Visa rules change frequently. Always verify with the embassy or official source before booking.";
+
+  // Positive "all clear" state: visa not required, no pre-arrival authorisation
+  // (ESTA/ETIAS/eTA), and no actionable mandatory documents beyond carrying
+  // your passport. Visibility = reassurance — we used to render only the
+  // summary line here, which left users wondering whether the section had
+  // failed to load.
+  const isAllClear =
+    data.visa_required === "no" &&
+    !data.entry_form_required &&
+    actionableDocCount(docs) === 0;
+
+  if (isAllClear) {
+    return (
+      <AllClearState
+        destName={destName}
+        nationality={myPassports[0]?.nationality_iso ?? null}
+        passportValidity={data.passport_validity}
+        summary={summary}
+        embassy={embassy}
+        additionalNotes={data.additional_notes}
+        disclaimer={disclaimerText}
+      />
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -318,6 +353,99 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
           Refreshing entry requirements…
         </p>
       )}
+    </div>
+  );
+}
+
+interface AllClearProps {
+  destName: string | null;
+  nationality: string | null;
+  passportValidity?: string;
+  summary?: string;
+  embassy?: string;
+  additionalNotes?: string[];
+  disclaimer: string;
+}
+
+function AllClearState({
+  destName,
+  nationality,
+  passportValidity,
+  summary,
+  embassy,
+  additionalNotes,
+  disclaimer,
+}: AllClearProps) {
+  const [open, setOpen] = useState(false);
+  const nationalityName = countryName(nationality);
+  const possessive = nationalityName ? `Your ${nationalityName} passport` : "Your passport";
+  const destPhrase = destName ? ` for ${destName}` : "";
+  const hasDetails = !!(passportValidity || summary || embassy || (additionalNotes && additionalNotes.length > 0));
+
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:bg-emerald-950/20 dark:border-emerald-900">
+      <div className="flex items-start gap-2">
+        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-emerald-900 dark:text-emerald-200">
+            Entry requirements: All clear
+          </p>
+          <p className="mt-1 text-[12.5px] text-emerald-900/85 dark:text-emerald-200/80 leading-snug">
+            {possessive} doesn&apos;t require a visa{destPhrase}. No additional entry documents needed.
+          </p>
+          <p className="mt-1.5 text-[11.5px] text-emerald-900/70 dark:text-emerald-200/60 leading-snug">
+            Always verify with the destination&apos;s embassy before travel.
+          </p>
+          {hasDetails && (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              className="mt-2 inline-flex items-center gap-1 text-[11.5px] font-medium text-emerald-800 hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-200"
+            >
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
+              />
+              {open ? "Hide details" : "Show details"}
+            </button>
+          )}
+          {open && hasDetails && (
+            <div className="mt-2 space-y-1.5 border-t border-emerald-200/60 pt-2 dark:border-emerald-900/60">
+              {summary && (
+                <p className="text-[12px] text-emerald-900/80 dark:text-emerald-200/75 leading-snug">
+                  {summary}
+                </p>
+              )}
+              {passportValidity && (
+                <p className="text-[12px] text-emerald-900/80 dark:text-emerald-200/75 leading-snug">
+                  <span className="font-medium">Passport validity:</span> {passportValidity}
+                </p>
+              )}
+              {additionalNotes && additionalNotes.length > 0 && (
+                <ul className="space-y-0.5 text-[12px] text-emerald-900/80 dark:text-emerald-200/75 leading-snug list-disc pl-4">
+                  {additionalNotes.map((note, i) => (
+                    <li key={i}>{note}</li>
+                  ))}
+                </ul>
+              )}
+              {embassy && (
+                <a
+                  href={embassy}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 text-[12px] font-medium text-emerald-800 hover:underline dark:text-emerald-300"
+                >
+                  Verify on official site
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+              <p className="pt-1 text-[11px] text-emerald-900/60 dark:text-emerald-200/55 leading-snug">
+                {disclaimer}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
