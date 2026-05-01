@@ -29,6 +29,7 @@ interface Props {
   getLocalAdditions: (dayDate: string) => AIActivity[];
   getReplacedActivity: (dayDate: string, activityIndex: number) => AIActivity | null;
   onCoordsRefined?: (dayDate: string, activityIndex: number, lat: number, lng: number) => void;
+  onOpenDayMap?: (dayIndex: number) => void;
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
