@@ -313,12 +313,12 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-foreground flex-1">{tripName}</p>
+                  <p className="text-sm text-foreground flex-1">{displayedTripName}</p>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground"
-                    onClick={() => { setNameValue(tripName); setEditingName(true); }}
+                    onClick={() => { setNameValue(displayedTripName); setEditingName(true); }}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
