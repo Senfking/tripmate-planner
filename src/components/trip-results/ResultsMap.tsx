@@ -367,12 +367,20 @@ function ActivityMarkers({
             icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
             eventHandlers={{
               click: () => {
-                // Center the marker, biasing upward so the popup (which opens above the pin)
-                // sits comfortably in view rather than getting clipped at the top.
+                // Popup opens ABOVE the pin and can be up to ~400px tall. We want the popup
+                // to sit fully inside the viewport, below the floating header card (~180px).
+                // Strategy: push the pin into the lower portion of the screen so the popup
+                // fills the upper portion without being clipped by the header.
                 const targetZoom = Math.max(map.getZoom(), 14);
+                const size = map.getSize();
+                // Place the pin ~75% down the viewport (leaves ~75% of height above for popup).
+                const pinScreenY = size.y * 0.78;
+                const centerScreenY = size.y / 2;
+                // Vertical pixel offset between desired pin position and current center.
+                const dy = pinScreenY - centerScreenY;
                 const point = map.project([act.latitude!, act.longitude!], targetZoom);
-                // Shift down by ~140px so the popup floating above the pin is fully visible.
-                const adjusted = map.unproject([point.x, point.y - 140], targetZoom);
+                // To move the pin DOWN on screen, shift the map center UP (smaller y).
+                const adjusted = map.unproject([point.x, point.y - dy], targetZoom);
                 map.setView(adjusted, targetZoom, { animate: true });
               },
             }}
