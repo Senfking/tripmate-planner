@@ -368,13 +368,18 @@ function ActivityMarkers({
             icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
             eventHandlers={{
               click: () => {
-                // Popup opens above the pin. To visually CENTER the popup in the viewport,
-                // place the pin in the lower portion of the screen so the popup body lands
-                // around the vertical middle, clear of the floating header card at the top.
+                // Center the popup within the AVAILABLE viewport area (between the floating
+                // header card at the top and the day-selector bar at the bottom). The popup
+                // opens upward from the pin, so we place the pin near the bottom of the
+                // available area such that the popup body lands at its vertical midpoint.
+                const HEADER = 180; // floating header card height
+                const FOOTER = 120; // day-selector bar height
+                const POPUP_HALF = 220; // half the typical popup height (~440px)
                 const targetZoom = Math.max(map.getZoom(), 14);
                 const size = map.getSize();
-                // Pin sits ~88% down the viewport → popup (opens upward) centers nicely.
-                const pinScreenY = size.y * 0.88;
+                const availableMid = (HEADER + (size.y - FOOTER)) / 2;
+                // Pin sits below the popup; popup tip ≈ pin, popup center ≈ pin - POPUP_HALF.
+                const pinScreenY = Math.min(availableMid + POPUP_HALF, size.y - FOOTER - 20);
                 const dy = pinScreenY - size.y / 2;
                 const point = map.project([act.latitude!, act.longitude!], targetZoom);
                 const adjusted = map.unproject([point.x, point.y - dy], targetZoom);
