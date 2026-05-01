@@ -663,10 +663,16 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     throw new Error("callClaudeHaiku: at least one system block is required");
   }
 
-  // Remaining wall-clock budget before Supabase SIGKILLs the function. If it's
-  // already gone, fail fast without spending an Anthropic call. Otherwise wrap
-  // the fetch in an AbortController so a slow-to-finish rank call gets
-  // interrupted cleanly instead of the whole function getting SIGKILLed.
+  // Two-tiered abort budget:
+  //   - global remaining = pipeline wall-clock minus elapsed (when this hits
+  //     zero we're about to be SIGKILLed; throw a PipelineError so the loop
+  //     short-circuits cleanly instead of cascading)
+  //   - per-attempt cap = PER_ATTEMPT_MAX_MS (bounds tail latency for one
+  //     call so a single stalled day can't burn the whole pipeline budget)
+  // The actual abort timer is min(remaining, perAttempt). We track which
+  // bound triggered so the catch block can distinguish a per-attempt
+  // timeout (transient — caller's retry should re-run) from a global
+  // budget exhaustion (terminal — caller should stop firing more calls).
   const remaining =
     PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
   if (remaining <= 0) {
@@ -677,8 +683,10 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     );
   }
 
+  const attemptBudget = Math.min(remaining, PER_ATTEMPT_MAX_MS);
+  const isPerAttemptCap = attemptBudget < remaining;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), remaining);
+  const timeoutId = setTimeout(() => controller.abort(), attemptBudget);
 
   const body = {
     model: HAIKU_MODEL,
@@ -712,10 +720,20 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     } catch (e) {
       const err = e as Error;
       if (controller.signal.aborted || err?.name === "AbortError") {
+        if (isPerAttemptCap) {
+          // Per-attempt cap fired (one slow call, but pipeline budget still
+          // has room). Throw a transient Error so rankDayWithRetry's loop
+          // re-runs against the same avoid list. PipelineError would
+          // short-circuit past the retry.
+          throw new Error(
+            `Anthropic fetch exceeded per-attempt cap of ${attemptBudget}ms ` +
+            `during step "${step}" (tool="${tool.name}", remaining_budget_ms=${remaining})`,
+          );
+        }
         throw new PipelineError(
           step,
           "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
-          `Anthropic fetch aborted after ${remaining}ms budget during step "${step}" (tool="${tool.name}")`,
+          `Anthropic fetch aborted after ${attemptBudget}ms budget during step "${step}" (tool="${tool.name}")`,
         );
       }
       throw new Error(`Anthropic network error calling "${tool.name}": ${err.message}`);
@@ -754,10 +772,16 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     } catch (e) {
       const err = e as Error;
       if (controller.signal.aborted || err?.name === "AbortError") {
+        if (isPerAttemptCap) {
+          throw new Error(
+            `Anthropic response body exceeded per-attempt cap of ${attemptBudget}ms ` +
+            `during step "${step}" (tool="${tool.name}", remaining_budget_ms=${remaining})`,
+          );
+        }
         throw new PipelineError(
           step,
           "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
-          `Anthropic response body aborted after ${remaining}ms budget during step "${step}" (tool="${tool.name}")`,
+          `Anthropic response body aborted after ${attemptBudget}ms budget during step "${step}" (tool="${tool.name}")`,
         );
       }
       throw new Error(`Anthropic returned non-JSON body: ${err.message}`);
@@ -3462,7 +3486,28 @@ async function rankInParallel(
   };
 
   if (sequentialRanking) {
+    // See streaming-path comment for the budget-exhaustion rationale.
+    let budgetExhausted = false;
     for (const day of skeleton) {
+      if (!budgetExhausted) {
+        const remainingMs =
+          PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+        if (remainingMs <= 0) {
+          budgetExhausted = true;
+          console.warn(
+            `[rankInParallel] remaining_budget_exhausted ` +
+            `day_number=${day.day_number} numDays=${numDays} ` +
+            `elapsed_ms=${Date.now() - pipelineStartedAt} ` +
+            `pipeline_budget_ms=${PIPELINE_WALL_CLOCK_MS} ` +
+            `skipping_remaining_days=true`,
+          );
+        }
+      }
+      if (budgetExhausted) {
+        fallbackDays++;
+        hydrateDay(day, null, "fallback");
+        continue;
+      }
       const settled = await rankDayWithRetry(
         anthropicKey, intent, day, sharedContext, accommodationPlaceId,
         Array.from(seenIds), pipelineStartedAt, logger,
@@ -4029,6 +4074,15 @@ class PipelineError extends Error {
 const PIPELINE_WALL_CLOCK_MS = 150_000;
 const PIPELINE_TIMEOUT_BUFFER_MS = 3_000;
 const PIPELINE_TIMEOUT_MS = PIPELINE_WALL_CLOCK_MS - PIPELINE_TIMEOUT_BUFFER_MS;
+
+// Per-attempt cap on a single Anthropic call. Keeps one slow day from
+// burning the whole pipeline budget — particularly important in sequential
+// rank mode where a stalled call would otherwise serialize-cascade through
+// every remaining day. Sized against observed Haiku call latency: p50 ~5-10s,
+// p95 ~20-25s, p99 ~30-60s. 35s comfortably covers p95 (including cold-cache
+// day-1 writes) while bounding the worst case so at least ~4 timeouts can
+// occur before the 150s pipeline budget exhausts.
+const PER_ATTEMPT_MAX_MS = 35_000;
 
 function checkPipelineTimeout(startedAt: number, nextStep: string): void {
   const elapsed = Date.now() - startedAt;
@@ -4669,7 +4723,35 @@ Deno.serve(async (req) => {
               // calls, so calls 2..N hit Anthropic's prompt cache; only the
               // small uncached suffix (buildDayInstruction with the variable
               // avoid list) re-encodes per call.
+              //
+              // Budget-exhaustion gate: once the global pipeline wall-clock
+              // is gone, firing more rankDayWithRetry calls is wasted work —
+              // callClaudeHaiku would throw PipelineError before sending any
+              // request, and rankDayWithRetry's retry loop would catch+retry
+              // for no reason. Detect exhaustion before each call, log once,
+              // and emit skeleton-only days for the rest of the trip so the
+              // result still has a complete days array.
+              let budgetExhausted = false;
               for (const day of skeleton) {
+                if (!budgetExhausted) {
+                  const remainingMs =
+                    PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+                  if (remainingMs <= 0) {
+                    budgetExhausted = true;
+                    console.warn(
+                      `[stream.rank] remaining_budget_exhausted ` +
+                      `day_number=${day.day_number} numDays=${numDays} ` +
+                      `elapsed_ms=${Date.now() - pipelineStartedAt} ` +
+                      `pipeline_budget_ms=${PIPELINE_WALL_CLOCK_MS} ` +
+                      `skipping_remaining_days=true`,
+                    );
+                  }
+                }
+                if (budgetExhausted) {
+                  fallbackDays++;
+                  hydrateAndEmit(null, day, "fallback");
+                  continue;
+                }
                 const settled = await rankDayWithRetry(
                   anthropicKey, intent, day, sharedContext, accommodationPlaceId,
                   Array.from(seenIds), pipelineStartedAt, logger,
