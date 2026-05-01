@@ -241,6 +241,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             </button>
           </div>
         </div>
+      </div>
+
 
       {/* Hero destination image — full-bleed, matches StreamingGeneratingScreen
         composition. Title sits below the image in body color so it stays
