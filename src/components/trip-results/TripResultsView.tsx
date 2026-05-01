@@ -24,6 +24,10 @@ import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
 import { MapSlidePanel, type MapState } from "./MapSlidePanel";
 import { EntryRequirementsPreview } from "./EntryRequirementsPreview";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { fetchEurRates } from "@/lib/fetchCrossRates";
+import { formatCurrency } from "@/lib/settlementCalc";
 import { cn } from "@/lib/utils";
 
 interface Props {
