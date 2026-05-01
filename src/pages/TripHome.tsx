@@ -376,14 +376,13 @@ export default function TripHome() {
         />
       )}
 
-      {/* ─── HERO PHOTO — boxed, fixed-height, rounded-bottom (pre-PR #218 style) ───
-        The dashboard is post-creation trip management; it gets a calmer, more
-        contained hero than the trip-builder's full-bleed cinematic one. Title
-        and chips render in the dedicated header section below. */}
+      {/* ─── HERO PHOTO — boxed, fixed-height (pre-PR #218 style) ───
+        The content area below overlaps with rounded-top + shadow for an
+        elevated card feel. Title overlays the bottom of the image. */}
       <div
         ref={heroRef}
-        className="relative w-full overflow-hidden rounded-b-2xl"
-        style={{ height: 200 }}
+        className="relative w-full overflow-hidden"
+        style={{ height: 240 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
@@ -394,6 +393,8 @@ export default function TripHome() {
         />
         {/* Top gradient — keeps nav buttons readable on light photos */}
         <div className="absolute inset-x-0 top-0 h-20" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.3), transparent)" }} />
+        {/* Bottom gradient — keeps overlaid title readable */}
+        <div className="absolute inset-x-0 bottom-0 h-32" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent)" }} />
 
         {/* Back button */}
         <button
@@ -461,77 +462,79 @@ export default function TripHome() {
         )}
       </div>
 
-      {/* ─── TRIP HEADER (eyebrow + title + chips) ───
-        Title sits below the boxed photo on the page background. */}
-      <div className="px-4 pt-4 md:max-w-[700px] md:mx-auto md:px-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+      {/* ─── TRIP HEADER (eyebrow + title overlay on hero image) ─── */}
+      <div className="relative -mt-24 px-6 pb-3 pointer-events-none md:max-w-[700px] md:mx-auto md:px-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-white/90 mb-1 drop-shadow">
           My trip
         </p>
-        <h1 className="text-3xl lg:text-4xl font-bold text-foreground leading-tight">
+        <h1 className="text-3xl lg:text-4xl font-bold text-white leading-tight drop-shadow-md">
           {trip?.destination || trip?.name}
         </h1>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {numDays !== null && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
-              <Clock className="h-3 w-3" />
-              {numDays} {numDays === 1 ? "day" : "days"}
-            </span>
-          )}
-          {trip?.destination && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
-              <MapPin className="h-3 w-3" />
-              {trip.destination}
-            </span>
-          )}
-          {(trip?.tentative_start_date || trip?.tentative_end_date) && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
-              <Calendar className="h-3 w-3" />
-              {formatDateRange(trip?.tentative_start_date ?? null, trip?.tentative_end_date ?? null)}
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* ─── TRIP INFO (members + attendance badge) ─── */}
-      <div className="px-4 pt-4 pb-2 md:max-w-[700px] md:mx-auto md:px-8">
-        {/* Members + attendance badge row */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMemberSheetOpen(true)}
-            className="flex items-center gap-2 shrink-0"
-          >
-            <div className="flex items-center -space-x-2">
-              {visibleMembers.map((m) => (
-                <Avatar key={m.userId} className="h-7 w-7 ring-2 ring-background">
-                  {m.avatarUrl && (
-                    <AvatarImage src={m.avatarUrl} alt={m.displayName || ""} />
-                  )}
-                  <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-medium">
-                    {getInitial(m.displayName)}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-            {memberCount > 0 && (
-              <span className="text-[12px] text-muted-foreground whitespace-nowrap">
-                {memberCount} member{memberCount !== 1 ? "s" : ""}
+      {/* ─── CONTENT CARD — rounded top, elevated shadow, overlaps hero ─── */}
+      <div className="relative flex-1 -mt-4 rounded-t-3xl bg-background shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)]">
+        <div className="px-4 pt-5 md:max-w-[700px] md:mx-auto md:px-8">
+          <div className="flex flex-wrap items-center gap-2">
+            {numDays !== null && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
+                <Clock className="h-3 w-3" />
+                {numDays} {numDays === 1 ? "day" : "days"}
               </span>
             )}
-          </button>
-
-          {attendanceBadge && (
-            <button
-              onClick={handleOpenOverlay}
-              className={cn("text-[11px] font-medium px-2.5 py-0.5 rounded-full border transition-colors", attendanceBadge.className)}
-            >
-              {attendanceBadge.label}
-            </button>
-          )}
+            {trip?.destination && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
+                <MapPin className="h-3 w-3" />
+                {trip.destination}
+              </span>
+            )}
+            {(trip?.tentative_start_date || trip?.tentative_end_date) && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
+                <Calendar className="h-3 w-3" />
+                {formatDateRange(trip?.tentative_start_date ?? null, trip?.tentative_end_date ?? null)}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* ─── DASHBOARD CONTENT ─── */}
-      <div className="flex-1">
+        {/* ─── TRIP INFO (members + attendance badge) ─── */}
+        <div className="px-4 pt-4 pb-2 md:max-w-[700px] md:mx-auto md:px-8">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMemberSheetOpen(true)}
+              className="flex items-center gap-2 shrink-0"
+            >
+              <div className="flex items-center -space-x-2">
+                {visibleMembers.map((m) => (
+                  <Avatar key={m.userId} className="h-7 w-7 ring-2 ring-background">
+                    {m.avatarUrl && (
+                      <AvatarImage src={m.avatarUrl} alt={m.displayName || ""} />
+                    )}
+                    <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-medium">
+                      {getInitial(m.displayName)}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              {memberCount > 0 && (
+                <span className="text-[12px] text-muted-foreground whitespace-nowrap">
+                  {memberCount} member{memberCount !== 1 ? "s" : ""}
+                </span>
+              )}
+            </button>
+
+            {attendanceBadge && (
+              <button
+                onClick={handleOpenOverlay}
+                className={cn("text-[11px] font-medium px-2.5 py-0.5 rounded-full border transition-colors", attendanceBadge.className)}
+              >
+                {attendanceBadge.label}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ─── DASHBOARD CONTENT ─── */}
         <TripDashboard
           tripId={trip.id}
           routeLocked={trip.route_locked ?? false}
