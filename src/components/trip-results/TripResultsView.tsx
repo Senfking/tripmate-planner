@@ -190,7 +190,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       <ResultsTimeline nodes={timelineNodes} compact={mapState === "partial"} />
 
       <div className={cn(
-        "max-w-[700px] mx-auto min-h-full flex flex-col",
+        "max-w-[700px] mx-auto flex flex-col",
         mapState === "partial" ? "lg:pl-9" : "lg:pl-[60px]"
       )}>
         {/* Header */}
@@ -241,11 +241,10 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             </button>
           </div>
         </div>
-      </div>
 
       {/* Hero destination image — full-bleed, matches StreamingGeneratingScreen
-        composition exactly so there's no visual jump between the streaming
-        and final review states. */}
+        composition. Title sits below the image in body color so it stays
+        legible regardless of the photo. */}
       {result.destination_image_url && (
         <div
           className="relative h-[42vh] min-h-[280px] w-full overflow-hidden"
@@ -261,28 +260,33 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.6) 30%, transparent 60%)",
+                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.4) 25%, transparent 55%)",
             }}
           />
-          <div className="absolute inset-x-0 bottom-0 p-5 lg:p-8 max-w-3xl mx-auto">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
-              Your trip
-            </p>
-            <h1 className="text-3xl lg:text-4xl font-bold text-foreground">
-              {result.trip_title}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" />
-                <span className="truncate">
-                  {result.destinations.map((d) => d.name).join(" · ")}
-                </span>
-              </span>
-              <span className="font-mono text-xs">{dateRange}</span>
-            </div>
-          </div>
         </div>
       )}
+
+      {/* Title block — below hero, standard body color for max legibility. */}
+      <div
+        className={cn("px-4 lg:px-8 pt-4 pb-2", rc)}
+        style={revealStyle("hero")}
+      >
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+          Your trip
+        </p>
+        <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+          {result.trip_title}
+        </h1>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 min-w-0">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {result.destinations.map((d) => d.name).join(" · ")}
+            </span>
+          </span>
+          <span className="font-mono text-xs">{dateRange}</span>
+        </div>
+      </div>
 
       <div className={cn(
         "max-w-[700px] mx-auto flex flex-col",
