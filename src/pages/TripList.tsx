@@ -1018,22 +1018,24 @@ export default function TripList() {
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide pl-4 md:pl-[max(2rem,calc((100vw-900px)/2+2rem))]">
             {drafts.map((draft: any) => {
-              const result = draft.result as AITripResult;
-              const destName = result?.destinations?.[0]?.name || "Draft trip";
-              const actCount = result?.total_activities || result?.destinations?.reduce((sum: number, d: any) => sum + (d.days?.reduce((ds: number, day: any) => ds + (day.activities?.length || 0), 0) || 0), 0) || 0;
-              const startDate = result?.destinations?.[0]?.start_date;
-              const endDate = result?.destinations?.[result.destinations.length - 1]?.end_date;
+              const draftName = (draft.trip_name as string | null) || (draft.name as string | null) || (draft.itinerary_title as string | null) || (draft.destination as string | null) || "Draft trip";
+              const startDate = draft.tentative_start_date as string | null;
+              const endDate = draft.tentative_end_date as string | null;
               let dateLabel = "";
               try {
                 if (startDate && endDate) dateLabel = `${format(parseISO(startDate), "MMM d")} – ${format(parseISO(endDate), "MMM d")}`;
                 else if (startDate) dateLabel = format(parseISO(startDate), "MMM d, yyyy");
               } catch {}
-              const photoUrl = resolvePhoto(destName, []);
+              const photoUrl = resolvePhoto(
+                draftName,
+                draft.destination ? [draft.destination] : [],
+                (draft.destination_image_url as string | null) ?? null,
+              );
 
               return (
-                <button
+                <Link
                   key={draft.id}
-                  onClick={() => setDraftToResume({ planId: draft.id, result })}
+                  to={`/app/trips/${draft.id}`}
                   className="group relative shrink-0 w-[220px] h-[120px] rounded-2xl overflow-hidden shadow-md text-left active:scale-[0.98] transition-transform"
                 >
                   <img
@@ -1060,11 +1062,13 @@ export default function TripList() {
                     role="button"
                     tabIndex={0}
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       deleteDraftMutation.mutate(draft.id);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
                         e.stopPropagation();
                         deleteDraftMutation.mutate(draft.id);
                       }
@@ -1077,17 +1081,17 @@ export default function TripList() {
 
                   {/* Bottom content */}
                   <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
-                    <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">{destName}</p>
+                    <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">{draftName}</p>
                     <div className="flex items-center justify-between mt-0.5">
                       <p className="text-[11px] text-white/75">
-                        {dateLabel || `${actCount} ${actCount === 1 ? "activity" : "activities"}`}
+                        {dateLabel || "Tap to continue"}
                       </p>
                       <span className="text-[11px] font-semibold text-white/90 flex items-center gap-0.5">
                         Continue <ChevronRight className="h-3 w-3" />
                       </span>
                     </div>
                   </div>
-                </button>
+                </Link>
               );
             })}
           </div>
