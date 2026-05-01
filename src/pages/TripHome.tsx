@@ -376,14 +376,13 @@ export default function TripHome() {
         />
       )}
 
-      {/* ─── HERO PHOTO — boxed, fixed-height, rounded-bottom (pre-PR #218 style) ───
-        The dashboard is post-creation trip management; it gets a calmer, more
-        contained hero than the trip-builder's full-bleed cinematic one. Title
-        and chips render in the dedicated header section below. */}
+      {/* ─── HERO PHOTO — boxed, fixed-height (pre-PR #218 style) ───
+        The content area below overlaps with rounded-top + shadow for an
+        elevated card feel. Title overlays the bottom of the image. */}
       <div
         ref={heroRef}
-        className="relative w-full overflow-hidden rounded-b-2xl"
-        style={{ height: 200 }}
+        className="relative w-full overflow-hidden"
+        style={{ height: 240 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
