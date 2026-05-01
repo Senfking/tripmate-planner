@@ -552,20 +552,34 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 <div className="space-y-0">
                   {costBreakdown.categories.map(([cat, amount], i) => {
                     const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
+                    const catConverted = convertToUserCurrency(amount);
+                    const catShowConverted = conversionEnabled && catConverted !== null;
+                    const catDisplay = catShowConverted
+                      ? `~${formatBudget(catConverted!, userCurrency)}`
+                      : `~${currency}${Math.round(amount).toLocaleString()}`;
                     return (
                       <div key={cat} className={`flex items-center gap-3 py-2.5 ${i > 0 ? "border-t border-border" : ""}`}>
                         <span className="text-xs text-muted-foreground flex-1">{cat}</span>
                         <div className="w-20 h-1.5 rounded-full bg-muted/60 overflow-hidden">
                           <div className="h-full rounded-full bg-primary/40" style={{ width: `${Math.min(pct, 100)}%` }} />
                         </div>
-                        <span className="text-xs font-mono text-foreground w-24 text-right">~{currency}{Math.round(amount).toLocaleString()}</span>
+                        <span className="text-xs font-mono text-foreground w-24 text-right">{catDisplay}</span>
                       </div>
                     );
                   })}
                 </div>
                 <div className="border-t border-border mt-1 pt-3 flex items-center justify-between">
                   <span className="text-sm font-semibold text-foreground">Total per person</span>
-                  <span className="text-sm font-mono font-bold text-primary">~{currency}{costBreakdown.total.toLocaleString()}</span>
+                  {(() => {
+                    const totalConv = convertToUserCurrency(costBreakdown.total);
+                    const showConv = conversionEnabled && totalConv !== null;
+                    const display = showConv
+                      ? `~${formatBudget(totalConv!, userCurrency)}`
+                      : `~${currency}${costBreakdown.total.toLocaleString()}`;
+                    return (
+                      <span className="text-sm font-mono font-bold text-primary">{display}</span>
+                    );
+                  })()}
                 </div>
                 <p className="text-[10px] text-muted-foreground/50 mt-2 italic">Estimates based on average local prices. Actual costs depend on season, availability, and personal choices.</p>
               </div>
@@ -723,6 +737,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   dailyAvg={costBreakdown.dailyAvg}
                   currency={currency}
                   categories={costBreakdown.categories}
+                  userCurrency={userCurrency}
+                  convertToUserCurrency={convertToUserCurrency}
+                  formatBudget={formatBudget}
                 />
               </div>
               <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
@@ -751,6 +768,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   dailyAvg={costBreakdown.dailyAvg}
                   currency={currency}
                   categories={costBreakdown.categories}
+                  userCurrency={userCurrency}
+                  convertToUserCurrency={convertToUserCurrency}
+                  formatBudget={formatBudget}
                 />
               </div>
               <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
