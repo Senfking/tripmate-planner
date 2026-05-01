@@ -500,7 +500,9 @@ export default function TripList() {
   const [showBuilder, setShowBuilder] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [builderInitDest, setBuilderInitDest] = useState("");
-  const [draftToResume, setDraftToResume] = useState<{ planId: string; result: AITripResult } | null>(null);
+  // (PR #237) Drafts now live as trips with status='draft'; tapping a draft
+  // card navigates to /app/trips/:id where TripHome branches into the
+  // results-style draft view. No in-memory resume state needed anymore.
   const [referralDismissed, setReferralDismissed] = useState(
     () => localStorage.getItem("junto_referral_card_dismissed") === "true"
   );
