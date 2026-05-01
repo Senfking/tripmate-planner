@@ -153,8 +153,16 @@ export function DaySection({
         {/* Expanded content */}
         {open && (
           <div className="border-t border-border animate-fade-in">
-            {/* Edit day button */}
-            <div className="flex items-center justify-end px-3 py-2">
+            {/* Day toolbar */}
+            <div className="flex items-center justify-end gap-3 px-3 py-2">
+              {onOpenDayMap && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onOpenDayMap(dayIndex); }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                >
+                  <MapIcon className="h-3 w-3" /> View day on map
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); setEditDayOpen(true); }}
                 className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
