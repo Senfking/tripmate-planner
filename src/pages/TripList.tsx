@@ -734,15 +734,14 @@ export default function TripList() {
     enabled: !!user,
   });
 
-  // ── Drafts query (ai_trip_plans with no trip_id) ──
+  // ── Drafts query (trips with status='draft' — RLS already restricts to creator) ──
   const { data: drafts } = useQuery({
-    queryKey: ["ai-drafts", user?.id],
+    queryKey: ["draft-trips", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ai_trip_plans" as any)
-        .select("id, result, created_at")
-        .is("trip_id", null)
-        .eq("created_by", user!.id)
+        .from("trips")
+        .select("id, name, trip_name, itinerary_title, destination, destination_image_url, cover_image_path, tentative_start_date, tentative_end_date, created_at")
+        .eq("status" as any, "draft")
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -752,12 +751,15 @@ export default function TripList() {
   });
 
   const deleteDraftMutation = useMutation({
-    mutationFn: async (planId: string) => {
-      const { error } = await supabase.from("ai_trip_plans" as any).delete().eq("id", planId);
+    mutationFn: async (tripId: string) => {
+      // RLS on trips_delete restricts to admin/owner; the creator is auto-added
+      // as owner so this succeeds for the draft author.
+      const { error } = await supabase.from("trips").delete().eq("id", tripId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["draft-trips"] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
       toast.success("Draft deleted");
     },
     onError: () => toast.error("Failed to delete draft"),
