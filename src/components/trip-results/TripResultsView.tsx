@@ -739,18 +739,16 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         />
       )}
 
-      {/* Concierge */}
+      {/* Concierge panel kept for future re-entry; floating "What to do?" button
+          removed per spec to reduce hero-area clutter. */}
       {!standalone && (
-        <>
-          <ConciergeButton onClick={() => setConciergeOpen(true)} />
-          <ConciergePanel
-            tripId={tripId}
-            open={conciergeOpen}
-            onClose={() => setConciergeOpen(false)}
-            tripResult={result}
-            onAddToPlan={(dayDate, activity) => state.addLocalActivity(dayDate, activity)}
-          />
-        </>
+        <ConciergePanel
+          tripId={tripId}
+          open={conciergeOpen}
+          onClose={() => setConciergeOpen(false)}
+          tripResult={result}
+          onAddToPlan={(dayDate, activity) => state.addLocalActivity(dayDate, activity)}
+        />
       )}
     </div>,
     document.body
