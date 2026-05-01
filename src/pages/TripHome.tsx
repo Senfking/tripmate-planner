@@ -393,6 +393,8 @@ export default function TripHome() {
         />
         {/* Top gradient — keeps nav buttons readable on light photos */}
         <div className="absolute inset-x-0 top-0 h-20" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.3), transparent)" }} />
+        {/* Bottom gradient — keeps overlaid title readable */}
+        <div className="absolute inset-x-0 bottom-0 h-32" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent)" }} />
 
         {/* Back button */}
         <button
