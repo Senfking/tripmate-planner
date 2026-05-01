@@ -122,6 +122,10 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
   });
 
   const sharePermission = (trip as any)?.share_permission ?? "all";
+  // Prefer the user-chosen `trip_name` (PR #231); fall back to the legacy
+  // name passed from the parent so this still works during the rollout.
+  const displayedTripName = ((trip as any)?.trip_name as string | undefined) || tripName;
+  const itinerarySubtitle = ((trip as any)?.itinerary_title as string | undefined) || null;
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
