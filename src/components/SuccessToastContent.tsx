@@ -20,11 +20,16 @@ export function SuccessToastContent({ toastId, title, description }: Props) {
 
   return (
     <div
-      className="w-full overflow-hidden"
+      className="w-full rounded-2xl border border-gray-100 overflow-hidden"
       role="status"
       style={{
         minWidth: 0,
         fontFamily: TOAST_FONT,
+        background: "rgba(255, 255, 255, 0.92)",
+        backdropFilter: "saturate(180%) blur(20px)",
+        WebkitBackdropFilter: "saturate(180%) blur(20px)",
+        boxShadow:
+          "0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -8px rgba(15, 23, 42, 0.12), 0 24px 48px -16px rgba(15, 23, 42, 0.08)",
       }}
     >
       <div className="flex items-start gap-2.5 px-3.5 py-3">
