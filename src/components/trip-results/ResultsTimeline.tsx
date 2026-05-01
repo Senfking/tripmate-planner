@@ -31,8 +31,10 @@ export function buildTimelineNodes(
 
   pushNode({ id: "section-flights", icon: Plane, label: "Flights" });
 
+  const isMultiDestination = destinations.length > 1;
   const hasAccommodation = destinations.some((d) => d.accommodation);
-  if (hasAccommodation) {
+  // Standalone "Stays" overview only renders for multi-destination trips
+  if (isMultiDestination && hasAccommodation) {
     pushNode({ id: "section-stays-overview", icon: Bed, label: "Stays" });
   }
 
