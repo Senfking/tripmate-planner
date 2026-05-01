@@ -352,7 +352,27 @@ const MAX_SLOTS_CEILING: Record<Intent["pace"], number> = {
   active: 42,
 };
 
-const MAX_FINALIST_HYDRATIONS = 20;     // safety cap on details pass; real trips pick 11–15
+// Floor: 20 (covers all short-trip shapes including a 3-day active stack of 18
+// slots). Per-day multiplier 5: a balanced day picks ~4 distinct place_ids, +1
+// of slack so trip-wide dedup has room to run on long trips. Hard ceiling 40
+// to bound Places Details cost. Real trips pick 11–15 venues regardless.
+const MAX_FINALIST_FLOOR = 20;
+const MAX_FINALIST_CEILING = 40;
+const MAX_FINALIST_PER_DAY = 5;
+function computeMaxFinalists(numDays: number): number {
+  return Math.min(
+    MAX_FINALIST_CEILING,
+    Math.max(MAX_FINALIST_FLOOR, numDays * MAX_FINALIST_PER_DAY),
+  );
+}
+
+// Trips with this many days or more rank sequentially so each per-day call
+// can be told which place_ids earlier days already claimed. Below this, the
+// candidate pool is wide enough relative to slot count that trip-wide dedup
+// doesn't drain later days, so we keep the parallel speed win. Threshold of 4
+// is calibrated against the 5-day Dubai bug (PR ref: this PR) — at 3 days the
+// failure mode is not reproducible against any tested destination.
+const SEQUENTIAL_RANKING_MIN_DAYS = 4;
 
 // Rate limit + circuit breaker defaults. Override via env if needed.
 const DEFAULT_RATE_LIMIT_PER_HOUR = 5;                 // generations per user per rolling hour
@@ -643,10 +663,16 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     throw new Error("callClaudeHaiku: at least one system block is required");
   }
 
-  // Remaining wall-clock budget before Supabase SIGKILLs the function. If it's
-  // already gone, fail fast without spending an Anthropic call. Otherwise wrap
-  // the fetch in an AbortController so a slow-to-finish rank call gets
-  // interrupted cleanly instead of the whole function getting SIGKILLed.
+  // Two-tiered abort budget:
+  //   - global remaining = pipeline wall-clock minus elapsed (when this hits
+  //     zero we're about to be SIGKILLed; throw a PipelineError so the loop
+  //     short-circuits cleanly instead of cascading)
+  //   - per-attempt cap = PER_ATTEMPT_MAX_MS (bounds tail latency for one
+  //     call so a single stalled day can't burn the whole pipeline budget)
+  // The actual abort timer is min(remaining, perAttempt). We track which
+  // bound triggered so the catch block can distinguish a per-attempt
+  // timeout (transient — caller's retry should re-run) from a global
+  // budget exhaustion (terminal — caller should stop firing more calls).
   const remaining =
     PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
   if (remaining <= 0) {
@@ -657,8 +683,10 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     );
   }
 
+  const attemptBudget = Math.min(remaining, PER_ATTEMPT_MAX_MS);
+  const isPerAttemptCap = attemptBudget < remaining;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), remaining);
+  const timeoutId = setTimeout(() => controller.abort(), attemptBudget);
 
   const body = {
     model: HAIKU_MODEL,
@@ -692,10 +720,20 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     } catch (e) {
       const err = e as Error;
       if (controller.signal.aborted || err?.name === "AbortError") {
+        if (isPerAttemptCap) {
+          // Per-attempt cap fired (one slow call, but pipeline budget still
+          // has room). Throw a transient Error so rankDayWithRetry's loop
+          // re-runs against the same avoid list. PipelineError would
+          // short-circuit past the retry.
+          throw new Error(
+            `Anthropic fetch exceeded per-attempt cap of ${attemptBudget}ms ` +
+            `during step "${step}" (tool="${tool.name}", remaining_budget_ms=${remaining})`,
+          );
+        }
         throw new PipelineError(
           step,
           "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
-          `Anthropic fetch aborted after ${remaining}ms budget during step "${step}" (tool="${tool.name}")`,
+          `Anthropic fetch aborted after ${attemptBudget}ms budget during step "${step}" (tool="${tool.name}")`,
         );
       }
       throw new Error(`Anthropic network error calling "${tool.name}": ${err.message}`);
@@ -734,10 +772,16 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     } catch (e) {
       const err = e as Error;
       if (controller.signal.aborted || err?.name === "AbortError") {
+        if (isPerAttemptCap) {
+          throw new Error(
+            `Anthropic response body exceeded per-attempt cap of ${attemptBudget}ms ` +
+            `during step "${step}" (tool="${tool.name}", remaining_budget_ms=${remaining})`,
+          );
+        }
         throw new PipelineError(
           step,
           "Trip generation took too long at rank step — try a shorter trip or fewer vibes.",
-          `Anthropic response body aborted after ${remaining}ms budget during step "${step}" (tool="${tool.name}")`,
+          `Anthropic response body aborted after ${attemptBudget}ms budget during step "${step}" (tool="${tool.name}")`,
         );
       }
       throw new Error(`Anthropic returned non-JSON body: ${err.message}`);
@@ -2075,7 +2119,7 @@ async function hydrateFinalists(
 ): Promise<{ hydrated: Map<string, BatchPlaceResult>; stats: PlacesBatchStats }> {
   const stats: PlacesBatchStats = { live_calls: 0, cache_hits: 0 };
   const hydrated = new Map(existingById);
-  const unique = Array.from(new Set(placeIds)).slice(0, MAX_FINALIST_HYDRATIONS);
+  const unique = Array.from(new Set(placeIds)).slice(0, MAX_FINALIST_CEILING);
 
   if (unique.length === 0) return { hydrated, stats };
 
@@ -3344,13 +3388,14 @@ async function rankInParallel(
   const accommodationPlaceId = pickAccommodationPlaceId(venuesByPool);
   const sharedContext = buildSharedContextText(intent, venuesByPool, events, currency, geo.country_code);
 
-  // Fire all N+1 in parallel.
-  const dayPromises = skeleton.map((day) =>
-    rankDayWithRetry(
-      anthropicKey, intent, day, sharedContext, accommodationPlaceId, [],
-      pipelineStartedAt, logger,
-    ).then((res) => ({ day, ...res })),
+  // Mode selection — see streaming-path comment for rationale.
+  const sequentialRanking = numDays >= SEQUENTIAL_RANKING_MIN_DAYS;
+  console.log(
+    `[rankInParallel] mode=${sequentialRanking ? "sequential" : "parallel"} ` +
+    `numDays=${numDays} pool_size=${placeById.size}`,
   );
+
+  // Metadata fires in parallel either way.
   const metadataPromise = rankTripMetadata(
     anthropicKey, intent, numDays, startDate, endDate, sharedContext, pipelineStartedAt,
   ).then(async (res) => {
@@ -3371,32 +3416,49 @@ async function rankInParallel(
     };
   });
 
-  const settledDays = await Promise.all(dayPromises);
-  const metaResult = await metadataPromise;
-  const meta = metaResult.data;
-
-  // ---- Walk in skeleton order so trip-wide dedup is deterministic ----
+  // ---- Walk in skeleton order. In sequential mode, each day's call sees
+  // the cumulative seenIds (built by the prior day's hydrate step) as
+  // avoid_place_ids, so the LLM is told what's claimed instead of guessing.
+  // Receipt-time dedup remains as a safety net. In parallel mode all calls
+  // fire at once with avoid_place_ids=[]; receipt-time dedup is the only
+  // collision check. ----
   const seenIds = new Set<string>();
   const ranked_days: RankedDay[] = [];
   const seenThemes = new Set<string>();
-  settledDays.sort((a, b) => a.day.day_number - b.day.day_number);
+  let fallbackDays = 0;
+  let thinDays = 0;
 
-  for (const settled of settledDays) {
-    const day = settled.day;
-    const rawDay = settled.raw;
+  const hydrateDay = (
+    day: DaySkeleton,
+    rawDay: RawRankerDay | null,
+    source: "llm" | "fallback",
+  ) => {
     const theme = rawDay?.theme?.trim() || day.theme;
     const activities: EnrichedActivity[] = [];
     const rawActs = Array.isArray(rawDay?.activities) ? rawDay!.activities : [];
+    const dropReasons: string[] = [];
     for (let i = 0; i < day.slots.length; i++) {
       const slot = day.slots[i];
       const rawAct = rawActs.find((a) => a?.slot_index === i);
       if (!rawAct) continue;
-      if (rawAct.place_id && seenIds.has(rawAct.place_id)) continue;
-      if (accommodationPlaceId && rawAct.place_id === accommodationPlaceId) continue;
+      if (rawAct.place_id && seenIds.has(rawAct.place_id)) {
+        dropReasons.push("dedup");
+        continue;
+      }
+      if (accommodationPlaceId && rawAct.place_id === accommodationPlaceId) {
+        dropReasons.push("accommodation_collision");
+        continue;
+      }
       const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
-      if (!rawAct.is_event && rawAct.place_id && !place) continue;
+      if (!rawAct.is_event && rawAct.place_id && !place) {
+        dropReasons.push("place_id_not_in_pool");
+        continue;
+      }
       const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
-      if (!activity) continue;
+      if (!activity) {
+        dropReasons.push("hydrate_failed");
+        continue;
+      }
       if (place) seenIds.add(place.id);
       activities.push(activity);
     }
@@ -3405,7 +3467,78 @@ async function rankInParallel(
     };
     resolveDayTheme(rankedDay, seenThemes);
     ranked_days.push(rankedDay);
+
+    const minActivities = Math.max(2, Math.floor(day.slots.length * 0.5));
+    if (activities.length < minActivities) {
+      thinDays++;
+      const reason =
+        source === "fallback" ? "rank_failed"
+        : dropReasons.length > 0 ? dropReasons.join(",")
+        : "unknown";
+      console.warn(
+        `[rankInParallel] thin day day_number=${day.day_number} ` +
+        `kept=${activities.length} slots=${day.slots.length} ` +
+        `mode=${sequentialRanking ? "sequential" : "parallel"} ` +
+        `claimed_total=${seenIds.size} pool_size=${placeById.size} ` +
+        `reason=${reason}`,
+      );
+    }
+  };
+
+  if (sequentialRanking) {
+    // See streaming-path comment for the budget-exhaustion rationale.
+    let budgetExhausted = false;
+    for (const day of skeleton) {
+      if (!budgetExhausted) {
+        const remainingMs =
+          PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+        if (remainingMs <= 0) {
+          budgetExhausted = true;
+          console.warn(
+            `[rankInParallel] remaining_budget_exhausted ` +
+            `day_number=${day.day_number} numDays=${numDays} ` +
+            `elapsed_ms=${Date.now() - pipelineStartedAt} ` +
+            `pipeline_budget_ms=${PIPELINE_WALL_CLOCK_MS} ` +
+            `skipping_remaining_days=true`,
+          );
+        }
+      }
+      if (budgetExhausted) {
+        fallbackDays++;
+        hydrateDay(day, null, "fallback");
+        continue;
+      }
+      const settled = await rankDayWithRetry(
+        anthropicKey, intent, day, sharedContext, accommodationPlaceId,
+        Array.from(seenIds), pipelineStartedAt, logger,
+      );
+      if (settled.source === "fallback") fallbackDays++;
+      hydrateDay(day, settled.raw, settled.source);
+    }
+  } else {
+    const dayPromises = skeleton.map((day) =>
+      rankDayWithRetry(
+        anthropicKey, intent, day, sharedContext, accommodationPlaceId, [],
+        pipelineStartedAt, logger,
+      ).then((res) => ({ day, ...res })),
+    );
+    const settledDays = await Promise.all(dayPromises);
+    settledDays.sort((a, b) => a.day.day_number - b.day.day_number);
+    for (const settled of settledDays) {
+      if (settled.source === "fallback") fallbackDays++;
+      hydrateDay(settled.day, settled.raw, settled.source);
+    }
   }
+
+  const metaResult = await metadataPromise;
+  const meta = metaResult.data;
+
+  const totalKept = ranked_days.reduce((n, d) => n + d.activities.length, 0);
+  console.log(
+    `[rankInParallel] summary mode=${sequentialRanking ? "sequential" : "parallel"} ` +
+    `days=${numDays} total_activities=${totalKept} ` +
+    `fallback_days=${fallbackDays} thin_days=${thinDays}`,
+  );
 
   // ---- Accommodation ----
   let accommodation: EnrichedActivity | undefined;
@@ -3942,6 +4075,15 @@ const PIPELINE_WALL_CLOCK_MS = 150_000;
 const PIPELINE_TIMEOUT_BUFFER_MS = 3_000;
 const PIPELINE_TIMEOUT_MS = PIPELINE_WALL_CLOCK_MS - PIPELINE_TIMEOUT_BUFFER_MS;
 
+// Per-attempt cap on a single Anthropic call. Keeps one slow day from
+// burning the whole pipeline budget — particularly important in sequential
+// rank mode where a stalled call would otherwise serialize-cascade through
+// every remaining day. Sized against observed Haiku call latency: p50 ~5-10s,
+// p95 ~20-25s, p99 ~30-60s. 35s comfortably covers p95 (including cold-cache
+// day-1 writes) while bounding the worst case so at least ~4 timeouts can
+// occur before the 150s pipeline budget exhausts.
+const PER_ATTEMPT_MAX_MS = 35_000;
+
 function checkPipelineTimeout(startedAt: number, nextStep: string): void {
   const elapsed = Date.now() - startedAt;
   if (elapsed > PIPELINE_TIMEOUT_MS) {
@@ -4383,15 +4525,16 @@ Deno.serve(async (req) => {
               pool.push(p);
               byPool.set(p.poolKey, pool);
             }
-            const maxPerPool = Math.max(3, Math.ceil(MAX_FINALIST_HYDRATIONS / Math.max(1, byPool.size)));
+            const maxFinalists = computeMaxFinalists(numDays);
+            const maxPerPool = Math.max(3, Math.ceil(maxFinalists / Math.max(1, byPool.size)));
             for (const pool of byPool.values()) {
               for (const p of pool.slice(0, maxPerPool)) {
                 if (seenFinalist.has(p.id)) continue;
                 seenFinalist.add(p.id);
                 finalistIds.push(p.id);
-                if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+                if (finalistIds.length >= maxFinalists) break;
               }
-              if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+              if (finalistIds.length >= maxFinalists) break;
             }
             const idToBase = new Map<string, BatchPlaceResult>();
             for (const p of places) idToBase.set(p.id, p);
@@ -4423,15 +4566,26 @@ Deno.serve(async (req) => {
             //
             // Cold-cache wall time used to be 60s for the whole trip because the
             // monolithic ranker generated all days serially in one call. Splitting
-            // by day means wall time = max(per-day call) ≈ 15-20s. As soon as
-            // each day's tool input arrives, we hydrate + emit the SSE `day`
-            // event so the UI can render progressively.
+            // by day means wall time = max(per-day call) ≈ 15-20s for short trips.
+            // As soon as each day's tool input arrives, we hydrate + emit the SSE
+            // `day` event so the UI can render progressively.
             //
-            // Trip-wide place-id dedup is enforced at receipt time: days are
-            // emitted in skeleton order (day_number ascending), so day 1 always
-            // gets first pick on any contested venue. Later days that the model
-            // accidentally collided on get the duplicate slot dropped (the
-            // skeleton remains visible; just no activity in that slot).
+            // Two ranking modes:
+            //   parallel   (numDays < SEQUENTIAL_RANKING_MIN_DAYS): all per-day
+            //              calls fire at once with avoid_place_ids=[]. Trip-wide
+            //              dedup at receipt time, day 1 wins contested venues.
+            //              Acceptable on short trips because the candidate pool
+            //              is wide enough relative to slot count that exhaustion
+            //              doesn't strip later days.
+            //   sequential (numDays ≥ SEQUENTIAL_RANKING_MIN_DAYS): per-day
+            //              calls fire one-by-one in skeleton order. After each
+            //              day's hydrate+emit step, the cumulative `seenIds`
+            //              set is passed to the next day's call as
+            //              avoid_place_ids — so the LLM is told what's already
+            //              claimed instead of guessing. Eliminates dedup-driven
+            //              empty days at the cost of ~2x wall time on long trips.
+            //              The metadata call still runs in parallel with day 1
+            //              (it doesn't compete on place_ids).
             send("progress", { stage: "ranking" });
             stepLabel = "rankAndEnrich";
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
@@ -4451,23 +4605,49 @@ Deno.serve(async (req) => {
             const accommodationPlaceId = pickAccommodationPlaceId(venuesByPool);
             const sharedContext = buildSharedContextText(intent, venuesByPool, events, currency, geo.country_code);
 
-            const hydrateAndEmit = (rawDay: RawRankerDay | null, day: DaySkeleton) => {
+            const sequentialRanking = numDays >= SEQUENTIAL_RANKING_MIN_DAYS;
+            let thinDays = 0;
+            console.log(
+              `[stream.rank] mode=${sequentialRanking ? "sequential" : "parallel"} ` +
+              `numDays=${numDays} pool_size=${placeById.size}`,
+            );
+
+            const hydrateAndEmit = (
+              rawDay: RawRankerDay | null,
+              day: DaySkeleton,
+              source: "llm" | "fallback",
+            ) => {
               if (emittedDayNumbers.has(day.day_number)) return;
               const theme = rawDay?.theme?.trim() || day.theme;
               const activities: EnrichedActivity[] = [];
               const rawActs = Array.isArray(rawDay?.activities) ? rawDay!.activities : [];
+              const dropReasons: string[] = [];
               for (let i = 0; i < day.slots.length; i++) {
                 const slot = day.slots[i];
                 const rawAct = rawActs.find((a) => a?.slot_index === i);
                 if (!rawAct) continue;
-                // Trip-wide dedup: in day-number order, day 1 wins.
-                if (rawAct.place_id && seenIds.has(rawAct.place_id)) continue;
+                // Trip-wide dedup safety net. In sequential mode the LLM was
+                // told what's claimed via avoid_place_ids, so this should rarely
+                // fire. In parallel mode it's the primary dedup mechanism.
+                if (rawAct.place_id && seenIds.has(rawAct.place_id)) {
+                  dropReasons.push("dedup");
+                  continue;
+                }
                 // Don't let per-day calls double-book the lodging place.
-                if (accommodationPlaceId && rawAct.place_id === accommodationPlaceId) continue;
+                if (accommodationPlaceId && rawAct.place_id === accommodationPlaceId) {
+                  dropReasons.push("accommodation_collision");
+                  continue;
+                }
                 const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
-                if (!rawAct.is_event && rawAct.place_id && !place) continue;
+                if (!rawAct.is_event && rawAct.place_id && !place) {
+                  dropReasons.push("place_id_not_in_pool");
+                  continue;
+                }
                 const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
-                if (!activity) continue;
+                if (!activity) {
+                  dropReasons.push("hydrate_failed");
+                  continue;
+                }
                 if (place) seenIds.add(place.id);
                 const aff = buildAffiliateUrl(
                   activity.place_id ? allPlacesById.get(activity.place_id) ?? null : null,
@@ -4488,25 +4668,33 @@ Deno.serve(async (req) => {
               resolveDayTheme(rankedDay, seenThemes);
               ranked_days.push(rankedDay);
               emittedDayNumbers.add(day.day_number);
+
+              // Thin-day signal: kept activities < half the day's slots is
+              // almost always a problem (validator drops, dedup exhaustion, or
+              // a fallback). Logged with a structured reason so the cause is
+              // visible in Edge logs without grep-fu.
+              const minActivities = Math.max(2, Math.floor(day.slots.length * 0.5));
+              if (validated.kept.length < minActivities) {
+                thinDays++;
+                const reason =
+                  source === "fallback" ? "rank_failed"
+                  : dropReasons.length > 0 ? dropReasons.join(",")
+                  : "unknown";
+                console.warn(
+                  `[stream.rank] thin day day_number=${day.day_number} ` +
+                  `kept=${validated.kept.length} slots=${day.slots.length} ` +
+                  `mode=${sequentialRanking ? "sequential" : "parallel"} ` +
+                  `claimed_total=${seenIds.size} pool_size=${placeById.size} ` +
+                  `reason=${reason}`,
+                );
+              }
+
               send("day", rankedDay);
             };
 
-            // Track per-day promises so we can emit each day in skeleton order
-            // (day 1 first, then day 2, etc.) — this preserves the dedup
-            // ordering invariant even if day 3's call returns before day 1's.
-            const dayPromises = skeleton.map((day, idx) => {
-              // The avoid_place_ids hint is best-effort. We don't actually
-              // know which places earlier days have claimed at submit time
-              // (parallel), so the strict dedup happens at receipt time. We
-              // pass an empty list — the LLM gets to pick freely from the
-              // pool, and the post-receipt walk drops dupes.
-              return rankDayWithRetry(
-                anthropicKey, intent, day, sharedContext, accommodationPlaceId,
-                [], pipelineStartedAt, logger,
-              ).then((res) => ({ idx, day, ...res }));
-            });
-
-            // Metadata call fires in parallel with day calls. Awaited at end.
+            // Metadata call fires in parallel with day calls in both modes —
+            // it doesn't compete on per-day place_ids, so there's no benefit
+            // to serializing it.
             const metadataPromise = rankTripMetadata(
               anthropicKey, intent, numDays, startDate, endDate,
               sharedContext, pipelineStartedAt,
@@ -4528,14 +4716,65 @@ Deno.serve(async (req) => {
               };
             });
 
-            // Emit days strictly in skeleton order. We await each promise in
-            // sequence; concurrency comes from the fact that ALL promises
-            // were already started above. The await is just for serializing
-            // the emit order.
-            for (const p of dayPromises) {
-              const settled = await p;
-              if (settled.source === "fallback") fallbackDays++;
-              hydrateAndEmit(settled.raw, settled.day);
+            if (sequentialRanking) {
+              // Sequential: each day's call sees the cumulative seenIds (built
+              // by hydrateAndEmit on prior days) as avoid_place_ids. The cached
+              // prompt prefix (system + sharedContext) is identical across
+              // calls, so calls 2..N hit Anthropic's prompt cache; only the
+              // small uncached suffix (buildDayInstruction with the variable
+              // avoid list) re-encodes per call.
+              //
+              // Budget-exhaustion gate: once the global pipeline wall-clock
+              // is gone, firing more rankDayWithRetry calls is wasted work —
+              // callClaudeHaiku would throw PipelineError before sending any
+              // request, and rankDayWithRetry's retry loop would catch+retry
+              // for no reason. Detect exhaustion before each call, log once,
+              // and emit skeleton-only days for the rest of the trip so the
+              // result still has a complete days array.
+              let budgetExhausted = false;
+              for (const day of skeleton) {
+                if (!budgetExhausted) {
+                  const remainingMs =
+                    PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+                  if (remainingMs <= 0) {
+                    budgetExhausted = true;
+                    console.warn(
+                      `[stream.rank] remaining_budget_exhausted ` +
+                      `day_number=${day.day_number} numDays=${numDays} ` +
+                      `elapsed_ms=${Date.now() - pipelineStartedAt} ` +
+                      `pipeline_budget_ms=${PIPELINE_WALL_CLOCK_MS} ` +
+                      `skipping_remaining_days=true`,
+                    );
+                  }
+                }
+                if (budgetExhausted) {
+                  fallbackDays++;
+                  hydrateAndEmit(null, day, "fallback");
+                  continue;
+                }
+                const settled = await rankDayWithRetry(
+                  anthropicKey, intent, day, sharedContext, accommodationPlaceId,
+                  Array.from(seenIds), pipelineStartedAt, logger,
+                );
+                if (settled.source === "fallback") fallbackDays++;
+                hydrateAndEmit(settled.raw, day, settled.source);
+              }
+            } else {
+              // Parallel (short trips). Track per-day promises so we can emit
+              // in skeleton order (day 1 first, then day 2, etc.) — this
+              // preserves the dedup ordering invariant even if day 3's call
+              // returns before day 1's.
+              const dayPromises = skeleton.map((day) =>
+                rankDayWithRetry(
+                  anthropicKey, intent, day, sharedContext, accommodationPlaceId,
+                  [], pipelineStartedAt, logger,
+                ).then((res) => ({ day, ...res }))
+              );
+              for (const p of dayPromises) {
+                const settled = await p;
+                if (settled.source === "fallback") fallbackDays++;
+                hydrateAndEmit(settled.raw, settled.day, settled.source);
+              }
             }
             ranked_days.sort((a, b) => a.day_number - b.day_number);
             tStage("rank_and_enrich", tRank);
@@ -4557,6 +4796,12 @@ Deno.serve(async (req) => {
             if (fallbackDays > 0) {
               console.warn(`[stream.rank] ${fallbackDays}/${numDays} days fell back to skeleton-only`);
             }
+            const totalKept = ranked_days.reduce((n, d) => n + d.activities.length, 0);
+            console.log(
+              `[stream.rank] summary mode=${sequentialRanking ? "sequential" : "parallel"} ` +
+              `days=${numDays} total_activities=${totalKept} dropped=${totalDropped} ` +
+              `fallback_days=${fallbackDays} thin_days=${thinDays}`,
+            );
 
             // ---- Metadata + accommodation ----
             const metadataResult = await metadataPromise;
@@ -4876,8 +5121,8 @@ Deno.serve(async (req) => {
 
     // ---- Step 4b: HYDRATION pass — Place Details for ranker candidates ----
     // Rank candidates by pool membership alone is too broad; we'd re-hydrate
-    // 100+ venues. Instead, pick up to MAX_FINALIST_HYDRATIONS per trip from
-    // the first venues in each pool (search results come back in relevance
+    // 100+ venues. Instead, pick up to computeMaxFinalists(numDays) per trip
+    // from the first venues in each pool (search results come back in relevance
     // order from Google). Ranker still has coverage (breakfast, restaurants,
     // attractions, etc.) while we pay Details cost only for the shortlist.
     const finalistIds: string[] = [];
@@ -4888,15 +5133,16 @@ Deno.serve(async (req) => {
       pool.push(p);
       byPool.set(p.poolKey, pool);
     }
-    const maxPerPool = Math.max(3, Math.ceil(MAX_FINALIST_HYDRATIONS / Math.max(1, byPool.size)));
+    const maxFinalists = computeMaxFinalists(numDays);
+    const maxPerPool = Math.max(3, Math.ceil(maxFinalists / Math.max(1, byPool.size)));
     for (const pool of byPool.values()) {
       for (const p of pool.slice(0, maxPerPool)) {
         if (seenFinalist.has(p.id)) continue;
         seenFinalist.add(p.id);
         finalistIds.push(p.id);
-        if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+        if (finalistIds.length >= maxFinalists) break;
       }
-      if (finalistIds.length >= MAX_FINALIST_HYDRATIONS) break;
+      if (finalistIds.length >= maxFinalists) break;
     }
     const idToBase = new Map<string, BatchPlaceResult>();
     for (const p of places) idToBase.set(p.id, p);
