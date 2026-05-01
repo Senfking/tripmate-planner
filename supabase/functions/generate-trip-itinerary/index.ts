@@ -2648,7 +2648,7 @@ ABSOLUTE RULES — violating any of these makes your output useless:
 4. slot_type must match the skeleton — if the slot is "dinner", do not pick a museum.
 5. Pick exactly one activity per slot in the skeleton. If a slot is "arrival", "departure", "transit_buffer", or "rest", emit an activity whose category reflects the downtime (e.g. "transit" or "rest") with a short helpful description ("Arrive, check in, unpack" / "Return to the hotel; you've earned it"). place_id=null is acceptable for pure-downtime slots — set is_event=false.
 6. Do not pick the venue listed in shared.accommodation_place_id — that's the lodging for the whole trip and is emitted separately.
-7. Avoid the venues listed in shared.avoid_place_ids — those are reserved for or already used by other days. If a slot has no good fallback, you may use one anyway, but trip-wide dedup will drop duplicates and the slot will read as empty.
+7. HARD CONSTRAINT — DO NOT pick any place_id listed in shared.avoid_place_ids. Those venues are already used by earlier days of this trip. The system will silently drop any slot that reuses a claimed place_id, leaving the slot visibly empty in the user's itinerary. If the unclaimed pool is too thin to fill every slot, RETURN FEWER ACTIVITIES — emit place_id=null for slots you cannot fill from the unclaimed pool (set is_event=false, slot_type matching the skeleton, and a short description explaining "no suitable venue available — leave open"). An empty slot is acceptable. A reused claimed venue is not.
 
 PACE DISCIPLINE — RESPECT THE EMPTY SPACE:
 - intent.pace tells you how full the user wants their days to feel. The skeleton already encodes this — light-pace days have only an afternoon anchor + dinner; balanced has morning + lunch + afternoon + dinner; active stacks three anchors plus all three meals.
@@ -2913,10 +2913,23 @@ function buildDayInstruction(
     },
     shared: {
       accommodation_place_id: accommodationPlaceId,
+      // avoid_place_ids is intentionally surfaced both here (machine-readable,
+      // canonical location) and in the CLAIMED PLACES block below (cognitive
+      // emphasis). The dual-surface is deliberate: long avoid lists buried in
+      // nested JSON get under-attended by the model, but removing the field
+      // from `shared` would silently break any downstream consumer that reads
+      // the structured form.
       avoid_place_ids: avoidPlaceIds,
     },
   };
-  return `Generate THIS day only. Call emit_day exactly once.\n${JSON.stringify(slotPayload)}`;
+  // Claimed places get top-of-prompt placement when non-empty. Sequential
+  // ranking sends a populated list every day after day 1; this block makes
+  // the constraint visually obvious and harder for the model to skip.
+  // Plain text emphasis (no emoji or special chars) per project style.
+  const claimedBlock = avoidPlaceIds.length > 0
+    ? `CLAIMED PLACES — HARD CONSTRAINT — ${avoidPlaceIds.length} venue(s) already used by earlier days of this trip. DO NOT pick any of these place_ids; the system will silently drop any slot that reuses one. Emit place_id=null for slots you cannot fill from the unclaimed pool — fewer activities is the correct outcome:\n${avoidPlaceIds.map((id) => `  - ${id}`).join("\n")}\n\n`
+    : "";
+  return `Generate THIS day only. Call emit_day exactly once.\n\n${claimedBlock}${JSON.stringify(slotPayload)}`;
 }
 
 function buildMetadataInstruction(
