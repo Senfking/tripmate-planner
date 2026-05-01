@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
+import { stripEmoji } from "@/lib/stripEmoji";
 
 import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
 import { ConfirmationCard } from "./ConfirmationCard";
@@ -54,7 +55,7 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
   }
 
   return {
-    trip_title: raw.trip_title || raw.title || "Your Trip",
+    trip_title: stripEmoji(raw.trip_title || raw.title || "Your Trip"),
     trip_summary: raw.trip_summary || raw.summary || "",
     destinations: safeDestinations,
     map_center: mapCenter,
@@ -183,7 +184,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       const { data: trip, error: tripError } = await supabase
         .from("trips")
         .insert({
-          name: results.trip_title,
+          name: stripEmoji(results.trip_title) || "Your Trip",
           destination,
           tentative_start_date: firstDest?.start_date || null,
           tentative_end_date: lastDest?.end_date || null,

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { stripEmoji } from "@/lib/stripEmoji";
 import type { AIActivity, AIDay, AITripResult } from "@/components/trip-results/useResultsState";
 
 // ---------------------------------------------------------------------------
@@ -99,7 +100,7 @@ function assembleResult(
     }));
 
   return {
-    trip_title: trip.trip_title,
+    trip_title: stripEmoji(trip.trip_title),
     trip_summary: trip.trip_summary,
     destinations: [
       {
@@ -312,7 +313,7 @@ function normalizeDayFromServer(raw: any): AIDay | null {
   return {
     date: typeof raw.date === "string" ? raw.date : "",
     day_number: raw.day_number,
-    theme: typeof raw.theme === "string" ? raw.theme : "",
+    theme: typeof raw.theme === "string" ? stripEmoji(raw.theme) : "",
     activities,
   };
 }
@@ -320,7 +321,7 @@ function normalizeDayFromServer(raw: any): AIDay | null {
 function normalizeActivityFromServer(a: any): AIActivity | null {
   if (!a || typeof a !== "object") return null;
   return {
-    title: a.title ?? "",
+    title: stripEmoji(a.title ?? ""),
     description: a.description ?? "",
     category: a.category ?? "experience",
     start_time: a.start_time ?? "",
