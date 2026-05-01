@@ -173,8 +173,7 @@ function PopupContent({ activity, dayLabel }: { activity: AIActivity; dayLabel?:
             href={activity.booking_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block text-center text-[11px] font-semibold text-white py-1.5 rounded-lg mt-1"
-            style={{ background: color }}
+            className="block text-center text-[11px] font-semibold text-primary-foreground py-1.5 rounded-lg mt-1 bg-primary hover:bg-primary/90 transition-colors"
           >
             Book this →
           </a>
