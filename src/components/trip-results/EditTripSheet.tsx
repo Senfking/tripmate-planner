@@ -167,7 +167,7 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
               <button
                 key={t.value}
                 type="button"
-                onClick={() => setTier(t.value)}
+                onClick={() => handleTierChange(t.value)}
                 className={cn(
                   "text-left px-3 py-2 rounded-xl border transition-all",
                   tier === t.value
@@ -182,10 +182,10 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
           </div>
         </div>
 
-        {/* Daily budget */}
+        {/* Daily budget — fine-tune override */}
         <div className="mb-6">
-          <label className="text-[11px] font-semibold text-foreground/80 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Wallet className="h-3 w-3" /> Daily budget per person
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+            <Wallet className="h-3 w-3" /> Adjust daily target (optional)
           </label>
           <div className="flex items-center gap-2">
             <span className="text-sm font-mono text-muted-foreground">{currency}</span>
@@ -193,7 +193,7 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
               type="number"
               inputMode="numeric"
               value={dailyBudget}
-              onChange={(e) => setDailyBudget(e.target.value)}
+              onChange={(e) => handleDailyBudgetChange(e.target.value)}
               placeholder="e.g. 150"
               className="flex-1 px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
