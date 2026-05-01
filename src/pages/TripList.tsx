@@ -811,19 +811,16 @@ export default function TripList() {
   }
 
   /* ── Standalone builder overlay ── */
-  if (showBuilder || draftToResume) {
+  if (showBuilder) {
     return (
       <StandaloneTripBuilder
         onClose={() => {
           setShowBuilder(false);
-          setDraftToResume(null);
           setBuilderInitDest("");
-          queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+          queryClient.invalidateQueries({ queryKey: ["draft-trips"] });
           queryClient.invalidateQueries({ queryKey: ["trips"] });
         }}
         initialDestination={builderInitDest || undefined}
-        draftPlanId={draftToResume?.planId}
-        draftResult={draftToResume?.result}
       />
     );
   }
