@@ -1,8 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -12,7 +10,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -21,7 +18,6 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Trash2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -31,31 +27,29 @@ interface Props {
   isPending: boolean;
 }
 
-export function DeleteTripDialog({ tripName, onConfirm, isPending }: Props) {
-  const [typed, setTyped] = useState("");
-  const [open, setOpen] = useState(false);
-  const isMobile = useIsMobile();
-  const matches = typed.trim().toLowerCase() === tripName.trim().toLowerCase();
+const ARM_DELAY_MS = 500;
 
-  const confirmBody = (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground text-center sm:text-left">
-        This will permanently delete <strong>{tripName}</strong> and all its data (itinerary,
-        expenses, bookings, polls). This action cannot be undone.
-      </p>
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Type <strong>{tripName}</strong> to confirm:
-        </p>
-        <Input
-          value={typed}
-          onChange={(e) => setTyped(e.target.value)}
-          placeholder={tripName}
-          className="text-sm"
-        />
-      </div>
-    </div>
-  );
+export function DeleteTripDialog({ tripName, onConfirm, isPending }: Props) {
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [armed, setArmed] = useState(false);
+  const isMobile = useIsMobile();
+
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setStep(1);
+      setArmed(false);
+    }
+  }, [open]);
+
+  // Arm the primary button after a short delay whenever the step changes
+  useEffect(() => {
+    if (!open) return;
+    setArmed(false);
+    const t = setTimeout(() => setArmed(true), ARM_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [step, open]);
 
   const trigger = (
     <Button variant="destructive" size="sm" className="w-full gap-2">
@@ -64,35 +58,59 @@ export function DeleteTripDialog({ tripName, onConfirm, isPending }: Props) {
     </Button>
   );
 
+  const title = step === 1 ? "Delete trip permanently?" : "Are you sure?";
+  const description =
+    step === 1 ? (
+      <>
+        This will permanently delete <strong>{tripName}</strong> and all its data (itinerary,
+        expenses, bookings, polls). This action cannot be undone.
+      </>
+    ) : (
+      <>Last chance — this can&apos;t be undone.</>
+    );
+
+  const handlePrimary = () => {
+    if (step === 1) {
+      setStep(2);
+    } else {
+      onConfirm();
+    }
+  };
+
+  const handleSecondary = () => {
+    if (step === 2) {
+      setStep(1);
+    } else {
+      setOpen(false);
+    }
+  };
+
+  const primaryLabel =
+    step === 1 ? "Delete trip" : isPending ? "Deleting…" : "Yes, delete forever";
+  const secondaryLabel = step === 1 ? "Cancel" : "Go back";
+
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={(o) => { setOpen(o); if (!o) setTyped(""); }}>
+      <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>{trigger}</DrawerTrigger>
         <DrawerContent>
           <DrawerHeader className="text-left">
-            <DrawerTitle>Delete trip permanently?</DrawerTitle>
-            <DrawerDescription className="sr-only">Confirm trip deletion</DrawerDescription>
+            <DrawerTitle>{title}</DrawerTitle>
+            <DrawerDescription className="text-sm text-muted-foreground">
+              {description}
+            </DrawerDescription>
           </DrawerHeader>
-          <div className="px-4">{confirmBody}</div>
           <DrawerFooter>
             <Button
               variant="destructive"
-              disabled={!matches || isPending}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (matches) {
-                  setOpen(false);
-                  // Small delay so drawer closes before mutation runs
-                  setTimeout(() => onConfirm(), 150);
-                }
-              }}
+              disabled={!armed || isPending}
+              onClick={handlePrimary}
             >
-              {isPending ? "Deleting…" : "Delete forever"}
+              {primaryLabel}
             </Button>
-            <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DrawerClose>
+            <Button variant="outline" onClick={handleSecondary} disabled={isPending}>
+              {secondaryLabel}
+            </Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
@@ -100,39 +118,24 @@ export function DeleteTripDialog({ tripName, onConfirm, isPending }: Props) {
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setTyped(""); }}>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete trip permanently?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will permanently delete <strong>{tripName}</strong> and all its data (itinerary,
-            expenses, bookings, polls). This action cannot be undone.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            Type <strong>{tripName}</strong> to confirm:
-          </p>
-          <Input
-            value={typed}
-            onChange={(e) => setTyped(e.target.value)}
-            placeholder={tripName}
-            className="text-sm"
-          />
-        </div>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setTyped("")}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={!matches || isPending}
-            onClick={(e) => {
-              if (!matches) { e.preventDefault(); return; }
-              onConfirm();
-            }}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <Button variant="outline" onClick={handleSecondary} disabled={isPending}>
+            {secondaryLabel}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!armed || isPending}
+            onClick={handlePrimary}
           >
-            {isPending ? "Deleting…" : "Delete forever"}
-          </AlertDialogAction>
+            {primaryLabel}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
