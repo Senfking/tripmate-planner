@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Map as MapIcon, X, Maximize2, Minimize2, CalendarDays, MapPin, Sparkles } from "lucide-react";
+import { Map as MapIcon, X, Maximize2, Minimize2, CalendarDays, MapPin, Sparkles, ArrowLeft } from "lucide-react";
 import { ResultsMap } from "./ResultsMap";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
