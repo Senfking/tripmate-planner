@@ -8,10 +8,11 @@ const textareaVariants = cva(
   {
     variants: {
       inputSize: {
-        // Default: 16px on mobile to prevent iOS Safari auto-zoom on focus.
-        default: "min-h-[80px] px-3 py-2 text-base md:text-sm",
-        // Compact: 13px throughout. Use inside dense modals where the
-        // textarea sits next to 11–13px labels and would otherwise dominate.
+        // Default: 14px throughout. iOS Safari will auto-zoom on focus
+        // (zoom kicks in below 16px) — accepted trade-off to keep textareas
+        // visually consistent with the app's 11–13px utility type scale.
+        default: "min-h-[80px] px-3 py-2 text-[14px] leading-snug",
+        // Compact: 12px. Use inside dense modals where even 14px dominates.
         sm: "min-h-[60px] px-2.5 py-2 text-[12px] leading-snug placeholder:text-[12px]",
       },
     },

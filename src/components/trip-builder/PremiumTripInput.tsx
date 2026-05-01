@@ -138,7 +138,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   }, [destination, dateRange, travelParty, kidsAges, budgetLevel, pace, vibes, dealBreakers, freeText, canGenerate, destMissing, onGenerate]);
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 pb-32">
+    <div className="w-full max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]">
       {/* ── Hero header ── */}
       <div className="text-center pt-8 pb-6">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
@@ -411,9 +411,9 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
 
       {/* ── Collapsible: Deal-breakers ── */}
       <Collapsible open={moreOpen} onOpenChange={setMoreOpen} className="mt-5">
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
           <ChevronDown className={cn("h-4 w-4 transition-transform", moreOpen && "rotate-180")} />
-          Tell us more <span className="text-xs text-muted-foreground/60">(optional)</span>
+          What DON'T you want? <span className="text-xs text-muted-foreground/60">(optional)</span>
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 space-y-2 animate-fade-in">
           <p className="text-xs text-primary/80 italic px-1">This is the question that makes the difference</p>
@@ -422,11 +422,8 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
             onChange={(e) => setDealBreakers(e.target.value)}
             placeholder="e.g. no tourist traps, no early mornings, no seafood, nothing requiring 3-month-ahead reservations"
             rows={3}
-            className="rounded-xl bg-card border-border text-sm resize-none"
+            className="rounded-xl bg-card border-border resize-none"
           />
-          <label className="text-[13px] font-semibold text-foreground px-1 block pt-1">
-            What DON'T you want? Any deal-breakers?
-          </label>
         </CollapsibleContent>
       </Collapsible>
 
@@ -442,7 +439,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
             onChange={(e) => setFreeText(e.target.value)}
             placeholder="Tell us about your dream trip in a sentence or two"
             rows={3}
-            className="rounded-xl bg-card border-border text-sm resize-none"
+            className="rounded-xl bg-card border-border resize-none"
           />
           {freeText.trim().length > 0 && (
             <p className="text-xs text-muted-foreground mt-1.5 px-1">
