@@ -179,6 +179,54 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
   const currency = result.currency || "USD";
 
+  // ---- Budget currency conversion ----
+  // Display the trip budget in the user's profile.default_currency primary,
+  // with the destination currency as a smaller subtitle. Uses the same
+  // EUR-based rate fetch that powers expense settlement.
+  const { profile } = useAuth();
+  const userCurrency = (profile?.default_currency || "EUR").toUpperCase();
+  const destCurrency = currency.toUpperCase();
+  const conversionEnabled = userCurrency !== destCurrency;
+
+  const { data: eurRates } = useQuery({
+    queryKey: ["budget-eur-rates"],
+    queryFn: fetchEurRates,
+    enabled: conversionEnabled,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  // Convert an amount in destCurrency → userCurrency via EUR.
+  // Returns null if rates unavailable so callers can fall back gracefully.
+  const convertToUserCurrency = useCallback(
+    (amount: number): number | null => {
+      if (!conversionEnabled) return amount;
+      if (!eurRates) return null;
+      const eurToDest = eurRates[destCurrency];
+      const eurToUser = eurRates[userCurrency];
+      if (!eurToDest || eurToDest <= 0 || !eurToUser || eurToUser <= 0) return null;
+      const amountInEur = amount / eurToDest;
+      return amountInEur * eurToUser;
+    },
+    [conversionEnabled, eurRates, destCurrency, userCurrency],
+  );
+
+  // Format a numeric amount with a localized currency symbol.
+  const formatBudget = useCallback(
+    (amount: number, code: string): string => {
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: code,
+          maximumFractionDigits: 0,
+        }).format(Math.round(amount));
+      } catch {
+        return `${code} ${Math.round(amount).toLocaleString()}`;
+      }
+    },
+    [],
+  );
+
+
   const hasPacking = (result.packing_suggestions?.length || 0) > 0;
 
   const timelineNodes = useMemo(
