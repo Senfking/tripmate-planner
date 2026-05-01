@@ -44,10 +44,13 @@ export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
       if (error) throw error;
       const ids = data.map((m) => m.user_id);
       const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: ids });
-      const map = new Map(profiles?.map((p) => [p.id, p.display_name || "Member"]) ?? []);
+      const map = new Map(
+        profiles?.map((p) => [p.id, { name: p.display_name || "Member", avatar: p.avatar_url ?? null }]) ?? []
+      );
       return data.map<MemberLite>((m) => ({
         userId: m.user_id,
-        displayName: map.get(m.user_id) ?? "Member",
+        displayName: map.get(m.user_id)?.name ?? "Member",
+        avatarUrl: map.get(m.user_id)?.avatar ?? null,
       }));
     },
     enabled: !!tripId,
