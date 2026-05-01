@@ -376,14 +376,14 @@ export default function TripHome() {
         />
       )}
 
-      {/* ─── HERO PHOTO — full-bleed, no text overlay (matches StreamingGeneratingScreen) ───
-        Title + dates + chips render in the dedicated header section below so the
-        photo reads as a clean, large-format hero and the type sits on the page
-        background instead of being overlaid on the image. */}
+      {/* ─── HERO PHOTO — boxed, fixed-height, rounded-bottom (pre-PR #218 style) ───
+        The dashboard is post-creation trip management; it gets a calmer, more
+        contained hero than the trip-builder's full-bleed cinematic one. Title
+        and chips render in the dedicated header section below. */}
       <div
         ref={heroRef}
-        className="relative w-full overflow-hidden"
-        style={{ height: "42vh", minHeight: 280 }}
+        className="relative w-full overflow-hidden rounded-b-2xl"
+        style={{ height: 200 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
@@ -394,16 +394,6 @@ export default function TripHome() {
         />
         {/* Top gradient — keeps nav buttons readable on light photos */}
         <div className="absolute inset-x-0 top-0 h-20" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.3), transparent)" }} />
-        {/* Bottom fade-to-background — same recipe as StreamingGeneratingScreen
-          so the bottom of the photo dissolves into the page surface and the
-          title section reads as a continuation of the hero. */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.6) 25%, transparent 55%)",
-          }}
-        />
 
         {/* Back button */}
         <button
@@ -472,11 +462,8 @@ export default function TripHome() {
       </div>
 
       {/* ─── TRIP HEADER (eyebrow + title + chips) ───
-        Mirrors StreamingGeneratingScreen's bottom-of-hero composition: a small
-        primary-color eyebrow, a large title, and metadata chips. The negative
-        margin pulls the section up into the gradient fade so the title looks
-        anchored to the photo rather than floating beneath it. */}
-      <div className="px-4 -mt-6 md:max-w-[700px] md:mx-auto md:px-8">
+        Title sits below the boxed photo on the page background. */}
+      <div className="px-4 pt-4 md:max-w-[700px] md:mx-auto md:px-8">
         <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
           My trip
         </p>

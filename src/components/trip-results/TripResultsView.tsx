@@ -250,35 +250,43 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           />
         )}
 
-        {/* Hero destination image */}
+        {/* Hero destination image — full-bleed, matches StreamingGeneratingScreen
+          composition exactly so there's no visual jump between the streaming
+          and final review states. */}
         {result.destination_image_url && (
           <div
-            className={cn("px-4 pt-4", rc)}
+            className="relative h-[42vh] min-h-[280px] w-full overflow-hidden"
             style={revealStyle("hero")}
           >
-            <div className="relative overflow-hidden rounded-2xl shadow-lg ring-1 ring-border/50 group">
-              <div className="aspect-[16/10] sm:aspect-[2/1] w-full bg-muted">
-                <img
-                  src={result.destination_image_url}
-                  alt={`${result.destinations[0]?.name ?? result.trip_title} cover`}
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                  loading="eager"
-                />
-              </div>
-              {/* Gradient scrim */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-              {/* Title overlay */}
-              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-                <div className="flex items-center gap-1.5 text-white/85 text-[11px] font-mono mb-1.5">
-                  <MapPin className="h-3 w-3" />
+            <img
+              src={result.destination_image_url}
+              alt={`${result.destinations[0]?.name ?? result.trip_title} cover`}
+              className="absolute inset-0 w-full h-full object-cover animate-fade-in"
+              loading="eager"
+            />
+            {/* Bottom fade-to-background — same recipe as StreamingGeneratingScreen */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.6) 30%, transparent 60%)",
+              }}
+            />
+            <div className="absolute inset-x-0 bottom-0 p-5 lg:p-8 max-w-3xl mx-auto">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+                Your trip
+              </p>
+              <h1 className="text-3xl lg:text-4xl font-bold text-foreground">
+                {result.trip_title}
+              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" />
                   <span className="truncate">
                     {result.destinations.map((d) => d.name).join(" · ")}
                   </span>
-                </div>
-                <h2 className="text-white text-xl sm:text-2xl font-bold leading-tight drop-shadow-sm">
-                  {result.trip_title}
-                </h2>
-                <p className="text-white/80 text-[11px] font-mono mt-1">{dateRange}</p>
+                </span>
+                <span className="font-mono text-xs">{dateRange}</span>
               </div>
             </div>
           </div>
