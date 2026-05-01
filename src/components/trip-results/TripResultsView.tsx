@@ -653,6 +653,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     getLocalAdditions={state.getLocalAdditions}
                     getReplacedActivity={state.getReplacedActivity}
                     onCoordsRefined={handleCoordsRefined}
+                    onOpenDayMap={openDayMap}
                   />
                   </div>
                 ))}
