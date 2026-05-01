@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, Sparkles, Loader2, Wallet, Gauge, Wand2, ChevronDown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { AITripResult } from "./useResultsState";
