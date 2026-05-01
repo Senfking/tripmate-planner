@@ -738,10 +738,10 @@ export default function TripList() {
   const { data: drafts } = useQuery({
     queryKey: ["draft-trips", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trips")
+      const { data, error } = await (supabase
+        .from("trips") as any)
         .select("id, name, trip_name, itinerary_title, destination, destination_image_url, cover_image_path, tentative_start_date, tentative_end_date, created_at")
-        .eq("status" as any, "draft")
+        .eq("status", "draft")
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
