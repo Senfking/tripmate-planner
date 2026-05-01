@@ -115,11 +115,9 @@ export function NameTripModal({ open, onOpenChange, defaultName, submitting, onC
             <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
             <DrawerHeader className="text-left">
               <DrawerTitle>Name your trip</DrawerTitle>
-              <VisuallyHidden>
-                <DialogPrimitive.Description>
-                  Give your trip a short, recognizable name before saving it.
-                </DialogPrimitive.Description>
-              </VisuallyHidden>
+              <DialogPrimitive.Description className={srOnly}>
+                Give your trip a short, recognizable name before saving it.
+              </DialogPrimitive.Description>
             </DrawerHeader>
             <div className="px-4 pb-6">{body}</div>
           </DrawerPrimitive.Content>
