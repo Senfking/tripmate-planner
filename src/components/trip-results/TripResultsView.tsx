@@ -23,6 +23,7 @@ import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
 import { MapSlidePanel, type MapState } from "./MapSlidePanel";
+import { EntryRequirementsPreview } from "./EntryRequirementsPreview";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -543,6 +544,14 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             </div>
           );
         })}
+
+        {/* Visa & entry requirements (read-only preview, pre-creation) */}
+        <div className={cn(rc)} style={revealStyle("packing")}>
+          <EntryRequirementsPreview
+            destinationCountryIso={result.destination_country_iso ?? null}
+            tripLengthDays={allDays.length || 7}
+          />
+        </div>
 
         {/* Packing suggestions */}
         {hasPacking && (
