@@ -81,7 +81,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   const [dealBreakers, setDealBreakers] = useState("");
   const [freeText, setFreeText] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
-  const [freeTextOpen, setFreeTextOpen] = useState(false);
+  
   const [showErrors, setShowErrors] = useState(false);
   const [paceInfoOpen, setPaceInfoOpen] = useState(false);
 
@@ -139,18 +139,44 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]">
-      {/* ── Hero header ── */}
-      <div className="text-center pt-8 pb-6">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-semibold text-primary tracking-wider uppercase">Junto AI</span>
+      {/* ── Hero with embedded free-text ── */}
+      <div className="relative pt-8 pb-6 -mx-4 px-4 mb-5 bg-gradient-to-b from-primary/5 via-primary/[0.02] to-transparent">
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-semibold text-primary tracking-wider uppercase">Junto AI</span>
+          </div>
+          <h1 className="text-[28px] sm:text-3xl font-bold text-foreground tracking-tight leading-[1.15]">
+            Plan your trip
+          </h1>
+          <p className="text-muted-foreground text-sm mt-2 px-2">
+            Describe your dream trip — or fill in the form below
+          </p>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight leading-tight">
-          Plan your trip
-        </h1>
-        <p className="text-muted-foreground text-sm mt-2">
-          Tell us where you're going and we'll do the rest
-        </p>
+
+        <div className="rounded-2xl bg-card/80 backdrop-blur border border-border shadow-sm p-3">
+          <Textarea
+            value={freeText}
+            onChange={(e) => setFreeText(e.target.value)}
+            placeholder='e.g. "10 days in Japan with my partner — food, temples, no early mornings"'
+            rows={3}
+            className="rounded-xl bg-background border-border resize-none focus-visible:ring-primary/40 focus-visible:ring-offset-0"
+          />
+          {freeText.trim().length > 0 && (
+            <p className="text-[11px] text-primary/80 mt-2 px-1 flex items-center gap-1 animate-fade-in">
+              <Sparkles className="h-3 w-3" />
+              We'll prioritize this over the form below
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 mt-6 px-1">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+            Or build it step by step
+          </span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
       </div>
 
       {/* ── Required fields card ── */}
@@ -411,9 +437,9 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
 
       {/* ── Collapsible: Deal-breakers ── */}
       <Collapsible open={moreOpen} onOpenChange={setMoreOpen} className="mt-5">
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
           <ChevronDown className={cn("h-4 w-4 transition-transform", moreOpen && "rotate-180")} />
-          What DON'T you want? <span className="text-xs text-muted-foreground/60">(optional)</span>
+          Anything to avoid? <span className="text-xs font-normal text-muted-foreground/70">(optional)</span>
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 space-y-2 animate-fade-in">
           <p className="text-xs text-primary/80 italic px-1">This is the question that makes the difference</p>
@@ -424,28 +450,6 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
             rows={3}
             className="rounded-xl bg-card border-border resize-none"
           />
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* ── Collapsible: Free text override ── */}
-      <Collapsible open={freeTextOpen} onOpenChange={setFreeTextOpen} className="mt-2">
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
-          <ChevronDown className={cn("h-4 w-4 transition-transform", freeTextOpen && "rotate-180")} />
-          Or describe your trip in your own words
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2 animate-fade-in">
-          <Textarea
-            value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
-            placeholder="Tell us about your dream trip in a sentence or two"
-            rows={3}
-            className="rounded-xl bg-card border-border resize-none"
-          />
-          {freeText.trim().length > 0 && (
-            <p className="text-xs text-muted-foreground mt-1.5 px-1">
-              This will take priority over the chips above
-            </p>
-          )}
         </CollapsibleContent>
       </Collapsible>
 
