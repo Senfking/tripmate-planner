@@ -1631,6 +1631,7 @@ export type Database = {
           route_locked: boolean
           settlement_currency: string
           share_permission: string
+          status: string
           tentative_end_date: string | null
           tentative_start_date: string | null
           trip_code: string
@@ -1654,6 +1655,7 @@ export type Database = {
           route_locked?: boolean
           settlement_currency?: string
           share_permission?: string
+          status?: string
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code: string
@@ -1677,6 +1679,7 @@ export type Database = {
           route_locked?: boolean
           settlement_currency?: string
           share_permission?: string
+          status?: string
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code?: string
