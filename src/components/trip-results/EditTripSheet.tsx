@@ -224,8 +224,8 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
           </div>
         </div>
 
-        {/* Budget tier */}
-        <div className="mb-5">
+        {/* Budget tier — primary control */}
+        <div className="mb-6">
           <label className="text-[11px] font-semibold text-foreground/80 uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <Gauge className="h-3 w-3" /> Budget tier
           </label>
@@ -234,9 +234,9 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
               <button
                 key={t.value}
                 type="button"
-                onClick={() => handleTierChange(t.value)}
+                onClick={() => setTier(t.value)}
                 className={cn(
-                  "text-left px-3 py-2 rounded-xl border transition-all",
+                  "text-left px-3 py-2.5 rounded-xl border transition-all",
                   tier === t.value
                     ? "border-primary bg-primary/10 ring-2 ring-primary/30"
                     : "border-border bg-background hover:bg-accent/50"
@@ -247,37 +247,60 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Daily budget — fine-tune override */}
-        <div className="mb-6">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-            <Wallet className="h-3 w-3" /> Adjust daily target (optional)
-          </label>
-          {budgetsLoading ? (
-            <div className="h-10 rounded-xl border border-border bg-muted/40 animate-pulse flex items-center px-3">
-              <span className="text-xs text-muted-foreground">
-                Estimating typical {currency} spend for {destinationLabel || "your trip"}…
+          {/* Tier caption — destination-aware default */}
+          <div className="mt-2 min-h-[18px] text-[11px] text-muted-foreground">
+            {budgetsLoading ? (
+              <span className="inline-block h-3 w-32 rounded bg-muted/60 animate-pulse" />
+            ) : tierBudgets ? (
+              <span>
+                {tierCaption}
+                {hasManualOverride && (
+                  <span className="ml-1.5 text-foreground/70">
+                    · using your target of {formatAmount(currency, Number(manualBudget))}
+                  </span>
+                )}
               </span>
-            </div>
+            ) : null}
+          </div>
+
+          {/* Disclosure — power-user override */}
+          {!overrideOpen ? (
+            <button
+              type="button"
+              onClick={handleOpenOverride}
+              className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Wallet className="h-3 w-3" />
+              {hasManualOverride ? "Adjust your daily target" : "Set exact daily target"}
+              <ChevronDown className="h-3 w-3" />
+            </button>
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-mono text-muted-foreground">{currency}</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={dailyBudget}
-                onChange={(e) => handleDailyBudgetChange(e.target.value)}
-                placeholder={tierBudgets ? String(tierBudgets[TIER_TO_KEY[tier]]) : "e.g. 150"}
-                className="flex-1 px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <span className="text-xs text-muted-foreground">/ day</span>
+            <div className="mt-3 pt-3 border-t border-border/60">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                <Wallet className="h-3 w-3" /> Daily target per person
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-mono text-muted-foreground">{currency}</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={manualBudget}
+                  onChange={(e) => setManualBudget(e.target.value)}
+                  placeholder={tierDefaultAmount > 0 ? String(tierDefaultAmount) : "e.g. 150"}
+                  className="flex-1 px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <span className="text-xs text-muted-foreground">/ day</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetOverride}
+                className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset to tier default
+              </button>
             </div>
-          )}
-          {!budgetsLoading && !tierBudgets && (
-            <p className="text-[10px] text-muted-foreground mt-1.5">
-              Couldn't load destination defaults — enter a target manually if you want to adjust.
-            </p>
           )}
         </div>
 
