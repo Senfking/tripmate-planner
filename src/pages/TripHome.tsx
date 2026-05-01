@@ -555,7 +555,7 @@ export default function TripHome() {
           myRole={myRole}
           startDate={trip.tentative_start_date}
           endDate={trip.tentative_end_date}
-          tripName={trip.destination || trip.name}
+          tripName={primaryTripName}
           coverPhoto={coverPhoto}
           onBuilderToggle={setBuilderOpen}
           onShareOpen={() => setShareInviteOpen(true)}
@@ -565,7 +565,7 @@ export default function TripHome() {
       {/* ─── ATTENDANCE OVERLAY ─── */}
       <AttendanceInviteOverlay
         tripId={trip.id}
-        tripName={trip.name}
+        tripName={primaryTripName}
         tripEmoji={trip.emoji}
         startDate={trip.tentative_start_date}
         endDate={trip.tentative_end_date}
@@ -589,7 +589,7 @@ export default function TripHome() {
       {trip && (
         <ShareInviteModal
           tripId={trip.id}
-          tripName={trip.name}
+          tripName={primaryTripName}
           open={shareInviteOpen}
           onOpenChange={setShareInviteOpen}
           isAdmin={isAdmin}
