@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil, Share2, Settings, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil, Share2, Settings, Calendar, Clock, Sparkles } from "lucide-react";
 import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
@@ -27,6 +27,10 @@ import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { expectAffectedRows } from "@/lib/safeMutate";
 import { cn } from "@/lib/utils";
+import { TripResultsView } from "@/components/trip-results/TripResultsView";
+import type { AITripResult } from "@/components/trip-results/useResultsState";
+import { NameTripModal } from "@/components/trip-builder/NameTripModal";
+import { stripEmoji } from "@/lib/stripEmoji";
 
 function getInitial(name: string | null | undefined) {
   return (name || "?").charAt(0).toUpperCase();
