@@ -234,18 +234,31 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
             <Wallet className="h-3 w-3" /> Adjust daily target (optional)
           </label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-mono text-muted-foreground">{currency}</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={dailyBudget}
-              onChange={(e) => handleDailyBudgetChange(e.target.value)}
-              placeholder="e.g. 150"
-              className="flex-1 px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-            <span className="text-xs text-muted-foreground">/ day</span>
-          </div>
+          {budgetsLoading ? (
+            <div className="h-10 rounded-xl border border-border bg-muted/40 animate-pulse flex items-center px-3">
+              <span className="text-xs text-muted-foreground">
+                Estimating typical {currency} spend for {destinationLabel || "your trip"}…
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-mono text-muted-foreground">{currency}</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={dailyBudget}
+                onChange={(e) => handleDailyBudgetChange(e.target.value)}
+                placeholder={tierBudgets ? String(tierBudgets[TIER_TO_KEY[tier]]) : "e.g. 150"}
+                className="flex-1 px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <span className="text-xs text-muted-foreground">/ day</span>
+            </div>
+          )}
+          {!budgetsLoading && !tierBudgets && (
+            <p className="text-[10px] text-muted-foreground mt-1.5">
+              Couldn't load destination defaults — enter a target manually if you want to adjust.
+            </p>
+          )}
         </div>
 
         <div className="flex justify-end">
