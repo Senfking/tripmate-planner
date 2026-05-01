@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, User, Pencil, ShieldCheck } from "lucide-react";
+import { Plus, User, Pencil, ShieldCheck, ChevronDown } from "lucide-react";
 import { CountryFlag } from "@/components/ui/CountryFlag";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useTripTravellerPassports, type TravellerPassport } from "@/hooks/useTripTravellerPassports";
 import { countryName } from "@/lib/countries";
 import { PassportEditModal } from "./PassportEditModal";
+
+const INITIAL_VISIBLE = 4;
 
 interface TravellersSectionProps {
   tripId: string;
@@ -17,6 +20,11 @@ interface TravellersSectionProps {
 interface MemberLite {
   userId: string;
   displayName: string;
+  avatarUrl: string | null;
+}
+
+function getInitial(name: string | null | undefined) {
+  return (name || "?").charAt(0).toUpperCase();
 }
 
 export function TravellersSection({ tripId, myRole }: TravellersSectionProps) {
