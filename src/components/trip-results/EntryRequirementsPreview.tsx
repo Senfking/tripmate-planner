@@ -50,11 +50,10 @@ export function EntryRequirementsPreview({
   const { user, profile } = useAuth();
   const nationalities = useMemo(
     () =>
-      (profile?.nationalities ?? [])
+      [profile?.nationality_iso, profile?.secondary_nationality_iso]
         .map((n) => n?.toUpperCase())
-        .filter((n): n is string => !!n && n.length >= 2)
-        .slice(0, 4),
-    [profile?.nationalities],
+        .filter((n): n is string => !!n && n.length === 2),
+    [profile?.nationality_iso, profile?.secondary_nationality_iso],
   );
 
   const destIso = destinationCountryIso?.toUpperCase() ?? null;
