@@ -164,9 +164,9 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
   return (
     <div
-      className={compact
+      className={`${compact
         ? "fixed left-3 top-[96px] bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none"
-        : "fixed left-[max(12px,calc(50%-420px))] top-[96px] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none"}
+        : "fixed left-[max(12px,calc(50%-420px))] top-[96px] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none"} transition-opacity duration-200 ${scrolledPastHero ? "opacity-100" : "opacity-0 pointer-events-none"}`}
     >
       <div className="absolute left-1/2 top-0 bottom-0 w-px bg-primary/15 -translate-x-1/2" />
 
