@@ -382,7 +382,7 @@ export default function TripHome() {
       <div
         ref={heroRef}
         className="relative w-full overflow-hidden"
-        style={{ height: 300 }}
+        style={{ height: 270 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
@@ -394,7 +394,7 @@ export default function TripHome() {
         {/* Top gradient — keeps nav buttons readable on light photos */}
         <div className="absolute inset-x-0 top-0 h-24" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.45), transparent)" }} />
         {/* Bottom gradient — stronger, taller for premium title legibility */}
-        <div className="absolute inset-x-0 bottom-0 h-2/3" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)" }} />
+        <div className="absolute inset-x-0 bottom-0 h-3/4" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.65) 35%, rgba(0,0,0,0.25) 70%, transparent 100%)" }} />
 
         {/* Back button */}
         <button
@@ -464,7 +464,7 @@ export default function TripHome() {
 
       {/* ─── TRIP HEADER (title overlay on hero image) ─── */}
       <div className="relative -mt-28 px-6 pb-8 pointer-events-none md:max-w-[700px] md:mx-auto md:px-8">
-        <h1 className="text-[26px] lg:text-3xl font-light text-white leading-[1.15] tracking-tight" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.45)" }}>
+        <h1 className="text-[26px] lg:text-3xl font-light uppercase text-white leading-[1.15] tracking-[0.02em]" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}>
           {trip?.destination || trip?.name}
         </h1>
       </div>
