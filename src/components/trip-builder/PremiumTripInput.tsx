@@ -439,7 +439,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
             onChange={(e) => setFreeText(e.target.value)}
             placeholder="Tell us about your dream trip in a sentence or two"
             rows={3}
-            className="rounded-xl bg-card border-border text-sm resize-none"
+            className="rounded-xl bg-card border-border resize-none"
           />
           {freeText.trim().length > 0 && (
             <p className="text-xs text-muted-foreground mt-1.5 px-1">
