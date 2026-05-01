@@ -31,8 +31,10 @@ export function buildTimelineNodes(
 
   pushNode({ id: "section-flights", icon: Plane, label: "Flights" });
 
+  const isMultiDestination = destinations.length > 1;
   const hasAccommodation = destinations.some((d) => d.accommodation);
-  if (hasAccommodation) {
+  // Standalone "Stays" overview only renders for multi-destination trips
+  if (isMultiDestination && hasAccommodation) {
     pushNode({ id: "section-stays-overview", icon: Bed, label: "Stays" });
   }
 
@@ -70,19 +72,28 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
     return (header?.getBoundingClientRect().height ?? 0) + 12;
   }, []);
 
-  const [scrolledPastHero, setScrolledPastHero] = useState(false);
+  const [topOffset, setTopOffset] = useState(96);
 
   useEffect(() => {
     if (!isDesktop) return;
     const scrollRoot = getScrollRoot();
-    const checkHero = () => {
-      // Hero is ~42vh; show timeline once user scrolls past most of it
-      const threshold = window.innerHeight * 0.35;
-      setScrolledPastHero(scrollRoot.scrollTop > threshold);
+    const computeOffset = () => {
+      const hero = document.querySelector<HTMLElement>("[data-results-hero='true']");
+      const minTop = 96;
+      if (!hero) {
+        setTopOffset(minTop);
+        return;
+      }
+      const heroRect = hero.getBoundingClientRect();
+      setTopOffset(Math.max(minTop, heroRect.bottom + 12));
     };
-    scrollRoot.addEventListener("scroll", checkHero, { passive: true });
-    checkHero();
-    return () => scrollRoot.removeEventListener("scroll", checkHero);
+    scrollRoot.addEventListener("scroll", computeOffset, { passive: true });
+    window.addEventListener("resize", computeOffset);
+    computeOffset();
+    return () => {
+      scrollRoot.removeEventListener("scroll", computeOffset);
+      window.removeEventListener("resize", computeOffset);
+    };
   }, [isDesktop, getScrollRoot]);
 
   useEffect(() => {
@@ -164,9 +175,10 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
   return (
     <div
-      className={`${compact
-        ? "fixed left-3 top-[96px] bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none"
-        : "fixed left-[max(12px,calc(50%-420px))] top-[96px] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none"} transition-opacity duration-200 ${scrolledPastHero ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+      style={{ top: topOffset }}
+      className={compact
+        ? "fixed left-3 bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none transition-[top] duration-150"
+        : "fixed left-[max(12px,calc(50%-420px))] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none transition-[top] duration-150"}
     >
       <div className="absolute left-1/2 top-0 bottom-0 w-px bg-primary/15 -translate-x-1/2" />
 
