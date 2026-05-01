@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CurrencyPicker } from "@/components/expenses/CurrencyPicker";
-import { NationalitiesPicker } from "@/components/profile/NationalitiesPicker";
+import { SingleNationalityPicker } from "@/components/profile/SingleNationalityPicker";
 import { countryName } from "@/lib/countries";
 import {
   Drawer,
@@ -381,7 +381,8 @@ const More = () => {
   const [showCurrency, setShowCurrency] = useState(false);
 
   const [showNationalities, setShowNationalities] = useState(false);
-  const [nationalitiesValue, setNationalitiesValue] = useState<string[]>([]);
+  const [primaryNatValue, setPrimaryNatValue] = useState<string | null>(null);
+  const [secondaryNatValue, setSecondaryNatValue] = useState<string | null>(null);
   const [savingNationalities, setSavingNationalities] = useState(false);
 
   const [showEmailDrawer, setShowEmailDrawer] = useState(false);
@@ -528,9 +529,20 @@ const More = () => {
   const handleSaveNationalities = async () => {
     if (!user) return;
     setSavingNationalities(true);
+    // PR #233 cutover: write to scalar columns. Keep `nationalities[]` mirrored
+    // (primary first, secondary second) so old surfaces still reading the
+    // legacy array don't go blank during the transition. The follow-up
+    // migration drops `nationalities[]` once every reader has cut over.
+    const mirror: string[] = [];
+    if (primaryNatValue) mirror.push(primaryNatValue);
+    if (secondaryNatValue) mirror.push(secondaryNatValue);
     const { error } = await supabase
       .from("profiles")
-      .update({ nationalities: nationalitiesValue })
+      .update({
+        nationality_iso: primaryNatValue,
+        secondary_nationality_iso: secondaryNatValue,
+        nationalities: mirror,
+      } as any)
       .eq("id", user.id);
     setSavingNationalities(false);
     if (error) {
