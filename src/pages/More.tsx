@@ -644,10 +644,6 @@ const More = () => {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    if (deleteEmail !== user.email) {
-      toast({ title: "Email doesn't match", variant: "destructive" });
-      return;
-    }
     setDeleting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -673,7 +669,6 @@ const More = () => {
   };
 
   const openDeleteDrawer = async () => {
-    setDeleteEmail("");
     setSoleOwnedTrips(null);
     setShowDeleteDrawer(true);
     if (!user) return;
