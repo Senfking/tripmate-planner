@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { parseEdgeError } from "@/lib/parseEdgeError";
+import { stripEmoji } from "@/lib/stripEmoji";
 
 import { useTripBuilderDefaults, type BudgetLevel, type PaceLevel } from "./useTripBuilderDefaults";
 import { parseFreeText } from "./parseFreeText";
@@ -83,7 +84,7 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
   }
 
   return {
-    trip_title: raw.trip_title || raw.title || "Your Trip",
+    trip_title: stripEmoji(raw.trip_title || raw.title || "Your Trip"),
     trip_summary: raw.trip_summary || raw.summary || "",
     destinations: safeDestinations,
     map_center: mapCenter,
