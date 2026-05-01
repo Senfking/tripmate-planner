@@ -261,6 +261,15 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           onSaveDraft={handleSaveDraft}
           creatingTrip={creatingTrip}
         />
+        <NameTripModal
+          open={nameModalOpen}
+          onOpenChange={(o) => {
+            if (!creatingTrip) setNameModalOpen(o);
+          }}
+          defaultName={stripEmoji(results.trip_title)}
+          submitting={creatingTrip}
+          onConfirm={persistTrip}
+        />
       </div>
     );
   }
