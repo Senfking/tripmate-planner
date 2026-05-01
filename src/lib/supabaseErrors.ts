@@ -175,22 +175,9 @@ export function showErrorToast(err: MaybeError, fallback: string): void {
 
   toast.custom(
     (id) => createElement(ErrorToastContent, { toastId: id, friendly, details, isAdmin }),
-    { duration, classNames: CUSTOM_TOAST_CLASSNAMES },
+    { duration },
   );
 }
-
-// Sonner applies the global toast chrome (background, border, blur, shadow,
-// padding, rounded corners) to every toast — including ones rendered via
-// `toast.custom`. Our custom shells (ErrorToastContent / SuccessToastContent)
-// already paint their own glass surface, so the outer wrapper would render
-// a second card behind the inner one — visible most clearly when the panel
-// expands and the doubled rounding/shadow becomes obvious. Neutralizing the
-// wrapper here lets the inner card own the entire visual surface and
-// expand/collapse cleanly.
-const CUSTOM_TOAST_CLASSNAMES = {
-  toast:
-    "!bg-transparent !border-0 !shadow-none !p-0 !rounded-none !backdrop-blur-0",
-} as const;
 
 // Premium success toast — visual twin of showErrorToast. Use this in place
 // of `toast.success(...)` when you want the polished Junto look. Existing
@@ -200,6 +187,6 @@ export function showSuccessToast(title: string, description?: string): void {
   toast.custom(
     (id) =>
       createElement(SuccessToastContent, { toastId: id, title, description }),
-    { duration: 4000, classNames: CUSTOM_TOAST_CLASSNAMES },
+    { duration: 4000 },
   );
 }
