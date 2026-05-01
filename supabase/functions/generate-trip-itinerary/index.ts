@@ -1149,15 +1149,22 @@ function buildSkeleton(
     const transitHub = "transit_hub";
 
     if (isFirst) {
-      // Arrival day: afternoon arrival buffer, one light sight, dinner.
+      // Arrival day: afternoon arrival buffer, one light sight, dinner. On
+      // leisurely pace lunch is dropped — light pace means light bookends too,
+      // and dinner is the day's food anchor. Balanced/active keep lunch so the
+      // post-arrival window has a meal beat before the afternoon sight.
       slots.push({ type: "arrival", start_time: hhmm(13, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
-      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 30), duration_minutes: 75, region_tag_for_queries: primary });
+      if (intent.pace !== "leisurely") {
+        slots.push({ type: "lunch", start_time: hhmm(lunchStart, 30), duration_minutes: 75, region_tag_for_queries: primary });
+      }
       slots.push({ type: "afternoon_major", start_time: hhmm(16, 0), duration_minutes: 120, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
     } else if (isLast) {
       // Departure day: morning highlight, farewell lunch, then departure buffer.
       // Breakfast is dropped — the day already has lunch + a transit anchor;
-      // morning_major is the more valuable slot before flight time.
+      // morning_major is the more valuable slot before flight time. Lunch is
+      // the day's only food anchor (no dinner before a flight) and is
+      // protected from cap-trimming below.
       slots.push({ type: "morning_major", start_time: hhmm(9, 30), duration_minutes: 120, region_tag_for_queries: primary });
       slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
       slots.push({ type: "departure", start_time: hhmm(15, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
@@ -1232,6 +1239,8 @@ const ACTIVITY_SLOT_TYPES: ReadonlySet<SlotType> = new Set([
 // lunch) before activities — they're the redundant ones when over budget.
 // Dinner is the social anchor of last resort and is never trimmed. On non-rest
 // days we always keep at least one activity slot regardless of trim order.
+// Lunch on a departure day is also protected: it's the day's only food anchor
+// (no dinner before the flight), so trimming it leaves the bookend foodless.
 function enforceSlotCap(days: DaySkeleton[], pace: Intent["pace"]): DaySkeleton[] {
   const budget = computeSlotBudget(days.length, pace);
   const totalSlots = () => days.reduce((n, d) => n + d.slots.length, 0);
@@ -1248,12 +1257,16 @@ function enforceSlotCap(days: DaySkeleton[], pace: Intent["pace"]): DaySkeleton[
 
   const countActivitySlots = (day: DaySkeleton): number =>
     day.slots.reduce((n, s) => n + (ACTIVITY_SLOT_TYPES.has(s.type) ? 1 : 0), 0);
+  const isDepartureDay = (day: DaySkeleton): boolean =>
+    day.slots.some((s) => s.type === "departure");
 
   for (const kind of trimOrder) {
     if (totalSlots() <= budget) break;
     const byLength = [...days].sort((a, b) => b.slots.length - a.slots.length);
     for (const day of byLength) {
       if (totalSlots() <= budget) break;
+      // Don't trim the only food anchor off a departure day.
+      if (kind === "lunch" && isDepartureDay(day)) continue;
       // Walk back-to-front so we drop the last instance first (e.g. the
       // second afternoon_major on an active day).
       for (let i = day.slots.length - 1; i >= 0; i--) {
