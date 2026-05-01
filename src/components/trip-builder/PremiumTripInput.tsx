@@ -437,9 +437,9 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
 
       {/* ── Collapsible: Deal-breakers ── */}
       <Collapsible open={moreOpen} onOpenChange={setMoreOpen} className="mt-5">
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
           <ChevronDown className={cn("h-4 w-4 transition-transform", moreOpen && "rotate-180")} />
-          What DON'T you want? <span className="text-xs text-muted-foreground/60">(optional)</span>
+          Anything to avoid? <span className="text-xs font-normal text-muted-foreground/70">(optional)</span>
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 space-y-2 animate-fade-in">
           <p className="text-xs text-primary/80 italic px-1">This is the question that makes the difference</p>
@@ -450,28 +450,6 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
             rows={3}
             className="rounded-xl bg-card border-border resize-none"
           />
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* ── Collapsible: Free text override ── */}
-      <Collapsible open={freeTextOpen} onOpenChange={setFreeTextOpen} className="mt-2">
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
-          <ChevronDown className={cn("h-4 w-4 transition-transform", freeTextOpen && "rotate-180")} />
-          Or describe your trip in your own words
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2 animate-fade-in">
-          <Textarea
-            value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
-            placeholder="Tell us about your dream trip in a sentence or two"
-            rows={3}
-            className="rounded-xl bg-card border-border resize-none"
-          />
-          {freeText.trim().length > 0 && (
-            <p className="text-xs text-muted-foreground mt-1.5 px-1">
-              This will take priority over the chips above
-            </p>
-          )}
         </CollapsibleContent>
       </Collapsible>
 
