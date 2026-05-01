@@ -138,7 +138,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   }, [destination, dateRange, travelParty, kidsAges, budgetLevel, pace, vibes, dealBreakers, freeText, canGenerate, destMissing, onGenerate]);
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 pb-32">
+    <div className="w-full max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]">
       {/* ── Hero header ── */}
       <div className="text-center pt-8 pb-6">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
