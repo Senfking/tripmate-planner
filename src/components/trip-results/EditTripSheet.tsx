@@ -24,24 +24,61 @@ const SAMPLE_REFINEMENTS = [
   "Bump up the budget — premium stays and tasting menus",
 ];
 
-const BUDGET_TIERS: { value: "budget" | "mid-range" | "premium" | "luxury"; label: string; hint: string }[] = [
+type TierValue = "budget" | "mid-range" | "premium" | "luxury";
+
+const BUDGET_TIERS: { value: TierValue; label: string; hint: string }[] = [
   { value: "budget", label: "Budget", hint: "Hostels, street food" },
   { value: "mid-range", label: "Mid-range", hint: "3★ hotels, casual dining" },
   { value: "premium", label: "Premium", hint: "4★ stays, nice restaurants" },
   { value: "luxury", label: "Luxury", hint: "5★ stays, fine dining" },
 ];
 
+// Multipliers applied to the trip's existing daily budget (which already
+// encodes destination cost-of-living) to derive a tier-appropriate target.
+const TIER_MULTIPLIERS: Record<TierValue, number> = {
+  budget: 0.5,
+  "mid-range": 1.0,
+  premium: 2.0,
+  luxury: 4.0,
+};
+
+function computeTierBudget(baseDaily: number, baseTier: TierValue, targetTier: TierValue): number {
+  if (!baseDaily || baseDaily <= 0) return 0;
+  // Normalize: scale base down to a "mid-range equivalent" then up to target tier.
+  const midEquivalent = baseDaily / TIER_MULTIPLIERS[baseTier];
+  return Math.round(midEquivalent * TIER_MULTIPLIERS[targetTier]);
+}
+
 export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props) {
-  const initialTier = (result.budget_tier ?? "mid-range") as
-    | "budget"
-    | "mid-range"
-    | "premium"
-    | "luxury";
-  const [tier, setTier] = useState(initialTier);
+  const initialTier = (result.budget_tier ?? "mid-range") as TierValue;
+  const baseDaily = Number(result.daily_budget_estimate) || 0;
+
+  const [tier, setTier] = useState<TierValue>(initialTier);
   const [dailyBudget, setDailyBudget] = useState<string>(
-    result.daily_budget_estimate ? String(result.daily_budget_estimate) : ""
+    baseDaily ? String(baseDaily) : ""
+  );
+  // Tracks the last auto-populated value so we can detect manual overrides.
+  const [lastAutoValue, setLastAutoValue] = useState<string>(
+    baseDaily ? String(baseDaily) : ""
   );
   const [refinement, setRefinement] = useState("");
+
+  const handleTierChange = (next: TierValue) => {
+    setTier(next);
+    if (!baseDaily) return;
+    // Only auto-populate when the user hasn't manually overridden the field.
+    const isUntouched = dailyBudget.trim() === "" || dailyBudget === lastAutoValue;
+    if (isUntouched) {
+      const suggested = String(computeTierBudget(baseDaily, initialTier, next));
+      setDailyBudget(suggested);
+      setLastAutoValue(suggested);
+    }
+  };
+
+  const handleDailyBudgetChange = (value: string) => {
+    setDailyBudget(value);
+    // Any keystroke that diverges from the last auto value counts as manual.
+  };
 
   // Pick 3 sample suggestions to show as chips, rotating each open
   const samples = useMemo(() => {
@@ -57,8 +94,16 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
   const buildPrompt = () => {
     const parts: string[] = [];
     if (refinement.trim()) parts.push(refinement.trim());
-    if (tierChanged) parts.push(`Change the overall budget tier to ${tier}.`);
-    if (budgetChanged) parts.push(`Target a daily budget of about ${currency}${dailyBudget} per person.`);
+    // Send ONE coherent budget signal: numeric target + tier as style/tone context.
+    if (tierChanged && budgetChanged) {
+      parts.push(
+        `Shift the trip to a ${tier} feel (style, accommodation class, dining tone) targeting about ${currency}${dailyBudget} per person per day.`
+      );
+    } else if (tierChanged) {
+      parts.push(`Shift the overall vibe to ${tier} (style, accommodation class, dining tone).`);
+    } else if (budgetChanged) {
+      parts.push(`Target a daily budget of about ${currency}${dailyBudget} per person.`);
+    }
     return parts.join(" ");
   };
 
@@ -122,7 +167,7 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
               <button
                 key={t.value}
                 type="button"
-                onClick={() => setTier(t.value)}
+                onClick={() => handleTierChange(t.value)}
                 className={cn(
                   "text-left px-3 py-2 rounded-xl border transition-all",
                   tier === t.value
@@ -137,10 +182,10 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
           </div>
         </div>
 
-        {/* Daily budget */}
+        {/* Daily budget — fine-tune override */}
         <div className="mb-6">
-          <label className="text-[11px] font-semibold text-foreground/80 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Wallet className="h-3 w-3" /> Daily budget per person
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+            <Wallet className="h-3 w-3" /> Adjust daily target (optional)
           </label>
           <div className="flex items-center gap-2">
             <span className="text-sm font-mono text-muted-foreground">{currency}</span>
@@ -148,7 +193,7 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
               type="number"
               inputMode="numeric"
               value={dailyBudget}
-              onChange={(e) => setDailyBudget(e.target.value)}
+              onChange={(e) => handleDailyBudgetChange(e.target.value)}
               placeholder="e.g. 150"
               className="flex-1 px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
