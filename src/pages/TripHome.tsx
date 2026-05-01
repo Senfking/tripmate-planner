@@ -471,8 +471,16 @@ export default function TripHome() {
           className="text-[28px] lg:text-[32px] font-semibold text-white leading-[1.1]"
           style={{ letterSpacing: "-0.02em", textShadow: "0 1px 16px rgba(0,0,0,0.35)" }}
         >
-          {trip?.destination || trip?.name}
+          {primaryTripName}
         </h1>
+        {itineraryTitle && itineraryTitle !== primaryTripName && (
+          <p
+            className="text-[14px] lg:text-[15px] text-white/80 leading-snug mt-1 italic"
+            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.35)" }}
+          >
+            {itineraryTitle}
+          </p>
+        )}
       </div>
 
       {/* ─── CONTENT CARD — rounded top, elevated shadow, overlaps hero ─── */}
