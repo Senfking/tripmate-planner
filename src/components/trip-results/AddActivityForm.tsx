@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { AIActivity } from "./useResultsState";
 
 interface Props {
@@ -47,13 +48,14 @@ export function AddActivityForm({ dayDate, onAdd, onClose }: Props) {
         </button>
       </div>
 
-      <input
+      <Input
+        inputSize="sm"
         type="text"
         autoFocus
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="What do you want to add?"
-        className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]/40 mb-2"
+        className="rounded-lg focus-visible:ring-1 focus-visible:ring-[#0D9488]/40 focus-visible:ring-offset-0 mb-2"
         onKeyDown={(e) => {
           if (e.key === "Enter") handleAdd();
           if (e.key === "Escape") onClose();
@@ -63,11 +65,12 @@ export function AddActivityForm({ dayDate, onAdd, onClose }: Props) {
       <div className="flex items-center gap-2 mb-3">
         <div className="flex-1">
           <label className="text-[10px] text-muted-foreground block mb-0.5">Time</label>
-          <input
+          <Input
+            inputSize="sm"
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]/40"
+            className="rounded-lg focus-visible:ring-1 focus-visible:ring-[#0D9488]/40 focus-visible:ring-offset-0"
           />
         </div>
         <div className="flex-1">
@@ -75,7 +78,7 @@ export function AddActivityForm({ dayDate, onAdd, onClose }: Props) {
           <select
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
-            className="w-full px-2 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]/40"
+            className="w-full h-9 px-2.5 py-1.5 text-[13px] rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]/40"
           >
             {DURATIONS.map((d) => (
               <option key={d} value={d}>{d} min</option>

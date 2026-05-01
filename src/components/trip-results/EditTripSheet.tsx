@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, Sparkles, Loader2, Wallet, Gauge, Wand2, ChevronDown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { AITripResult } from "./useResultsState";
@@ -201,11 +202,12 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
           <label className="text-[11px] font-semibold text-foreground/80 uppercase tracking-wide mb-2 block">
             What should change?
           </label>
-          <textarea
+          <Textarea
+            inputSize="sm"
             value={refinement}
             onChange={(e) => setRefinement(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+            className="rounded-xl border-border placeholder:text-muted-foreground/70 focus-visible:ring-primary/40 focus-visible:ring-offset-0 resize-none"
             placeholder="e.g. Make it more focused on food, fewer museums, add a half-day trip outside the city…"
           />
 
