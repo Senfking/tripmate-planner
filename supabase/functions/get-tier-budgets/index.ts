@@ -206,15 +206,18 @@ Deno.serve(async (req) => {
     }
 
     if (supabase) {
-      await supabase
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { error: cacheErr } = await supabase
         .from("ai_response_cache")
         .upsert(
-          { cache_key: cacheKey, response_json: tiers as unknown as Record<string, unknown> },
+          {
+            cache_key: cacheKey,
+            response_json: tiers as unknown as Record<string, unknown>,
+            expires_at: expiresAt,
+          },
           { onConflict: "cache_key" },
-        )
-        .then(({ error }) => {
-          if (error) console.error("get-tier-budgets cache write failed:", error.message);
-        });
+        );
+      if (cacheErr) console.error("get-tier-budgets cache write failed:", cacheErr.message);
     }
 
     return jsonResponse({ success: true, cached: false, tiers });
