@@ -27,12 +27,13 @@ export function EditDaySheet({ day, onApply, onClose, loading }: Props) {
           </button>
         </div>
 
-        <textarea
+        <Textarea
+          inputSize="sm"
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={3}
           autoFocus
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#0D9488]/40 resize-none"
+          className="rounded-xl border-border focus-visible:ring-[#0D9488]/40 focus-visible:ring-offset-0 resize-none"
           placeholder="e.g. make it more relaxed, add a morning surf session..."
         />
 
