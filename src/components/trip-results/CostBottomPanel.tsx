@@ -71,8 +71,8 @@ export function CostBottomPanel({
             </div>
             {showConverted && (
               <div className="flex items-center justify-end">
-                <span className="text-[10px] text-muted-foreground/70 font-mono">
-                  ~{currency}{total.toLocaleString()} in {currency}
+                <span className="text-[10px] text-muted-foreground/60 font-mono">
+                  ≈ {currency} {total.toLocaleString()} locally
                 </span>
               </div>
             )}
@@ -93,8 +93,8 @@ export function CostBottomPanel({
           {" · "}
           <span className="font-mono">{dailyPrimary}</span>
           {showConverted && (
-            <span className="block text-[10px] text-muted-foreground/70 font-mono">
-              ~{currency}{total.toLocaleString()} in {currency}
+            <span className="block text-[10px] text-muted-foreground/60 font-mono">
+              ≈ {currency} {total.toLocaleString()} locally
             </span>
           )}
         </span>
