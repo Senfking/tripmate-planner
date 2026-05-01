@@ -1620,7 +1620,6 @@ export type Database = {
           emoji: string | null
           enabled_modules: Json
           id: string
-          itinerary_title: string | null
           name: string
           route_locked: boolean
           settlement_currency: string
@@ -1628,7 +1627,6 @@ export type Database = {
           tentative_end_date: string | null
           tentative_start_date: string | null
           trip_code: string
-          trip_name: string
           updated_at: string
           vibe_board_active: boolean
           vibe_board_locked: boolean
@@ -1643,7 +1641,6 @@ export type Database = {
           emoji?: string | null
           enabled_modules?: Json
           id?: string
-          itinerary_title?: string | null
           name: string
           route_locked?: boolean
           settlement_currency?: string
@@ -1651,7 +1648,6 @@ export type Database = {
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code: string
-          trip_name: string
           updated_at?: string
           vibe_board_active?: boolean
           vibe_board_locked?: boolean
@@ -1666,7 +1662,6 @@ export type Database = {
           emoji?: string | null
           enabled_modules?: Json
           id?: string
-          itinerary_title?: string | null
           name?: string
           route_locked?: boolean
           settlement_currency?: string
@@ -1674,7 +1669,6 @@ export type Database = {
           tentative_end_date?: string | null
           tentative_start_date?: string | null
           trip_code?: string
-          trip_name?: string
           updated_at?: string
           vibe_board_active?: boolean
           vibe_board_locked?: boolean
