@@ -81,7 +81,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   const [dealBreakers, setDealBreakers] = useState("");
   const [freeText, setFreeText] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
-  const [freeTextOpen, setFreeTextOpen] = useState(false);
+  
   const [showErrors, setShowErrors] = useState(false);
   const [paceInfoOpen, setPaceInfoOpen] = useState(false);
 
