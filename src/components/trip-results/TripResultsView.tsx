@@ -491,18 +491,40 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 <CreditCard className="h-4.5 w-4.5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold text-foreground">
-                  ~{currency}{costBreakdown.total.toLocaleString()}
-                  <span className="text-sm font-normal text-muted-foreground"> per person</span>
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-                  Activities ~{currency}{costBreakdown.activitiesTotal.toLocaleString()}
-                  {costBreakdown.accommodationTotal > 0 && (
-                    <> · Stay ~{currency}{costBreakdown.accommodationTotal.toLocaleString()}</>
-                  )}
-                  {" · "}
-                  ~{currency}{costBreakdown.dailyAvg.toLocaleString()}/day
-                </div>
+                {(() => {
+                  const converted = convertToUserCurrency(costBreakdown.total);
+                  const showConverted = conversionEnabled && converted !== null;
+                  const primaryDisplay = showConverted
+                    ? `~${formatBudget(converted!, userCurrency)}`
+                    : `~${currency}${costBreakdown.total.toLocaleString()}`;
+                  const subtitleNative = `~${currency}${costBreakdown.total.toLocaleString()}`;
+                  const dailyConverted = convertToUserCurrency(costBreakdown.dailyAvg);
+                  const dailyDisplay =
+                    showConverted && dailyConverted !== null
+                      ? `~${formatBudget(dailyConverted, userCurrency)}/day`
+                      : `~${currency}${costBreakdown.dailyAvg.toLocaleString()}/day`;
+                  return (
+                    <>
+                      <div className="text-base font-semibold text-foreground">
+                        {primaryDisplay}
+                        <span className="text-sm font-normal text-muted-foreground"> per person</span>
+                      </div>
+                      {showConverted && (
+                        <div className="text-[11px] text-muted-foreground/80 mt-0.5 font-mono">
+                          {subtitleNative} in {currency}
+                        </div>
+                      )}
+                      <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+                        Activities ~{currency}{costBreakdown.activitiesTotal.toLocaleString()}
+                        {costBreakdown.accommodationTotal > 0 && (
+                          <> · Stay ~{currency}{costBreakdown.accommodationTotal.toLocaleString()}</>
+                        )}
+                        {" · "}
+                        {dailyDisplay}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <div className={`p-1.5 rounded-lg bg-muted/50 transition-transform duration-200 ${costOpen ? "rotate-180" : ""}`}>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
