@@ -94,8 +94,16 @@ export function EditTripSheet({ result, onRegenerate, onClose, loading }: Props)
   const buildPrompt = () => {
     const parts: string[] = [];
     if (refinement.trim()) parts.push(refinement.trim());
-    if (tierChanged) parts.push(`Change the overall budget tier to ${tier}.`);
-    if (budgetChanged) parts.push(`Target a daily budget of about ${currency}${dailyBudget} per person.`);
+    // Send ONE coherent budget signal: numeric target + tier as style/tone context.
+    if (tierChanged && budgetChanged) {
+      parts.push(
+        `Shift the trip to a ${tier} feel (style, accommodation class, dining tone) targeting about ${currency}${dailyBudget} per person per day.`
+      );
+    } else if (tierChanged) {
+      parts.push(`Shift the overall vibe to ${tier} (style, accommodation class, dining tone).`);
+    } else if (budgetChanged) {
+      parts.push(`Target a daily budget of about ${currency}${dailyBudget} per person.`);
+    }
     return parts.join(" ");
   };
 
