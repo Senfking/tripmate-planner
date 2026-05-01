@@ -11,6 +11,7 @@ import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
 import { ConfirmationCard } from "./ConfirmationCard";
 import { StreamingGeneratingScreen } from "./StreamingGeneratingScreen";
 import { BlankTripModal } from "./BlankTripModal";
+import { NameTripModal } from "./NameTripModal";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 import { useStreamingTripGeneration } from "@/hooks/useStreamingTripGeneration";
@@ -95,6 +96,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   const [savedPlanId, setSavedPlanId] = useState<string | null>(draftPlanId ?? null);
   const [creatingTrip, setCreatingTrip] = useState(false);
   const [blankModalOpen, setBlankModalOpen] = useState(false);
+  const [nameModalOpen, setNameModalOpen] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
   const streaming = useStreamingTripGeneration();
 
@@ -166,7 +168,8 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     trackEvent("ai_trip_generated", { standalone: true, destination: inputData?.destination, streamed: true });
   }, [pendingPayload, user, inputData]);
 
-  const handleCreateTrip = useCallback(async () => {
+  // Step 1: open the "Name your trip" modal (always shown before save).
+  const handleCreateTrip = useCallback(() => {
     if (!results) {
       toast.error("Plan isn't ready yet — please wait a moment.");
       return;
@@ -175,16 +178,29 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       toast.error("You need to be signed in to save a trip.");
       return;
     }
+    setNameModalOpen(true);
+  }, [results, user]);
+
+  // Step 2: actually persist the trip with the user-confirmed name. The
+  // AI-generated `trip_title` becomes `itinerary_title` (the descriptive
+  // subtitle); the user-chosen name becomes `trip_name` (the primary
+  // identifier). We mirror to the legacy `name` column during the
+  // transition so unmigrated reads keep working.
+  const persistTrip = useCallback(async (tripName: string) => {
+    if (!results || !user) return;
     setCreatingTrip(true);
     try {
       const firstDest = results.destinations[0];
       const lastDest = results.destinations[results.destinations.length - 1];
       const destination = results.destinations.map((d) => d.name).join(", ");
+      const itineraryTitle = stripEmoji(results.trip_title) || tripName;
 
       const { data: trip, error: tripError } = await supabase
         .from("trips")
         .insert({
-          name: stripEmoji(results.trip_title) || "Your Trip",
+          name: tripName,
+          trip_name: tripName,
+          itinerary_title: itineraryTitle,
           destination,
           tentative_start_date: firstDest?.start_date || null,
           tentative_end_date: lastDest?.end_date || null,
@@ -202,6 +218,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
 
       trackEvent("trip_created_from_ai", { trip_id: trip.id, plan_id: savedPlanId });
       toast.success("Trip created!");
+      setNameModalOpen(false);
       navigate(`/app/trips/${trip.id}`, { replace: true });
     } catch (err: any) {
       console.error("[StandaloneBuilder] create trip failed:", err);
@@ -243,6 +260,15 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           onCreateTrip={handleCreateTrip}
           onSaveDraft={handleSaveDraft}
           creatingTrip={creatingTrip}
+        />
+        <NameTripModal
+          open={nameModalOpen}
+          onOpenChange={(o) => {
+            if (!creatingTrip) setNameModalOpen(o);
+          }}
+          defaultName={stripEmoji(results.trip_title)}
+          submitting={creatingTrip}
+          onConfirm={persistTrip}
         />
       </div>
     );

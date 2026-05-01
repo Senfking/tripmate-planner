@@ -122,6 +122,10 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
   });
 
   const sharePermission = (trip as any)?.share_permission ?? "all";
+  // Prefer the user-chosen `trip_name` (PR #231); fall back to the legacy
+  // name passed from the parent so this still works during the rollout.
+  const displayedTripName = ((trip as any)?.trip_name as string | undefined) || tripName;
+  const itinerarySubtitle = ((trip as any)?.itinerary_title as string | undefined) || null;
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
@@ -130,7 +134,12 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
     mutationFn: async (name: string) => {
       const trimmed = name.trim();
       if (!trimmed) throw new Error("Trip name cannot be empty");
-      const { error } = await supabase.from("trips").update({ name: trimmed }).eq("id", tripId);
+      // Mirror the user-chosen name to the legacy `name` column during the
+      // PR #231 transition so unmigrated reads keep working.
+      const { error } = await supabase
+        .from("trips")
+        .update({ trip_name: trimmed, name: trimmed } as any)
+        .eq("id", tripId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -308,12 +317,19 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-foreground flex-1">{tripName}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground truncate">{displayedTripName}</p>
+                    {itinerarySubtitle && itinerarySubtitle !== displayedTripName && (
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        {itinerarySubtitle}
+                      </p>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground"
-                    onClick={() => { setNameValue(tripName); setEditingName(true); }}
+                    onClick={() => { setNameValue(displayedTripName); setEditingName(true); }}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -441,7 +457,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
               {/* Delete trip - owner only */}
               {isOwner && (
                 <DeleteTripDialog
-                  tripName={tripName}
+                  tripName={displayedTripName}
                   onConfirm={() => deleteTrip.mutate()}
                   isPending={deleteTrip.isPending}
                 />

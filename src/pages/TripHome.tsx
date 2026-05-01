@@ -337,10 +337,12 @@ export default function TripHome() {
 
   const visibleMembers = members?.slice(0, 5) ?? [];
   const memberCount = members?.length ?? 0;
+  const primaryTripName = ((trip as any)?.trip_name as string | undefined) || trip.name;
+  const itineraryTitle = ((trip as any)?.itinerary_title as string | undefined) || null;
   const coverPhoto =
     coverSignedUrl ||
     resolvePhoto(
-      trip.name,
+      primaryTripName,
       routeStops ?? [],
       (trip as any)?.destination_image_url ?? null,
     );
@@ -471,8 +473,16 @@ export default function TripHome() {
           className="text-[28px] lg:text-[32px] font-semibold text-white leading-[1.1]"
           style={{ letterSpacing: "-0.02em", textShadow: "0 1px 16px rgba(0,0,0,0.35)" }}
         >
-          {trip?.destination || trip?.name}
+          {primaryTripName}
         </h1>
+        {itineraryTitle && itineraryTitle !== primaryTripName && (
+          <p
+            className="text-[14px] lg:text-[15px] text-white/80 leading-snug mt-1 italic"
+            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.35)" }}
+          >
+            {itineraryTitle}
+          </p>
+        )}
       </div>
 
       {/* ─── CONTENT CARD — rounded top, elevated shadow, overlaps hero ─── */}
@@ -545,7 +555,7 @@ export default function TripHome() {
           myRole={myRole}
           startDate={trip.tentative_start_date}
           endDate={trip.tentative_end_date}
-          tripName={trip.destination || trip.name}
+          tripName={primaryTripName}
           coverPhoto={coverPhoto}
           onBuilderToggle={setBuilderOpen}
           onShareOpen={() => setShareInviteOpen(true)}
@@ -555,7 +565,7 @@ export default function TripHome() {
       {/* ─── ATTENDANCE OVERLAY ─── */}
       <AttendanceInviteOverlay
         tripId={trip.id}
-        tripName={trip.name}
+        tripName={primaryTripName}
         tripEmoji={trip.emoji}
         startDate={trip.tentative_start_date}
         endDate={trip.tentative_end_date}
@@ -579,7 +589,7 @@ export default function TripHome() {
       {trip && (
         <ShareInviteModal
           tripId={trip.id}
-          tripName={trip.name}
+          tripName={primaryTripName}
           open={shareInviteOpen}
           onOpenChange={setShareInviteOpen}
           isAdmin={isAdmin}
