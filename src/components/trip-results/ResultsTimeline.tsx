@@ -70,6 +70,21 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
     return (header?.getBoundingClientRect().height ?? 0) + 12;
   }, []);
 
+  const [scrolledPastHero, setScrolledPastHero] = useState(false);
+
+  useEffect(() => {
+    if (!isDesktop) return;
+    const scrollRoot = getScrollRoot();
+    const checkHero = () => {
+      // Hero is ~42vh; show timeline once user scrolls past most of it
+      const threshold = window.innerHeight * 0.35;
+      setScrolledPastHero(scrollRoot.scrollTop > threshold);
+    };
+    scrollRoot.addEventListener("scroll", checkHero, { passive: true });
+    checkHero();
+    return () => scrollRoot.removeEventListener("scroll", checkHero);
+  }, [isDesktop, getScrollRoot]);
+
   useEffect(() => {
     if (!isDesktop) return;
 
