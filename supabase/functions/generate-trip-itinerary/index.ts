@@ -84,6 +84,21 @@ interface TripBuilderRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Text helpers
+// ---------------------------------------------------------------------------
+
+// Defensive strip for any emoji/pictograph the LLM slips into a title despite
+// system-prompt rules. \p{Extended_Pictographic} covers emoji + decorative
+// symbols across Unicode planes; the trailing collapse keeps spacing clean.
+function stripEmojis(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// ---------------------------------------------------------------------------
 // Date helpers
 // ---------------------------------------------------------------------------
 
@@ -2645,6 +2660,7 @@ ABSOLUTE RULES:
 4. packing_suggestions is 5–8 items, weather-specific and activity-specific. Not "comfortable shoes" — "closed-toe walking shoes for the cobblestones on Rua das Flores".
 5. Honor intent.pace, intent.budget_tier, and intent.must_avoids in the trip narrative.
 6. NEVER quote USD when the trip currency is something else.
+7. Do NOT include emojis, decorative symbols, or pictographs in titles. Use only plain text, punctuation, and standard characters. Premium and mature aesthetic.
 
 ACCOMMODATION:
 - Pick ONE lodging for the whole destination from the lodging pool. Prefer rating ≥ 4.3, reviews 100+, and a priceLevel consistent with intent.budget_tier. If the pool is thin, pick the best available and note the limitation.
@@ -3005,7 +3021,7 @@ function hydrateActivity(
     ? clampCostPerPerson(raw.estimated_cost_per_person, place.priceLevel, currency, raw.title)
     : Math.max(0, raw.estimated_cost_per_person);
 
-  const title = raw.title?.trim() || place?.displayName || "Activity";
+  const title = stripEmojis(raw.title) || stripEmojis(place?.displayName) || "Activity";
 
   return {
     place_id: place?.id ?? "",
@@ -3439,7 +3455,7 @@ async function rankInParallel(
   };
 
   return {
-    trip_title: meta?.trip_title?.trim() || intent.destination,
+    trip_title: stripEmojis(meta?.trip_title) || intent.destination,
     trip_summary: meta?.trip_summary?.trim() ?? "",
     destinations: [destination],
     map_center: { lat: geo.lat, lng: geo.lng },
@@ -4286,7 +4302,7 @@ Deno.serve(async (req) => {
                 for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
               }
               send("trip_complete", {
-                trip_title: payload?.trip_title ?? "",
+                trip_title: stripEmojis(payload?.trip_title),
                 trip_summary: payload?.trip_summary ?? "",
                 accommodation: dest?.accommodation ?? null,
                 packing_suggestions: payload?.packing_suggestions ?? [],
@@ -4595,7 +4611,7 @@ Deno.serve(async (req) => {
               accommodation,
             };
             const pipelineResult: PipelineResult = {
-              trip_title: meta?.trip_title?.trim() || intent.destination,
+              trip_title: stripEmojis(meta?.trip_title) || intent.destination,
               trip_summary: meta?.trip_summary?.trim() ?? "",
               destinations: [destinationFinal],
               map_center: { lat: geo.lat, lng: geo.lng },
