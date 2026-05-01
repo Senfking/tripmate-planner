@@ -450,7 +450,7 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
               {/* Delete trip - owner only */}
               {isOwner && (
                 <DeleteTripDialog
-                  tripName={tripName}
+                  tripName={displayedTripName}
                   onConfirm={() => deleteTrip.mutate()}
                   isPending={deleteTrip.isPending}
                 />
