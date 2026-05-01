@@ -388,9 +388,26 @@ const More = () => {
   const [newEmail, setNewEmail] = useState("");
 
   const [showDeleteDrawer, setShowDeleteDrawer] = useState(false);
-  const [deleteEmail, setDeleteEmail] = useState("");
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deleteArmed, setDeleteArmed] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [soleOwnedTrips, setSoleOwnedTrips] = useState<string[] | null>(null);
+
+  // Reset two-step state when delete drawer closes
+  useEffect(() => {
+    if (!showDeleteDrawer) {
+      setDeleteStep(1);
+      setDeleteArmed(false);
+    }
+  }, [showDeleteDrawer]);
+
+  // Arm primary action briefly after each step
+  useEffect(() => {
+    if (!showDeleteDrawer) return;
+    setDeleteArmed(false);
+    const t = setTimeout(() => setDeleteArmed(true), 500);
+    return () => clearTimeout(t);
+  }, [deleteStep, showDeleteDrawer]);
 
   const [trips, setTrips] = useState<{ id: string; name: string; emoji: string | null; role: string }[]>([]);
   const [hasMoreTrips, setHasMoreTrips] = useState(false);
