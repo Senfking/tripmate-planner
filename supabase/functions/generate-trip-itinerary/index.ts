@@ -4270,18 +4270,23 @@ Deno.serve(async (req) => {
     // Circuit breaker: sums places_* cost_usd in the last 24h across the
     // whole project. If over PLACES_DAILY_BUDGET_USD, refuse new builds.
     // Protects against a runaway prompt/loop burning the daily budget.
+    // Admin bypass: skip rate limit entirely for the admin user so dev/testing
+    // isn't blocked by the per-user hourly cap.
+    const ADMIN_USER_ID = "1d5b21fe-f74c-429b-8d9d-938a4f295013";
     const rateLimit = Number.parseInt(Deno.env.get("RATE_LIMIT_TRIPS_PER_HOUR") ?? "", 10);
     const effectiveRateLimit = Number.isFinite(rateLimit) && rateLimit > 0 ? rateLimit : DEFAULT_RATE_LIMIT_PER_HOUR;
-    const recentCount = await userGenerationsInLastHour(svcClient, user.id);
-    if (recentCount >= effectiveRateLimit) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "rate_limited",
-          message: `Slow down — you've kicked off ${recentCount} generations in the last hour. Please try again in a few minutes.`,
-        },
-        429,
-      );
+    if (user.id !== ADMIN_USER_ID) {
+      const recentCount = await userGenerationsInLastHour(svcClient, user.id);
+      if (recentCount >= effectiveRateLimit) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "rate_limited",
+            message: `Slow down — you've kicked off ${recentCount} generations in the last hour. Please try again in a few minutes.`,
+          },
+          429,
+        );
+      }
     }
 
     const dailyBudget = Number.parseFloat(Deno.env.get("PLACES_DAILY_BUDGET_USD") ?? "");
