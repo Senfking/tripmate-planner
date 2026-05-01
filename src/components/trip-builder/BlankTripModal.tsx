@@ -49,6 +49,8 @@ export function BlankTripModal({ open, onOpenChange }: Props) {
         .from("trips")
         .insert({
           name: trimmedName,
+          trip_name: trimmedName,
+          itinerary_title: trimmedName,
           destination: trimmedDest || trimmedName,
           tentative_start_date: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null,
           tentative_end_date: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null,
