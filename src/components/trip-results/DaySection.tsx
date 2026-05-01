@@ -129,7 +129,9 @@ export function DaySection({
                 Day {day.day_number}
               </span>
               <span className="text-xs text-muted-foreground font-mono">
-                {dateStr} · {visibleActivities.length} {visibleActivities.length === 1 ? "Experience" : "Experiences"}
+                {dateStr} · {visibleActivities.length === 0
+                  ? "No activities scheduled"
+                  : `${visibleActivities.length} ${visibleActivities.length === 1 ? "Experience" : "Experiences"}`}
               </span>
               {planId && !isDraft && (
                 <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
@@ -186,31 +188,51 @@ export function DaySection({
 
             {/* Activities */}
             <div className="py-2">
-              {visibleActivities.map((activity, i) => (
-                <div key={`${day.date}-${i}`}>
-                  {i > 0 && (
-                    <TravelTimeConnector
-                      travelTime={activity.travel_time_from_previous || null}
-                      travelMode={activity.travel_mode_from_previous || null}
-                    />
-                  )}
-                  <ActivityCard
-                    activity={activity}
-                    day={day}
-                    index={i}
-                    planId={planId || null}
-                    isDraft={isDraft}
-                    dayIndex={dayIndex}
-                    activityIndex={i}
-                    onRequestChange={() => onRequestChange(day.date, i, activity)}
-                    onRequestDescribedChange={(desc) => onRequestDescribedChange(day.date, i, activity, desc)}
-                    onCustomPlaceSwap={(name) => onCustomPlaceSwap(day.date, i, name)}
-                    onRemove={() => onRemoveActivity(day.date, i, activity)}
-                    onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
-                    animDelay={i * 50}
-                  />
+              {visibleActivities.length === 0 ? (
+                // Theme-only empty state. Dedup at receipt time can occasionally
+                // strip a day to zero activities (the model picked place_ids
+                // already claimed by earlier days). Rather than emit a barren
+                // "0 Experiences" card, show a styled empty-state with theme +
+                // explicit CTA so the user knows the day is intentional, not
+                // broken. The Add activity button below remains the primary
+                // action.
+                <div className="mx-4 mb-2 px-4 py-6 rounded-xl border border-dashed border-muted-foreground/25 bg-muted/30 text-center">
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    No activities scheduled
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {day.theme
+                      ? `${day.theme} — add your own to fill in this day.`
+                      : "Add your own to fill in this day."}
+                  </p>
                 </div>
-              ))}
+              ) : (
+                visibleActivities.map((activity, i) => (
+                  <div key={`${day.date}-${i}`}>
+                    {i > 0 && (
+                      <TravelTimeConnector
+                        travelTime={activity.travel_time_from_previous || null}
+                        travelMode={activity.travel_mode_from_previous || null}
+                      />
+                    )}
+                    <ActivityCard
+                      activity={activity}
+                      day={day}
+                      index={i}
+                      planId={planId || null}
+                      isDraft={isDraft}
+                      dayIndex={dayIndex}
+                      activityIndex={i}
+                      onRequestChange={() => onRequestChange(day.date, i, activity)}
+                      onRequestDescribedChange={(desc) => onRequestDescribedChange(day.date, i, activity, desc)}
+                      onCustomPlaceSwap={(name) => onCustomPlaceSwap(day.date, i, name)}
+                      onRemove={() => onRemoveActivity(day.date, i, activity)}
+                      onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
+                      animDelay={i * 50}
+                    />
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Add activity */}
