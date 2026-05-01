@@ -204,6 +204,11 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
             <p className="text-2xl font-bold leading-tight text-white mt-0.5 line-clamp-2">
               {trip.name}
             </p>
+            {trip.itineraryTitle && trip.itineraryTitle !== trip.name && (
+              <p className="text-[12px] text-white/65 leading-tight mt-0.5 line-clamp-1 italic">
+                {trip.itineraryTitle}
+              </p>
+            )}
             <p className="text-sm text-white/70 mt-0.5">
               {trip.statusInfo.missingEnd
                 ? `Started ${format(parseISO(trip.tentative_start_date!), "MMM d, yyyy")} · end date?`
@@ -284,6 +289,11 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
           <p className="text-lg font-bold leading-tight text-white line-clamp-2">
             {trip.emoji || "✈️"} {trip.name}
           </p>
+          {trip.itineraryTitle && trip.itineraryTitle !== trip.name && (
+            <p className="text-[11px] text-white/60 leading-tight mt-0.5 line-clamp-1 italic">
+              {trip.itineraryTitle}
+            </p>
+          )}
           <p className="mt-0.5 text-sm text-white/70">
             {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
           </p>
