@@ -337,10 +337,12 @@ export default function TripHome() {
 
   const visibleMembers = members?.slice(0, 5) ?? [];
   const memberCount = members?.length ?? 0;
+  const primaryTripName = ((trip as any)?.trip_name as string | undefined) || trip.name;
+  const itineraryTitle = ((trip as any)?.itinerary_title as string | undefined) || null;
   const coverPhoto =
     coverSignedUrl ||
     resolvePhoto(
-      trip.name,
+      primaryTripName,
       routeStops ?? [],
       (trip as any)?.destination_image_url ?? null,
     );
