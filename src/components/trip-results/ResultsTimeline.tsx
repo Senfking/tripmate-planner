@@ -70,19 +70,28 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
     return (header?.getBoundingClientRect().height ?? 0) + 12;
   }, []);
 
-  const [scrolledPastHero, setScrolledPastHero] = useState(false);
+  const [topOffset, setTopOffset] = useState(96);
 
   useEffect(() => {
     if (!isDesktop) return;
     const scrollRoot = getScrollRoot();
-    const checkHero = () => {
-      // Hero is ~42vh; show timeline once user scrolls past most of it
-      const threshold = window.innerHeight * 0.35;
-      setScrolledPastHero(scrollRoot.scrollTop > threshold);
+    const computeOffset = () => {
+      const hero = document.querySelector<HTMLElement>("[data-results-hero='true']");
+      const minTop = 96;
+      if (!hero) {
+        setTopOffset(minTop);
+        return;
+      }
+      const heroRect = hero.getBoundingClientRect();
+      setTopOffset(Math.max(minTop, heroRect.bottom + 12));
     };
-    scrollRoot.addEventListener("scroll", checkHero, { passive: true });
-    checkHero();
-    return () => scrollRoot.removeEventListener("scroll", checkHero);
+    scrollRoot.addEventListener("scroll", computeOffset, { passive: true });
+    window.addEventListener("resize", computeOffset);
+    computeOffset();
+    return () => {
+      scrollRoot.removeEventListener("scroll", computeOffset);
+      window.removeEventListener("resize", computeOffset);
+    };
   }, [isDesktop, getScrollRoot]);
 
   useEffect(() => {
