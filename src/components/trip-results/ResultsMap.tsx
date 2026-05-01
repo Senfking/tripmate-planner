@@ -202,7 +202,11 @@ function MapController({
 
       if (points.length > 1) {
         map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
-          padding: [50, 50],
+          // Generous padding so all destinations are clearly visible with breathing room.
+          // Top padding accounts for the floating info card overlay on mobile.
+          paddingTopLeft: [60, 180],
+          paddingBottomRight: [60, 140],
+          maxZoom: 13,
           animate: true,
         });
       } else if (points.length === 1) {
@@ -229,7 +233,9 @@ function MapController({
       map.setView(points[0], 14, { animate: true });
     } else {
       map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
-        padding: [40, 40],
+        paddingTopLeft: [50, 180],
+        paddingBottomRight: [50, 140],
+        maxZoom: 14,
         animate: true,
       });
     }
@@ -329,9 +335,27 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
         />
       )}
 
+      <ActivityMarkers
+        activitiesForMap={activitiesForMap}
+        mode={mode}
+      />
+    </MapContainer>
+  );
+}
+
+/* ── Markers with click-to-center behavior ── */
+function ActivityMarkers({
+  activitiesForMap,
+  mode,
+}: {
+  activitiesForMap: (AIActivity & { _dayDate: string; _idx: number; _dayNumber: number })[];
+  mode: "overview" | "day";
+}) {
+  const map = useMap();
+
+  return (
+    <>
       {activitiesForMap.map((act) => {
-        // In day mode show just activity number (1, 2, 3...)
-        // In overview show D1.1, D1.2, D2.1 etc. so user knows day + order
         const pinLabel = mode === "day"
           ? String(act._idx + 1)
           : `D${act._dayNumber}.${act._idx + 1}`;
@@ -342,6 +366,17 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
             key={`${act._dayDate}-${act._idx}`}
             position={[act.latitude!, act.longitude!]}
             icon={createPinIcon(pinLabel, getCategoryColor(act.category))}
+            eventHandlers={{
+              click: () => {
+                // Center the marker, biasing upward so the popup (which opens above the pin)
+                // sits comfortably in view rather than getting clipped at the top.
+                const targetZoom = Math.max(map.getZoom(), 14);
+                const point = map.project([act.latitude!, act.longitude!], targetZoom);
+                // Shift down by ~140px so the popup floating above the pin is fully visible.
+                const adjusted = map.unproject([point.x, point.y - 140], targetZoom);
+                map.setView(adjusted, targetZoom, { animate: true });
+              },
+            }}
           >
             <Popup closeButton className="premium-map-popup" maxWidth={260} minWidth={240}>
               <PopupContent activity={act} dayLabel={dayLabel} />
@@ -349,6 +384,7 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
           </Marker>
         );
       })}
-    </MapContainer>
+    </>
   );
 }
+
