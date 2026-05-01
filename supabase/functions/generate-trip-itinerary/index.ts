@@ -1102,18 +1102,23 @@ function hasNightlifeSignal(intent: Intent): boolean {
   return /nightlife|party|club|bar\b|cocktail|lively|live music|rooftop/.test(haystack);
 }
 
+// Skeleton themes are FALLBACKS only. The ranker is now required to write a
+// specific, day-unique theme (see RANKER_DAY_SYSTEM_PROMPT). Middle days return
+// an empty string here so we never seed the LLM with a generic label it might
+// echo back. If the LLM also fails, dedupeDayThemes derives a theme from the
+// day's activities (neighborhood + cuisine) downstream.
 function themeForDay(opts: {
   isFirst: boolean;
   isLast: boolean;
   isRest: boolean;
   pace: Intent["pace"];
+  destination: string;
 }): string {
-  if (opts.isFirst) return "Arrival & settling in";
-  if (opts.isLast) return "Last highlights & departure";
+  const dest = opts.destination?.trim();
+  if (opts.isFirst) return dest ? `Arrival in ${dest}` : "Arrival & settling in";
+  if (opts.isLast) return dest ? `Last highlights & ${dest} farewell` : "Last highlights & departure";
   if (opts.isRest) return "Rest day — recharge";
-  if (opts.pace === "active") return "Full exploration";
-  if (opts.pace === "leisurely") return "Slow wandering";
-  return "Balanced exploration";
+  return "";
 }
 
 function buildSkeleton(
@@ -1207,7 +1212,7 @@ function buildSkeleton(
     days.push({
       date,
       day_number: d + 1,
-      theme: themeForDay({ isFirst, isLast, isRest, pace: intent.pace }),
+      theme: themeForDay({ isFirst, isLast, isRest, pace: intent.pace, destination: intent.destination }),
       slots,
     });
   }
@@ -2621,6 +2626,14 @@ JUNTO PICKS:
 EVENTS (may be empty):
 - The events list contains snippets from web search — dates often missing or wrong. Only slot an event when there's a nightlife slot for it AND the event genuinely fits the trip's vibes. When you do include an event, set is_event=true and place_id=null.
 
+DAY THEME — MANDATORY, MUST BE SPECIFIC:
+- The "theme" field is a 2–5 word label that summarises THIS day for the day picker. It is NOT a slot; it is the headline.
+- MUST be specific to THIS day's actual venues — name a neighborhood, landmark, cuisine, or activity type the user will actually do. Examples: "Old Town & coffee culture", "Harbor views & seafood", "Museums & quiet streets", "Markets & nightlife", "Coastal escape", "Speicherstadt & fish market", "Alfama fado night".
+- BANNED generic templates (do NOT emit any of these or close paraphrases): "Slow wandering", "Cultural exploration", "Full exploration", "Balanced exploration", "Free day", "Free time", "Exploration", "City highlights", "Sightseeing", "Day of leisure". If your draft theme is generic, rewrite it.
+- Bookend days (arrival / departure) get a slightly templated theme but STILL name the destination or a specific anchor. Good: "Arrival & first taste of Lisbon", "Hamburg farewell over harbor lunch". Bad: "Arrival & settling in", "Last highlights & departure".
+- The skeleton input may include an empty or placeholder theme — IGNORE IT and write your own based on the venues you picked.
+- Other days of this trip are being generated in parallel; you cannot see their themes. Pick the most distinctive feature of YOUR day so collisions are unlikely.
+
 OUTPUT: you MUST call the emit_day tool with the day's structured response. Do not include any text outside the tool call.`;
 
 const RANKER_METADATA_SYSTEM_PROMPT = `You are an editorial trip curator for Junto. You write the trip-level fields (title, summary, packing list) and pick the trip's accommodation. The per-day itinerary is being generated in parallel by separate calls — you do not see the chosen day activities. Lean on the user's parsed intent + the venue pool to write copy that fits the WHOLE trip arc.
@@ -2821,11 +2834,15 @@ function buildDayInstruction(
   accommodationPlaceId: string | null,
   avoidPlaceIds: string[],
 ): string {
+  // Intentionally do NOT pass day.theme. The skeleton's theme is a generic
+  // fallback ("" for middle days, "Arrival in X" / "X farewell" for bookends);
+  // showing it to the LLM would let it echo the placeholder. The system prompt
+  // tells the ranker to invent a specific 2–5 word theme from the venues it
+  // picks. Dedup + derive happens downstream if the LLM fails to comply.
   const slotPayload = {
     day: {
       day_number: day.day_number,
       date: day.date,
-      theme: day.theme,
       slots: day.slots.map((s, i) => ({
         slot_index: i,
         type: s.type,
@@ -3035,6 +3052,99 @@ interface RawRankerAccommodation {
   dietary_notes: string | null;
 }
 
+
+// ---------------------------------------------------------------------------
+// Day-theme post-processing — dedup duplicates and replace generic fallbacks.
+// Per-day calls run in parallel and cannot see each other's themes, so even
+// with a strict system prompt two days can land on the same label. Bookend
+// fallbacks ("Arrival in X", "X farewell") and the empty-string fallback for
+// middle days both flow through here too. We walk in day_number order so
+// day 1 always gets first claim on its theme, and later collisions are
+// rewritten using the day's own activity venues.
+// ---------------------------------------------------------------------------
+
+const GENERIC_THEME_PATTERNS: RegExp[] = [
+  /^slow wandering$/i,
+  /^cultural exploration$/i,
+  /^free (day|time)$/i,
+  /^(full |balanced )?exploration$/i,
+  /^rest day(\s|$).*/i,
+  /^city highlights$/i,
+  /^sightseeing$/i,
+  /^day of leisure$/i,
+  /^day \d+$/i,
+];
+
+function isGenericTheme(s: string | undefined | null): boolean {
+  if (!s) return true;
+  const t = s.trim();
+  if (!t) return true;
+  return GENERIC_THEME_PATTERNS.some((rx) => rx.test(t));
+}
+
+function normalizeTheme(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+const MEAL_CATEGORY_RX = /dinner|lunch|breakfast|brunch|food|cafe|coffee|restaurant|bistro|trattoria|bakery/i;
+
+function shortFoodLabel(meal: EnrichedActivity): string {
+  const haystack = `${meal.title} ${meal.dietary_notes ?? ""} ${meal.category}`.toLowerCase();
+  if (/seafood|fish|harbor|oyster/.test(haystack)) return "seafood";
+  if (/coffee|cafe|kaffee|espresso/.test(haystack)) return "coffee culture";
+  if (/wine|vineyard|cellar/.test(haystack)) return "wine";
+  if (/market|mercado|markt/.test(haystack)) return "market eats";
+  if (/bbq|grill|asado/.test(haystack)) return "grilled fare";
+  if (/ramen|sushi|izakaya/.test(haystack)) return "Japanese food";
+  if (/tapas|pintxos/.test(haystack)) return "tapas";
+  if (/pastry|bakery|patisserie/.test(haystack)) return "pastries";
+  return "local food";
+}
+
+// Build a deterministic theme from a day's activities. Tries each unique
+// neighborhood paired with a meal cuisine clue before falling back to an
+// activity title. Skips candidates already taken so duplicates don't recur.
+function deriveDayTheme(
+  activities: EnrichedActivity[],
+  dayNumber: number,
+  taken: Set<string>,
+): string {
+  const isMeal = (a: EnrichedActivity) => MEAL_CATEGORY_RX.test(a.category);
+  const neighborhoods: string[] = [];
+  for (const a of activities) {
+    if (a.neighborhood && !neighborhoods.includes(a.neighborhood)) {
+      neighborhoods.push(a.neighborhood);
+    }
+  }
+  const meal = activities.find((a) => isMeal(a) && a.title);
+  for (const n of neighborhoods) {
+    const cuisine = meal ? shortFoodLabel(meal) : null;
+    const candidate = cuisine ? `${n} & ${cuisine}` : `${n} highlights`;
+    if (!taken.has(normalizeTheme(candidate))) return candidate;
+  }
+  const firstNonMeal = activities.find((a) => !isMeal(a) && a.title);
+  if (firstNonMeal?.title) {
+    const words = firstNonMeal.title.split(/\s+/).slice(0, 3).join(" ");
+    const candidate = `${words} day`;
+    if (!taken.has(normalizeTheme(candidate))) return candidate;
+  }
+  return `Day ${dayNumber} highlights`;
+}
+
+// Mutates each day's theme in place. Resolves a single day at a time so it
+// works for both the streaming emit-as-you-go path and the batch path.
+function resolveDayTheme(day: RankedDay, taken: Set<string>): void {
+  const original = day.theme?.trim() ?? "";
+  let candidate = original;
+  if (isGenericTheme(candidate) || (candidate && taken.has(normalizeTheme(candidate)))) {
+    candidate = deriveDayTheme(day.activities, day.day_number, taken);
+  }
+  if (taken.has(normalizeTheme(candidate))) {
+    candidate = deriveDayTheme(day.activities, day.day_number, taken);
+  }
+  day.theme = candidate;
+  taken.add(normalizeTheme(candidate));
+}
 
 // ---------------------------------------------------------------------------
 // Parallel rank — N per-day calls + 1 metadata call, all in flight at once.
@@ -3252,6 +3362,7 @@ async function rankInParallel(
   // ---- Walk in skeleton order so trip-wide dedup is deterministic ----
   const seenIds = new Set<string>();
   const ranked_days: RankedDay[] = [];
+  const seenThemes = new Set<string>();
   settledDays.sort((a, b) => a.day.day_number - b.day.day_number);
 
   for (const settled of settledDays) {
@@ -3273,9 +3384,11 @@ async function rankInParallel(
       if (place) seenIds.add(place.id);
       activities.push(activity);
     }
-    ranked_days.push({
+    const rankedDay: RankedDay = {
       date: day.date, day_number: day.day_number, theme, activities,
-    });
+    };
+    resolveDayTheme(rankedDay, seenThemes);
+    ranked_days.push(rankedDay);
   }
 
   // ---- Accommodation ----
@@ -4312,6 +4425,7 @@ Deno.serve(async (req) => {
             const affEnv = { booking: bookingAid, viator: viatorMcid, gyg: gygPid };
             const ranked_days: RankedDay[] = [];
             const seenIds = new Set<string>();
+            const seenThemes = new Set<string>();
             const emittedDayNumbers = new Set<number>();
             let totalDropped = 0;
             // skeleton-only-fallback days, used in the post-loop drop-threshold
@@ -4350,6 +4464,12 @@ Deno.serve(async (req) => {
               const validated = validateDayActivitiesInline(activities, allPlacesById, { lat: geo.lat, lng: geo.lng });
               totalDropped += validated.dropped;
               const rankedDay: RankedDay = { date: day.date, day_number: day.day_number, theme, activities: validated.kept };
+              // Dedup theme against earlier-emitted days. Per-day calls run in
+              // parallel and can't see each other's themes, so two days may
+              // land on the same label. Day order is preserved by the await
+              // loop below, so day 1 always wins; day 2+ collisions get a
+              // theme derived from their own activity venues.
+              resolveDayTheme(rankedDay, seenThemes);
               ranked_days.push(rankedDay);
               emittedDayNumbers.add(day.day_number);
               send("day", rankedDay);
