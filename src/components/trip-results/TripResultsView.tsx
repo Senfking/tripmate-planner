@@ -234,15 +234,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           <button
             onClick={onClose}
             aria-label="Back"
-            className="h-10 w-10 inline-flex items-center justify-center rounded-full text-white shadow-md transition-transform active:scale-95"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:scale-95 hover:bg-black/40"
             style={{
-              background: "rgba(255,255,255,0.18)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.22)",
+              background: "rgba(0,0,0,0.3)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.2)",
             }}
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
 
           <div className="flex items-center gap-2">
@@ -256,43 +256,43 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 setMapState(isDesktop ? "partial" : "full");
               }}
               aria-label={mapState === "closed" ? "Show map" : "Hide map"}
-              className="h-10 w-10 inline-flex items-center justify-center rounded-full text-white shadow-md transition-transform active:scale-95"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:scale-95 hover:bg-black/40"
               style={{
-                background: mapState !== "closed" ? "rgba(13,148,136,0.55)" : "rgba(255,255,255,0.18)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.22)",
+                background: mapState !== "closed" ? "rgba(13,148,136,0.6)" : "rgba(0,0,0,0.3)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.2)",
               }}
             >
-              <MapIcon className="h-4.5 w-4.5" />
+              <MapIcon className="h-4 w-4" />
             </button>
             {onDashboard && (
               <button
                 onClick={onDashboard}
                 aria-label="Trip overview"
-                className="h-10 w-10 inline-flex items-center justify-center rounded-full text-white shadow-md transition-transform active:scale-95"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:scale-95 hover:bg-black/40"
                 style={{
-                  background: "rgba(255,255,255,0.18)",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  border: "1px solid rgba(255,255,255,0.22)",
+                  background: "rgba(0,0,0,0.3)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255,255,255,0.2)",
                 }}
               >
-                <LayoutDashboard className="h-4.5 w-4.5" />
+                <LayoutDashboard className="h-4 w-4" />
               </button>
             )}
             <button
               onClick={() => setEditTripOpen(true)}
               aria-label="Edit trip"
-              className="h-10 w-10 inline-flex items-center justify-center rounded-full text-white shadow-md transition-transform active:scale-95"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:scale-95 hover:bg-black/40"
               style={{
-                background: "rgba(255,255,255,0.18)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.22)",
+                background: "rgba(0,0,0,0.3)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.2)",
               }}
             >
-              <PenLine className="h-4.5 w-4.5" />
+              <PenLine className="h-4 w-4" />
             </button>
           </div>
         </div>
