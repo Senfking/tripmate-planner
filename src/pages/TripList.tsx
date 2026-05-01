@@ -21,7 +21,7 @@ import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
-import type { AITripResult } from "@/components/trip-results/useResultsState";
+
 import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 
 /* ─── Status logic ─── */
@@ -500,7 +500,9 @@ export default function TripList() {
   const [showBuilder, setShowBuilder] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [builderInitDest, setBuilderInitDest] = useState("");
-  const [draftToResume, setDraftToResume] = useState<{ planId: string; result: AITripResult } | null>(null);
+  // (PR #237) Drafts now live as trips with status='draft'; tapping a draft
+  // card navigates to /app/trips/:id where TripHome branches into the
+  // results-style draft view. No in-memory resume state needed anymore.
   const [referralDismissed, setReferralDismissed] = useState(
     () => localStorage.getItem("junto_referral_card_dismissed") === "true"
   );
@@ -586,8 +588,12 @@ export default function TripList() {
   const { data: trips, isLoading } = useQuery({
     queryKey: ["trips", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("trips").select("*");
+      const { data: rawTrips, error } = await supabase.from("trips").select("*");
       if (error) throw error;
+
+      // Drafts are surfaced in their own section below — exclude them from the
+      // main lists so we don't double-render them.
+      const data = (rawTrips ?? []).filter((t) => (t as any).status !== "draft");
 
       const tripIds = data.map((t) => t.id);
 
@@ -730,15 +736,14 @@ export default function TripList() {
     enabled: !!user,
   });
 
-  // ── Drafts query (ai_trip_plans with no trip_id) ──
+  // ── Drafts query (trips with status='draft' — RLS already restricts to creator) ──
   const { data: drafts } = useQuery({
-    queryKey: ["ai-drafts", user?.id],
+    queryKey: ["draft-trips", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_trip_plans" as any)
-        .select("id, result, created_at")
-        .is("trip_id", null)
-        .eq("created_by", user!.id)
+      const { data, error } = await (supabase
+        .from("trips") as any)
+        .select("id, name, trip_name, itinerary_title, destination, destination_image_url, cover_image_path, tentative_start_date, tentative_end_date, created_at")
+        .eq("status", "draft")
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -748,12 +753,15 @@ export default function TripList() {
   });
 
   const deleteDraftMutation = useMutation({
-    mutationFn: async (planId: string) => {
-      const { error } = await supabase.from("ai_trip_plans" as any).delete().eq("id", planId);
+    mutationFn: async (tripId: string) => {
+      // RLS on trips_delete restricts to admin/owner; the creator is auto-added
+      // as owner so this succeeds for the draft author.
+      const { error } = await supabase.from("trips").delete().eq("id", tripId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["draft-trips"] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
       toast.success("Draft deleted");
     },
     onError: () => toast.error("Failed to delete draft"),
@@ -803,19 +811,16 @@ export default function TripList() {
   }
 
   /* ── Standalone builder overlay ── */
-  if (showBuilder || draftToResume) {
+  if (showBuilder) {
     return (
       <StandaloneTripBuilder
         onClose={() => {
           setShowBuilder(false);
-          setDraftToResume(null);
           setBuilderInitDest("");
-          queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+          queryClient.invalidateQueries({ queryKey: ["draft-trips"] });
           queryClient.invalidateQueries({ queryKey: ["trips"] });
         }}
         initialDestination={builderInitDest || undefined}
-        draftPlanId={draftToResume?.planId}
-        draftResult={draftToResume?.result}
       />
     );
   }
@@ -1013,22 +1018,24 @@ export default function TripList() {
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide pl-4 md:pl-[max(2rem,calc((100vw-900px)/2+2rem))]">
             {drafts.map((draft: any) => {
-              const result = draft.result as AITripResult;
-              const destName = result?.destinations?.[0]?.name || "Draft trip";
-              const actCount = result?.total_activities || result?.destinations?.reduce((sum: number, d: any) => sum + (d.days?.reduce((ds: number, day: any) => ds + (day.activities?.length || 0), 0) || 0), 0) || 0;
-              const startDate = result?.destinations?.[0]?.start_date;
-              const endDate = result?.destinations?.[result.destinations.length - 1]?.end_date;
+              const draftName = (draft.trip_name as string | null) || (draft.name as string | null) || (draft.itinerary_title as string | null) || (draft.destination as string | null) || "Draft trip";
+              const startDate = draft.tentative_start_date as string | null;
+              const endDate = draft.tentative_end_date as string | null;
               let dateLabel = "";
               try {
                 if (startDate && endDate) dateLabel = `${format(parseISO(startDate), "MMM d")} – ${format(parseISO(endDate), "MMM d")}`;
                 else if (startDate) dateLabel = format(parseISO(startDate), "MMM d, yyyy");
               } catch {}
-              const photoUrl = resolvePhoto(destName, []);
+              const photoUrl = resolvePhoto(
+                draftName,
+                draft.destination ? [draft.destination] : [],
+                (draft.destination_image_url as string | null) ?? null,
+              );
 
               return (
-                <button
+                <Link
                   key={draft.id}
-                  onClick={() => setDraftToResume({ planId: draft.id, result })}
+                  to={`/app/trips/${draft.id}`}
                   className="group relative shrink-0 w-[220px] h-[120px] rounded-2xl overflow-hidden shadow-md text-left active:scale-[0.98] transition-transform"
                 >
                   <img
@@ -1055,11 +1062,13 @@ export default function TripList() {
                     role="button"
                     tabIndex={0}
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       deleteDraftMutation.mutate(draft.id);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
                         e.stopPropagation();
                         deleteDraftMutation.mutate(draft.id);
                       }
@@ -1072,17 +1081,17 @@ export default function TripList() {
 
                   {/* Bottom content */}
                   <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
-                    <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">{destName}</p>
+                    <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">{draftName}</p>
                     <div className="flex items-center justify-between mt-0.5">
                       <p className="text-[11px] text-white/75">
-                        {dateLabel || `${actCount} ${actCount === 1 ? "activity" : "activities"}`}
+                        {dateLabel || "Tap to continue"}
                       </p>
                       <span className="text-[11px] font-semibold text-white/90 flex items-center gap-0.5">
                         Continue <ChevronRight className="h-3 w-3" />
                       </span>
                     </div>
                   </div>
-                </button>
+                </Link>
               );
             })}
           </div>

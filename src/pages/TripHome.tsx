@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil, Share2, Settings, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Camera, ImageOff, Move, Upload, Pencil, Share2, Settings, Calendar, Clock, Sparkles } from "lucide-react";
 import { CoverCropOverlay } from "@/components/trip/CoverCropOverlay";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ShareInviteModal } from "@/components/ShareInviteModal";
@@ -27,6 +27,10 @@ import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { expectAffectedRows } from "@/lib/safeMutate";
 import { cn } from "@/lib/utils";
+import { TripResultsView } from "@/components/trip-results/TripResultsView";
+import type { AITripResult } from "@/components/trip-results/useResultsState";
+import { NameTripModal } from "@/components/trip-builder/NameTripModal";
+import { stripEmoji } from "@/lib/stripEmoji";
 
 function getInitial(name: string | null | undefined) {
   return (name || "?").charAt(0).toUpperCase();
@@ -304,6 +308,46 @@ export default function TripHome() {
   }, []);
 
   const isAdmin = myRole === "owner" || myRole === "admin";
+  const isDraft = (trip as any)?.status === "draft";
+
+  // ─── Draft handling (PR #236/#237) ───
+  // When status='draft', day data lives in ai_trip_plans.result (jsonb), not
+  // in any relational table. Fetch the most recent plan for this trip and
+  // render the existing TripResultsView. Promotion flips status to 'active'.
+  const { data: draftPlan, isLoading: draftPlanLoading } = useQuery({
+    queryKey: ["trip-draft-plan", tripId],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("ai_trip_plans") as any)
+        .select("id, result")
+        .eq("trip_id", tripId!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; result: AITripResult } | null;
+    },
+    enabled: !!tripId && !!user && isDraft,
+  });
+
+  const [promoteNameOpen, setPromoteNameOpen] = useState(false);
+  const promoteDraft = useMutation({
+    mutationFn: async (newTripName: string) => {
+      const { error } = await (supabase
+        .from("trips") as any)
+        .update({ status: "active", name: newTripName, trip_name: newTripName })
+        .eq("id", tripId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trips"] });
+      qc.invalidateQueries({ queryKey: ["draft-trips"] });
+      setPromoteNameOpen(false);
+      toast.success("Trip created!");
+    },
+    onError: (err: any) => toast.error(err?.message || "Failed to create trip"),
+  });
 
   if (isLoading) {
     return (
@@ -324,6 +368,71 @@ export default function TripHome() {
         <button onClick={() => navigate("/app/trips")} className="text-primary underline text-sm">
           Back to My Trips
         </button>
+      </div>
+    );
+  }
+
+  // ─── Draft view: render TripResultsView with promote CTA ───
+  if (isDraft) {
+    if (draftPlanLoading) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+    if (!draftPlan) {
+      // Edge case: status='draft' but no ai_trip_plans row (failed insert mid-flight).
+      return (
+        <div className="flex flex-col items-center justify-center h-screen text-center p-4 space-y-4">
+          <MapPin className="h-16 w-16 text-muted-foreground/50" />
+          <div>
+            <p className="text-xl font-semibold text-foreground">This draft is incomplete</p>
+            <p className="text-muted-foreground mt-1 max-w-sm">
+              We couldn't find the plan for this draft. Start a new one to keep planning.
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate("/app/trips/new")}
+            className="gap-2 text-white"
+            style={{ background: "#0D9488" }}
+          >
+            <Sparkles className="h-4 w-4" /> Back to trip builder
+          </Button>
+        </div>
+      );
+    }
+
+    const draftTitle = ((trip as any).itinerary_title as string | null)
+      || ((trip as any).trip_name as string | null)
+      || trip.name
+      || draftPlan.result.trip_title
+      || "Your trip";
+
+    return (
+      <div className="flex flex-col min-h-dvh bg-background">
+        <TripResultsView
+          tripId={trip.id}
+          planId={draftPlan.id}
+          result={draftPlan.result}
+          onClose={() => navigate("/app/trips")}
+          onRegenerate={() => {
+            const dest = draftPlan.result.destinations?.[0]?.name ?? "";
+            const qs = dest ? `?initialDestination=${encodeURIComponent(dest)}` : "";
+            navigate(`/app/trips/new${qs}`);
+          }}
+          standalone
+          onCreateTrip={() => setPromoteNameOpen(true)}
+          onSaveDraft={() => navigate("/app/trips")}
+          creatingTrip={promoteDraft.isPending}
+        />
+        <NameTripModal
+          open={promoteNameOpen}
+          onOpenChange={(o) => { if (!promoteDraft.isPending) setPromoteNameOpen(o); }}
+          defaultName={stripEmoji(draftTitle)}
+          submitting={promoteDraft.isPending}
+          onConfirm={(name) => promoteDraft.mutate(name)}
+        />
       </div>
     );
   }
