@@ -240,7 +240,53 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             </button>
           </div>
         </div>
+      </div>
 
+      {/* Hero destination image — full-bleed, matches StreamingGeneratingScreen
+        composition exactly so there's no visual jump between the streaming
+        and final review states. */}
+      {result.destination_image_url && (
+        <div
+          className="relative h-[42vh] min-h-[280px] w-full overflow-hidden"
+          style={revealStyle("hero")}
+        >
+          <img
+            src={result.destination_image_url}
+            alt={`${result.destinations[0]?.name ?? result.trip_title} cover`}
+            className="absolute inset-0 w-full h-full object-cover animate-fade-in"
+            loading="eager"
+          />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.6) 30%, transparent 60%)",
+            }}
+          />
+          <div className="absolute inset-x-0 bottom-0 p-5 lg:p-8 max-w-3xl mx-auto">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+              Your trip
+            </p>
+            <h1 className="text-3xl lg:text-4xl font-bold text-foreground">
+              {result.trip_title}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                <span className="truncate">
+                  {result.destinations.map((d) => d.name).join(" · ")}
+                </span>
+              </span>
+              <span className="font-mono text-xs">{dateRange}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={cn(
+        "max-w-[700px] mx-auto flex flex-col",
+        mapState === "partial" ? "lg:pl-9" : "lg:pl-[60px]"
+      )}>
         {/* Streaming reveal indicator */}
         {revealMode && (
           <StreamRevealIndicator
