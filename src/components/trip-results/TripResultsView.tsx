@@ -249,7 +249,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         legible regardless of the photo. */}
       {result.destination_image_url && (
         <div
-          className="relative h-[42vh] min-h-[280px] w-full overflow-hidden"
+          className="relative h-[32vh] min-h-[220px] lg:h-[38vh] w-full overflow-hidden"
           style={revealStyle("hero")}
         >
           <img
@@ -262,7 +262,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.4) 25%, transparent 55%)",
+                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.85) 12%, hsl(var(--background) / 0.55) 28%, hsl(var(--background) / 0.2) 50%, transparent 75%)",
             }}
           />
         </div>
@@ -673,7 +673,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {planId && !standalone && (
         <button
           onClick={() => setGroupActivityOpen(true)}
-          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground shadow-xl hover:bg-primary/90 hover:scale-105 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
+          className="fixed right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground shadow-xl hover:bg-primary/90 hover:scale-105 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 9rem)" }}
           title="Group activity"
         >
           <Users className="h-4 w-4" />
@@ -687,7 +688,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           onClick={() => toast.info("Create the trip to chat with your group", {
             description: "Save it as a trip and invite your travel buddies to start chatting.",
           })}
-          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-muted text-muted-foreground border border-border shadow-lg hover:bg-muted/80 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
+          className="fixed right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-muted text-muted-foreground border border-border shadow-lg hover:bg-muted/80 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 9rem)" }}
           title="Group chat unlocks after creating the trip"
         >
           <Users className="h-4 w-4 opacity-60" />
