@@ -1,46 +1,57 @@
-Three fixes scoped to the trip builder + a global typography tightening.
+## 1. Shrink placeholder text only
 
-## 1. Shrink input/textarea fonts globally
+The user means the gray sample text inside empty inputs/textareas — not the typed value. Tailwind exposes a `placeholder:` variant for this.
 
-The previous fix added a `sm` variant but left the default at 16px (`text-base` on mobile). Most forms still use the default, so the issue persists across the app (trip builder, expenses, bookings, comments, proposals, etc.).
+Add to both shadcn primitives:
 
-Change the **default** variant in `src/components/ui/textarea.tsx` and `src/components/ui/input.tsx` from `text-base md:text-sm` to `text-[14px]` throughout. Keep the `sm` variant at 12–13px for very dense modals.
+- `src/components/ui/textarea.tsx` base classes → add `placeholder:text-[12px] placeholder:leading-snug`
+- `src/components/ui/input.tsx` base classes → add `placeholder:text-[12px]`
 
-Trade-off: iOS Safari only auto-zooms when font-size is `<16px`, so dropping to 14px will trigger zoom-on-focus on iOS. Given the user has twice asked us to fix oversized inputs, accept this trade-off globally — it's the standard behaviour in most modern apps (Linear, Notion, Airbnb mobile web all use 14px inputs and accept the zoom).
+This shrinks the example text (e.g. "e.g. no tourist traps, no early mornings…") without changing what the user types. The typed-value font size stays at the current 14px. The `sm` variant already overrides placeholder size and stays as-is.
 
-If we want to avoid the zoom, the alternative is keeping 16px and instead scaling the surrounding UI up — but that contradicts the established 11–13px label/utility scale.
+This applies app-wide automatically — every textarea and input across trip builder, expenses, bookings, comments, etc.
 
-Recommend: go with 14px default, accept iOS zoom. One coherent type scale.
+## 2. Move "describe your trip" into the hero
 
-## 2. Fix unreachable bottom of trip builder
+Today the hero is a small centered title + subtitle, and "Or describe your trip in your own words" is a buried collapsible at the bottom. Promote it.
 
-`PremiumTripInput.tsx` scroll container uses `pb-32` (128px), but the fixed bottom bar contains:
-- "Generate my trip" button (48px)
-- Optional helper text
-- "Start with a blank trip" link
-- Top/bottom padding + safe-area inset
+New hero structure (replaces lines ~143-154):
 
-Total ≈ 150–180px on iPhone. The "Or describe your trip in your own words" disclosure gets clipped behind the bar.
+```text
+┌──────────────────────────────────────┐
+│   [Junto AI badge]                   │
+│                                      │
+│   Plan your trip                     │  (display heading)
+│   Tell us where, or describe your    │  (subtitle, slightly bigger)
+│   dream trip in your own words       │
+│                                      │
+│   ┌────────────────────────────────┐ │
+│   │ Describe your dream trip…      │ │  (free-text textarea, 3 rows)
+│   │ (e.g. "10 days in Japan with   │ │  inline, always visible
+│   │  my partner, food + temples,   │ │
+│   │  no early mornings")           │ │
+│   └────────────────────────────────┘ │
+│       Skip the form below if you do  │  (helper, when filled)
+└──────────────────────────────────────┘
+```
 
-Fix: bump the scroll container to `pb-48` (192px) and also reserve space for the safe-area inset by using `pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]`.
+Visual treatment:
+- Hero gets a soft gradient background (`bg-gradient-to-b from-primary/5 to-transparent`) + rounded card feel, so it reads as one cohesive block instead of bare text
+- "Plan your trip" title stays bold but slightly smaller to make room
+- The free-text textarea sits inside the hero, full width, with subtle border and warm focus ring
+- Below the hero, a small divider with text: "Or build it step by step ↓"
+- The required card (destination/dates) and quick picks follow as today
+- The old "Or describe your trip in your own words" collapsible at the bottom is **removed** (it's now in the hero)
+- The `freeText` state and `onGenerate` payload stay identical — only the UI moves
 
-## 3. Clarify "Tell us more" labelling
+When `freeText` has content, show the helper "We'll prioritize this over the chips below" right under the textarea.
 
-Currently:
-- Disclosure label: "Tell us more (optional)"
-- Inside, italic helper: "This is the question that makes the difference"
-- Textarea (then) label below it: "What DON'T you want? Any deal-breakers?"
+## 3. Unify the remaining optional headings
 
-The label sits *after* the textarea, which is backwards, and the disclosure trigger is vague.
-
-Fix:
-- Rename trigger from "Tell us more (optional)" → **"What DON'T you want? (optional)"**
-- Remove the redundant `<label>` that currently sits below the textarea
-- Keep the italic helper "This is the question that makes the difference" above the textarea
-- Apply the same clarity pass to the second disclosure: "Or describe your trip in your own words" stays — it's already clear
+Only one collapsible remains at the bottom now: "What DON'T you want? (optional)". Rename to **"Anything to avoid? (optional)"** — matches the conversational voice of the new hero copy. Trigger styling stays consistent with existing patterns.
 
 ## Files
 
-- `src/components/ui/textarea.tsx` — default variant → 14px
-- `src/components/ui/input.tsx` — default variant → 14px
-- `src/components/trip-builder/PremiumTripInput.tsx` — `pb-32` → `pb-48`, rename "Tell us more" disclosure, remove the misplaced label
+- `src/components/ui/textarea.tsx` — add `placeholder:text-[12px] placeholder:leading-snug` to base
+- `src/components/ui/input.tsx` — add `placeholder:text-[12px]` to base
+- `src/components/trip-builder/PremiumTripInput.tsx` — redesign hero with embedded free-text textarea + gradient background; remove the bottom free-text collapsible; rename remaining collapsible to "Anything to avoid?"
