@@ -372,6 +372,71 @@ export default function TripHome() {
     );
   }
 
+  // ─── Draft view: render TripResultsView with promote CTA ───
+  if (isDraft) {
+    if (draftPlanLoading) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+    if (!draftPlan) {
+      // Edge case: status='draft' but no ai_trip_plans row (failed insert mid-flight).
+      return (
+        <div className="flex flex-col items-center justify-center h-screen text-center p-4 space-y-4">
+          <MapPin className="h-16 w-16 text-muted-foreground/50" />
+          <div>
+            <p className="text-xl font-semibold text-foreground">This draft is incomplete</p>
+            <p className="text-muted-foreground mt-1 max-w-sm">
+              We couldn't find the plan for this draft. Start a new one to keep planning.
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate("/app/trips/new")}
+            className="gap-2 text-white"
+            style={{ background: "#0D9488" }}
+          >
+            <Sparkles className="h-4 w-4" /> Back to trip builder
+          </Button>
+        </div>
+      );
+    }
+
+    const draftTitle = ((trip as any).itinerary_title as string | null)
+      || ((trip as any).trip_name as string | null)
+      || trip.name
+      || draftPlan.result.trip_title
+      || "Your trip";
+
+    return (
+      <div className="flex flex-col min-h-dvh bg-background">
+        <TripResultsView
+          tripId={trip.id}
+          planId={draftPlan.id}
+          result={draftPlan.result}
+          onClose={() => navigate("/app/trips")}
+          onRegenerate={() => {
+            const dest = draftPlan.result.destinations?.[0]?.name ?? "";
+            const qs = dest ? `?initialDestination=${encodeURIComponent(dest)}` : "";
+            navigate(`/app/trips/new${qs}`);
+          }}
+          standalone
+          onCreateTrip={() => setPromoteNameOpen(true)}
+          onSaveDraft={() => navigate("/app/trips")}
+          creatingTrip={promoteDraft.isPending}
+        />
+        <NameTripModal
+          open={promoteNameOpen}
+          onOpenChange={(o) => { if (!promoteDraft.isPending) setPromoteNameOpen(o); }}
+          defaultName={stripEmoji(draftTitle)}
+          submitting={promoteDraft.isPending}
+          onConfirm={(name) => promoteDraft.mutate(name)}
+        />
+      </div>
+    );
+  }
+
   const formatDateRange = (start: string | null, end: string | null) => {
     if (!start && !end) return "Dates TBD";
     if (start && end) return `${format(new Date(start), "MMM d")} – ${format(new Date(end), "MMM d, yyyy")}`;
