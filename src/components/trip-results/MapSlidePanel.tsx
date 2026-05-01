@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Map as MapIcon, X, Maximize2, Minimize2, CalendarDays, MapPin, Sparkles } from "lucide-react";
+import { Map as MapIcon, X, Maximize2, Minimize2, CalendarDays, MapPin, Sparkles, ArrowLeft } from "lucide-react";
 import { ResultsMap } from "./ResultsMap";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -157,14 +157,25 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
       </div>
 
       <div
-        className="absolute inset-x-0 top-0 z-[1200] px-4 pb-4 pointer-events-none"
+        className="absolute inset-x-0 top-0 z-[1200] px-3 sm:px-4 pb-4 pointer-events-none"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}
       >
-        <div className="flex items-start gap-3">
-          <div className="pointer-events-auto bg-card/92 backdrop-blur-xl rounded-2xl border border-border shadow-2xl px-5 py-4 max-w-sm">
-            <h2 className="text-base font-bold text-foreground truncate">{result.trip_title}</h2>
+        {/* Mobile-first: back button row, then info card below */}
+        <div className="flex items-start gap-2 sm:gap-3">
+          {/* Mobile back/close button (left) */}
+          <button
+            onClick={() => onStateChange("closed")}
+            className="sm:hidden pointer-events-auto h-10 w-10 rounded-full bg-card/92 backdrop-blur-xl border border-border text-foreground shadow-lg hover:bg-accent transition-colors flex items-center justify-center shrink-0"
+            aria-label="Close map"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          {/* Info card — full width on mobile (minus buttons), constrained on desktop */}
+          <div className="pointer-events-auto bg-card/92 backdrop-blur-xl rounded-2xl border border-border shadow-2xl px-4 py-3 sm:px-5 sm:py-4 flex-1 min-w-0 sm:max-w-sm sm:flex-initial">
+            <h2 className="text-sm sm:text-base font-bold text-foreground truncate">{result.trip_title}</h2>
             <p className="text-[11px] text-muted-foreground font-mono mt-0.5">{dateRange}</p>
-            <div className="flex items-center gap-3 mt-2.5 flex-wrap">
+            <div className="flex items-center gap-3 mt-2 sm:mt-2.5 flex-wrap">
               <span className="inline-flex items-center gap-1 text-[10px] text-primary font-semibold">
                 <CalendarDays className="h-3 w-3" /> {dayCount} days
               </span>
@@ -177,9 +188,10 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
             </div>
           </div>
 
-          <div className="flex-1" />
+          <div className="hidden sm:block flex-1" />
 
-          <div className="pointer-events-auto flex items-center gap-2 shrink-0">
+          {/* Desktop controls (right) */}
+          <div className="hidden sm:flex pointer-events-auto items-center gap-2 shrink-0">
             {isDesktop && (
               <button
                 onClick={() => onStateChange("partial")}
