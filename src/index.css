@@ -661,3 +661,10 @@ html.dark, html.dark body, html.dark #root {
     padding-top: max(env(safe-area-inset-top, 60px), 60px) !important;
   }
 }
+
+/* Sonner snapshots custom toast height when it mounts and normally only
+ * re-measures when the desktop stack is hovered. Junto's rich toast expands
+ * in-place, so let that toast's wrapper size itself immediately with content. */
+[data-sonner-toast].junto-rich-toast {
+  height: auto !important;
+}
