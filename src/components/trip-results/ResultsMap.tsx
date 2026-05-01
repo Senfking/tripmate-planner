@@ -388,9 +388,3 @@ function ActivityMarkers({
   );
 }
 
-// Render fallback (kept so the original return structure stays valid)
-function _Unused() {
-  return null;
-    </MapContainer>
-  );
-}
