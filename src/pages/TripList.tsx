@@ -995,7 +995,7 @@ export default function TripList() {
                 {/* Bottom content */}
                 <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
                   <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">
-                    {trip.emoji ? `${trip.emoji} ` : ""}{trip.name}
+                    {trip.name}
                   </p>
                   <p className="text-[11px] text-white/75 mt-0.5">Dates TBD</p>
                 </div>
