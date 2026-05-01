@@ -14,10 +14,12 @@ interface Props {
   totalActivities: number;
   state: MapState;
   onStateChange: (state: MapState) => void;
+  activeDayIndex: number;
+  onActiveDayChange: (i: number) => void;
 }
 
-export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities, state, onStateChange }: Props) {
-  const [activeDayIndex, setActiveDayIndex] = useState(-1);
+export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities, state, onStateChange, activeDayIndex, onActiveDayChange }: Props) {
+  const setActiveDayIndex = onActiveDayChange;
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
   );
@@ -45,10 +47,6 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [state, onStateChange, isDesktop]);
-
-  useEffect(() => {
-    if (state === "closed") setActiveDayIndex(-1);
-  }, [state]);
 
   const dayCount = allDays.length;
 

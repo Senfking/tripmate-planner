@@ -81,6 +81,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const [costOpen, setCostOpen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
   const [mapState, setMapState] = useState<MapState>("closed");
+  const [mapActiveDayIndex, setMapActiveDayIndex] = useState(-1);
+
+  const openDayMap = (dayIndex: number) => {
+    setMapActiveDayIndex(dayIndex);
+    setMapState(typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches ? "partial" : "full");
+  };
   const [groupActivityOpen, setGroupActivityOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
   type CoordsMap = Map<string, { lat: number; lng: number }>;
@@ -647,6 +653,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     getLocalAdditions={state.getLocalAdditions}
                     getReplacedActivity={state.getReplacedActivity}
                     onCoordsRefined={handleCoordsRefined}
+                    onOpenDayMap={openDayMap}
                   />
                   </div>
                 ))}
@@ -778,7 +785,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         refinedCoords={coordsVersion >= 0 ? refinedCoords : refinedCoords}
         totalActivities={totalActivities}
         state={mapState}
-        onStateChange={setMapState}
+        onStateChange={(s) => {
+          setMapState(s);
+          if (s === "closed") setMapActiveDayIndex(-1);
+        }}
+        activeDayIndex={mapActiveDayIndex}
+        onActiveDayChange={setMapActiveDayIndex}
       />
 
       {/* Overlays (outside flex layout) */}

@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronRight, ChevronDown, PenLine, Plus } from "lucide-react";
+import { ChevronRight, ChevronDown, PenLine, Plus, Map as MapIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ActivityCard } from "./ActivityCard";
 import { TravelTimeConnector } from "./TravelTimeConnector";
-import { DayMiniMap } from "./DayMiniMap";
 import { DayReactionSummary } from "./DayReactionSummary";
 import { TripDiscussion } from "./TripDiscussion";
 import { EditDaySheet } from "./EditDaySheet";
@@ -30,6 +29,7 @@ interface Props {
   getLocalAdditions: (dayDate: string) => AIActivity[];
   getReplacedActivity: (dayDate: string, activityIndex: number) => AIActivity | null;
   onCoordsRefined?: (dayDate: string, activityIndex: number, lat: number, lng: number) => void;
+  onOpenDayMap?: (dayIndex: number) => void;
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
@@ -73,6 +73,7 @@ export function DaySection({
   getLocalAdditions,
   getReplacedActivity,
   onCoordsRefined,
+  onOpenDayMap,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editDayOpen, setEditDayOpen] = useState(false);
@@ -152,8 +153,16 @@ export function DaySection({
         {/* Expanded content */}
         {open && (
           <div className="border-t border-border animate-fade-in">
-            {/* Edit day button */}
-            <div className="flex items-center justify-end px-3 py-2">
+            {/* Day toolbar */}
+            <div className="flex items-center justify-end gap-3 px-3 py-2">
+              {onOpenDayMap && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onOpenDayMap(dayIndex); }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                >
+                  <MapIcon className="h-3 w-3" /> View day on map
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); setEditDayOpen(true); }}
                 className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
@@ -223,15 +232,6 @@ export function DaySection({
               </button>
             )}
 
-            {/* Embedded mini-map */}
-            <div className="mx-4 mb-4">
-              <DayMiniMap
-                result={result}
-                allDays={allDays}
-                dayIndex={dayIndex}
-                refinedCoords={refinedCoords}
-              />
-            </div>
           </div>
         )}
       </div>
