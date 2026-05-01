@@ -130,7 +130,12 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
     mutationFn: async (name: string) => {
       const trimmed = name.trim();
       if (!trimmed) throw new Error("Trip name cannot be empty");
-      const { error } = await supabase.from("trips").update({ name: trimmed }).eq("id", tripId);
+      // Mirror the user-chosen name to the legacy `name` column during the
+      // PR #231 transition so unmigrated reads keep working.
+      const { error } = await supabase
+        .from("trips")
+        .update({ trip_name: trimmed, name: trimmed } as any)
+        .eq("id", tripId);
       if (error) throw error;
     },
     onSuccess: () => {
