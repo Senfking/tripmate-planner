@@ -60,6 +60,7 @@ function getTripStatus(
 type EnrichedTrip = {
   id: string;
   name: string;
+  itineraryTitle: string | null;
   emoji: string | null;
   tentative_start_date: string | null;
   tentative_end_date: string | null;
@@ -681,10 +682,14 @@ export default function TripList() {
 
       const enriched: EnrichedTrip[] = data.map((t) => {
         const statusInfo = getTripStatus(t.tentative_start_date, t.tentative_end_date);
+        // Prefer the user-chosen `trip_name` (PR #231); fall back to the
+        // legacy `name` so unmigrated rows still render.
+        const displayName = ((t as any).trip_name as string | null) || t.name;
+        const itineraryTitle = ((t as any).itinerary_title as string | null) || null;
         const photoUrl =
           signedUrlMap[t.id] ||
           resolvePhoto(
-            t.name,
+            displayName,
             stopDestsMap[t.id] ?? [],
             (t as any).destination_image_url ?? null,
           );
@@ -694,7 +699,8 @@ export default function TripList() {
         }));
         return {
           id: t.id,
-          name: t.name,
+          name: displayName,
+          itineraryTitle,
           emoji: t.emoji,
           tentative_start_date: t.tentative_start_date,
           tentative_end_date: t.tentative_end_date,
