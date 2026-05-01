@@ -308,6 +308,46 @@ export default function TripHome() {
   }, []);
 
   const isAdmin = myRole === "owner" || myRole === "admin";
+  const isDraft = (trip as any)?.status === "draft";
+
+  // ─── Draft handling (PR #236/#237) ───
+  // When status='draft', day data lives in ai_trip_plans.result (jsonb), not
+  // in any relational table. Fetch the most recent plan for this trip and
+  // render the existing TripResultsView. Promotion flips status to 'active'.
+  const { data: draftPlan, isLoading: draftPlanLoading } = useQuery({
+    queryKey: ["trip-draft-plan", tripId],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("ai_trip_plans") as any)
+        .select("id, result")
+        .eq("trip_id", tripId!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; result: AITripResult } | null;
+    },
+    enabled: !!tripId && !!user && isDraft,
+  });
+
+  const [promoteNameOpen, setPromoteNameOpen] = useState(false);
+  const promoteDraft = useMutation({
+    mutationFn: async (newTripName: string) => {
+      const { error } = await (supabase
+        .from("trips") as any)
+        .update({ status: "active", name: newTripName, trip_name: newTripName })
+        .eq("id", tripId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trip", tripId] });
+      qc.invalidateQueries({ queryKey: ["trips"] });
+      qc.invalidateQueries({ queryKey: ["draft-trips"] });
+      setPromoteNameOpen(false);
+      toast.success("Trip created!");
+    },
+    onError: (err: any) => toast.error(err?.message || "Failed to create trip"),
+  });
 
   if (isLoading) {
     return (
