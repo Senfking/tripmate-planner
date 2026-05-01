@@ -586,8 +586,12 @@ export default function TripList() {
   const { data: trips, isLoading } = useQuery({
     queryKey: ["trips", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("trips").select("*");
+      const { data: rawTrips, error } = await supabase.from("trips").select("*");
       if (error) throw error;
+
+      // Drafts are surfaced in their own section below — exclude them from the
+      // main lists so we don't double-render them.
+      const data = (rawTrips ?? []).filter((t) => (t as any).status !== "draft");
 
       const tripIds = data.map((t) => t.id);
 
