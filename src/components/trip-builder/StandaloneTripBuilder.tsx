@@ -78,7 +78,7 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
   };
 }
 
-type Phase = "input" | "confirming" | "generating" | "results";
+type Phase = "input" | "confirming" | "generating" | "opening" | "open-error" | "results";
 
 interface Props {
   onClose: () => void;
@@ -99,6 +99,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   const [blankModalOpen, setBlankModalOpen] = useState(false);
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
+  const [pendingNormalized, setPendingNormalized] = useState<AITripResult | null>(null);
   const streaming = useStreamingTripGeneration();
 
   const handleStartBlank = useCallback(() => {
