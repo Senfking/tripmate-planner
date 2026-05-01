@@ -202,7 +202,11 @@ function MapController({
 
       if (points.length > 1) {
         map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
-          padding: [50, 50],
+          // Generous padding so all destinations are clearly visible with breathing room.
+          // Top padding accounts for the floating info card overlay on mobile.
+          paddingTopLeft: [60, 180],
+          paddingBottomRight: [60, 140],
+          maxZoom: 13,
           animate: true,
         });
       } else if (points.length === 1) {
@@ -229,7 +233,9 @@ function MapController({
       map.setView(points[0], 14, { animate: true });
     } else {
       map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), {
-        padding: [40, 40],
+        paddingTopLeft: [50, 180],
+        paddingBottomRight: [50, 140],
+        maxZoom: 14,
         animate: true,
       });
     }
