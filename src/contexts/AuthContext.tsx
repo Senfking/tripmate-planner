@@ -22,7 +22,14 @@ type Profile = {
   subscription_tier: string;
   notification_preferences: NotificationPreferences;
   referral_code: string | null;
+  /**
+   * Legacy multi-nationality array. Kept for backward compatibility while the
+   * scalar columns roll out — read-only from this point. New writes go to
+   * `nationality_iso` / `secondary_nationality_iso` from PR #233.
+   */
   nationalities: string[];
+  nationality_iso: string | null;
+  secondary_nationality_iso: string | null;
 };
 
 interface AuthContextValue {
@@ -38,7 +45,7 @@ interface AuthContextValue {
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const PROFILE_SELECT = "id, display_name, avatar_url, default_currency, subscription_tier, notification_preferences, referral_code, nationalities";
+const PROFILE_SELECT = "id, display_name, avatar_url, default_currency, subscription_tier, notification_preferences, referral_code, nationalities, nationality_iso, secondary_nationality_iso";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -66,6 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           decisions_reminder: true,
         },
         nationalities: ((data as any).nationalities as string[] | null) ?? [],
+        nationality_iso: ((data as any).nationality_iso as string | null) ?? null,
+        secondary_nationality_iso: ((data as any).secondary_nationality_iso as string | null) ?? null,
       });
     }
   }, []);

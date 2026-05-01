@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CurrencyPicker } from "@/components/expenses/CurrencyPicker";
-import { NationalitiesPicker } from "@/components/profile/NationalitiesPicker";
+import { SingleNationalityPicker } from "@/components/profile/SingleNationalityPicker";
 import { countryName } from "@/lib/countries";
 import {
   Drawer,
@@ -381,7 +381,8 @@ const More = () => {
   const [showCurrency, setShowCurrency] = useState(false);
 
   const [showNationalities, setShowNationalities] = useState(false);
-  const [nationalitiesValue, setNationalitiesValue] = useState<string[]>([]);
+  const [primaryNatValue, setPrimaryNatValue] = useState<string | null>(null);
+  const [secondaryNatValue, setSecondaryNatValue] = useState<string | null>(null);
   const [savingNationalities, setSavingNationalities] = useState(false);
 
   const [showEmailDrawer, setShowEmailDrawer] = useState(false);
@@ -528,9 +529,20 @@ const More = () => {
   const handleSaveNationalities = async () => {
     if (!user) return;
     setSavingNationalities(true);
+    // PR #233 cutover: write to scalar columns. Keep `nationalities[]` mirrored
+    // (primary first, secondary second) so old surfaces still reading the
+    // legacy array don't go blank during the transition. The follow-up
+    // migration drops `nationalities[]` once every reader has cut over.
+    const mirror: string[] = [];
+    if (primaryNatValue) mirror.push(primaryNatValue);
+    if (secondaryNatValue) mirror.push(secondaryNatValue);
     const { error } = await supabase
       .from("profiles")
-      .update({ nationalities: nationalitiesValue })
+      .update({
+        nationality_iso: primaryNatValue,
+        secondary_nationality_iso: secondaryNatValue,
+        nationalities: mirror,
+      } as any)
       .eq("id", user.id);
     setSavingNationalities(false);
     if (error) {
@@ -935,15 +947,38 @@ const More = () => {
             </>
           )}
 
-          {/* Nationalities */}
+          {/* Nationalities (PR #233 — scalar primary + secondary) */}
           {showNationalities ? (
-            <div className="px-4 py-3 space-y-2">
-              <p className="text-xs text-muted-foreground">Nationalities</p>
-              <NationalitiesPicker
-                value={nationalitiesValue}
-                onChange={setNationalitiesValue}
-                disabled={savingNationalities}
-              />
+            <div className="px-4 py-3 space-y-3">
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-foreground">Primary nationality</p>
+                <SingleNationalityPicker
+                  value={primaryNatValue}
+                  onChange={(v) => {
+                    setPrimaryNatValue(v);
+                    // Clearing the primary auto-clears the secondary; you
+                    // can't have a second passport without a first.
+                    if (!v) setSecondaryNatValue(null);
+                  }}
+                  excludeCode={secondaryNatValue}
+                  disabled={savingNationalities}
+                  placeholder="Select primary nationality…"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-foreground">
+                  Second nationality{" "}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </p>
+                <SingleNationalityPicker
+                  value={secondaryNatValue}
+                  onChange={setSecondaryNatValue}
+                  excludeCode={primaryNatValue}
+                  disabled={savingNationalities || !primaryNatValue}
+                  placeholder={primaryNatValue ? "Add a second passport…" : "Set primary first"}
+                  clearable
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
                 Used for personalized travel and visa info. Not shared with other users.
               </p>
@@ -956,7 +991,8 @@ const More = () => {
                   variant="ghost"
                   onClick={() => {
                     setShowNationalities(false);
-                    setNationalitiesValue(profile?.nationalities ?? []);
+                    setPrimaryNatValue(profile?.nationality_iso ?? null);
+                    setSecondaryNatValue(profile?.secondary_nationality_iso ?? null);
                   }}
                   disabled={savingNationalities}
                 >
@@ -967,13 +1003,17 @@ const More = () => {
           ) : (
             <SettingRow
               icon={Globe}
-              label={
-                profile?.nationalities && profile.nationalities.length > 0
-                  ? `Nationalities: ${profile.nationalities.map((c) => countryName(c)).join(", ")}`
-                  : "Add nationalities (optional)"
-              }
+              label={(() => {
+                const parts: string[] = [];
+                if (profile?.nationality_iso) parts.push(countryName(profile.nationality_iso));
+                if (profile?.secondary_nationality_iso) parts.push(countryName(profile.secondary_nationality_iso));
+                return parts.length > 0
+                  ? `Nationalities: ${parts.join(", ")}`
+                  : "Add nationalities (optional)";
+              })()}
               onClick={() => {
-                setNationalitiesValue(profile?.nationalities ?? []);
+                setPrimaryNatValue(profile?.nationality_iso ?? null);
+                setSecondaryNatValue(profile?.secondary_nationality_iso ?? null);
                 setShowNationalities(true);
               }}
             />
