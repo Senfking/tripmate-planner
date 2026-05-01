@@ -200,6 +200,6 @@ export function showSuccessToast(title: string, description?: string): void {
   toast.custom(
     (id) =>
       createElement(SuccessToastContent, { toastId: id, title, description }),
-    { duration: 4000 },
+    { duration: 4000, classNames: CUSTOM_TOAST_CLASSNAMES },
   );
 }
