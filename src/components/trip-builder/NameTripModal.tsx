@@ -145,7 +145,7 @@ export function NameTripModal({ open, onOpenChange, defaultName, submitting, onC
               Give your trip a short, recognizable name before saving it.
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[70vh]">{body}</div>
+          <div className="overflow-y-auto max-h-[70vh] px-1">{body}</div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </Dialog>
