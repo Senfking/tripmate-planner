@@ -73,6 +73,7 @@ export function DaySection({
   getLocalAdditions,
   getReplacedActivity,
   onCoordsRefined,
+  onOpenDayMap,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editDayOpen, setEditDayOpen] = useState(false);
