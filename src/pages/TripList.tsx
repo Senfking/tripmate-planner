@@ -21,7 +21,7 @@ import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
-import type { AITripResult } from "@/components/trip-results/useResultsState";
+
 import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 
 /* ─── Status logic ─── */
