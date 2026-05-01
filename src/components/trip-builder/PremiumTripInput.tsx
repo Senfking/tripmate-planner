@@ -139,18 +139,44 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]">
-      {/* ── Hero header ── */}
-      <div className="text-center pt-8 pb-6">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-semibold text-primary tracking-wider uppercase">Junto AI</span>
+      {/* ── Hero with embedded free-text ── */}
+      <div className="relative pt-8 pb-6 -mx-4 px-4 mb-5 bg-gradient-to-b from-primary/5 via-primary/[0.02] to-transparent">
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-semibold text-primary tracking-wider uppercase">Junto AI</span>
+          </div>
+          <h1 className="text-[28px] sm:text-3xl font-bold text-foreground tracking-tight leading-[1.15]">
+            Plan your trip
+          </h1>
+          <p className="text-muted-foreground text-sm mt-2 px-2">
+            Describe your dream trip — or fill in the form below
+          </p>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight leading-tight">
-          Plan your trip
-        </h1>
-        <p className="text-muted-foreground text-sm mt-2">
-          Tell us where you're going and we'll do the rest
-        </p>
+
+        <div className="rounded-2xl bg-card/80 backdrop-blur border border-border shadow-sm p-3">
+          <Textarea
+            value={freeText}
+            onChange={(e) => setFreeText(e.target.value)}
+            placeholder='e.g. "10 days in Japan with my partner — food, temples, no early mornings"'
+            rows={3}
+            className="rounded-xl bg-background border-border resize-none focus-visible:ring-primary/40 focus-visible:ring-offset-0"
+          />
+          {freeText.trim().length > 0 && (
+            <p className="text-[11px] text-primary/80 mt-2 px-1 flex items-center gap-1 animate-fade-in">
+              <Sparkles className="h-3 w-3" />
+              We'll prioritize this over the form below
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 mt-6 px-1">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+            Or build it step by step
+          </span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
       </div>
 
       {/* ── Required fields card ── */}
