@@ -119,7 +119,7 @@ export function NameTripModal({ open, onOpenChange, defaultName, submitting, onC
                 Give your trip a short, recognizable name before saving it.
               </DialogPrimitive.Description>
             </DrawerHeader>
-            <div className="px-4 pb-6">{body}</div>
+            <div className="px-5 pb-6">{body}</div>
           </DrawerPrimitive.Content>
         </DrawerPrimitive.Portal>
       </Drawer>
