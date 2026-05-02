@@ -114,14 +114,9 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
     enabled: !!tripId,
   });
 
-  // Trip passports drive whether we can ask the AI for entry requirements.
   // The dashboard card is happy with the user's nationality from either the
   // trip-level passport row OR their profile-level nationality_iso.
   const { data: passports } = useTripTravellerPassports(tripId);
-  const hasMyTripPassport = useMemo(
-    () => (passports ?? []).some((p) => p.user_id === userId),
-    [passports, userId],
-  );
 
   const destIso = trip?.destination_country_iso?.toUpperCase() ?? null;
   const destName = destIso ? countryName(destIso) : null;
