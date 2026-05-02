@@ -157,6 +157,21 @@ export default function TripHome() {
   });
 
   const [shareInviteOpen, setShareInviteOpen] = useState(false);
+
+  // Auto-open the invite modal when arriving from trip creation with
+  // ?invite=1 so users get prompted to bring friends along right after
+  // they finish setting up the trip. The param is stripped immediately so
+  // the prompt doesn't re-open on subsequent navigations.
+  useEffect(() => {
+    if (searchParams.get("invite") === "1") {
+      setShareInviteOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("invite");
+      const qs = next.toString();
+      navigate(`/app/trips/${tripId}${qs ? `?${qs}` : ""}`, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, tripId]);
   const [memberSheetOpen, setMemberSheetOpen] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [coverMenuOpen, setCoverMenuOpen] = useState(false);

@@ -65,7 +65,7 @@ export function BlankTripModal({ open, onOpenChange }: Props) {
       setName("");
       setDestination("");
       setDateRange(undefined);
-      navigate(`/app/trips/${trip.id}`);
+      navigate(`/app/trips/${trip.id}?invite=1`);
     } catch (err: any) {
       console.error("[BlankTripModal] create trip failed:", err);
       toast.error(err?.message || "Couldn't create your trip. Please try again.");

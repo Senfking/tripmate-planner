@@ -293,7 +293,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       trackEvent("trip_created_from_ai", { trip_id: trip.id, plan_id: savedPlanId });
       toast.success("Trip created!");
       setNameModalOpen(false);
-      navigate(`/app/trips/${trip.id}`, { replace: true });
+      navigate(`/app/trips/${trip.id}?invite=1`, { replace: true });
     } catch (err: any) {
       console.error("[StandaloneBuilder] create trip failed:", err);
       toast.error(err?.message || "Couldn't save your trip. Please try again.");
