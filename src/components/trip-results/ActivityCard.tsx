@@ -348,11 +348,28 @@ export function ActivityCard({
             >
               <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
             </button>
-            <span className="text-[11px] font-mono text-muted-foreground">
-              {activity.estimated_cost_per_person
-                ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}/person`
-                : "Free"}
-            </span>
+            {(() => {
+              const amount = activity.estimated_cost_per_person;
+              if (!amount) {
+                return <span className="text-[11px] font-mono text-muted-foreground">Free</span>;
+              }
+              const code = activity.currency || "USD";
+              if (costFormatter) {
+                const primary = costFormatter.primary(amount);
+                const secondary = costFormatter.secondary(amount);
+                return (
+                  <span className="flex flex-col items-end leading-tight">
+                    <span className="text-[11px] font-mono text-muted-foreground">{`${primary}/person`}</span>
+                    {secondary && (
+                      <span className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">{secondary}</span>
+                    )}
+                  </span>
+                );
+              }
+              return (
+                <span className="text-[11px] font-mono text-muted-foreground">{`~${code}${amount}/person`}</span>
+              );
+            })()}
 
             {/* Swap popover */}
             {swapMode === "menu" && (
