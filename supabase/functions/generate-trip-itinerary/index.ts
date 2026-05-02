@@ -5818,7 +5818,7 @@ Deno.serve(async (req) => {
       tripId: tripIdForClickref,
       checkin: startDate,
       checkout: endDate,
-                  cityHint: intent.destination,
+      cityHint: intent.destination,
     };
     for (const dest of ranked.destinations) {
       const decorate = (a: EnrichedActivity) => {
