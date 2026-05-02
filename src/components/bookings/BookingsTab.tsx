@@ -140,6 +140,21 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     openManualForm({ title: requirementName, type: "visa" });
   };
 
+  // If the URL points at #visa-entry-section (e.g. tapped from the dashboard
+  // "Entry & visa" card), scroll to it once the tab has rendered. Re-runs when
+  // loading flips so the anchor exists before we scroll.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#visa-entry-section") return;
+    if (query.isLoading) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById("visa-entry-section")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [query.isLoading]);
+
   const BOOKING_TYPES = [
     { value: "flight", label: "Flight" },
     { value: "hotel", label: "Hotel" },
