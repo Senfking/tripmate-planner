@@ -4312,11 +4312,11 @@ function rewriteCachedPayloadDates(
 }
 
 // Re-build Booking.com URLs on cached payloads so each cache hit gets:
-//   - the correct /searchresults.html path (older entries may have the broken
-//     /search.html path that returns 404 on Booking.com)
-//   - fresh checkin/checkout matching the current request's trip dates
+//   - the lenient /search.html path (older entries from PR #248 used the
+//     strict /searchresults.html path which often fails to resolve)
 //   - an Awin wrapper with this trip's clickref (so click → trip correlation
 //     works for replayed cached trips, not just freshly generated ones)
+//   - no checkin/checkout on the inner URL (strict dates break the resolver)
 // We extract the original `ss` query from the cached URL — for both legacy
 // raw Booking links and Awin-wrapped links (via the `ued` param) — and rebuild
 // from scratch. Activities with booking_partner !== "booking" are left alone.
