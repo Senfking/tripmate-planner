@@ -1786,6 +1786,10 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      delete_expense_line_items_and_claims: {
+        Args: { _expense_id: string }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
