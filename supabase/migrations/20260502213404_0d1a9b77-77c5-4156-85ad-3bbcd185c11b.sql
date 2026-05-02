@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_trip_plans_backup_pre_ss_cleanup ENABLE ROW LEVEL SECURITY;

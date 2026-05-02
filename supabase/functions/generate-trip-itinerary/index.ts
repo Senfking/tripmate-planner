@@ -3834,6 +3834,22 @@ interface AffiliateEnv {
   tripId: string | null;
   checkin: string | null;
   checkout: string | null;
+  /** Trip destination city — used to build clean Booking.com `ss=` queries
+   *  (hotel name + city) without picking up street/postal noise from
+   *  formatted_address. */
+  cityHint: string | null;
+}
+
+// Build a clean Booking.com `ss=` search string: "{hotel} {city}", but skip
+// the city if the hotel name already contains it (case-insensitive substring).
+// Falls back to just the hotel name when city is missing.
+function buildBookingSearchString(hotelName: string, cityHint: string | null): string {
+  const name = (hotelName ?? "").trim().replace(/\s+/g, " ");
+  const city = (cityHint ?? "").trim().replace(/\s+/g, " ");
+  if (!name) return city;
+  if (!city) return name;
+  if (name.toLowerCase().includes(city.toLowerCase())) return name;
+  return `${name} ${city}`;
 }
 
 function buildAffiliateUrl(
@@ -3856,7 +3872,11 @@ function buildAffiliateUrl(
 
   switch (partner) {
     case "booking": {
-      const dest = buildBookingDestinationUrl(nameWithCity);
+      // Booking's lenient resolver chokes on street numbers/postcodes from
+      // formatted_address. Build "{hotel} {city}" using the trip's destination
+      // (cityHint) instead — see buildBookingSearchString.
+      const searchQuery = buildBookingSearchString(name, env.cityHint);
+      const dest = buildBookingDestinationUrl(searchQuery);
       return {
         booking_url: wrapAwinBookingUrl(dest, env.tripId, {
           publisherId: env.awinPublisherId,
@@ -4328,7 +4348,12 @@ function rewriteCachedBookingUrls(
   if (!dest) return { rewritten: 0 };
   let rewritten = 0;
 
-  const rebuild = (existingUrl: string): string => {
+  const destName = typeof (dest as { name?: unknown }).name === "string"
+    ? (dest as { name: string }).name
+    : "";
+  const cityHint = env.cityHint ?? destName ?? null;
+
+  const rebuild = (existingUrl: string, activityTitle: string | null): string => {
     let bookingUrl = existingUrl;
     try {
       const parsed = new URL(existingUrl);
@@ -4339,14 +4364,20 @@ function rewriteCachedBookingUrls(
     } catch {
       // fall through with original string
     }
-    let searchQuery = "";
+    let existingSs = "";
     try {
       const inner = new URL(bookingUrl);
-      searchQuery = inner.searchParams.get("ss") ?? "";
+      existingSs = inner.searchParams.get("ss") ?? "";
     } catch {
       // unparseable — leave URL unchanged
       return existingUrl;
     }
+    // Prefer the activity title (clean hotel name) + city hint over the
+    // existing ss, which often contains street/postcode noise from older
+    // generations.
+    const hotelName = (activityTitle ?? "").trim() || existingSs;
+    if (!hotelName) return existingUrl;
+    const searchQuery = buildBookingSearchString(hotelName, cityHint);
     if (!searchQuery) return existingUrl;
     const fresh = buildBookingDestinationUrl(searchQuery);
     return wrapAwinBookingUrl(fresh, env.tripId, {
@@ -4360,7 +4391,8 @@ function rewriteCachedBookingUrls(
     if (activity.booking_partner !== "booking") return;
     const current = typeof activity.booking_url === "string" ? activity.booking_url : "";
     if (!current) return;
-    const next = rebuild(current);
+    const title = typeof activity.title === "string" ? activity.title : null;
+    const next = rebuild(current, title);
     if (next !== current) {
       activity.booking_url = next;
       rewritten++;
@@ -4879,6 +4911,7 @@ Deno.serve(async (req) => {
                   tripId: tripIdForClickref,
                   checkin: startDate,
                   checkout: endDate,
+                  cityHint: intent.destination,
                 };
                 const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
                 const eventsResult = await refreshCachedEvents(
@@ -5079,6 +5112,7 @@ Deno.serve(async (req) => {
               tripId: tripIdForClickref,
               checkin: startDate,
               checkout: endDate,
+              cityHint: intent.destination,
             };
             const ranked_days: RankedDay[] = [];
             const seenIds = new Set<string>();
@@ -5584,6 +5618,7 @@ Deno.serve(async (req) => {
             tripId: tripIdForClickref,
             checkin: startDate,
             checkout: endDate,
+            cityHint: intent.destination,
           };
           const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
           // Re-apply junto picks against the current request's intent — cached
@@ -5783,6 +5818,7 @@ Deno.serve(async (req) => {
       tripId: tripIdForClickref,
       checkin: startDate,
       checkout: endDate,
+      cityHint: intent.destination,
     };
     for (const dest of ranked.destinations) {
       const decorate = (a: EnrichedActivity) => {
