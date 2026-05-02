@@ -81,6 +81,20 @@ export function AccommodationCard({
   const [expanded, setExpanded] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const swapPopoverRef = useRef<HTMLDivElement>(null);
+
+  // Close swap popover on outside click
+  useEffect(() => {
+    if (!swapOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (swapPopoverRef.current && !swapPopoverRef.current.contains(e.target as Node)) {
+        setSwapOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [swapOpen]);
 
   // Only fetch from Google Places hook when we don't already have photo/rating
   // data from the backend (saves a round-trip on freshly built trips).
