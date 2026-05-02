@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTripTravellerPassports } from "@/hooks/useTripTravellerPassports";
@@ -113,16 +114,12 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
     return (
       <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
         Add your nationality to see personalized entry requirements.{" "}
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById("travellers-section");
-            el?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
+        <Link
+          to="/app/more"
           className="font-medium text-[#0D9488] hover:underline"
         >
-          Go to Who's traveling →
-        </button>
+          Open profile →
+        </Link>
       </div>
     );
   }
