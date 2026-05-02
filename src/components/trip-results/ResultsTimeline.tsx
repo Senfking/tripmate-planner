@@ -94,6 +94,19 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
     const nodeIds = nodes.map((n) => n.id);
 
+    const updateTopOffset = () => {
+      const hero = document.querySelector<HTMLElement>("[data-results-hero='true']");
+      if (!hero) {
+        setTopOffset(96);
+        return;
+      }
+      const rect = hero.getBoundingClientRect();
+      // Hero bottom (in viewport coords) + small breathing space, clamped to a
+      // sensible minimum so the rail never glues to the very top.
+      const next = Math.max(96, Math.round(rect.bottom + 16));
+      setTopOffset(next);
+    };
+
     const findTopmost = () => {
       if (isClickScrolling.current) return;
 
@@ -101,9 +114,6 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
       let bestId: string | null = null;
       let bestDistance = Infinity;
 
-      // Use viewport-relative coordinates — works whether document or an
-      // inner element is the scroller, since getBoundingClientRect is always
-      // relative to the viewport.
       for (const id of nodeIds) {
         const el = document.getElementById(id);
         if (!el) continue;
@@ -124,19 +134,21 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
       }
     };
 
-    // Listen on both window (document scroll) and the marked inner element
-    // (when map panel is open and inner scroll is active). One of them is the
-    // active scroller at any given time; the other is a no-op.
+    const onScrollOrResize = () => {
+      updateTopOffset();
+      findTopmost();
+    };
+
     const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
-    window.addEventListener("scroll", findTopmost, { passive: true });
-    marked?.addEventListener("scroll", findTopmost, { passive: true });
-    window.addEventListener("resize", findTopmost);
-    findTopmost();
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    marked?.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+    onScrollOrResize();
 
     return () => {
-      window.removeEventListener("scroll", findTopmost);
-      marked?.removeEventListener("scroll", findTopmost);
-      window.removeEventListener("resize", findTopmost);
+      window.removeEventListener("scroll", onScrollOrResize);
+      marked?.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
     };
   }, [nodes, isDesktop, getHeaderOffset]);
 
