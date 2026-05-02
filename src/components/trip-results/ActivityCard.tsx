@@ -186,7 +186,7 @@ export function ActivityCard({
       </div>
 
       {/* Summary row */}
-      <div className="flex items-start justify-between px-3 py-2 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+      <div className="flex items-start justify-between px-3 py-2 cursor-pointer gap-3" onClick={() => setExpanded((e) => !e)}>
         <div className="flex-1 min-w-0">
           <h4 className="text-[13px] font-semibold text-foreground leading-snug truncate">
             {activity.title}
@@ -206,8 +206,32 @@ export function ActivityCard({
             <span className="font-mono">{activity.duration_minutes}min</span>
             {activity.start_time && <span className="font-mono">{activity.start_time}</span>}
           </div>
-          {/* Collapsed-state booking CTA — surface affiliate link without requiring expand */}
+        </div>
+        <div className="flex flex-col items-end whitespace-nowrap mt-0.5 gap-1.5">
           {(() => {
+            const amount = activity.estimated_cost_per_person;
+            if (!amount) {
+              return <span className="text-[11px] font-mono font-medium text-foreground">Free</span>;
+            }
+            const code = activity.currency || "USD";
+            if (costFormatter) {
+              const primary = costFormatter.primary(amount);
+              const secondary = costFormatter.secondary(amount);
+              return (
+                <div className="flex flex-col items-end">
+                  <span className="text-[11px] font-mono font-medium text-foreground">{primary}</span>
+                  {secondary && (
+                    <span className="text-[9px] font-mono text-muted-foreground/70 mt-0.5">{secondary}</span>
+                  )}
+                </div>
+              );
+            }
+            return <span className="text-[11px] font-mono font-medium text-foreground">{`~${code}${amount}`}</span>;
+          })()}
+
+          {/* Collapsed-state booking CTA — right column for easier mobile tap.
+              Hidden when expanded; the in-expansion CTA takes over. */}
+          {!expanded && (() => {
             const gygEligible = isGetYourGuideEligible(activity);
             const partner = (activity as any).booking_partner as string | null | undefined;
             const showRealBooking =
@@ -219,7 +243,7 @@ export function ActivityCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm whitespace-nowrap"
                 >
                   Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
                 </a>
@@ -232,35 +256,13 @@ export function ActivityCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm whitespace-nowrap"
                 >
                   Book <ExternalLink className="h-2.5 w-2.5" />
                 </a>
               );
             }
             return null;
-          })()}
-        </div>
-        <div className="flex flex-col items-end whitespace-nowrap ml-3 mt-0.5">
-          {(() => {
-            const amount = activity.estimated_cost_per_person;
-            if (!amount) {
-              return <span className="text-[11px] font-mono font-medium text-foreground">Free</span>;
-            }
-            const code = activity.currency || "USD";
-            if (costFormatter) {
-              const primary = costFormatter.primary(amount);
-              const secondary = costFormatter.secondary(amount);
-              return (
-                <>
-                  <span className="text-[11px] font-mono font-medium text-foreground">{primary}</span>
-                  {secondary && (
-                    <span className="text-[9px] font-mono text-muted-foreground/70 mt-0.5">{secondary}</span>
-                  )}
-                </>
-              );
-            }
-            return <span className="text-[11px] font-mono font-medium text-foreground">{`~${code}${amount}`}</span>;
           })()}
         </div>
       </div>
