@@ -847,7 +847,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               </picture>
             </div>
             <div className="p-3">
-              <p className="font-semibold text-[14px] text-foreground">Bookings</p>
+              <p className="font-semibold text-[14px] text-foreground">Bookings & Docs</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">{bookingsSummary}</p>
             </div>
           </button>

@@ -140,6 +140,21 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
     openManualForm({ title: requirementName, type: "visa" });
   };
 
+  // If the URL points at #visa-entry-section (e.g. tapped from the dashboard
+  // "Entry & visa" card), scroll to it once the tab has rendered. Re-runs when
+  // loading flips so the anchor exists before we scroll.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#visa-entry-section") return;
+    if (query.isLoading) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById("visa-entry-section")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [query.isLoading]);
+
   const BOOKING_TYPES = [
     { value: "flight", label: "Flight" },
     { value: "hotel", label: "Hotel" },
@@ -423,7 +438,16 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   // Empty state — premium, AI-forward
   if (attachments.length === 0) {
     return (
-      <div className="px-1 pt-6 pb-10">
+      <div className="px-1 pt-6 pb-10 space-y-4">
+        {/* Entry & visa block — always visible so the dashboard "Entry & visa"
+            CTA actually lands on something useful, even before any uploads. */}
+        <div id="visa-entry-section">
+          <EntryRequirementsBlock
+            tripId={tripId}
+            onUploadForRequirement={openManualFormForRequirement}
+          />
+        </div>
+
         {/* Hero card */}
         <div className="relative overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6">
           {/* Soft glow */}
