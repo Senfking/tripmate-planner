@@ -325,69 +325,103 @@ function AllClearPanel({
 
 
   return (
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 shadow-sm dark:bg-emerald-950/20 dark:border-emerald-900">
-      <div className="flex items-start gap-2">
-        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-emerald-900 dark:text-emerald-200">
-            Entry requirements: All clear
-          </p>
-          <p className="mt-1 text-[12.5px] text-emerald-900/85 dark:text-emerald-200/80 leading-snug">
-            {possessive} doesn&apos;t require a visa{destPhrase}. No additional entry documents needed.
-          </p>
-          <p className="mt-1.5 text-[11.5px] text-emerald-900/70 dark:text-emerald-200/60 leading-snug">
-            Always verify with the destination&apos;s embassy before travel.
-          </p>
-          {hasDetails && (
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              aria-expanded={open}
-              className="mt-2 inline-flex items-center gap-1 text-[11.5px] font-medium text-emerald-800 hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-200"
-            >
-              <ChevronDown
-                className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
-              />
-              {open ? "Hide details" : "Show details"}
-            </button>
-          )}
-          {open && hasDetails && (
-            <div className="mt-2 space-y-1.5 border-t border-emerald-200/60 pt-2 dark:border-emerald-900/60">
-              {summary && (
-                <p className="text-[12px] text-emerald-900/80 dark:text-emerald-200/75 leading-snug">
-                  {summary}
-                </p>
-              )}
-              {passportValidity && (
-                <p className="text-[12px] text-emerald-900/80 dark:text-emerald-200/75 leading-snug">
-                  <span className="font-medium">Passport validity:</span> {passportValidity}
-                </p>
-              )}
-              {additionalNotes && additionalNotes.length > 0 && (
-                <ul className="space-y-0.5 text-[12px] text-emerald-900/80 dark:text-emerald-200/75 leading-snug list-disc pl-4">
-                  {additionalNotes.map((note, i) => (
-                    <li key={i}>{note}</li>
-                  ))}
-                </ul>
-              )}
-              {embassy && (
-                <a
-                  href={embassy}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-0.5 text-[12px] font-medium text-emerald-800 hover:underline dark:text-emerald-300"
-                >
-                  Verify on official site
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-              <p className="pt-1 text-[11px] text-emerald-900/60 dark:text-emerald-200/55 leading-snug">
-                {disclaimer}
-              </p>
-            </div>
-          )}
+    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50/80 to-emerald-50/30 shadow-sm overflow-hidden dark:from-emerald-950/30 dark:to-emerald-950/10 dark:border-emerald-900">
+      {/* Header row — acts as the collapse toggle when there are details */}
+      {hasDetails ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="w-full flex items-start gap-3 p-4 text-left hover:bg-emerald-100/40 dark:hover:bg-emerald-900/20 transition-colors"
+        >
+          <HeaderContent
+            possessive={possessive}
+            destPhrase={destPhrase}
+          />
+          <div
+            className={cn(
+              "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-semibold shadow-sm transition-colors",
+              "hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950"
+            )}
+          >
+            {open ? "Hide" : "Details"}
+            <ChevronDown
+              className={cn("h-3 w-3 transition-transform duration-200", open && "rotate-180")}
+            />
+          </div>
+        </button>
+      ) : (
+        <div className="p-4 flex items-start gap-3">
+          <HeaderContent possessive={possessive} destPhrase={destPhrase} />
         </div>
-      </div>
+      )}
+
+      {/* Expanded details */}
+      {open && hasDetails && (
+        <div className="px-4 pb-4 pt-0 animate-fade-in">
+          <div className="rounded-xl border border-emerald-200/70 bg-background/70 backdrop-blur-sm p-4 space-y-3 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+            {summary && (
+              <p className="text-[12.5px] text-foreground/85 leading-relaxed">
+                {summary}
+              </p>
+            )}
+            {passportValidity && (
+              <div className="flex items-start gap-2 rounded-lg bg-emerald-100/60 px-3 py-2 dark:bg-emerald-900/30">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-300 shrink-0 mt-0.5" />
+                <p className="text-[12px] text-emerald-900 dark:text-emerald-100 leading-snug">
+                  <span className="font-semibold">Passport validity: </span>
+                  <span className="font-normal">{passportValidity}</span>
+                </p>
+              </div>
+            )}
+            {additionalNotes && additionalNotes.length > 0 && (
+              <ul className="space-y-1.5">
+                {additionalNotes.map((note, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-[12px] text-foreground/80 leading-snug"
+                  >
+                    <span className="mt-1.5 h-1 w-1 rounded-full bg-emerald-600 dark:bg-emerald-400 shrink-0" />
+                    <span>{note}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {embassy && (
+              <a
+                href={embassy}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-emerald-700 hover:text-emerald-800 hover:underline dark:text-emerald-300 dark:hover:text-emerald-200"
+              >
+                Verify on official site
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            <p className="pt-2 border-t border-emerald-200/60 text-[10.5px] text-muted-foreground leading-snug dark:border-emerald-900/60">
+              {disclaimer}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function HeaderContent({ possessive, destPhrase }: { possessive: string; destPhrase: string }) {
+  return (
+    <>
+      <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm dark:bg-emerald-500 dark:text-emerald-950">
+        <CheckCircle2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-bold text-emerald-900 dark:text-emerald-100 leading-tight">
+          All clear — no visa needed
+        </p>
+        <p className="mt-1 text-[12px] text-emerald-900/80 dark:text-emerald-200/80 leading-snug">
+          {possessive} doesn&apos;t require a visa{destPhrase}.
+        </p>
+      </div>
+    </>
   );
 }
