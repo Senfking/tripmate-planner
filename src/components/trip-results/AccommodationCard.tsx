@@ -138,7 +138,10 @@ export function AccommodationCard({
   const descIsLong = (description?.length || 0) > 120;
 
   return (
-    <div className="mx-4 mb-4 rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+    <div
+      id={`section-stay-${(locationHint || name).replace(/\s+/g, "-")}`}
+      className="mx-4 mb-4 rounded-2xl border border-border overflow-hidden bg-card shadow-sm"
+    >
       {/* Photo */}
       <div
         className="w-full h-[160px] bg-muted relative cursor-pointer"
@@ -163,6 +166,18 @@ export function AccommodationCard({
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-bold text-white bg-black/50 backdrop-blur-sm">
             <Hotel className="h-2.5 w-2.5" /> Stay
           </span>
+        </div>
+        {/* Swap button — top right */}
+        <div className="absolute top-2 right-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toast.info("Hotel swap coming soon");
+            }}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
+          </button>
         </div>
       </div>
 
@@ -202,8 +217,9 @@ export function AccommodationCard({
             </div>
           </div>
 
-          {/* Prominent Booking CTA — pill button, always visible */}
-          {hasBooking && bookingUrlWithDates && (
+          {/* Prominent Booking CTA — only in collapsed state. When expanded,
+              the footer Book CTA takes over so we don't show two at once. */}
+          {!expanded && hasBooking && bookingUrlWithDates && (
             <a
               href={bookingUrlWithDates}
               target="_blank"
