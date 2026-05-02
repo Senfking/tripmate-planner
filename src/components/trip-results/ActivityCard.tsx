@@ -169,23 +169,133 @@ export function ActivityCard({
         <div className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-primary-foreground shadow-md bg-primary">
           {index + 1}
         </div>
-        {/* Swap button — top right, teal outline. Hidden when expanded;
-            the footer actions row exposes Swap there. */}
-        {!expanded && (
-          <div className="absolute top-2 right-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded(true);
-                setSwapMode(swapMode === "menu" ? null : "menu");
-                setSwapText("");
-              }}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
-            >
-              <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
-            </button>
-          </div>
-        )}
+        {/* Persistent action cluster — Delete + Swap. Always visible at the
+            same location regardless of expand state so CTAs don't jump. */}
+        <div className="absolute top-2 right-2 flex items-center gap-1.5" ref={swapRef}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            aria-label="Remove activity"
+            className="p-1.5 rounded-lg shadow-lg bg-card/90 backdrop-blur-sm text-muted-foreground hover:text-destructive border border-border hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSwapMode(swapMode === "menu" ? null : "menu");
+              setSwapText("");
+            }}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
+          </button>
+
+          {/* Swap popovers — anchored to the action cluster, opening downward */}
+          {swapMode === "menu" && (
+            <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-xl shadow-lg p-1.5 z-30 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={(e) => { e.stopPropagation(); onRequestChange(); setSwapMode(null); }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <div>
+                  <span className="font-medium text-foreground">Get Junto AI suggestions</span>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Auto-suggest similar experiences</p>
+                </div>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setSwapMode("describe"); }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
+              >
+                <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                <div>
+                  <span className="font-medium text-foreground">Describe what you want</span>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">"Something more casual…"</p>
+                </div>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setSwapMode("custom"); }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
+              >
+                <PenLine className="h-3.5 w-3.5 text-primary" />
+                <div>
+                  <span className="font-medium text-foreground">Choose your own</span>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Type a specific place name</p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {swapMode === "describe" && (
+            <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-lg p-3 z-30 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <p className="text-[11px] font-medium text-foreground mb-2">What are you looking for instead?</p>
+              <input
+                type="text"
+                autoFocus
+                value={swapText}
+                onChange={(e) => setSwapText(e.target.value)}
+                placeholder="e.g. a rooftop bar instead"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && swapText.trim()) handleDescribeSwap();
+                  if (e.key === "Escape") { setSwapMode(null); setSwapText(""); }
+                }}
+              />
+              <div className="flex justify-end mt-2 gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSwapMode(null); setSwapText(""); }}
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDescribeSwap(); }}
+                  disabled={!swapText.trim()}
+                  className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md"
+                >
+                  Find
+                </button>
+              </div>
+            </div>
+          )}
+
+          {swapMode === "custom" && (
+            <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-lg p-3 z-30 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <p className="text-[11px] font-medium text-foreground mb-2">
+                {swapLoading ? "Looking up place..." : "Enter the place name"}
+              </p>
+              <input
+                type="text"
+                autoFocus
+                value={swapText}
+                onChange={(e) => setSwapText(e.target.value)}
+                placeholder="e.g. Potato Head Beach Club"
+                disabled={swapLoading}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && swapText.trim()) handleCustomSwap();
+                  if (e.key === "Escape") { setSwapMode(null); setSwapText(""); }
+                }}
+              />
+              <div className="flex justify-end mt-2 gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); if (!swapLoading) { setSwapMode(null); setSwapText(""); } }}
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleCustomSwap(); }}
+                  disabled={!swapText.trim() || swapLoading}
+                  className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md disabled:opacity-50 inline-flex items-center gap-1"
+                >
+                  {swapLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {swapLoading ? "Searching..." : "Replace"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
 
@@ -233,9 +343,9 @@ export function ActivityCard({
             return <span className="text-[11px] font-mono font-medium text-foreground">{`~${code}${amount}`}</span>;
           })()}
 
-          {/* Collapsed-state booking CTA — right column for easier mobile tap.
-              Hidden when expanded; the in-expansion CTA takes over. */}
-          {!expanded && (() => {
+          {/* Persistent booking CTA — right column. Always visible regardless
+              of expand state so it doesn't jump around. */}
+          {(() => {
             const gygEligible = isGetYourGuideEligible(activity);
             const partner = (activity as any).booking_partner as string | null | undefined;
             const showRealBooking =
@@ -340,50 +450,20 @@ export function ActivityCard({
             </div>
           ) : null}
 
-          {/* Links */}
-          {(() => {
-            const gygEligible = isGetYourGuideEligible(activity);
-            // Hide the misleading "Book" link when booking_partner is google_maps
-            // (it just re-points to Maps). Also suppress real booking_url when GYG
-            // is eligible — GYG is the better commerce match for tours/attractions.
-            const partner = (activity as any).booking_partner as string | null | undefined;
-            const showRealBooking =
-              !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
-
-            return (
-              <div className="px-3.5 pb-2 flex flex-wrap items-center gap-3 text-[11px]">
-                {mapsLink && (
-                  <a
-                    href={mapsLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
-                  >
-                    View on Maps <ExternalLink className="h-2.5 w-2.5" />
-                  </a>
-                )}
-                {gygEligible ? (
-                  <a
-                    href={buildGetYourGuideUrl(activity.title, destinationName)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
-                  >
-                    Book on GetYourGuide <ExternalLink className="h-3 w-3" />
-                  </a>
-                ) : showRealBooking ? (
-                  <a
-                    href={activity.booking_url!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
-                  >
-                    Book <ExternalLink className="h-3 w-3" />
-                  </a>
-                ) : null}
-              </div>
-            );
-          })()}
+          {/* Secondary link — View on Maps. Booking CTA is persistent in the
+              summary row's right column, so we don't repeat it here. */}
+          {mapsLink && (
+            <div className="px-3.5 pb-2 flex flex-wrap items-center gap-3 text-[11px]">
+              <a
+                href={mapsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
+              >
+                View on Maps <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            </div>
+          )}
 
           {/* Reactions & Comments */}
           {planId && actKey && (
@@ -393,165 +473,10 @@ export function ActivityCard({
             </>
           )}
 
-          {/* Actions row */}
-          <div className="flex items-center justify-between px-3.5 py-2 border-t border-border bg-accent/20 relative" ref={swapRef}>
-            <button
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
-              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded-lg hover:bg-destructive/10"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSwapMode(swapMode === "menu" ? null : "menu");
-                setSwapText("");
-              }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-[#0D9488]/30 text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors"
-            >
-              <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
-            </button>
-            {(() => {
-              const amount = activity.estimated_cost_per_person;
-              if (!amount) {
-                return <span className="text-[11px] font-mono text-muted-foreground">Free</span>;
-              }
-              const code = activity.currency || "USD";
-              if (costFormatter) {
-                const primary = costFormatter.primary(amount);
-                const secondary = costFormatter.secondary(amount);
-                return (
-                  <span className="flex flex-col items-end leading-tight">
-                    <span className="text-[11px] font-mono text-muted-foreground">{`${primary}/person`}</span>
-                    {secondary && (
-                      <span className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">{secondary}</span>
-                    )}
-                  </span>
-                );
-              }
-              return (
-                <span className="text-[11px] font-mono text-muted-foreground">{`~${code}${amount}/person`}</span>
-              );
-            })()}
-
-            {/* Swap popover */}
-            {swapMode === "menu" && (
-              <div className="absolute left-2 bottom-full mb-1 w-56 bg-card border border-border rounded-xl shadow-lg p-1.5 z-20 animate-fade-in">
-                <button
-                  onClick={(e) => { e.stopPropagation(); onRequestChange(); setSwapMode(null); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <div>
-                    <span className="font-medium text-foreground">Get Junto AI suggestions</span>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Auto-suggest similar experiences</p>
-                  </div>
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSwapMode("describe"); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
-                >
-                  <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                  <div>
-                    <span className="font-medium text-foreground">Describe what you want</span>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">"Something more casual…"</p>
-                  </div>
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSwapMode("custom"); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
-                >
-                  <PenLine className="h-3.5 w-3.5 text-primary" />
-                  <div>
-                    <span className="font-medium text-foreground">Choose your own</span>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Type a specific place name</p>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            {/* Describe input */}
-            {swapMode === "describe" && (
-              <div className="absolute left-2 bottom-full mb-1 w-64 bg-card border border-border rounded-xl shadow-lg p-3 z-20 animate-fade-in">
-                <p className="text-[11px] font-medium text-foreground mb-2">What are you looking for instead?</p>
-                <input
-                  type="text"
-                  autoFocus
-                  value={swapText}
-                  onChange={(e) => setSwapText(e.target.value)}
-                  placeholder="e.g. a rooftop bar instead"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && swapText.trim()) {
-                      handleDescribeSwap();
-                    }
-                    if (e.key === "Escape") {
-                      setSwapMode(null);
-                      setSwapText("");
-                    }
-                  }}
-                />
-                <div className="flex justify-end mt-2 gap-2">
-                  <button
-                    onClick={() => { setSwapMode(null); setSwapText(""); }}
-                    className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => { handleDescribeSwap(); }}
-                    disabled={!swapText.trim()}
-                    className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md"
-                  >
-                    Find
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Custom place input */}
-            {swapMode === "custom" && (
-              <div className="absolute left-2 bottom-full mb-1 w-64 bg-card border border-border rounded-xl shadow-lg p-3 z-20 animate-fade-in">
-                <p className="text-[11px] font-medium text-foreground mb-2">
-                  {swapLoading ? "Looking up place..." : "Enter the place name"}
-                </p>
-                <input
-                  type="text"
-                  autoFocus
-                  value={swapText}
-                  onChange={(e) => setSwapText(e.target.value)}
-                  placeholder="e.g. Potato Head Beach Club"
-                  disabled={swapLoading}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && swapText.trim()) {
-                      handleCustomSwap();
-                    }
-                    if (e.key === "Escape") {
-                      setSwapMode(null);
-                      setSwapText("");
-                    }
-                  }}
-                />
-                <div className="flex justify-end mt-2 gap-2">
-                  <button
-                    onClick={() => { if (!swapLoading) { setSwapMode(null); setSwapText(""); } }}
-                    className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCustomSwap}
-                    disabled={!swapText.trim() || swapLoading}
-                    className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md disabled:opacity-50 inline-flex items-center gap-1"
-                  >
-                    {swapLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-                    {swapLoading ? "Searching..." : "Replace"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Actions row removed — Delete + Swap are persistent on the hero,
+              and Book is persistent in the summary's right column. Keeping
+              CTAs in fixed locations prevents them from jumping when the
+              user expands/collapses the card. */}
         </div>
       )}
     </div>

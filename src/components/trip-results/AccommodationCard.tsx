@@ -167,12 +167,16 @@ export function AccommodationCard({
             <Hotel className="h-2.5 w-2.5" /> Stay
           </span>
         </div>
-        {/* Swap button — top right */}
+        {/* Persistent Swap button — top right, always visible */}
         <div className="absolute top-2 right-2">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
-              toast.info("Hotel swap coming soon");
+              e.preventDefault();
+              toast("Hotel swap coming soon", {
+                description: "We're working on letting you swap stays. For now, click 'Book' to explore alternatives on Booking.com.",
+              });
             }}
             className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
           >
@@ -217,9 +221,9 @@ export function AccommodationCard({
             </div>
           </div>
 
-          {/* Prominent Booking CTA — only in collapsed state. When expanded,
-              the footer Book CTA takes over so we don't show two at once. */}
-          {!expanded && hasBooking && bookingUrlWithDates && (
+          {/* Persistent Booking CTA — always visible regardless of expand
+              state so it never jumps. */}
+          {hasBooking && bookingUrlWithDates && (
             <a
               href={bookingUrlWithDates}
               target="_blank"
@@ -297,9 +301,10 @@ export function AccommodationCard({
             </div>
           ) : null}
 
-          {/* Footer links */}
-          <div className="px-3.5 pb-3 pt-1 flex flex-wrap items-center gap-3 text-[11px]">
-            {googleMapsUrl && (
+          {/* Secondary link — Booking CTA stays in the persistent summary
+              right column, so we only show View on Maps here. */}
+          {googleMapsUrl && (
+            <div className="px-3.5 pb-3 pt-1 flex flex-wrap items-center gap-3 text-[11px]">
               <a
                 href={googleMapsUrl}
                 target="_blank"
@@ -309,19 +314,8 @@ export function AccommodationCard({
               >
                 View on Maps <ExternalLink className="h-2.5 w-2.5" />
               </a>
-            )}
-            {hasBooking && bookingUrlWithDates && (
-              <a
-                href={bookingUrlWithDates}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm ml-auto"
-              >
-                Book on {partnerLabel} <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
