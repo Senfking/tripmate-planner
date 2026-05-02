@@ -343,9 +343,9 @@ export function ActivityCard({
             return <span className="text-[11px] font-mono font-medium text-foreground">{`~${code}${amount}`}</span>;
           })()}
 
-          {/* Collapsed-state booking CTA — right column for easier mobile tap.
-              Hidden when expanded; the in-expansion CTA takes over. */}
-          {!expanded && (() => {
+          {/* Persistent booking CTA — right column. Always visible regardless
+              of expand state so it doesn't jump around. */}
+          {(() => {
             const gygEligible = isGetYourGuideEligible(activity);
             const partner = (activity as any).booking_partner as string | null | undefined;
             const showRealBooking =
