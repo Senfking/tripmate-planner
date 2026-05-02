@@ -124,10 +124,10 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
 
   const myMember = (members ?? []).find((m) => m.userId === userId);
   const myNatIso =
+    profileNatIso ??
     (passports ?? []).find((p) => p.user_id === userId && p.is_primary)?.nationality_iso?.toUpperCase() ??
     (passports ?? []).find((p) => p.user_id === userId)?.nationality_iso?.toUpperCase() ??
     myMember?.nationalityIso?.toUpperCase() ??
-    profileNatIso ??
     null;
   const myNatName = myNatIso ? countryName(myNatIso) : null;
 
