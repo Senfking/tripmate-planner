@@ -493,7 +493,7 @@ export default function TripHome() {
       <div
         ref={heroRef}
         className="relative w-full overflow-hidden"
-        style={{ height: 270 }}
+        style={{ height: "44vh", minHeight: 300, maxHeight: 420 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img

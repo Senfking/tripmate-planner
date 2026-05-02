@@ -1,49 +1,31 @@
-## Two changes to the results view
+## Problem
 
-### 1. Timeline clicks auto-expand the target section
+On the trip detail page, the hero photo no longer fills the visible hero space. The white content card below correctly has rounded top corners and an elevated shadow (good), but the photo above it looks short / gapped. The image source itself is fine — the container is just too small relative to the screen and the title overlay overlaps too aggressively, so the photo reads as cropped/letterboxed.
 
-Today, clicking a Day or Packing dot on the left timeline scrolls the page, but the target section stays collapsed — you land on a closed card and have to click again. The fix uses a lightweight DOM event so the timeline doesn't need to know about each section's state.
+### Root cause
 
-**`src/components/trip-results/ResultsTimeline.tsx`** — in the `scrollTo(id)` callback, before the scroll math runs, dispatch a window-level `CustomEvent("results:expand", { detail: { id } })`. No other timeline changes.
+In `src/pages/TripHome.tsx` the hero was changed to a fixed `height: 270` (pixels) while the overlapping title block uses `-mt-24` (96px) and the content card uses `-mt-4`. On taller phones, 270px ≈ 30% of viewport — much smaller than the previous `42vh / minHeight 280`. Combined with the heavy bottom dark gradient (`h-3/4`), only the top ~half of the container shows actual photo, so the user perceives "the image doesn't fill the entire space".
 
-**`src/components/trip-results/DaySection.tsx`** — add a `useEffect` that listens for `results:expand` on `window`. If `e.detail.id === \`section-day-${day.day_number}\`` and the day isn't open, set `open` to `true`. The existing `useEffect` on `[open]` already scrolls into view, so the timeline's own scroll + the day's auto-scroll both target the same anchor — that's fine, the second smooth-scroll just settles to the same spot.
+## Fix
 
-**`src/components/trip-results/TripResultsView.tsx`** — wrap the packing card the same way: add a `useEffect` keyed on `packingOpen` that listens for `results:expand` and opens the panel when `id === "section-packing"`.
+Edit `src/pages/TripHome.tsx` only.
 
-The Entry card (`section-entry`) is already always-expanded inline, so it doesn't need the listener.
+1. **Restore a viewport-relative hero height** so the photo gets meaningful real estate on all devices, while keeping the new boxed (non-rounded-bottom) style and the rounded/elevated white card below:
+   - Change the hero container from `style={{ height: 270 }}` to `style={{ height: "44vh", minHeight: 300, maxHeight: 420 }}`.
+   - `maxHeight` prevents the hero from dominating tablets/desktops.
 
-### 2. Make the Packing card a proper visual moment
+2. **Tone down the bottom gradient** so more of the photo is visible:
+   - Reduce the bottom gradient height from `h-3/4` to `h-1/2`.
+   - Soften the stops to `rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 30%, rgba(0,0,0,0.2) 65%, transparent 100%` (still legible for the title, less heavy).
 
-Right now packing is a plain dropdown of bullet-pointed strings. Replace it with a card-grid that turns each string into a chip with an inferred category icon — matches the visual weight of the day cards and Visa & entry block above it.
+3. **Keep title overlap consistent** with the taller hero:
+   - Leave the title block at `-mt-24` and the content card at `-mt-4` — these still produce the correct overlap with a 300–420px hero.
 
-**Categorization** — packing items come in as `string[]` with no metadata. Add a small `categorizePackingItem(text: string)` helper that lowercases the string and matches keyword groups, returning `{ icon, accent }`:
+No other files are touched. The white content card's rounded top + shadow stay exactly as they are.
 
-| Category | Keywords (any match) | Icon (lucide) | Accent |
-|---|---|---|---|
-| Clothing | shirt, pants, shorts, jacket, dress, sock, underwear, swimwear, swimsuit | `Shirt` | warm sand |
-| Footwear | shoes, sneakers, boots, sandals, footwear | `Footprints` | clay |
-| Weather | umbrella, rain, poncho, raincoat | `CloudRain` | ocean |
-| Sun protection | sunscreen, spf, hat, sunglasses, sun | `Sun` | amber |
-| Tech | charger, adapter, power bank, cable, phone, camera, headphone | `Plug` | slate |
-| Documents | passport, visa, ticket, id, document, insurance | `FileCheck` | emerald |
-| Toiletries | toothbrush, soap, shampoo, deodorant, toiletr, medication, medicine, first aid | `Sparkles` | blush |
-| Bag | backpack, daypack, bag, tote | `Backpack` | terracotta |
-| Default | (no match) | `Package` | muted primary |
+## Acceptance check
 
-All accents reference existing semantic tokens (`primary`, `accent`, `muted`) — no new colors. Icon stroke `1.75`, size `h-4 w-4`.
-
-**Layout** — replace the current `<button>` + `<ul>` with:
-
-- A header row: `Package` icon + "Packing essentials" title + `{count} items` chip on the right + chevron. Same hover/expand behavior, same `id="section-packing"`.
-- When expanded: a `grid grid-cols-1 sm:grid-cols-2` of pill-shaped cards. Each card: 40×40 rounded-xl icon tile (tinted background using the accent), then the item text on two lines max with `text-foreground` (not muted), then a subtle category caption underneath in `text-[11px] text-muted-foreground uppercase tracking-wide`.
-- Cards animate in with a 30ms stagger using inline `animationDelay` + the existing `animate-fade-in` utility, so opening the panel feels intentional.
-- Container card: `rounded-2xl border border-border bg-card p-4` with a subtle gradient-tinted top edge (`bg-gradient-to-b from-primary/5 to-transparent`) — matches the visual treatment of the Visa & entry block.
-
-**Files**
-
-- `src/components/trip-results/TripResultsView.tsx` — replace the packing block (current lines ~806-829) with the new component invocation; add the `results:expand` listener for packing.
-- `src/components/trip-results/PackingCard.tsx` — new file. Self-contained: takes `items: string[]`, `open`, `onToggle`. Includes the `categorizePackingItem` helper inline (small, only used here).
-- `src/components/trip-results/ResultsTimeline.tsx` — dispatch the expand event in `scrollTo`.
-- `src/components/trip-results/DaySection.tsx` — listen for the expand event, set `open` when matched.
-
-No backend, hook, type, or routing changes. Mobile and desktop render the same component; the grid collapses to a single column under `sm`.
+After the edit, on a 390×844 viewport the trip detail hero should:
+- Show the cover photo filling the full width and roughly the top 44% of the viewport.
+- Have the title sitting on the lower portion of the photo with a softer dark gradient (photo still visible behind it).
+- Have the rounded white card overlapping the bottom of the hero by a few pixels with the existing shadow — unchanged.
