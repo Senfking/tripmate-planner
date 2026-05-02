@@ -769,14 +769,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             <div className="h-full w-1/3 bg-primary/40 rounded-full" style={{ animation: "shimmer 1.5s ease-in-out infinite" }} />
           </div>
         )}
-        {expenses.length === 0 && isExpensesSuccess ? (
-          <div className="text-center py-8 space-y-1 px-4">
-            <p className="text-muted-foreground text-[14px]">No expenses yet</p>
-            <p className="text-xs text-muted-foreground">
-              Tap "Add Expense" to start tracking costs
-            </p>
-          </div>
-        ) : expenses.length === 0 && isLoading ? (
+        {expenses.length === 0 && isExpensesSuccess ? null : expenses.length === 0 && isLoading ? (
           /* Still fetching — show inline skeleton rows */
           <div>
             <div className="px-4 py-3 flex items-center justify-between">
