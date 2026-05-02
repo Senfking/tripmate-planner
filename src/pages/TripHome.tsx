@@ -596,14 +596,8 @@ export default function TripHome() {
           >
             {primaryTripName}
           </h1>
-          {itineraryTitle && itineraryTitle !== primaryTripName && (
-            <p
-              className="text-[14px] lg:text-[15px] text-white/80 leading-snug mt-1 italic"
-              style={{ textShadow: "0 1px 12px rgba(0,0,0,0.35)" }}
-            >
-              {itineraryTitle}
-            </p>
-          )}
+          {/* AI-generated itinerary subtitle removed — adds noise without value. */}
+
         </div>
       </div>
 
