@@ -323,6 +323,16 @@ export function ActivityCard({
                   Book <ExternalLink className="h-2.5 w-2.5" />
                 </a>
               )}
+              {isGetYourGuideEligible(activity) && (
+                <a
+                  href={buildGetYourGuideUrl(activity.title, destinationName)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#0D9488] hover:text-[#0D9488]/80 flex items-center gap-0.5 transition-colors font-medium"
+                >
+                  View on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              )}
             </div>
           )}
 
