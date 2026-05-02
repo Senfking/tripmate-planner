@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
-import { parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -230,8 +230,12 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
         trip_id: tripId,
         destination: answers.surpriseMe ? null : answers.destination,
         surprise_me: answers.surpriseMe,
-        start_date: answers.flexible ? null : (answers.dateRange?.from?.toISOString().split("T")[0] || null),
-        end_date: answers.flexible ? null : (answers.dateRange?.to?.toISOString().split("T")[0] || null),
+        start_date: answers.flexible || !answers.dateRange?.from
+          ? null
+          : format(answers.dateRange.from, "yyyy-MM-dd"),
+        end_date: answers.flexible || !answers.dateRange?.to
+          ? null
+          : format(answers.dateRange.to, "yyyy-MM-dd"),
         flexible: answers.flexible,
         duration_days: answers.flexible ? answers.flexibleDuration : null,
         budget_level: answers.budgetLevel,

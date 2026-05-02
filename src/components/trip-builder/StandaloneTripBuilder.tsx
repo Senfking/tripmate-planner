@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Loader2, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -115,8 +116,8 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     trip_id: null,
     destination: data.destination,
     surprise_me: false,
-    start_date: data.dateRange?.from?.toISOString().split("T")[0] || null,
-    end_date: data.dateRange?.to?.toISOString().split("T")[0] || null,
+    start_date: data.dateRange?.from ? format(data.dateRange.from, "yyyy-MM-dd") : null,
+    end_date: data.dateRange?.to ? format(data.dateRange.to, "yyyy-MM-dd") : null,
     flexible: false,
     duration_days: null,
     budget_level: data.budgetLevel || "mid-range",
