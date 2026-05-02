@@ -1,12 +1,25 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Plane, AlertCircle, Plus } from "lucide-react";
+import {
+  ChevronRight,
+  AlertCircle,
+  Plus,
+  CheckCircle2,
+  ShieldAlert,
+  FileText,
+  Loader2,
+} from "lucide-react";
 import { CountryFlag } from "@/components/ui/CountryFlag";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { countryName } from "@/lib/countries";
+import { useTripTravellerPassports } from "@/hooks/useTripTravellerPassports";
+import {
+  useEntryRequirements,
+  type EntryRequirementDoc,
+} from "@/hooks/useEntryRequirements";
 
 interface TravellersSectionProps {
   tripId: string;
@@ -24,16 +37,26 @@ function getInitial(name: string | null | undefined) {
   return (name || "?").charAt(0).toUpperCase();
 }
 
+// Documents that represent real user action — exclude "Passport" itself,
+// which the LLM always lists. Mirrors the same logic in EntryRequirementsBlock.
+function actionableDocs(docs: EntryRequirementDoc[]): EntryRequirementDoc[] {
+  return docs.filter(
+    (d) => d.mandatory && !/^passport(\s|$|:)/i.test(d.name.trim()),
+  );
+}
+
 /**
- * Compact "Entry & visa" card.
+ * Compact "Entry & visa" card on the trip dashboard.
  *
- * The previous version showed a full member list with redundant per-row
- * "Visa info" pills and a footer button that scrolled to a section that
- * doesn't exist on the dashboard (it lives in Bookings & Docs), making the
- * CTA look broken. Members are already represented elsewhere on the
- * dashboard (header chip + avatars), so this card focuses purely on the
- * one job nationality data is needed for: getting visa guidance for the
- * destination.
+ * Goes one step further than just linking to Bookings & Docs: it actually
+ * fetches the entry-requirements result for this trip + the current user's
+ * passport, so the dashboard can immediately reflect status:
+ *   - "All clear" (no visa, no docs)
+ *   - "Visa required" / N required documents
+ *   - "Add nationality" CTA when missing
+ *
+ * Tapping the card always deep-links to the visa block in Bookings & Docs
+ * for the full experience.
  */
 export function TravellersSection({ tripId, myRole: _myRole }: TravellersSectionProps) {
   const { user } = useAuth();
@@ -91,17 +114,71 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
     enabled: !!tripId,
   });
 
+  // Trip passports drive whether we can ask the AI for entry requirements.
+  // The dashboard card is happy with the user's nationality from either the
+  // trip-level passport row OR their profile-level nationality_iso.
+  const { data: passports } = useTripTravellerPassports(tripId);
+  const hasMyTripPassport = useMemo(
+    () => (passports ?? []).some((p) => p.user_id === userId),
+    [passports, userId],
+  );
+
   const destIso = trip?.destination_country_iso?.toUpperCase() ?? null;
   const destName = destIso ? countryName(destIso) : null;
 
   const myMember = (members ?? []).find((m) => m.userId === userId);
-  const myNatIso = myMember?.nationalityIso?.toUpperCase() ?? null;
+  const myNatIso =
+    (passports ?? []).find((p) => p.user_id === userId && p.is_primary)?.nationality_iso?.toUpperCase() ??
+    (passports ?? []).find((p) => p.user_id === userId)?.nationality_iso?.toUpperCase() ??
+    myMember?.nationalityIso?.toUpperCase() ??
+    null;
   const myNatName = myNatIso ? countryName(myNatIso) : null;
 
   const missingCount = useMemo(
     () => (members ?? []).filter((m) => !m.nationalityIso).length,
     [members],
   );
+
+  const hasMyNat = !!myNatIso;
+  const canFetchReqs = hasMyTripPassport && !!destIso;
+
+  const { data: entryData, isLoading: entryLoading } = useEntryRequirements({
+    tripId,
+    enabled: canFetchReqs,
+  });
+
+  // Derive a compact status the card can show directly, instead of the
+  // generic "View" pill that gives no information.
+  type Status =
+    | { kind: "loading" }
+    | { kind: "all-clear" }
+    | { kind: "visa-required"; docCount: number }
+    | { kind: "docs-required"; docCount: number }
+    | { kind: "unknown" };
+
+  const status: Status | null = useMemo(() => {
+    if (!hasMyNat) return null;
+    if (entryLoading) return { kind: "loading" };
+    if (!entryData) return { kind: "unknown" };
+
+    const docs = entryData.documents_needed ?? [];
+    const reqDocs = actionableDocs(docs);
+
+    const visaState = entryData.visa_required;
+    const needsForm = !!entryData.entry_form_required;
+
+    if (visaState === "yes" || needsForm) {
+      return { kind: "visa-required", docCount: reqDocs.length };
+    }
+    if (visaState === "no" && reqDocs.length === 0) {
+      return { kind: "all-clear" };
+    }
+    if (reqDocs.length > 0) {
+      return { kind: "docs-required", docCount: reqDocs.length };
+    }
+    if (visaState === "no") return { kind: "all-clear" };
+    return { kind: "unknown" };
+  }, [hasMyNat, entryLoading, entryData]);
 
   const goToVisa = () => {
     navigate(`/app/trips/${tripId}/bookings#visa-entry-section`);
@@ -114,8 +191,74 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
   // No destination resolved yet — render nothing rather than a useless card.
   if (!destIso) return null;
 
-  // Primary state: I have my nationality set → show route + CTA.
-  const hasMyNat = !!myNatIso;
+  const statusPill = (() => {
+    if (!status) {
+      return (
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#0D9488]/10 text-[#0D9488] px-2.5 py-1 text-[11px] font-semibold">
+          <Plus className="h-3 w-3" />
+          Add
+        </span>
+      );
+    }
+    switch (status.kind) {
+      case "loading":
+        return (
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground px-2.5 py-1 text-[11px] font-semibold">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Checking
+          </span>
+        );
+      case "all-clear":
+        return (
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-1 text-[11px] font-semibold dark:bg-emerald-950/40 dark:text-emerald-300">
+            <CheckCircle2 className="h-3 w-3" />
+            All clear
+          </span>
+        );
+      case "visa-required":
+        return (
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 text-[11px] font-semibold dark:bg-amber-950/40 dark:text-amber-300">
+            <ShieldAlert className="h-3 w-3" />
+            Visa needed
+          </span>
+        );
+      case "docs-required":
+        return (
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 text-[11px] font-semibold dark:bg-amber-950/40 dark:text-amber-300">
+            <FileText className="h-3 w-3" />
+            {status.docCount} doc{status.docCount === 1 ? "" : "s"}
+          </span>
+        );
+      case "unknown":
+      default:
+        return (
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground px-2.5 py-1 text-[11px] font-semibold">
+            View
+          </span>
+        );
+    }
+  })();
+
+  const subtitle = (() => {
+    if (!hasMyNat) return "Add it to your profile to get personalized visa guidance";
+    if (!status || status.kind === "loading")
+      return `Checking entry rules for ${myNatName} passport holders…`;
+    switch (status.kind) {
+      case "all-clear":
+        return `No visa needed for ${myNatName} passport holders`;
+      case "visa-required":
+        return status.docCount > 0
+          ? `Visa required · ${status.docCount} document${status.docCount === 1 ? "" : "s"} to prepare`
+          : `Visa required for ${myNatName} passport holders`;
+      case "docs-required":
+        return `${status.docCount} required document${status.docCount === 1 ? "" : "s"} to prepare`;
+      case "unknown":
+      default:
+        return `Visa & entry rules for ${myNatName} passport holders`;
+    }
+  })();
+
+  const title = hasMyNat ? `Entry to ${destName}` : "Set your nationality";
 
   return (
     <button
@@ -139,33 +282,40 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-[14px] text-foreground leading-tight">
-            {hasMyNat ? (
-              <>Entry to {destName}</>
-            ) : (
-              <>Set your nationality</>
-            )}
-          </p>
-          <p className="text-[12px] text-muted-foreground leading-snug mt-0.5">
-            {hasMyNat ? (
-              <>
-                Visa & entry rules for {myNatName} passport holders
-              </>
-            ) : (
-              <>Add it to your profile to get personalized visa guidance</>
-            )}
+          <p className="font-semibold text-[14px] text-foreground leading-tight">{title}</p>
+          <p className="text-[12px] text-muted-foreground leading-snug mt-0.5 truncate">
+            {subtitle}
           </p>
         </div>
 
-        <div className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#0D9488]/10 text-[#0D9488] px-2.5 py-1 text-[11px] font-semibold">
-          <Plane className="h-3 w-3" />
-          {hasMyNat ? "View" : "Add"}
-        </div>
+        {statusPill}
       </div>
 
+      {/* Required-docs preview — show up to 2 mandatory items inline so the
+          user sees exactly what they need without leaving the dashboard. */}
+      {status?.kind === "visa-required" || status?.kind === "docs-required" ? (
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
+          {actionableDocs(entryData?.documents_needed ?? [])
+            .slice(0, 2)
+            .map((doc) => (
+              <div
+                key={doc.name}
+                className="flex items-center gap-2 text-[12px] text-foreground/80"
+              >
+                <FileText className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                <span className="font-medium truncate">{doc.name}</span>
+              </div>
+            ))}
+          {(actionableDocs(entryData?.documents_needed ?? []).length ?? 0) > 2 && (
+            <p className="text-[11.5px] text-muted-foreground pl-5">
+              +{actionableDocs(entryData?.documents_needed ?? []).length - 2} more
+            </p>
+          )}
+        </div>
+      ) : null}
+
       {/* Co-traveller summary — only when there are other members and some
-          are missing nationality data. Encourages everyone to set their
-          profile so visa info covers the whole group. */}
+          are missing nationality data. */}
       {hasMyNat && (members?.length ?? 0) > 1 && missingCount > 0 && (
         <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[11.5px] text-muted-foreground">
           <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
