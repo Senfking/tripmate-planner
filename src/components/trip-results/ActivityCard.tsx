@@ -7,6 +7,7 @@ import { ActivityReactions } from "./ActivityReactions";
 import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
 import type { ActivityCostFormatter } from "./formatActivityCost";
+import { isGetYourGuideEligible, buildGetYourGuideUrl } from "@/lib/affiliateLinks";
 
 interface Props {
   activity: AIActivity;
@@ -16,6 +17,8 @@ interface Props {
   isDraft?: boolean;
   dayIndex?: number;
   activityIndex?: number;
+  /** Trip's primary destination — used to scope GetYourGuide search results. */
+  destinationName?: string | null;
   onRequestChange: () => void;
   onRequestDescribedChange: (description: string) => void;
   onCustomPlaceSwap: (placeName: string) => Promise<any>;
@@ -53,6 +56,7 @@ export function ActivityCard({
   isDraft = false,
   dayIndex,
   activityIndex,
+  destinationName,
   onRequestChange,
   onRequestDescribedChange,
   onCustomPlaceSwap,
