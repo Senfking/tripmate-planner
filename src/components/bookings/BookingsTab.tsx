@@ -262,7 +262,9 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
       try {
         const url = await getSignedUrl(a.file_path);
         window.open(url, "_blank");
-      } catch {}
+      } catch (error) {
+        console.warn("Couldn't open attachment", error);
+      }
     }
   };
 
