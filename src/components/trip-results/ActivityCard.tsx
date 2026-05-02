@@ -206,6 +206,40 @@ export function ActivityCard({
             <span className="font-mono">{activity.duration_minutes}min</span>
             {activity.start_time && <span className="font-mono">{activity.start_time}</span>}
           </div>
+          {/* Collapsed-state booking CTA — surface affiliate link without requiring expand */}
+          {(() => {
+            const gygEligible = isGetYourGuideEligible(activity);
+            const partner = (activity as any).booking_partner as string | null | undefined;
+            const showRealBooking =
+              !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
+            if (gygEligible) {
+              return (
+                <a
+                  href={buildGetYourGuideUrl(activity.title, destinationName)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
+                >
+                  Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              );
+            }
+            if (showRealBooking) {
+              return (
+                <a
+                  href={activity.booking_url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
+                >
+                  Book <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              );
+            }
+            return null;
+          })()}
         </div>
         <div className="flex flex-col items-end whitespace-nowrap ml-3 mt-0.5">
           {(() => {

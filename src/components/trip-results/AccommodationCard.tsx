@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Star, ExternalLink, Hotel, MapPin } from "lucide-react";
+import { Star, ExternalLink, Hotel, MapPin, Lightbulb } from "lucide-react";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -12,6 +12,8 @@ type PriceLevel =
 
 interface Props {
   name: string;
+  description?: string | null;
+  proTip?: string | null;
   photos?: string[];
   rating?: number | null;
   userRatingCount?: number | null;
@@ -44,8 +46,25 @@ const PARTNER_LABELS: Record<string, string> = {
   event_direct: "Official site",
 };
 
+function MiniStars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-px">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          className={`h-2.5 w-2.5 ${
+            i <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function AccommodationCard({
   name,
+  description,
+  proTip,
   photos: providedPhotos,
   rating: providedRating,
   userRatingCount: providedReviews,
@@ -59,18 +78,19 @@ export function AccommodationCard({
   checkInDate,
   checkOutDate,
 }: Props) {
+  const [expanded, setExpanded] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
   // Only fetch from Google Places hook when we don't already have photo/rating
   // data from the backend (saves a round-trip on freshly built trips).
   const hasBackendMedia = (providedPhotos?.length ?? 0) > 0;
-  const placeDetails = useGooglePlaceDetails(
-    hasBackendMedia ? "" : name,
-    locationHint || "",
-  );
-  const [imgError, setImgError] = useState(false);
+  const placeDetails = useGooglePlaceDetails(name, locationHint || "");
 
   const photos = hasBackendMedia ? providedPhotos! : placeDetails.photos;
   const rating = providedRating ?? placeDetails.rating;
   const reviewCount = providedReviews ?? placeDetails.totalRatings;
+  const reviews = placeDetails.reviews;
   const isLoading = !hasBackendMedia && placeDetails.isLoading;
   const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
 
@@ -104,9 +124,6 @@ export function AccommodationCard({
     }
   })();
 
-  const ctaHref = hasBooking ? bookingUrlWithDates : googleMapsUrl;
-  const ctaLabel = hasBooking ? `Book on ${partnerLabel}` : "View on Google Maps";
-
   // Resolve price display — never render currency without an amount.
   const priceLabel = (() => {
     if (priceRange && priceRange.trim()) return priceRange.trim();
@@ -117,10 +134,15 @@ export function AccommodationCard({
     return null;
   })();
 
+  const descIsLong = (description?.length || 0) > 120;
+
   return (
-    <div className="mx-4 mb-4 rounded-xl border border-border overflow-hidden bg-card">
+    <div className="mx-4 mb-4 rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
       {/* Photo */}
-      <div className="w-full h-[140px] bg-muted relative">
+      <div
+        className="w-full h-[160px] bg-muted relative cursor-pointer"
+        onClick={() => setExpanded((e) => !e)}
+      >
         {isLoading ? (
           <Skeleton className="w-full h-full rounded-none" />
         ) : heroSrc ? (
@@ -143,52 +165,148 @@ export function AccommodationCard({
         </div>
       </div>
 
-      {/* Details */}
-      <div className="p-3.5">
-        <h4 className="text-sm font-semibold text-foreground">{name}</h4>
-
-        {neighborhood && (
-          <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
-            <MapPin className="h-3 w-3" />
-            <span className="truncate">{neighborhood}</span>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          {rating != null && (
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              <span className="text-[11px] text-foreground font-mono font-medium">
-                {rating.toFixed(1)}
-              </span>
-              {reviewCount ? (
+      {/* Summary row */}
+      <div className="px-3.5 py-3 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-semibold text-foreground leading-snug">{name}</h4>
+            {neighborhood && (
+              <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                <span className="truncate">{neighborhood}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              {rating != null && (
+                <div className="flex items-center gap-1">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  <span className="text-[11px] text-foreground font-mono font-medium">
+                    {rating.toFixed(1)}
+                  </span>
+                  {reviewCount ? (
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      ({reviewCount.toLocaleString()})
+                    </span>
+                  ) : null}
+                </div>
+              )}
+              {priceLabel && rating != null && (
+                <span className="text-muted-foreground/30">·</span>
+              )}
+              {priceLabel && (
                 <span className="text-[11px] text-muted-foreground font-mono">
-                  ({reviewCount.toLocaleString()})
+                  {priceLabel}
                 </span>
-              ) : null}
+              )}
             </div>
-          )}
-          {priceLabel && rating != null && (
-            <span className="text-muted-foreground/30">·</span>
-          )}
-          {priceLabel && (
-            <span className="text-[11px] text-muted-foreground font-mono">
-              {priceLabel}
-            </span>
+          </div>
+
+          {/* Prominent Booking CTA — pill button, always visible */}
+          {hasBooking && bookingUrlWithDates && (
+            <a
+              href={bookingUrlWithDates}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
+            >
+              Book on {partnerLabel} <ExternalLink className="h-3 w-3" />
+            </a>
           )}
         </div>
-
-        {ctaHref && (
-          <a
-            href={ctaHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 mt-2.5 transition-colors font-medium"
-          >
-            {ctaLabel} <ExternalLink className="h-2.5 w-2.5" />
-          </a>
-        )}
       </div>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="border-t border-border animate-fade-in">
+          {description && (
+            <div className="px-3.5 pt-2.5 pb-2">
+              <p className={`text-xs text-muted-foreground leading-relaxed ${!descExpanded && descIsLong ? "line-clamp-3" : ""}`}>
+                {description}
+              </p>
+              {descIsLong && !descExpanded && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDescExpanded(true); }}
+                  className="text-[11px] text-primary font-medium mt-0.5 hover:underline"
+                >
+                  Read more
+                </button>
+              )}
+            </div>
+          )}
+
+          {proTip && (
+            <div className="mx-3.5 mb-2 border-l-2 border-primary/50 pl-2.5 py-1 bg-primary/5 rounded-r-lg">
+              <p className="text-[11px] text-muted-foreground flex items-start gap-1">
+                <Lightbulb className="h-3 w-3 text-primary shrink-0 mt-0.5" />
+                <span>
+                  <span className="font-semibold text-primary mr-1">Tip:</span>
+                  <span className="text-foreground/80">{proTip}</span>
+                </span>
+              </p>
+            </div>
+          )}
+
+          {/* Google Reviews */}
+          {isLoading ? (
+            <div className="px-3.5 pb-2.5 space-y-1.5">
+              <Skeleton className="h-14 w-full rounded-lg" />
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="px-3.5 pb-1 space-y-1.5">
+              {reviews.slice(0, 2).map((review, i) => (
+                <div key={i} className="flex gap-2 p-2 rounded-lg bg-accent/50 border border-border">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
+                    style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}
+                  >
+                    {review.author.charAt(0) || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-medium text-foreground">{review.author}</span>
+                      <MiniStars rating={review.rating} />
+                      {review.time && (
+                        <span className="text-[10px] text-muted-foreground">{review.time}</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                      {review.text}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <p className="text-[9px] text-muted-foreground/60 pb-1">Photos & reviews from Google</p>
+            </div>
+          ) : null}
+
+          {/* Footer links */}
+          <div className="px-3.5 pb-3 pt-1 flex flex-wrap items-center gap-3 text-[11px]">
+            {googleMapsUrl && (
+              <a
+                href={googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
+              >
+                View on Maps <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            )}
+            {hasBooking && bookingUrlWithDates && (
+              <a
+                href={bookingUrlWithDates}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm ml-auto"
+              >
+                Book on {partnerLabel} <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
