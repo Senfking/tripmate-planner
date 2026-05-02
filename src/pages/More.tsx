@@ -386,6 +386,26 @@ const More = () => {
   const [secondaryNatValue, setSecondaryNatValue] = useState<string | null>(null);
   const [savingNationalities, setSavingNationalities] = useState(false);
 
+  // Deep-link: /app/more?edit=nationality opens the nationality editor
+  // pre-filled with the current values and scrolls to it. Used by the
+  // "Add nationality" empty states in the Bookings & trip results pages.
+  useEffect(() => {
+    if (searchParams.get("edit") !== "nationality") return;
+    setPrimaryNatValue(profile?.nationality_iso ?? null);
+    setSecondaryNatValue(profile?.secondary_nationality_iso ?? null);
+    setShowNationalities(true);
+    // Strip the query param so it doesn't re-trigger / pollute history
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+    // Scroll the editor into view once it has rendered
+    requestAnimationFrame(() => {
+      document
+        .getElementById("nationality-editor")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [searchParams, profile?.nationality_iso, profile?.secondary_nationality_iso, setSearchParams]);
+
   const [showEmailDrawer, setShowEmailDrawer] = useState(false);
   const [newEmail, setNewEmail] = useState("");
 
