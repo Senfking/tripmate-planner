@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -43,9 +43,22 @@ interface Props {
   onDashboard?: () => void;
   revealMode?: boolean;
   onRevealComplete?: () => void;
+  /** When true, the result is mid-stream and incomplete. Day cards listed in
+   *  `streamingDayNumbers` render as skeleton placeholders; the budget panel,
+   *  trip summary, packing, and overview sections only render once their
+   *  source data is present. The "Create trip" CTA stays disabled until
+   *  streaming completes (caller passes streaming=false to release it). */
+  streaming?: boolean;
+  /** Set of day_number values that haven't streamed yet — render those days
+   *  as skeleton placeholders. Empty set / undefined means all days populated. */
+  streamingDayNumbers?: Set<number>;
+  /** Status text for the small loading pill shown at the top of the results
+   *  surface while streaming (e.g. "Composing your day-by-day itinerary…").
+   *  Hidden once streaming=false. */
+  streamingMessage?: string;
 }
 
-export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage }: Props) {
   const reveal = useStreamReveal(result, !!revealMode);
 
   // Notify parent when reveal completes
@@ -400,6 +413,21 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           />
         )}
 
+        {/* Live-streaming status pill — only while generation is mid-flight.
+            Disappears the instant `streaming` flips false (trip_complete fires
+            in StandaloneTripBuilder), so the transition to the final state is
+            just one element disappearing — no other layout change. */}
+        {streaming && (
+          <div className="px-4 pt-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-[#0D9488]/25 shadow-sm">
+              <Loader2 className="h-3.5 w-3.5 text-[#0D9488] animate-spin" />
+              <span className="text-xs font-medium text-foreground">
+                {streamingMessage || "Composing your day-by-day itinerary…"}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Stat pills */}
         <div className={cn("px-4 pt-4 pb-2", rc)} style={revealStyle("stats")}>
           <div className="flex flex-wrap gap-2">
@@ -420,17 +448,32 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         </div>
 
-        {/* Trip summary */}
-        <div className={cn("px-4 pt-2 pb-4", rc)} style={revealStyle("summary")}>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {result.trip_summary}
-          </p>
-        </div>
+        {/* Trip summary — only render once we actually have one. During
+            streaming this stays hidden; trip_summary arrives in trip_complete
+            so it appears in the same render that flips streaming -> false. */}
+        {result.trip_summary ? (
+          <div className={cn("px-4 pt-2 pb-4", rc)} style={revealStyle("summary")}>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {result.trip_summary}
+            </p>
+          </div>
+        ) : streaming ? (
+          // Lightweight placeholder so the divider doesn't crash into the
+          // stat pills. Same vertical footprint as a 2-line summary.
+          <div className="px-4 pt-2 pb-4 space-y-1.5">
+            <div className="h-3 w-full rounded bg-muted animate-pulse" />
+            <div className="h-3 w-4/5 rounded bg-muted animate-pulse" />
+          </div>
+        ) : null}
 
         {/* Divider */}
         <div className="mx-4 border-t border-border" />
 
-        {/* ===== OVERALL SUMMARY SECTIONS ===== */}
+        {/* ===== OVERALL SUMMARY SECTIONS =====
+            Hidden while streaming — flights/stays/budget rely on the full
+            assembled trip. Day cards and the hero/stats above remain visible
+            so users see progress without flashes. */}
+        {!streaming && (<>
 
         {/* Flights */}
         <div id="section-flights" className={cn("px-4 mb-4", rc)} style={revealStyle("overview-flights")}>
@@ -599,6 +642,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* Divider before destinations */}
         <div className="mx-4 border-t border-border mb-2" />
 
+        </>)}{/* end !streaming overview */}
+
         {/* ===== PER-DESTINATION CONTENT ===== */}
         {result.destinations.map((dest, destIdx) => {
           const destDays = allDays.filter(
@@ -677,6 +722,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     getReplacedActivity={state.getReplacedActivity}
                     onCoordsRefined={handleCoordsRefined}
                     onOpenDayMap={openDayMap}
+                    skeleton={!!streamingDayNumbers?.has(day.day_number)}
                   />
                   </div>
                 ))}
@@ -694,38 +740,43 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           );
         })}
 
-        {/* Visa & entry requirements (read-only preview, pre-creation) */}
-        <div className={cn(rc)} style={revealStyle("packing")}>
-          <EntryRequirementsPreview
-            destinationCountryIso={result.destination_country_iso ?? null}
-            tripLengthDays={allDays.length || 7}
-          />
-        </div>
+        {/* Visa & entry requirements + Packing — only once streaming complete.
+            Both depend on data that arrives in trip_complete (country_iso /
+            packing_suggestions). */}
+        {!streaming && (
+          <>
+            <div className={cn(rc)} style={revealStyle("packing")}>
+              <EntryRequirementsPreview
+                destinationCountryIso={result.destination_country_iso ?? null}
+                tripLengthDays={allDays.length || 7}
+              />
+            </div>
 
-        {/* Packing suggestions */}
-        {hasPacking && (
-          <div id="section-packing" className={cn("mx-4 mt-2 mb-6", rc)} style={revealStyle("packing")}>
-            <button
-              onClick={() => setPackingOpen(!packingOpen)}
-              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-            >
-              <Package className="h-4 w-4 text-[#0D9488]" />
-              <span className="text-sm font-medium flex-1 text-foreground">Packing suggestions</span>
-              <span className="text-xs text-muted-foreground">{result.packing_suggestions.length} items</span>
-            </button>
-            {packingOpen && (
-              <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in">
-                <ul className="space-y-1">
-                  {result.packing_suggestions.map((item, i) => (
-                    <li key={i} className="text-xs text-muted-foreground flex items-center gap-2">
-                      <span className="w-1 h-1 rounded-full bg-muted-foreground/30 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+            {hasPacking && (
+              <div id="section-packing" className={cn("mx-4 mt-2 mb-6", rc)} style={revealStyle("packing")}>
+                <button
+                  onClick={() => setPackingOpen(!packingOpen)}
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
+                >
+                  <Package className="h-4 w-4 text-[#0D9488]" />
+                  <span className="text-sm font-medium flex-1 text-foreground">Packing suggestions</span>
+                  <span className="text-xs text-muted-foreground">{result.packing_suggestions.length} items</span>
+                </button>
+                {packingOpen && (
+                  <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in">
+                    <ul className="space-y-1">
+                      {result.packing_suggestions.map((item, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span className="w-1 h-1 rounded-full bg-muted-foreground/30 flex-shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Trip-level discussion moved into Group Activity panel */}
@@ -761,10 +812,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 </Button>
                 <Button
                   onClick={onCreateTrip}
-                  disabled={creatingTrip}
+                  disabled={creatingTrip || !!streaming}
+                  title={streaming ? "Available once your trip finishes generating" : undefined}
                   className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white flex-1 sm:flex-none"
                 >
-                  {creatingTrip ? "Creating..." : "Create trip"}
+                  {creatingTrip ? "Creating..." : streaming ? "Generating…" : "Create trip"}
                 </Button>
               </div>
             </div>

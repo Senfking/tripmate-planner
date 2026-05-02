@@ -30,6 +30,12 @@ interface Props {
   getReplacedActivity: (dayDate: string, activityIndex: number) => AIActivity | null;
   onCoordsRefined?: (dayDate: string, activityIndex: number, lat: number, lng: number) => void;
   onOpenDayMap?: (dayIndex: number) => void;
+  /** When true, render a skeleton placeholder card instead of the populated
+   *  one. Used while streaming — the day's number/date/theme are known from
+   *  the meta-event skeleton, but its activities haven't arrived yet. The
+   *  skeleton matches the populated card's outer shape (border, radius,
+   *  height) so the swap to populated is layout-stable. */
+  skeleton?: boolean;
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
@@ -74,6 +80,7 @@ export function DaySection({
   getReplacedActivity,
   onCoordsRefined,
   onOpenDayMap,
+  skeleton = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editDayOpen, setEditDayOpen] = useState(false);
@@ -95,6 +102,47 @@ export function DaySection({
       }, 50);
     }
   }, [open]);
+
+  // Skeleton placeholder while the day's activities are still streaming. Same
+  // outer dimensions as the populated card so swap-in is layout-stable.
+  // Placed after all hooks to satisfy rules-of-hooks (the `skeleton` prop can
+  // flip false once the day arrives).
+  if (skeleton) {
+    return (
+      <div
+        id={`section-day-${day.day_number}`}
+        className="rounded-xl border border-border bg-card overflow-hidden"
+        aria-busy="true"
+      >
+        <div className="w-full flex items-center gap-3 p-3">
+          {/* Thumbnail placeholder — matches populated 72x56 */}
+          <div className="w-[72px] h-[56px] rounded-lg overflow-hidden flex-shrink-0 bg-muted animate-pulse" />
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/25 text-[10px] font-bold uppercase tracking-wide">
+                Day {day.day_number}
+              </span>
+              <span className="text-xs text-muted-foreground font-mono">
+                {dateStr ? `${dateStr} · ` : ""}
+                <span className="inline-block align-middle h-3 w-20 rounded bg-muted animate-pulse" />
+              </span>
+            </div>
+            {day.theme ? (
+              <p className="text-[13px] font-medium text-foreground mt-1 truncate">
+                {day.theme}
+              </p>
+            ) : (
+              <div className="mt-1.5 h-3 w-2/3 rounded bg-muted animate-pulse" />
+            )}
+          </div>
+
+          <ChevronRight className="h-4 w-4 text-muted-foreground/40 flex-shrink-0" />
+        </div>
+      </div>
+    );
+  }
+
 
   const firstActivity = day.activities[0];
   const dayIndex = allDays.findIndex((d) => d.date === day.date);
