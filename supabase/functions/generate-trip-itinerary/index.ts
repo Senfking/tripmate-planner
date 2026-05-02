@@ -381,9 +381,12 @@ const DEFAULT_PLACES_DAILY_BUDGET_USD = 50;            // rolling 24h Places spe
 // Affiliate URL templates
 //
 // Booking.com URLs are built via URLSearchParams in buildBookingDestinationUrl
-// (the path is /searchresults.html — /search.html returns 404). The destination
-// URL is then wrapped through Awin via wrapAwinBookingUrl so commission tracks
-// against our publisher account.
+// using the lenient /search.html path. /searchresults.html with strict
+// checkin/checkout params frequently triggers errorc_searchstring_not_found,
+// while /search.html?ss=... reliably resolves to the hotel as the top result.
+// The destination URL is then wrapped through Awin via wrapAwinBookingUrl so
+// commission tracks against our publisher account (Awin injects aid/label
+// dynamically, so we omit them from the inner URL).
 const VIATOR_TEMPLATE = "https://www.viator.com/searchResults/all?text={name}&mcid={mcid}";
 const GETYOURGUIDE_TEMPLATE = "https://www.getyourguide.com/s/?q={name}&partner_id={pid}";
 
