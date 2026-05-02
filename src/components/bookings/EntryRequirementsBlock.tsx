@@ -115,10 +115,10 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
       <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
         Add your nationality to see personalized entry requirements.{" "}
         <Link
-          to="/app/more"
+          to="/app/more?edit=nationality"
           className="font-medium text-[#0D9488] hover:underline"
         >
-          Open profile →
+          Set nationality →
         </Link>
       </div>
     );
