@@ -150,6 +150,18 @@ export function AccommodationCard({
 
   const descIsLong = (description?.length || 0) > 120;
 
+  // Booking.com search URL for the destination, pre-filled with trip dates,
+  // so users can browse alternative stays in the same area.
+  const browseAlternativesUrl = (() => {
+    const cityQuery = (locationHint || neighborhood || name).trim();
+    const params = new URLSearchParams();
+    params.set("ss", cityQuery);
+    if (checkInDate) params.set("checkin", checkInDate);
+    if (checkOutDate) params.set("checkout", checkOutDate);
+    return `https://www.booking.com/searchresults.html?${params.toString()}`;
+  })();
+
+
   return (
     <div
       id={`section-stay-${(locationHint || name).replace(/\s+/g, "-")}`}
