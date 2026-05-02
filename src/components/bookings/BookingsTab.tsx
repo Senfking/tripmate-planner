@@ -62,7 +62,7 @@ function sortByOwnership(items: AttachmentRow[], userId: string | undefined) {
 }
 
 export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { query, uploadFile, addManual, deleteAttachment, updateNotes, updatePrivacy, updateType, getSignedUrl, extractingIds, fetchingIds, lastExtractedId, clearLastExtractedId } = useAttachments(tripId);
   const isMobile = useIsMobile();
 
@@ -210,7 +210,8 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
   });
   const { data: passports } = useTripTravellerPassports(tripId);
   const myPassportCount = (passports ?? []).filter((p) => p.user_id === user?.id).length;
-  const entryReqEnabled = myPassportCount > 0 && !!tripIso?.destination_country_iso;
+  const hasProfileNationality = !!profile?.nationality_iso;
+  const entryReqEnabled = (myPassportCount > 0 || hasProfileNationality) && !!tripIso?.destination_country_iso;
   const { data: entryReqData } = useEntryRequirements({ tripId, enabled: entryReqEnabled });
   const { data: entryReqAcks } = useEntryReqAcks(tripId);
   const aiDocCount = entryReqData?.documents_needed?.length ?? 0;
