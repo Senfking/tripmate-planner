@@ -4348,7 +4348,7 @@ function rewriteCachedBookingUrls(
       return existingUrl;
     }
     if (!searchQuery) return existingUrl;
-    const fresh = buildBookingDestinationUrl(searchQuery, env.checkin, env.checkout);
+    const fresh = buildBookingDestinationUrl(searchQuery);
     return wrapAwinBookingUrl(fresh, env.tripId, {
       publisherId: env.awinPublisherId,
       merchantId: env.awinMerchantId,
