@@ -265,20 +265,36 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   // fixed at the side). When the map is closed, the document itself is the
   // scroller — this lets full-page screenshot tools and browser features
   // (find-in-page, middle-click autoscroll) work normally.
+  //
+  // Because the view portals into <body> alongside the underlying app shell
+  // (sidebar, header, etc.), we hide the rest of <body>'s children while
+  // mounted so the results view sits at the top of the document instead of
+  // being pushed down by the app underneath.
   useEffect(() => {
-    if (!mapOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const portalRoot = document.getElementById("trip-results-portal-root");
+    const siblings = Array.from(document.body.children).filter(
+      (el) => el !== portalRoot && el.tagName !== "SCRIPT"
+    ) as HTMLElement[];
+    const prev = siblings.map((el) => el.style.display);
+    siblings.forEach((el) => {
+      el.style.display = "none";
+    });
+    const prevBodyOverflow = document.body.style.overflow;
+    if (mapOpen) document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = prev;
+      siblings.forEach((el, i) => {
+        el.style.display = prev[i];
+      });
+      document.body.style.overflow = prevBodyOverflow;
     };
   }, [mapOpen]);
 
   return createPortal(
     <div
+      id="trip-results-portal-root"
       className={cn(
-        "relative z-[9999] bg-background flex",
-        mapOpen ? "fixed inset-0" : "min-h-screen w-full"
+        "z-[9999] bg-background flex",
+        mapOpen ? "fixed inset-0" : "absolute top-0 left-0 right-0 min-h-screen w-full"
       )}
     >
       {/* Itinerary scroll area */}
