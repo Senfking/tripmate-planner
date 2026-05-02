@@ -30,6 +30,12 @@ interface Props {
   getReplacedActivity: (dayDate: string, activityIndex: number) => AIActivity | null;
   onCoordsRefined?: (dayDate: string, activityIndex: number, lat: number, lng: number) => void;
   onOpenDayMap?: (dayIndex: number) => void;
+  /** When true, render a skeleton placeholder card instead of the populated
+   *  one. Used while streaming — the day's number/date/theme are known from
+   *  the meta-event skeleton, but its activities haven't arrived yet. The
+   *  skeleton matches the populated card's outer shape (border, radius,
+   *  height) so the swap to populated is layout-stable. */
+  skeleton?: boolean;
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
