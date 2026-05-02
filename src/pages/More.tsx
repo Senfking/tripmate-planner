@@ -970,7 +970,7 @@ const More = () => {
 
           {/* Nationalities (PR #233 — scalar primary + secondary) */}
           {showNationalities ? (
-            <div className="px-4 py-3 space-y-3">
+            <div id="nationality-editor" className="px-4 py-3 space-y-3 scroll-mt-24">
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-foreground">Primary nationality</p>
                 <SingleNationalityPicker
