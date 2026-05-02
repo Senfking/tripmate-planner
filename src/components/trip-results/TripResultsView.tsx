@@ -413,6 +413,21 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           />
         )}
 
+        {/* Live-streaming status pill — only while generation is mid-flight.
+            Disappears the instant `streaming` flips false (trip_complete fires
+            in StandaloneTripBuilder), so the transition to the final state is
+            just one element disappearing — no other layout change. */}
+        {streaming && (
+          <div className="px-4 pt-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-[#0D9488]/25 shadow-sm">
+              <Loader2 className="h-3.5 w-3.5 text-[#0D9488] animate-spin" />
+              <span className="text-xs font-medium text-foreground">
+                {streamingMessage || "Composing your day-by-day itinerary…"}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Stat pills */}
         <div className={cn("px-4 pt-4 pb-2", rc)} style={revealStyle("stats")}>
           <div className="flex flex-wrap gap-2">
@@ -433,12 +448,23 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         </div>
 
-        {/* Trip summary */}
-        <div className={cn("px-4 pt-2 pb-4", rc)} style={revealStyle("summary")}>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {result.trip_summary}
-          </p>
-        </div>
+        {/* Trip summary — only render once we actually have one. During
+            streaming this stays hidden; trip_summary arrives in trip_complete
+            so it appears in the same render that flips streaming -> false. */}
+        {result.trip_summary ? (
+          <div className={cn("px-4 pt-2 pb-4", rc)} style={revealStyle("summary")}>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {result.trip_summary}
+            </p>
+          </div>
+        ) : streaming ? (
+          // Lightweight placeholder so the divider doesn't crash into the
+          // stat pills. Same vertical footprint as a 2-line summary.
+          <div className="px-4 pt-2 pb-4 space-y-1.5">
+            <div className="h-3 w-full rounded bg-muted animate-pulse" />
+            <div className="h-3 w-4/5 rounded bg-muted animate-pulse" />
+          </div>
+        ) : null}
 
         {/* Divider */}
         <div className="mx-4 border-t border-border" />
