@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Star, ExternalLink, Hotel, MapPin, Lightbulb } from "lucide-react";
+import { Star, ExternalLink, Hotel, MapPin, Lightbulb, ArrowLeftRight } from "lucide-react";
+import { toast } from "sonner";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
 
