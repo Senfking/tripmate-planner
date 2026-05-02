@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Plane, Bed, Wallet, MapPin, Package } from "lucide-react";
+import { Plane, Bed, Wallet, MapPin, Package, FileCheck } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface TimelineNode {
