@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
-  ChevronDown,
-  CheckCircle2,
   ExternalLink,
   FileText,
   ShieldCheck,
@@ -14,6 +12,7 @@ import {
 } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AllClearPanel } from "@/components/entry-requirements/AllClearPanel";
 import type { EntryRequirementsResult, EntryRequirementDoc } from "@/hooks/useEntryRequirements";
 import { cn } from "@/lib/utils";
 
