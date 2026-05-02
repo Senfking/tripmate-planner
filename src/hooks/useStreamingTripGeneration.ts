@@ -56,6 +56,7 @@ interface TripCompleteEvent {
   currency: string;
   budget_tier?: AITripResult["budget_tier"];
   destination_image_url: string | null;
+  destination_country_iso: string | null;
   from_cache: boolean;
 }
 
@@ -120,6 +121,7 @@ function assembleResult(
     total_activities: trip.total_activities ?? annotatedDays.reduce((n, d) => n + d.activities.length, 0),
     budget_tier: trip.budget_tier,
     destination_image_url: trip.destination_image_url ?? imageUrl ?? null,
+    destination_country_iso: trip.destination_country_iso ?? null,
   };
 }
 
