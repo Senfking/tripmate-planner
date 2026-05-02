@@ -493,7 +493,7 @@ export default function TripHome() {
       <div
         ref={heroRef}
         className="relative w-full overflow-hidden"
-        style={{ height: "44vh", minHeight: 300, maxHeight: 420 }}
+        style={{ height: "min(38vh, 320px)", minHeight: 240 }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
@@ -504,8 +504,8 @@ export default function TripHome() {
         />
         {/* Top gradient — keeps nav buttons readable on light photos */}
         <div className="absolute inset-x-0 top-0 h-24" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.45), transparent)" }} />
-        {/* Bottom gradient — stronger, taller for premium title legibility */}
-        <div className="absolute inset-x-0 bottom-0 h-1/2" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 30%, rgba(0,0,0,0.2) 65%, transparent 100%)" }} />
+        {/* Bottom gradient — strong, tall fade so the overlaid title is always legible */}
+        <div className="absolute inset-x-0 bottom-0 h-3/4 pointer-events-none" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 25%, rgba(0,0,0,0.35) 55%, transparent 100%)" }} />
 
         {/* Back button */}
         <button
