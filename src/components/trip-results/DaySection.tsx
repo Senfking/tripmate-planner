@@ -85,6 +85,7 @@ export function DaySection({
   onCoordsRefined,
   onOpenDayMap,
   skeleton = false,
+  costFormatter,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editDayOpen, setEditDayOpen] = useState(false);
