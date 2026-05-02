@@ -16,7 +16,24 @@ import { BlankTripModal } from "./BlankTripModal";
 import { NameTripModal } from "./NameTripModal";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
-import { useStreamingTripGeneration } from "@/hooks/useStreamingTripGeneration";
+import {
+  useStreamingTripGeneration,
+  buildPartialResult,
+  getSkeletonDayNumbers,
+} from "@/hooks/useStreamingTripGeneration";
+
+const STAGE_LABELS: Record<string, string> = {
+  starting: "Connecting…",
+  parsing_intent: "Reading your preferences…",
+  picking_destination: "Picking your surprise destination…",
+  destination_picked: "Destination locked in",
+  geocoding: "Locating your destination…",
+  searching_venues: "Finding venues that match your vibe…",
+  hydrating_finalists: "Looking up venue details…",
+  ranking: "Composing your day-by-day itinerary…",
+  complete: "Your trip is ready!",
+  error: "Something went wrong",
+};
 
 function normalizeAIResponse(raw: Record<string, any>): AITripResult {
   const destinations = Array.isArray(raw.destinations) ? raw.destinations : [];
