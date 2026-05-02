@@ -263,38 +263,52 @@ export function DateRangePicker({
     setOpen(isOpen);
   };
 
+  const commit = useCallback(
+    (range: DateRange | undefined) => {
+      onChange(range);
+      setOpen(false);
+      setWarning(null);
+    },
+    [onChange]
+  );
+
   const handleSelect = useCallback(
     (d: Date) => {
       setWarning(null);
+
+      // No start yet, or both already set → start a fresh range.
       if (!draft?.from || (draft.from && draft.to)) {
         setDraft({ from: d, to: undefined });
         return;
       }
+
+      // Tapping a day before current `from` resets the start.
       if (isBefore(d, draft.from)) {
         setDraft({ from: d, to: undefined });
         return;
       }
+
+      // Same day as `from` → one-day trip, commit & close.
+      if (isSameDay(d, draft.from)) {
+        commit({ from: draft.from, to: draft.from });
+        return;
+      }
+
       const span = differenceInCalendarDays(d, draft.from) + 1;
       if (span > MAX_TRIP_DAYS) {
         setWarning(`Maximum trip length is ${MAX_TRIP_DAYS} days`);
         return;
       }
-      setDraft({ from: draft.from, to: d });
-    },
-    [draft]
-  );
 
-  const handleApply = () => {
-    // Treat a single picked day as a same-day (one-day) trip
-    const finalRange =
-      draft?.from && !draft?.to ? { from: draft.from, to: draft.from } : draft;
-    onChange(finalRange);
-    setOpen(false);
-  };
+      // Valid end date → commit & close.
+      commit({ from: draft.from, to: d });
+    },
+    [draft, commit]
+  );
 
   const handleClear = () => {
     setDraft(undefined);
-    setWarning(null);
+    commit(undefined);
   };
 
   const label =
@@ -319,28 +333,27 @@ export function DateRangePicker({
     </Button>
   );
 
+  const showEndHint = !!draft?.from && !draft?.to;
+
   const pickerBody = (
     <div className="flex flex-col" style={{ width: isMobile ? "100%" : 340 }}>
       <SingleMonthCalendar draft={draft} onSelect={handleSelect} warning={warning} />
-      <div className="flex items-center justify-between px-1 pt-2">
+      {showEndHint && (
+        <p className="text-[12px] text-muted-foreground text-center px-2 pt-2 leading-snug">
+          Pick an end date — or tap the same day for a one-day trip
+        </p>
+      )}
+      <div className="flex items-center justify-start px-1 pt-2">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={handleClear}
           className="text-xs gap-1 text-muted-foreground"
+          disabled={!value?.from && !draft?.from}
         >
           <X className="h-3 w-3" />
           Clear
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleApply}
-          disabled={!draft?.from}
-          style={draft?.from ? { background: TEAL, color: "white" } : undefined}
-        >
-          Apply
         </Button>
       </div>
     </div>
