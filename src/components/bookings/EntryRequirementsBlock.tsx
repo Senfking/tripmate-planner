@@ -47,7 +47,7 @@ function actionableDocCount(docs: EntryRequirementDoc[]): number {
 }
 
 export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // Trip destination ISO
   const { data: trip } = useQuery({
@@ -69,10 +69,12 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
     () => (passports ?? []).filter((p) => p.user_id === user?.id),
     [passports, user?.id],
   );
+  const profileNationality = profile?.nationality_iso?.toUpperCase() ?? null;
+  const primaryNationality = myPassports[0]?.nationality_iso ?? profileNationality;
 
-  const hasPassport = myPassports.length > 0;
+  const hasNationality = myPassports.length > 0 || !!profileNationality;
   const hasDestIso = !!trip?.destination_country_iso;
-  const canFetch = hasPassport && hasDestIso;
+  const canFetch = hasNationality && hasDestIso;
 
   const { data, isLoading, isError, refetch, isFetching } = useEntryRequirements({
     tripId,
@@ -107,7 +109,7 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
   }
 
   // Empty state: destination set but user has no nationality
-  if (!hasPassport) {
+  if (!hasNationality) {
     return (
       <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
         Add your nationality to see personalized entry requirements.{" "}
@@ -190,7 +192,7 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
     return (
       <AllClearState
         destName={destName}
-        nationality={myPassports[0]?.nationality_iso ?? null}
+          nationality={primaryNationality ?? null}
         passportValidity={data.passport_validity}
         summary={summary}
         embassy={embassy}
