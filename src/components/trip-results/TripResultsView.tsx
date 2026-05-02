@@ -804,27 +804,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             </div>
 
             {hasPacking && (
-              <div id="section-packing" className={cn("mx-4 mt-2 mb-6", rc)} style={revealStyle("packing")}>
-                <button
-                  onClick={() => setPackingOpen(!packingOpen)}
-                  className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-                >
-                  <Package className="h-4 w-4 text-[#0D9488]" />
-                  <span className="text-sm font-medium flex-1 text-foreground">Packing suggestions</span>
-                  <span className="text-xs text-muted-foreground">{result.packing_suggestions.length} items</span>
-                </button>
-                {packingOpen && (
-                  <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in">
-                    <ul className="space-y-1">
-                      {result.packing_suggestions.map((item, i) => (
-                        <li key={i} className="text-xs text-muted-foreground flex items-center gap-2">
-                          <span className="w-1 h-1 rounded-full bg-muted-foreground/30 flex-shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+              <div className={cn(rc)} style={revealStyle("packing")}>
+                <PackingCard
+                  items={result.packing_suggestions}
+                  open={packingOpen}
+                  onToggle={() => setPackingOpen(!packingOpen)}
+                />
               </div>
             )}
           </>
