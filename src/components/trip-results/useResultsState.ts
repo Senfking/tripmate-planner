@@ -55,6 +55,9 @@ export interface AIDestination {
     // until Booking.com integration lands.
     title?: string;
     name?: string;
+    description?: string;
+    pro_tip?: string;
+    tips?: string | null;
     location_name?: string;
     neighborhood?: string | null;
     photos?: string[];
