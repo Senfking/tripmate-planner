@@ -213,7 +213,7 @@ function ExpandedDetail({
             const member = members.find((m) => m.userId === s.user_id);
             const isDifferent = expense.currency !== settlementCurrency;
             const converted = isDifferent
-              ? convertAmount(s.share_amount, expense.currency, settlementCurrency, baseCurrency, rates)
+              ? convertAmount(s.share_amount, expense.currency, settlementCurrency, baseCurrency, rates, { fx_rate: expense.fx_rate, fx_base: expense.fx_base })
               : s.share_amount;
             return (
               <div key={s.id} className="flex items-center justify-between text-xs">

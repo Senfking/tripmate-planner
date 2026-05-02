@@ -650,6 +650,8 @@ export type Database = {
           category: string
           created_at: string
           currency: string
+          fx_base: string | null
+          fx_rate: number | null
           id: string
           incurred_on: string
           itinerary_item_id: string | null
@@ -665,6 +667,8 @@ export type Database = {
           category?: string
           created_at?: string
           currency?: string
+          fx_base?: string | null
+          fx_rate?: number | null
           id?: string
           incurred_on: string
           itinerary_item_id?: string | null
@@ -680,6 +684,8 @@ export type Database = {
           category?: string
           created_at?: string
           currency?: string
+          fx_base?: string | null
+          fx_rate?: number | null
           id?: string
           incurred_on?: string
           itinerary_item_id?: string | null

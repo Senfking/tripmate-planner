@@ -49,9 +49,10 @@ export function BalanceAuditSheet({
 
     for (const exp of expenses) {
       const dateStr = format(new Date(exp.incurred_on), "MMM d");
+      const snapshot = { fx_rate: exp.fx_rate, fx_base: exp.fx_base };
 
       if (exp.payer_id === userId) {
-        const converted = convertAmount(exp.amount, exp.currency, settlementCurrency, settlementCurrency, rates);
+        const converted = convertAmount(exp.amount, exp.currency, settlementCurrency, settlementCurrency, rates, snapshot);
         if (converted != null) totalPaid += converted;
         if (exp.currency !== settlementCurrency) foreignCurrencies.add(exp.currency);
         paid.push({
@@ -66,7 +67,7 @@ export function BalanceAuditSheet({
 
       const mySplits = splits.filter((s) => s.expense_id === exp.id && s.user_id === userId);
       for (const s of mySplits) {
-        const converted = convertAmount(s.share_amount, exp.currency, settlementCurrency, settlementCurrency, rates);
+        const converted = convertAmount(s.share_amount, exp.currency, settlementCurrency, settlementCurrency, rates, snapshot);
         if (converted != null) totalOwed += converted;
         if (exp.currency !== settlementCurrency) foreignCurrencies.add(exp.currency);
         owed.push({
