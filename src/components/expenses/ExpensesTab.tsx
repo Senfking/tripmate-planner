@@ -659,14 +659,98 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </div>
       )}
 
-      {/* Add Expense button - full width, clean */}
-      <Button
-        className="w-full h-12 gap-2 text-[15px] font-semibold rounded-2xl"
-        onClick={() => { setEditingExpense(null); setFormOpen(true); }}
-      >
-        <Plus className="h-4.5 w-4.5" />
-        Add Expense
-      </Button>
+      {/* Empty-state hero — shown when there are zero expenses */}
+      {expenses.length === 0 && isExpensesSuccess ? (
+        <div className="px-1 pt-2 pb-4">
+          {/* Hero card */}
+          <div className="relative overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6">
+            <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#0D9488]/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-[#0D9488]/10 blur-3xl" />
+
+            <div className="relative flex flex-col items-center text-center">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-[#0D9488]/25 bg-background/70 backdrop-blur px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#0D9488]">
+                <Sparkles className="h-3 w-3" />
+                Powered by Junto AI
+              </div>
+
+              <h2 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground leading-tight">
+                Split costs,<br />
+                <span className="text-[#0D9488]">skip the awkward maths</span>
+              </h2>
+              <p className="mt-2 max-w-[300px] text-[13.5px] leading-relaxed text-muted-foreground">
+                Snap a receipt or add an expense. Junto handles the splits, currency conversion and who-owes-who for the whole crew.
+              </p>
+
+              {/* Primary CTAs */}
+              <div className="mt-5 grid w-full max-w-xs grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={scanning}
+                  onClick={() => receiptCameraRef.current?.click()}
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0D9488] py-3 text-[13.5px] font-semibold text-white shadow-[0_6px_20px_-6px_rgba(13,148,136,0.5)] transition-transform active:scale-[0.97] disabled:opacity-60"
+                >
+                  {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  Scan receipt
+                </button>
+                <button
+                  type="button"
+                  disabled={scanning}
+                  onClick={() => receiptFileRef.current?.click()}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#0D9488]/30 bg-background py-3 text-[13.5px] font-semibold text-[#0D9488] transition-colors hover:bg-[#0D9488]/[0.06] active:scale-[0.97] disabled:opacity-60"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload photo
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground/80">JPG, PNG, HEIC · screenshots work too</p>
+            </div>
+          </div>
+
+          {/* Benefit list */}
+          <ul className="mt-6 space-y-2.5 px-2">
+            {[
+              { icon: Scan, title: "Receipts read instantly", desc: "Merchant, amount, date and currency, pulled out automatically." },
+              { icon: Users, title: "Fair splits, every time", desc: "Equal, custom or item-by-item. Toggle who's in for each expense." },
+              { icon: Wallet, title: "One settle-up at the end", desc: "Multi-currency totals net down to the fewest payments possible." },
+            ].map(({ icon: Icon, title, desc }) => (
+              <li key={title} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/50 p-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0D9488]/10">
+                  <Icon className="h-4 w-4 text-[#0D9488]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-foreground leading-tight">{title}</p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground leading-snug">{desc}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* Secondary manual CTA */}
+          <div className="mt-6 flex flex-col items-center gap-1.5">
+            <p className="text-[11.5px] uppercase tracking-[0.14em] text-muted-foreground/60">No receipt handy?</p>
+            <button
+              type="button"
+              onClick={() => { setEditingExpense(null); setFormOpen(true); }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-muted/50 active:scale-[0.97]"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add expense manually
+            </button>
+          </div>
+
+          {/* Hidden receipt inputs */}
+          <input ref={receiptCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptScan} />
+          <input ref={receiptFileRef} type="file" accept="image/*" className="hidden" onChange={handleReceiptScan} />
+        </div>
+      ) : (
+        <Button
+          className="w-full h-12 gap-2 text-[15px] font-semibold rounded-2xl"
+          onClick={() => { setEditingExpense(null); setFormOpen(true); }}
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Add Expense
+        </Button>
+      )}
 
       {/* Expenses list - standalone */}
       <div
