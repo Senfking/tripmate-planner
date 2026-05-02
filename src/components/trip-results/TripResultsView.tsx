@@ -794,7 +794,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             packing_suggestions). */}
         {!streaming && (
           <>
-            <div className={cn(rc)} style={revealStyle("packing")}>
+            <div id="section-entry" className={cn(rc)} style={revealStyle("packing")}>
               <EntryRequirementsPreview
                 destinationCountryIso={result.destination_country_iso ?? null}
                 tripLengthDays={allDays.length || 7}
