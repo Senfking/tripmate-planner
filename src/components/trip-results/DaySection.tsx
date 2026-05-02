@@ -311,6 +311,7 @@ export function DaySection({
                       onRemove={() => onRemoveActivity(day.date, i, activity)}
                       onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
                       animDelay={i * 50}
+                      costFormatter={costFormatter}
                     />
                   </div>
                 ))
