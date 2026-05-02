@@ -319,11 +319,6 @@ export function AdminTab({ tripId, myRole, tripName }: AdminTabProps) {
                 <div className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground truncate">{displayedTripName}</p>
-                    {itinerarySubtitle && itinerarySubtitle !== displayedTripName && (
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                        {itinerarySubtitle}
-                      </p>
-                    )}
                   </div>
                   <Button
                     variant="ghost"
