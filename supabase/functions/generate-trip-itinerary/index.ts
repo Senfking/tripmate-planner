@@ -3872,7 +3872,11 @@ function buildAffiliateUrl(
 
   switch (partner) {
     case "booking": {
-      const dest = buildBookingDestinationUrl(nameWithCity);
+      // Booking's lenient resolver chokes on street numbers/postcodes from
+      // formatted_address. Build "{hotel} {city}" using the trip's destination
+      // (cityHint) instead — see buildBookingSearchString.
+      const searchQuery = buildBookingSearchString(name, env.cityHint);
+      const dest = buildBookingDestinationUrl(searchQuery);
       return {
         booking_url: wrapAwinBookingUrl(dest, env.tripId, {
           publisherId: env.awinPublisherId,
