@@ -59,7 +59,7 @@ function actionableDocs(docs: EntryRequirementDoc[]): EntryRequirementDoc[] {
  * for the full experience.
  */
 export function TravellersSection({ tripId, myRole: _myRole }: TravellersSectionProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const userId = user?.id;
   const navigate = useNavigate();
 
@@ -87,7 +87,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
         ]) ?? [],
       );
       const natMap = new Map(
-        profs.data?.map((p) => [p.id, (p as any).nationality_iso as string | null]) ?? [],
+        profs.data?.map((p) => [p.id, p.nationality_iso as string | null]) ?? [],
       );
 
       return data.map<MemberLite>((m) => ({
@@ -114,33 +114,31 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
     enabled: !!tripId,
   });
 
-  // Trip passports drive whether we can ask the AI for entry requirements.
   // The dashboard card is happy with the user's nationality from either the
   // trip-level passport row OR their profile-level nationality_iso.
   const { data: passports } = useTripTravellerPassports(tripId);
-  const hasMyTripPassport = useMemo(
-    () => (passports ?? []).some((p) => p.user_id === userId),
-    [passports, userId],
-  );
 
   const destIso = trip?.destination_country_iso?.toUpperCase() ?? null;
   const destName = destIso ? countryName(destIso) : null;
+  const profileNatIso = profile?.nationality_iso?.toUpperCase() ?? null;
 
   const myMember = (members ?? []).find((m) => m.userId === userId);
   const myNatIso =
+    profileNatIso ??
     (passports ?? []).find((p) => p.user_id === userId && p.is_primary)?.nationality_iso?.toUpperCase() ??
     (passports ?? []).find((p) => p.user_id === userId)?.nationality_iso?.toUpperCase() ??
     myMember?.nationalityIso?.toUpperCase() ??
     null;
   const myNatName = myNatIso ? countryName(myNatIso) : null;
 
-  const missingCount = useMemo(
-    () => (members ?? []).filter((m) => !m.nationalityIso).length,
-    [members],
-  );
-
   const hasMyNat = !!myNatIso;
-  const canFetchReqs = hasMyTripPassport && !!destIso;
+  const canFetchReqs = hasMyNat && !!destIso;
+
+  const missingMembers = useMemo(
+    () => (members ?? []).filter((m) => (m.userId === userId ? !hasMyNat : !m.nationalityIso)),
+    [members, userId, hasMyNat],
+  );
+  const missingCount = missingMembers.length;
 
   const { data: entryData, isLoading: entryLoading } = useEntryRequirements({
     tripId,
@@ -188,6 +186,12 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
     navigate("/app/more");
   };
 
+  const opensFullDetails = status?.kind === "visa-required" || status?.kind === "docs-required";
+  const handleCardClick = () => {
+    if (!hasMyNat) goToProfile();
+    else if (opensFullDetails) goToVisa();
+  };
+
   // No destination resolved yet — render nothing rather than a useless card.
   if (!destIso) return null;
 
@@ -210,7 +214,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
         );
       case "all-clear":
         return (
-          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-1 text-[11px] font-semibold dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-1 text-[11px] font-semibold">
             <CheckCircle2 className="h-3 w-3" />
             All clear
           </span>
@@ -259,13 +263,25 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
   })();
 
   const title = hasMyNat ? `Entry to ${destName}` : "Set your nationality";
+  const allClearPassportLine = entryData?.passport_validity
+    ? `Passport: ${entryData.passport_validity}`
+    : "Passport: carry a valid passport";
+  const isInteractive = !hasMyNat || opensFullDetails;
 
   return (
-    <button
-      type="button"
-      onClick={hasMyNat ? goToVisa : goToProfile}
+    <div
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (!isInteractive) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
       id="travellers-section"
-      className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-all active:scale-[0.99]"
+      className={`w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 p-4 transition-all ${isInteractive ? "hover:shadow-md active:scale-[0.99] cursor-pointer" : "cursor-default"}`}
     >
       <div className="flex items-center gap-3">
         {/* Route visual: my flag → destination flag */}
@@ -290,6 +306,22 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
 
         {statusPill}
       </div>
+
+      {status?.kind === "all-clear" && (
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
+          <div className="rounded-xl bg-primary/10 px-3 py-2">
+            <p className="text-[11px] font-semibold text-primary">Visa</p>
+            <p className="mt-0.5 text-[12px] text-foreground">Not required</p>
+          </div>
+          <div className="rounded-xl bg-muted/50 px-3 py-2">
+            <p className="text-[11px] font-semibold text-muted-foreground">Documents</p>
+            <p className="mt-0.5 text-[12px] text-foreground">No extra docs</p>
+          </div>
+          <p className="col-span-2 text-[11.5px] leading-snug text-muted-foreground">
+            {allClearPassportLine}. Verify official rules before travel.
+          </p>
+        </div>
+      )}
 
       {/* Required-docs preview — show up to 2 mandatory items inline so the
           user sees exactly what they need without leaving the dashboard. */}
@@ -324,7 +356,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
           </span>
           <div className="flex -space-x-1.5">
             {(members ?? [])
-              .filter((m) => !m.nationalityIso)
+              .filter((m) => missingMembers.some((missing) => missing.userId === m.userId))
               .slice(0, 3)
               .map((m) => (
                 <Avatar key={m.userId} className="h-5 w-5 ring-2 ring-white">
@@ -337,6 +369,6 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
           </div>
         </div>
       )}
-    </button>
+    </div>
   );
 }
