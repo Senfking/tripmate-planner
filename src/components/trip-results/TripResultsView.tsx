@@ -722,6 +722,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     getReplacedActivity={state.getReplacedActivity}
                     onCoordsRefined={handleCoordsRefined}
                     onOpenDayMap={openDayMap}
+                    skeleton={!!streamingDayNumbers?.has(day.day_number)}
                   />
                   </div>
                 ))}
