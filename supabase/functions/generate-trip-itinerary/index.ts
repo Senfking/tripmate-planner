@@ -381,9 +381,12 @@ const DEFAULT_PLACES_DAILY_BUDGET_USD = 50;            // rolling 24h Places spe
 // Affiliate URL templates
 //
 // Booking.com URLs are built via URLSearchParams in buildBookingDestinationUrl
-// (the path is /searchresults.html — /search.html returns 404). The destination
-// URL is then wrapped through Awin via wrapAwinBookingUrl so commission tracks
-// against our publisher account.
+// using the lenient /search.html path. /searchresults.html with strict
+// checkin/checkout params frequently triggers errorc_searchstring_not_found,
+// while /search.html?ss=... reliably resolves to the hotel as the top result.
+// The destination URL is then wrapped through Awin via wrapAwinBookingUrl so
+// commission tracks against our publisher account (Awin injects aid/label
+// dynamically, so we omit them from the inner URL).
 const VIATOR_TEMPLATE = "https://www.viator.com/searchResults/all?text={name}&mcid={mcid}";
 const GETYOURGUIDE_TEMPLATE = "https://www.getyourguide.com/s/?q={name}&partner_id={pid}";
 
@@ -394,18 +397,15 @@ const GETYOURGUIDE_TEMPLATE = "https://www.getyourguide.com/s/?q={name}&partner_
 // different regional ID (APAC/NA) in future.
 const DEFAULT_AWIN_BOOKING_MID = "18119";
 
-// Builds the raw Booking.com search-results URL (no affiliate params — those
-// are dynamically injected by Awin when the link is wrapped via cread.php).
-function buildBookingDestinationUrl(
-  searchQuery: string,
-  checkin: string | null,
-  checkout: string | null,
-): string {
+// Builds the raw Booking.com search URL using the lenient /search.html
+// resolver. We deliberately omit checkin/checkout/aid:
+//   - Booking's lenient matcher places the named hotel as the top card; adding
+//     strict dates often triggers errorc_searchstring_not_found.
+//   - aid/label are injected dynamically by Awin via cread.php.
+function buildBookingDestinationUrl(searchQuery: string): string {
   const params = new URLSearchParams();
   params.set("ss", searchQuery);
-  if (checkin) params.set("checkin", checkin);
-  if (checkout) params.set("checkout", checkout);
-  return `https://www.booking.com/searchresults.html?${params.toString()}`;
+  return `https://www.booking.com/search.html?${params.toString()}`;
 }
 
 // Strip aid/label query params from a Booking.com URL before passing to Awin.
@@ -3856,7 +3856,7 @@ function buildAffiliateUrl(
 
   switch (partner) {
     case "booking": {
-      const dest = buildBookingDestinationUrl(nameWithCity, env.checkin, env.checkout);
+      const dest = buildBookingDestinationUrl(nameWithCity);
       return {
         booking_url: wrapAwinBookingUrl(dest, env.tripId, {
           publisherId: env.awinPublisherId,
@@ -4312,11 +4312,11 @@ function rewriteCachedPayloadDates(
 }
 
 // Re-build Booking.com URLs on cached payloads so each cache hit gets:
-//   - the correct /searchresults.html path (older entries may have the broken
-//     /search.html path that returns 404 on Booking.com)
-//   - fresh checkin/checkout matching the current request's trip dates
+//   - the lenient /search.html path (older entries from PR #248 used the
+//     strict /searchresults.html path which often fails to resolve)
 //   - an Awin wrapper with this trip's clickref (so click → trip correlation
 //     works for replayed cached trips, not just freshly generated ones)
+//   - no checkin/checkout on the inner URL (strict dates break the resolver)
 // We extract the original `ss` query from the cached URL — for both legacy
 // raw Booking links and Awin-wrapped links (via the `ued` param) — and rebuild
 // from scratch. Activities with booking_partner !== "booking" are left alone.
@@ -4348,7 +4348,7 @@ function rewriteCachedBookingUrls(
       return existingUrl;
     }
     if (!searchQuery) return existingUrl;
-    const fresh = buildBookingDestinationUrl(searchQuery, env.checkin, env.checkout);
+    const fresh = buildBookingDestinationUrl(searchQuery);
     return wrapAwinBookingUrl(fresh, env.tripId, {
       publisherId: env.awinPublisherId,
       merchantId: env.awinMerchantId,
