@@ -97,23 +97,22 @@ export function DaySection({
 
   useEffect(() => {
     if (open && cardRef.current) {
-      // Use header-aware scrolling so the day card lands just below the
-      // sticky page header instead of being hidden behind it. Mirrors the
-      // logic in ResultsTimeline.scrollTo / TripResultsView.scrollToSection.
+      // Bring the day card near the top of the viewport so it becomes the
+      // user's center of attention. The hero is not sticky, so we use a
+      // small constant gap rather than measuring the (huge) hero height.
       setTimeout(() => {
         const el = cardRef.current;
         if (!el) return;
+        const SCROLL_TOP_GAP = 24;
         const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
         const useInner = !!(marked && marked.scrollHeight > marked.clientHeight + 1);
-        const header = document.querySelector<HTMLElement>("[data-results-header='true']");
-        const headerOffset = (header?.getBoundingClientRect().height ?? 0) + 12;
         const elementRect = el.getBoundingClientRect();
         if (useInner && marked) {
           const rootRect = marked.getBoundingClientRect();
-          const targetTop = Math.max(0, marked.scrollTop + (elementRect.top - rootRect.top) - headerOffset);
+          const targetTop = Math.max(0, marked.scrollTop + (elementRect.top - rootRect.top) - SCROLL_TOP_GAP);
           marked.scrollTo({ top: targetTop, behavior: "smooth" });
         } else {
-          const targetTop = Math.max(0, window.scrollY + elementRect.top - headerOffset);
+          const targetTop = Math.max(0, window.scrollY + elementRect.top - SCROLL_TOP_GAP);
           window.scrollTo({ top: targetTop, behavior: "smooth" });
         }
       }, 80);
