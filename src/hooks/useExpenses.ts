@@ -34,6 +34,8 @@ function tripIdGuard(tripId: string, op: string, userId: string | undefined): bo
   return false;
 }
 
+export type SplitType = "equal" | "custom" | "byItem";
+
 export interface ExpenseRow {
   id: string;
   trip_id: string;
@@ -49,6 +51,8 @@ export interface ExpenseRow {
   /** FX snapshot at insert/edit time. Null on legacy rows pre-backfill. */
   fx_rate: number | null;
   fx_base: string | null;
+  /** How splits were derived. Source of truth — read this column instead of inferring. */
+  split_type: SplitType;
   created_at: string;
   updated_at: string;
 }
@@ -356,6 +360,7 @@ export function useExpenses(tripId: string) {
       notes?: string;
       itinerary_item_id?: string | null;
       receipt_image_path?: string | null;
+      split_type: SplitType;
       splits: { user_id: string; share_amount: number }[];
       lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
       itemAssignments?: Record<number, Set<string> | string[]>;
@@ -385,7 +390,7 @@ export function useExpenses(tripId: string) {
           if (error) throw error;
           return data as ExpenseRow;
         },
-        { name: "expense_insert", context: { trip_id, currency: params.currency, category: params.category }, userId: user?.id },
+        { name: "expense_insert", context: { trip_id, currency: params.currency, category: params.category, split_type: params.split_type }, userId: user?.id },
       );
 
       const splitRows = splits.map((s) => ({
@@ -464,6 +469,7 @@ export function useExpenses(tripId: string) {
       payer_id: string;
       notes?: string;
       itinerary_item_id?: string | null;
+      split_type: SplitType;
       splits: { user_id: string; share_amount: number }[];
     }) => {
       const { id, splits, ...expenseData } = params;
@@ -477,6 +483,9 @@ export function useExpenses(tripId: string) {
       const fxPatch = currencyChanged
         ? await snapshotFxRate(qc, params.currency)
         : null;
+
+      const previousSplitType: SplitType | undefined = prev?.split_type;
+      const leavingByItem = previousSplitType === "byItem" && params.split_type !== "byItem";
 
       await withAuthRetry(
         async () => {
@@ -493,8 +502,25 @@ export function useExpenses(tripId: string) {
             "Expense could not be updated. Please refresh and try again.",
           );
         },
-        { name: "expense_update", context: { trip_id: tripId, expense_id: id }, userId: user?.id },
+        { name: "expense_update", context: { trip_id: tripId, expense_id: id, split_type: params.split_type }, userId: user?.id },
       );
+
+      // Cleanup orphan line items + claims after the split_type write
+      // commits. Doing this AFTER the UPDATE means a failed update leaves
+      // line items in place; a failed cleanup leaves split_type='equal'
+      // with stale line items that no UI surface reads (display now
+      // honours split_type), so the worst case is wasted rows.
+      if (leavingByItem) {
+        await withAuthRetry(
+          async () => {
+            const { error: dErr } = await (supabase.rpc as any)("delete_expense_line_items_and_claims", {
+              _expense_id: id,
+            });
+            if (dErr) throw dErr;
+          },
+          { name: "expense_line_items_cleanup", context: { trip_id: tripId, expense_id: id, previous_split_type: previousSplitType }, userId: user?.id },
+        );
+      }
 
       await withAuthRetry(
         async () => {
@@ -520,6 +546,10 @@ export function useExpenses(tripId: string) {
           updated_at: new Date().toISOString(),
         } : e)
       );
+      // If we left byItem mode, drop the cached line-item + claim queries
+      // for this expense so the next read sees the cleaned-up state.
+      qc.invalidateQueries({ queryKey: ["expense-line-items", id] });
+      qc.invalidateQueries({ queryKey: ["expense-line-item-claims", id] });
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
       qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });

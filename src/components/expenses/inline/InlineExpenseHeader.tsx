@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { format, parse } from "date-fns";
 import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
 import { useExpenseInlineEdit, recomputeSplits } from "@/hooks/useExpenseInlineEdit";
@@ -45,13 +45,12 @@ export function InlineExpenseHeader({
   const payerName = members.find((m) => m.userId === expense.payer_id)?.displayName || "Unknown";
   const categoryLabel = CATEGORIES.find((c) => c.value === expense.category)?.label || "Other";
 
-  const splitMode: "equal" | "custom" | "byItem" = useMemo(() => {
-    if (hasLineItems) return "byItem";
-    if (splits.length <= 1) return "equal";
-    const first = splits[0].share_amount;
-    const allEqual = splits.every((s) => Math.abs(s.share_amount - first) < 0.01);
-    return allEqual ? "equal" : "custom";
-  }, [splits, hasLineItems]);
+  // Read split mode straight off the persisted column. Previously this was
+  // inferred from the splits' shape, which disagreed with the form modal
+  // in edge cases (byItem expenses with one non-zero claimant looked like
+  // 'equal' because splits.length <= 1). Both surfaces now read the same
+  // column so they can no longer disagree.
+  const splitMode: "equal" | "custom" | "byItem" = (expense.split_type ?? "equal") as "equal" | "custom" | "byItem";
 
   const [titleDraft, setTitleDraft] = useState(expense.title);
   const [amountDraft, setAmountDraft] = useState(String(expense.amount));
@@ -107,8 +106,17 @@ export function InlineExpenseHeader({
                 try {
                   await patchExpense.mutateAsync({ id: expense.id, patch: { amount: v } });
                   if (splits.length > 0) {
-                    const next = recomputeSplits(splitMode === "byItem" ? "equal" : splitMode, splits.map(s => s.user_id), v, splits);
-                    await replaceSplits.mutateAsync({ expenseId: expense.id, splits: next });
+                    // The amount editor only renders when !hasLineItems (see
+                    // outer ternary), which implies split_type !== 'byItem',
+                    // so the fallback below is defensive belt-and-braces.
+                    const mode = splitMode === "byItem" ? "equal" : splitMode;
+                    const next = recomputeSplits(mode, splits.map(s => s.user_id), v, splits);
+                    await replaceSplits.mutateAsync({
+                      expenseId: expense.id,
+                      splits: next,
+                      splitType: mode,
+                      previousSplitType: splitMode,
+                    });
                   }
                   return true;
                 } catch { setAmountDraft(String(expense.amount)); return false; }
@@ -205,9 +213,23 @@ export function InlineExpenseHeader({
               mode={splitMode}
               onChange={async (next) => {
                 if (next === splitMode) return;
-                const ids = splits.length > 0 ? splits.map((s) => s.user_id) : members.map((m) => m.userId);
+                // 'equal' must include every current trip member by default
+                // so we don't silently confine the participant set to whoever
+                // happened to have non-zero shares from a previous mode (the
+                // root cause of the byItem -> equal "100% on one person" bug).
+                const ids = next === "equal"
+                  ? members.map((m) => m.userId)
+                  : (splits.length > 0 ? splits.map((s) => s.user_id) : members.map((m) => m.userId));
                 const recomputed = recomputeSplits(next, ids, expense.amount, splits);
-                await replaceSplits.mutateAsync({ expenseId: expense.id, splits: recomputed });
+                // 'percent' is a UI-only mode; persist as 'custom' since the
+                // db column only stores equal/custom/byItem.
+                const persistedType = next === "percent" ? "custom" : next;
+                await replaceSplits.mutateAsync({
+                  expenseId: expense.id,
+                  splits: recomputed,
+                  splitType: persistedType,
+                  previousSplitType: splitMode,
+                });
               }}
             />
           )}

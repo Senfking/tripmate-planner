@@ -637,7 +637,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   mySettlements.some((s) => `${s.from}→${s.to}` === p.pairKey)
                 )}
                 totalSettledOverall={totalSettledOverall}
-                onSettle={(data) => addExpense.mutate({ ...data, trip_id: tripId } as any)}
+                onSettle={(data) => addExpense.mutate({ ...data, trip_id: tripId, split_type: "equal" } as any)}
               />
             )}
             {otherSettlements.length > 0 && (
