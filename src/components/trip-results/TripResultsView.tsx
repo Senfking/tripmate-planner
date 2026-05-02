@@ -733,6 +733,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               {dest.accommodation ? (
                 <AccommodationCard
                   name={dest.accommodation.title || dest.accommodation.name || "Stay"}
+                  description={dest.accommodation.description ?? null}
+                  proTip={dest.accommodation.pro_tip ?? dest.accommodation.tips ?? null}
                   photos={dest.accommodation.photos}
                   rating={dest.accommodation.rating ?? null}
                   userRatingCount={dest.accommodation.user_rating_count ?? null}
