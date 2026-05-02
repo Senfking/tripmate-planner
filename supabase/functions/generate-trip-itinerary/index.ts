@@ -4348,7 +4348,12 @@ function rewriteCachedBookingUrls(
   if (!dest) return { rewritten: 0 };
   let rewritten = 0;
 
-  const rebuild = (existingUrl: string): string => {
+  const destName = typeof (dest as { name?: unknown }).name === "string"
+    ? (dest as { name: string }).name
+    : "";
+  const cityHint = env.cityHint ?? destName ?? null;
+
+  const rebuild = (existingUrl: string, activityTitle: string | null): string => {
     let bookingUrl = existingUrl;
     try {
       const parsed = new URL(existingUrl);
@@ -4359,14 +4364,20 @@ function rewriteCachedBookingUrls(
     } catch {
       // fall through with original string
     }
-    let searchQuery = "";
+    let existingSs = "";
     try {
       const inner = new URL(bookingUrl);
-      searchQuery = inner.searchParams.get("ss") ?? "";
+      existingSs = inner.searchParams.get("ss") ?? "";
     } catch {
       // unparseable — leave URL unchanged
       return existingUrl;
     }
+    // Prefer the activity title (clean hotel name) + city hint over the
+    // existing ss, which often contains street/postcode noise from older
+    // generations.
+    const hotelName = (activityTitle ?? "").trim() || existingSs;
+    if (!hotelName) return existingUrl;
+    const searchQuery = buildBookingSearchString(hotelName, cityHint);
     if (!searchQuery) return existingUrl;
     const fresh = buildBookingDestinationUrl(searchQuery);
     return wrapAwinBookingUrl(fresh, env.tripId, {
@@ -4380,7 +4391,8 @@ function rewriteCachedBookingUrls(
     if (activity.booking_partner !== "booking") return;
     const current = typeof activity.booking_url === "string" ? activity.booking_url : "";
     if (!current) return;
-    const next = rebuild(current);
+    const title = typeof activity.title === "string" ? activity.title : null;
+    const next = rebuild(current, title);
     if (next !== current) {
       activity.booking_url = next;
       rewritten++;
