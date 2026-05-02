@@ -203,11 +203,28 @@ export function ActivityCard({
             {activity.start_time && <span className="font-mono">{activity.start_time}</span>}
           </div>
         </div>
-        <span className="text-[11px] font-mono font-medium text-foreground whitespace-nowrap ml-3 mt-0.5">
-          {activity.estimated_cost_per_person
-            ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}`
-            : "Free"}
-        </span>
+        <div className="flex flex-col items-end whitespace-nowrap ml-3 mt-0.5">
+          {(() => {
+            const amount = activity.estimated_cost_per_person;
+            if (!amount) {
+              return <span className="text-[11px] font-mono font-medium text-foreground">Free</span>;
+            }
+            const code = activity.currency || "USD";
+            if (costFormatter) {
+              const primary = costFormatter.primary(amount);
+              const secondary = costFormatter.secondary(amount);
+              return (
+                <>
+                  <span className="text-[11px] font-mono font-medium text-foreground">{primary}</span>
+                  {secondary && (
+                    <span className="text-[9px] font-mono text-muted-foreground/70 mt-0.5">{secondary}</span>
+                  )}
+                </>
+              );
+            }
+            return <span className="text-[11px] font-mono font-medium text-foreground">{`~${code}${amount}`}</span>;
+          })()}
+        </div>
       </div>
 
       {/* Expanded details */}
