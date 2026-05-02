@@ -63,8 +63,15 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
   const scrollTimeoutRef = useRef<number>();
   activeIdRef.current = activeId;
 
-  const getScrollRoot = useCallback(() => {
-    return document.querySelector<HTMLElement>("[data-results-scroll-root='true']") ?? document.documentElement;
+  // Returns whichever element is the actual scroller. The results view used
+  // to scroll inside [data-results-scroll-root]; now (for screenshot/extension
+  // compatibility) document scroll is the default and the inner element only
+  // becomes scrollable when the map side panel is open. Detect that at call
+  // time so the same code works in both states.
+  const getScrollRoot = useCallback((): HTMLElement => {
+    const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
+    if (marked && marked.scrollHeight > marked.clientHeight + 1) return marked;
+    return document.scrollingElement as HTMLElement ?? document.documentElement;
   }, []);
 
   const getHeaderOffset = useCallback(() => {
@@ -72,56 +79,29 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
     return (header?.getBoundingClientRect().height ?? 0) + 12;
   }, []);
 
-  const [topOffset, setTopOffset] = useState(96);
-
-  useEffect(() => {
-    if (!isDesktop) return;
-    const scrollRoot = getScrollRoot();
-    const computeOffset = () => {
-      const hero = document.querySelector<HTMLElement>("[data-results-hero='true']");
-      const minTop = 96;
-      if (!hero) {
-        setTopOffset(minTop);
-        return;
-      }
-      const heroRect = hero.getBoundingClientRect();
-      setTopOffset(Math.max(minTop, heroRect.bottom + 12));
-    };
-    scrollRoot.addEventListener("scroll", computeOffset, { passive: true });
-    window.addEventListener("resize", computeOffset);
-    computeOffset();
-    return () => {
-      scrollRoot.removeEventListener("scroll", computeOffset);
-      window.removeEventListener("resize", computeOffset);
-    };
-  }, [isDesktop, getScrollRoot]);
-
   useEffect(() => {
     if (!isDesktop) return;
 
     const nodeIds = nodes.map((n) => n.id);
-    const scrollRoot = getScrollRoot();
 
     const findTopmost = () => {
       if (isClickScrolling.current) return;
 
-      const rootRect = scrollRoot.getBoundingClientRect();
-      const topBoundary = rootRect.top + getHeaderOffset();
+      const topBoundary = getHeaderOffset();
       let bestId: string | null = null;
       let bestDistance = Infinity;
 
-      // Find the single node whose top edge is closest to (but not far below) the header boundary
+      // Use viewport-relative coordinates — works whether document or an
+      // inner element is the scroller, since getBoundingClientRect is always
+      // relative to the viewport.
       for (const id of nodeIds) {
         const el = document.getElementById(id);
         if (!el) continue;
 
         const rect = el.getBoundingClientRect();
-        // Distance from topBoundary — negative means section has scrolled past
         const dist = rect.top - topBoundary;
 
-        // Prefer sections that have been scrolled past (dist <= 0) — pick the closest one
-        // If none have been scrolled past, pick the nearest upcoming one
-        const absDist = dist <= 0 ? -dist : dist + 10000; // heavily prefer passed sections
+        const absDist = dist <= 0 ? -dist : dist + 10000;
         if (absDist < bestDistance) {
           bestDistance = absDist;
           bestId = id;
@@ -134,15 +114,21 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
       }
     };
 
-    scrollRoot.addEventListener("scroll", findTopmost, { passive: true });
+    // Listen on both window (document scroll) and the marked inner element
+    // (when map panel is open and inner scroll is active). One of them is the
+    // active scroller at any given time; the other is a no-op.
+    const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
+    window.addEventListener("scroll", findTopmost, { passive: true });
+    marked?.addEventListener("scroll", findTopmost, { passive: true });
     window.addEventListener("resize", findTopmost);
     findTopmost();
 
     return () => {
-      scrollRoot.removeEventListener("scroll", findTopmost);
+      window.removeEventListener("scroll", findTopmost);
+      marked?.removeEventListener("scroll", findTopmost);
       window.removeEventListener("resize", findTopmost);
     };
-  }, [nodes, isDesktop, getHeaderOffset, getScrollRoot]);
+  }, [nodes, isDesktop, getHeaderOffset]);
 
   const scrollTo = useCallback(
     (id: string) => {
@@ -150,15 +136,22 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
       if (!el) return;
 
       const scrollRoot = getScrollRoot();
-      const rootRect = scrollRoot.getBoundingClientRect();
+      const isDocument =
+        scrollRoot === document.documentElement || scrollRoot === document.body;
       const elementRect = el.getBoundingClientRect();
-      const targetTop = Math.max(0, scrollRoot.scrollTop + (elementRect.top - rootRect.top) - getHeaderOffset());
+      const currentTop = isDocument ? window.scrollY : scrollRoot.scrollTop;
+      const rootTop = isDocument ? 0 : scrollRoot.getBoundingClientRect().top;
+      const targetTop = Math.max(0, currentTop + (elementRect.top - rootTop) - getHeaderOffset());
 
       setActiveId(id);
       isClickScrolling.current = true;
 
       window.clearTimeout(scrollTimeoutRef.current);
-      scrollRoot.scrollTo({ top: targetTop, behavior: "smooth" });
+      if (isDocument) {
+        window.scrollTo({ top: targetTop, behavior: "smooth" });
+      } else {
+        scrollRoot.scrollTo({ top: targetTop, behavior: "smooth" });
+      }
 
       scrollTimeoutRef.current = window.setTimeout(() => {
         isClickScrolling.current = false;
@@ -175,10 +168,10 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
   return (
     <div
-      style={{ top: topOffset }}
+      style={{ top: 96 }}
       className={compact
-        ? "fixed left-3 bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none transition-[top] duration-150"
-        : "fixed left-[max(12px,calc(50%-420px))] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none transition-[top] duration-150"}
+        ? "fixed left-3 bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none"
+        : "fixed left-[max(12px,calc(50%-420px))] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none"}
     >
       <div className="absolute left-1/2 top-0 bottom-0 w-px bg-primary/15 -translate-x-1/2" />
 

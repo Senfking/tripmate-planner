@@ -106,13 +106,19 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const scrollRoot = document.querySelector<HTMLElement>("[data-results-scroll-root='true']") ?? document.documentElement;
+    const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
+    const useInner = marked && marked.scrollHeight > marked.clientHeight + 1;
     const header = document.querySelector<HTMLElement>("[data-results-header='true']");
     const headerOffset = (header?.getBoundingClientRect().height ?? 0) + 12;
-    const rootRect = scrollRoot.getBoundingClientRect();
     const elementRect = el.getBoundingClientRect();
-    const targetTop = Math.max(0, scrollRoot.scrollTop + (elementRect.top - rootRect.top) - headerOffset);
-    scrollRoot.scrollTo({ top: targetTop, behavior: "smooth" });
+    if (useInner && marked) {
+      const rootRect = marked.getBoundingClientRect();
+      const targetTop = Math.max(0, marked.scrollTop + (elementRect.top - rootRect.top) - headerOffset);
+      marked.scrollTo({ top: targetTop, behavior: "smooth" });
+    } else {
+      const targetTop = Math.max(0, window.scrollY + elementRect.top - headerOffset);
+      window.scrollTo({ top: targetTop, behavior: "smooth" });
+    }
   }, []);
 
   const refinedCoords = useRef<CoordsMap>(new (Map as any)()).current as CoordsMap;
@@ -252,10 +258,37 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     [result.destinations, allDays, hasPacking]
   );
 
+  const mapOpen = mapState !== "closed";
+
+  // When the map panel is open, the layout becomes a constrained split-view
+  // and the itinerary column gets its own internal scroll (so the map stays
+  // fixed at the side). When the map is closed, the document itself is the
+  // scroller — this lets full-page screenshot tools and browser features
+  // (find-in-page, middle-click autoscroll) work normally.
+  useEffect(() => {
+    if (!mapOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mapOpen]);
+
   return createPortal(
-    <div className={cn("fixed inset-0 z-[9999] bg-background flex")}>
+    <div
+      className={cn(
+        "relative z-[9999] bg-background flex",
+        mapOpen ? "fixed inset-0" : "min-h-screen w-full"
+      )}
+    >
       {/* Itinerary scroll area */}
-      <div className="min-w-0 overflow-y-auto flex-1 h-full" data-results-scroll-root="true">
+      <div
+        className={cn(
+          "min-w-0 flex-1",
+          mapOpen ? "overflow-y-auto h-full" : ""
+        )}
+        data-results-scroll-root="true"
+      >
       {/* Timeline (desktop only) */}
       <ResultsTimeline nodes={timelineNodes} compact={mapState === "partial"} />
 

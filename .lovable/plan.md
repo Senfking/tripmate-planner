@@ -1,54 +1,45 @@
-## Problem
+## Problems
 
-The `DateRangePicker` (used in the trip builder, decisions, route planner, etc.) requires the user to scroll down past the calendar and tap **Apply** to commit a range. The button is below the fold on small viewports, so people don't realise the selection isn't saved. Single-date pickers elsewhere in the app (expenses, itinerary, trip dates) commit instantly on tap — the inconsistency is jarring.
+**1. Timeline drifts during initial scroll (desktop)**
+`ResultsTimeline` is `position: fixed` with `top` computed from `heroRect.bottom + 12` on every scroll. At rest the hero bottom sits ~42vh down the viewport, so the timeline starts pushed far down. As you scroll, hero's `bottom` decreases, so `top` decreases — the timeline visibly slides upward for the first ~300px of scroll before settling at the `minTop = 96` floor. It looks like the timeline is moving with the scroll.
 
-## Proposed UX (one rule for all date pickers)
+**2. Full-page screenshot extensions capture only the first viewport**
+`TripResultsView` portals into `document.body` as a `fixed inset-0` container, and scrolling happens on an inner `overflow-y-auto` element (`[data-results-scroll-root]`), not on the document. Chrome screenshot extensions (GoFullPage, Fireshot, etc.) scroll `window` / `document.documentElement` and stitch viewports — since the document itself isn't scrollable, they capture the visible viewport once and stop.
 
-**Tap commits. The popover/sheet closes itself.**
+## Fix
 
-- **Single-date pickers** (already work this way): one tap → value set → popover closes.
-- **Range pickers** (new behaviour):
-  1. First tap sets `from` and clears `to`. Popover stays open. Helper text under the month: "Pick an end date (or tap the same day for a one-day trip)."
-  2. Second tap (any day on or after `from`) sets `to`, fires `onChange` with the full range, and closes the popover.
-  3. Tapping a day **before** the current `from` resets `from` to that day (current behaviour, kept).
-  4. Tapping the **same day** as `from` commits a one-day trip and closes (matches what Apply did).
-  5. Exceeding the 30-day max keeps the existing inline warning, doesn't commit, doesn't close.
+### 1. Anchor the timeline immediately
 
-No Apply button. **Clear** stays as a small ghost link at the bottom-left — a single tap clears the value, fires `onChange(undefined)`, and closes.
+In `src/components/trip-results/ResultsTimeline.tsx`:
 
-Closing the popover any other way (tap outside, Esc, X on mobile sheet) without a complete range = discard the partial selection (revert to previous `value`). This matches how single-date pickers behave when dismissed without choosing.
+- Remove the dynamic `topOffset` state and the scroll/resize listener that recomputes it from the hero's bounding rect.
+- Set the timeline's `top` to a fixed value (`96px`) from the start. The "appear under the hero" behavior isn't needed — desktop users see the timeline as a persistent left-rail nav from the moment the page loads, anchored to the same spot regardless of scroll. This matches how the rail behaves once you've scrolled past the hero anyway.
+- Drop the now-unused `data-results-hero` lookup in this file (the attribute can stay on the hero in `TripResultsView` — other code may reference it; leave untouched).
 
-## Why this is better
+The class strings already use `transition-[top]` — that can also be removed since `top` is static now.
 
-- No hidden CTA. Selection feels direct, like every other tap target in the app.
-- Removes a whole interaction step for the common case (pick start, pick end, done).
-- Same mental model across single-date and range pickers: "tap = commit."
-- The `Clear` affordance stays for the "I want to wipe an existing range" case, which a single tap can't express.
+### 2. Make the results view document-scrollable
 
-## Scope of changes
+The portal + inner-scroll architecture is intentional (overlay-style results view that fully replaces the trip page), but it breaks screenshot tools and also prevents browser features like Find-in-page scrolling and middle-click autoscroll from working naturally.
 
-**Primary file:** `src/components/decisions/DateRangePicker.tsx`
-- Remove the Apply button and the footer row that holds it.
-- Move auto-commit logic into `handleSelect`: when a valid `to` is picked (or `from === to`), call `onChange(finalRange)` and `setOpen(false)`.
-- Add a one-line helper under the month grid while `from` is set but `to` is not: *"Pick an end date — or tap the same day for a one-day trip."*
-- Make `Clear` commit immediately: `onChange(undefined); setOpen(false)`.
-- On `handleOpen(false)` without a complete range, do nothing (drop the partial draft) — `value` is unchanged so reopening starts fresh from the last committed value.
-- Mobile inline-expanded variant: same logic; the section collapses on commit.
+In `src/components/trip-results/TripResultsView.tsx`:
 
-**No changes** to:
-- `src/components/ui/calendar.tsx` (shadcn single-date) — already commits on tap.
-- Single-date consumers (`ExpenseFormModal`, `InlineExpenseHeader`, `SettleConfirmDrawer`, `TripDateEditor`, `ItineraryTab`, `ProposalCard`, etc.) — they already follow the "tap commits" pattern.
-- The trigger button styling — placeholder size fix from the previous turn stays.
+- Change the outer portal container from `fixed inset-0 ... flex` to a non-fixed full-height layout that participates in document flow: `min-h-screen w-full ... flex`. It still portals to `document.body` so it overlays sibling app chrome via stacking, but scroll lives on `<html>`/`<body>` instead of the inner div.
+- Change the inner itinerary column from `overflow-y-auto flex-1 h-full` to just `flex-1 min-w-0` (no internal scroll, no fixed height). Keep the `data-results-scroll-root` attribute on the same element but have callers (timeline scroll-into-view, `scrollToSection`) detect when the element isn't itself scrollable and fall back to `document.documentElement` / `window.scrollTo`.
+- Update `getScrollRoot()` in both `ResultsTimeline.tsx` and the local `scrollToSection` helper in `TripResultsView.tsx` to return `document.documentElement` whenever the marked element's `scrollHeight <= clientHeight` (i.e. it isn't actually the scroller). This keeps the existing API and the map-side-panel layout working — when the map opens and re-introduces a constrained inner scroller, the same code path still finds it.
+- The map slide panel (`MapSlidePanel`) currently coexists with the inner scroll in a flex row. When the itinerary column no longer has its own scroll, opening the map needs to either (a) re-enable inner scroll on the itinerary column while the map is open, or (b) keep the map in a fixed/sticky pane on the right while the document scrolls behind. Option (a) is the smaller change: when `mapState !== "closed"`, add back `overflow-y-auto h-screen` on the itinerary column and lock body scroll; when `mapState === "closed"`, document scroll is the source of truth. This preserves the existing split-view UX without rewriting `MapSlidePanel`.
 
-## Edge cases handled
+### Verification
 
-- Reopening after a committed range: `handleOpen(true)` already seeds `draft` from `value`, so the calendar shows the existing selection and the user can tap-tap to overwrite.
-- Tapping `from` again as a one-day trip: covered (span = 1, commits).
-- Picking a day before `from`: resets `from`, stays open waiting for end date (existing behaviour).
-- 30-day cap exceeded: shows existing warning, does not commit, does not close.
+After changes, on desktop (≥1024px):
+- Timeline left rail is visible and pinned at `top: 96px` from the moment the page renders. Scrolling the page does not move the rail.
+- Active dot still updates as sections scroll past the header threshold (the active-section logic already supports `document.documentElement` as the scroll root).
+- A Chrome full-page screenshot extension (e.g. GoFullPage) successfully captures the entire trip results view top to bottom.
+- Opening the map panel still produces the existing split layout with the map on the right and a scrollable itinerary on the left.
 
-## Out of scope
+### Files
 
-- Single-date pickers — already consistent.
-- Visual restyle of the calendar grid (colors, fonts) — keeping the current look.
-- Adding range support to other pickers — none of the current single-date consumers need it.
+- `src/components/trip-results/ResultsTimeline.tsx` — remove dynamic `topOffset`; pin to `top: 96px`; update `getScrollRoot()` to fall back to `document.documentElement` when the marked node isn't scrollable.
+- `src/components/trip-results/TripResultsView.tsx` — change outer container to `min-h-screen` (non-fixed); remove always-on inner `overflow-y-auto`; conditionally re-enable inner scroll only when map panel is open; update local `scrollToSection` to use the same scroll-root fallback.
+
+No backend, hook, or SSE changes. No changes to `DaySection`, `useStreamingTripGeneration`, or `StandaloneTripBuilder`.
