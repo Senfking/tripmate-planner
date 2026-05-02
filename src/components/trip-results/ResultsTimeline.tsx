@@ -84,10 +84,12 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
     return document.scrollingElement as HTMLElement ?? document.documentElement;
   }, []);
 
-  const getHeaderOffset = useCallback(() => {
-    const header = document.querySelector<HTMLElement>("[data-results-header='true']");
-    return (header?.getBoundingClientRect().height ?? 0) + 12;
-  }, []);
+  // Small visual breathing-room offset so the section title isn't glued to
+  // the very top edge of the viewport. There's no real sticky header on
+  // results — the hero scrolls away — so we use a small constant rather
+  // than measuring the (very tall) hero element.
+  const SCROLL_TOP_GAP = 24;
+  const getHeaderOffset = useCallback(() => SCROLL_TOP_GAP, []);
 
   useEffect(() => {
     if (!isDesktop) return;
