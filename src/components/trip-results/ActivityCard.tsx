@@ -125,11 +125,11 @@ export function ActivityCard({
   return (
     <div
       data-activity-id={`${day.date}-${index}`}
-      className="mx-4 mb-3 rounded-2xl border border-border bg-card overflow-hidden transition-all duration-200 animate-fade-in shadow-sm"
+      className="mx-4 mb-3 rounded-2xl border border-border bg-card transition-all duration-200 animate-fade-in shadow-sm relative"
       style={{ animationDelay: `${animDelay}ms` }}
     >
       {/* Hero image */}
-      <div className="relative w-full h-[120px] overflow-hidden bg-muted cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+      <div className="relative w-full h-[120px] overflow-hidden bg-muted cursor-pointer rounded-t-2xl" onClick={() => setExpanded((e) => !e)}>
         {isLoading ? (
           <Skeleton className="w-full h-full rounded-none" />
         ) : heroSrc ? (
