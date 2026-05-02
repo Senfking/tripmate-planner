@@ -214,7 +214,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
         );
       case "all-clear":
         return (
-          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-1 text-[11px] font-semibold dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-1 text-[11px] font-semibold">
             <CheckCircle2 className="h-3 w-3" />
             All clear
           </span>
@@ -309,9 +309,9 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
 
       {status?.kind === "all-clear" && (
         <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
-          <div className="rounded-xl bg-emerald-50 px-3 py-2">
-            <p className="text-[11px] font-semibold text-emerald-800">Visa</p>
-            <p className="mt-0.5 text-[12px] text-emerald-900">Not required</p>
+          <div className="rounded-xl bg-primary/10 px-3 py-2">
+            <p className="text-[11px] font-semibold text-primary">Visa</p>
+            <p className="mt-0.5 text-[12px] text-foreground">Not required</p>
           </div>
           <div className="rounded-xl bg-muted/50 px-3 py-2">
             <p className="text-[11px] font-semibold text-muted-foreground">Documents</p>
