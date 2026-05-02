@@ -169,21 +169,23 @@ export function ActivityCard({
         <div className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-primary-foreground shadow-md bg-primary">
           {index + 1}
         </div>
-        {/* Swap button — top right, teal outline */}
-        <div className="absolute top-2 right-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(true);
-              setSwapMode(swapMode === "menu" ? null : "menu");
-              setSwapText("");
-            }}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
-          >
-            <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
-          </button>
-        </div>
-      </div>
+        {/* Swap button — top right, teal outline. Hidden when expanded;
+            the footer actions row exposes Swap there. */}
+        {!expanded && (
+          <div className="absolute top-2 right-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(true);
+                setSwapMode(swapMode === "menu" ? null : "menu");
+                setSwapText("");
+              }}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
+            </button>
+          </div>
+        )}
 
       {/* Summary row */}
       <div className="flex items-start justify-between px-3 py-2 cursor-pointer gap-3" onClick={() => setExpanded((e) => !e)}>
