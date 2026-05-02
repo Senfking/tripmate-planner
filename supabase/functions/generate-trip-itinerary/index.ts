@@ -3634,11 +3634,22 @@ async function rankInParallel(
 
 // ---- markJuntoPicks ----
 //
-// Marks 2–3 activities per trip with is_junto_pick=true. Qualifying bar:
-//   rating >= 4.5 AND user_rating_count in [50, 500]  (hidden-gem band)
-//   AND the activity matches >= 2 intent signals (vibe / must_have / dietary).
-// Events never qualify (no rating/review data).
-// Fewer than 2 qualifiers → mark what we have; never force a bad pick.
+// Marks standout activities with is_junto_pick=true. Eligibility:
+//   place_id present (events ineligible) AND rating present.
+// No upper or lower review-count band — popular icons can qualify.
+//
+// Algorithm:
+//   1. Per day, score each eligible activity:
+//        signalMatches * 1000 + rating * 10 - log(max(reviews, 1)) * 5
+//      The log penalty mildly favors less-mainstream venues without excluding
+//      the high-review icons. Keep the day's top scorer (one pick per day max).
+//   2. Across the trip, take the top ceil(numDays / 2) of those per-day winners
+//      — a 5-day trip gets up to 3 picks, 7-day up to 4. Biased toward
+//      fewer-but-higher-confidence picks.
+//   3. Tie-break: higher signalMatches, then higher rating, then random.
+// Days with zero eligible activities (events-only, hydration gaps) are skipped.
+// Existing is_junto_pick flags are reset before scoring so cache-hit callers
+// get a fresh pass against the current request's intent.
 
 function countIntentSignalMatches(act: EnrichedActivity, intent: Intent): number {
   const haystack = [
@@ -3666,34 +3677,58 @@ function countIntentSignalMatches(act: EnrichedActivity, intent: Intent): number
 }
 
 function markJuntoPicks(result: PipelineResult, intent: Intent): void {
-  // Score every candidate across the whole trip, then pick up to 3.
-  interface Candidate { act: EnrichedActivity; score: number; }
-  const candidates: Candidate[] = [];
+  interface Candidate {
+    act: EnrichedActivity;
+    score: number;
+    signalMatches: number;
+    rating: number;
+  }
 
+  const compare = (a: Candidate, b: Candidate): number => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.signalMatches !== a.signalMatches) return b.signalMatches - a.signalMatches;
+    if (b.rating !== a.rating) return b.rating - a.rating;
+    return Math.random() - 0.5;
+  };
+
+  // Reset existing flags so cache-hit callers don't carry over stale picks
+  // from a prior intent.
   for (const dest of result.destinations) {
     for (const day of dest.days) {
       for (const act of day.activities) {
-        // Events ineligible — no rating/review data.
-        if (!act.place_id) continue;
-        const rating = act.rating ?? 0;
-        const reviews = act.user_rating_count ?? 0;
-        if (rating < 4.5) continue;
-        if (reviews < 50 || reviews > 500) continue;
-        const signalMatches = countIntentSignalMatches(act, intent);
-        if (signalMatches < 2) continue;
-        // Tie-breaker: higher signalMatches, then higher rating, then fewer reviews
-        // (hidden-gem bias — prefer 80-review 4.7 over 450-review 4.6).
-        const score =
-          signalMatches * 1000 +
-          rating * 10 -
-          reviews / 100;
-        candidates.push({ act, score });
+        act.is_junto_pick = false;
       }
     }
   }
 
-  candidates.sort((a, b) => b.score - a.score);
-  for (const c of candidates.slice(0, 3)) {
+  const perDayPicks: Candidate[] = [];
+  let numDays = 0;
+  for (const dest of result.destinations) {
+    for (const day of dest.days) {
+      numDays++;
+      let best: Candidate | null = null;
+      for (const act of day.activities) {
+        if (!act.place_id) continue;
+        if (act.rating == null) continue;
+        const rating = act.rating;
+        const reviews = act.user_rating_count ?? 0;
+        const signalMatches = countIntentSignalMatches(act, intent);
+        const score =
+          signalMatches * 1000 +
+          rating * 10 -
+          Math.log(Math.max(reviews, 1)) * 5;
+        const cand: Candidate = { act, score, signalMatches, rating };
+        if (!best || compare(cand, best) < 0) best = cand;
+      }
+      if (best) perDayPicks.push(best);
+    }
+  }
+
+  if (perDayPicks.length === 0) return;
+
+  const tripCap = Math.max(1, Math.ceil(numDays / 2));
+  perDayPicks.sort(compare);
+  for (const c of perDayPicks.slice(0, tripCap)) {
     c.act.is_junto_pick = true;
   }
 }
@@ -4697,6 +4732,12 @@ Deno.serve(async (req) => {
                   from_cache: true,
                 });
                 send("image", { url: payload?.destination_image_url ?? null });
+                // Re-apply junto picks against the current request's intent
+                // before streaming days — cached payloads were tagged under
+                // whatever intent generated them, and signal matches may
+                // differ for this caller. markJuntoPicks resets stale flags
+                // internally.
+                markJuntoPicks(payload as unknown as PipelineResult, intent);
                 for (const d of dest?.days ?? []) send("day", d);
                 const juntoPlaceIds: string[] = [];
                 for (const day of dest?.days ?? []) {
