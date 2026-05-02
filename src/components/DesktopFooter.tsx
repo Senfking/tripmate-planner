@@ -23,13 +23,9 @@ export function DesktopFooter() {
         <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
       </div>
 
-      {/* Center */}
-      <a
-        href="https://junto.pro/ref"
-        className="text-xs text-muted-foreground hover:text-[#0D9488] transition-colors"
-      >
-        Plan your next trip →
-      </a>
+      {/* Center spacer keeps left/right anchored at the edges */}
+      <div aria-hidden />
+
 
       {/* Right */}
       <button
