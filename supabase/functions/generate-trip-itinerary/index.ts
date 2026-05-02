@@ -4911,6 +4911,7 @@ Deno.serve(async (req) => {
                   tripId: tripIdForClickref,
                   checkin: startDate,
                   checkout: endDate,
+                  cityHint: intent.destination,
                 };
                 const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
                 const eventsResult = await refreshCachedEvents(
@@ -5111,6 +5112,7 @@ Deno.serve(async (req) => {
               tripId: tripIdForClickref,
               checkin: startDate,
               checkout: endDate,
+                  cityHint: intent.destination,
             };
             const ranked_days: RankedDay[] = [];
             const seenIds = new Set<string>();
@@ -5616,6 +5618,7 @@ Deno.serve(async (req) => {
             tripId: tripIdForClickref,
             checkin: startDate,
             checkout: endDate,
+                  cityHint: intent.destination,
           };
           const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
           // Re-apply junto picks against the current request's intent — cached
@@ -5815,6 +5818,7 @@ Deno.serve(async (req) => {
       tripId: tripIdForClickref,
       checkin: startDate,
       checkout: endDate,
+                  cityHint: intent.destination,
     };
     for (const dest of ranked.destinations) {
       const decorate = (a: EnrichedActivity) => {
