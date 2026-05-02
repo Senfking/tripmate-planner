@@ -300,6 +300,21 @@ function AllClearPanel({
   disclaimer,
 }: AllClearProps) {
   const [open, setOpen] = useState(false);
+
+  // Allow the timeline rail to remote-open the details when the user clicks
+  // the "Entry" node. The wrapper div uses id="section-entry".
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (detail?.id === "section-entry" && hasDetails) {
+        setOpen(true);
+      }
+    };
+    window.addEventListener("results:expand", handler as EventListener);
+    return () => window.removeEventListener("results:expand", handler as EventListener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const nationalityName = countryName(nationality);
   const possessive = nationalityName ? `Your ${nationalityName} passport` : "Your passport";
   const destPhrase = destName ? ` for ${destName}` : "";
