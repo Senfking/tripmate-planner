@@ -752,7 +752,8 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
         </Button>
       )}
 
-      {/* Expenses list - standalone */}
+      {/* Expenses list - standalone (hidden when empty hero is shown) */}
+      {!(expenses.length === 0 && isExpensesSuccess) && (
       <div
         className="rounded-2xl overflow-hidden relative"
         style={{
