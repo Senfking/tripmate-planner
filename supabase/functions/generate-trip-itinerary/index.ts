@@ -4223,7 +4223,14 @@ function normalizeStringArray(arr: unknown): string[] {
     .sort();
 }
 
+// Bump to force every existing ai_response_cache entry to miss and regenerate.
+// Older entries were written before PR #244's markJuntoPicks rewrite (and before
+// the non-streaming cache-hit branch learned to re-tag picks), so they ship
+// with is_junto_pick=false on every activity. v2 evicts them.
+const CACHE_KEY_VERSION = "v2";
+
 interface RawCacheKeyShape {
+  version: string;
   destination: string;
   num_days: number;
   start_month: string;
@@ -4245,6 +4252,7 @@ function buildRawCacheKeyShape(
 ): RawCacheKeyShape {
   const dest = (destinationOverride ?? body.destination ?? "").toLowerCase().trim();
   return {
+    version: CACHE_KEY_VERSION,
     destination: dest,
     num_days: numDays,
     start_month: extractMonthBucket(startDate),
@@ -4909,6 +4917,7 @@ Deno.serve(async (req) => {
                 for (const day of dest?.days ?? []) {
                   for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
                 }
+                console.log(`[stream.cache] junto_picks_tagged=${juntoPlaceIds.length}`);
                 send("trip_complete", {
                   trip_title: stripEmojis(payload?.trip_title),
                   trip_summary: payload?.trip_summary ?? "",
@@ -5541,7 +5550,7 @@ Deno.serve(async (req) => {
       surpriseMe ? intent.destination : undefined,
     );
     console.log(
-      `[stream.cache] read key=${cacheKey} raw_inputs=${JSON.stringify(cacheKeyShape)}`,
+      `[nonstream.cache] read key=${cacheKey} raw_inputs=${JSON.stringify(cacheKeyShape)}`,
     );
     {
       const { data: cached, error: cacheErr } = await svcClient
@@ -5562,7 +5571,7 @@ Deno.serve(async (req) => {
           : 0;
         if (cachedDayCount !== numDays) {
           console.log(
-            `[stream.cache] miss cache_key=${cacheKey} reason=day_count_mismatch cached=${cachedDayCount} requested=${numDays}`,
+            `[nonstream.cache] miss cache_key=${cacheKey} reason=day_count_mismatch cached=${cachedDayCount} requested=${numDays}`,
           );
         } else {
           tStage("cache_lookup_hit", tCacheLookup);
@@ -5577,6 +5586,15 @@ Deno.serve(async (req) => {
             checkout: endDate,
           };
           const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
+          // Re-apply junto picks against the current request's intent — cached
+          // payloads were tagged under whatever intent generated them (and
+          // pre-PR #244 entries were tagged under the strict hidden-gem rule
+          // and may have zero picks). Mirrors the streaming cache-hit branch.
+          markJuntoPicks(payload as unknown as PipelineResult, intent);
+          let juntoPicksTagged = 0;
+          for (const day of payload?.destinations?.[0]?.days ?? []) {
+            for (const a of day.activities ?? []) if (a?.is_junto_pick) juntoPicksTagged++;
+          }
           const eventsResult = await refreshCachedEvents(
             payload,
             intent,
@@ -5586,8 +5604,9 @@ Deno.serve(async (req) => {
             logger,
           );
           console.log(
-            `[stream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared} booking_urls_rewritten=${bookingRewriteStats.rewritten}`,
+            `[nonstream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared} booking_urls_rewritten=${bookingRewriteStats.rewritten}`,
           );
+          console.log(`[nonstream.cache] junto_picks_tagged=${juntoPicksTagged}`);
           console.log(
             `[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stages: stageTimings })}`,
           );
@@ -5602,7 +5621,7 @@ Deno.serve(async (req) => {
           return jsonResponse({ success: true, ...payload });
         }
       } else {
-        console.log(`[stream.cache] miss cache_key=${cacheKey} reason=not_found month_bucket=${monthBucket}`);
+        console.log(`[nonstream.cache] miss cache_key=${cacheKey} reason=not_found month_bucket=${monthBucket}`);
       }
     }
     tStage("cache_lookup_miss", tCacheLookup);
@@ -5820,7 +5839,7 @@ Deno.serve(async (req) => {
     // ---- Cache write (fail loud, AFTER validation passes) ----
     const tCacheWrite = Date.now();
     console.log(
-      `[stream.cache] write key=${cacheKey} raw_inputs=${JSON.stringify(cacheKeyShape)}`,
+      `[nonstream.cache] write key=${cacheKey} raw_inputs=${JSON.stringify(cacheKeyShape)}`,
     );
     {
       const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
