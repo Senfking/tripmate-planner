@@ -43,6 +43,13 @@ export function buildTimelineNodes(
 
   for (const dest of destinations) {
     pushNode({ id: `section-dest-${dest.name}`, icon: MapPin, label: dest.name });
+    if (dest.accommodation) {
+      pushNode({
+        id: `section-stay-${dest.name.replace(/\s+/g, "-")}`,
+        icon: Bed,
+        label: "Stay",
+      });
+    }
     const destDays = allDays.filter((d) => d.date >= dest.start_date && d.date <= dest.end_date);
     for (const day of destDays) {
       pushNode({ id: `section-day-${day.day_number}`, label: `Day ${day.day_number}`, minor: true });
