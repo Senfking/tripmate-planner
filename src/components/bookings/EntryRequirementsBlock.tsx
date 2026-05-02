@@ -186,9 +186,9 @@ export function EntryRequirementsBlock({ tripId, onUploadForRequirement }: Props
 
   if (isAllClear) {
     return (
-      <AllClearState
+      <AllClearPanel
         destName={destName}
-          nationality={primaryNationality ?? null}
+        nationality={primaryNationality ?? null}
         passportValidity={data.passport_validity}
         summary={summary}
         embassy={embassy}
