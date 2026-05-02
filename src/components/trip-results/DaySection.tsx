@@ -11,6 +11,7 @@ import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import type { AIDay, AIActivity, AITripResult } from "./useResultsState";
+import type { ActivityCostFormatter } from "./formatActivityCost";
 
 interface Props {
   day: AIDay;
@@ -36,6 +37,9 @@ interface Props {
    *  skeleton matches the populated card's outer shape (border, radius,
    *  height) so the swap to populated is layout-stable. */
   skeleton?: boolean;
+  /** Per-person cost formatter — when present, ActivityCard renders prices
+   *  in user's profile currency primary with destination currency subtitle. */
+  costFormatter?: ActivityCostFormatter;
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
@@ -81,6 +85,7 @@ export function DaySection({
   onCoordsRefined,
   onOpenDayMap,
   skeleton = false,
+  costFormatter,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editDayOpen, setEditDayOpen] = useState(false);
@@ -306,6 +311,7 @@ export function DaySection({
                       onRemove={() => onRemoveActivity(day.date, i, activity)}
                       onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
                       animDelay={i * 50}
+                      costFormatter={costFormatter}
                     />
                   </div>
                 ))

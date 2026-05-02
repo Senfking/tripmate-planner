@@ -8,6 +8,7 @@ import { DestinationSection } from "./DestinationSection";
 import { DaySection } from "./DaySection";
 import { TransportCard } from "./TransportCard";
 import { AccommodationCard } from "./AccommodationCard";
+import { buildActivityCostFormatter } from "./formatActivityCost";
 import { AlternativesSheet } from "./AlternativesSheet";
 import { ResultsMap } from "./ResultsMap";
 import { ResultsTimeline, buildTimelineNodes } from "./ResultsTimeline";
@@ -248,6 +249,18 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       }
     },
     [],
+  );
+
+  // Per-activity cost formatter — same conversion path as the budget bar so
+  // the day cards and bottom bar agree on currency.
+  const activityCostFormatter = useMemo(
+    () => buildActivityCostFormatter({
+      destCurrency,
+      userCurrency,
+      convertToUserCurrency,
+      formatBudget,
+    }),
+    [destCurrency, userCurrency, convertToUserCurrency, formatBudget],
   );
 
 
@@ -730,6 +743,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   bookingUrl={dest.accommodation.booking_url ?? null}
                   bookingPartner={dest.accommodation.booking_partner ?? null}
                   locationHint={dest.name}
+                  checkInDate={dest.start_date || null}
+                  checkOutDate={dest.end_date || null}
                 />
               ) : (
                 <div className="mx-4 mb-4 rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
@@ -774,6 +789,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     onCoordsRefined={handleCoordsRefined}
                     onOpenDayMap={openDayMap}
                     skeleton={!!streamingDayNumbers?.has(day.day_number)}
+                    costFormatter={activityCostFormatter}
                   />
                   </div>
                 ))}

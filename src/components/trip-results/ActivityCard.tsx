@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityReactions } from "./ActivityReactions";
 import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
+import type { ActivityCostFormatter } from "./formatActivityCost";
 
 interface Props {
   activity: AIActivity;
@@ -21,6 +22,10 @@ interface Props {
   onRemove: () => void;
   onCoordsRefined?: (lat: number, lng: number) => void;
   animDelay?: number;
+  /** Formats per-person costs in user's profile currency (primary) plus
+   *  destination currency (smaller subtitle). Optional — falls back to the
+   *  legacy "~CCY{amount}" rendering when not provided. */
+  costFormatter?: ActivityCostFormatter;
 }
 
 function MiniStars({ rating }: { rating: number }) {
@@ -54,6 +59,7 @@ export function ActivityCard({
   onRemove,
   onCoordsRefined,
   animDelay = 0,
+  costFormatter,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -197,11 +203,28 @@ export function ActivityCard({
             {activity.start_time && <span className="font-mono">{activity.start_time}</span>}
           </div>
         </div>
-        <span className="text-[11px] font-mono font-medium text-foreground whitespace-nowrap ml-3 mt-0.5">
-          {activity.estimated_cost_per_person
-            ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}`
-            : "Free"}
-        </span>
+        <div className="flex flex-col items-end whitespace-nowrap ml-3 mt-0.5">
+          {(() => {
+            const amount = activity.estimated_cost_per_person;
+            if (!amount) {
+              return <span className="text-[11px] font-mono font-medium text-foreground">Free</span>;
+            }
+            const code = activity.currency || "USD";
+            if (costFormatter) {
+              const primary = costFormatter.primary(amount);
+              const secondary = costFormatter.secondary(amount);
+              return (
+                <>
+                  <span className="text-[11px] font-mono font-medium text-foreground">{primary}</span>
+                  {secondary && (
+                    <span className="text-[9px] font-mono text-muted-foreground/70 mt-0.5">{secondary}</span>
+                  )}
+                </>
+              );
+            }
+            return <span className="text-[11px] font-mono font-medium text-foreground">{`~${code}${amount}`}</span>;
+          })()}
+        </div>
       </div>
 
       {/* Expanded details */}
@@ -325,11 +348,28 @@ export function ActivityCard({
             >
               <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
             </button>
-            <span className="text-[11px] font-mono text-muted-foreground">
-              {activity.estimated_cost_per_person
-                ? `~${activity.currency || "USD"}${activity.estimated_cost_per_person}/person`
-                : "Free"}
-            </span>
+            {(() => {
+              const amount = activity.estimated_cost_per_person;
+              if (!amount) {
+                return <span className="text-[11px] font-mono text-muted-foreground">Free</span>;
+              }
+              const code = activity.currency || "USD";
+              if (costFormatter) {
+                const primary = costFormatter.primary(amount);
+                const secondary = costFormatter.secondary(amount);
+                return (
+                  <span className="flex flex-col items-end leading-tight">
+                    <span className="text-[11px] font-mono text-muted-foreground">{`${primary}/person`}</span>
+                    {secondary && (
+                      <span className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">{secondary}</span>
+                    )}
+                  </span>
+                );
+              }
+              return (
+                <span className="text-[11px] font-mono text-muted-foreground">{`~${code}${amount}/person`}</span>
+              );
+            })()}
 
             {/* Swap popover */}
             {swapMode === "menu" && (

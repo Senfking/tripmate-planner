@@ -308,12 +308,27 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   }, [onClose]);
 
   // Brief transition shown after stream completes while we INSERT the draft
-  // trip and navigate to /app/trips/[id]. Prevents a flash of TripResultsView.
-  if (phase === "opening") {
+  // trip and navigate to /app/trips/[id]. Per the streaming-UI refactor,
+  // TripResultsView IS the final state — there is no separate "Creating
+  // your trip" overlay. We render the same surface with streaming=false so
+  // the transition from streaming-end to navigation is invisible (the
+  // streaming pill disappears, budget appears, Create Trip enables). The
+  // persist+navigate runs in the background; if it fails we drop into the
+  // open-error state below.
+  if (phase === "opening" && pendingNormalized) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-4">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        <p className="text-sm text-muted-foreground">Opening your trip…</p>
+      <div className="fixed inset-0 z-[100]">
+        <TripResultsView
+          tripId="standalone-opening"
+          planId={null}
+          result={pendingNormalized}
+          onClose={onClose}
+          onRegenerate={() => { /* gated during open */ }}
+          standalone
+          onCreateTrip={handleCreateTrip}
+          onSaveDraft={handleSaveDraft}
+          creatingTrip={creatingTrip}
+        />
       </div>
     );
   }

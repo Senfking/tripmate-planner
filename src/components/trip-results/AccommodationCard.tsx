@@ -22,6 +22,10 @@ interface Props {
   bookingUrl?: string | null;
   bookingPartner?: string | null;
   locationHint?: string;
+  /** ISO yyyy-MM-dd. Pre-fills checkin/checkout on Booking.com so users
+   *  don't have to re-enter the trip's dates after clicking "Book". */
+  checkInDate?: string | null;
+  checkOutDate?: string | null;
 }
 
 const PRICE_LABELS: Record<PriceLevel, { dollars: string; label: string }> = {
@@ -52,6 +56,8 @@ export function AccommodationCard({
   bookingUrl,
   bookingPartner,
   locationHint,
+  checkInDate,
+  checkOutDate,
 }: Props) {
   // Only fetch from Google Places hook when we don't already have photo/rating
   // data from the backend (saves a round-trip on freshly built trips).
@@ -71,7 +77,26 @@ export function AccommodationCard({
   // Resolve primary CTA: real booking partner > Google Maps fallback.
   const hasBooking = !!bookingUrl && !!bookingPartner && bookingPartner !== "google_maps";
   const partnerLabel = bookingPartner ? PARTNER_LABELS[bookingPartner] ?? bookingPartner : null;
-  const ctaHref = hasBooking ? bookingUrl! : googleMapsUrl;
+
+  // Append trip dates to the booking URL when available so the partner's
+  // search is pre-filled. Currently only Booking.com is wired (and the only
+  // partner whose URL accepts checkin/checkout query params); other partners
+  // would need their own param mapping.
+  const bookingUrlWithDates = (() => {
+    if (!hasBooking) return bookingUrl ?? null;
+    if (!checkInDate || !checkOutDate) return bookingUrl ?? null;
+    if (bookingPartner !== "booking") return bookingUrl ?? null;
+    try {
+      const url = new URL(bookingUrl!);
+      if (!url.searchParams.has("checkin")) url.searchParams.set("checkin", checkInDate);
+      if (!url.searchParams.has("checkout")) url.searchParams.set("checkout", checkOutDate);
+      return url.toString();
+    } catch {
+      return bookingUrl ?? null;
+    }
+  })();
+
+  const ctaHref = hasBooking ? bookingUrlWithDates : googleMapsUrl;
   const ctaLabel = hasBooking ? `Book on ${partnerLabel}` : "View on Google Maps";
 
   // Resolve price display — never render currency without an amount.
