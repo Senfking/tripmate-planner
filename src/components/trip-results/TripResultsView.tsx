@@ -743,6 +743,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   bookingUrl={dest.accommodation.booking_url ?? null}
                   bookingPartner={dest.accommodation.booking_partner ?? null}
                   locationHint={dest.name}
+                  checkInDate={dest.start_date || null}
+                  checkOutDate={dest.end_date || null}
                 />
               ) : (
                 <div className="mx-4 mb-4 rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
