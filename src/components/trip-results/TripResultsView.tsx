@@ -740,38 +740,43 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           );
         })}
 
-        {/* Visa & entry requirements (read-only preview, pre-creation) */}
-        <div className={cn(rc)} style={revealStyle("packing")}>
-          <EntryRequirementsPreview
-            destinationCountryIso={result.destination_country_iso ?? null}
-            tripLengthDays={allDays.length || 7}
-          />
-        </div>
+        {/* Visa & entry requirements + Packing — only once streaming complete.
+            Both depend on data that arrives in trip_complete (country_iso /
+            packing_suggestions). */}
+        {!streaming && (
+          <>
+            <div className={cn(rc)} style={revealStyle("packing")}>
+              <EntryRequirementsPreview
+                destinationCountryIso={result.destination_country_iso ?? null}
+                tripLengthDays={allDays.length || 7}
+              />
+            </div>
 
-        {/* Packing suggestions */}
-        {hasPacking && (
-          <div id="section-packing" className={cn("mx-4 mt-2 mb-6", rc)} style={revealStyle("packing")}>
-            <button
-              onClick={() => setPackingOpen(!packingOpen)}
-              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
-            >
-              <Package className="h-4 w-4 text-[#0D9488]" />
-              <span className="text-sm font-medium flex-1 text-foreground">Packing suggestions</span>
-              <span className="text-xs text-muted-foreground">{result.packing_suggestions.length} items</span>
-            </button>
-            {packingOpen && (
-              <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in">
-                <ul className="space-y-1">
-                  {result.packing_suggestions.map((item, i) => (
-                    <li key={i} className="text-xs text-muted-foreground flex items-center gap-2">
-                      <span className="w-1 h-1 rounded-full bg-muted-foreground/30 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+            {hasPacking && (
+              <div id="section-packing" className={cn("mx-4 mt-2 mb-6", rc)} style={revealStyle("packing")}>
+                <button
+                  onClick={() => setPackingOpen(!packingOpen)}
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border text-left hover:bg-accent/50 transition-colors"
+                >
+                  <Package className="h-4 w-4 text-[#0D9488]" />
+                  <span className="text-sm font-medium flex-1 text-foreground">Packing suggestions</span>
+                  <span className="text-xs text-muted-foreground">{result.packing_suggestions.length} items</span>
+                </button>
+                {packingOpen && (
+                  <div className="mt-2 px-4 py-3 rounded-xl bg-card border border-border animate-fade-in">
+                    <ul className="space-y-1">
+                      {result.packing_suggestions.map((item, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span className="w-1 h-1 rounded-full bg-muted-foreground/30 flex-shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Trip-level discussion moved into Group Activity panel */}
@@ -807,10 +812,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 </Button>
                 <Button
                   onClick={onCreateTrip}
-                  disabled={creatingTrip}
+                  disabled={creatingTrip || !!streaming}
+                  title={streaming ? "Available once your trip finishes generating" : undefined}
                   className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white flex-1 sm:flex-none"
                 >
-                  {creatingTrip ? "Creating..." : "Create trip"}
+                  {creatingTrip ? "Creating..." : streaming ? "Generating…" : "Create trip"}
                 </Button>
               </div>
             </div>
