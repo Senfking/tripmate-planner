@@ -3834,6 +3834,22 @@ interface AffiliateEnv {
   tripId: string | null;
   checkin: string | null;
   checkout: string | null;
+  /** Trip destination city — used to build clean Booking.com `ss=` queries
+   *  (hotel name + city) without picking up street/postal noise from
+   *  formatted_address. */
+  cityHint: string | null;
+}
+
+// Build a clean Booking.com `ss=` search string: "{hotel} {city}", but skip
+// the city if the hotel name already contains it (case-insensitive substring).
+// Falls back to just the hotel name when city is missing.
+function buildBookingSearchString(hotelName: string, cityHint: string | null): string {
+  const name = (hotelName ?? "").trim().replace(/\s+/g, " ");
+  const city = (cityHint ?? "").trim().replace(/\s+/g, " ");
+  if (!name) return city;
+  if (!city) return name;
+  if (name.toLowerCase().includes(city.toLowerCase())) return name;
+  return `${name} ${city}`;
 }
 
 function buildAffiliateUrl(
