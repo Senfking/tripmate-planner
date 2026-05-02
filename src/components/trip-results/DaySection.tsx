@@ -95,8 +95,18 @@ export function DaySection({
     }
   })();
 
+  useEffect(() => {
+    if (open && cardRef.current) {
+      setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    }
+  }, [open]);
+
   // Skeleton placeholder while the day's activities are still streaming. Same
   // outer dimensions as the populated card so swap-in is layout-stable.
+  // Placed after all hooks to satisfy rules-of-hooks (the `skeleton` prop can
+  // flip false once the day arrives).
   if (skeleton) {
     return (
       <div
@@ -133,14 +143,6 @@ export function DaySection({
     );
   }
 
-
-  useEffect(() => {
-    if (open && cardRef.current) {
-      setTimeout(() => {
-        cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
-    }
-  }, [open]);
 
   const firstActivity = day.activities[0];
   const dayIndex = allDays.findIndex((d) => d.date === day.date);
