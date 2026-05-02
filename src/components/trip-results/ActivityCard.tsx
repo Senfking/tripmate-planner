@@ -59,6 +59,7 @@ export function ActivityCard({
   onRemove,
   onCoordsRefined,
   animDelay = 0,
+  costFormatter,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
