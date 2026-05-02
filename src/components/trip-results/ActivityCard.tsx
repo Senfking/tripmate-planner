@@ -186,6 +186,8 @@ export function ActivityCard({
             </button>
           </div>
         )}
+      </div>
+
 
       {/* Summary row */}
       <div className="flex items-start justify-between px-3 py-2 cursor-pointer gap-3" onClick={() => setExpanded((e) => !e)}>
