@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { subscribeToPush } from "@/lib/pushSubscription";
 import { DesktopFooter } from "@/components/DesktopFooter";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
@@ -372,6 +372,7 @@ function AvatarCropDrawer({
 const More = () => {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   /* ── local state ── */
   const [editingName, setEditingName] = useState(false);
@@ -384,6 +385,26 @@ const More = () => {
   const [primaryNatValue, setPrimaryNatValue] = useState<string | null>(null);
   const [secondaryNatValue, setSecondaryNatValue] = useState<string | null>(null);
   const [savingNationalities, setSavingNationalities] = useState(false);
+
+  // Deep-link: /app/more?edit=nationality opens the nationality editor
+  // pre-filled with the current values and scrolls to it. Used by the
+  // "Add nationality" empty states in the Bookings & trip results pages.
+  useEffect(() => {
+    if (searchParams.get("edit") !== "nationality") return;
+    setPrimaryNatValue(profile?.nationality_iso ?? null);
+    setSecondaryNatValue(profile?.secondary_nationality_iso ?? null);
+    setShowNationalities(true);
+    // Strip the query param so it doesn't re-trigger / pollute history
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+    // Scroll the editor into view once it has rendered
+    requestAnimationFrame(() => {
+      document
+        .getElementById("nationality-editor")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [searchParams, profile?.nationality_iso, profile?.secondary_nationality_iso, setSearchParams]);
 
   const [showEmailDrawer, setShowEmailDrawer] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -949,7 +970,7 @@ const More = () => {
 
           {/* Nationalities (PR #233 — scalar primary + secondary) */}
           {showNationalities ? (
-            <div className="px-4 py-3 space-y-3">
+            <div id="nationality-editor" className="px-4 py-3 space-y-3 scroll-mt-24">
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-foreground">Primary nationality</p>
                 <SingleNationalityPicker

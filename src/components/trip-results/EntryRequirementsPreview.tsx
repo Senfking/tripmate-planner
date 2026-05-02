@@ -119,10 +119,10 @@ export function EntryRequirementsPreview({
         <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
           Add your nationality to see entry requirements for this trip.{" "}
           <Link
-            to="/app/more"
+            to="/app/more?edit=nationality"
             className="font-medium text-[#0D9488] hover:underline whitespace-nowrap"
           >
-            Open profile →
+            Set nationality →
           </Link>
         </div>
       </Wrapper>
