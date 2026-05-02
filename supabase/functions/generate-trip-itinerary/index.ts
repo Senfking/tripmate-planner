@@ -397,18 +397,15 @@ const GETYOURGUIDE_TEMPLATE = "https://www.getyourguide.com/s/?q={name}&partner_
 // different regional ID (APAC/NA) in future.
 const DEFAULT_AWIN_BOOKING_MID = "18119";
 
-// Builds the raw Booking.com search-results URL (no affiliate params — those
-// are dynamically injected by Awin when the link is wrapped via cread.php).
-function buildBookingDestinationUrl(
-  searchQuery: string,
-  checkin: string | null,
-  checkout: string | null,
-): string {
+// Builds the raw Booking.com search URL using the lenient /search.html
+// resolver. We deliberately omit checkin/checkout/aid:
+//   - Booking's lenient matcher places the named hotel as the top card; adding
+//     strict dates often triggers errorc_searchstring_not_found.
+//   - aid/label are injected dynamically by Awin via cread.php.
+function buildBookingDestinationUrl(searchQuery: string): string {
   const params = new URLSearchParams();
   params.set("ss", searchQuery);
-  if (checkin) params.set("checkin", checkin);
-  if (checkout) params.set("checkout", checkout);
-  return `https://www.booking.com/searchresults.html?${params.toString()}`;
+  return `https://www.booking.com/search.html?${params.toString()}`;
 }
 
 // Strip aid/label query params from a Booking.com URL before passing to Awin.
