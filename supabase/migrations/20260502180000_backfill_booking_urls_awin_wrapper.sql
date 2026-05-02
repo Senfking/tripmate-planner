@@ -191,19 +191,29 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 -- Walk the full trip plan, rewriting booking_url on every accommodation
 -- and on every activity where booking_partner = 'booking', across all
 -- destinations (not just destinations[0] — multi-destination trips exist).
--- jsonb_set runs in-place on a working copy; rows whose URLs already match
--- the canonical wrapped form are no-ops.
+-- Each destination uses its own start_date / end_date when set; the
+-- trip-level dates are only a fallback for legs missing per-destination
+-- dates. This matches the live edge function, which passes per-destination
+-- check-in/check-out at runtime — applying a single trip-level pair to
+-- every leg of a Bali → Singapore trip would bake Bali dates into the
+-- Singapore hotel URL.
+-- jsonb_set runs in-place on a working copy; rows whose URLs already
+-- match the canonical wrapped form are no-ops.
 CREATE OR REPLACE FUNCTION pg_temp.rewrite_plan_result_bookbf(
   plan_result jsonb,
   trip_id uuid,
-  checkin date,
-  checkout date
+  fallback_checkin date,
+  fallback_checkout date
 ) RETURNS jsonb AS $$
 DECLARE
   out_result jsonb := plan_result;
   destinations jsonb;
   d_idx int;
   d_count int;
+  dest_checkin date;
+  dest_checkout date;
+  dest_start_text text;
+  dest_end_text text;
   accom jsonb;
   days jsonb;
   day_idx int;
@@ -223,13 +233,29 @@ BEGIN
 
   d_count := jsonb_array_length(destinations);
   FOR d_idx IN 0..d_count - 1 LOOP
+    -- Resolve per-destination dates with trip-level fallback. Wrap each
+    -- cast in a sub-block so a malformed date string degrades to the
+    -- fallback rather than aborting the migration.
+    dest_start_text := NULLIF(out_result #>> ARRAY['destinations', d_idx::text, 'start_date'], '');
+    dest_end_text   := NULLIF(out_result #>> ARRAY['destinations', d_idx::text, 'end_date'],   '');
+    BEGIN
+      dest_checkin := COALESCE(dest_start_text::date, fallback_checkin);
+    EXCEPTION WHEN others THEN
+      dest_checkin := fallback_checkin;
+    END;
+    BEGIN
+      dest_checkout := COALESCE(dest_end_text::date, fallback_checkout);
+    EXCEPTION WHEN others THEN
+      dest_checkout := fallback_checkout;
+    END;
+
     -- Accommodation
     accom := out_result -> 'destinations' -> d_idx -> 'accommodation';
     IF accom IS NOT NULL AND jsonb_typeof(accom) = 'object' THEN
       partner := accom ->> 'booking_partner';
       IF partner = 'booking' THEN
         current_url := accom ->> 'booking_url';
-        next_url := pg_temp.rewrite_booking_url_bookbf(current_url, trip_id, checkin, checkout);
+        next_url := pg_temp.rewrite_booking_url_bookbf(current_url, trip_id, dest_checkin, dest_checkout);
         IF next_url IS DISTINCT FROM current_url THEN
           out_result := jsonb_set(
             out_result,
@@ -260,7 +286,7 @@ BEGIN
           CONTINUE;
         END IF;
         current_url := act ->> 'booking_url';
-        next_url := pg_temp.rewrite_booking_url_bookbf(current_url, trip_id, checkin, checkout);
+        next_url := pg_temp.rewrite_booking_url_bookbf(current_url, trip_id, dest_checkin, dest_checkout);
         IF next_url IS DISTINCT FROM current_url THEN
           out_result := jsonb_set(
             out_result,
@@ -277,24 +303,104 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- Helper-level self-test. Build a synthetic two-leg payload with distinct
+-- per-leg dates, run the walker, and assert each leg's wrapped URL encodes
+-- its own dates (not the fallback, not the other leg's). Also re-runs the
+-- walker on its own output to assert idempotency. Any assertion failure
+-- raises and rolls back the whole migration before the UPDATE fires, so
+-- no real rows are touched if the rewrite logic regresses.
+DO $$
+DECLARE
+  synthetic jsonb;
+  rewritten jsonb;
+  url_a text;
+  url_b text;
+  dest_a text;
+  dest_b text;
+  url_a2 text;
+BEGIN
+  synthetic := '{
+    "destinations": [
+      {
+        "name": "Bali",
+        "start_date": "2026-06-01",
+        "end_date":   "2026-06-05",
+        "accommodation": {
+          "booking_partner": "booking",
+          "booking_url": "https://www.booking.com/search.html?ss=Hanging+Gardens+Bali&aid="
+        },
+        "days": []
+      },
+      {
+        "name": "Singapore",
+        "start_date": "2026-06-06",
+        "end_date":   "2026-06-10",
+        "accommodation": {
+          "booking_partner": "booking",
+          "booking_url": "https://www.booking.com/search.html?ss=Marina+Bay+Sands&aid="
+        },
+        "days": []
+      }
+    ]
+  }'::jsonb;
+
+  rewritten := pg_temp.rewrite_plan_result_bookbf(
+    synthetic,
+    NULL::uuid,
+    DATE '2026-01-01',  -- fallback should NOT be used: per-leg dates are set
+    DATE '2026-01-31'
+  );
+
+  url_a := rewritten #>> '{destinations,0,accommodation,booking_url}';
+  url_b := rewritten #>> '{destinations,1,accommodation,booking_url}';
+
+  IF position('awin1.com' IN url_a) = 0
+     OR position('awin1.com' IN url_b) = 0 THEN
+    RAISE EXCEPTION 'self-test: rewrite did not wrap with awin1.com (a=%, b=%)', url_a, url_b;
+  END IF;
+
+  dest_a := pg_temp.urldecode_bookbf(pg_temp.url_query_param_bookbf(url_a, 'ued'));
+  dest_b := pg_temp.urldecode_bookbf(pg_temp.url_query_param_bookbf(url_b, 'ued'));
+
+  IF dest_a NOT LIKE '%/searchresults.html%' OR dest_b NOT LIKE '%/searchresults.html%' THEN
+    RAISE EXCEPTION 'self-test: rebuilt URL is not /searchresults.html (a=%, b=%)', dest_a, dest_b;
+  END IF;
+
+  IF dest_a NOT LIKE '%checkin=2026-06-01%checkout=2026-06-05%' THEN
+    RAISE EXCEPTION 'self-test: leg A dates do not match destinations[0] start/end (decoded=%)', dest_a;
+  END IF;
+  IF dest_b NOT LIKE '%checkin=2026-06-06%checkout=2026-06-10%' THEN
+    RAISE EXCEPTION 'self-test: leg B dates do not match destinations[1] start/end (decoded=%)', dest_b;
+  END IF;
+
+  IF dest_a = dest_b THEN
+    RAISE EXCEPTION 'self-test: legs produced identical destination URLs (%)', dest_a;
+  END IF;
+
+  -- Idempotency: re-running over already-wrapped output should be a no-op.
+  url_a2 := (pg_temp.rewrite_plan_result_bookbf(
+    rewritten, NULL::uuid, DATE '2026-01-01', DATE '2026-01-31'
+  )) #>> '{destinations,0,accommodation,booking_url}';
+  IF url_a2 <> url_a THEN
+    RAISE EXCEPTION 'self-test: rewrite is not idempotent (1st=%, 2nd=%)', url_a, url_a2;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Apply the rewrite. Filter on `result::text` containing 'booking.com'
 -- broadly — the rewrite function is idempotent on already-wrapped URLs,
 -- and over-selecting here costs nothing (a no-op UPDATE per row at worst).
--- Trip dates come from public.trips when joinable; for orphan drafts
--- (trip_id IS NULL) we fall back to the destination's own start/end dates
--- inside the cached payload.
+-- Per-destination dates inside the cached payload are the primary source
+-- of truth (resolved inside rewrite_plan_result_bookbf); trips.tentative_*
+-- is passed in only as a fallback for legs missing destinations[n].start_date
+-- or end_date — and exists at all just for orphan rows where neither place
+-- has a date set.
 UPDATE public.ai_trip_plans p
 SET result = pg_temp.rewrite_plan_result_bookbf(
   p.result,
   p.trip_id,
-  COALESCE(
-    (SELECT t.tentative_start_date FROM public.trips t WHERE t.id = p.trip_id),
-    NULLIF(p.result #>> '{destinations,0,start_date}', '')::date
-  ),
-  COALESCE(
-    (SELECT t.tentative_end_date FROM public.trips t WHERE t.id = p.trip_id),
-    NULLIF(p.result #>> '{destinations,0,end_date}', '')::date
-  )
+  (SELECT t.tentative_start_date FROM public.trips t WHERE t.id = p.trip_id),
+  (SELECT t.tentative_end_date   FROM public.trips t WHERE t.id = p.trip_id)
 )
 WHERE p.result::text LIKE '%booking.com%';
 
@@ -338,5 +444,36 @@ WHERE p.result::text LIKE '%booking.com%';
 --
 --   -- decoded form should be:
 --   --   https://www.booking.com/searchresults.html?ss=<HotelName>&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD
+--
+-- 4. Multi-destination spot-check. For any trip plan with two or more
+--    destinations, every leg's wrapped URL should encode that leg's own
+--    start_date / end_date — not the trip's outer range. The query pulls
+--    the per-destination dates side-by-side with the checkin/checkout
+--    encoded into the awin1.com `ued` value. Distinct legs should show
+--    distinct encoded checkin/checkout strings matching their respective
+--    destinations[n].start_date / end_date.
+--
+--   WITH multi AS (
+--     SELECT id
+--     FROM public.ai_trip_plans
+--     WHERE jsonb_array_length(result -> 'destinations') > 1
+--   )
+--   SELECT
+--     p.id,
+--     d_ord                                                                            AS leg,
+--     dest ->> 'name'                                                                  AS leg_name,
+--     dest ->> 'start_date'                                                            AS dest_start_date,
+--     dest ->> 'end_date'                                                              AS dest_end_date,
+--     split_part(split_part(dest -> 'accommodation' ->> 'booking_url', 'ued=', 2), '&', 1) AS encoded_destination
+--   FROM public.ai_trip_plans p
+--   JOIN multi USING (id),
+--        jsonb_array_elements(p.result -> 'destinations') WITH ORDINALITY AS d(dest, d_ord)
+--   WHERE dest -> 'accommodation' ->> 'booking_partner' = 'booking'
+--   ORDER BY p.id, d_ord;
+--
+--   -- decoding `encoded_destination` for each row should yield
+--   --   https://www.booking.com/searchresults.html?ss=...&checkin=<dest_start_date>&checkout=<dest_end_date>
+--   -- with the percent-decoded checkin/checkout matching dest_start_date/end_date
+--   -- *of that row*, not the same dates across all legs.
 
 COMMIT;
