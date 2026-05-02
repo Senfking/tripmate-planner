@@ -160,7 +160,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
             onChange={(e) => setFreeText(e.target.value)}
             placeholder='e.g. "10 days in Japan with my partner — food, temples, no early mornings"'
             rows={3}
-            className="rounded-xl bg-background border-border resize-none text-[15px] focus-visible:ring-primary/40 focus-visible:ring-offset-0"
+            className="rounded-xl bg-background border-border resize-none text-[14px] placeholder:text-[14px] focus-visible:ring-primary/40 focus-visible:ring-offset-0"
           />
           {freeText.trim().length > 0 && (
             <p className="text-[11px] text-primary/80 mt-2 px-1 flex items-center gap-1 animate-fade-in">
@@ -191,7 +191,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
               onChange={(e) => setDestination(e.target.value)}
               placeholder="e.g. Bali"
               className={cn(
-                "h-12 pl-10 rounded-xl bg-background text-[15px]",
+                "h-12 pl-10 rounded-xl bg-background text-[14px] placeholder:text-[14px]",
                 showErrors && destMissing
                   ? "border-red-300 focus-visible:ring-red-200"
                   : "border-border"
