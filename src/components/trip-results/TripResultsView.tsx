@@ -469,7 +469,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* Divider */}
         <div className="mx-4 border-t border-border" />
 
-        {/* ===== OVERALL SUMMARY SECTIONS ===== */}
+        {/* ===== OVERALL SUMMARY SECTIONS =====
+            Hidden while streaming — flights/stays/budget rely on the full
+            assembled trip. Day cards and the hero/stats above remain visible
+            so users see progress without flashes. */}
+        {!streaming && (<>
 
         {/* Flights */}
         <div id="section-flights" className={cn("px-4 mb-4", rc)} style={revealStyle("overview-flights")}>
@@ -637,6 +641,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* Divider before destinations */}
         <div className="mx-4 border-t border-border mb-2" />
+
+        </>)}{/* end !streaming overview */}
 
         {/* ===== PER-DESTINATION CONTENT ===== */}
         {result.destinations.map((dest, destIdx) => {
