@@ -167,12 +167,16 @@ export function AccommodationCard({
             <Hotel className="h-2.5 w-2.5" /> Stay
           </span>
         </div>
-        {/* Swap button — top right */}
+        {/* Persistent Swap button — top right, always visible */}
         <div className="absolute top-2 right-2">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
-              toast.info("Hotel swap coming soon");
+              e.preventDefault();
+              toast("Hotel swap coming soon", {
+                description: "We're working on letting you swap stays. For now, click 'Book' to explore alternatives on Booking.com.",
+              });
             }}
             className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
           >
