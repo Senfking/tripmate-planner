@@ -253,9 +253,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
   const hasPacking = (result.packing_suggestions?.length || 0) > 0;
 
+  const hasEntry = !streaming && !!result.destination_country_iso;
+
   const timelineNodes = useMemo(
-    () => buildTimelineNodes(result.destinations, allDays, hasPacking),
-    [result.destinations, allDays, hasPacking]
+    () => buildTimelineNodes(result.destinations, allDays, hasPacking, hasEntry),
+    [result.destinations, allDays, hasPacking, hasEntry]
   );
 
   const mapOpen = mapState !== "closed";
