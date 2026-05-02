@@ -658,7 +658,6 @@ export type Database = {
           notes: string | null
           payer_id: string
           receipt_image_path: string | null
-          split_type: string
           title: string
           trip_id: string
           updated_at: string
@@ -676,7 +675,6 @@ export type Database = {
           notes?: string | null
           payer_id: string
           receipt_image_path?: string | null
-          split_type?: string
           title: string
           trip_id: string
           updated_at?: string
@@ -694,7 +692,6 @@ export type Database = {
           notes?: string | null
           payer_id?: string
           receipt_image_path?: string | null
-          split_type?: string
           title?: string
           trip_id?: string
           updated_at?: string
