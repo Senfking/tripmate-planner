@@ -1154,7 +1154,7 @@ export default function TripList() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 gap-2 border-white/20 text-white hover:bg-white/10 hover:text-white"
+                  className="flex-1 gap-2 bg-white text-[#0f766e] border-white font-semibold hover:bg-white/90 hover:text-[#0f766e]"
                   onClick={handleNudgeCopyLink}
                 >
                   <Copy className="h-4 w-4" />
