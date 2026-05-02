@@ -305,6 +305,7 @@ export function DaySection({
                       isDraft={isDraft}
                       dayIndex={dayIndex}
                       activityIndex={i}
+                      destinationName={destinationName}
                       onRequestChange={() => onRequestChange(day.date, i, activity)}
                       onRequestDescribedChange={(desc) => onRequestDescribedChange(day.date, i, activity, desc)}
                       onCustomPlaceSwap={(name) => onCustomPlaceSwap(day.date, i, name)}

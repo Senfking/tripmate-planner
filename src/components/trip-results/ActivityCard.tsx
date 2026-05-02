@@ -7,6 +7,7 @@ import { ActivityReactions } from "./ActivityReactions";
 import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
 import type { ActivityCostFormatter } from "./formatActivityCost";
+import { isGetYourGuideEligible, buildGetYourGuideUrl } from "@/lib/affiliateLinks";
 
 interface Props {
   activity: AIActivity;
@@ -16,6 +17,8 @@ interface Props {
   isDraft?: boolean;
   dayIndex?: number;
   activityIndex?: number;
+  /** Trip's primary destination — used to scope GetYourGuide search results. */
+  destinationName?: string | null;
   onRequestChange: () => void;
   onRequestDescribedChange: (description: string) => void;
   onCustomPlaceSwap: (placeName: string) => Promise<any>;
@@ -53,6 +56,7 @@ export function ActivityCard({
   isDraft = false,
   dayIndex,
   activityIndex,
+  destinationName,
   onRequestChange,
   onRequestDescribedChange,
   onCustomPlaceSwap,
@@ -317,6 +321,16 @@ export function ActivityCard({
                   className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
                 >
                   Book <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              )}
+              {isGetYourGuideEligible(activity) && (
+                <a
+                  href={buildGetYourGuideUrl(activity.title, destinationName)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#0D9488] hover:text-[#0D9488]/80 flex items-center gap-0.5 transition-colors font-medium"
+                >
+                  View on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
                 </a>
               )}
             </div>
