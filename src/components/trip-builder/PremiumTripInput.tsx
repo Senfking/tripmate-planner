@@ -160,7 +160,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
             onChange={(e) => setFreeText(e.target.value)}
             placeholder='e.g. "10 days in Japan with my partner — food, temples, no early mornings"'
             rows={3}
-            className="rounded-xl bg-background border-border resize-none focus-visible:ring-primary/40 focus-visible:ring-offset-0"
+            className="rounded-xl bg-background border-border resize-none text-[15px] focus-visible:ring-primary/40 focus-visible:ring-offset-0"
           />
           {freeText.trim().length > 0 && (
             <p className="text-[11px] text-primary/80 mt-2 px-1 flex items-center gap-1 animate-fade-in">
