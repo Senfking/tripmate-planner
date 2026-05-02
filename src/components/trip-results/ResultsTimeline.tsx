@@ -168,10 +168,10 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
   return (
     <div
-      style={{ top: topOffset }}
+      style={{ top: 96 }}
       className={compact
-        ? "fixed left-3 bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none transition-[top] duration-150"
-        : "fixed left-[max(12px,calc(50%-420px))] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none transition-[top] duration-150"}
+        ? "fixed left-3 bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none"
+        : "fixed left-[max(12px,calc(50%-420px))] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none"}
     >
       <div className="absolute left-1/2 top-0 bottom-0 w-px bg-primary/15 -translate-x-1/2" />
 
