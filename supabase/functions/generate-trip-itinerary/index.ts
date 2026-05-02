@@ -4621,6 +4621,7 @@ Deno.serve(async (req) => {
                   currency: payload?.currency ?? "USD",
                   budget_tier: payload?.budget_tier ?? intent.budget_tier,
                   destination_image_url: payload?.destination_image_url ?? null,
+                  destination_country_iso: payload?.destination_country_iso ?? null,
                   from_cache: true,
                 });
                 await logger.log({
@@ -5046,9 +5047,19 @@ Deno.serve(async (req) => {
             // ---- Image (await final URL) ----
             const destinationImageUrl = await imagePromise;
 
+            // ISO-3166-1 alpha-2 destination country, derived from the geocode
+            // step. Mirrors the non-streaming path (see `destinationCountryIso`
+            // below) so cache entries written here are interchangeable with
+            // entries written by the non-stream branch.
+            const destinationCountryIso = geo.country_code
+              ? geo.country_code.toUpperCase()
+              : null;
+
             // ---- Cache write ----
             const responsePayload: Record<string, unknown> = {
-              ...pipelineResult, destination_image_url: destinationImageUrl,
+              ...pipelineResult,
+              destination_image_url: destinationImageUrl,
+              destination_country_iso: destinationCountryIso,
             };
             const tCacheWrite = Date.now();
             const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
@@ -5075,6 +5086,7 @@ Deno.serve(async (req) => {
               currency,
               budget_tier: pipelineResult.budget_tier,
               destination_image_url: destinationImageUrl,
+              destination_country_iso: destinationCountryIso,
               from_cache: false,
             });
 
