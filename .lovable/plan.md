@@ -1,45 +1,49 @@
-## Problems
+## Two changes to the results view
 
-**1. Timeline drifts during initial scroll (desktop)**
-`ResultsTimeline` is `position: fixed` with `top` computed from `heroRect.bottom + 12` on every scroll. At rest the hero bottom sits ~42vh down the viewport, so the timeline starts pushed far down. As you scroll, hero's `bottom` decreases, so `top` decreases — the timeline visibly slides upward for the first ~300px of scroll before settling at the `minTop = 96` floor. It looks like the timeline is moving with the scroll.
+### 1. Timeline clicks auto-expand the target section
 
-**2. Full-page screenshot extensions capture only the first viewport**
-`TripResultsView` portals into `document.body` as a `fixed inset-0` container, and scrolling happens on an inner `overflow-y-auto` element (`[data-results-scroll-root]`), not on the document. Chrome screenshot extensions (GoFullPage, Fireshot, etc.) scroll `window` / `document.documentElement` and stitch viewports — since the document itself isn't scrollable, they capture the visible viewport once and stop.
+Today, clicking a Day or Packing dot on the left timeline scrolls the page, but the target section stays collapsed — you land on a closed card and have to click again. The fix uses a lightweight DOM event so the timeline doesn't need to know about each section's state.
 
-## Fix
+**`src/components/trip-results/ResultsTimeline.tsx`** — in the `scrollTo(id)` callback, before the scroll math runs, dispatch a window-level `CustomEvent("results:expand", { detail: { id } })`. No other timeline changes.
 
-### 1. Anchor the timeline immediately
+**`src/components/trip-results/DaySection.tsx`** — add a `useEffect` that listens for `results:expand` on `window`. If `e.detail.id === \`section-day-${day.day_number}\`` and the day isn't open, set `open` to `true`. The existing `useEffect` on `[open]` already scrolls into view, so the timeline's own scroll + the day's auto-scroll both target the same anchor — that's fine, the second smooth-scroll just settles to the same spot.
 
-In `src/components/trip-results/ResultsTimeline.tsx`:
+**`src/components/trip-results/TripResultsView.tsx`** — wrap the packing card the same way: add a `useEffect` keyed on `packingOpen` that listens for `results:expand` and opens the panel when `id === "section-packing"`.
 
-- Remove the dynamic `topOffset` state and the scroll/resize listener that recomputes it from the hero's bounding rect.
-- Set the timeline's `top` to a fixed value (`96px`) from the start. The "appear under the hero" behavior isn't needed — desktop users see the timeline as a persistent left-rail nav from the moment the page loads, anchored to the same spot regardless of scroll. This matches how the rail behaves once you've scrolled past the hero anyway.
-- Drop the now-unused `data-results-hero` lookup in this file (the attribute can stay on the hero in `TripResultsView` — other code may reference it; leave untouched).
+The Entry card (`section-entry`) is already always-expanded inline, so it doesn't need the listener.
 
-The class strings already use `transition-[top]` — that can also be removed since `top` is static now.
+### 2. Make the Packing card a proper visual moment
 
-### 2. Make the results view document-scrollable
+Right now packing is a plain dropdown of bullet-pointed strings. Replace it with a card-grid that turns each string into a chip with an inferred category icon — matches the visual weight of the day cards and Visa & entry block above it.
 
-The portal + inner-scroll architecture is intentional (overlay-style results view that fully replaces the trip page), but it breaks screenshot tools and also prevents browser features like Find-in-page scrolling and middle-click autoscroll from working naturally.
+**Categorization** — packing items come in as `string[]` with no metadata. Add a small `categorizePackingItem(text: string)` helper that lowercases the string and matches keyword groups, returning `{ icon, accent }`:
 
-In `src/components/trip-results/TripResultsView.tsx`:
+| Category | Keywords (any match) | Icon (lucide) | Accent |
+|---|---|---|---|
+| Clothing | shirt, pants, shorts, jacket, dress, sock, underwear, swimwear, swimsuit | `Shirt` | warm sand |
+| Footwear | shoes, sneakers, boots, sandals, footwear | `Footprints` | clay |
+| Weather | umbrella, rain, poncho, raincoat | `CloudRain` | ocean |
+| Sun protection | sunscreen, spf, hat, sunglasses, sun | `Sun` | amber |
+| Tech | charger, adapter, power bank, cable, phone, camera, headphone | `Plug` | slate |
+| Documents | passport, visa, ticket, id, document, insurance | `FileCheck` | emerald |
+| Toiletries | toothbrush, soap, shampoo, deodorant, toiletr, medication, medicine, first aid | `Sparkles` | blush |
+| Bag | backpack, daypack, bag, tote | `Backpack` | terracotta |
+| Default | (no match) | `Package` | muted primary |
 
-- Change the outer portal container from `fixed inset-0 ... flex` to a non-fixed full-height layout that participates in document flow: `min-h-screen w-full ... flex`. It still portals to `document.body` so it overlays sibling app chrome via stacking, but scroll lives on `<html>`/`<body>` instead of the inner div.
-- Change the inner itinerary column from `overflow-y-auto flex-1 h-full` to just `flex-1 min-w-0` (no internal scroll, no fixed height). Keep the `data-results-scroll-root` attribute on the same element but have callers (timeline scroll-into-view, `scrollToSection`) detect when the element isn't itself scrollable and fall back to `document.documentElement` / `window.scrollTo`.
-- Update `getScrollRoot()` in both `ResultsTimeline.tsx` and the local `scrollToSection` helper in `TripResultsView.tsx` to return `document.documentElement` whenever the marked element's `scrollHeight <= clientHeight` (i.e. it isn't actually the scroller). This keeps the existing API and the map-side-panel layout working — when the map opens and re-introduces a constrained inner scroller, the same code path still finds it.
-- The map slide panel (`MapSlidePanel`) currently coexists with the inner scroll in a flex row. When the itinerary column no longer has its own scroll, opening the map needs to either (a) re-enable inner scroll on the itinerary column while the map is open, or (b) keep the map in a fixed/sticky pane on the right while the document scrolls behind. Option (a) is the smaller change: when `mapState !== "closed"`, add back `overflow-y-auto h-screen` on the itinerary column and lock body scroll; when `mapState === "closed"`, document scroll is the source of truth. This preserves the existing split-view UX without rewriting `MapSlidePanel`.
+All accents reference existing semantic tokens (`primary`, `accent`, `muted`) — no new colors. Icon stroke `1.75`, size `h-4 w-4`.
 
-### Verification
+**Layout** — replace the current `<button>` + `<ul>` with:
 
-After changes, on desktop (≥1024px):
-- Timeline left rail is visible and pinned at `top: 96px` from the moment the page renders. Scrolling the page does not move the rail.
-- Active dot still updates as sections scroll past the header threshold (the active-section logic already supports `document.documentElement` as the scroll root).
-- A Chrome full-page screenshot extension (e.g. GoFullPage) successfully captures the entire trip results view top to bottom.
-- Opening the map panel still produces the existing split layout with the map on the right and a scrollable itinerary on the left.
+- A header row: `Package` icon + "Packing essentials" title + `{count} items` chip on the right + chevron. Same hover/expand behavior, same `id="section-packing"`.
+- When expanded: a `grid grid-cols-1 sm:grid-cols-2` of pill-shaped cards. Each card: 40×40 rounded-xl icon tile (tinted background using the accent), then the item text on two lines max with `text-foreground` (not muted), then a subtle category caption underneath in `text-[11px] text-muted-foreground uppercase tracking-wide`.
+- Cards animate in with a 30ms stagger using inline `animationDelay` + the existing `animate-fade-in` utility, so opening the panel feels intentional.
+- Container card: `rounded-2xl border border-border bg-card p-4` with a subtle gradient-tinted top edge (`bg-gradient-to-b from-primary/5 to-transparent`) — matches the visual treatment of the Visa & entry block.
 
-### Files
+**Files**
 
-- `src/components/trip-results/ResultsTimeline.tsx` — remove dynamic `topOffset`; pin to `top: 96px`; update `getScrollRoot()` to fall back to `document.documentElement` when the marked node isn't scrollable.
-- `src/components/trip-results/TripResultsView.tsx` — change outer container to `min-h-screen` (non-fixed); remove always-on inner `overflow-y-auto`; conditionally re-enable inner scroll only when map panel is open; update local `scrollToSection` to use the same scroll-root fallback.
+- `src/components/trip-results/TripResultsView.tsx` — replace the packing block (current lines ~806-829) with the new component invocation; add the `results:expand` listener for packing.
+- `src/components/trip-results/PackingCard.tsx` — new file. Self-contained: takes `items: string[]`, `open`, `onToggle`. Includes the `categorizePackingItem` helper inline (small, only used here).
+- `src/components/trip-results/ResultsTimeline.tsx` — dispatch the expand event in `scrollTo`.
+- `src/components/trip-results/DaySection.tsx` — listen for the expand event, set `open` when matched.
 
-No backend, hook, or SSE changes. No changes to `DaySection`, `useStreamingTripGeneration`, or `StandaloneTripBuilder`.
+No backend, hook, type, or routing changes. Mobile and desktop render the same component; the grid collapses to a single column under `sm`.

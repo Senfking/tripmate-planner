@@ -103,6 +103,19 @@ export function DaySection({
     }
   }, [open]);
 
+  // Listen for timeline-rail clicks. When the rail says "expand section-day-N"
+  // and that's us, open ourselves so the user lands on populated content.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (detail?.id === `section-day-${day.day_number}`) {
+        setOpen(true);
+      }
+    };
+    window.addEventListener("results:expand", handler as EventListener);
+    return () => window.removeEventListener("results:expand", handler as EventListener);
+  }, [day.day_number]);
+
   // Skeleton placeholder while the day's activities are still streaming. Same
   // outer dimensions as the populated card so swap-in is layout-stable.
   // Placed after all hooks to satisfy rules-of-hooks (the `skeleton` prop can

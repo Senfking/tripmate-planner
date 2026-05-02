@@ -137,6 +137,10 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
   const scrollTo = useCallback(
     (id: string) => {
+      // Tell collapsible owners (DaySection, packing card) to expand themselves
+      // before we scroll, so the user lands on opened content.
+      window.dispatchEvent(new CustomEvent("results:expand", { detail: { id } }));
+
       const el = document.getElementById(id);
       if (!el) return;
 
