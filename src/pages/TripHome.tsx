@@ -487,13 +487,11 @@ export default function TripHome() {
         />
       )}
 
-      {/* ─── HERO PHOTO — boxed, fixed-height (pre-PR #218 style) ───
-        The content area below overlaps with rounded-top + shadow for an
-        elevated card feel. Title overlays the bottom of the image. */}
+      {/* ─── HERO PHOTO — title and card both overlap the image so rounded corners never expose page background. */}
       <div
         ref={heroRef}
         className="relative w-full overflow-hidden"
-        style={{ height: "min(38vh, 320px)", minHeight: 240 }}
+        style={{ height: "clamp(260px, 32vh, 300px)" }}
       >
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)" }} />
         <img
@@ -571,31 +569,31 @@ export default function TripHome() {
             />
           </div>
         )}
-      </div>
 
-      {/* ─── TRIP HEADER (title overlay on hero image) ─── */}
-      <div className="relative -mt-24 px-6 pb-8 pointer-events-none md:max-w-[700px] md:mx-auto md:px-8">
-        <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/70 mb-2">
-          Trip
-        </p>
-        <h1
-          className="text-[28px] lg:text-[32px] font-semibold text-white leading-[1.1]"
-          style={{ letterSpacing: "-0.02em", textShadow: "0 1px 16px rgba(0,0,0,0.35)" }}
-        >
-          {primaryTripName}
-        </h1>
-        {itineraryTitle && itineraryTitle !== primaryTripName && (
-          <p
-            className="text-[14px] lg:text-[15px] text-white/80 leading-snug mt-1 italic"
-            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.35)" }}
-          >
-            {itineraryTitle}
+        {/* ─── TRIP HEADER (title overlay on hero image) ─── */}
+        <div className="absolute inset-x-0 bottom-0 z-[4] px-6 pb-12 pointer-events-none md:max-w-[700px] md:mx-auto md:px-8">
+          <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/70 mb-2">
+            Trip
           </p>
-        )}
+          <h1
+            className="text-[28px] lg:text-[32px] font-semibold text-white leading-[1.1]"
+            style={{ letterSpacing: "-0.02em", textShadow: "0 1px 16px rgba(0,0,0,0.35)" }}
+          >
+            {primaryTripName}
+          </h1>
+          {itineraryTitle && itineraryTitle !== primaryTripName && (
+            <p
+              className="text-[14px] lg:text-[15px] text-white/80 leading-snug mt-1 italic"
+              style={{ textShadow: "0 1px 12px rgba(0,0,0,0.35)" }}
+            >
+              {itineraryTitle}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* ─── CONTENT CARD — rounded top, elevated shadow, overlaps hero ─── */}
-      <div className="relative flex-1 -mt-4 rounded-t-3xl bg-background shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)]">
+      <div className="relative z-[6] flex-1 -mt-6 rounded-t-3xl bg-background shadow-[0_-10px_28px_-14px_rgba(0,0,0,0.28)]">
         <div className="px-4 pt-5 md:max-w-[700px] md:mx-auto md:px-8">
           <div className="flex flex-wrap items-center gap-2">
             {numDays !== null && (
