@@ -71,6 +71,95 @@ export interface StreamingState {
   isCacheHit: boolean;
 }
 
+/**
+ * Build a best-effort AITripResult from whatever events have arrived so far.
+ *
+ * Used so TripResultsView can be rendered mid-stream — populated days fill in
+ * incrementally; days that haven't arrived yet are emitted as empty AIDay rows
+ * (date + day_number + theme from the skeleton, no activities) so the UI can
+ * render a skeleton card with the correct identity in the correct slot.
+ *
+ * Returns null until `meta` arrives (we don't yet know the date range / num
+ * days / destination name).
+ */
+export function buildPartialResult(state: StreamingState): AITripResult | null {
+  // Once trip_complete fires we have the fully-assembled result. Use that
+  // verbatim — no point reconstructing it.
+  if (state.result) return state.result;
+
+  const meta = state.meta;
+  if (!meta) return null;
+
+  const arrived = new Map(state.days.map((d) => [d.day_number, d]));
+  const skeletonByNum = new Map(meta.skeleton.map((s) => [s.day_number, s]));
+
+  // Merge skeleton + arrived days, preserving the skeleton's ordering. A
+  // skeleton entry with no matching streamed day yields an empty-activities
+  // AIDay so DaySection can render a placeholder in the correct slot.
+  const allDays: AIDay[] = meta.skeleton.map((s) => {
+    const got = arrived.get(s.day_number);
+    if (got) return got;
+    return {
+      day_number: s.day_number,
+      date: s.date,
+      theme: s.theme,
+      activities: [],
+    };
+  });
+
+  // Some streams may emit a day with a number that isn't in the skeleton
+  // (defensive — shouldn't happen but don't drop data). Append at the end.
+  for (const d of state.days) {
+    if (!skeletonByNum.has(d.day_number)) allDays.push(d);
+  }
+  allDays.sort((a, b) => a.day_number - b.day_number);
+
+  const startDate = allDays[0]?.date ?? "";
+  const endDate = allDays[allDays.length - 1]?.date ?? startDate;
+
+  const totalActivities = allDays.reduce((n, d) => n + d.activities.length, 0);
+
+  return {
+    trip_title: meta.destination || "Your Trip",
+    trip_summary: "",
+    destinations: [
+      {
+        name: meta.destination,
+        start_date: startDate,
+        end_date: endDate,
+        intro: "",
+        days: allDays,
+      },
+    ],
+    map_center: { lat: 0, lng: 0 },
+    map_zoom: 6,
+    daily_budget_estimate: 0,
+    currency: meta.currency || "USD",
+    packing_suggestions: [],
+    total_activities: totalActivities,
+    destination_image_url: state.imageUrl ?? null,
+    destination_country_iso:
+      typeof meta.country_code === "string" && meta.country_code.length === 2
+        ? meta.country_code.toUpperCase()
+        : null,
+  };
+}
+
+/**
+ * Set of day_numbers that are still skeleton placeholders (not yet streamed).
+ * TripResultsView consumes this to know which day cards to render in skeleton
+ * mode vs populated mode.
+ */
+export function getSkeletonDayNumbers(state: StreamingState): Set<number> {
+  if (!state.meta || state.result) return new Set();
+  const arrived = new Set(state.days.map((d) => d.day_number));
+  const skel = new Set<number>();
+  for (const s of state.meta.skeleton) {
+    if (!arrived.has(s.day_number)) skel.add(s.day_number);
+  }
+  return skel;
+}
+
 const INITIAL: StreamingState = {
   stage: "idle",
   meta: null,
