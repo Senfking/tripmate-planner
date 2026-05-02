@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityReactions } from "./ActivityReactions";
 import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
+import type { ActivityCostFormatter } from "./formatActivityCost";
 
 interface Props {
   activity: AIActivity;
@@ -21,6 +22,10 @@ interface Props {
   onRemove: () => void;
   onCoordsRefined?: (lat: number, lng: number) => void;
   animDelay?: number;
+  /** Formats per-person costs in user's profile currency (primary) plus
+   *  destination currency (smaller subtitle). Optional — falls back to the
+   *  legacy "~CCY{amount}" rendering when not provided. */
+  costFormatter?: ActivityCostFormatter;
 }
 
 function MiniStars({ rating }: { rating: number }) {
