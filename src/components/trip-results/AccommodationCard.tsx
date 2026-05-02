@@ -82,12 +82,20 @@ export function AccommodationCard({
   // search is pre-filled. Currently only Booking.com is wired (and the only
   // partner whose URL accepts checkin/checkout query params); other partners
   // would need their own param mapping.
+  //
+  // Skip this rewrite when the URL is an Awin tracking link (awin1.com/cread.php):
+  // the destination Booking.com URL is encoded inside the `ued` param, so
+  // appending checkin/checkout to the outer URL would set them on awin1.com
+  // (where they're meaningless) instead of on Booking.com itself, breaking
+  // date pre-fill on click. The backend already bakes trip dates into the
+  // inner destination URL before wrapping, so no rewrite is needed here.
   const bookingUrlWithDates = (() => {
     if (!hasBooking) return bookingUrl ?? null;
     if (!checkInDate || !checkOutDate) return bookingUrl ?? null;
     if (bookingPartner !== "booking") return bookingUrl ?? null;
     try {
       const url = new URL(bookingUrl!);
+      if (url.hostname.endsWith("awin1.com")) return bookingUrl!;
       if (!url.searchParams.has("checkin")) url.searchParams.set("checkin", checkInDate);
       if (!url.searchParams.has("checkout")) url.searchParams.set("checkout", checkOutDate);
       return url.toString();

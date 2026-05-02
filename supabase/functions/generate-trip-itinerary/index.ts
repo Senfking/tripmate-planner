@@ -379,9 +379,71 @@ const DEFAULT_RATE_LIMIT_PER_HOUR = 5;                 // generations per user p
 const DEFAULT_PLACES_DAILY_BUDGET_USD = 50;            // rolling 24h Places spend hard cap
 
 // Affiliate URL templates
-const BOOKING_TEMPLATE = "https://www.booking.com/search.html?ss={loc}&aid={aid}";
+//
+// Booking.com URLs are built via URLSearchParams in buildBookingDestinationUrl
+// (the path is /searchresults.html — /search.html returns 404). The destination
+// URL is then wrapped through Awin via wrapAwinBookingUrl so commission tracks
+// against our publisher account.
 const VIATOR_TEMPLATE = "https://www.viator.com/searchResults/all?text={name}&mcid={mcid}";
 const GETYOURGUIDE_TEMPLATE = "https://www.getyourguide.com/s/?q={name}&partner_id={pid}";
+
+// Default Awin merchant ID for the Booking.com LATAM program. The user is
+// signed up to LATAM (international stays are commissionable regardless of
+// region per official Awin/Booking.com guidance), but the value stays
+// configurable via AWIN_BOOKING_MID in case the program is migrated to a
+// different regional ID (APAC/NA) in future.
+const DEFAULT_AWIN_BOOKING_MID = "18119";
+
+// Builds the raw Booking.com search-results URL (no affiliate params — those
+// are dynamically injected by Awin when the link is wrapped via cread.php).
+function buildBookingDestinationUrl(
+  searchQuery: string,
+  checkin: string | null,
+  checkout: string | null,
+): string {
+  const params = new URLSearchParams();
+  params.set("ss", searchQuery);
+  if (checkin) params.set("checkin", checkin);
+  if (checkout) params.set("checkout", checkout);
+  return `https://www.booking.com/searchresults.html?${params.toString()}`;
+}
+
+// Strip aid/label query params from a Booking.com URL before passing to Awin.
+// Per Awin/Booking.com guidance: "remove all click appends from destination
+// URLs so that Awin's system can dynamically insert a fresh set of parameters."
+function stripBookingClickAppends(url: string): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.delete("aid");
+    u.searchParams.delete("label");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+// Wrap a Booking.com destination URL through Awin's cread.php endpoint so
+// clicks attribute commission to our publisher account. clickref is the trip
+// ID, which lets us correlate clicks back to specific trips via Awin's
+// transactions report.
+//
+// Returns the raw destination URL unchanged when AWIN_PUBLISHER_ID is unset
+// (placeholder/empty) — preserves dev/preview behavior so missing config
+// never breaks links.
+function wrapAwinBookingUrl(
+  destinationUrl: string,
+  tripId: string | null | undefined,
+  awin: { publisherId: string; merchantId: string },
+): string {
+  if (!awin.publisherId) return destinationUrl;
+  const stripped = stripBookingClickAppends(destinationUrl);
+  const params = new URLSearchParams();
+  params.set("awinmid", awin.merchantId);
+  params.set("awinaffid", awin.publisherId);
+  if (tripId) params.set("clickref", tripId);
+  params.set("ued", stripped);
+  return `https://www.awin1.com/cread.php?${params.toString()}`;
+}
 
 // Google Places type buckets for affiliate routing
 const LODGING_TYPES = new Set([
@@ -3764,9 +3826,19 @@ function partnerForPlace(place: BatchPlaceResult): AffiliatePartner {
   return place.googleMapsUri ? "google_maps" : "viator";
 }
 
+interface AffiliateEnv {
+  viator: string;
+  gyg: string;
+  awinPublisherId: string;
+  awinMerchantId: string;
+  tripId: string | null;
+  checkin: string | null;
+  checkout: string | null;
+}
+
 function buildAffiliateUrl(
   place: BatchPlaceResult | null,
-  env: { booking: string; viator: string; gyg: string },
+  env: AffiliateEnv,
   eventUrl?: string | null,
 ): { booking_url: string; booking_partner: AffiliatePartner } {
   // Event case — no Places data.
@@ -3783,13 +3855,16 @@ function buildAffiliateUrl(
   const nameWithCity = city ? `${name} ${city}` : name;
 
   switch (partner) {
-    case "booking":
+    case "booking": {
+      const dest = buildBookingDestinationUrl(nameWithCity, env.checkin, env.checkout);
       return {
-        booking_url: BOOKING_TEMPLATE
-          .replace("{loc}", urlencode(nameWithCity))
-          .replace("{aid}", urlencode(env.booking)),
+        booking_url: wrapAwinBookingUrl(dest, env.tripId, {
+          publisherId: env.awinPublisherId,
+          merchantId: env.awinMerchantId,
+        }),
         booking_partner: "booking",
       };
+    }
     case "viator":
       return {
         booking_url: VIATOR_TEMPLATE
@@ -4228,6 +4303,75 @@ function rewriteCachedPayloadDates(
   return { days_rewritten: daysRewritten };
 }
 
+// Re-build Booking.com URLs on cached payloads so each cache hit gets:
+//   - the correct /searchresults.html path (older entries may have the broken
+//     /search.html path that returns 404 on Booking.com)
+//   - fresh checkin/checkout matching the current request's trip dates
+//   - an Awin wrapper with this trip's clickref (so click → trip correlation
+//     works for replayed cached trips, not just freshly generated ones)
+// We extract the original `ss` query from the cached URL — for both legacy
+// raw Booking links and Awin-wrapped links (via the `ued` param) — and rebuild
+// from scratch. Activities with booking_partner !== "booking" are left alone.
+function rewriteCachedBookingUrls(
+  payload: Record<string, unknown>,
+  env: AffiliateEnv,
+): { rewritten: number } {
+  const dest = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations?.[0];
+  if (!dest) return { rewritten: 0 };
+  let rewritten = 0;
+
+  const rebuild = (existingUrl: string): string => {
+    let bookingUrl = existingUrl;
+    try {
+      const parsed = new URL(existingUrl);
+      if (parsed.hostname.includes("awin1.com")) {
+        const ued = parsed.searchParams.get("ued");
+        if (ued) bookingUrl = decodeURIComponent(ued);
+      }
+    } catch {
+      // fall through with original string
+    }
+    let searchQuery = "";
+    try {
+      const inner = new URL(bookingUrl);
+      searchQuery = inner.searchParams.get("ss") ?? "";
+    } catch {
+      // unparseable — leave URL unchanged
+      return existingUrl;
+    }
+    if (!searchQuery) return existingUrl;
+    const fresh = buildBookingDestinationUrl(searchQuery, env.checkin, env.checkout);
+    return wrapAwinBookingUrl(fresh, env.tripId, {
+      publisherId: env.awinPublisherId,
+      merchantId: env.awinMerchantId,
+    });
+  };
+
+  const visit = (activity: Record<string, unknown> | null | undefined) => {
+    if (!activity) return;
+    if (activity.booking_partner !== "booking") return;
+    const current = typeof activity.booking_url === "string" ? activity.booking_url : "";
+    if (!current) return;
+    const next = rebuild(current);
+    if (next !== current) {
+      activity.booking_url = next;
+      rewritten++;
+    }
+  };
+
+  visit(dest.accommodation as Record<string, unknown> | undefined);
+  const days = Array.isArray((dest as { days?: unknown }).days)
+    ? (dest as { days: Array<Record<string, unknown>> }).days
+    : [];
+  for (const day of days) {
+    const acts = Array.isArray((day as { activities?: unknown }).activities)
+      ? (day as { activities: Array<Record<string, unknown>> }).activities
+      : [];
+    for (const a of acts) visit(a);
+  }
+  return { rewritten };
+}
+
 // Refresh event_url on cached activities so we don't serve a stale ticket URL
 // (e.g. a December festival page) when the request is for June. Walks cached
 // days for activities that previously had event_url set, re-runs searchEvents
@@ -4499,9 +4643,21 @@ Deno.serve(async (req) => {
     // ---- Required env ----
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     const googleKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
-    const bookingAid = Deno.env.get("BOOKING_AID") ?? "";
     const viatorMcid = Deno.env.get("VIATOR_MCID") ?? "";
     const gygPid = Deno.env.get("GETYOURGUIDE_PARTNER_ID") ?? "";
+    // Awin publisher ID (Junto's account: 2848261). When unset, wrapAwinBookingUrl
+    // returns the raw Booking.com destination URL — links still work, they just
+    // don't track commission. Keep configurable in case the publisher account
+    // rotates.
+    const awinPublisherId = Deno.env.get("AWIN_PUBLISHER_ID") ?? "2848261";
+    // Awin merchant ID for the Booking.com program. Defaults to LATAM (18119)
+    // — the program Junto is signed up to. International stays are
+    // commissionable regardless of program region per official Awin/Booking.com
+    // guidance, but kept configurable in case the program is migrated.
+    const awinBookingMid = Deno.env.get("AWIN_BOOKING_MID") ?? DEFAULT_AWIN_BOOKING_MID;
+    const tripIdForClickref = (typeof body.trip_id === "string" && body.trip_id.trim())
+      ? body.trip_id.trim()
+      : null;
 
     if (!anthropicKey) {
       return jsonResponse({ success: false, error: "ANTHROPIC_API_KEY not configured" }, 500);
@@ -4707,6 +4863,16 @@ Deno.serve(async (req) => {
               } else {
                 tStage("cache_lookup_hit", tCacheLookup);
                 rewriteCachedPayloadDates(payload, startDate);
+                const cacheAffEnv: AffiliateEnv = {
+                  viator: viatorMcid,
+                  gyg: gygPid,
+                  awinPublisherId,
+                  awinMerchantId: awinBookingMid,
+                  tripId: tripIdForClickref,
+                  checkin: startDate,
+                  checkout: endDate,
+                };
+                const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
                 const eventsResult = await refreshCachedEvents(
                   payload,
                   intent,
@@ -4716,7 +4882,7 @@ Deno.serve(async (req) => {
                   logger,
                 );
                 console.log(
-                  `[stream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared}`,
+                  `[stream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared} booking_urls_rewritten=${bookingRewriteStats.rewritten}`,
                 );
                 const dest = payload?.destinations?.[0];
                 send("meta", {
@@ -4896,7 +5062,15 @@ Deno.serve(async (req) => {
             const tRank = Date.now();
 
             const currency = resolveTripCurrency(geo.country_code);
-            const affEnv = { booking: bookingAid, viator: viatorMcid, gyg: gygPid };
+            const affEnv: AffiliateEnv = {
+              viator: viatorMcid,
+              gyg: gygPid,
+              awinPublisherId,
+              awinMerchantId: awinBookingMid,
+              tripId: tripIdForClickref,
+              checkin: startDate,
+              checkout: endDate,
+            };
             const ranked_days: RankedDay[] = [];
             const seenIds = new Set<string>();
             const seenThemes = new Set<string>();
@@ -5393,6 +5567,16 @@ Deno.serve(async (req) => {
         } else {
           tStage("cache_lookup_hit", tCacheLookup);
           rewriteCachedPayloadDates(payload, startDate);
+          const cacheAffEnv: AffiliateEnv = {
+            viator: viatorMcid,
+            gyg: gygPid,
+            awinPublisherId,
+            awinMerchantId: awinBookingMid,
+            tripId: tripIdForClickref,
+            checkin: startDate,
+            checkout: endDate,
+          };
+          const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
           const eventsResult = await refreshCachedEvents(
             payload,
             intent,
@@ -5402,7 +5586,7 @@ Deno.serve(async (req) => {
             logger,
           );
           console.log(
-            `[stream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared}`,
+            `[stream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared} booking_urls_rewritten=${bookingRewriteStats.rewritten}`,
           );
           console.log(
             `[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stages: stageTimings })}`,
@@ -5572,7 +5756,15 @@ Deno.serve(async (req) => {
     const tJunto = Date.now();
     markJuntoPicks(ranked, intent);
 
-    const affEnv = { booking: bookingAid, viator: viatorMcid, gyg: gygPid };
+    const affEnv: AffiliateEnv = {
+      viator: viatorMcid,
+      gyg: gygPid,
+      awinPublisherId,
+      awinMerchantId: awinBookingMid,
+      tripId: tripIdForClickref,
+      checkin: startDate,
+      checkout: endDate,
+    };
     for (const dest of ranked.destinations) {
       const decorate = (a: EnrichedActivity) => {
         // Events (place_id === "") pass null → event_direct; their event_url
