@@ -54,6 +54,7 @@ interface Props {
     notes?: string;
     itinerary_item_id?: string | null;
     receipt_image_path?: string | null;
+    split_type: "equal" | "custom" | "byItem";
     splits: { user_id: string; share_amount: number }[];
     lineItems?: { name: string; quantity: number; unit_price: number | null; total_price: number; is_shared?: boolean }[];
     itemAssignments?: Record<number, Set<string>>;
@@ -244,14 +245,31 @@ export function ExpenseFormModal({
         setItemAssignments({});
         setQuantityAssignments({});
         setReceiptFile(null);
-        if (editingSplits) {
+        // Read split_type straight off the column instead of inferring
+        // from the splits' shape. Inference disagreed with the inline
+        // header in edge cases (byItem expenses with one non-zero
+        // claimant looked like 'equal'); both surfaces now read the same
+        // value.
+        const persistedType: "equal" | "custom" | "byItem" = (editingExpense.split_type ?? "equal") as "equal" | "custom" | "byItem";
+        setSplitMode(persistedType);
+
+        if (persistedType === "equal") {
+          // Equal split must default to every current trip member, not
+          // just whoever had non-zero shares before. The previous code
+          // pre-selected from editingSplits, so a byItem expense whose
+          // only claimant was User A would re-equal-split to give 100%
+          // to User A — the bug this fix is closing.
+          setSelectedMembers(new Set(defaultSelectedMemberIds));
+          setCustomAmounts({});
+        } else if (persistedType === "custom" && editingSplits) {
           setSelectedMembers(new Set(editingSplits.map((s) => s.user_id)));
-          const allEqual = editingSplits.length > 1 &&
-            editingSplits.every((s) => Math.abs(s.share_amount - editingSplits[0].share_amount) < 0.01);
-          setSplitMode(allEqual ? "equal" : "custom");
-          if (!allEqual) {
-            setCustomAmounts(Object.fromEntries(editingSplits.map((s) => [s.user_id, String(s.share_amount)])));
-          }
+          setCustomAmounts(Object.fromEntries(editingSplits.map((s) => [s.user_id, String(s.share_amount)])));
+        } else if (persistedType === "byItem" && editingSplits) {
+          // Keep whoever currently has shares; the form doesn't let users
+          // re-edit line items here (those live on the inline card), but
+          // they can switch to equal/custom which broadens correctly.
+          setSelectedMembers(new Set(editingSplits.map((s) => s.user_id)));
+          setCustomAmounts({});
         }
       } else {
         const draft = readDraft();
@@ -318,6 +336,12 @@ export function ExpenseFormModal({
     if (selected.length === 0) return [];
 
     if (splitMode === "byItem") {
+      // Editing an existing byItem expense without re-scanning a receipt:
+      // preserve the persisted splits verbatim instead of recomputing from
+      // an empty line-item set (which would zero everyone's share).
+      if (scannedLineItems.length === 0 && editingSplits) {
+        return editingSplits.map((s) => ({ user_id: s.user_id, share_amount: s.share_amount }));
+      }
       return computeItemSplits(scannedLineItems, itemAssignments, selected, parsedAmount, quantityAssignments);
     }
 
@@ -345,7 +369,7 @@ export function ExpenseFormModal({
       user_id: uid,
       share_amount: i === 0 ? base + remainder : base,
     }));
-  }, [selectedMembers, splitMode, parsedAmount, customAmounts, scannedLineItems, itemAssignments, quantityAssignments]);
+  }, [selectedMembers, splitMode, parsedAmount, customAmounts, scannedLineItems, itemAssignments, quantityAssignments, editingSplits]);
 
   const customSum = splitMode === "custom"
     ? computedSplits.reduce((s, c) => s + c.share_amount, 0)
@@ -488,6 +512,11 @@ export function ExpenseFormModal({
         }
       }
 
+      // 'percent' is a UI-only mode; the db column only stores
+      // equal/custom/byItem, so percent persists as 'custom'.
+      const persistedSplitType: "equal" | "custom" | "byItem" =
+        splitMode === "percent" ? "custom" : splitMode;
+
       await Promise.resolve(onSave({
         id: editingExpense?.id,
         title: title.trim(),
@@ -499,6 +528,7 @@ export function ExpenseFormModal({
         notes: notes.trim() || undefined,
         itinerary_item_id: itineraryItemId === "none" ? null : itineraryItemId,
         receipt_image_path: receiptPath,
+        split_type: persistedSplitType,
         splits: computedSplits,
         lineItems: splitMode === "byItem" && scannedLineItems.length > 0 ? scannedLineItems : undefined,
         itemAssignments: splitMode === "byItem" && Object.keys(itemAssignments).length > 0 ? itemAssignments : undefined,
@@ -672,14 +702,22 @@ export function ExpenseFormModal({
                 variant={splitMode === mode ? "default" : "outline"}
                 className="h-8 text-xs px-3 capitalize"
                 onClick={() => {
+                  if (mode === splitMode) return;
                   setSplitMode(mode);
-                  if (mode !== splitMode) setCustomAmounts({});
+                  setCustomAmounts({});
+                  // Equal split must include every current trip member by
+                  // default. Without this re-broadening, a byItem -> equal
+                  // edit would keep selectedMembers pinned to whoever had
+                  // non-zero shares, often a single person.
+                  if (mode === "equal") {
+                    setSelectedMembers(new Set(defaultSelectedMemberIds));
+                  }
                 }}
               >
                 {mode === "percent" ? "%" : mode}
               </Button>
             ))}
-            {scannedLineItems.length > 0 && (
+            {(scannedLineItems.length > 0 || splitMode === "byItem") && (
               <Button
                 type="button" size="sm"
                 variant={splitMode === "byItem" ? "default" : "outline"}
@@ -691,7 +729,15 @@ export function ExpenseFormModal({
             )}
           </div>
         </div>
-        {splitMode === "byItem" ? (
+        {splitMode === "byItem" && scannedLineItems.length === 0 ? (
+          // Editing an existing byItem expense whose line items live on the
+          // inline card, not in this form. Show the state truthfully and
+          // give the user the option to switch modes (which triggers the
+          // server-side cleanup of orphan line items + claims).
+          <p className="text-xs text-muted-foreground rounded-md border border-dashed border-border bg-muted/40 p-3">
+            This expense splits by line item. Edit items inline on the expense card, or switch to Equal/Custom above to assign shares directly (line items will be cleared).
+          </p>
+        ) : splitMode === "byItem" ? (
           <>
             <ItemSplitPanel
               lineItems={scannedLineItems}

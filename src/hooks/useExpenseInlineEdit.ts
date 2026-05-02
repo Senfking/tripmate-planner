@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/contexts/AuthContext";
-import { ExpenseRow, SplitRow, snapshotFxRate } from "@/hooks/useExpenses";
+import { ExpenseRow, SplitRow, SplitType, snapshotFxRate } from "@/hooks/useExpenses";
 import { isSharedCostItem } from "@/lib/expenseLineItems";
 import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 
@@ -20,7 +20,7 @@ export function useExpenseInlineEdit(tripId: string) {
 
   /** Patch one or more scalar columns on the expenses row */
   const patchExpense = useMutation({
-    mutationFn: async (params: { id: string; patch: Partial<Pick<ExpenseRow, "title" | "amount" | "currency" | "category" | "incurred_on" | "payer_id" | "notes" | "itinerary_item_id">> }) => {
+    mutationFn: async (params: { id: string; patch: Partial<Pick<ExpenseRow, "title" | "amount" | "currency" | "category" | "incurred_on" | "payer_id" | "notes" | "itinerary_item_id" | "split_type">> }) => {
       const { id, patch } = params;
 
       // If currency is being changed, refresh the fx_rate snapshot. The
@@ -51,24 +51,53 @@ export function useExpenseInlineEdit(tripId: string) {
   });
 
   /**
-   * Re-split an expense by mode while keeping the same set of participants.
-   * Used when the user toggles Equal/%/Custom inline.
+   * Re-split an expense by mode and (optionally) write the new split_type
+   * onto the expense row in the same flow. Used when the user toggles
+   * Equal/%/Custom inline.
+   *
+   * When `previousSplitType` is 'byItem' and the new mode is not, we also
+   * call delete_expense_line_items_and_claims to remove the orphan line
+   * items + claims rows. Without that cleanup, the row keeps stale data
+   * that legacy display paths used to interpret as 'byItem' (the bug this
+   * fix is closing).
    */
   const replaceSplits = useMutation({
     mutationFn: async (params: {
       expenseId: string;
       splits: { user_id: string; share_amount: number }[];
+      splitType?: SplitType;
+      previousSplitType?: SplitType;
     }) => {
+      const { expenseId, splits, splitType, previousSplitType } = params;
+
+      if (splitType) {
+        const { error: uErr } = await supabase
+          .from("expenses")
+          .update({ split_type: splitType, updated_at: new Date().toISOString() } as any)
+          .eq("id", expenseId);
+        if (uErr) throw uErr;
+      }
+
+      if (previousSplitType === "byItem" && splitType && splitType !== "byItem") {
+        const { error: dErr } = await supabase.rpc("delete_expense_line_items_and_claims", {
+          _expense_id: expenseId,
+        });
+        if (dErr) throw dErr;
+      }
+
       const { error } = await supabase.rpc("replace_expense_splits", {
-        _expense_id: params.expenseId,
-        _splits: params.splits as any,
+        _expense_id: expenseId,
+        _splits: splits as any,
       });
       if (error) throw error;
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });
+      qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expenses-summary", tripId] });
       qc.invalidateQueries({ queryKey: ["global-expenses"] });
+      qc.invalidateQueries({ queryKey: ["expense-line-items", vars.expenseId] });
+      qc.invalidateQueries({ queryKey: ["expense-line-item-claims", vars.expenseId] });
     },
     onError: (e: any) => toast.error(friendlyErrorMessage(e, "Couldn't update split")),
   });
@@ -102,13 +131,21 @@ export function useExpenseInlineEdit(tripId: string) {
   return { patchExpense, replaceSplits, addLineItem };
 }
 
-/** Detect current split mode from a set of splits + total amount */
-export function detectSplitMode(splits: SplitRow[], total: number): SplitMode {
-  if (splits.length <= 1) return "equal";
-  const first = splits[0].share_amount;
-  const allEqual = splits.every((s) => Math.abs(s.share_amount - first) < 0.01);
-  if (allEqual) return "equal";
-  return "custom";
+/**
+ * Read the current split mode from the expense row.
+ *
+ * Previously this inferred from the splits' shape (single row -> equal,
+ * all-equal amounts -> equal, else -> custom). That worked for live data
+ * but disagreed with the form modal in edge cases (byItem expenses with
+ * one non-zero claimant looked like 'equal' because length<=1). Reading
+ * the persisted column makes both surfaces agree.
+ *
+ * The inline toggle UI only handles 'equal' and 'custom'; 'byItem' is
+ * surfaced to the caller as-is so it can render the correct read-only
+ * label and hide the toggle.
+ */
+export function detectSplitMode(expense: { split_type: SplitType }): SplitType {
+  return expense.split_type;
 }
 
 /** Recalculate splits for the chosen mode, preserving participants */
