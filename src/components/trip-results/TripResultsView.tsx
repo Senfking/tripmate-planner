@@ -8,6 +8,7 @@ import { DestinationSection } from "./DestinationSection";
 import { DaySection } from "./DaySection";
 import { TransportCard } from "./TransportCard";
 import { AccommodationCard } from "./AccommodationCard";
+import { buildActivityCostFormatter } from "./formatActivityCost";
 import { AlternativesSheet } from "./AlternativesSheet";
 import { ResultsMap } from "./ResultsMap";
 import { ResultsTimeline, buildTimelineNodes } from "./ResultsTimeline";
