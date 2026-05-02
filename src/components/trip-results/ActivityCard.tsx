@@ -169,135 +169,136 @@ export function ActivityCard({
         <div className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-primary-foreground shadow-md bg-primary">
           {index + 1}
         </div>
-        {/* Persistent action cluster — Delete + Swap. Always visible at the
-            same location regardless of expand state so CTAs don't jump. */}
-        <div className="absolute top-2 right-2 flex items-center gap-1.5" ref={swapRef}>
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            aria-label="Remove activity"
-            className="p-1.5 rounded-lg shadow-lg bg-card/90 backdrop-blur-sm text-muted-foreground hover:text-destructive border border-border hover:bg-destructive/10 transition-colors"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setSwapMode(swapMode === "menu" ? null : "menu");
-              setSwapText("");
-            }}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
-          >
-            <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
-          </button>
-
-          {/* Swap popovers — anchored to the action cluster, opening downward */}
-          {swapMode === "menu" && (
-            <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-xl shadow-lg p-1.5 z-30 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={(e) => { e.stopPropagation(); onRequestChange(); setSwapMode(null); }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                <div>
-                  <span className="font-medium text-foreground">Get Junto AI suggestions</span>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Auto-suggest similar experiences</p>
-                </div>
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setSwapMode("describe"); }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
-              >
-                <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                <div>
-                  <span className="font-medium text-foreground">Describe what you want</span>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">"Something more casual…"</p>
-                </div>
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setSwapMode("custom"); }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
-              >
-                <PenLine className="h-3.5 w-3.5 text-primary" />
-                <div>
-                  <span className="font-medium text-foreground">Choose your own</span>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Type a specific place name</p>
-                </div>
-              </button>
-            </div>
-          )}
-
-          {swapMode === "describe" && (
-            <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-lg p-3 z-30 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-              <p className="text-[11px] font-medium text-foreground mb-2">What are you looking for instead?</p>
-              <input
-                type="text"
-                autoFocus
-                value={swapText}
-                onChange={(e) => setSwapText(e.target.value)}
-                placeholder="e.g. a rooftop bar instead"
-                className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && swapText.trim()) handleDescribeSwap();
-                  if (e.key === "Escape") { setSwapMode(null); setSwapText(""); }
-                }}
-              />
-              <div className="flex justify-end mt-2 gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSwapMode(null); setSwapText(""); }}
-                  className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDescribeSwap(); }}
-                  disabled={!swapText.trim()}
-                  className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md"
-                >
-                  Find
-                </button>
-              </div>
-            </div>
-          )}
-
-          {swapMode === "custom" && (
-            <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-lg p-3 z-30 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-              <p className="text-[11px] font-medium text-foreground mb-2">
-                {swapLoading ? "Looking up place..." : "Enter the place name"}
-              </p>
-              <input
-                type="text"
-                autoFocus
-                value={swapText}
-                onChange={(e) => setSwapText(e.target.value)}
-                placeholder="e.g. Potato Head Beach Club"
-                disabled={swapLoading}
-                className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && swapText.trim()) handleCustomSwap();
-                  if (e.key === "Escape") { setSwapMode(null); setSwapText(""); }
-                }}
-              />
-              <div className="flex justify-end mt-2 gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); if (!swapLoading) { setSwapMode(null); setSwapText(""); } }}
-                  className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleCustomSwap(); }}
-                  disabled={!swapText.trim() || swapLoading}
-                  className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md disabled:opacity-50 inline-flex items-center gap-1"
-                >
-                  {swapLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-                  {swapLoading ? "Searching..." : "Replace"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
+      {/* Persistent action cluster — Delete + Swap. Positioned over the hero
+          but as a sibling so the swap popover can escape the hero's
+          overflow-hidden clip and render above subsequent siblings. */}
+      <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20" ref={swapRef}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          aria-label="Remove activity"
+          className="p-1.5 rounded-lg shadow-lg bg-card/90 backdrop-blur-sm text-muted-foreground hover:text-destructive border border-border hover:bg-destructive/10 transition-colors"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setSwapMode(swapMode === "menu" ? null : "menu");
+            setSwapText("");
+          }}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
+        >
+          <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
+        </button>
+
+        {/* Swap popovers — anchored to the action cluster, opening downward */}
+        {swapMode === "menu" && (
+          <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-xl shadow-xl p-1.5 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={(e) => { e.stopPropagation(); onRequestChange(); setSwapMode(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <div>
+                <span className="font-medium text-foreground">Get Junto AI suggestions</span>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Auto-suggest similar experiences</p>
+              </div>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setSwapMode("describe"); }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+              <div>
+                <span className="font-medium text-foreground">Describe what you want</span>
+                <p className="text-[10px] text-muted-foreground mt-0.5">"Something more casual…"</p>
+              </div>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setSwapMode("custom"); }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors"
+            >
+              <PenLine className="h-3.5 w-3.5 text-primary" />
+              <div>
+                <span className="font-medium text-foreground">Choose your own</span>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Type a specific place name</p>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {swapMode === "describe" && (
+          <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[11px] font-medium text-foreground mb-2">What are you looking for instead?</p>
+            <input
+              type="text"
+              autoFocus
+              value={swapText}
+              onChange={(e) => setSwapText(e.target.value)}
+              placeholder="e.g. a rooftop bar instead"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && swapText.trim()) handleDescribeSwap();
+                if (e.key === "Escape") { setSwapMode(null); setSwapText(""); }
+              }}
+            />
+            <div className="flex justify-end mt-2 gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setSwapMode(null); setSwapText(""); }}
+                className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDescribeSwap(); }}
+                disabled={!swapText.trim()}
+                className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md"
+              >
+                Find
+              </button>
+            </div>
+          </div>
+        )}
+
+        {swapMode === "custom" && (
+          <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[11px] font-medium text-foreground mb-2">
+              {swapLoading ? "Looking up place..." : "Enter the place name"}
+            </p>
+            <input
+              type="text"
+              autoFocus
+              value={swapText}
+              onChange={(e) => setSwapText(e.target.value)}
+              placeholder="e.g. Potato Head Beach Club"
+              disabled={swapLoading}
+              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && swapText.trim()) handleCustomSwap();
+                if (e.key === "Escape") { setSwapMode(null); setSwapText(""); }
+              }}
+            />
+            <div className="flex justify-end mt-2 gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!swapLoading) { setSwapMode(null); setSwapText(""); } }}
+                className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleCustomSwap(); }}
+                disabled={!swapText.trim() || swapLoading}
+                className="text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1 rounded-md disabled:opacity-50 inline-flex items-center gap-1"
+              >
+                {swapLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                {swapLoading ? "Searching..." : "Replace"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Summary row */}
       <div className="flex items-start justify-between px-3 py-2 cursor-pointer gap-3" onClick={() => setExpanded((e) => !e)}>
