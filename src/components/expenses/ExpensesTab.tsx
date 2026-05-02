@@ -13,7 +13,7 @@ import { ExpenseCard } from "./ExpenseCard";
 import { ExpenseFormModal } from "./ExpenseFormModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles, Users, Download, Settings2, WifiOff } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, ChevronRight, CheckCircle2, Info, RotateCcw, Camera, Upload, Sparkles, Users, Download, Settings2, WifiOff, Receipt, Scan, Wallet } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { format, parseISO } from "date-fns";
