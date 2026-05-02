@@ -1,13 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ShieldCheck, ChevronDown, Plane } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight, Plane, AlertCircle, Plus } from "lucide-react";
 import { CountryFlag } from "@/components/ui/CountryFlag";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { countryName } from "@/lib/countries";
-
-const INITIAL_VISIBLE = 4;
 
 interface TravellersSectionProps {
   tripId: string;
@@ -19,20 +18,30 @@ interface MemberLite {
   displayName: string;
   avatarUrl: string | null;
   nationalityIso: string | null;
-  secondaryNationalityIso: string | null;
 }
 
 function getInitial(name: string | null | undefined) {
   return (name || "?").charAt(0).toUpperCase();
 }
 
+/**
+ * Compact "Entry & visa" card.
+ *
+ * The previous version showed a full member list with redundant per-row
+ * "Visa info" pills and a footer button that scrolled to a section that
+ * doesn't exist on the dashboard (it lives in Bookings & Docs), making the
+ * CTA look broken. Members are already represented elsewhere on the
+ * dashboard (header chip + avatars), so this card focuses purely on the
+ * one job nationality data is needed for: getting visa guidance for the
+ * destination.
+ */
 export function TravellersSection({ tripId, myRole: _myRole }: TravellersSectionProps) {
   const { user } = useAuth();
   const userId = user?.id;
-  const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
 
   const { data: members } = useQuery({
-    queryKey: ["trip-travellers-members-v3", tripId],
+    queryKey: ["trip-travellers-members-v4", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_members")
@@ -45,10 +54,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
 
       const [pub, profs] = await Promise.all([
         supabase.rpc("get_public_profiles", { _user_ids: ids }),
-        supabase
-          .from("profiles")
-          .select("id, nationality_iso, secondary_nationality_iso")
-          .in("id", ids),
+        supabase.from("profiles").select("id, nationality_iso").in("id", ids),
       ]);
 
       const pubMap = new Map(
@@ -58,21 +64,14 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
         ]) ?? [],
       );
       const natMap = new Map(
-        profs.data?.map((p) => [
-          p.id,
-          {
-            primary: (p as any).nationality_iso as string | null,
-            secondary: (p as any).secondary_nationality_iso as string | null,
-          },
-        ]) ?? [],
+        profs.data?.map((p) => [p.id, (p as any).nationality_iso as string | null]) ?? [],
       );
 
       return data.map<MemberLite>((m) => ({
         userId: m.user_id,
         displayName: pubMap.get(m.user_id)?.name ?? "Member",
         avatarUrl: pubMap.get(m.user_id)?.avatar ?? null,
-        nationalityIso: natMap.get(m.user_id)?.primary ?? null,
-        secondaryNationalityIso: natMap.get(m.user_id)?.secondary ?? null,
+        nationalityIso: natMap.get(m.user_id) ?? null,
       }));
     },
     enabled: !!tripId,
@@ -92,128 +91,102 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
     enabled: !!tripId,
   });
 
-  const totalWithNationality = useMemo(
-    () => (members ?? []).filter((m) => !!m.nationalityIso).length,
+  const destIso = trip?.destination_country_iso?.toUpperCase() ?? null;
+  const destName = destIso ? countryName(destIso) : null;
+
+  const myMember = (members ?? []).find((m) => m.userId === userId);
+  const myNatIso = myMember?.nationalityIso?.toUpperCase() ?? null;
+  const myNatName = myNatIso ? countryName(myNatIso) : null;
+
+  const missingCount = useMemo(
+    () => (members ?? []).filter((m) => !m.nationalityIso).length,
     [members],
   );
 
-  const myMember = (members ?? []).find((m) => m.userId === userId);
-  const myHasNationality = !!myMember?.nationalityIso;
-  const showVisaHint = myHasNationality && !!trip?.destination_country_iso;
-  const destIso = trip?.destination_country_iso?.toUpperCase() ?? null;
+  const goToVisa = () => {
+    navigate(`/app/trips/${tripId}/bookings#visa-entry-section`);
+  };
+
+  const goToProfile = () => {
+    navigate("/app/profile");
+  };
+
+  // No destination resolved yet — render nothing rather than a useless card.
+  if (!destIso) return null;
+
+  // Primary state: I have my nationality set → show route + CTA.
+  const hasMyNat = !!myNatIso;
 
   return (
-    <div id="travellers-section" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-      <div className="flex items-baseline justify-between mb-1">
-        <h3 className="font-semibold text-[15px] text-foreground">Who's traveling</h3>
-        {totalWithNationality === 0 && (
-          <span className="text-[11px] text-muted-foreground">Optional</span>
-        )}
-      </div>
-      <p className="text-[12px] text-muted-foreground mb-3 leading-relaxed">
-        Nationalities come from each member's profile. Set yours in profile to get personalized visa guidance.
-      </p>
-
-      <div className="space-y-2">
-        {(expanded ? (members ?? []) : (members ?? []).slice(0, INITIAL_VISIBLE)).map((m) => {
-          const codes = [m.nationalityIso, m.secondaryNationalityIso]
-            .filter((c): c is string => !!c)
-            .map((c) => c.toUpperCase());
-          const hasNats = codes.length > 0;
-          const isMe = m.userId === userId;
-          // Visa-status summary: only meaningful if we know both destination and member's nationality.
-          const visaPossible = hasNats && !!destIso;
-
-          return (
-            <div
-              key={m.userId}
-              className="flex items-center gap-3 rounded-xl border border-gray-100 px-3 py-2.5"
-            >
-              <Avatar className="h-8 w-8 shrink-0">
-                {m.avatarUrl && <AvatarImage src={m.avatarUrl} alt={m.displayName} />}
-                <AvatarFallback className="bg-[#0D9488]/10 text-[#0D9488] text-xs font-medium">
-                  {getInitial(m.displayName)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {m.displayName}
-                  {isMe && (
-                    <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(you)</span>
-                  )}
-                </p>
-                {hasNats ? (
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    {codes.map((code, idx) => (
-                      <span
-                        key={code}
-                        title={`${countryName(code)}${idx === 0 ? " (Primary)" : ""}`}
-                        className={
-                          idx === 0
-                            ? "inline-flex items-center gap-1 rounded-full bg-[#0D9488]/10 ring-1 ring-[#0D9488]/30 pl-0.5 pr-1.5 py-0.5"
-                            : "inline-flex items-center gap-1 rounded-full bg-muted pl-0.5 pr-1.5 py-0.5"
-                        }
-                      >
-                        <CountryFlag code={code} size={20} />
-                        <span
-                          className={
-                            idx === 0
-                              ? "font-mono text-[10px] font-semibold tracking-wide text-[#0D9488]"
-                              : "font-mono text-[10px] font-semibold tracking-wide text-muted-foreground"
-                          }
-                        >
-                          {code}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {isMe ? "Add nationality in your profile" : "Nationality not set in profile"}
-                  </p>
-                )}
-              </div>
-              {visaPossible && (
-                <span
-                  className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#0D9488]/[0.08] text-[#0D9488] px-2 py-0.5 text-[10.5px] font-medium"
-                  title={`Visa info available for ${countryName(destIso)}`}
-                >
-                  <Plane className="h-3 w-3" />
-                  Visa info
-                </span>
-              )}
+    <button
+      type="button"
+      onClick={hasMyNat ? goToVisa : goToProfile}
+      id="travellers-section"
+      className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-all active:scale-[0.99]"
+    >
+      <div className="flex items-center gap-3">
+        {/* Route visual: my flag → destination flag */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {hasMyNat ? (
+            <CountryFlag code={myNatIso!} size={28} />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+              <Plus className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-          );
-        })}
+          )}
+          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          <CountryFlag code={destIso} size={28} />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-[14px] text-foreground leading-tight">
+            {hasMyNat ? (
+              <>Entry to {destName}</>
+            ) : (
+              <>Set your nationality</>
+            )}
+          </p>
+          <p className="text-[12px] text-muted-foreground leading-snug mt-0.5">
+            {hasMyNat ? (
+              <>
+                Visa & entry rules for {myNatName} passport holders
+              </>
+            ) : (
+              <>Add it to your profile to get personalized visa guidance</>
+            )}
+          </p>
+        </div>
+
+        <div className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#0D9488]/10 text-[#0D9488] px-2.5 py-1 text-[11px] font-semibold">
+          <Plane className="h-3 w-3" />
+          {hasMyNat ? "View" : "Add"}
+        </div>
       </div>
 
-      {(members?.length ?? 0) > INITIAL_VISIBLE && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-2 w-full flex items-center justify-center gap-1 rounded-xl py-2 text-[12px] font-medium text-[#0D9488] hover:bg-[#0D9488]/[0.06] transition-colors"
-        >
-          {expanded ? "Show less" : `Show ${(members?.length ?? 0) - INITIAL_VISIBLE} more`}
-          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
-        </button>
-      )}
-
-      {showVisaHint && (
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById("visa-entry-section");
-            el?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-          className="mt-3 w-full flex items-center gap-2 rounded-xl bg-[#0D9488]/[0.06] hover:bg-[#0D9488]/[0.1] transition-colors px-3 py-2 text-left"
-        >
-          <ShieldCheck className="h-3.5 w-3.5 text-[#0D9488] shrink-0" />
-          <span className="text-[12px] font-medium text-[#0D9488] flex-1">
-            Visa requirements available
+      {/* Co-traveller summary — only when there are other members and some
+          are missing nationality data. Encourages everyone to set their
+          profile so visa info covers the whole group. */}
+      {hasMyNat && (members?.length ?? 0) > 1 && missingCount > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[11.5px] text-muted-foreground">
+          <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          <span className="flex-1">
+            {missingCount} {missingCount === 1 ? "traveller hasn't" : "travellers haven't"} set their nationality
           </span>
-          <span className="text-[11px] text-[#0D9488]/80">View →</span>
-        </button>
+          <div className="flex -space-x-1.5">
+            {(members ?? [])
+              .filter((m) => !m.nationalityIso)
+              .slice(0, 3)
+              .map((m) => (
+                <Avatar key={m.userId} className="h-5 w-5 ring-2 ring-white">
+                  {m.avatarUrl && <AvatarImage src={m.avatarUrl} alt={m.displayName} />}
+                  <AvatarFallback className="bg-muted text-[9px] font-medium">
+                    {getInitial(m.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+          </div>
+        </div>
       )}
-    </div>
+    </button>
   );
 }
