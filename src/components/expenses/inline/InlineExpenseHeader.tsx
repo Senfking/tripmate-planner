@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format, parse } from "date-fns";
+import { toast } from "sonner";
 import { ExpenseRow, SplitRow, MemberProfile } from "@/hooks/useExpenses";
 import { useExpenseInlineEdit, recomputeSplits } from "@/hooks/useExpenseInlineEdit";
 import { formatCurrency } from "@/lib/settlementCalc";
@@ -56,6 +57,75 @@ export function InlineExpenseHeader({
   const [amountDraft, setAmountDraft] = useState(String(expense.amount));
   const [notesDraft, setNotesDraft] = useState(expense.notes || "");
   const [notesExpanded, setNotesExpanded] = useState(false);
+
+  // Auto-heal pre-existing equal-split rows whose participant set has drifted
+  // away from the trip's active member set. The byItem -> equal Edit flow
+  // before the split_type column existed could leave an expense with
+  // split_type='equal' but only one user in expense_splits (whoever held the
+  // line-item claims). The split-mode toggle alone can't repair it because
+  // it short-circuits when the user clicks the same mode they're already in.
+  // Re-broadening on Edit-mode entry repairs the row the moment the user
+  // engages with it, with no extra clicks required.
+  //
+  // Conditions:
+  //   - split_type === 'equal' (don't touch custom/byItem; those are
+  //     intentional non-uniform splits)
+  //   - category !== 'settlement' (settlements are 1:1 transfers by design)
+  //   - active member set (attendance != 'not_going') differs from the
+  //     current splits' user set
+  //
+  // We trigger the heal exactly once per editMode=true entry via a ref
+  // guard; the ref clears when editMode goes false so a second Edit click
+  // can heal again if the row drifted in the meantime.
+  const healAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (!editMode) {
+      healAttemptedRef.current = false;
+      return;
+    }
+    if (healAttemptedRef.current) return;
+    if (expense.split_type !== "equal") return;
+    if (expense.category === "settlement") return;
+    if (members.length === 0 || splits.length === 0) return;
+
+    const activeIds = members
+      .filter((m) => m.attendanceStatus !== "not_going")
+      .map((m) => m.userId);
+    if (activeIds.length === 0) return;
+
+    const currentIds = new Set(splits.map((s) => s.user_id));
+    const sameSet =
+      activeIds.length === currentIds.size
+      && activeIds.every((id) => currentIds.has(id));
+    if (sameSet) return;
+
+    healAttemptedRef.current = true;
+
+    // Match ExpenseFormModal's equal-split distribution exactly: floor base,
+    // pile the rounding remainder onto the first participant.
+    const base = Math.floor((expense.amount / activeIds.length) * 100) / 100;
+    const remainder = Math.round((expense.amount - base * activeIds.length) * 100) / 100;
+    const newSplits = activeIds.map((uid, i) => ({
+      user_id: uid,
+      share_amount: i === 0 ? Math.round((base + remainder) * 100) / 100 : base,
+    }));
+
+    replaceSplits
+      .mutateAsync({
+        expenseId: expense.id,
+        splits: newSplits,
+        splitType: "equal",
+        previousSplitType: "equal",
+      })
+      .then(() => {
+        toast.success(`Re-distributed equally across all ${activeIds.length} trip members`);
+      })
+      .catch(() => {
+        // replaceSplits surfaces its own error toast; reset the guard so a
+        // subsequent Edit click can retry the heal.
+        healAttemptedRef.current = false;
+      });
+  }, [editMode, expense.id, expense.amount, expense.split_type, expense.category, members, splits, replaceSplits]);
 
   return (
     <div className="space-y-1.5 text-muted-foreground">
