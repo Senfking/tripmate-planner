@@ -5112,7 +5112,7 @@ Deno.serve(async (req) => {
               tripId: tripIdForClickref,
               checkin: startDate,
               checkout: endDate,
-                  cityHint: intent.destination,
+              cityHint: intent.destination,
             };
             const ranked_days: RankedDay[] = [];
             const seenIds = new Set<string>();
