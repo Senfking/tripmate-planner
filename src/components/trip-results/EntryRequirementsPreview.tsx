@@ -300,6 +300,15 @@ function AllClearPanel({
   disclaimer,
 }: AllClearProps) {
   const [open, setOpen] = useState(false);
+  const nationalityName = countryName(nationality);
+  const possessive = nationalityName ? `Your ${nationalityName} passport` : "Your passport";
+  const destPhrase = destName ? ` for ${destName}` : "";
+  const hasDetails = !!(
+    passportValidity ||
+    summary ||
+    embassy ||
+    (additionalNotes && additionalNotes.length > 0)
+  );
 
   // Allow the timeline rail to remote-open the details when the user clicks
   // the "Entry" node. The wrapper div uses id="section-entry".
@@ -312,18 +321,8 @@ function AllClearPanel({
     };
     window.addEventListener("results:expand", handler as EventListener);
     return () => window.removeEventListener("results:expand", handler as EventListener);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasDetails]);
 
-  const nationalityName = countryName(nationality);
-  const possessive = nationalityName ? `Your ${nationalityName} passport` : "Your passport";
-  const destPhrase = destName ? ` for ${destName}` : "";
-  const hasDetails = !!(
-    passportValidity ||
-    summary ||
-    embassy ||
-    (additionalNotes && additionalNotes.length > 0)
-  );
 
   return (
     <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 shadow-sm dark:bg-emerald-950/20 dark:border-emerald-900">
