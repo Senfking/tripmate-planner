@@ -250,6 +250,18 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     [],
   );
 
+  // Per-activity cost formatter — same conversion path as the budget bar so
+  // the day cards and bottom bar agree on currency.
+  const activityCostFormatter = useMemo(
+    () => buildActivityCostFormatter({
+      destCurrency,
+      userCurrency,
+      convertToUserCurrency,
+      formatBudget,
+    }),
+    [destCurrency, userCurrency, convertToUserCurrency, formatBudget],
+  );
+
 
   const hasPacking = (result.packing_suggestions?.length || 0) > 0;
 
