@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Star, ExternalLink, Hotel, MapPin, Lightbulb, ArrowLeftRight } from "lucide-react";
-import { toast } from "sonner";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -82,6 +81,20 @@ export function AccommodationCard({
   const [expanded, setExpanded] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const swapPopoverRef = useRef<HTMLDivElement>(null);
+
+  // Close swap popover on outside click
+  useEffect(() => {
+    if (!swapOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (swapPopoverRef.current && !swapPopoverRef.current.contains(e.target as Node)) {
+        setSwapOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [swapOpen]);
 
   // Only fetch from Google Places hook when we don't already have photo/rating
   // data from the backend (saves a round-trip on freshly built trips).
@@ -137,14 +150,26 @@ export function AccommodationCard({
 
   const descIsLong = (description?.length || 0) > 120;
 
+  // Booking.com search URL for the destination, pre-filled with trip dates,
+  // so users can browse alternative stays in the same area.
+  const browseAlternativesUrl = (() => {
+    const cityQuery = (locationHint || neighborhood || name).trim();
+    const params = new URLSearchParams();
+    params.set("ss", cityQuery);
+    if (checkInDate) params.set("checkin", checkInDate);
+    if (checkOutDate) params.set("checkout", checkOutDate);
+    return `https://www.booking.com/searchresults.html?${params.toString()}`;
+  })();
+
+
   return (
     <div
       id={`section-stay-${(locationHint || name).replace(/\s+/g, "-")}`}
-      className="mx-4 mb-4 rounded-2xl border border-border overflow-hidden bg-card shadow-sm"
+      className="mx-4 mb-4 rounded-2xl border border-border bg-card shadow-sm relative"
     >
       {/* Photo */}
       <div
-        className="w-full h-[160px] bg-muted relative cursor-pointer"
+        className="w-full h-[160px] bg-muted relative cursor-pointer overflow-hidden rounded-t-2xl"
         onClick={() => setExpanded((e) => !e)}
       >
         {isLoading ? (
@@ -167,22 +192,44 @@ export function AccommodationCard({
             <Hotel className="h-2.5 w-2.5" /> Stay
           </span>
         </div>
-        {/* Persistent Swap button — top right, always visible */}
-        <div className="absolute top-2 right-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              toast("Hotel swap coming soon", {
-                description: "We're working on letting you swap stays. For now, click 'Book' to explore alternatives on Booking.com.",
-              });
-            }}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
+      </div>
+
+      {/* Persistent Swap button — top right, sibling of hero so the popover
+          escapes the hero's overflow-hidden clipping. */}
+      <div className="absolute top-2 right-2 z-20">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            setSwapOpen((o) => !o);
+          }}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
+        >
+          <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
+        </button>
+
+        {swapOpen && (
+          <div
+            ref={swapPopoverRef}
+            className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
           >
-            <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
-          </button>
-        </div>
+            <p className="text-[11px] font-medium text-foreground mb-1">Swap this stay</p>
+            <p className="text-[10px] text-muted-foreground mb-2.5 leading-relaxed">
+              In-app swap is coming soon. For now, browse alternative stays for your dates on Booking.com.
+            </p>
+            <a
+              href={browseAlternativesUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setSwapOpen(false)}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors"
+            >
+              Browse alternatives <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Summary row */}
