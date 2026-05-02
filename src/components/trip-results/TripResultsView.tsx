@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -43,9 +43,22 @@ interface Props {
   onDashboard?: () => void;
   revealMode?: boolean;
   onRevealComplete?: () => void;
+  /** When true, the result is mid-stream and incomplete. Day cards listed in
+   *  `streamingDayNumbers` render as skeleton placeholders; the budget panel,
+   *  trip summary, packing, and overview sections only render once their
+   *  source data is present. The "Create trip" CTA stays disabled until
+   *  streaming completes (caller passes streaming=false to release it). */
+  streaming?: boolean;
+  /** Set of day_number values that haven't streamed yet — render those days
+   *  as skeleton placeholders. Empty set / undefined means all days populated. */
+  streamingDayNumbers?: Set<number>;
+  /** Status text for the small loading pill shown at the top of the results
+   *  surface while streaming (e.g. "Composing your day-by-day itinerary…").
+   *  Hidden once streaming=false. */
+  streamingMessage?: string;
 }
 
-export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage }: Props) {
   const reveal = useStreamReveal(result, !!revealMode);
 
   // Notify parent when reveal completes
