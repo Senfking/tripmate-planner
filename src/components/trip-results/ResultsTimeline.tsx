@@ -63,38 +63,21 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
   const scrollTimeoutRef = useRef<number>();
   activeIdRef.current = activeId;
 
-  const getScrollRoot = useCallback(() => {
-    return document.querySelector<HTMLElement>("[data-results-scroll-root='true']") ?? document.documentElement;
+  // Returns whichever element is the actual scroller. The results view used
+  // to scroll inside [data-results-scroll-root]; now (for screenshot/extension
+  // compatibility) document scroll is the default and the inner element only
+  // becomes scrollable when the map side panel is open. Detect that at call
+  // time so the same code works in both states.
+  const getScrollRoot = useCallback((): HTMLElement => {
+    const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
+    if (marked && marked.scrollHeight > marked.clientHeight + 1) return marked;
+    return document.scrollingElement as HTMLElement ?? document.documentElement;
   }, []);
 
   const getHeaderOffset = useCallback(() => {
     const header = document.querySelector<HTMLElement>("[data-results-header='true']");
     return (header?.getBoundingClientRect().height ?? 0) + 12;
   }, []);
-
-  const [topOffset, setTopOffset] = useState(96);
-
-  useEffect(() => {
-    if (!isDesktop) return;
-    const scrollRoot = getScrollRoot();
-    const computeOffset = () => {
-      const hero = document.querySelector<HTMLElement>("[data-results-hero='true']");
-      const minTop = 96;
-      if (!hero) {
-        setTopOffset(minTop);
-        return;
-      }
-      const heroRect = hero.getBoundingClientRect();
-      setTopOffset(Math.max(minTop, heroRect.bottom + 12));
-    };
-    scrollRoot.addEventListener("scroll", computeOffset, { passive: true });
-    window.addEventListener("resize", computeOffset);
-    computeOffset();
-    return () => {
-      scrollRoot.removeEventListener("scroll", computeOffset);
-      window.removeEventListener("resize", computeOffset);
-    };
-  }, [isDesktop, getScrollRoot]);
 
   useEffect(() => {
     if (!isDesktop) return;
