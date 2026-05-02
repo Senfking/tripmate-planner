@@ -851,6 +851,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           </p>
         )}
       </div>
+      )}
 
 
       <ExpenseFormModal
