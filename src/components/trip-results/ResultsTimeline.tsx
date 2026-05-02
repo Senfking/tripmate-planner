@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Plane, Bed, Wallet, MapPin, Package } from "lucide-react";
+import { Plane, Bed, Wallet, MapPin, Package, FileCheck } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface TimelineNode {
@@ -18,7 +18,8 @@ interface Props {
 export function buildTimelineNodes(
   destinations: { name: string; start_date: string; end_date: string; accommodation?: { name?: string; title?: string } }[],
   allDays: { day_number: number; date: string }[],
-  hasPacking: boolean
+  hasPacking: boolean,
+  hasEntry: boolean = false,
 ): TimelineNode[] {
   const nodes: TimelineNode[] = [];
   const seenNodeIds = new Set<string>();
@@ -46,6 +47,10 @@ export function buildTimelineNodes(
     for (const day of destDays) {
       pushNode({ id: `section-day-${day.day_number}`, label: `Day ${day.day_number}`, minor: true });
     }
+  }
+
+  if (hasEntry) {
+    pushNode({ id: "section-entry", icon: FileCheck, label: "Entry" });
   }
 
   if (hasPacking) {
