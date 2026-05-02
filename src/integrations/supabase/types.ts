@@ -154,6 +154,36 @@ export type Database = {
           },
         ]
       }
+      ai_trip_plans_backup_pre_awin_backfill: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          is_public: boolean | null
+          prompt: Json | null
+          result: Json | null
+          trip_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          is_public?: boolean | null
+          prompt?: Json | null
+          result?: Json | null
+          trip_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          is_public?: boolean | null
+          prompt?: Json | null
+          result?: Json | null
+          trip_id?: string | null
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string | null
