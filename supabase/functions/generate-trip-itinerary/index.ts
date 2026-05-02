@@ -655,6 +655,10 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
   maxTokens: number,
   pipelineStartedAt: number,
   step: string,
+  // Optional override. Anthropic defaults to 1.0 when unset; pass 0 for
+  // intent-extraction-shaped calls where determinism matters more than
+  // creative variety (parseIntent, rankTripMetadata).
+  temperature?: number,
 ): Promise<ClaudeCallResult<T>> {
   if (!apiKey) {
     throw new Error("callClaudeHaiku: ANTHROPIC_API_KEY is empty");
@@ -688,7 +692,7 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), attemptBudget);
 
-  const body = {
+  const body: Record<string, unknown> = {
     model: HAIKU_MODEL,
     max_tokens: maxTokens,
     system: systemBlocks,
@@ -702,6 +706,9 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
     ],
     tool_choice: { type: "tool", name: tool.name },
   };
+  if (typeof temperature === "number") {
+    body.temperature = temperature;
+  }
 
   const callStart = Date.now();
   try {
@@ -984,6 +991,7 @@ async function parseIntent(
     1024,
     pipelineStartedAt,
     "parseIntent",
+    0,
   );
 
   await logger.log({
@@ -3310,6 +3318,7 @@ async function rankTripMetadata(
     METADATA_MAX_TOKENS,
     pipelineStartedAt,
     "rankTripMetadata",
+    0,
   );
 }
 
@@ -4080,6 +4089,83 @@ async function buildIntentCacheKey(
     .join("");
 }
 
+// Cache key derived from the RAW request body, not the parsed Intent. Claude
+// Haiku runs at default temperature on parseIntent — its outputs (vibes,
+// must_haves, must_avoids, group_composition…) drift between calls for the
+// same form input, so an Intent-derived key essentially never matches across
+// runs. The raw form fields are what the user actually controls; hashing them
+// gives a deterministic key. `destinationOverride` lets surprise-mode callers
+// thread the LLM-picked destination in (raw body has empty destination then),
+// keeping cache behaviour for surprise trips.
+function normalizeFreeText(...inputs: Array<string | null | undefined>): string {
+  return inputs
+    .map((s) => (s ?? "").trim().toLowerCase().replace(/\s+/g, " "))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function normalizeStringArray(arr: unknown): string[] {
+  if (!Array.isArray(arr)) return [];
+  return [...arr]
+    .filter((v): v is string => typeof v === "string")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean)
+    .sort();
+}
+
+interface RawCacheKeyShape {
+  destination: string;
+  num_days: number;
+  start_month: string;
+  budget_tier: string | null;
+  pace: string | null;
+  group_size: number | null;
+  group_type: string | null;
+  free_text: string;
+  vibes: string[];
+  must_haves: string[];
+  dietary: string[];
+}
+
+function buildRawCacheKeyShape(
+  body: TripBuilderRequest,
+  numDays: number,
+  startDate: string,
+  destinationOverride?: string,
+): RawCacheKeyShape {
+  const dest = (destinationOverride ?? body.destination ?? "").toLowerCase().trim();
+  return {
+    destination: dest,
+    num_days: numDays,
+    start_month: extractMonthBucket(startDate),
+    budget_tier: body.budget_level ?? null,
+    pace: body.pace ?? null,
+    group_size: typeof body.group_size === "number" ? body.group_size : null,
+    group_type: (body as { group_type?: unknown }).group_type
+      ? String((body as { group_type?: unknown }).group_type).trim().toLowerCase() || null
+      : null,
+    free_text: normalizeFreeText(body.notes, body.free_text),
+    vibes: normalizeStringArray(body.vibes),
+    must_haves: normalizeStringArray(body.interests),
+    dietary: normalizeStringArray(body.dietary),
+  };
+}
+
+async function buildRawCacheKey(
+  body: TripBuilderRequest,
+  numDays: number,
+  startDate: string,
+  destinationOverride?: string,
+): Promise<{ key: string; shape: RawCacheKeyShape }> {
+  const shape = buildRawCacheKeyShape(body, numDays, startDate, destinationOverride);
+  const enc = new TextEncoder().encode(JSON.stringify(shape));
+  const hash = await crypto.subtle.digest("SHA-256", enc);
+  const key = Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return { key, shape };
+}
+
 // Rewrites the dates inside a cached itinerary payload in place so an entry
 // keyed by month bucket can serve a request landing on a different start day
 // within the same month. Day N gets newStartDate + (N-1) days; the destination
@@ -4553,7 +4639,15 @@ Deno.serve(async (req) => {
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const tCacheLookup = Date.now();
             const monthBucket = extractMonthBucket(startDate);
-            const cacheKey = await buildIntentCacheKey(intent, numDays, startDate);
+            const { key: cacheKey, shape: cacheKeyShape } = await buildRawCacheKey(
+              body,
+              numDays,
+              startDate,
+              surpriseMe ? intent.destination : undefined,
+            );
+            console.log(
+              `[stream.cache] read key=${cacheKey} raw_inputs=${JSON.stringify(cacheKeyShape)}`,
+            );
             const { data: cached, error: cacheErr } = await svcClient
               .from("ai_response_cache")
               .select("response_json")
@@ -5051,6 +5145,9 @@ Deno.serve(async (req) => {
               ...pipelineResult, destination_image_url: destinationImageUrl,
             };
             const tCacheWrite = Date.now();
+            console.log(
+              `[stream.cache] write key=${cacheKey} raw_inputs=${JSON.stringify(cacheKeyShape)}`,
+            );
             const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
               cache_key: cacheKey, response_json: responsePayload,
               expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
@@ -5205,12 +5302,20 @@ Deno.serve(async (req) => {
       loggedDestination = intent.destination;
     }
 
-    // ---- Cache check by intent hash (BEFORE Places spend) ----
+    // ---- Cache check by raw-body hash (BEFORE Places spend) ----
     loggedStep = "cacheLookup";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const tCacheLookup = Date.now();
     const monthBucket = extractMonthBucket(startDate);
-    const cacheKey = await buildIntentCacheKey(intent, numDays, startDate);
+    const { key: cacheKey, shape: cacheKeyShape } = await buildRawCacheKey(
+      body,
+      numDays,
+      startDate,
+      surpriseMe ? intent.destination : undefined,
+    );
+    console.log(
+      `[stream.cache] read key=${cacheKey} raw_inputs=${JSON.stringify(cacheKeyShape)}`,
+    );
     {
       const { data: cached, error: cacheErr } = await svcClient
         .from("ai_response_cache")
@@ -5469,6 +5574,9 @@ Deno.serve(async (req) => {
 
     // ---- Cache write (fail loud, AFTER validation passes) ----
     const tCacheWrite = Date.now();
+    console.log(
+      `[stream.cache] write key=${cacheKey} raw_inputs=${JSON.stringify(cacheKeyShape)}`,
+    );
     {
       const { error: cacheInsErr } = await svcClient.from("ai_response_cache").insert({
         cache_key: cacheKey,
