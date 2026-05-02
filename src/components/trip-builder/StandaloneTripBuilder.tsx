@@ -11,7 +11,7 @@ import { stripEmoji } from "@/lib/stripEmoji";
 
 import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
 import { ConfirmationCard } from "./ConfirmationCard";
-import { StreamingGeneratingScreen } from "./StreamingGeneratingScreen";
+// StreamingGeneratingScreen retired — TripResultsView is now the streaming surface.
 import { BlankTripModal } from "./BlankTripModal";
 import { NameTripModal } from "./NameTripModal";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
@@ -380,15 +380,71 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     );
   }
 
-  // Generating view (live SSE streaming)
+  // Generating view (live SSE streaming) — render TripResultsView with the
+  // partial result so the user sees the SAME surface during streaming and
+  // after completion. Day cards stream in; un-streamed days render as
+  // skeletons. The transition to "complete" is just one status pill
+  // disappearing — no layout swap.
   if (phase === "generating") {
+    const partial = buildPartialResult(streaming.state);
+    const skeletonNums = getSkeletonDayNumbers(streaming.state);
+    const isStreaming = streaming.state.stage !== "complete" && streaming.state.stage !== "error";
+    const stageMsg = STAGE_LABELS[streaming.state.stage] ?? "Crafting your trip…";
+
+    // Once trip_complete fires we get a fully-assembled `result`. Persist +
+    // navigate (existing behavior). Until then, render TripResultsView with
+    // whatever we have.
+    if (streaming.state.stage === "complete" && streaming.state.result) {
+      // Defer to the existing handoff (persists draft + navigates). We still
+      // render the results view underneath so there's no flash while the
+      // INSERT round-trips.
+      // Fire-and-forget — handleStreamComplete is idempotent on pendingPayload.
+      void handleStreamComplete(streaming.state.result);
+    }
+
+    // Error state — small overlay, retry CTA. Mirrors the prior screen.
+    if (streaming.state.stage === "error") {
+      return (
+        <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center p-6">
+          <div className="w-full max-w-sm rounded-2xl border border-destructive/30 bg-card shadow-2xl p-6 text-center space-y-3">
+            <AlertCircle className="h-6 w-6 text-destructive mx-auto" />
+            <p className="text-sm font-semibold text-foreground">Couldn't finish your trip</p>
+            <p className="text-xs text-muted-foreground">{streaming.state.error ?? "Unknown error"}</p>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" onClick={onClose} className="flex-1">Close</Button>
+              <Button onClick={handleConfirm} className="flex-1">Try again</Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Pre-meta: nothing to render yet in the results surface. Show a brief
+    // centered loading state — disappears within ~1s once meta arrives.
+    if (!partial) {
+      return (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-3">
+          <Loader2 className="h-6 w-6 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">{stageMsg}</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <StreamingGeneratingScreen
-          destination={inputData?.destination || ""}
-          state={streaming.state}
-          onRetry={handleConfirm}
-          onComplete={handleStreamComplete}
+      <div className="fixed inset-0 z-[100]">
+        <TripResultsView
+          tripId="standalone-streaming"
+          planId={null}
+          result={partial}
+          onClose={onClose}
+          onRegenerate={() => { /* gated during stream */ }}
+          standalone
+          onCreateTrip={handleCreateTrip}
+          onSaveDraft={handleSaveDraft}
+          creatingTrip={creatingTrip}
+          streaming={isStreaming}
+          streamingDayNumbers={skeletonNums}
+          streamingMessage={stageMsg}
         />
       </div>
     );
