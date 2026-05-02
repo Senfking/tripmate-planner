@@ -97,9 +97,26 @@ export function DaySection({
 
   useEffect(() => {
     if (open && cardRef.current) {
+      // Use header-aware scrolling so the day card lands just below the
+      // sticky page header instead of being hidden behind it. Mirrors the
+      // logic in ResultsTimeline.scrollTo / TripResultsView.scrollToSection.
       setTimeout(() => {
-        cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
+        const el = cardRef.current;
+        if (!el) return;
+        const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
+        const useInner = !!(marked && marked.scrollHeight > marked.clientHeight + 1);
+        const header = document.querySelector<HTMLElement>("[data-results-header='true']");
+        const headerOffset = (header?.getBoundingClientRect().height ?? 0) + 12;
+        const elementRect = el.getBoundingClientRect();
+        if (useInner && marked) {
+          const rootRect = marked.getBoundingClientRect();
+          const targetTop = Math.max(0, marked.scrollTop + (elementRect.top - rootRect.top) - headerOffset);
+          marked.scrollTo({ top: targetTop, behavior: "smooth" });
+        } else {
+          const targetTop = Math.max(0, window.scrollY + elementRect.top - headerOffset);
+          window.scrollTo({ top: targetTop, behavior: "smooth" });
+        }
+      }, 80);
     }
   }, [open]);
 
