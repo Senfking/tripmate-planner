@@ -22,6 +22,10 @@ interface Props {
   bookingUrl?: string | null;
   bookingPartner?: string | null;
   locationHint?: string;
+  /** ISO yyyy-MM-dd. Pre-fills checkin/checkout on Booking.com so users
+   *  don't have to re-enter the trip's dates after clicking "Book". */
+  checkInDate?: string | null;
+  checkOutDate?: string | null;
 }
 
 const PRICE_LABELS: Record<PriceLevel, { dollars: string; label: string }> = {
