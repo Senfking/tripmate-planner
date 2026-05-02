@@ -2383,9 +2383,14 @@ async function searchEvents(
   skeleton: DaySkeleton[],
   svcClient: ReturnType<typeof createClient>,
   logger: LLMLogger,
+  // Bypass shouldSearchEvents() — used by the cache-hit refresh path, where
+  // the presence of event_url on cached activities is itself proof that
+  // events were relevant for this intent (and the original skeleton, which
+  // we no longer have on a cache hit, must have signalled it).
+  forceSearch: boolean = false,
 ): Promise<EventCandidate[]> {
   // ---- Heuristic short-circuit ----
-  if (!shouldSearchEvents(intent, skeleton)) {
+  if (!forceSearch && !shouldSearchEvents(intent, skeleton)) {
     await logger.log({
       feature: "events_search_skipped",
       model: "heuristic",
@@ -4042,10 +4047,24 @@ async function logPlacesByTier(
 // Cache key — sha256 of normalized intent shape
 // ---------------------------------------------------------------------------
 
-async function buildIntentCacheKey(intent: Intent, numDays: number): Promise<string> {
+// Bucket a YYYY-MM-DD date into "YYYY-MM" so the cache partitions by month
+// (captures seasonality — June ≠ December) without exploding cache cardinality
+// to one entry per literal start day. "flex" is the bucket for empty / invalid
+// inputs so flex-date trips share an entry across the year.
+function extractMonthBucket(isoDate: string): string {
+  if (!isoDate || isoDate.length < 7) return "flex";
+  return isoDate.slice(0, 7);
+}
+
+async function buildIntentCacheKey(
+  intent: Intent,
+  numDays: number,
+  startDate: string,
+): Promise<string> {
   const shape = {
     destination: intent.destination.toLowerCase().trim(),
     days: numDays,
+    start_month: extractMonthBucket(startDate),
     budget: intent.budget_tier,
     pace: intent.pace,
     vibes: [...intent.vibes].sort(),
@@ -4059,6 +4078,110 @@ async function buildIntentCacheKey(intent: Intent, numDays: number): Promise<str
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+// Rewrites the dates inside a cached itinerary payload in place so an entry
+// keyed by month bucket can serve a request landing on a different start day
+// within the same month. Day N gets newStartDate + (N-1) days; the destination
+// start_date / end_date are pinned to the rewritten first / last day. Returns
+// how many days were touched for logging.
+function rewriteCachedPayloadDates(
+  payload: Record<string, unknown>,
+  newStartDate: string,
+): { days_rewritten: number } {
+  const dest = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations?.[0];
+  if (!dest || !Array.isArray((dest as { days?: unknown }).days)) {
+    return { days_rewritten: 0 };
+  }
+  const days = (dest as { days: Array<Record<string, unknown>> }).days;
+  let daysRewritten = 0;
+  for (const day of days) {
+    const dayNum = typeof day.day_number === "number" ? day.day_number : daysRewritten + 1;
+    day.date = addDaysIso(newStartDate, dayNum - 1);
+    daysRewritten++;
+  }
+  if (days.length > 0) {
+    (dest as Record<string, unknown>).start_date = days[0].date;
+    (dest as Record<string, unknown>).end_date = days[days.length - 1].date;
+  }
+  return { days_rewritten: daysRewritten };
+}
+
+// Refresh event_url on cached activities so we don't serve a stale ticket URL
+// (e.g. a December festival page) when the request is for June. Walks cached
+// days for activities that previously had event_url set, re-runs searchEvents
+// with the current request's dates (events:v1 cache layer keys by start/end so
+// this hits its own cache when warm), and rebinds URLs via matchEventCandidate.
+// Activities that no longer match a fresh event get event_url cleared rather
+// than retain the stale URL. If the events fetch throws, we clear all stale
+// URLs and surface the failure via [stream.cache] events_refresh_failed; the
+// rest of the cache hit still serves.
+async function refreshCachedEvents(
+  payload: Record<string, unknown>,
+  intent: Intent,
+  startDate: string,
+  endDate: string,
+  svcClient: ReturnType<typeof createClient>,
+  logger: LLMLogger,
+): Promise<{ refreshed: number; cleared: number }> {
+  const dest = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations?.[0];
+  const days: Array<Record<string, unknown>> = Array.isArray((dest as { days?: unknown })?.days)
+    ? ((dest as { days: Array<Record<string, unknown>> }).days)
+    : [];
+
+  const eventActivities: Array<Record<string, unknown>> = [];
+  for (const day of days) {
+    const acts = (day as { activities?: unknown }).activities;
+    if (!Array.isArray(acts)) continue;
+    for (const a of acts as Array<Record<string, unknown>>) {
+      if (a && a.event_url) eventActivities.push(a);
+    }
+  }
+  if (eventActivities.length === 0) {
+    return { refreshed: 0, cleared: 0 };
+  }
+
+  let freshEvents: EventCandidate[] = [];
+  try {
+    freshEvents = await searchEvents(
+      intent.destination,
+      startDate,
+      endDate,
+      intent,
+      [],
+      svcClient,
+      logger,
+      true,
+    );
+  } catch (err) {
+    console.warn(
+      `[stream.cache] events_refresh_failed dest="${intent.destination}" start=${startDate} end=${endDate} err=${(err as Error).message}`,
+    );
+    let cleared = 0;
+    for (const a of eventActivities) {
+      a.event_url = null;
+      cleared++;
+    }
+    return { refreshed: 0, cleared };
+  }
+
+  let refreshed = 0;
+  let cleared = 0;
+  for (const a of eventActivities) {
+    const match = matchEventCandidate(
+      typeof a.title === "string" ? a.title : "",
+      typeof a.description === "string" ? a.description : "",
+      freshEvents,
+    );
+    if (match?.url) {
+      a.event_url = match.url;
+      refreshed++;
+    } else {
+      a.event_url = null;
+      cleared++;
+    }
+  }
+  return { refreshed, cleared };
 }
 
 // ===========================================================================
@@ -4429,7 +4552,8 @@ Deno.serve(async (req) => {
             stepLabel = "cacheLookup";
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const tCacheLookup = Date.now();
-            const cacheKey = await buildIntentCacheKey(intent, numDays);
+            const monthBucket = extractMonthBucket(startDate);
+            const cacheKey = await buildIntentCacheKey(intent, numDays, startDate);
             const { data: cached, error: cacheErr } = await svcClient
               .from("ai_response_cache")
               .select("response_json")
@@ -4440,48 +4564,74 @@ Deno.serve(async (req) => {
               throw new Error(`ai_response_cache lookup failed: ${cacheErr.message}`);
             }
             if (cached?.response_json) {
-              tStage("cache_lookup_hit", tCacheLookup);
               const payload = cached.response_json as Record<string, any>;
-              const dest = payload?.destinations?.[0];
-              send("meta", {
-                destination: payload?.destinations?.[0]?.name ?? intent.destination,
-                country_code: null,
-                num_days: dest?.days?.length ?? numDays,
-                skeleton: (dest?.days ?? []).map((d: any) => ({
-                  day_number: d.day_number,
-                  date: d.date,
-                  theme: d.theme ?? "",
-                })),
-                currency: payload?.currency ?? "USD",
-                from_cache: true,
-              });
-              send("image", { url: payload?.destination_image_url ?? null });
-              for (const d of dest?.days ?? []) send("day", d);
-              const juntoPlaceIds: string[] = [];
-              for (const day of dest?.days ?? []) {
-                for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
+              const cachedDayCount: number = Array.isArray(payload?.destinations?.[0]?.days)
+                ? payload.destinations[0].days.length
+                : 0;
+              // Defensive miss: numDays is already in the cache key, so this
+              // should never trip — but if a malformed entry slips through we'd
+              // rather regenerate than ship a 5-day trip for a 6-day request.
+              if (cachedDayCount !== numDays) {
+                console.log(
+                  `[stream.cache] miss cache_key=${cacheKey} reason=day_count_mismatch cached=${cachedDayCount} requested=${numDays}`,
+                );
+              } else {
+                tStage("cache_lookup_hit", tCacheLookup);
+                rewriteCachedPayloadDates(payload, startDate);
+                const eventsResult = await refreshCachedEvents(
+                  payload,
+                  intent,
+                  startDate,
+                  endDate,
+                  svcClient,
+                  logger,
+                );
+                console.log(
+                  `[stream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared}`,
+                );
+                const dest = payload?.destinations?.[0];
+                send("meta", {
+                  destination: payload?.destinations?.[0]?.name ?? intent.destination,
+                  country_code: null,
+                  num_days: dest?.days?.length ?? numDays,
+                  skeleton: (dest?.days ?? []).map((d: any) => ({
+                    day_number: d.day_number,
+                    date: d.date,
+                    theme: d.theme ?? "",
+                  })),
+                  currency: payload?.currency ?? "USD",
+                  from_cache: true,
+                });
+                send("image", { url: payload?.destination_image_url ?? null });
+                for (const d of dest?.days ?? []) send("day", d);
+                const juntoPlaceIds: string[] = [];
+                for (const day of dest?.days ?? []) {
+                  for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
+                }
+                send("trip_complete", {
+                  trip_title: stripEmojis(payload?.trip_title),
+                  trip_summary: payload?.trip_summary ?? "",
+                  accommodation: dest?.accommodation ?? null,
+                  packing_suggestions: payload?.packing_suggestions ?? [],
+                  junto_pick_place_ids: juntoPlaceIds,
+                  daily_budget_estimate: payload?.daily_budget_estimate ?? 0,
+                  total_activities: payload?.total_activities ?? 0,
+                  map_center: payload?.map_center ?? null,
+                  map_zoom: payload?.map_zoom ?? 12,
+                  currency: payload?.currency ?? "USD",
+                  budget_tier: payload?.budget_tier ?? intent.budget_tier,
+                  destination_image_url: payload?.destination_image_url ?? null,
+                  from_cache: true,
+                });
+                await logger.log({
+                  feature: "trip_builder_cache_hit", model: "cache",
+                  input_tokens: 0, output_tokens: 0, cost_usd: 0, cached: true,
+                });
+                console.log(`[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stream: true, stages: stageTimings })}`);
+                return;
               }
-              send("trip_complete", {
-                trip_title: stripEmojis(payload?.trip_title),
-                trip_summary: payload?.trip_summary ?? "",
-                accommodation: dest?.accommodation ?? null,
-                packing_suggestions: payload?.packing_suggestions ?? [],
-                junto_pick_place_ids: juntoPlaceIds,
-                daily_budget_estimate: payload?.daily_budget_estimate ?? 0,
-                total_activities: payload?.total_activities ?? 0,
-                map_center: payload?.map_center ?? null,
-                map_zoom: payload?.map_zoom ?? 12,
-                currency: payload?.currency ?? "USD",
-                budget_tier: payload?.budget_tier ?? intent.budget_tier,
-                destination_image_url: payload?.destination_image_url ?? null,
-                from_cache: true,
-              });
-              await logger.log({
-                feature: "trip_builder_cache_hit", model: "cache",
-                input_tokens: 0, output_tokens: 0, cost_usd: 0, cached: true,
-              });
-              console.log(`[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stream: true, stages: stageTimings })}`);
-              return;
+            } else {
+              console.log(`[stream.cache] miss cache_key=${cacheKey} reason=not_found month_bucket=${monthBucket}`);
             }
             tStage("cache_lookup_miss", tCacheLookup);
 
@@ -5059,7 +5209,8 @@ Deno.serve(async (req) => {
     loggedStep = "cacheLookup";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const tCacheLookup = Date.now();
-    const cacheKey = await buildIntentCacheKey(intent, numDays);
+    const monthBucket = extractMonthBucket(startDate);
+    const cacheKey = await buildIntentCacheKey(intent, numDays, startDate);
     {
       const { data: cached, error: cacheErr } = await svcClient
         .from("ai_response_cache")
@@ -5073,19 +5224,43 @@ Deno.serve(async (req) => {
         throw new Error(`ai_response_cache lookup failed: ${cacheErr.message}`);
       }
       if (cached?.response_json) {
-        tStage("cache_lookup_hit", tCacheLookup);
-        console.log(
-          `[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stages: stageTimings })}`,
-        );
-        await logger.log({
-          feature: "trip_builder_cache_hit",
-          model: "cache",
-          input_tokens: 0,
-          output_tokens: 0,
-          cost_usd: 0,
-          cached: true,
-        });
-        return jsonResponse({ success: true, ...(cached.response_json as Record<string, unknown>) });
+        const payload = cached.response_json as Record<string, any>;
+        const cachedDayCount: number = Array.isArray(payload?.destinations?.[0]?.days)
+          ? payload.destinations[0].days.length
+          : 0;
+        if (cachedDayCount !== numDays) {
+          console.log(
+            `[stream.cache] miss cache_key=${cacheKey} reason=day_count_mismatch cached=${cachedDayCount} requested=${numDays}`,
+          );
+        } else {
+          tStage("cache_lookup_hit", tCacheLookup);
+          rewriteCachedPayloadDates(payload, startDate);
+          const eventsResult = await refreshCachedEvents(
+            payload,
+            intent,
+            startDate,
+            endDate,
+            svcClient,
+            logger,
+          );
+          console.log(
+            `[stream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared}`,
+          );
+          console.log(
+            `[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stages: stageTimings })}`,
+          );
+          await logger.log({
+            feature: "trip_builder_cache_hit",
+            model: "cache",
+            input_tokens: 0,
+            output_tokens: 0,
+            cost_usd: 0,
+            cached: true,
+          });
+          return jsonResponse({ success: true, ...payload });
+        }
+      } else {
+        console.log(`[stream.cache] miss cache_key=${cacheKey} reason=not_found month_bucket=${monthBucket}`);
       }
     }
     tStage("cache_lookup_miss", tCacheLookup);
