@@ -301,9 +301,10 @@ export function AccommodationCard({
             </div>
           ) : null}
 
-          {/* Footer links */}
-          <div className="px-3.5 pb-3 pt-1 flex flex-wrap items-center gap-3 text-[11px]">
-            {googleMapsUrl && (
+          {/* Secondary link — Booking CTA stays in the persistent summary
+              right column, so we only show View on Maps here. */}
+          {googleMapsUrl && (
+            <div className="px-3.5 pb-3 pt-1 flex flex-wrap items-center gap-3 text-[11px]">
               <a
                 href={googleMapsUrl}
                 target="_blank"
@@ -313,19 +314,8 @@ export function AccommodationCard({
               >
                 View on Maps <ExternalLink className="h-2.5 w-2.5" />
               </a>
-            )}
-            {hasBooking && bookingUrlWithDates && (
-              <a
-                href={bookingUrlWithDates}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm ml-auto"
-              >
-                Book on {partnerLabel} <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
