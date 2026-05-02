@@ -131,13 +131,14 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
     null;
   const myNatName = myNatIso ? countryName(myNatIso) : null;
 
-  const missingCount = useMemo(
-    () => (members ?? []).filter((m) => !m.nationalityIso).length,
-    [members],
-  );
-
   const hasMyNat = !!myNatIso;
   const canFetchReqs = hasMyNat && !!destIso;
+
+  const missingMembers = useMemo(
+    () => (members ?? []).filter((m) => (m.userId === userId ? !hasMyNat : !m.nationalityIso)),
+    [members, userId, hasMyNat],
+  );
+  const missingCount = missingMembers.length;
 
   const { data: entryData, isLoading: entryLoading } = useEntryRequirements({
     tripId,
@@ -355,7 +356,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
           </span>
           <div className="flex -space-x-1.5">
             {(members ?? [])
-              .filter((m) => !m.nationalityIso)
+              .filter((m) => missingMembers.some((missing) => missing.userId === m.userId))
               .slice(0, 3)
               .map((m) => (
                 <Avatar key={m.userId} className="h-5 w-5 ring-2 ring-white">
