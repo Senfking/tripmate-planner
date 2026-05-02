@@ -3856,7 +3856,7 @@ function buildAffiliateUrl(
 
   switch (partner) {
     case "booking": {
-      const dest = buildBookingDestinationUrl(nameWithCity, env.checkin, env.checkout);
+      const dest = buildBookingDestinationUrl(nameWithCity);
       return {
         booking_url: wrapAwinBookingUrl(dest, env.tripId, {
           publisherId: env.awinPublisherId,
