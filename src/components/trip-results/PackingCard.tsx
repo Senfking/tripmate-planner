@@ -21,18 +21,19 @@ type Category = {
   // system (no raw hex).
   tile: string;
   icon: string;
+  ring: string;
 };
 
 const CATEGORIES: Record<string, Category> = {
-  clothing:   { label: "Clothing",   Icon: Shirt,      tile: "bg-amber-100",   icon: "text-amber-700" },
-  footwear:   { label: "Footwear",   Icon: Footprints, tile: "bg-orange-100",  icon: "text-orange-700" },
-  weather:    { label: "Weather",    Icon: CloudRain,  tile: "bg-sky-100",     icon: "text-sky-700" },
-  sun:        { label: "Sun care",   Icon: Sun,        tile: "bg-yellow-100",  icon: "text-yellow-700" },
-  tech:       { label: "Tech",       Icon: Plug,       tile: "bg-slate-100",   icon: "text-slate-700" },
-  documents:  { label: "Documents",  Icon: FileCheck,  tile: "bg-emerald-100", icon: "text-emerald-700" },
-  toiletries: { label: "Toiletries", Icon: Sparkles,   tile: "bg-pink-100",    icon: "text-pink-700" },
-  bag:        { label: "Bag",        Icon: Backpack,   tile: "bg-rose-100",    icon: "text-rose-700" },
-  default:    { label: "Essential",  Icon: Package,    tile: "bg-primary/10",  icon: "text-primary" },
+  clothing:   { label: "Clothing",   Icon: Shirt,      tile: "bg-amber-100",   icon: "text-amber-700",   ring: "hover:border-amber-200" },
+  footwear:   { label: "Footwear",   Icon: Footprints, tile: "bg-orange-100",  icon: "text-orange-700",  ring: "hover:border-orange-200" },
+  weather:    { label: "Weather",    Icon: CloudRain,  tile: "bg-sky-100",     icon: "text-sky-700",     ring: "hover:border-sky-200" },
+  sun:        { label: "Sun care",   Icon: Sun,        tile: "bg-yellow-100",  icon: "text-yellow-700",  ring: "hover:border-yellow-200" },
+  tech:       { label: "Tech",       Icon: Plug,       tile: "bg-slate-100",   icon: "text-slate-700",   ring: "hover:border-slate-200" },
+  documents:  { label: "Documents",  Icon: FileCheck,  tile: "bg-emerald-100", icon: "text-emerald-700", ring: "hover:border-emerald-200" },
+  toiletries: { label: "Toiletries", Icon: Sparkles,   tile: "bg-pink-100",    icon: "text-pink-700",    ring: "hover:border-pink-200" },
+  bag:        { label: "Bag",        Icon: Backpack,   tile: "bg-rose-100",    icon: "text-rose-700",    ring: "hover:border-rose-200" },
+  default:    { label: "Essential",  Icon: Package,    tile: "bg-primary/10",  icon: "text-primary",     ring: "hover:border-primary/30" },
 };
 
 function categorize(text: string): Category {
@@ -48,6 +49,28 @@ function categorize(text: string): Category {
   if (has("toothbrush", "toothpaste", "soap", "shampoo", "deodorant", "toiletr", "medication", "medicine", "first aid", "first-aid", "razor", "comb")) return CATEGORIES.toiletries;
   if (has("backpack", "daypack", "tote", " bag", "duffel")) return CATEGORIES.bag;
   return CATEGORIES.default;
+}
+
+/**
+ * Split a packing item like "Sunscreen SPF 50+ — reef-safe" into a short
+ * title (before the first dash/colon/parenthesis) and an optional detail.
+ * Keeps cards visually tidy without truncating real content.
+ */
+function splitTitleDetail(raw: string): { title: string; detail?: string } {
+  const text = raw.trim();
+  // Try common separators in order of preference.
+  const separators = [" — ", " – ", " - ", ": ", " ("];
+  for (const sep of separators) {
+    const idx = text.indexOf(sep);
+    if (idx > 0 && idx < text.length - sep.length) {
+      const title = text.slice(0, idx).trim();
+      let detail = text.slice(idx + sep.length).trim();
+      if (sep === " (" && detail.endsWith(")")) detail = detail.slice(0, -1);
+      // Avoid splitting if the title would be ridiculously short (e.g. "1: x")
+      if (title.length >= 3) return { title, detail: detail || undefined };
+    }
+  }
+  return { title: text };
 }
 
 interface Props {
@@ -80,8 +103,8 @@ export function PackingCard({ items, open, onToggle, className, itemClassName }:
           className="w-full flex items-center gap-3 p-4 text-left hover:bg-accent/40 transition-colors"
           aria-expanded={open}
         >
-          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Backpack className="h-4 w-4" strokeWidth={2} />
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Backpack className="h-[18px] w-[18px]" strokeWidth={2} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground leading-tight">
@@ -104,27 +127,38 @@ export function PackingCard({ items, open, onToggle, className, itemClassName }:
 
         {/* Grid of categorized chips */}
         {open && (
-          <div className="px-4 pb-4 pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="px-4 pb-4 pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {items.map((item, i) => {
               const cat = categorize(item);
               const { Icon } = cat;
+              const { title, detail } = splitTitleDetail(item);
               return (
                 <div
                   key={i}
                   className={cn(
-                    "flex items-start gap-3 p-3 rounded-xl border border-border/60 bg-background/60 hover:border-border hover:bg-background transition-all animate-fade-in",
+                    "group relative flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-background/70 hover:bg-background hover:shadow-sm transition-all animate-fade-in",
+                    cat.ring,
                     itemClassName
                   )}
                   style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
                 >
-                  <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", cat.tile)}>
-                    <Icon className={cn("h-4 w-4", cat.icon)} strokeWidth={1.75} />
+                  {/* Icon tile — square, vertically centered with the title row */}
+                  <div className={cn(
+                    "h-11 w-11 rounded-xl flex items-center justify-center shrink-0 self-start",
+                    cat.tile
+                  )}>
+                    <Icon className={cn("h-[18px] w-[18px]", cat.icon)} strokeWidth={1.75} />
                   </div>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-[13px] leading-snug text-foreground line-clamp-2">
-                      {item}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-medium leading-snug text-foreground break-words">
+                      {title}
                     </p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">
+                    {detail && (
+                      <p className="text-[12px] text-muted-foreground leading-snug mt-0.5 break-words">
+                        {detail}
+                      </p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground/80 uppercase tracking-wider mt-1.5 font-medium">
                       {cat.label}
                     </p>
                   </div>

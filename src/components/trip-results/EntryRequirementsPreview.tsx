@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -309,6 +309,20 @@ function AllClearPanel({
     embassy ||
     (additionalNotes && additionalNotes.length > 0)
   );
+
+  // Allow the timeline rail to remote-open the details when the user clicks
+  // the "Entry" node. The wrapper div uses id="section-entry".
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (detail?.id === "section-entry" && hasDetails) {
+        setOpen(true);
+      }
+    };
+    window.addEventListener("results:expand", handler as EventListener);
+    return () => window.removeEventListener("results:expand", handler as EventListener);
+  }, [hasDetails]);
+
 
   return (
     <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 shadow-sm dark:bg-emerald-950/20 dark:border-emerald-900">

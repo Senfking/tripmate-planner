@@ -63,6 +63,11 @@ export function buildTimelineNodes(
 export function ResultsTimeline({ nodes, compact = false }: Props) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Dynamic top offset so the rail never overlaps the hero image. While the
+  // hero is on screen we anchor the rail to the hero's bottom edge; once the
+  // user scrolls past it we collapse to a small fixed offset below the page
+  // header.
+  const [topOffset, setTopOffset] = useState<number>(96);
   const isClickScrolling = useRef(false);
   const activeIdRef = useRef(activeId);
   const scrollTimeoutRef = useRef<number>();
@@ -89,6 +94,19 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
     const nodeIds = nodes.map((n) => n.id);
 
+    const updateTopOffset = () => {
+      const hero = document.querySelector<HTMLElement>("[data-results-hero='true']");
+      if (!hero) {
+        setTopOffset(96);
+        return;
+      }
+      const rect = hero.getBoundingClientRect();
+      // Hero bottom (in viewport coords) + small breathing space, clamped to a
+      // sensible minimum so the rail never glues to the very top.
+      const next = Math.max(96, Math.round(rect.bottom + 16));
+      setTopOffset(next);
+    };
+
     const findTopmost = () => {
       if (isClickScrolling.current) return;
 
@@ -96,9 +114,6 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
       let bestId: string | null = null;
       let bestDistance = Infinity;
 
-      // Use viewport-relative coordinates — works whether document or an
-      // inner element is the scroller, since getBoundingClientRect is always
-      // relative to the viewport.
       for (const id of nodeIds) {
         const el = document.getElementById(id);
         if (!el) continue;
@@ -119,19 +134,21 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
       }
     };
 
-    // Listen on both window (document scroll) and the marked inner element
-    // (when map panel is open and inner scroll is active). One of them is the
-    // active scroller at any given time; the other is a no-op.
+    const onScrollOrResize = () => {
+      updateTopOffset();
+      findTopmost();
+    };
+
     const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
-    window.addEventListener("scroll", findTopmost, { passive: true });
-    marked?.addEventListener("scroll", findTopmost, { passive: true });
-    window.addEventListener("resize", findTopmost);
-    findTopmost();
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    marked?.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+    onScrollOrResize();
 
     return () => {
-      window.removeEventListener("scroll", findTopmost);
-      marked?.removeEventListener("scroll", findTopmost);
-      window.removeEventListener("resize", findTopmost);
+      window.removeEventListener("scroll", onScrollOrResize);
+      marked?.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
     };
   }, [nodes, isDesktop, getHeaderOffset]);
 
@@ -177,7 +194,7 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
   return (
     <div
-      style={{ top: 96 }}
+      style={{ top: topOffset, transition: "top 200ms ease-out" }}
       className={compact
         ? "fixed left-3 bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none"
         : "fixed left-[max(12px,calc(50%-420px))] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none"}
