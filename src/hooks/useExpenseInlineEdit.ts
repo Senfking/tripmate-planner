@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/contexts/AuthContext";
-import { ExpenseRow, SplitRow } from "@/hooks/useExpenses";
+import { ExpenseRow, SplitRow, snapshotFxRate } from "@/hooks/useExpenses";
 import { isSharedCostItem } from "@/lib/expenseLineItems";
 import { friendlyErrorMessage } from "@/lib/supabaseErrors";
 
@@ -22,9 +22,22 @@ export function useExpenseInlineEdit(tripId: string) {
   const patchExpense = useMutation({
     mutationFn: async (params: { id: string; patch: Partial<Pick<ExpenseRow, "title" | "amount" | "currency" | "category" | "incurred_on" | "payer_id" | "notes" | "itinerary_item_id">> }) => {
       const { id, patch } = params;
+
+      // If currency is being changed, refresh the fx_rate snapshot. The
+      // existing snapshot was pinned to the previous currency and would
+      // produce wrong settlement totals after the swap.
+      let fxPatch: { fx_rate: number | null; fx_base: string | null } | null = null;
+      if (typeof patch.currency === "string") {
+        fxPatch = await snapshotFxRate(qc, patch.currency);
+      }
+
       const { error } = await supabase
         .from("expenses")
-        .update({ ...patch, updated_at: new Date().toISOString() } as any)
+        .update({
+          ...patch,
+          ...(fxPatch ? { fx_rate: fxPatch.fx_rate, fx_base: fxPatch.fx_base } : {}),
+          updated_at: new Date().toISOString(),
+        } as any)
         .eq("id", id);
       if (error) throw error;
     },

@@ -16,8 +16,21 @@ function convertAmount(
   to: string,
   baseCurrency: string,
   rates: Record<string, number>,
+  snapshot?: { fx_rate: number | null; fx_base: string | null } | null,
 ): number {
   if (from === to) return amount;
+
+  const snapRate = snapshot?.fx_rate;
+  const snapBase = snapshot?.fx_base;
+  if (snapRate != null && snapRate > 0 && snapBase) {
+    const inFxBase = from === snapBase ? amount : amount / snapRate;
+    if (to === snapBase) return inFxBase;
+    const toRate = to === baseCurrency ? 1 : rates[to];
+    const fxBaseRate = snapBase === baseCurrency ? 1 : rates[snapBase];
+    if (toRate == null || fxBaseRate == null || fxBaseRate <= 0) return amount;
+    return inFxBase * (toRate / fxBaseRate);
+  }
+
   const fromRate = from === baseCurrency ? 1 : rates[from];
   const toRate = to === baseCurrency ? 1 : rates[to];
   if (fromRate == null || toRate == null) return amount;
@@ -163,7 +176,7 @@ Deno.serve(async (req) => {
       const [expensesRes, ratesRes] = await Promise.all([
         supabase
           .from("expenses")
-          .select("id, payer_id, amount, currency")
+          .select("id, payer_id, amount, currency, fx_rate, fx_base")
           .eq("trip_id", tripId),
         supabase
           .from("exchange_rate_cache")
@@ -192,13 +205,14 @@ Deno.serve(async (req) => {
       let totalSpent = 0;
 
       for (const exp of expenses) {
-        const converted = convertAmount(exp.amount, exp.currency, settlementCurrency, baseCurrency, rates);
+        const snapshot = { fx_rate: exp.fx_rate ?? null, fx_base: exp.fx_base ?? null };
+        const converted = convertAmount(exp.amount, exp.currency, settlementCurrency, baseCurrency, rates, snapshot);
         totalSpent += converted;
         balances[exp.payer_id] = (balances[exp.payer_id] || 0) + converted;
 
         const splits = allSplits.filter((s: any) => s.expense_id === exp.id);
         for (const s of splits) {
-          const splitConverted = convertAmount(s.share_amount, exp.currency, settlementCurrency, baseCurrency, rates);
+          const splitConverted = convertAmount(s.share_amount, exp.currency, settlementCurrency, baseCurrency, rates, snapshot);
           balances[s.user_id] = (balances[s.user_id] || 0) - splitConverted;
         }
       }

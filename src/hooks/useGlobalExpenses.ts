@@ -59,7 +59,7 @@ export function useGlobalExpenses() {
           .in("id", tripIds),
         supabase
           .from("expenses")
-          .select("id, trip_id, payer_id, amount, currency")
+          .select("id, trip_id, payer_id, amount, currency, fx_rate, fx_base")
           .in("trip_id", tripIds),
         supabase
           .from("trip_route_stops")
@@ -127,11 +127,13 @@ export function useGlobalExpenses() {
           (s) => expenseTripMap.get(s.expense_id) === tripId
         );
 
-        const expensesWithSplits = expensesForTrip.map((e) => ({
+        const expensesWithSplits = expensesForTrip.map((e: any) => ({
           id: e.id,
           payer_id: e.payer_id,
           amount: Number(e.amount),
           currency: e.currency,
+          fx_rate: e.fx_rate != null ? Number(e.fx_rate) : null,
+          fx_base: e.fx_base ?? null,
           splits: splitsForTrip
             .filter((s) => s.expense_id === e.id)
             .map((s) => ({

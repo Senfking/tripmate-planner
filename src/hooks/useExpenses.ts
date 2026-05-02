@@ -46,8 +46,36 @@ export interface ExpenseRow {
   incurred_on: string;
   itinerary_item_id: string | null;
   receipt_image_path: string | null;
+  /** FX snapshot at insert/edit time. Null on legacy rows pre-backfill. */
+  fx_rate: number | null;
+  fx_base: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Resolve the EUR-base FX rate for `currency` from the cached EUR rate row,
+ *  reusing the same query key as useExpenses' ratesQuery so we hit cache.
+ *  Returns null fields when the rate is unavailable — caller stores NULL and
+ *  display code falls back to live conversion. */
+export async function snapshotFxRate(
+  qc: ReturnType<typeof useQueryClient>,
+  currency: string,
+): Promise<{ fx_rate: number | null; fx_base: string | null }> {
+  if (currency === "EUR") return { fx_rate: 1, fx_base: "EUR" };
+  try {
+    const eurRates = await qc.fetchQuery({
+      queryKey: ["exchange-rates", "EUR"],
+      queryFn: fetchEurRates,
+      staleTime: 1000 * 60 * 60,
+    });
+    const rate = eurRates[currency];
+    if (typeof rate === "number" && rate > 0) {
+      return { fx_rate: rate, fx_base: "EUR" };
+    }
+  } catch {
+    // Network/cache miss — leave snapshot null, display falls back to live rates.
+  }
+  return { fx_rate: null, fx_base: null };
 }
 
 export interface SplitRow {
@@ -343,11 +371,15 @@ export function useExpenses(tripId: string) {
         throw new Error("Cannot add expense: trip context is missing. Please refresh the page.");
       }
 
+      // Snapshot the EUR-base FX rate so settlement totals don't drift as the
+      // global exchange_rate_cache row is overwritten by cron.
+      const fx = await snapshotFxRate(qc, params.currency);
+
       const insertedExpense = await withAuthRetry<ExpenseRow>(
         async () => {
           const { data, error } = await supabase
             .from("expenses")
-            .insert({ ...expenseData, trip_id } as any)
+            .insert({ ...expenseData, trip_id, fx_rate: fx.fx_rate, fx_base: fx.fx_base } as any)
             .select("*")
             .single();
           if (error) throw error;
@@ -436,12 +468,26 @@ export function useExpenses(tripId: string) {
     }) => {
       const { id, splits, ...expenseData } = params;
 
+      // If currency changed, the row's stored fx_rate is now wrong (it was
+      // pinned to the previous currency). Re-snapshot before writing so
+      // settlement totals stay frozen against the new currency.
+      const cachedExpenses = qc.getQueryData<ExpenseRow[]>(["expenses", tripId]);
+      const prev = cachedExpenses?.find((e) => e.id === id);
+      const currencyChanged = !prev || prev.currency !== params.currency;
+      const fxPatch = currencyChanged
+        ? await snapshotFxRate(qc, params.currency)
+        : null;
+
       await withAuthRetry(
         async () => {
           expectAffectedRows(
             await supabase
               .from("expenses")
-              .update({ ...expenseData, updated_at: new Date().toISOString() } as any)
+              .update({
+                ...expenseData,
+                ...(fxPatch ? { fx_rate: fxPatch.fx_rate, fx_base: fxPatch.fx_base } : {}),
+                updated_at: new Date().toISOString(),
+              } as any)
               .eq("id", id)
               .select("id"),
             "Expense could not be updated. Please refresh and try again.",
@@ -460,11 +506,19 @@ export function useExpenses(tripId: string) {
         },
         { name: "expense_splits_replace", context: { trip_id: tripId, expense_id: id, split_count: splits.length }, userId: user?.id },
       );
+
+      return { fxPatch };
     },
-    onSuccess: (_data, params) => {
+    onSuccess: (result, params) => {
       const { id, splits, ...expenseData } = params;
+      const fxPatch = result?.fxPatch;
       qc.setQueryData<ExpenseRow[]>(["expenses", tripId], (old) =>
-        old?.map((e) => e.id === id ? { ...e, ...expenseData, updated_at: new Date().toISOString() } : e)
+        old?.map((e) => e.id === id ? {
+          ...e,
+          ...expenseData,
+          ...(fxPatch ? { fx_rate: fxPatch.fx_rate, fx_base: fxPatch.fx_base } : {}),
+          updated_at: new Date().toISOString(),
+        } : e)
       );
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["expense-splits", tripId] });

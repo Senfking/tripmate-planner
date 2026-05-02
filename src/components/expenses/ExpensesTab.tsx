@@ -224,13 +224,13 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     const totalPaid = nonSettlement
       .filter((e) => e.payer_id === user?.id)
       .reduce((sum, e) => {
-        const converted = convertAmount(e.amount, e.currency, settlementCurrency, settlementCurrency, rates);
+        const converted = convertAmount(e.amount, e.currency, settlementCurrency, settlementCurrency, rates, { fx_rate: e.fx_rate, fx_base: e.fx_base });
         return sum + (converted ?? 0);
       }, 0);
     const myShare = nonSettlement.reduce((sum, e) => {
       const mySplit = splits.find((s) => s.expense_id === e.id && s.user_id === user?.id);
       if (!mySplit) return sum;
-      const converted = convertAmount(mySplit.share_amount, e.currency, settlementCurrency, settlementCurrency, rates);
+      const converted = convertAmount(mySplit.share_amount, e.currency, settlementCurrency, settlementCurrency, rates, { fx_rate: e.fx_rate, fx_base: e.fx_base });
       return sum + (converted ?? 0);
     }, 0);
     return { totalPaid, myShare };
@@ -277,13 +277,9 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
     for (const exp of expenses) {
       if (exp.category === "settlement") continue;
       count++;
-      if (exp.currency === settlementCurrency) {
-        total += exp.amount;
-      } else if (rates && rates[exp.currency]) {
-        total += exp.amount / rates[exp.currency];
-      } else {
-        // rates unavailable for this currency - skip from total
-      }
+      const converted = convertAmount(exp.amount, exp.currency, settlementCurrency, settlementCurrency, rates, { fx_rate: exp.fx_rate, fx_base: exp.fx_base });
+      if (converted != null) total += converted;
+      // else: rates unavailable for this currency - skip from total
     }
     return { totalExpenses: count > 0 ? total : null, nonSettlementCount: count };
   }, [expenses, settlementCurrency, rates]);

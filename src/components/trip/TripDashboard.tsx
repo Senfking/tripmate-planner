@@ -25,7 +25,7 @@ import {
   Plane, GripVertical, Check, ArrowUpDown,
 } from "lucide-react";
 import { DashboardSkeleton } from "./DashboardSkeleton";
-import { calcNetBalances } from "@/lib/settlementCalc";
+import { calcNetBalances, convertAmount } from "@/lib/settlementCalc";
 import { fetchEurRates, crossCalculateRates } from "@/lib/fetchCrossRates";
 import { SharedItemsSection } from "./SharedItemsSection";
 import { TravellersSection } from "./TravellersSection";
@@ -434,7 +434,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ["expenses-summary", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("expenses").select("id, payer_id, amount, currency, category, expense_splits(user_id, share_amount)").eq("trip_id", tripId);
+      const { data, error } = await supabase.from("expenses").select("id, payer_id, amount, currency, category, fx_rate, fx_base, expense_splits(user_id, share_amount)").eq("trip_id", tripId);
       if (error) throw error;
       return data;
     },
@@ -484,9 +484,11 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   let balances: { userId: string; balance: number }[] = [];
 
   if (expenses && expenses.length > 0 && userId) {
-    const mapped = expenses.map((e) => ({
+    const mapped = expenses.map((e: any) => ({
       id: e.id, payer_id: e.payer_id, amount: Number(e.amount), currency: e.currency, category: e.category,
-      splits: (e.expense_splits ?? []).map((s) => ({ user_id: s.user_id, share_amount: Number(s.share_amount) })),
+      fx_rate: e.fx_rate != null ? Number(e.fx_rate) : null,
+      fx_base: e.fx_base ?? null,
+      splits: (e.expense_splits ?? []).map((s: any) => ({ user_id: s.user_id, share_amount: Number(s.share_amount) })),
     }));
     const result = calcNetBalances(mapped, settlementCurrency, settlementCurrency, rates ?? {}, {});
     balances = result.balances;
@@ -494,9 +496,8 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     myBalance = myBal?.balance ?? 0;
     totalSpent = mapped.reduce((sum, e) => {
       if (e.category === "settlement") return sum;
-      if (e.currency === settlementCurrency) return sum + e.amount;
-      if (rates && rates[e.currency]) return sum + e.amount / rates[e.currency];
-      return sum;
+      const converted = convertAmount(e.amount, e.currency, settlementCurrency, settlementCurrency, rates ?? {}, { fx_rate: e.fx_rate, fx_base: e.fx_base });
+      return converted != null ? sum + converted : sum;
     }, 0);
   }
 
