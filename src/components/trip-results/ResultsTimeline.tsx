@@ -194,7 +194,7 @@ export function ResultsTimeline({ nodes, compact = false }: Props) {
 
   return (
     <div
-      style={{ top: 96 }}
+      style={{ top: topOffset, transition: "top 200ms ease-out" }}
       className={compact
         ? "fixed left-3 bottom-[72px] w-10 z-40 flex flex-col items-center overflow-visible scrollbar-none"
         : "fixed left-[max(12px,calc(50%-420px))] bottom-[72px] w-[56px] z-40 flex flex-col items-center overflow-visible scrollbar-none"}
