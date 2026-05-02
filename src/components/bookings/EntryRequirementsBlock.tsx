@@ -13,14 +13,13 @@ import {
 } from "@/hooks/useEntryRequirements";
 import { COUNTRIES } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AllClearPanel } from "@/components/entry-requirements/AllClearPanel";
 import {
   AlertCircle,
   ExternalLink,
   FileText,
   ShieldCheck,
   Check,
-  CheckCircle2,
-  ChevronDown,
   Upload,
   Sparkles,
   Loader2,
