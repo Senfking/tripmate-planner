@@ -107,7 +107,19 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },
-      dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+      dedupe: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+        // Force a single copy of react-query. A peer-dep mismatch between
+        // react-query and react-query-persist-client could otherwise install two
+        // copies, leaving useQueryClient() consumers reading from a different
+        // React context than <PersistQueryClientProvider> set — surfacing as
+        // "No QueryClient set" only in production builds.
+        "@tanstack/react-query",
+        "@tanstack/query-core",
+      ],
     },
   };
 });
