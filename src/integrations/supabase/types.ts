@@ -658,6 +658,7 @@ export type Database = {
           notes: string | null
           payer_id: string
           receipt_image_path: string | null
+          split_type: string
           title: string
           trip_id: string
           updated_at: string
@@ -675,6 +676,7 @@ export type Database = {
           notes?: string | null
           payer_id: string
           receipt_image_path?: string | null
+          split_type?: string
           title: string
           trip_id: string
           updated_at?: string
@@ -692,6 +694,7 @@ export type Database = {
           notes?: string | null
           payer_id?: string
           receipt_image_path?: string | null
+          split_type?: string
           title?: string
           trip_id?: string
           updated_at?: string
@@ -1782,6 +1785,10 @@ export type Database = {
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      delete_expense_line_items_and_claims: {
+        Args: { _expense_id: string }
+        Returns: undefined
       }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
