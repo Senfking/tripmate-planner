@@ -108,7 +108,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
   };
 
   const goToProfile = () => {
-    navigate("/app/profile");
+    navigate("/app/more");
   };
 
   // No destination resolved yet — render nothing rather than a useless card.
