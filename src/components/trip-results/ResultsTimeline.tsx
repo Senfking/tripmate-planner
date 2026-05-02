@@ -63,6 +63,11 @@ export function buildTimelineNodes(
 export function ResultsTimeline({ nodes, compact = false }: Props) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Dynamic top offset so the rail never overlaps the hero image. While the
+  // hero is on screen we anchor the rail to the hero's bottom edge; once the
+  // user scrolls past it we collapse to a small fixed offset below the page
+  // header.
+  const [topOffset, setTopOffset] = useState<number>(96);
   const isClickScrolling = useRef(false);
   const activeIdRef = useRef(activeId);
   const scrollTimeoutRef = useRef<number>();
