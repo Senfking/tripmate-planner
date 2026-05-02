@@ -16,24 +16,24 @@ import { cn } from "@/lib/utils";
 type Category = {
   label: string;
   Icon: React.ElementType;
-  // Tailwind classes — accent ring + icon-tile bg + icon color. All routed
-  // through semantic-friendly Tailwind colors so we stay inside the design
-  // system (no raw hex).
+  // Subtle, monochromatic-ish tints. We keep saturation low so the grid
+  // reads as a calm system rather than a rainbow of badges. The accent
+  // dot in the corner of each tile is the only saturated touch.
   tile: string;
   icon: string;
-  ring: string;
+  dot: string;
 };
 
 const CATEGORIES: Record<string, Category> = {
-  clothing:   { label: "Clothing",   Icon: Shirt,      tile: "bg-amber-100",   icon: "text-amber-700",   ring: "hover:border-amber-200" },
-  footwear:   { label: "Footwear",   Icon: Footprints, tile: "bg-orange-100",  icon: "text-orange-700",  ring: "hover:border-orange-200" },
-  weather:    { label: "Weather",    Icon: CloudRain,  tile: "bg-sky-100",     icon: "text-sky-700",     ring: "hover:border-sky-200" },
-  sun:        { label: "Sun care",   Icon: Sun,        tile: "bg-yellow-100",  icon: "text-yellow-700",  ring: "hover:border-yellow-200" },
-  tech:       { label: "Tech",       Icon: Plug,       tile: "bg-slate-100",   icon: "text-slate-700",   ring: "hover:border-slate-200" },
-  documents:  { label: "Documents",  Icon: FileCheck,  tile: "bg-emerald-100", icon: "text-emerald-700", ring: "hover:border-emerald-200" },
-  toiletries: { label: "Toiletries", Icon: Sparkles,   tile: "bg-pink-100",    icon: "text-pink-700",    ring: "hover:border-pink-200" },
-  bag:        { label: "Bag",        Icon: Backpack,   tile: "bg-rose-100",    icon: "text-rose-700",    ring: "hover:border-rose-200" },
-  default:    { label: "Essential",  Icon: Package,    tile: "bg-primary/10",  icon: "text-primary",     ring: "hover:border-primary/30" },
+  clothing:   { label: "Clothing",   Icon: Shirt,      tile: "bg-amber-50",    icon: "text-amber-700",   dot: "bg-amber-500" },
+  footwear:   { label: "Footwear",   Icon: Footprints, tile: "bg-orange-50",   icon: "text-orange-700",  dot: "bg-orange-500" },
+  weather:    { label: "Weather",    Icon: CloudRain,  tile: "bg-sky-50",      icon: "text-sky-700",     dot: "bg-sky-500" },
+  sun:        { label: "Sun care",   Icon: Sun,        tile: "bg-yellow-50",   icon: "text-yellow-700",  dot: "bg-yellow-500" },
+  tech:       { label: "Tech",       Icon: Plug,       tile: "bg-slate-100",   icon: "text-slate-700",   dot: "bg-slate-500" },
+  documents:  { label: "Documents",  Icon: FileCheck,  tile: "bg-emerald-50",  icon: "text-emerald-700", dot: "bg-emerald-500" },
+  toiletries: { label: "Toiletries", Icon: Sparkles,   tile: "bg-pink-50",     icon: "text-pink-700",    dot: "bg-pink-500" },
+  bag:        { label: "Bag",        Icon: Backpack,   tile: "bg-rose-50",     icon: "text-rose-700",    dot: "bg-rose-500" },
+  default:    { label: "Essential",  Icon: Package,    tile: "bg-primary/10",  icon: "text-primary",     dot: "bg-primary" },
 };
 
 function categorize(text: string): Category {
@@ -51,14 +51,8 @@ function categorize(text: string): Category {
   return CATEGORIES.default;
 }
 
-/**
- * Split a packing item like "Sunscreen SPF 50+ — reef-safe" into a short
- * title (before the first dash/colon/parenthesis) and an optional detail.
- * Keeps cards visually tidy without truncating real content.
- */
 function splitTitleDetail(raw: string): { title: string; detail?: string } {
   const text = raw.trim();
-  // Try common separators in order of preference.
   const separators = [" — ", " – ", " - ", ": ", " ("];
   for (const sep of separators) {
     const idx = text.indexOf(sep);
@@ -66,7 +60,6 @@ function splitTitleDetail(raw: string): { title: string; detail?: string } {
       const title = text.slice(0, idx).trim();
       let detail = text.slice(idx + sep.length).trim();
       if (sep === " (" && detail.endsWith(")")) detail = detail.slice(0, -1);
-      // Avoid splitting if the title would be ridiculously short (e.g. "1: x")
       if (title.length >= 3) return { title, detail: detail || undefined };
     }
   }
@@ -82,7 +75,6 @@ interface Props {
 }
 
 export function PackingCard({ items, open, onToggle, className, itemClassName }: Props) {
-  // Allow the timeline rail to remote-open this section.
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ id: string }>).detail;
@@ -96,76 +88,86 @@ export function PackingCard({ items, open, onToggle, className, itemClassName }:
 
   return (
     <div id="section-packing" className={cn("mx-4 mt-2 mb-6", className)}>
-      <div className="rounded-2xl border border-border bg-card overflow-hidden bg-gradient-to-b from-primary/[0.04] to-transparent">
+      <div className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)]">
         {/* Header */}
         <button
           onClick={onToggle}
-          className="w-full flex items-center gap-3 p-4 text-left hover:bg-accent/40 transition-colors"
+          className="group w-full flex items-center gap-3.5 p-4 text-left hover:bg-muted/40 transition-colors"
           aria-expanded={open}
         >
-          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Backpack className="h-[18px] w-[18px]" strokeWidth={2} />
+          <div className="relative h-11 w-11 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 text-primary flex items-center justify-center shrink-0 ring-1 ring-inset ring-primary/10">
+            <Backpack className="h-5 w-5" strokeWidth={2} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground leading-tight">
-              Packing essentials
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5 uppercase tracking-wide">
-              Curated for your destination
+            <div className="flex items-center gap-2">
+              <p className="text-[15px] font-semibold text-foreground leading-tight tracking-tight">
+                Packing essentials
+              </p>
+              <span className="text-[10.5px] font-mono px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground tabular-nums">
+                {items.length}
+              </span>
+            </div>
+            <p className="text-[11.5px] text-muted-foreground mt-1 leading-snug">
+              Curated for your destination and season
             </p>
           </div>
-          <span className="text-[11px] font-mono px-2 py-1 rounded-full bg-muted text-muted-foreground">
-            {items.length} items
-          </span>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-300",
-              !open && "-rotate-90"
-            )}
-          />
+          <div className="h-7 w-7 rounded-full bg-muted/60 flex items-center justify-center shrink-0 group-hover:bg-muted transition-colors">
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-300",
+                !open && "-rotate-90"
+              )}
+            />
+          </div>
         </button>
 
         {/* Grid of categorized chips */}
         {open && (
-          <div className="px-4 pb-4 pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {items.map((item, i) => {
-              const cat = categorize(item);
-              const { Icon } = cat;
-              const { title, detail } = splitTitleDetail(item);
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    "group relative flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-background/70 hover:bg-background hover:shadow-sm transition-all animate-fade-in",
-                    cat.ring,
-                    itemClassName
-                  )}
-                  style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
-                >
-                  {/* Icon tile — square, vertically centered with the title row */}
-                  <div className={cn(
-                    "h-11 w-11 rounded-xl flex items-center justify-center shrink-0 self-start",
-                    cat.tile
-                  )}>
-                    <Icon className={cn("h-[18px] w-[18px]", cat.icon)} strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-medium leading-snug text-foreground break-words">
-                      {title}
-                    </p>
-                    {detail && (
-                      <p className="text-[12px] text-muted-foreground leading-snug mt-0.5 break-words">
-                        {detail}
-                      </p>
+          <>
+            <div className="mx-4 border-t border-border/60" />
+            <div className="px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {items.map((item, i) => {
+                const cat = categorize(item);
+                const { Icon } = cat;
+                const { title, detail } = splitTitleDetail(item);
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "group/item relative flex items-start gap-3 p-3 rounded-xl bg-card border border-border/60 hover:border-foreground/15 hover:bg-muted/30 hover:shadow-sm transition-all duration-200 animate-fade-in",
+                      itemClassName
                     )}
-                    <p className="text-[10px] text-muted-foreground/80 uppercase tracking-wider mt-1.5 font-medium">
-                      {cat.label}
-                    </p>
+                    style={{ animationDelay: `${i * 25}ms`, animationFillMode: "both" }}
+                  >
+                    {/* Icon tile with subtle accent dot */}
+                    <div className={cn(
+                      "relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ring-1 ring-inset ring-foreground/[0.04]",
+                      cat.tile
+                    )}>
+                      <Icon className={cn("h-[17px] w-[17px]", cat.icon)} strokeWidth={1.85} />
+                      <span className={cn(
+                        "absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ring-2 ring-card",
+                        cat.dot
+                      )} />
+                    </div>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-[13.5px] font-medium leading-snug text-foreground break-words">
+                        {title}
+                      </p>
+                      {detail && (
+                        <p className="text-[12px] text-muted-foreground leading-snug mt-1 break-words">
+                          {detail}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.08em] mt-1.5 font-semibold">
+                        {cat.label}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
