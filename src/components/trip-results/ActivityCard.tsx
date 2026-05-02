@@ -450,50 +450,20 @@ export function ActivityCard({
             </div>
           ) : null}
 
-          {/* Links */}
-          {(() => {
-            const gygEligible = isGetYourGuideEligible(activity);
-            // Hide the misleading "Book" link when booking_partner is google_maps
-            // (it just re-points to Maps). Also suppress real booking_url when GYG
-            // is eligible — GYG is the better commerce match for tours/attractions.
-            const partner = (activity as any).booking_partner as string | null | undefined;
-            const showRealBooking =
-              !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
-
-            return (
-              <div className="px-3.5 pb-2 flex flex-wrap items-center gap-3 text-[11px]">
-                {mapsLink && (
-                  <a
-                    href={mapsLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
-                  >
-                    View on Maps <ExternalLink className="h-2.5 w-2.5" />
-                  </a>
-                )}
-                {gygEligible ? (
-                  <a
-                    href={buildGetYourGuideUrl(activity.title, destinationName)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
-                  >
-                    Book on GetYourGuide <ExternalLink className="h-3 w-3" />
-                  </a>
-                ) : showRealBooking ? (
-                  <a
-                    href={activity.booking_url!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
-                  >
-                    Book <ExternalLink className="h-3 w-3" />
-                  </a>
-                ) : null}
-              </div>
-            );
-          })()}
+          {/* Secondary link — View on Maps. Booking CTA is persistent in the
+              summary row's right column, so we don't repeat it here. */}
+          {mapsLink && (
+            <div className="px-3.5 pb-2 flex flex-wrap items-center gap-3 text-[11px]">
+              <a
+                href={mapsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
+              >
+                View on Maps <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            </div>
+          )}
 
           {/* Reactions & Comments */}
           {planId && actKey && (
