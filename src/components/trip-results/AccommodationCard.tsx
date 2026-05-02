@@ -221,9 +221,9 @@ export function AccommodationCard({
             </div>
           </div>
 
-          {/* Prominent Booking CTA — only in collapsed state. When expanded,
-              the footer Book CTA takes over so we don't show two at once. */}
-          {!expanded && hasBooking && bookingUrlWithDates && (
+          {/* Persistent Booking CTA — always visible regardless of expand
+              state so it never jumps. */}
+          {hasBooking && bookingUrlWithDates && (
             <a
               href={bookingUrlWithDates}
               target="_blank"
