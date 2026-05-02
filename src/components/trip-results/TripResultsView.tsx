@@ -106,13 +106,19 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const scrollRoot = document.querySelector<HTMLElement>("[data-results-scroll-root='true']") ?? document.documentElement;
+    const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
+    const useInner = marked && marked.scrollHeight > marked.clientHeight + 1;
     const header = document.querySelector<HTMLElement>("[data-results-header='true']");
     const headerOffset = (header?.getBoundingClientRect().height ?? 0) + 12;
-    const rootRect = scrollRoot.getBoundingClientRect();
     const elementRect = el.getBoundingClientRect();
-    const targetTop = Math.max(0, scrollRoot.scrollTop + (elementRect.top - rootRect.top) - headerOffset);
-    scrollRoot.scrollTo({ top: targetTop, behavior: "smooth" });
+    if (useInner && marked) {
+      const rootRect = marked.getBoundingClientRect();
+      const targetTop = Math.max(0, marked.scrollTop + (elementRect.top - rootRect.top) - headerOffset);
+      marked.scrollTo({ top: targetTop, behavior: "smooth" });
+    } else {
+      const targetTop = Math.max(0, window.scrollY + elementRect.top - headerOffset);
+      window.scrollTo({ top: targetTop, behavior: "smooth" });
+    }
   }, []);
 
   const refinedCoords = useRef<CoordsMap>(new (Map as any)()).current as CoordsMap;
