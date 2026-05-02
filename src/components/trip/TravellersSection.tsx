@@ -87,7 +87,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
         ]) ?? [],
       );
       const natMap = new Map(
-        profs.data?.map((p) => [p.id, (p as any).nationality_iso as string | null]) ?? [],
+        profs.data?.map((p) => [p.id, p.nationality_iso as string | null]) ?? [],
       );
 
       return data.map<MemberLite>((m) => ({
