@@ -799,6 +799,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     onOpenDayMap={openDayMap}
                     skeleton={!!streamingDayNumbers?.has(day.day_number)}
                     costFormatter={activityCostFormatter}
+                    dateMode={dateMode}
+                    readOnly={readOnly}
                   />
                   </div>
                 ))}
