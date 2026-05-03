@@ -524,9 +524,22 @@ export function PremiumTripInput({
         />
       </div>
 
-      {/* ── Generate CTA (fixed bottom) ── */}
-      <div className="fixed bottom-0 inset-x-0 bg-background/90 backdrop-blur-lg border-t border-border z-10">
-        <div className="max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 space-y-2">
+      {/* ── Generate CTA — fixed when modal-style, inline when embedded ── */}
+      <div
+        className={cn(
+          inline
+            ? "mt-6"
+            : "fixed bottom-0 inset-x-0 bg-background/90 backdrop-blur-lg border-t border-border z-10"
+        )}
+      >
+        <div
+          className={cn(
+            "space-y-2",
+            inline
+              ? ""
+              : "max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3"
+          )}
+        >
           <Button
             onClick={handleGenerate}
             className="w-full h-12 rounded-xl font-semibold text-[15px] text-primary-foreground gap-2"
@@ -540,7 +553,7 @@ export function PremiumTripInput({
               Add a destination and dates to continue
             </p>
           )}
-          {onStartBlank && (
+          {onStartBlank && !inline && (
             <button
               type="button"
               onClick={onStartBlank}
