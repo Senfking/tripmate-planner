@@ -99,6 +99,17 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
 
 type Phase = "input" | "confirming" | "generating" | "opening" | "open-error" | "results";
 
+interface TemplateContext {
+  slug: string;
+  defaults: {
+    destination: string;
+    duration_days: number;
+    vibes: string[];
+    pace: string;
+    budget_tier: string;
+  };
+}
+
 interface Props {
   onClose: () => void;
   initialDestination?: string;
@@ -112,9 +123,16 @@ interface Props {
    *  phase with this data prefilled. Used by the inline step-by-step
    *  panel on /trips/new so the user doesn't see a separate input page. */
   initialInputData?: PremiumInputData;
+  /** Template-driven personalization context. When set with !isModified at
+   *  submit time, we'll back-fill the template cache after generation. */
+  templateContext?: TemplateContext;
+  /** When true, override the default-derived initial phase and always start
+   *  on the input editor (so a user with prefilled template defaults can
+   *  still tweak before submitting). */
+  forceInputFirst?: boolean;
 }
 
-export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt, initialInputData }: Props) {
+export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt, initialInputData, templateContext, forceInputFirst }: Props) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
