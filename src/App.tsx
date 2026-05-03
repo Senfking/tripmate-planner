@@ -211,8 +211,10 @@ function AppInner() {
             <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
 
-            {/* Public Hero-led pages (PR: shared Hero) */}
-            <Route path="/trips/new" element={<PublicTripBuilder />} />
+            {/* /trips/new is reachable by everyone, but logged-in visitors
+                see it wrapped in the app shell so the sidebar/header stay
+                consistent with the rest of the authenticated app. */}
+            <Route path="/trips/new" element={<TripsNewRoute />} />
             
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
@@ -254,6 +256,25 @@ function RootRoute() {
   if (user) return <Navigate to="/app/trips" replace />;
   // Unauthenticated visitors land on the Hero-led public landing.
   return <PublicLanding />;
+}
+
+/**
+ * /trips/new gateway: anonymous visitors see the standalone PublicTripBuilder
+ * (atmospheric public-variant Hero, no app shell). Authenticated users see
+ * the same page rendered inside AppLayout so sidebar + headers match the
+ * rest of the app.
+ */
+function TripsNewRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (!user) return <PublicTripBuilder />;
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route index element={<PublicTripBuilder />} />
+      </Route>
+    </Routes>
+  );
 }
 
 function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {

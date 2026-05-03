@@ -76,7 +76,7 @@ export function AppLayout() {
   const isTripPage = /^\/app\/trips\/[^/]+/.test(location.pathname) && location.pathname !== "/app/trips/new";
 
   // Global tabs use their own TabHeroHeader - hide the app header on mobile
-  const globalTabPaths = ["/app/trips", "/app/trips/new", "/app/decisions", "/app/itinerary", "/app/ideas", "/app/expenses"];
+  const globalTabPaths = ["/app/trips", "/app/trips/new", "/trips/new", "/app/decisions", "/app/itinerary", "/app/ideas", "/app/expenses"];
   const hideHeader = globalTabPaths.includes(location.pathname) || location.pathname === "/app/more" || isTripPage;
 
   return (
