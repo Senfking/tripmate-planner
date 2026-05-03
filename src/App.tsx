@@ -44,6 +44,7 @@ const AdminAIErrors = lazy(() => import("./pages/AdminAIErrors"));
 const AdminTemplates = lazy(() => import("./pages/AdminTemplates"));
 const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
+const TemplatePersonalize = lazy(() => import("./pages/TemplatePersonalize"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PublicLanding = lazy(() => import("./pages/PublicLanding"));
 const PublicTripBuilder = lazy(() => import("./pages/PublicTripBuilder"));
