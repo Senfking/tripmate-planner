@@ -170,7 +170,7 @@ export function Hero({
           className={[
             "block w-full min-w-0 flex-1 resize-none bg-transparent",
             "px-3 py-2.5 sm:px-4",
-            "text-[13px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
+            "text-[12px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
             "outline-none border-0",
             "leading-tight overflow-hidden",
             "min-h-[52px] max-h-[100px]",
