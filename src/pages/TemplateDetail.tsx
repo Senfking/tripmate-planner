@@ -412,17 +412,25 @@ function JuntoValueGrid() {
       >
         What you'll get with Junto AI
       </h2>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {items.map(({ icon: Icon, title, copy }) => (
           <div
             key={title}
-            className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex flex-col gap-2"
+            className="rounded-2xl bg-white shadow-sm p-5 flex items-center gap-4"
           >
-            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Icon className="h-5 w-5 text-primary" />
+            <div
+              className="h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.06))",
+              }}
+            >
+              <Icon className="h-6 w-6 text-primary" />
             </div>
-            <p className="text-sm font-semibold text-gray-900 leading-snug">{title}</p>
-            <p className="text-xs text-gray-600 leading-snug">{copy}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 leading-snug">{title}</p>
+              <p className="text-xs text-gray-600 leading-snug mt-0.5">{copy}</p>
+            </div>
           </div>
         ))}
       </div>
