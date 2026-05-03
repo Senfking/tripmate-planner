@@ -50,6 +50,12 @@ type Props = {
   subtitle?: string;
   /** Hide the free-text prompt + "or build step by step" divider. */
   hideFreeText?: boolean;
+  /** Hide the entire hero block (title/subtitle/free-text). Used when the
+   *  form is rendered below another hero (e.g. inline on /trips/new). */
+  hideHero?: boolean;
+  /** Optional badge rendered under the hero title — shows the template
+   *  origin with a small thumbnail. */
+  templateBadge?: { label: string; thumbnailUrl?: string | null };
 };
 
 /* ─── Constants ───────────────────────────────────── */
