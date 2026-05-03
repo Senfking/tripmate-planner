@@ -56,6 +56,10 @@ type Props = {
   /** Optional badge rendered under the hero title — shows the template
    *  origin with a small thumbnail. */
   templateBadge?: { label: string; thumbnailUrl?: string | null };
+  /** When true, render the Generate CTA inline at the bottom of the form
+   *  (instead of fixed-positioned). Use when the form is inlined inside a
+   *  scrollable host page rather than rendered as a full-screen modal. */
+  inline?: boolean;
 };
 
 /* ─── Constants ───────────────────────────────────── */
