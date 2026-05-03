@@ -46,7 +46,7 @@ export default function Templates() {
               to={`/templates/${c.slug}`}
               className="group rounded-[20px] overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow"
             >
-              <div className="relative h-[200px] sm:h-[260px] overflow-hidden">
+              <div className="relative aspect-[4/3] sm:aspect-[3/2] overflow-hidden">
                 <img src={c.img} alt={c.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 <h3 className="absolute bottom-3 left-3 text-white font-bold text-lg drop-shadow-lg">{c.name}</h3>
