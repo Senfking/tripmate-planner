@@ -85,25 +85,21 @@ export default function PublicTripBuilder() {
         type="button"
         onClick={() => setStepMode((v) => !v)}
         aria-expanded={stepMode}
-        className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-foreground/80 hover:text-foreground transition-colors group"
+        className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-200 hover:border-gray-300 px-5 py-2.5 text-sm text-gray-700 hover:text-gray-900 transition-colors shadow-sm"
       >
-        <ListChecks className="h-4 w-4 text-muted-foreground" />
-        <span className="underline-offset-4 group-hover:underline">
-          Or fill in details step by step
-        </span>
+        <ListChecks className="h-4 w-4 text-gray-500" />
+        <span>Plan step by step instead</span>
         <ChevronDown
-          className={`h-4 w-4 text-muted-foreground transition-transform ${stepMode ? "rotate-180" : ""}`}
+          className={`h-4 w-4 text-gray-400 transition-transform ${stepMode ? "rotate-180" : ""}`}
         />
       </button>
       <button
         type="button"
         onClick={() => setBlankOpen(true)}
-        className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-foreground/80 hover:text-foreground transition-colors group"
+        className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-200 hover:border-gray-300 px-5 py-2.5 text-sm text-gray-700 hover:text-gray-900 transition-colors shadow-sm"
       >
-        <FileText className="h-4 w-4 text-muted-foreground" />
-        <span className="underline-offset-4 group-hover:underline">
-          Or start without an itinerary
-        </span>
+        <FileText className="h-4 w-4 text-gray-500" />
+        <span>Skip the itinerary for now</span>
       </button>
 
       {stepMode && (
