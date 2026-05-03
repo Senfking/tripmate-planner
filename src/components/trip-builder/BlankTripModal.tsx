@@ -16,14 +16,16 @@ import { useNavigate } from "react-router-dom";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Optional destination pre-fill (e.g. when opened from a template). */
+  defaultDestination?: string;
 }
 
-export function BlankTripModal({ open, onOpenChange }: Props) {
+export function BlankTripModal({ open, onOpenChange, defaultDestination }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
-  const [destination, setDestination] = useState("");
+  const [destination, setDestination] = useState(defaultDestination ?? "");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [nameError, setNameError] = useState(false);
