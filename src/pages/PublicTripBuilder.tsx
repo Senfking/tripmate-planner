@@ -8,41 +8,42 @@ import {
 } from "@/components/hero/usePendingPrompt";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 
-// Public trip-builder route at /trips/new. Hero on top; when authed,
-// the existing StandaloneTripBuilder renders below it.
+// Public trip-builder route at /trips/new. Hero on top; StandaloneTripBuilder
+// (which is itself a fixed-position fullscreen modal) opens as an overlay
+// only when explicitly triggered — either by the secondary "Prefer to fill
+// in details step by step?" link, or by an authed Hero submission.
 //
-// Authed submission: in-page handoff via React state — no sessionStorage.
-// We pass `initialFreeTextPrompt` down to the builder, which seeds the
-// PremiumTripInput's freeText. We DO NOT auto-submit; the user clicks
-// Plan in the builder themselves.
-//
-// Unauth submission: stash to sessionStorage and route to /ref. After
+// Authed Hero submit: open the modal with the prompt seeded.
+// Unauth Hero submit: stash to sessionStorage and route to /ref. After
 // signup, the builder consumes the stashed prompt on mount.
 export default function PublicTripBuilder() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Resolve any cross-nav stashed prompt once on mount. Done eagerly so
-  // the Hero renders pre-filled on the same paint as the page.
   const [pending, setPending] = useState<string | undefined>(() => {
     return consumePendingPrompt() ?? undefined;
   });
+  const [builderOpen, setBuilderOpen] = useState(false);
 
-  // If the user signs in mid-session (e.g. opens /trips/new logged-out,
-  // signs up in another tab, comes back), re-check the stash so we still
-  // pick up the prompt.
+  // If the user signs in mid-session, re-check the stash so we still pick
+  // up the prompt. Auto-open the builder if there's a pending prompt.
   useEffect(() => {
     if (user && !pending) {
       const v = consumePendingPrompt();
-      if (v) setPending(v);
+      if (v) {
+        setPending(v);
+        setBuilderOpen(true);
+      }
+    } else if (user && pending && !builderOpen) {
+      // Stash already consumed at mount and user is authed → open builder.
+      setBuilderOpen(true);
     }
-  }, [user, pending]);
+  }, [user, pending, builderOpen]);
 
   function handleHeroSubmit(prompt: string) {
     if (user) {
-      // Same-page handoff — push into local state, the builder reads it
-      // via the initialFreeTextPrompt prop.
       setPending(prompt);
+      setBuilderOpen(true);
     } else {
       stashPendingPrompt(prompt);
       navigate("/ref");
@@ -51,15 +52,25 @@ export default function PublicTripBuilder() {
 
   return (
     <div className="min-h-dvh bg-background">
-      <Hero onSubmit={handleHeroSubmit} prefill={pending} />
+      <Hero
+        onSubmit={handleHeroSubmit}
+        prefill={pending}
+        secondaryAction={
+          <button
+            type="button"
+            onClick={() => setBuilderOpen(true)}
+            className="underline-offset-4 hover:underline text-white/85 hover:text-white transition-colors"
+          >
+            Prefer to fill in details step by step?
+          </button>
+        }
+      />
 
-      {user && (
-        <div className="border-t border-border">
-          <StandaloneTripBuilder
-            onClose={() => navigate("/app/trips")}
-            initialFreeTextPrompt={pending}
-          />
-        </div>
+      {builderOpen && user && (
+        <StandaloneTripBuilder
+          onClose={() => setBuilderOpen(false)}
+          initialFreeTextPrompt={pending}
+        />
       )}
     </div>
   );
