@@ -5,11 +5,12 @@ export type HighlightCardData = {
   area?: string;
   description?: string;
   photo_url: string;
+  category?: string;
 };
 
 type Props = {
   highlight: HighlightCardData;
-  /** Optional category badge (e.g. "Landmark", "Restaurant"). */
+  /** Optional explicit category override; falls back to highlight.category. */
   category?: string;
 };
 
@@ -21,6 +22,7 @@ type Props = {
  */
 export function HighlightCard({ highlight, category }: Props) {
   const [tapped, setTapped] = useState(false);
+  const chip = category ?? highlight.category ?? null;
 
   return (
     <button
@@ -39,10 +41,10 @@ export function HighlightCard({ highlight, category }: Props) {
       {/* Always-on bottom gradient (neutral black) */}
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/30 to-transparent pointer-events-none" />
 
-      {/* Optional glassmorphism category chip */}
-      {category && (
-        <span className="absolute top-3 left-3 inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20">
-          {category}
+      {/* Glassmorphism category chip (top-left) */}
+      {chip && (
+        <span className="absolute top-3 left-3 inline-flex items-center text-[10.5px] font-semibold uppercase tracking-[0.08em] px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/25 shadow-sm">
+          {chip}
         </span>
       )}
 
