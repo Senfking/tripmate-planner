@@ -131,7 +131,7 @@ export function Hero({
   const sharedTextareaProps = {
     ref: textareaRef,
     value,
-    onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onChange: (e: ChangeEvent<HTMLTextAreaElement>) => {
       setValue(e.target.value);
       if (error) setError(null);
     },
