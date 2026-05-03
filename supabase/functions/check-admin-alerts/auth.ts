@@ -18,19 +18,13 @@ async function loadLegacyJwt(): Promise<void> {
       return;
     }
     const admin = createClient(supabaseUrl, serviceRoleKey);
-    const { data, error } = await admin
-      .schema("vault")
-      .from("decrypted_secrets")
-      .select("decrypted_secret")
-      .eq("name", "service_role_key")
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await admin.rpc("get_legacy_service_role_jwt");
 
     if (error) {
-      console.error("auth: vault read failed:", error.message);
+      console.error("auth: vault rpc failed:", error.message);
       return;
     }
-    const secret = (data as { decrypted_secret?: string } | null)?.decrypted_secret;
+    const secret = typeof data === "string" ? data : null;
     if (!secret) {
       console.error("auth: vault row 'service_role_key' missing or empty");
       return;
