@@ -7,8 +7,9 @@ import { useTripTemplate } from "@/hooks/useTripTemplates";
 import { stashIntent } from "@/lib/templateIntent";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
-import { TripCreationSurface } from "@/components/trip-builder/TripCreationSurface";
+import { TripCreationSurface, StandaloneInfoCards } from "@/components/trip-builder/TripCreationSurface";
 import { PremiumTripInput, type PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
+import { TripCarousels } from "@/components/landing/TripCarousel";
 
 function templateToInputData(
   t: {
