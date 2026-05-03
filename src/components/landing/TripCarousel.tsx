@@ -130,16 +130,18 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
   );
 }
 
-export function TripCarousels() {
+export function TripCarousels({ showHeader = true }: { showHeader?: boolean } = {}) {
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between px-5 sm:px-10 lg:px-16">
-        <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Explore trip plans</h2>
-        <Link to="/templates" className="text-sm font-medium text-primary hover:underline">See all</Link>
-      </div>
+      {showHeader && (
+        <div className="mb-8 flex items-center justify-between px-5 sm:px-10 lg:px-16">
+          <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Explore trip plans</h2>
+          <Link to="/templates" className="text-sm font-medium text-primary hover:underline">See all</Link>
+        </div>
+      )}
 
-      {SECTIONS.map((section, index) => (
-        <CarouselRow key={section.title} title={section.title} cards={section.cards} seeAll={index === 0} />
+      {SECTIONS.map((section) => (
+        <CarouselRow key={section.title} title={section.title} cards={section.cards} seeAll />
       ))}
     </div>
   );
