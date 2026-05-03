@@ -58,9 +58,15 @@ interface Props {
    *  surface while streaming (e.g. "Composing your day-by-day itinerary…").
    *  Hidden once streaming=false. */
   streamingMessage?: string;
+  /** "calendar" (default) or "generic" — generic mode hides real dates and
+   *  the date range, used for date-agnostic template previews. */
+  dateMode?: "calendar" | "generic";
+  /** When true, hide editing affordances inside day cards (edit, add,
+   *  remove, comments). The hero edit/regenerate controls are also hidden. */
+  readOnly?: boolean;
 }
 
-export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage, dateMode = "calendar", readOnly = false }: Props) {
   const reveal = useStreamReveal(result, !!revealMode);
 
   // Notify parent when reveal completes
