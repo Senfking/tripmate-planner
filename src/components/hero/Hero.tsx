@@ -169,10 +169,10 @@ export function Hero({
           rows={2}
           className={[
             "block w-full min-w-0 flex-1 resize-none bg-transparent",
-            "px-4 py-2.5",
-            "text-[14.5px] text-gray-900 placeholder:text-gray-500",
+            "px-3 py-2.5 sm:px-4",
+            "text-[13px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
             "outline-none border-0",
-            "leading-tight overflow-y-auto",
+            "leading-tight overflow-hidden",
             "min-h-[52px] max-h-[100px]",
             "disabled:opacity-60 text-left",
           ].join(" ")}
@@ -181,6 +181,7 @@ export function Hero({
         <button
           type="submit"
           disabled={busy}
+          aria-label="Plan with Junto AI"
           className={[
             "inline-flex items-center justify-center gap-2 shrink-0",
             "rounded-full bg-primary text-white font-medium",
