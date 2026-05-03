@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { ArrowRight, Loader2, Map, Sparkles, Users } from "lucide-react";
+import { ArrowRight, FileText, ListChecks, Loader2, Map, Sparkles, Users } from "lucide-react";
 
 /**
  * TripCreationSurface — single hero-first creation entry shared by:
@@ -8,11 +8,11 @@ import { ArrowRight, Loader2, Map, Sparkles, Users } from "lucide-react";
  *
  * It owns ONLY presentation + the free-text pill. The page that hosts it
  * provides callbacks that decide what the three CTAs actually do
- * (free-text submit, step-by-step open, blank trip open).
+ * (free-text submit, step-by-step expand, blank trip open).
  *
- * The detailed step-by-step form (StandaloneTripBuilder + PremiumTripInput)
- * is NOT inlined here — it stays in its modal exactly as before. We only
- * surface a text-link CTA that opens it.
+ * The detailed step-by-step form is INLINED beneath the hero card by the
+ * host page (passed via `expandedSlot` when stepByStepExpanded=true).
+ * No modals, no route changes for step-by-step.
  */
 
 export type TripCreationSurfaceProps = {
@@ -26,11 +26,17 @@ export type TripCreationSurfaceProps = {
   ctaLabel: string;
   /** Called when the user submits the free-text pill with non-empty value. */
   onFreeTextSubmit: (prompt: string) => void;
-  /** Opens the step-by-step form (StandaloneTripBuilder). */
+  /** Toggles inline step-by-step expansion. Host owns the boolean. */
   onStepByStep: () => void;
-  /** Opens BlankTripModal. */
+  /** Opens BlankTripModal (or other blank-trip flow). */
   onSkipItinerary: () => void;
-  /** Optional template card rendered above the hero. */
+  /** Whether the inline step-by-step form is currently expanded. Drives
+   *  the secondary CTA's pressed state and reveals `expandedSlot`. */
+  stepByStepExpanded?: boolean;
+  /** Inline form rendered below the hero card when expanded. */
+  expandedSlot?: ReactNode;
+  /** Optional template card rendered to the LEFT of the hero card on
+   *  desktop, ABOVE the hero card on mobile (two-column hero). */
   templateCard?: ReactNode;
   /** Optional content rendered below the hero card (info cards, carousels). */
   belowHero?: ReactNode;
@@ -46,6 +52,8 @@ export function TripCreationSurface({
   onFreeTextSubmit,
   onStepByStep,
   onSkipItinerary,
+  stepByStepExpanded,
+  expandedSlot,
   templateCard,
   belowHero,
   busy = false,
@@ -65,90 +73,119 @@ export function TripCreationSurface({
     onFreeTextSubmit(trimmed);
   }
 
-  return (
-    <section className="relative w-full bg-gray-50">
-      <div className="relative z-10 mx-auto w-full max-w-2xl px-5 sm:px-8 py-8 sm:py-12">
-        {templateCard}
+  // Hero card content (extracted so we can render with or without the
+  // adjacent template column).
+  const heroCard = (
+    <div className="relative overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6 sm:p-8">
+      <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#0D9488]/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-[#0D9488]/10 blur-3xl" />
 
-        {/* Hero card */}
-        <div className="relative overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6 sm:p-8">
-          <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#0D9488]/15 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-[#0D9488]/10 blur-3xl" />
-
-          <div className="relative flex flex-col items-center text-center">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#0D9488]/25 bg-background/70 backdrop-blur px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#0D9488]">
-              <Sparkles className="h-3 w-3" />
-              Powered by Junto AI
-            </div>
-
-            <h2 className="mt-4 text-[22px] sm:text-[28px] font-semibold tracking-tight text-foreground leading-tight">
-              {headline}
-            </h2>
-            <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-muted-foreground">
-              {subtitle}
-            </p>
-
-            {/* Free-text pill */}
-            <form
-              onSubmit={handleSubmit}
-              className={`mt-6 w-full max-w-xl ${shake ? "tcs-shake" : ""}`}
-            >
-              <div className="flex items-center gap-1.5 rounded-full bg-white border border-gray-100 shadow-sm pl-1.5 pr-1.5 py-1.5 transition-all focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40">
-                <textarea
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault();
-                      handleSubmit(e as unknown as FormEvent);
-                    }
-                  }}
-                  rows={2}
-                  disabled={busy}
-                  placeholder={placeholder}
-                  aria-label="Describe your trip"
-                  className="block w-full min-w-0 flex-1 resize-none bg-transparent self-center px-3 py-2 sm:px-4 sm:py-2.5 text-[13px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500 outline-none border-0 leading-[1.3] overflow-hidden h-[48px] sm:h-auto sm:min-h-[52px] sm:max-h-[100px] disabled:opacity-60 text-left"
-                />
-                <button
-                  type="submit"
-                  disabled={busy}
-                  aria-label={ctaLabel}
-                  className="inline-flex items-center justify-center gap-2 shrink-0 rounded-full bg-primary text-white font-medium h-[48px] w-[48px] p-0 sm:h-[52px] sm:w-auto sm:px-5 text-sm whitespace-nowrap shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)] transition-all hover:brightness-110 active:brightness-95 disabled:opacity-60"
-                >
-                  {busy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      <span className="hidden sm:inline">{ctaLabel}</span>
-                      <ArrowRight className="hidden h-4 w-4 sm:block" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* Two text-link CTAs (always visible) */}
-            <div className="mt-5 flex flex-col items-center gap-2.5">
-              <button
-                type="button"
-                onClick={onStepByStep}
-                className="text-[13.5px] font-medium text-gray-700 hover:text-foreground transition-colors inline-flex items-center gap-1"
-              >
-                Or build it step-by-step <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={onSkipItinerary}
-                className="text-[13.5px] font-medium text-gray-700 hover:text-foreground transition-colors inline-flex items-center gap-1"
-              >
-                Or start without an itinerary <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
+      <div className="relative flex flex-col items-center text-center">
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-[#0D9488]/25 bg-background/70 backdrop-blur px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#0D9488]">
+          <Sparkles className="h-3 w-3" />
+          Powered by Junto AI
         </div>
 
-        {belowHero}
+        <h2 className="mt-4 text-[22px] sm:text-[28px] font-semibold tracking-tight text-foreground leading-tight">
+          {headline}
+        </h2>
+        <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-muted-foreground">
+          {subtitle}
+        </p>
+
+        {/* Free-text pill — submit button sized for even visual padding */}
+        <form
+          onSubmit={handleSubmit}
+          className={`mt-6 w-full max-w-xl ${shake ? "tcs-shake" : ""}`}
+        >
+          <div className="flex items-center gap-2 rounded-full bg-white border border-gray-100 shadow-sm pl-2 pr-2 py-2 transition-all focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40">
+            <textarea
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  handleSubmit(e as unknown as FormEvent);
+                }
+              }}
+              rows={2}
+              disabled={busy}
+              placeholder={placeholder}
+              aria-label="Describe your trip"
+              className="block w-full min-w-0 flex-1 resize-none bg-transparent self-center px-3 py-2 sm:px-4 sm:py-2.5 text-[13px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500 outline-none border-0 leading-[1.3] overflow-hidden h-[52px] sm:h-auto sm:min-h-[56px] sm:max-h-[100px] disabled:opacity-60 text-left"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              aria-label={ctaLabel}
+              className="inline-flex items-center justify-center gap-2 shrink-0 rounded-full bg-primary text-white font-semibold h-[52px] w-[52px] p-0 sm:h-[56px] sm:w-auto sm:px-6 text-[14.5px] whitespace-nowrap shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)] transition-all hover:brightness-110 active:brightness-95 disabled:opacity-60"
+            >
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="h-[17px] w-[17px]" />
+                  <span className="hidden sm:inline">{ctaLabel}</span>
+                  <ArrowRight className="hidden h-4 w-4 sm:block" />
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        {/* Two side-by-side outline pill CTAs */}
+        <div className="mt-5 flex w-full max-w-xl flex-col gap-2.5 sm:flex-row sm:gap-3">
+          <button
+            type="button"
+            onClick={onStepByStep}
+            aria-pressed={stepByStepExpanded ? true : undefined}
+            className={`group inline-flex flex-1 items-center justify-center gap-2 rounded-full border bg-white px-5 py-3 text-[13.5px] font-medium transition-all active:scale-[0.98] ${
+              stepByStepExpanded
+                ? "border-primary text-primary shadow-sm"
+                : "border-gray-200 text-gray-700 hover:border-primary/40 hover:text-foreground"
+            }`}
+          >
+            <ListChecks className="h-4 w-4" />
+            Build it step-by-step
+          </button>
+          <button
+            type="button"
+            onClick={onSkipItinerary}
+            className="group inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-3 text-[13.5px] font-medium text-gray-700 transition-all hover:border-primary/40 hover:text-foreground active:scale-[0.98]"
+          >
+            <FileText className="h-4 w-4" />
+            Start without an itinerary
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <section className="relative w-full bg-gray-50">
+      <div className="relative z-10 mx-auto w-full max-w-5xl px-5 sm:px-8 py-8 sm:py-12">
+        {templateCard ? (
+          <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
+            <div className="md:order-1">{templateCard}</div>
+            <div className="md:order-2">{heroCard}</div>
+          </div>
+        ) : (
+          <div className="mx-auto w-full max-w-2xl">{heroCard}</div>
+        )}
+
+        {/* Inline step-by-step form lives directly below the hero block */}
+        {stepByStepExpanded && expandedSlot && (
+          <div
+            id="tcs-step-by-step"
+            className="mx-auto mt-6 w-full max-w-2xl rounded-2xl border border-gray-100 bg-white shadow-sm"
+          >
+            {expandedSlot}
+          </div>
+        )}
+
+        {belowHero && (
+          <div className="mx-auto mt-2 w-full max-w-2xl">{belowHero}</div>
+        )}
       </div>
 
       <style>{`
