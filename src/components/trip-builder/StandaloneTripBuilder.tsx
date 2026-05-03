@@ -539,6 +539,10 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
         subtitle: "Tweak any of these to make it yours.",
         hideFreeText: true,
         initialData: initialInputData ?? undefined,
+        templateBadge: {
+          label: `Based on the ${templateContext.defaults.destination} template`,
+          thumbnailUrl: templateContext.hero_image_url ?? null,
+        },
       }
     : ({} as const);
 
