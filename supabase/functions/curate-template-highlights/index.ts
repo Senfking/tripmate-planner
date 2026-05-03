@@ -36,6 +36,7 @@
 // =============================================================================
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { ensureLegacyJwtLoaded, isServiceRoleAuthorized } from "./auth.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -481,16 +482,25 @@ Deno.serve(async (req) => {
   if (!placesKey) return err("GOOGLE_PLACES_API_KEY not set", 500);
   if (!anthropicKey) return err("ANTHROPIC_API_KEY not set", 500);
 
-  // Verify caller is admin (same gate as admin-query). We never trust the
-  // JWT claims without the auth.getUser round-trip — that's what validates
-  // the signature against Supabase's JWKS.
-  const token = authHeader.slice("Bearer ".length).trim();
-  const authClient = createClient(supabaseUrl, anonKey);
-  const { data: userData, error: authErr } = await authClient.auth.getUser(token);
-  if (authErr || !userData?.user) return err("Invalid token", 401);
-  if (userData.user.id !== adminUserId) {
-    console.error("[curate-template-highlights] non-admin caller:", userData.user.id);
-    return err("Forbidden", 403);
+  // Two accepted credentials:
+  //   1) The legacy service-role JWT (for backfill scripts / cron / admin
+  //      curl from a shell that has the secret). Cheap string compare —
+  //      check this first so we skip the auth.getUser round-trip when
+  //      possible. auth.getUser would also fail on a service-role JWT
+  //      since it's not a user token.
+  //   2) An admin user JWT (for the admin browser). We round-trip through
+  //      auth.getUser so the signature is validated against Supabase's
+  //      JWKS — never trust raw claims.
+  await ensureLegacyJwtLoaded();
+  if (!isServiceRoleAuthorized(authHeader)) {
+    const token = authHeader.slice("Bearer ".length).trim();
+    const authClient = createClient(supabaseUrl, anonKey);
+    const { data: userData, error: authErr } = await authClient.auth.getUser(token);
+    if (authErr || !userData?.user) return err("Invalid token", 401);
+    if (userData.user.id !== adminUserId) {
+      console.error("[curate-template-highlights] non-admin caller:", userData.user.id);
+      return err("Forbidden", 403);
+    }
   }
 
   let body: { force?: boolean; slugs?: string[] } = {};
