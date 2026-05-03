@@ -101,6 +101,7 @@ type Phase = "input" | "confirming" | "generating" | "opening" | "open-error" | 
 
 interface TemplateContext {
   slug: string;
+  hero_image_url?: string | null;
   defaults: {
     destination: string;
     duration_days: number;
