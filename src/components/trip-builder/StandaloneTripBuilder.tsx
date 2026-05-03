@@ -99,6 +99,17 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
 
 type Phase = "input" | "confirming" | "generating" | "opening" | "open-error" | "results";
 
+interface TemplateContext {
+  slug: string;
+  defaults: {
+    destination: string;
+    duration_days: number;
+    vibes: string[];
+    pace: string;
+    budget_tier: string;
+  };
+}
+
 interface Props {
   onClose: () => void;
   initialDestination?: string;
@@ -112,14 +123,21 @@ interface Props {
    *  phase with this data prefilled. Used by the inline step-by-step
    *  panel on /trips/new so the user doesn't see a separate input page. */
   initialInputData?: PremiumInputData;
+  /** Template-driven personalization context. When set with !isModified at
+   *  submit time, we'll back-fill the template cache after generation. */
+  templateContext?: TemplateContext;
+  /** When true, override the default-derived initial phase and always start
+   *  on the input editor (so a user with prefilled template defaults can
+   *  still tweak before submitting). */
+  forceInputFirst?: boolean;
 }
 
-export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt, initialInputData }: Props) {
+export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt, initialInputData, templateContext, forceInputFirst }: Props) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [phase, setPhase] = useState<Phase>(
-    draftResult ? "results" : initialInputData ? "confirming" : "input"
+    draftResult ? "results" : initialInputData && !forceInputFirst ? "confirming" : "input"
   );
   const [inputData, setInputData] = useState<PremiumInputData | null>(initialInputData ?? null);
   const [results, setResults] = useState<AITripResult | null>(draftResult ?? null);
@@ -227,14 +245,16 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
 
       if (tripError || !trip) throw tripError ?? new Error("trip insert returned no row");
 
-      const { error: planError } = await (supabase
+      const { data: planRow, error: planError } = await (supabase
         .from("ai_trip_plans" as any)
         .insert({
           trip_id: trip.id,
           created_by: user.id,
           prompt: payload,
           result: normalized,
-        }) as any);
+        })
+        .select("id")
+        .single() as any);
 
       if (planError) throw planError;
 
@@ -245,12 +265,30 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
         draft_trip_id: trip.id,
       });
 
+      // If this generation came from a template and the user didn't tweak
+      // the defaults, back-fill the template cache (fire-and-forget).
+      if (templateContext && inputData && planRow?.id) {
+        const d = templateContext.defaults;
+        const isModified =
+          inputData.destination.trim().toLowerCase() !== d.destination.trim().toLowerCase() ||
+          (inputData.pace ?? "") !== d.pace ||
+          (inputData.budgetLevel ?? "") !== d.budget_tier ||
+          JSON.stringify([...(inputData.vibes ?? [])].sort()) !==
+            JSON.stringify([...(d.vibes ?? [])].sort());
+        if (!isModified) {
+          void (supabase as any).rpc("update_template_cache", {
+            _slug: templateContext.slug,
+            _plan_id: planRow.id,
+          });
+        }
+      }
+
       navigate(`/app/trips/${trip.id}`, { replace: true });
     } catch (saveErr) {
       console.error("[StandaloneBuilder] Failed to persist draft trip:", saveErr);
       setPhase("open-error");
     }
-  }, [user, inputData, navigate]);
+  }, [user, inputData, navigate, templateContext]);
 
   const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
     if (!pendingPayload) return;
