@@ -1768,6 +1768,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _tmp_pr251_vault_peek: {
+        Args: never
+        Returns: {
+          len: number
+          looks_like_jwt: boolean
+          name: string
+          prefix: string
+        }[]
+      }
       check_error_spike: { Args: never; Returns: undefined }
       cleanup_expired_entry_requirements_cache: {
         Args: never
