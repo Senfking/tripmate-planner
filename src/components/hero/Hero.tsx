@@ -106,15 +106,15 @@ export function Hero({
   // pill is just slightly taller on mobile than on desktop.
   const pillWrapper = isApp
     ? [
-        "flex items-stretch",
-        "rounded-full bg-white border border-gray-200",
-        "shadow-md pl-4 sm:pl-5 pr-1 py-1 transition-all",
+        "flex items-center gap-1",
+        "rounded-full bg-white border border-gray-100",
+        "shadow-sm pl-1 pr-1 py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
-        "flex items-stretch",
+        "flex items-center gap-1",
         "rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl pl-4 sm:pl-5 pr-1 py-1 transition-all",
+        "shadow-2xl pl-1 pr-1 py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
@@ -141,12 +141,12 @@ export function Hero({
   const buttonContent = busy ? (
     <>
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      <span className="hidden min-[375px]:inline">Planning…</span>
+      <span className="hidden min-[380px]:inline">Planning…</span>
     </>
   ) : (
     <>
       <Sparkles className="h-4 w-4" aria-hidden />
-      <span className="hidden min-[375px]:inline">Plan with Junto AI</span>
+      <span className="hidden min-[380px]:inline">Plan with Junto AI</span>
       <ArrowRight className="h-4 w-4" aria-hidden />
     </>
   );
@@ -169,14 +169,12 @@ export function Hero({
           rows={2}
           className={[
             "block w-full flex-1 resize-none bg-transparent",
-            "px-2 py-2",
+            "px-4 py-2.5",
             "text-[14.5px] text-gray-900 placeholder:text-gray-500",
-            "outline-none",
+            "outline-none border-0",
             "leading-tight overflow-y-auto",
-            // ~2 lines tall on mobile, single-line feel on desktop where
-            // the pill is wide enough to fit the placeholder on one line.
-            "min-h-[56px] sm:min-h-[52px] max-h-[100px]",
-            "disabled:opacity-60 text-left sm:text-center",
+            "min-h-[52px] max-h-[100px]",
+            "disabled:opacity-60 text-left",
           ].join(" ")}
         />
 
@@ -184,13 +182,12 @@ export function Hero({
           type="submit"
           disabled={busy}
           className={[
-            "inline-flex items-center justify-center gap-2",
-            "rounded-full bg-primary text-white font-semibold",
-            "px-3 sm:px-6 py-2.5 text-[14px] whitespace-nowrap",
+            "inline-flex items-center justify-center gap-2 shrink-0",
+            "rounded-full bg-primary text-white font-medium",
+            "px-4 sm:px-5 py-3 text-sm whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
             "transition-all hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
             "active:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed",
-            "shrink-0 self-stretch",
           ].join(" ")}
         >
           {buttonContent}
