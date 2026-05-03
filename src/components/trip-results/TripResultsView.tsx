@@ -465,7 +465,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 {result.destinations.map((d) => d.name).join(" · ")}
               </span>
             </span>
-            <span className="font-mono text-xs">{dateRange}</span>
+            {dateMode !== "generic" && <span className="font-mono text-xs">{dateRange}</span>}
           </div>
         </div>
       </div>
