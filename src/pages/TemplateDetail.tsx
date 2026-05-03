@@ -222,12 +222,6 @@ export default function TemplateDetail() {
   // STATE 2: no cache — minimal SEO hero with single CTA
   return (
     <>
-      <Helmet>
-        <title>{pageTitle} | Junto</title>
-        <meta name="description" content={pageDescription} />
-        <link rel="canonical" href={`${window.location.origin}/templates/${template.slug}`} />
-      </Helmet>
-
       <div className="min-h-screen bg-background pb-32">
         <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-border px-4 py-2.5">
           <div className="max-w-3xl mx-auto flex items-center gap-3">
