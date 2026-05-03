@@ -1,7 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
-import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/AuthContext";
