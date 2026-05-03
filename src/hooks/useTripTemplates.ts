@@ -8,6 +8,11 @@ export type CuratedHighlight = {
   description: string;
   place_id: string;
   photo_url: string;
+  /** Derived from Google Places types — e.g. "Landmark", "Restaurant",
+   *  "Nature", "Museum", "Market", "Neighborhood", "Experience". Optional
+   *  for backward compatibility with rows curated before the field was
+   *  introduced. */
+  category?: string;
 };
 
 export type TripTemplate = {
