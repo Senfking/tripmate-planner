@@ -125,7 +125,7 @@ export default function TemplateDetail() {
   // Sticky bottom action bar (rendered in both states)
   const StickyActions = (
     <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-2 sm:justify-end">
+      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-2 sm:justify-center">
         <Button
           variant="outline"
           onClick={handlePersonalize}
