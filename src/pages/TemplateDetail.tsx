@@ -490,15 +490,20 @@ function TravelEssentialsSection() {
       <p className="text-sm text-gray-600 mb-4 leading-relaxed">
         Unlocked when you build your trip.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {items.map(({ icon: Icon, title, copy }) => (
           <div
             key={title}
-            className="rounded-2xl bg-gray-50 border border-gray-200 p-4 flex flex-col gap-1.5"
+            className="relative rounded-2xl bg-gray-50 p-5 flex items-center gap-4"
           >
-            <Icon className="h-4 w-4 text-gray-500" />
-            <p className="text-sm font-semibold text-gray-700 leading-snug">{title}</p>
-            <p className="text-xs text-gray-500 leading-snug">{copy}</p>
+            <Lock className="absolute top-3 right-3 h-3.5 w-3.5 text-gray-400" />
+            <div className="h-12 w-12 shrink-0 rounded-2xl bg-gray-200/70 flex items-center justify-center">
+              <Icon className="h-5 w-5 text-gray-500" />
+            </div>
+            <div className="min-w-0 pr-5">
+              <p className="text-sm font-semibold text-gray-700 leading-snug">{title}</p>
+              <p className="text-xs text-gray-500 leading-snug mt-0.5">{copy}</p>
+            </div>
           </div>
         ))}
       </div>
