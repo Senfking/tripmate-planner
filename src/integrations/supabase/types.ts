@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      _smoketest_results: {
+        Row: {
+          created_at: string | null
+          id: number
+          label: string | null
+          payload: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          label?: string | null
+          payload?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          label?: string | null
+          payload?: Json | null
+        }
+        Relationships: []
+      }
       admin_notifications: {
         Row: {
           body: string
