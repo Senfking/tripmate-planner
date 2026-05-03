@@ -192,7 +192,10 @@ export function PremiumTripInput({
     subtitle ?? "Describe your dream trip — or fill in the form below";
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]">
+    <div className={cn(
+      "w-full max-w-lg mx-auto px-4",
+      inline ? "pb-6" : "pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]"
+    )}>
       {/* ── Hero ── */}
       {!hideHero && (
         <div className="relative pt-8 pb-6 -mx-4 px-4 mb-5 bg-gradient-to-b from-primary/5 via-primary/[0.02] to-transparent">
