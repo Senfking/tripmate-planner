@@ -413,6 +413,7 @@ async function curateOneTemplate(
         description,
         place_id: placeId,
         photo_url: photoUrl,
+        category: deriveCategory(place.types),
       };
 
       // Defense-in-depth assertion: the row's `name` and `place_id` must
