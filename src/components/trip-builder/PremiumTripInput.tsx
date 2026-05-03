@@ -56,6 +56,10 @@ type Props = {
   /** Optional badge rendered under the hero title — shows the template
    *  origin with a small thumbnail. */
   templateBadge?: { label: string; thumbnailUrl?: string | null };
+  /** When true, render the Generate CTA inline at the bottom of the form
+   *  (instead of fixed-positioned). Use when the form is inlined inside a
+   *  scrollable host page rather than rendered as a full-screen modal. */
+  inline?: boolean;
 };
 
 /* ─── Constants ───────────────────────────────────── */
@@ -108,6 +112,7 @@ export function PremiumTripInput({
   hideFreeText,
   hideHero,
   templateBadge,
+  inline,
 }: Props) {
   const [destination, setDestination] = useState(
     initialData?.destination ?? initialDestination ?? ""
@@ -187,7 +192,10 @@ export function PremiumTripInput({
     subtitle ?? "Describe your dream trip — or fill in the form below";
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]">
+    <div className={cn(
+      "w-full max-w-lg mx-auto px-4",
+      inline ? "pb-6" : "pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]"
+    )}>
       {/* ── Hero ── */}
       {!hideHero && (
         <div className="relative pt-8 pb-6 -mx-4 px-4 mb-5 bg-gradient-to-b from-primary/5 via-primary/[0.02] to-transparent">
@@ -516,9 +524,22 @@ export function PremiumTripInput({
         />
       </div>
 
-      {/* ── Generate CTA (fixed bottom) ── */}
-      <div className="fixed bottom-0 inset-x-0 bg-background/90 backdrop-blur-lg border-t border-border z-10">
-        <div className="max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 space-y-2">
+      {/* ── Generate CTA — fixed when modal-style, inline when embedded ── */}
+      <div
+        className={cn(
+          inline
+            ? "mt-6"
+            : "fixed bottom-0 inset-x-0 bg-background/90 backdrop-blur-lg border-t border-border z-10"
+        )}
+      >
+        <div
+          className={cn(
+            "space-y-2",
+            inline
+              ? ""
+              : "max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3"
+          )}
+        >
           <Button
             onClick={handleGenerate}
             className="w-full h-12 rounded-xl font-semibold text-[15px] text-primary-foreground gap-2"
@@ -532,7 +553,7 @@ export function PremiumTripInput({
               Add a destination and dates to continue
             </p>
           )}
-          {onStartBlank && (
+          {onStartBlank && !inline && (
             <button
               type="button"
               onClick={onStartBlank}

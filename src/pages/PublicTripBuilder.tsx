@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
@@ -12,14 +12,17 @@ import {
   TripCreationSurface,
   StandaloneInfoCards,
 } from "@/components/trip-builder/TripCreationSurface";
+import { PremiumTripInput, type PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 
 /**
  * /trips/new — single trip-creation entry point.
  *
- * Logged-in: hero-first TripCreationSurface (free-text pill + two text
- *   CTAs). Step-by-step opens StandaloneTripBuilder modal; skip-itinerary
- *   opens BlankTripModal. Sample trips carousel below.
+ * Logged-in: hero-first TripCreationSurface (free-text pill + two
+ *   side-by-side outline CTAs). "Step-by-step" expands the form INLINE
+ *   on the same page (no modal, no route change). "Skip itinerary" opens
+ *   BlankTripModal. Free-text submit hands off to StandaloneTripBuilder
+ *   for confirmation + generation.
  *
  * Anonymous: full-bleed atmospheric Hero — prompt is stashed and the
  *   visitor is routed to /ref to sign up.
@@ -33,6 +36,9 @@ export default function PublicTripBuilder() {
   });
   const [builderOpen, setBuilderOpen] = useState(false);
   const [blankOpen, setBlankOpen] = useState(false);
+  const [stepExpanded, setStepExpanded] = useState(false);
+  const [submittedInputData, setSubmittedInputData] = useState<PremiumInputData | null>(null);
+  const formAnchorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (user && !pending) {
@@ -57,12 +63,26 @@ export default function PublicTripBuilder() {
   }
 
   function handleStepByStep() {
-    setPending(undefined);
+    setStepExpanded((v) => {
+      const next = !v;
+      if (next) {
+        // Smooth-scroll the inline form into view after it renders.
+        window.requestAnimationFrame(() => {
+          formAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+      return next;
+    });
+  }
+
+  function handleInlineGenerate(data: PremiumInputData) {
+    setSubmittedInputData(data);
     setBuilderOpen(true);
   }
 
   function handleBuilderClose() {
     setBuilderOpen(false);
+    setSubmittedInputData(null);
   }
 
   // Anonymous visitors get the original public Hero.
@@ -78,7 +98,7 @@ export default function PublicTripBuilder() {
     );
   }
 
-  // Logged-in: hero-first TripCreationSurface.
+  // Logged-in: hero-first TripCreationSurface with optional inline form.
   return (
     <div className="min-h-dvh bg-gray-50">
       <TripCreationSurface
@@ -95,24 +115,41 @@ export default function PublicTripBuilder() {
         onFreeTextSubmit={handleFreeTextSubmit}
         onStepByStep={handleStepByStep}
         onSkipItinerary={() => setBlankOpen(true)}
-        belowHero={<StandaloneInfoCards />}
+        stepByStepExpanded={stepExpanded}
+        expandedSlot={
+          stepExpanded ? (
+            <div ref={formAnchorRef} className="py-6 scroll-mt-4">
+              <PremiumTripInput
+                onGenerate={handleInlineGenerate}
+                initialData={undefined}
+                hideHero
+                hideFreeText
+                inline
+              />
+            </div>
+          ) : null
+        }
+        belowHero={!stepExpanded ? <StandaloneInfoCards /> : undefined}
       />
 
-      <section className="w-full pb-12 pt-2">
-        <div className="mx-auto w-full max-w-5xl px-5 sm:px-8">
-          <div className="border-t border-gray-200/70 pt-6 mb-6">
-            <p className="text-sm text-muted-foreground text-center">
-              Or browse a sample trip
-            </p>
+      {!stepExpanded && (
+        <section className="w-full pb-12 pt-2">
+          <div className="mx-auto w-full max-w-5xl px-5 sm:px-8">
+            <div className="border-t border-gray-200/70 pt-6 mb-6">
+              <p className="text-sm text-muted-foreground text-center">
+                Or browse a sample trip
+              </p>
+            </div>
           </div>
-        </div>
-        <TripCarousels showHeader={false} />
-      </section>
+          <TripCarousels showHeader={false} />
+        </section>
+      )}
 
       {builderOpen && (
         <StandaloneTripBuilder
           onClose={handleBuilderClose}
-          initialFreeTextPrompt={pending}
+          initialFreeTextPrompt={submittedInputData ? undefined : pending}
+          initialInputData={submittedInputData ?? undefined}
         />
       )}
 
