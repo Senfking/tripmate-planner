@@ -12,6 +12,7 @@ import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
 import { InlineStepFields } from "@/components/trip-builder/InlineStepFields";
 import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 import { SAMPLE_TRIPS } from "@/components/hero/sampleTrips";
+import { SampleTripCard } from "@/components/hero/SampleTripCard";
 
 // Public trip-builder route at /trips/new. Hero on top.
 //
