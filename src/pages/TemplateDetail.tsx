@@ -25,29 +25,8 @@ import { useTripTemplate, type CuratedHighlight } from "@/hooks/useTripTemplates
 import { stashIntent } from "@/lib/templateIntent";
 import { getCountryFacts } from "@/lib/countryFacts";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
-import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
-import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 import { Button } from "@/components/ui/button";
 import { HighlightCard } from "@/components/templates/HighlightCard";
-
-function templateToInputData(t: {
-  destination: string;
-  default_vibes: string[];
-  default_pace: string;
-  default_budget_tier: string;
-}): PremiumInputData {
-  return {
-    destination: t.destination,
-    dateRange: undefined,
-    travelParty: null,
-    kidsAges: "",
-    budgetLevel: (t.default_budget_tier as PremiumInputData["budgetLevel"]) ?? null,
-    pace: (t.default_pace as PremiumInputData["pace"]) ?? null,
-    vibes: t.default_vibes ?? [],
-    dealBreakers: "",
-    freeText: "",
-  };
-}
 
 export default function TemplateDetail() {
   const { slug } = useParams<{ slug: string }>();
