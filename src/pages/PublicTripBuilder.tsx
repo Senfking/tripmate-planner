@@ -11,8 +11,7 @@ import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripB
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
 import { InlineStepFields } from "@/components/trip-builder/InlineStepFields";
 import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
-import { SAMPLE_TRIPS } from "@/components/hero/sampleTrips";
-import { SampleTripCard } from "@/components/hero/SampleTripCard";
+import { TripCarousels } from "@/components/landing/TripCarousel";
 
 // Public trip-builder route at /trips/new. Hero on top.
 //
@@ -130,30 +129,18 @@ export default function PublicTripBuilder() {
         secondaryAction={secondaryAction}
       />
 
-      {/* Sample trips strip — uses the SAME large image-led card as the
-          public landing page (full reuse, no app-specific variant). */}
+      {/* Sample trips browse — full TripCarousels reuse from landing page.
+          Same component, same data, no fork. */}
       {user && (
-        <section className="mx-auto w-full max-w-5xl px-5 sm:px-8 pb-12 pt-2">
-          <div className="border-t border-gray-200/70 pt-6">
-            <p className="text-sm text-muted-foreground mb-4 text-center">
-              Or browse a sample trip
-            </p>
-            <div
-              className={[
-                "flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 pb-2",
-                "sm:mx-0 sm:px-0 sm:overflow-visible sm:grid sm:grid-cols-3 sm:gap-4",
-              ].join(" ")}
-            >
-              {SAMPLE_TRIPS.map((trip) => (
-                <div
-                  key={trip.id}
-                  className="snap-start shrink-0 w-[260px] sm:w-auto"
-                >
-                  <SampleTripCard trip={trip} />
-                </div>
-              ))}
+        <section className="w-full pb-12 pt-2">
+          <div className="mx-auto w-full max-w-5xl px-5 sm:px-8">
+            <div className="border-t border-gray-200/70 pt-6 mb-6">
+              <p className="text-sm text-muted-foreground text-center">
+                Or browse a sample trip
+              </p>
             </div>
           </div>
+          <TripCarousels />
         </section>
       )}
 

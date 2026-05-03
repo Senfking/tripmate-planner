@@ -47,16 +47,10 @@ function useAutoSize(value: string) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Only auto-grow on mobile (stacked card layout). On desktop the
-    // textarea sits inside a single-row pill — letting it grow distorts
-    // the pill shape, so we keep a fixed height and let content scroll.
-    const isDesktop = window.matchMedia("(min-width: 640px)").matches;
-    if (isDesktop) {
-      el.style.height = "";
-      return;
-    }
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    // Pill is a fixed-height integrated container on every viewport.
+    // Don't auto-grow — let content scroll past the 2-line cap instead,
+    // otherwise the pill shape distorts.
+    el.style.height = "";
   }, [value]);
   return ref;
 }
@@ -107,20 +101,20 @@ export function Hero({
   }
 
   // ── Shared: pill input form ──────────────────────────────────────────
-  // Mobile: textarea and button rendered as TWO separate full-width
-  // rounded-full pills, stacked with gap-3. Desktop (sm+): single
-  // integrated pill — textarea + nested right-aligned button.
-  const desktopPillWrapper = isApp
+  // Single integrated pill on ALL viewports — textarea on the left,
+  // nested button on the right. The textarea allows 2 rows so the
+  // pill is just slightly taller on mobile than on desktop.
+  const pillWrapper = isApp
     ? [
-        "hidden sm:flex sm:items-stretch",
+        "flex items-stretch",
         "rounded-full bg-white border border-gray-200",
-        "shadow-md pl-5 pr-1 py-1 transition-all",
+        "shadow-md pl-4 sm:pl-5 pr-1 py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
-        "hidden sm:flex sm:items-stretch",
+        "flex items-stretch",
         "rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl pl-5 pr-1 py-1 transition-all",
+        "shadow-2xl pl-4 sm:pl-5 pr-1 py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
@@ -142,15 +136,17 @@ export function Hero({
     "aria-invalid": !!error,
   };
 
+  // Compact (icon-only) content for very narrow viewports (<375px) so
+  // the button doesn't squeeze the textarea below a usable width.
   const buttonContent = busy ? (
     <>
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      Planning…
+      <span className="hidden min-[375px]:inline">Planning…</span>
     </>
   ) : (
     <>
       <Sparkles className="h-4 w-4" aria-hidden />
-      Plan with Junto AI
+      <span className="hidden min-[375px]:inline">Plan with Junto AI</span>
       <ArrowRight className="h-4 w-4" aria-hidden />
     </>
   );
@@ -160,67 +156,27 @@ export function Hero({
       onSubmit={handleSubmit}
       className={isApp ? "mt-6 w-full max-w-2xl" : "mt-8 sm:mt-10 w-full max-w-2xl"}
     >
-      {/* ── Mobile: two separate full-width pills, stacked ── */}
+      {/* ── Single integrated pill (all viewports) ── */}
       <div
         className={[
-          "flex flex-col gap-3 sm:hidden",
-          shake ? "hero-shake" : "",
-        ].join(" ")}
-      >
-        <div
-          className={[
-            "rounded-3xl bg-white border px-4 py-3 shadow-md transition-all",
-            isApp ? "border-gray-200" : "border-white/50 bg-white/95 backdrop-blur-xl shadow-2xl",
-            "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
-            error ? "ring-2 ring-destructive/50" : "",
-          ].join(" ")}
-        >
-          <textarea
-            {...sharedTextareaProps}
-            rows={2}
-            className={[
-              "block w-full resize-none bg-transparent",
-              "text-[14.5px] text-gray-900 placeholder:text-gray-500",
-              "outline-none leading-[20px]",
-              "min-h-[48px] max-h-[140px] overflow-y-auto",
-              "disabled:opacity-60 text-left",
-            ].join(" ")}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={busy}
-          className={[
-            "inline-flex items-center justify-center gap-2 w-full",
-            "rounded-full bg-primary text-white font-semibold",
-            "px-5 py-3.5 text-sm whitespace-nowrap",
-            "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
-            "transition-all hover:brightness-110 active:brightness-95",
-            "disabled:opacity-60 disabled:cursor-not-allowed",
-          ].join(" ")}
-        >
-          {buttonContent}
-        </button>
-      </div>
-
-      {/* ── Desktop: integrated single pill ── */}
-      <div
-        className={[
-          desktopPillWrapper,
+          pillWrapper,
           error ? "ring-2 ring-destructive/50" : "",
           shake ? "hero-shake" : "",
         ].join(" ")}
       >
         <textarea
           {...sharedTextareaProps}
-          rows={1}
+          rows={2}
           className={[
             "block w-full flex-1 resize-none bg-transparent",
-            "px-2 py-1.5",
+            "px-2 py-2",
             "text-[14.5px] text-gray-900 placeholder:text-gray-500",
             "outline-none",
-            "h-[52px] leading-[20px] overflow-y-auto",
-            "disabled:opacity-60 text-center",
+            "leading-tight overflow-y-auto",
+            // ~2 lines tall on mobile, single-line feel on desktop where
+            // the pill is wide enough to fit the placeholder on one line.
+            "min-h-[56px] sm:min-h-[52px] max-h-[100px]",
+            "disabled:opacity-60 text-left sm:text-center",
           ].join(" ")}
         />
 
@@ -230,7 +186,7 @@ export function Hero({
           className={[
             "inline-flex items-center justify-center gap-2",
             "rounded-full bg-primary text-white font-semibold",
-            "px-6 py-2.5 text-[14px] whitespace-nowrap",
+            "px-3 sm:px-6 py-2.5 text-[14px] whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
             "transition-all hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
             "active:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed",

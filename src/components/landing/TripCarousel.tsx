@@ -101,11 +101,17 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/12 to-transparent" />
-                  <h4 className="absolute bottom-4 left-4 text-2xl font-bold text-white drop-shadow-lg">{card.name}</h4>
+                  <h4 className="absolute bottom-4 left-4 right-4 text-2xl font-bold text-white drop-shadow-lg">
+                    {card.name} · {card.duration}
+                  </h4>
                 </div>
                 <div className="px-4 py-3.5">
-                  <p className="text-[13px] text-muted-foreground">{card.duration} · {card.vibe}</p>
-                  <div className="mt-1.5 flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      {card.vibe}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1">
                     <Sparkles className="h-3 w-3 text-primary" />
                     <span className="text-[11px] font-medium text-primary">Junto AI plan</span>
                   </div>

@@ -29,10 +29,10 @@ const BUDGET_OPTIONS: { key: BudgetLevel; label: string; symbol: string }[] = [
   { key: "luxury" as BudgetLevel, label: "Luxury", symbol: "$$$$" },
 ];
 
-const PACE_OPTIONS: { key: PaceLevel; label: string }[] = [
-  { key: "relaxed", label: "Light" },
-  { key: "balanced", label: "Balanced" },
-  { key: "packed", label: "Active" },
+const PACE_OPTIONS: { key: PaceLevel; label: string; emoji: string }[] = [
+  { key: "relaxed", label: "Light", emoji: "🍃" },
+  { key: "balanced", label: "Balanced", emoji: "⚖️" },
+  { key: "packed", label: "Active", emoji: "⚡" },
 ];
 
 const VIBE_OPTIONS: { label: string; emoji: string }[] = [
@@ -207,6 +207,7 @@ export function InlineStepFields({ onGenerate }: Props) {
                 onClick={() => setPace(selected ? null : opt.key)}
                 className={cn(pillBase, selected ? pillSelected : pillIdle)}
               >
+                <span className="text-base leading-none" aria-hidden>{opt.emoji}</span>
                 {opt.label}
               </button>
             );
