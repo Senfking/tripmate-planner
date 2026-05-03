@@ -40,6 +40,12 @@ interface Props {
   /** Per-person cost formatter — when present, ActivityCard renders prices
    *  in user's profile currency primary with destination currency subtitle. */
   costFormatter?: ActivityCostFormatter;
+  /** "calendar" (default) shows a real "MMM d" date; "generic" hides it
+   *  so date-agnostic templates don't render sentinel dates. */
+  dateMode?: "calendar" | "generic";
+  /** When true, hide editing affordances: edit-day, add-activity,
+   *  request-change, remove, and the comments panel. */
+  readOnly?: boolean;
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
@@ -86,6 +92,8 @@ export function DaySection({
   onOpenDayMap,
   skeleton = false,
   costFormatter,
+  dateMode = "calendar",
+  readOnly = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editDayOpen, setEditDayOpen] = useState(false);
@@ -93,6 +101,7 @@ export function DaySection({
   const cardRef = useRef<HTMLDivElement>(null);
 
   const dateStr = (() => {
+    if (dateMode === "generic") return "";
     try {
       return format(parseISO(day.date), "MMM d");
     } catch {
@@ -247,16 +256,18 @@ export function DaySection({
                   <MapIcon className="h-3 w-3" /> View day on map
                 </button>
               )}
-              <button
-                onClick={(e) => { e.stopPropagation(); setEditDayOpen(true); }}
-                className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-              >
-                <PenLine className="h-3 w-3" /> Edit day
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEditDayOpen(true); }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                >
+                  <PenLine className="h-3 w-3" /> Edit day
+                </button>
+              )}
             </div>
 
             {/* Day-level comments */}
-            {planId && (
+            {planId && !readOnly && (
               <div className="px-4 py-3 border-b border-border bg-accent/20">
                 <TripDiscussion
                   planId={planId}
@@ -320,22 +331,24 @@ export function DaySection({
             </div>
 
             {/* Add activity */}
-            {addingActivity ? (
-              <AddActivityForm
-                dayDate={day.date}
-                onAdd={(act) => {
-                  onAddLocalActivity(day.date, act);
-                  setAddingActivity(false);
-                }}
-                onClose={() => setAddingActivity(false)}
-              />
-            ) : (
-              <button
-                onClick={() => setAddingActivity(true)}
-                className="mx-4 mb-3 w-[calc(100%-2rem)] flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#0D9488]/30 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/5 transition-colors"
-              >
-                <Plus className="h-3 w-3" /> Add activity
-              </button>
+            {!readOnly && (
+              addingActivity ? (
+                <AddActivityForm
+                  dayDate={day.date}
+                  onAdd={(act) => {
+                    onAddLocalActivity(day.date, act);
+                    setAddingActivity(false);
+                  }}
+                  onClose={() => setAddingActivity(false)}
+                />
+              ) : (
+                <button
+                  onClick={() => setAddingActivity(true)}
+                  className="mx-4 mb-3 w-[calc(100%-2rem)] flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#0D9488]/30 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/5 transition-colors"
+                >
+                  <Plus className="h-3 w-3" /> Add activity
+                </button>
+              )
             )}
 
           </div>

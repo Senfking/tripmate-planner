@@ -7,9 +7,14 @@ interface Props {
   endDate: string;
   intro: string;
   dayRange: string;
+  /** "calendar" (default) shows "MMM d — MMM d"; "generic" hides the
+   *  date range entirely so date-agnostic templates don't print sentinel
+   *  dates like "Jan 1 — Jan 7". */
+  dateMode?: "calendar" | "generic";
 }
 
-export function DestinationSection({ name, startDate, endDate, intro, dayRange }: Props) {
+export function DestinationSection({ name, startDate, endDate, intro, dayRange, dateMode = "calendar" }: Props) {
+  const showDates = dateMode !== "generic";
   const startStr = (() => {
     try { return format(parseISO(startDate), "MMM d"); } catch { return startDate; }
   })();
@@ -28,7 +33,7 @@ export function DestinationSection({ name, startDate, endDate, intro, dayRange }
             {name}
           </h2>
           <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-            <span>{startStr} — {endStr}</span>
+            {showDates && <span>{startStr} — {endStr}</span>}
             <span className="px-1.5 py-0.5 rounded bg-accent font-mono text-[10px]">
               {dayRange}
             </span>

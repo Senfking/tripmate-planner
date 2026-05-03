@@ -1586,6 +1586,77 @@ export type Database = {
           },
         ]
       }
+      trip_templates: {
+        Row: {
+          cached_at: string | null
+          cached_from_trip_id: string | null
+          cached_result: Json | null
+          category: string
+          chips: string[]
+          country: string
+          country_iso: string | null
+          cover_image_url: string
+          created_at: string
+          default_budget_tier: string
+          default_pace: string
+          default_vibes: string[]
+          description: string
+          destination: string
+          display_order: number
+          duration_days: number
+          recommended_season: string | null
+          slug: string
+        }
+        Insert: {
+          cached_at?: string | null
+          cached_from_trip_id?: string | null
+          cached_result?: Json | null
+          category: string
+          chips?: string[]
+          country: string
+          country_iso?: string | null
+          cover_image_url: string
+          created_at?: string
+          default_budget_tier?: string
+          default_pace?: string
+          default_vibes?: string[]
+          description: string
+          destination: string
+          display_order?: number
+          duration_days: number
+          recommended_season?: string | null
+          slug: string
+        }
+        Update: {
+          cached_at?: string | null
+          cached_from_trip_id?: string | null
+          cached_result?: Json | null
+          category?: string
+          chips?: string[]
+          country?: string
+          country_iso?: string | null
+          cover_image_url?: string
+          created_at?: string
+          default_budget_tier?: string
+          default_pace?: string
+          default_vibes?: string[]
+          description?: string
+          destination?: string
+          display_order?: number
+          duration_days?: number
+          recommended_season?: string | null
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_templates_cached_from_trip_id_fkey"
+            columns: ["cached_from_trip_id"]
+            isOneToOne: false
+            referencedRelation: "ai_trip_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_traveller_passports: {
         Row: {
           created_at: string
@@ -1768,12 +1839,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_promote_plan_to_template: {
+        Args: { _plan_id: string; _slug: string }
+        Returns: Json
+      }
       check_error_spike: { Args: never; Returns: undefined }
       cleanup_expired_entry_requirements_cache: {
         Args: never
         Returns: undefined
       }
       cleanup_expired_places_cache: { Args: never; Returns: undefined }
+      clone_template_to_user_trip: { Args: { _slug: string }; Returns: Json }
       count_user_trip_generations_last_hour: {
         Args: { p_user_id: string }
         Returns: number
@@ -1886,9 +1962,18 @@ export type Database = {
       }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
       send_daily_digest: { Args: never; Returns: undefined }
+      shift_template_result_dates: {
+        Args: { _result: Json; _start_date: string }
+        Returns: Json
+      }
+      strip_template_result_dates: { Args: { _result: Json }; Returns: Json }
       sum_places_spend_last_day: { Args: never; Returns: number }
       update_member_role: {
         Args: { _new_role: string; _target_user_id: string; _trip_id: string }
+        Returns: Json
+      }
+      update_template_cache: {
+        Args: { _plan_id: string; _slug: string }
         Returns: Json
       }
       user_has_feature: {

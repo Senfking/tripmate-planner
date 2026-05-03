@@ -58,9 +58,15 @@ interface Props {
    *  surface while streaming (e.g. "Composing your day-by-day itinerary…").
    *  Hidden once streaming=false. */
   streamingMessage?: string;
+  /** "calendar" (default) or "generic" — generic mode hides real dates and
+   *  the date range, used for date-agnostic template previews. */
+  dateMode?: "calendar" | "generic";
+  /** When true, hide editing affordances inside day cards (edit, add,
+   *  remove, comments). The hero edit/regenerate controls are also hidden. */
+  readOnly?: boolean;
 }
 
-export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage, dateMode = "calendar", readOnly = false }: Props) {
   const reveal = useStreamReveal(result, !!revealMode);
 
   // Notify parent when reveal completes
@@ -459,7 +465,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 {result.destinations.map((d) => d.name).join(" · ")}
               </span>
             </span>
-            <span className="font-mono text-xs">{dateRange}</span>
+            {dateMode !== "generic" && <span className="font-mono text-xs">{dateRange}</span>}
           </div>
         </div>
       </div>
@@ -726,6 +732,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   endDate={dest.end_date}
                   intro={dest.intro}
                   dayRange={dayRange2}
+                  dateMode={dateMode}
                 />
               </div>
 
@@ -792,6 +799,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     onOpenDayMap={openDayMap}
                     skeleton={!!streamingDayNumbers?.has(day.day_number)}
                     costFormatter={activityCostFormatter}
+                    dateMode={dateMode}
+                    readOnly={readOnly}
                   />
                   </div>
                 ))}
