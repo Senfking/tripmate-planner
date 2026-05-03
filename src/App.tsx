@@ -258,6 +258,25 @@ function RootRoute() {
   return <PublicLanding />;
 }
 
+/**
+ * /trips/new gateway: anonymous visitors see the standalone PublicTripBuilder
+ * (atmospheric public-variant Hero, no app shell). Authenticated users see
+ * the same page rendered inside AppLayout so sidebar + headers match the
+ * rest of the app.
+ */
+function TripsNewRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (!user) return <PublicTripBuilder />;
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route index element={<PublicTripBuilder />} />
+      </Route>
+    </Routes>
+  );
+}
+
 function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   return <ErrorBoundary userId={user?.id}>{children}</ErrorBoundary>;
