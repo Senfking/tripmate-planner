@@ -102,7 +102,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
   const [vibeWarning, setVibeWarning] = useState(false);
   const [dealBreakers, setDealBreakers] = useState("");
   const [freeText, setFreeText] = useState(initialFreeText ?? "");
-  const [moreOpen, setMoreOpen] = useState(false);
+  // (deal-breakers is now always visible — no collapsible state needed)
   
   const [showErrors, setShowErrors] = useState(false);
   const [paceInfoOpen, setPaceInfoOpen] = useState(false);
