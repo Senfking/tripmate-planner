@@ -8,6 +8,7 @@ export interface TripCard {
   duration: string;
   vibe: string;
   img: string;
+  chips: string[];
 }
 
 interface CarouselSection {
