@@ -44,6 +44,8 @@ const AdminAIErrors = lazy(() => import("./pages/AdminAIErrors"));
 const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
 const Landing = lazy(() => import("./pages/Landing"));
+const PublicLanding = lazy(() => import("./pages/PublicLanding"));
+const PublicTripBuilder = lazy(() => import("./pages/PublicTripBuilder"));
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
