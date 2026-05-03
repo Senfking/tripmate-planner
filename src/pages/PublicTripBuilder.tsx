@@ -84,7 +84,7 @@ export default function PublicTripBuilder() {
   );
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div className={user ? "min-h-dvh bg-gray-50" : "min-h-dvh bg-background"}>
       <Hero
         onSubmit={handleHeroSubmit}
         prefill={pending}
