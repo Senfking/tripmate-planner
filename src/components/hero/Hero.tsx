@@ -106,15 +106,15 @@ export function Hero({
   // pill is just slightly taller on mobile than on desktop.
   const pillWrapper = isApp
     ? [
-        "flex items-stretch",
-        "rounded-full bg-white border border-gray-200",
-        "shadow-md pl-4 sm:pl-5 pr-1 py-1 transition-all",
+        "flex items-center gap-1",
+        "rounded-full bg-white border border-gray-100",
+        "shadow-sm pl-1 pr-1 py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
-        "flex items-stretch",
+        "flex items-center gap-1",
         "rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl pl-4 sm:pl-5 pr-1 py-1 transition-all",
+        "shadow-2xl pl-1 pr-1 py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
