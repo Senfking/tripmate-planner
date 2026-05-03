@@ -396,6 +396,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
                       );
                     })}
                   </span>
+                  <span className="text-base leading-none" aria-hidden>{opt.emoji}</span>
                   {opt.label}
                 </button>
               );
