@@ -169,14 +169,12 @@ export function Hero({
           rows={2}
           className={[
             "block w-full flex-1 resize-none bg-transparent",
-            "px-2 py-2",
+            "px-4 py-2.5",
             "text-[14.5px] text-gray-900 placeholder:text-gray-500",
-            "outline-none",
+            "outline-none border-0",
             "leading-tight overflow-y-auto",
-            // ~2 lines tall on mobile, single-line feel on desktop where
-            // the pill is wide enough to fit the placeholder on one line.
-            "min-h-[56px] sm:min-h-[52px] max-h-[100px]",
-            "disabled:opacity-60 text-left sm:text-center",
+            "min-h-[52px] max-h-[100px]",
+            "disabled:opacity-60 text-left",
           ].join(" ")}
         />
 
@@ -184,13 +182,12 @@ export function Hero({
           type="submit"
           disabled={busy}
           className={[
-            "inline-flex items-center justify-center gap-2",
-            "rounded-full bg-primary text-white font-semibold",
-            "px-3 sm:px-6 py-2.5 text-[14px] whitespace-nowrap",
+            "inline-flex items-center justify-center gap-2 shrink-0",
+            "rounded-full bg-primary text-white font-medium",
+            "px-4 sm:px-5 py-3 text-sm whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
             "transition-all hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
             "active:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed",
-            "shrink-0 self-stretch",
           ].join(" ")}
         >
           {buttonContent}
