@@ -33,7 +33,7 @@ export function DestinationSection({ name, startDate, endDate, intro, dayRange, 
             {name}
           </h2>
           <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-            <span>{startStr} — {endStr}</span>
+            {showDates && <span>{startStr} — {endStr}</span>}
             <span className="px-1.5 py-0.5 rounded bg-accent font-mono text-[10px]">
               {dayRange}
             </span>
