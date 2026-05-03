@@ -154,15 +154,18 @@ export function Hero({
           aria-invalid={!!error}
           className={[
             "block w-full flex-1 resize-none bg-transparent",
-            "px-3 py-2 sm:px-0 sm:py-2.5",
-            "text-[15px] sm:text-[15px] text-gray-900 placeholder:text-gray-500",
+            "px-3 py-2 sm:px-2 sm:py-0",
+            "text-[15px] text-gray-900 placeholder:text-gray-500",
             "outline-none",
-            // Mobile: auto-grows up to 140px (multiline card). Desktop:
-            // fixed single-line height that matches the button so the
-            // pill shape stays constant; overflow scrolls internally.
-            "min-h-[44px] max-h-[140px] sm:max-h-none sm:h-10 overflow-y-auto",
+            // Mobile: auto-grows up to 140px (stacked card layout).
+            // Desktop: fixed single-line height matching the button so the
+            // pill shape never distorts. We use leading-[48px] to vertically
+            // center one line of text without padding gymnastics, and
+            // whitespace-nowrap on the placeholder so it never wraps.
+            "min-h-[44px] max-h-[140px] sm:max-h-none sm:h-12 sm:leading-[48px]",
+            "overflow-y-auto sm:overflow-x-auto sm:whitespace-nowrap",
             "disabled:opacity-60",
-            "text-left sm:text-center leading-snug",
+            "text-left sm:text-center",
           ].join(" ")}
         />
 
