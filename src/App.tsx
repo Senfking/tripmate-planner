@@ -212,6 +212,7 @@ function AppInner() {
             <Route path="/templates" element={<Templates />} />
             <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
+            <Route path="/templates/:slug/personalize" element={<TemplatePersonalize />} />
 
             {/* /trips/new is reachable by everyone, but logged-in visitors
                 see it wrapped in the app shell so the sidebar/header stay
