@@ -7,8 +7,9 @@ import { useTripTemplate } from "@/hooks/useTripTemplates";
 import { stashIntent } from "@/lib/templateIntent";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
-import { TripCreationSurface } from "@/components/trip-builder/TripCreationSurface";
+import { TripCreationSurface, StandaloneInfoCards } from "@/components/trip-builder/TripCreationSurface";
 import { PremiumTripInput, type PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
+import { TripCarousels } from "@/components/landing/TripCarousel";
 
 function templateToInputData(
   t: {
@@ -198,7 +199,21 @@ export default function TemplatePersonalize() {
             </div>
           ) : null
         }
+        belowHero={!stepExpanded ? <StandaloneInfoCards /> : undefined}
       />
+
+      {!stepExpanded && (
+        <section className="w-full pb-12 pt-2">
+          <div className="mx-auto w-full max-w-5xl px-5 sm:px-8">
+            <div className="border-t border-gray-200/70 pt-6 mb-6">
+              <p className="text-sm text-muted-foreground text-center">
+                Or browse a sample trip
+              </p>
+            </div>
+          </div>
+          <TripCarousels showHeader={false} />
+        </section>
+      )}
 
       {builderOpen && submittedInputData && (
         <StandaloneTripBuilder

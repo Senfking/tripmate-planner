@@ -76,11 +76,11 @@ export function TripCreationSurface({
   // Hero card content (extracted so we can render with or without the
   // adjacent template column).
   const heroCard = (
-    <div className="relative overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6 sm:p-8">
+    <div className="relative h-full overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6 sm:p-8">
       <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#0D9488]/15 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-[#0D9488]/10 blur-3xl" />
 
-      <div className="relative flex flex-col items-center text-center">
+      <div className="relative flex h-full flex-col items-center text-center">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-[#0D9488]/25 bg-background/70 backdrop-blur px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#0D9488]">
           <Sparkles className="h-3 w-3" />
           Powered by Junto AI
@@ -93,12 +93,12 @@ export function TripCreationSurface({
           {subtitle}
         </p>
 
-        {/* Free-text pill — submit button sized for even visual padding */}
+        {/* Free-text textarea — button BELOW for breathing room */}
         <form
           onSubmit={handleSubmit}
-          className={`mt-6 w-full max-w-xl ${shake ? "tcs-shake" : ""}`}
+          className={`mt-6 w-full ${shake ? "tcs-shake" : ""}`}
         >
-          <div className="flex items-center gap-2 rounded-full bg-white border border-gray-100 shadow-sm pl-2 pr-2 py-2 transition-all focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40">
+          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40">
             <textarea
               value={value}
               onChange={(e) => setValue(e.target.value)}
@@ -108,53 +108,53 @@ export function TripCreationSurface({
                   handleSubmit(e as unknown as FormEvent);
                 }
               }}
-              rows={2}
+              rows={3}
               disabled={busy}
               placeholder={placeholder}
               aria-label="Describe your trip"
-              className="block w-full min-w-0 flex-1 resize-none bg-transparent self-center px-3 py-2 sm:px-4 sm:py-2.5 text-[13px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500 outline-none border-0 leading-[1.3] overflow-hidden h-[52px] sm:h-auto sm:min-h-[56px] sm:max-h-[100px] disabled:opacity-60 text-left"
+              className="block w-full resize-none bg-transparent rounded-2xl px-4 py-3 text-[14px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500 outline-none border-0 leading-[1.45] min-h-[88px] disabled:opacity-60 text-left"
             />
-            <button
-              type="submit"
-              disabled={busy}
-              aria-label={ctaLabel}
-              className="inline-flex items-center justify-center gap-2 shrink-0 rounded-full bg-primary text-white font-semibold h-[52px] w-[52px] p-0 sm:h-[56px] sm:w-auto sm:px-6 text-[14.5px] whitespace-nowrap shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)] transition-all hover:brightness-110 active:brightness-95 disabled:opacity-60"
-            >
-              {busy ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Sparkles className="h-[17px] w-[17px]" />
-                  <span className="hidden sm:inline">{ctaLabel}</span>
-                  <ArrowRight className="hidden h-4 w-4 sm:block" />
-                </>
-              )}
-            </button>
           </div>
+          <button
+            type="submit"
+            disabled={busy}
+            aria-label={ctaLabel}
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary text-white font-semibold h-[52px] px-6 text-[14.5px] whitespace-nowrap shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)] transition-all hover:brightness-110 active:brightness-95 disabled:opacity-60"
+          >
+            {busy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="h-[17px] w-[17px]" />
+                <span>{ctaLabel}</span>
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
         </form>
 
         {/* Two side-by-side outline pill CTAs */}
-        <div className="mt-5 flex w-full max-w-xl flex-col gap-2.5 sm:flex-row sm:gap-3">
+        <div className="mt-3 flex w-full flex-col gap-2.5 sm:flex-row sm:gap-3">
           <button
             type="button"
             onClick={onStepByStep}
             aria-pressed={stepByStepExpanded ? true : undefined}
-            className={`group inline-flex flex-1 items-center justify-center gap-2 rounded-full border bg-white px-5 py-3 text-[13.5px] font-medium transition-all active:scale-[0.98] ${
+            className={`group inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border bg-white px-4 py-3 text-[13px] font-medium transition-all active:scale-[0.98] ${
               stepByStepExpanded
                 ? "border-primary text-primary shadow-sm"
                 : "border-gray-200 text-gray-700 hover:border-primary/40 hover:text-foreground"
             }`}
           >
             <ListChecks className="h-4 w-4" />
-            Build it step-by-step
+            Step-by-step
           </button>
           <button
             type="button"
             onClick={onSkipItinerary}
-            className="group inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-3 text-[13.5px] font-medium text-gray-700 transition-all hover:border-primary/40 hover:text-foreground active:scale-[0.98]"
+            className="group inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-gray-200 bg-white px-4 py-3 text-[13px] font-medium text-gray-700 transition-all hover:border-primary/40 hover:text-foreground active:scale-[0.98]"
           >
             <FileText className="h-4 w-4" />
-            Start without an itinerary
+            Skip itinerary
           </button>
         </div>
       </div>
@@ -163,11 +163,11 @@ export function TripCreationSurface({
 
   return (
     <section className="relative w-full bg-gray-50">
-      <div className="relative z-10 mx-auto w-full max-w-5xl px-5 sm:px-8 py-8 sm:py-12">
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-5 sm:px-8 py-8 sm:py-12">
         {templateCard ? (
-          <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
-            <div className="md:order-1">{templateCard}</div>
-            <div className="md:order-2">{heroCard}</div>
+          <div className="grid gap-6 md:grid-cols-5 md:items-stretch">
+            <div className="md:order-1 md:col-span-2">{templateCard}</div>
+            <div className="md:order-2 md:col-span-3">{heroCard}</div>
           </div>
         ) : (
           <div className="mx-auto w-full max-w-2xl">{heroCard}</div>
