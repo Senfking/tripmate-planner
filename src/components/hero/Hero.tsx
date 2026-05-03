@@ -46,6 +46,14 @@ function useAutoSize(value: string) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Only auto-grow on mobile (stacked card layout). On desktop the
+    // textarea sits inside a single-row pill — letting it grow distorts
+    // the pill shape, so we keep a fixed height and let content scroll.
+    const isDesktop = window.matchMedia("(min-width: 640px)").matches;
+    if (isDesktop) {
+      el.style.height = "";
+      return;
+    }
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   }, [value]);
