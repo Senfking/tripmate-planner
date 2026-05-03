@@ -46,20 +46,38 @@ export default function Templates() {
               to={`/templates/${c.slug}`}
               className="group/card block"
             >
-              <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
-                <div className="relative aspect-[4/3] sm:aspect-[3/2] overflow-hidden">
+                <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
+                <div className="relative aspect-square overflow-hidden sm:aspect-[3/2]">
                   <img
                     src={c.img}
                     alt={c.name}
                     className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-[1.03]"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  <h4 className="absolute bottom-3 left-4 right-4 text-base sm:text-xl font-bold text-white drop-shadow-lg">
-                    {c.name} · {c.duration}
-                  </h4>
+                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/15 to-transparent" />
+                  <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-4 sm:right-4">
+                    <h4 className="text-[15px] font-bold leading-tight text-background drop-shadow-lg sm:text-xl">
+                      {c.name} · {c.duration}
+                    </h4>
+                    <div className="mt-2 flex flex-wrap items-center gap-1 sm:hidden">
+                      {c.chips.slice(0, 2).map((chip) => (
+                        <span key={chip} className="inline-flex items-center rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur">
+                          {chip}
+                        </span>
+                      ))}
+                      {c.chips.length > 2 && (
+                        <span className="inline-flex items-center rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur">
+                          +{c.chips.length - 2}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-1 sm:hidden">
+                      <Sparkles className="h-3 w-3 text-background" />
+                      <span className="text-[10px] font-semibold text-background">Junto AI plan</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="px-3 py-3 sm:px-4 sm:py-3.5">
+                <div className="hidden px-3 py-3 sm:block sm:px-4 sm:py-3.5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {c.chips.map((chip) => (
                       <span key={chip} className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-[11px] sm:text-xs text-gray-700">
