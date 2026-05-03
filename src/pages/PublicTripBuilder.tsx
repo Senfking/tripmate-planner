@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ListChecks, PencilLine } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
 import {
@@ -54,20 +55,22 @@ export default function PublicTripBuilder() {
   // Two stacked secondary links for authed users; single white link
   // (gates to /ref) for the public/atmospheric variant.
   const secondaryAction = user ? (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-center gap-2 w-full max-w-md mx-auto">
       <button
         type="button"
         onClick={() => setBuilderOpen(true)}
-        className="text-sm text-gray-600 hover:text-gray-900 hover:underline underline-offset-4 transition-colors"
+        className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-[13.5px] font-medium text-foreground shadow-sm transition-all hover:border-foreground/30 hover:bg-muted/40 active:scale-[0.98] flex-1"
       >
-        Or fill in details step by step →
+        <ListChecks className="h-4 w-4 text-muted-foreground" />
+        Fill in step by step
       </button>
       <button
         type="button"
         onClick={() => setBlankOpen(true)}
-        className="text-sm text-gray-600 hover:text-gray-900 hover:underline underline-offset-4 transition-colors"
+        className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-[13.5px] font-medium text-foreground shadow-sm transition-all hover:border-foreground/30 hover:bg-muted/40 active:scale-[0.98] flex-1"
       >
-        Or build it manually →
+        <PencilLine className="h-4 w-4 text-muted-foreground" />
+        Build it manually
       </button>
     </div>
   ) : (
@@ -81,7 +84,7 @@ export default function PublicTripBuilder() {
   );
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div className={user ? "min-h-dvh bg-gray-50" : "min-h-dvh bg-background"}>
       <Hero
         onSubmit={handleHeroSubmit}
         prefill={pending}
