@@ -187,7 +187,7 @@ export default function TemplateDetail() {
             dateMode="generic"
             readOnly
           />
-          <TravelEssentialsSection />
+          <JuntoValueGrid />
         </div>
 
         {StickyActions}
