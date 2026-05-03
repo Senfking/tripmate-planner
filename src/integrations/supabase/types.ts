@@ -1768,6 +1768,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _smoketest_push_auth: { Args: never; Returns: Json }
       check_error_spike: { Args: never; Returns: undefined }
       cleanup_expired_entry_requirements_cache: {
         Args: never
