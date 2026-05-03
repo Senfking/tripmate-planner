@@ -106,65 +106,120 @@ export function Hero({
   }
 
   // ── Shared: pill input form ──────────────────────────────────────────
-  // Mobile: stacked card (rounded-3xl) — textarea on top, full-width
-  // button below. Desktop (sm+): single-row rounded-full pill with the
-  // button nested on the right, sized so it nearly fills the pill height.
-  const pillClasses = isApp
+  // Mobile: textarea and button rendered as TWO separate full-width
+  // rounded-full pills, stacked with gap-3. Desktop (sm+): single
+  // integrated pill — textarea + nested right-aligned button.
+  const desktopPillWrapper = isApp
     ? [
-        "relative flex flex-col sm:flex-row sm:items-stretch gap-2 sm:gap-0",
-        "rounded-3xl sm:rounded-full bg-white border border-gray-200",
-        "shadow-md p-2 sm:pl-5 sm:pr-1 sm:py-1 transition-all",
+        "hidden sm:flex sm:items-stretch",
+        "rounded-full bg-white border border-gray-200",
+        "shadow-md pl-5 pr-1 py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
-        "relative flex flex-col sm:flex-row sm:items-stretch gap-2 sm:gap-0",
-        "rounded-3xl sm:rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl p-2 sm:pl-5 sm:pr-1 sm:py-1 transition-all",
+        "hidden sm:flex sm:items-stretch",
+        "rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
+        "shadow-2xl pl-5 pr-1 py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
+
+  const placeholder = isApp
+    ? "Describe your trip — destination, dates, who's coming"
+    : "Tell Junto AI about your trip — destination, dates, who's coming";
+
+  const sharedTextareaProps = {
+    ref: textareaRef,
+    value,
+    onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setValue(e.target.value);
+      if (error) setError(null);
+    },
+    onKeyDown: handleKeyDown,
+    disabled: busy,
+    placeholder,
+    "aria-label": "Describe your trip",
+    "aria-invalid": !!error,
+  };
+
+  const buttonContent = busy ? (
+    <>
+      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      Planning…
+    </>
+  ) : (
+    <>
+      <Sparkles className="h-4 w-4" aria-hidden />
+      Plan with Junto AI
+      <ArrowRight className="h-4 w-4" aria-hidden />
+    </>
+  );
 
   const formEl = (
     <form
       onSubmit={handleSubmit}
       className={isApp ? "mt-6 w-full max-w-2xl" : "mt-8 sm:mt-10 w-full max-w-2xl"}
     >
+      {/* ── Mobile: two separate full-width pills, stacked ── */}
       <div
         className={[
-          pillClasses,
+          "flex flex-col gap-3 sm:hidden",
+          shake ? "hero-shake" : "",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "rounded-3xl bg-white border px-4 py-3 shadow-md transition-all",
+            isApp ? "border-gray-200" : "border-white/50 bg-white/95 backdrop-blur-xl shadow-2xl",
+            "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
+            error ? "ring-2 ring-destructive/50" : "",
+          ].join(" ")}
+        >
+          <textarea
+            {...sharedTextareaProps}
+            rows={2}
+            className={[
+              "block w-full resize-none bg-transparent",
+              "text-[14.5px] text-gray-900 placeholder:text-gray-500",
+              "outline-none leading-[20px]",
+              "min-h-[48px] max-h-[140px] overflow-y-auto",
+              "disabled:opacity-60 text-left",
+            ].join(" ")}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={busy}
+          className={[
+            "inline-flex items-center justify-center gap-2 w-full",
+            "rounded-full bg-primary text-white font-semibold",
+            "px-5 py-3.5 text-sm whitespace-nowrap",
+            "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
+            "transition-all hover:brightness-110 active:brightness-95",
+            "disabled:opacity-60 disabled:cursor-not-allowed",
+          ].join(" ")}
+        >
+          {buttonContent}
+        </button>
+      </div>
+
+      {/* ── Desktop: integrated single pill ── */}
+      <div
+        className={[
+          desktopPillWrapper,
           error ? "ring-2 ring-destructive/50" : "",
           shake ? "hero-shake" : "",
         ].join(" ")}
       >
         <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            if (error) setError(null);
-          }}
-          onKeyDown={handleKeyDown}
-          disabled={busy}
+          {...sharedTextareaProps}
           rows={1}
-          placeholder={
-            isApp
-              ? "Describe your trip — destination, dates, who's coming"
-              : "Tell Junto AI about your trip — destination, dates, who's coming"
-          }
-          aria-label="Describe your trip"
-          aria-invalid={!!error}
           className={[
             "block w-full flex-1 resize-none bg-transparent",
-            "px-3 py-2 sm:px-2 sm:py-1.5",
+            "px-2 py-1.5",
             "text-[14.5px] text-gray-900 placeholder:text-gray-500",
             "outline-none",
-            // Mobile: auto-grows up to 140px (stacked card layout).
-            // Desktop: fixed two-line height so longer placeholders/text
-            // wrap inside the pill without distorting it. ~2 × 20px line
-            // height + 12px vertical padding = 52px.
-            "min-h-[44px] max-h-[140px] sm:max-h-none sm:h-[52px]",
-            "leading-[20px] overflow-y-auto",
-            "disabled:opacity-60",
-            "text-left sm:text-center",
+            "h-[52px] leading-[20px] overflow-y-auto",
+            "disabled:opacity-60 text-center",
           ].join(" ")}
         />
 
@@ -173,28 +228,15 @@ export function Hero({
           disabled={busy}
           className={[
             "inline-flex items-center justify-center gap-2",
-            "rounded-2xl sm:rounded-full bg-primary text-white font-semibold",
-            "px-5 py-3 sm:px-6 sm:py-2.5 text-sm sm:text-[14px] whitespace-nowrap",
+            "rounded-full bg-primary text-white font-semibold",
+            "px-6 py-2.5 text-[14px] whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
-            "transition-all",
-            "hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
-            "active:brightness-95",
-            "disabled:opacity-60 disabled:cursor-not-allowed",
-            "w-full sm:w-auto sm:shrink-0 sm:self-stretch",
+            "transition-all hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
+            "active:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed",
+            "shrink-0 self-stretch",
           ].join(" ")}
         >
-          {busy ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Planning…
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" aria-hidden />
-              Plan with Junto AI
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </>
-          )}
+          {buttonContent}
         </button>
       </div>
 
