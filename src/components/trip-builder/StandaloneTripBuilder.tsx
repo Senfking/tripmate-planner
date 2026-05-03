@@ -245,14 +245,16 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
 
       if (tripError || !trip) throw tripError ?? new Error("trip insert returned no row");
 
-      const { error: planError } = await (supabase
+      const { data: planRow, error: planError } = await (supabase
         .from("ai_trip_plans" as any)
         .insert({
           trip_id: trip.id,
           created_by: user.id,
           prompt: payload,
           result: normalized,
-        }) as any);
+        })
+        .select("id")
+        .single() as any);
 
       if (planError) throw planError;
 
@@ -263,12 +265,30 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
         draft_trip_id: trip.id,
       });
 
+      // If this generation came from a template and the user didn't tweak
+      // the defaults, back-fill the template cache (fire-and-forget).
+      if (templateContext && inputData && planRow?.id) {
+        const d = templateContext.defaults;
+        const isModified =
+          inputData.destination.trim().toLowerCase() !== d.destination.trim().toLowerCase() ||
+          (inputData.pace ?? "") !== d.pace ||
+          (inputData.budgetLevel ?? "") !== d.budget_tier ||
+          JSON.stringify([...(inputData.vibes ?? [])].sort()) !==
+            JSON.stringify([...(d.vibes ?? [])].sort());
+        if (!isModified) {
+          void (supabase as any).rpc("update_template_cache", {
+            _slug: templateContext.slug,
+            _plan_id: planRow.id,
+          });
+        }
+      }
+
       navigate(`/app/trips/${trip.id}`, { replace: true });
     } catch (saveErr) {
       console.error("[StandaloneBuilder] Failed to persist draft trip:", saveErr);
       setPhase("open-error");
     }
-  }, [user, inputData, navigate]);
+  }, [user, inputData, navigate, templateContext]);
 
   const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
     if (!pendingPayload) return;
