@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkTripMembership } from "./authz.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +60,22 @@ Deno.serve(async (req) => {
     if (!attachment_id || !url) {
       return new Response(JSON.stringify({ error: "attachment_id and url required" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Authorization: caller must belong to the trip that owns this attachment.
+    // Without this, any authenticated user could trigger paid Anthropic calls
+    // and overwrite og_*/booking_data/type on attachments belonging to trips
+    // they aren't part of.
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const authzResult = await checkTripMembership(supabaseAdmin, attachment_id, authUser.id);
+    if (!authzResult.ok) {
+      return new Response(JSON.stringify({ error: authzResult.error }), {
+        status: authzResult.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -240,11 +257,6 @@ Return only valid JSON, no other text.`;
     }
 
     // 4. Build final update
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
     // Read current row to check type
     const { data: current } = await supabaseAdmin
       .from("attachments")
