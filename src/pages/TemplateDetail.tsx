@@ -96,8 +96,44 @@ export default function TemplateDetail() {
     );
   }
 
-  const pageTitle = `${template.destination} · ${template.duration_days} days`;
-  const pageDescription = template.description;
+  const pageTitle = `${template?.destination ?? ""} · ${template?.duration_days ?? ""} days`;
+  const pageDescription = template?.description ?? "";
+
+  useEffect(() => {
+    if (!template) return;
+    const prev = document.title;
+    document.title = `${pageTitle} | Junto`;
+    const meta = document.querySelector('meta[name="description"]');
+    const prevDesc = meta?.getAttribute("content") ?? null;
+    if (meta) meta.setAttribute("content", pageDescription);
+    return () => {
+      document.title = prev;
+      if (meta && prevDesc !== null) meta.setAttribute("content", prevDesc);
+    };
+  }, [template, pageTitle, pageDescription]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!template) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Template not found</p>
+          <Link to="/templates" className="text-primary font-medium hover:underline">
+            Browse all templates
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // (pageTitle / pageDescription already computed above)
 
   // Sticky bottom action bar (rendered in both states)
   const StickyActions = (
