@@ -14,27 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _smoketest_results: {
-        Row: {
-          created_at: string | null
-          id: number
-          label: string | null
-          payload: Json | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: number
-          label?: string | null
-          payload?: Json | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: number
-          label?: string | null
-          payload?: Json | null
-        }
-        Relationships: []
-      }
       admin_notifications: {
         Row: {
           body: string
@@ -1789,7 +1768,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      _smoketest_push_auth: { Args: never; Returns: Json }
       check_error_spike: { Args: never; Returns: undefined }
       cleanup_expired_entry_requirements_cache: {
         Args: never
