@@ -49,27 +49,33 @@ export default function Templates() {
         </div>
       </header>
 
-      <div className="max-w-[1200px] mx-auto px-5 py-6">
-        {/* Search */}
-        <div className="relative mb-5">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by destination, vibe, or season (e.g. December, beach)…"
-            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+      <div className="max-w-[1200px] mx-auto px-5 py-6 sm:py-8">
+        {/* Cooler search: larger, gradient focus ring, soft inner glow */}
+        <div className="group/search relative mb-6 sm:mb-7">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-r from-primary/40 via-primary/10 to-primary/40 opacity-0 transition-opacity duration-300 group-focus-within/search:opacity-100"
           />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:bg-muted"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+          <div className="relative flex items-center rounded-2xl border border-border/70 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] transition-shadow duration-300 group-focus-within/search:shadow-[0_8px_32px_-8px_hsl(var(--primary)/0.25)]">
+            <Search className="ml-4 h-5 w-5 shrink-0 text-muted-foreground transition-colors group-focus-within/search:text-primary" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by destination, vibe, or season (e.g. December, beach)…"
+              className="w-full bg-transparent px-3 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none sm:py-4"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="mr-2 rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-8">
@@ -79,7 +85,7 @@ export default function Templates() {
               onClick={() => setFilter(c)}
               className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 filter === c
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "bg-muted text-muted-foreground hover:bg-muted/70"
               }`}
             >
@@ -91,13 +97,10 @@ export default function Templates() {
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="rounded-[1.25rem] overflow-hidden border border-border/40 bg-card">
-                <div className="aspect-square sm:aspect-[3/2] bg-muted animate-pulse" />
-                <div className="hidden sm:block p-4 space-y-2">
-                  <div className="h-3 w-2/3 rounded bg-muted animate-pulse" />
-                  <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
-                </div>
-              </div>
+              <div
+                key={i}
+                className="aspect-[3/4] rounded-[1.25rem] bg-muted animate-pulse"
+              />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -111,55 +114,62 @@ export default function Templates() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-            {filtered.map((c) => (
-              <Link key={c.slug} to={`/templates/${c.slug}`} className="group/card block">
-                <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
-                  <div className="relative aspect-square overflow-hidden sm:aspect-[3/2]">
+            {filtered.map((c) => {
+              const visibleChips = c.chips.slice(0, 2);
+              const extraChips = c.chips.length - visibleChips.length;
+              return (
+                <Link
+                  key={c.slug}
+                  to={`/templates/${c.slug}`}
+                  className="group/card relative block aspect-[4/5] sm:aspect-[3/4] overflow-hidden rounded-[1.25rem] bg-muted shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_28px_-6px_rgba(0,0,0,0.18),0_16px_40px_-10px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2"
+                >
+                  {/* Inner wrapper isolates the transform from the rounded clip,
+                      eliminating the brief "sharp edge" flash on hover */}
+                  <div className="absolute inset-0 overflow-hidden rounded-[inherit] [transform:translateZ(0)] [backface-visibility:hidden]">
                     <img
                       src={c.cover_image_url}
                       alt={c.destination}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-[1.03]"
+                      className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover/card:scale-[1.06] transform-gpu [backface-visibility:hidden]"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/15 to-transparent" />
-                    <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-4 sm:right-4">
-                      <h4 className="text-[15px] font-bold leading-tight text-background drop-shadow-lg sm:text-xl">
-                        {c.destination} · {c.duration_days}d
-                      </h4>
-                      <div className="mt-2 flex flex-wrap items-center gap-1 sm:hidden">
-                        {c.chips.slice(0, 2).map((chip) => (
-                          <span key={chip} className="inline-flex items-center rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur">
-                            {chip}
-                          </span>
-                        ))}
-                        {c.chips.length > 2 && (
-                          <span className="inline-flex items-center rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur">
-                            +{c.chips.length - 2}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1.5 flex items-center gap-1 sm:hidden">
-                        <Sparkles className="h-3 w-3 text-background" />
-                        <span className="text-[10px] font-semibold text-background">Junto AI plan</span>
-                      </div>
-                    </div>
+                    {/* Strong bottom-up gradient for legibility on any image */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                    {/* Subtle top vignette to balance + frame */}
+                    <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/20 to-transparent" />
                   </div>
-                  <div className="hidden px-3 py-3 sm:block sm:px-4 sm:py-3.5">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {c.chips.map((chip) => (
-                        <span key={chip} className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-[11px] sm:text-xs text-gray-700">
+
+                  {/* Junto AI badge top-right */}
+                  <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-foreground shadow-md backdrop-blur sm:text-[11px]">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    Junto AI
+                  </div>
+
+                  {/* Title + chips bottom */}
+                  <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
+                    <h4 className="text-[17px] font-bold leading-tight text-white drop-shadow-md sm:text-xl">
+                      {c.destination}
+                      <span className="ml-1.5 font-semibold text-white/85">· {c.duration_days}d</span>
+                    </h4>
+                    {/* Single row of chips, no wrap, ellipsis-style overflow */}
+                    <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
+                      {visibleChips.map((chip) => (
+                        <span
+                          key={chip}
+                          className="inline-flex shrink-0 items-center rounded-full bg-white/90 px-2 py-0.5 text-[10.5px] font-medium text-foreground shadow-sm backdrop-blur sm:text-[11px]"
+                        >
                           {chip}
                         </span>
                       ))}
-                    </div>
-                    <div className="mt-2 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-primary" />
-                      <span className="text-[11px] font-medium text-primary">Junto AI plan</span>
+                      {extraChips > 0 && (
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-white/30 px-2 py-0.5 text-[10.5px] font-medium text-white shadow-sm backdrop-blur sm:text-[11px]">
+                          +{extraChips}
+                        </span>
+                      )}
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
