@@ -7,21 +7,26 @@ import {
   stashPendingPrompt,
 } from "@/components/hero/usePendingPrompt";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
+import {
+  PremiumTripInput,
+  type PremiumInputData,
+} from "@/components/trip-builder/PremiumTripInput";
+import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 
 /**
  * /trips/new — single trip-creation entry point.
  *
- * - Anonymous: full-bleed atmospheric Hero (variant="public"). Submitting
- *   the prompt stashes it and routes to /ref so the user can sign up.
- * - Authenticated: clean in-app Hero (variant="app"). Submitting opens
- *   StandaloneTripBuilder with the prompt prefilled in the free-text
- *   field, where the user can refine and Generate.
+ * Logged-in:
+ *   1. Hero (variant="app") with the prompt pill at the top.
+ *   2. The full canonical step-by-step form (PremiumTripInput) inline
+ *      below — same form used in the template "Personalize" modal.
+ *   3. Sample trips carousel below.
+ *   Submitting either the Hero pill OR the inline form opens
+ *   StandaloneTripBuilder, which owns the confirmation + generation flow.
  *
- * No inline step-by-step form, no "skip the itinerary" path here —
- * StandaloneTripBuilder owns the whole input experience once opened.
- * Templates have their own sticky CTA that opens the same builder
- * with destination locked + defaults applied.
+ * Anonymous: full-bleed atmospheric Hero, prompt is stashed and the
+ * visitor is routed to /ref to sign up.
  */
 export default function PublicTripBuilder() {
   const navigate = useNavigate();
@@ -31,6 +36,9 @@ export default function PublicTripBuilder() {
     return consumePendingPrompt() ?? undefined;
   });
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [inlineSubmission, setInlineSubmission] =
+    useState<PremiumInputData | null>(null);
+  const [blankOpen, setBlankOpen] = useState(false);
 
   // If the user signs in mid-session and there's a stashed prompt, open
   // the builder with it.
@@ -49,11 +57,23 @@ export default function PublicTripBuilder() {
   function handleHeroSubmit(prompt: string) {
     if (user) {
       setPending(prompt);
+      setInlineSubmission(null);
       setBuilderOpen(true);
     } else {
       stashPendingPrompt(prompt);
       navigate("/ref");
     }
+  }
+
+  function handleInlineGenerate(data: PremiumInputData) {
+    setPending(undefined);
+    setInlineSubmission(data);
+    setBuilderOpen(true);
+  }
+
+  function handleBuilderClose() {
+    setBuilderOpen(false);
+    setInlineSubmission(null);
   }
 
   return (
@@ -63,6 +83,19 @@ export default function PublicTripBuilder() {
         prefill={pending}
         variant={user ? "app" : "public"}
       />
+
+      {/* Logged-in users get the canonical step-by-step form inline below
+          the Hero. Same component used inside the template "Personalize"
+          modal — single source of truth for trip-creation inputs. */}
+      {user && (
+        <section className="w-full pt-6 pb-4">
+          <PremiumTripInput
+            onGenerate={handleInlineGenerate}
+            onStartBlank={() => setBlankOpen(true)}
+            hideHero
+          />
+        </section>
+      )}
 
       {/* Sample trips browse — full TripCarousels reuse from landing page. */}
       {user && (
@@ -80,10 +113,13 @@ export default function PublicTripBuilder() {
 
       {builderOpen && user && (
         <StandaloneTripBuilder
-          onClose={() => setBuilderOpen(false)}
+          onClose={handleBuilderClose}
           initialFreeTextPrompt={pending}
+          initialInputData={inlineSubmission ?? undefined}
         />
       )}
+
+      <BlankTripModal open={blankOpen} onOpenChange={setBlankOpen} />
     </div>
   );
 }
