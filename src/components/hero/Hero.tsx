@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, Map, Sparkles, Users } from "lucide-react";
 import { JuntoWordmark } from "./JuntoWordmark";
 import { SAMPLE_TRIPS } from "./sampleTrips";
 
