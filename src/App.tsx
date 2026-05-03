@@ -41,6 +41,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Admin = lazy(() => import("./pages/Admin"));
 const AdminAIErrors = lazy(() => import("./pages/AdminAIErrors"));
+const AdminTemplates = lazy(() => import("./pages/AdminTemplates"));
 const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
 const Landing = lazy(() => import("./pages/Landing"));
