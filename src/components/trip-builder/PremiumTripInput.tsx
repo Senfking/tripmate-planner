@@ -427,12 +427,12 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
             <span className="text-xs text-muted-foreground">Pick up to 3</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {VIBE_OPTIONS.map((opt) => {
-              const selected = vibes.includes(opt.label);
+            {VIBE_OPTIONS.map(({ label, Icon }) => {
+              const selected = vibes.includes(label);
               return (
                 <button
-                  key={opt.label}
-                  onClick={() => toggleVibe(opt.label)}
+                  key={label}
+                  onClick={() => toggleVibe(label)}
                   className={cn(
                     "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.96]",
                     "border",
@@ -442,8 +442,8 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
                   )}
                   style={selected ? { background: "var(--gradient-primary)" } : undefined}
                 >
-                  <span>{opt.emoji}</span>
-                  {opt.label}
+                  <Icon className={cn("h-4 w-4", selected ? "text-primary-foreground" : "text-muted-foreground")} />
+                  {label}
                 </button>
               );
             })}
