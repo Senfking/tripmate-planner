@@ -31,7 +31,7 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
               data-carousel-card="true"
               className="group/card w-[280px] shrink-0 snap-start sm:w-[320px]"
             >
-              <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 [transform:translateZ(0)] [-webkit-backface-visibility:hidden] [backface-visibility:hidden] [-webkit-mask-image:-webkit-radial-gradient(white,black)] hover:[@media(hover:hover)]:-translate-y-0.5 hover:[@media(hover:hover)]:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
+              <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 transform-gpu [backface-visibility:hidden] [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
                 <div className="relative aspect-[3/2] overflow-hidden rounded-t-[1.25rem]">
                   <img
                     src={card.cover_image_url}
