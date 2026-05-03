@@ -100,7 +100,7 @@ export default function TemplateDetail() {
       navigate("/ref");
       return;
     }
-    setPersonalizeOpen(true);
+    navigate(`/templates/${slug}/personalize`);
   }, [slug, user, navigate]);
 
   const pageTitle = template ? `${template.destination} · ${template.duration_days} days` : "";
