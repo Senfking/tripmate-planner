@@ -169,12 +169,6 @@ export default function TemplateDetail() {
   if (template.cached_result) {
     return (
       <>
-        <Helmet>
-          <title>{pageTitle} | Junto</title>
-          <meta name="description" content={pageDescription} />
-          <link rel="canonical" href={`${window.location.origin}/templates/${template.slug}`} />
-        </Helmet>
-
         {/* Slim back nav */}
         <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-border px-4 py-2.5">
           <div className="max-w-6xl mx-auto flex items-center gap-3">
