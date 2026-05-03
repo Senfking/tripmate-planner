@@ -1,12 +1,29 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import type { DateRange } from "react-day-picker";
-import { MapPin, Sparkles, ChevronDown, AlertCircle, ArrowRight, Info } from "lucide-react";
+import {
+  MapPin,
+  Sparkles,
+  AlertCircle,
+  ArrowRight,
+  Info,
+  User,
+  Users,
+  Home,
+  UsersRound,
+  UtensilsCrossed,
+  Landmark,
+  Mountain,
+  Moon,
+  Leaf,
+  Gem,
+  Camera,
+  type LucideIcon,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
 import { cn } from "@/lib/utils";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { BudgetLevel, PaceLevel } from "./useTripBuilderDefaults";
 
 /* ─── Types ───────────────────────────────────────── */
