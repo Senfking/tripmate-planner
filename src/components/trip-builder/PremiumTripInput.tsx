@@ -241,7 +241,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
         <div className="space-y-2">
           <label className="text-[13px] font-semibold text-foreground px-1">Who's going?</label>
           <div className="flex flex-wrap gap-2">
-            {PARTY_OPTIONS.map(({ key, label, Icon }) => {
+            {PARTY_OPTIONS.map(({ key, label, emoji }) => {
               const selected = travelParty === key;
               return (
                 <button
@@ -256,7 +256,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
                   )}
                   style={selected ? { background: "var(--gradient-primary)" } : undefined}
                 >
-                  <Icon className={cn("h-4 w-4", selected ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <span className="text-base leading-none" aria-hidden>{emoji}</span>
                   {label}
                 </button>
               );
@@ -415,7 +415,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
             <span className="text-xs text-muted-foreground">Pick up to 3</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {VIBE_OPTIONS.map(({ label, Icon }) => {
+            {VIBE_OPTIONS.map(({ label, emoji }) => {
               const selected = vibes.includes(label);
               return (
                 <button
@@ -430,7 +430,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
                   )}
                   style={selected ? { background: "var(--gradient-primary)" } : undefined}
                 >
-                  <Icon className={cn("h-4 w-4", selected ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <span className="text-base leading-none" aria-hidden>{emoji}</span>
                   {label}
                 </button>
               );
