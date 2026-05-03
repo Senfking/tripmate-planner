@@ -1,16 +1,33 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Sparkles,
+  CalendarDays,
+  MapPin,
+  Wallet,
+  Users,
+  Clock,
+  Globe2,
+  Coins,
+  CalendarRange,
+  FileText,
+  PiggyBank,
+  CloudSun,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useTripTemplate, type CuratedHighlight } from "@/hooks/useTripTemplates";
 import { stashIntent } from "@/lib/templateIntent";
+import { getCountryFacts } from "@/lib/countryFacts";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 import { Button } from "@/components/ui/button";
+import { HighlightCard } from "@/components/templates/HighlightCard";
 
 function templateToInputData(t: {
   destination: string;
@@ -41,8 +58,6 @@ export default function TemplateDetail() {
   const [cloning, setCloning] = useState(false);
   const [personalizeOpen, setPersonalizeOpen] = useState(false);
 
-  // Auto-open personalize modal when arriving with ?personalize=1 (post-auth
-  // intent drain bounces here). We only trigger once the template is loaded.
   useEffect(() => {
     if (template && user && searchParams.get("personalize") === "1") {
       setPersonalizeOpen(true);
@@ -87,28 +102,7 @@ export default function TemplateDetail() {
     setPersonalizeOpen(true);
   }, [slug, user, navigate]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!template) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Template not found</p>
-          <Link to="/templates" className="text-primary font-medium hover:underline">
-            Browse all templates
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const pageTitle = `${template?.destination ?? ""} · ${template?.duration_days ?? ""} days`;
+  const pageTitle = template ? `${template.destination} · ${template.duration_days} days` : "";
   const pageDescription = template?.description ?? "";
 
   useEffect(() => {
@@ -136,7 +130,7 @@ export default function TemplateDetail() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Template not found</p>
+          <p className="text-gray-600 mb-4">Template not found</p>
           <Link to="/templates" className="text-primary font-medium hover:underline">
             Browse all templates
           </Link>
@@ -145,11 +139,11 @@ export default function TemplateDetail() {
     );
   }
 
-  // (pageTitle / pageDescription already computed above)
+  const ctaLabel = `Build my ${template.destination} itinerary`;
 
   // Sticky bottom action bar (rendered in both states)
   const StickyActions = (
-    <div className="fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
+    <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
       <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-2 sm:justify-end">
         <Button
           variant="outline"
@@ -177,30 +171,30 @@ export default function TemplateDetail() {
     </div>
   );
 
-  // STATE 1: cached result exists — render TripResultsView in readOnly + generic mode
+  // STATE 1: cached result exists
   if (template.cached_result) {
     return (
       <>
-        {/* Slim back nav */}
-        <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-border px-4 py-2.5">
+        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-2.5">
           <div className="max-w-6xl mx-auto flex items-center gap-3">
             <button
               onClick={() => navigate("/templates")}
-              className="text-muted-foreground hover:text-foreground transition"
+              className="text-gray-600 hover:text-gray-900 transition"
               aria-label="Back to templates"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <span className="text-sm font-medium text-muted-foreground truncate">Trip template</span>
+            <span className="text-sm font-medium text-gray-600 truncate">Trip template</span>
           </div>
         </div>
 
         <div className="pb-32">
+          <QuickFactsStrip
+            countryIso={template.country_iso}
+            recommendedSeason={template.recommended_season}
+          />
           {template.curated_highlights && template.curated_highlights.length > 0 && (
-            <CuratedHighlightsSection
-              destination={template.destination}
-              highlights={template.curated_highlights}
-            />
+            <HighlightsSection highlights={template.curated_highlights} />
           )}
           <TripResultsView
             tripId={`template-${template.slug}`}
@@ -212,6 +206,7 @@ export default function TemplateDetail() {
             dateMode="generic"
             readOnly
           />
+          <TravelEssentialsSection />
         </div>
 
         {StickyActions}
@@ -237,33 +232,24 @@ export default function TemplateDetail() {
     );
   }
 
-  // STATE 2: no cache — structured "proof of substance" preview that mirrors
-  // the shape of a real trip page using only honest, derived metadata.
-  const vibes = template.default_vibes?.length ? template.default_vibes : ["Highlights"];
-  const curatedPlaces = Math.ceil(template.duration_days * 2.5);
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-  const dayTheme = (n: number) => `${cap(vibes[(n - 1) % vibes.length])} day`;
-
-  const ctaLabel = `Build my ${template.destination} itinerary`;
-
+  // STATE 2: no cache — premium destination guide preview
   return (
     <>
-      <div className="min-h-screen bg-background pb-32">
-        {/* Slim back nav */}
-        <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-border px-4 py-2.5">
+      <div className="min-h-screen bg-white pb-32">
+        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-2.5">
           <div className="max-w-3xl mx-auto flex items-center gap-3">
             <button
               onClick={() => navigate("/templates")}
-              className="text-muted-foreground hover:text-foreground transition"
+              className="text-gray-600 hover:text-gray-900 transition"
               aria-label="Back to templates"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <span className="text-sm font-medium text-muted-foreground truncate">Trip template</span>
+            <span className="text-sm font-medium text-gray-600 truncate">Trip template</span>
           </div>
         </div>
 
-        {/* Hero banner */}
+        {/* Hero */}
         <div className="relative h-[280px] md:h-[400px]">
           {template.cover_image_url ? (
             <img
@@ -274,10 +260,13 @@ export default function TemplateDetail() {
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/10" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
           <div className="absolute bottom-6 left-5 right-5">
             <div className="max-w-3xl mx-auto">
-              <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight">
+              <h1
+                className="text-3xl md:text-5xl font-semibold text-white leading-tight"
+                style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+              >
                 {template.destination}
               </h1>
               <p className="mt-2 text-white/85 text-sm md:text-base">
@@ -289,7 +278,7 @@ export default function TemplateDetail() {
                   {template.chips.map((chip) => (
                     <span
                       key={chip}
-                      className="inline-flex items-center text-[11px] md:text-xs font-medium px-2.5 py-1 rounded-full bg-white/20 text-white backdrop-blur-sm border border-white/20"
+                      className="inline-flex items-center text-[11px] md:text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 text-white backdrop-blur-md border border-white/20"
                     >
                       {chip}
                     </span>
@@ -300,67 +289,30 @@ export default function TemplateDetail() {
           </div>
         </div>
 
-        {/* "What's inside" section */}
-        <section className="max-w-3xl mx-auto px-5 py-8">
-          <h2 className="text-xl font-semibold text-foreground mb-3">What's inside this trip</h2>
-          <p className="text-base text-muted-foreground leading-relaxed mb-6">
-            {template.description}
-          </p>
+        <QuickFactsStrip
+          countryIso={template.country_iso}
+          recommendedSeason={template.recommended_season}
+        />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-xl border border-border bg-card px-4 py-3">
-              <p className="text-xs text-muted-foreground">Length</p>
-              <p className="text-base font-semibold text-foreground mt-0.5">
-                {template.duration_days} days
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-card px-4 py-3">
-              <p className="text-xs text-muted-foreground">Curated places</p>
-              <p className="text-base font-semibold text-foreground mt-0.5">
-                ~{curatedPlaces} picks
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-card px-4 py-3">
-              <p className="text-xs text-muted-foreground">Format</p>
-              <p className="text-base font-semibold text-foreground mt-0.5">Day-by-day plan</p>
-            </div>
-          </div>
+        {/* Description */}
+        <section className="max-w-3xl mx-auto px-5 pt-2 pb-6">
+          <p className="text-base text-gray-600 leading-relaxed">{template.description}</p>
         </section>
 
-        {/* Highlights — curated, Google-Places-backed venues. Falls back to
-            the generic day-by-day teaser if the backfill hasn't run yet. */}
-        {template.curated_highlights && template.curated_highlights.length > 0 ? (
-          <CuratedHighlightsSection
-            destination={template.destination}
-            highlights={template.curated_highlights}
-          />
-        ) : (
-          <section className="max-w-3xl mx-auto px-5 pb-8">
-            <h2 className="text-xl font-semibold text-foreground mb-4">Your day-by-day plan</h2>
-            <div className="space-y-3">
-              {Array.from({ length: template.duration_days }, (_, i) => i + 1).map((n) => (
-                <div
-                  key={n}
-                  className="rounded-2xl border border-border bg-card px-5 py-4"
-                >
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-bold text-foreground">Day {n}</span>
-                    <span className="text-base font-medium text-foreground/80">
-                      · {dayTheme(n)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Junto AI will pick the best places in {template.destination} for this day
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
+        {/* What you'll get with Junto AI */}
+        <JuntoValueGrid />
+
+        {/* Highlights */}
+        {template.curated_highlights && template.curated_highlights.length > 0 && (
+          <HighlightsSection highlights={template.curated_highlights} />
         )}
+
+        {/* Travel essentials scaffolding */}
+        <TravelEssentialsSection />
       </div>
 
-      {/* Sticky bottom action — single CTA on this state */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
+      {/* Sticky CTA */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
         <div className="max-w-3xl mx-auto flex sm:justify-end">
           <Button
             onClick={handlePersonalize}
@@ -393,45 +345,165 @@ export default function TemplateDetail() {
   );
 }
 
-function CuratedHighlightsSection({
-  destination,
-  highlights,
+/* ───────────────── Sub-sections ───────────────── */
+
+function QuickFactsStrip({
+  countryIso,
+  recommendedSeason,
 }: {
-  destination: string;
-  highlights: CuratedHighlight[];
+  countryIso: string | null;
+  recommendedSeason: string | null;
 }) {
+  const facts = getCountryFacts(countryIso);
+  const items: Array<{ icon: typeof Clock; label: string; value: string }> = [];
+
+  if (recommendedSeason) {
+    items.push({ icon: CalendarRange, label: "Best time", value: recommendedSeason });
+  }
+  if (facts?.currency) {
+    items.push({ icon: Coins, label: "Currency", value: facts.currency });
+  }
+  if (facts?.language) {
+    items.push({ icon: Globe2, label: "Language", value: facts.language });
+  }
+  if (facts?.timezone) {
+    items.push({ icon: Clock, label: "Time zone", value: facts.timezone });
+  }
+
+  if (items.length === 0) return null;
+
   return (
-    <section className="max-w-3xl mx-auto px-5 py-8">
-      <h2 className="text-xl font-semibold text-foreground mb-1">
-        Highlights you'll actually want to do
-      </h2>
-      <p className="text-sm text-muted-foreground mb-5">
-        Hand-picked spots in {destination}, sourced from Google Places.
-      </p>
-      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {highlights.map((h) => (
-          <li
-            key={h.place_id}
-            className="rounded-2xl border border-border bg-card overflow-hidden flex flex-col"
+    <section className="max-w-3xl mx-auto px-5 pt-6">
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none sm:flex-wrap sm:overflow-visible">
+        {items.map(({ icon: Icon, label, value }) => (
+          <div
+            key={label}
+            className="flex items-center gap-2 shrink-0 rounded-full border border-gray-200 bg-white px-3.5 py-2 shadow-sm"
           >
-            <div className="aspect-[16/10] bg-muted overflow-hidden">
-              <img
-                src={h.photo_url}
-                alt={h.name}
-                loading="lazy"
-                className="w-full h-full object-cover"
-              />
+            <Icon className="h-4 w-4 text-primary" />
+            <div className="leading-tight">
+              <p className="text-[10px] uppercase tracking-wide text-gray-500">{label}</p>
+              <p className="text-sm font-medium text-gray-800">{value}</p>
             </div>
-            <div className="px-4 py-3 flex-1 flex flex-col gap-1">
-              <p className="text-base font-semibold text-foreground leading-tight">{h.name}</p>
-              {h.area && (
-                <p className="text-xs text-muted-foreground">{h.area}</p>
-              )}
-              <p className="text-sm text-foreground/80 leading-snug mt-1">{h.description}</p>
-            </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
+    </section>
+  );
+}
+
+function JuntoValueGrid() {
+  const items = [
+    {
+      icon: CalendarDays,
+      title: "Day-by-day itinerary",
+      copy: "A full plan timed to your dates and pace.",
+    },
+    {
+      icon: MapPin,
+      title: "Curated venues & bookings",
+      copy: "Hand-picked stays, food, and activities.",
+    },
+    {
+      icon: Wallet,
+      title: "Group expense splitting",
+      copy: "Track costs and settle up effortlessly.",
+    },
+    {
+      icon: Users,
+      title: "Real-time collaboration",
+      copy: "Plan together, vote, and decide as a group.",
+    },
+  ];
+  return (
+    <section className="max-w-3xl mx-auto px-5 py-6">
+      <h2
+        className="text-xl font-semibold text-gray-900 mb-4"
+        style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+      >
+        What you'll get with Junto AI
+      </h2>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {items.map(({ icon: Icon, title, copy }) => (
+          <div
+            key={title}
+            className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex flex-col gap-2"
+          >
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Icon className="h-5 w-5 text-primary" />
+            </div>
+            <p className="text-sm font-semibold text-gray-900 leading-snug">{title}</p>
+            <p className="text-xs text-gray-600 leading-snug">{copy}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HighlightsSection({ highlights }: { highlights: CuratedHighlight[] }) {
+  return (
+    <section className="max-w-3xl mx-auto px-5 py-6">
+      <h2
+        className="text-xl font-semibold text-gray-900 mb-1"
+        style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+      >
+        Highlights
+      </h2>
+      <p className="text-sm text-gray-600 mb-5 leading-relaxed">
+        A taste of what your itinerary will include. Junto AI builds the full plan around your
+        dates, pace, and group.
+      </p>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        {highlights.map((h) => (
+          <HighlightCard key={h.place_id} highlight={h} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TravelEssentialsSection() {
+  const items = [
+    {
+      icon: FileText,
+      title: "Visa & entry",
+      copy: "Personalized entry requirements based on your nationality.",
+    },
+    {
+      icon: PiggyBank,
+      title: "Budget guide",
+      copy: "Cost breakdown tailored to your travel style and group size.",
+    },
+    {
+      icon: CloudSun,
+      title: "Packing & weather",
+      copy: "Smart packing list and forecast for your travel window.",
+    },
+  ];
+  return (
+    <section className="max-w-3xl mx-auto px-5 py-6">
+      <h2
+        className="text-xl font-semibold text-gray-900 mb-1"
+        style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+      >
+        Travel essentials
+      </h2>
+      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+        Unlocked when you build your trip.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {items.map(({ icon: Icon, title, copy }) => (
+          <div
+            key={title}
+            className="rounded-2xl bg-gray-50 border border-gray-200 p-4 flex flex-col gap-1.5"
+          >
+            <Icon className="h-4 w-4 text-gray-500" />
+            <p className="text-sm font-semibold text-gray-700 leading-snug">{title}</p>
+            <p className="text-xs text-gray-500 leading-snug">{copy}</p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
