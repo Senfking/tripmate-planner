@@ -37,7 +37,6 @@ export default function PublicTripBuilder() {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [blankOpen, setBlankOpen] = useState(false);
   const [stepExpanded, setStepExpanded] = useState(false);
-  const [inlineSeed, setInlineSeed] = useState<Partial<PremiumInputData> | null>(null);
   const [submittedInputData, setSubmittedInputData] = useState<PremiumInputData | null>(null);
   const formAnchorRef = useRef<HTMLDivElement | null>(null);
 
