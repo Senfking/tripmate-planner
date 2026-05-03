@@ -276,30 +276,78 @@ export function Hero({
     </div>
   );
 
-  // ─── APP variant: clean, in-context, no photo ──────────────────────
+  // ─── APP variant: in-app empty-state, mirrors Expenses empty hero ──
   if (isApp) {
+    const features = [
+      {
+        icon: Sparkles,
+        title: "AI-built itineraries",
+        desc: "Junto AI plans your full trip — destinations, days, places, food.",
+      },
+      {
+        icon: Users,
+        title: "Group-friendly",
+        desc: "Plan together. Vote on options. Split expenses fairly.",
+      },
+      {
+        icon: Map,
+        title: "Real places, real prices",
+        desc: "Itineraries use Google Places data — no hallucinated venues.",
+      },
+    ];
+
     return (
-      <section
-        className="relative w-full bg-gray-50 border-b border-gray-100"
-        style={{ minHeight: "min(40vh, 480px)" }}
-      >
-        <div
-          className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-5 sm:px-8 text-center py-10 sm:py-14"
-        >
-          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-gray-900 leading-[1.1]">
-            Plan a new trip
-          </h1>
-          <p className="mt-3 text-base sm:text-lg text-gray-600 max-w-xl leading-relaxed">
-            Describe what you have in mind and Junto AI will build it.
-          </p>
+      <section className="relative w-full bg-gray-50 border-b border-gray-100">
+        <div className="relative z-10 mx-auto w-full max-w-2xl px-5 sm:px-8 py-10 sm:py-14">
+          {/* Hero card — same shell pattern as ExpensesTab empty state */}
+          <div className="relative overflow-hidden rounded-2xl border border-[#0D9488]/15 bg-gradient-to-br from-[#0D9488]/[0.06] via-background to-background p-6">
+            <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#0D9488]/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-[#0D9488]/10 blur-3xl" />
 
-          {formEl}
+            <div className="relative flex flex-col items-center text-center">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-[#0D9488]/25 bg-background/70 backdrop-blur px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#0D9488]">
+                <Sparkles className="h-3 w-3" />
+                Powered by Junto AI
+              </div>
 
+              <h2 className="mt-4 text-[22px] sm:text-[26px] font-semibold tracking-tight text-foreground leading-tight">
+                Plan your next trip,<br />
+                <span className="text-[#0D9488]">Junto AI does the heavy lifting</span>
+              </h2>
+              <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-muted-foreground">
+                Describe what you have in mind — destination, dates, who's coming. Junto AI builds an itinerary in seconds.
+              </p>
+
+              {/* Pill input — primary action */}
+              <div className="w-full">{formEl}</div>
+            </div>
+          </div>
+
+          {/* Feature explainer rows — exact pattern from ExpensesTab */}
+          <ul className="mt-6 space-y-2.5 px-2">
+            {features.map(({ icon: Icon, title, desc }) => (
+              <li
+                key={title}
+                className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/50 p-3"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0D9488]/10">
+                  <Icon className="h-4 w-4 text-[#0D9488]" />
+                </div>
+                <div className="min-w-0 text-left">
+                  <p className="text-[13px] font-semibold text-foreground leading-tight">{title}</p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground leading-snug">{desc}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* OR divider + stacked secondary actions */}
           {secondaryAction && (
-            <div className="mt-4 text-sm text-gray-600">{secondaryAction}</div>
+            <div className="mt-6 flex flex-col items-center">
+              <p className="text-[11.5px] uppercase tracking-[0.14em] text-muted-foreground/60">OR</p>
+              <div className="mt-2 w-full">{secondaryAction}</div>
+            </div>
           )}
-
-          {sampleRow}
         </div>
 
         <style>{`
