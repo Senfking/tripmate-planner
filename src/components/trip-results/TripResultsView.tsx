@@ -732,6 +732,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   endDate={dest.end_date}
                   intro={dest.intro}
                   dayRange={dayRange2}
+                  dateMode={dateMode}
                 />
               </div>
 
