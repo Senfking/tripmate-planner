@@ -84,7 +84,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
   const [vibes, setVibes] = useState<string[]>([]);
   const [vibeWarning, setVibeWarning] = useState(false);
   const [dealBreakers, setDealBreakers] = useState("");
-  const [freeText, setFreeText] = useState("");
+  const [freeText, setFreeText] = useState(initialFreeText ?? "");
   const [moreOpen, setMoreOpen] = useState(false);
   
   const [showErrors, setShowErrors] = useState(false);
