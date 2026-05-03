@@ -115,8 +115,13 @@ export default function Templates() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
             {filtered.map((c) => {
-              const visibleChips = c.chips.slice(0, 2);
+              const visibleCount = 2;
+              const visibleChips = c.chips.slice(0, visibleCount);
               const extraChips = c.chips.length - visibleChips.length;
+              // On mobile we only have ~165px of card width — show 1 chip + overflow.
+              // On sm+ we have room for 2 + overflow.
+              const mobileVisible = c.chips.slice(0, 1);
+              const mobileExtra = c.chips.length - mobileVisible.length;
               return (
                 <Link
                   key={c.slug}
