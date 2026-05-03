@@ -103,9 +103,13 @@ interface Props {
   initialDestination?: string;
   draftPlanId?: string;
   draftResult?: AITripResult;
+  /** Pre-fills the free-text prompt in the builder's input. Used by the
+   *  shared Hero on /trips/new and /. We do NOT auto-submit — the user
+   *  clicks Generate themselves once the field is populated. */
+  initialFreeTextPrompt?: string;
 }
 
-export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult }: Props) {
+export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt }: Props) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
