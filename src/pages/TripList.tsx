@@ -911,8 +911,11 @@ export default function TripList() {
         subtitle={subtitle}
         hasOnlyDrafts={liveTrips.length === 0 && upcomingTrips.length === 0 && noDateTrips.length === 0 && pastTrips.length === 0 && (drafts?.length ?? 0) > 0}
         onJoin={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-        onPlanWithAI={(dest) => { setBuilderInitDest(dest); setShowBuilder(true); }}
-        onPlanStepByStep={() => navigate("/app/trips/new")}
+        onPlanWithAI={(dest) => {
+          const qs = dest ? `?initialDestination=${encodeURIComponent(dest)}` : "";
+          navigate(`/trips/new${qs}`);
+        }}
+        onPlanStepByStep={() => navigate("/trips/new")}
       />
 
 
