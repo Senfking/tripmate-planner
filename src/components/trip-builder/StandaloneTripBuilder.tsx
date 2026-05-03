@@ -101,6 +101,7 @@ type Phase = "input" | "confirming" | "generating" | "opening" | "open-error" | 
 
 interface TemplateContext {
   slug: string;
+  hero_image_url?: string | null;
   defaults: {
     destination: string;
     duration_days: number;
@@ -538,6 +539,10 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
         subtitle: "Tweak any of these to make it yours.",
         hideFreeText: true,
         initialData: initialInputData ?? undefined,
+        templateBadge: {
+          label: `Based on the ${templateContext.defaults.destination} template`,
+          thumbnailUrl: templateContext.hero_image_url ?? null,
+        },
       }
     : ({} as const);
 
