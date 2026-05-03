@@ -322,7 +322,6 @@ export default function TemplateDetail() {
           templateContext={{
             slug: template.slug,
             hero_image_url: template.cover_image_url,
-            slug: template.slug,
             defaults: {
               destination: template.destination,
               duration_days: template.duration_days,
