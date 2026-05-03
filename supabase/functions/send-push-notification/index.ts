@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import webpush from "https://esm.sh/web-push@3.6.7";
-import { isServiceRoleAuthorized } from "./auth.ts";
+import { ensureLegacyJwtLoaded, isServiceRoleAuthorized } from "./auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,8 +54,9 @@ Deno.serve(async (req) => {
   // logged-in user, who could otherwise spam any user UUID with arbitrary
   // titles and bodies. Require the service-role key in Authorization.
   // Mirrors the guard used by check-admin-alerts.
+  await ensureLegacyJwtLoaded();
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  if (!isServiceRoleAuthorized(req.headers.get("Authorization"), serviceRoleKey)) {
+  if (!isServiceRoleAuthorized(req.headers.get("Authorization"))) {
     return new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
