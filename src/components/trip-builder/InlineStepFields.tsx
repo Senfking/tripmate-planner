@@ -1,7 +1,24 @@
 import { useState, useCallback, useRef } from "react";
 import type { DateRange } from "react-day-picker";
-import { MapPin, Sparkles, ArrowRight } from "lucide-react";
+import {
+  MapPin,
+  Sparkles,
+  ArrowRight,
+  User,
+  Users,
+  Home,
+  UsersRound,
+  UtensilsCrossed,
+  Landmark,
+  Mountain,
+  Moon,
+  Leaf,
+  Gem,
+  Camera,
+  type LucideIcon,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { DateRangePicker } from "@/components/decisions/DateRangePicker";
 import { cn } from "@/lib/utils";
 import type { BudgetLevel, PaceLevel } from "./useTripBuilderDefaults";
@@ -9,12 +26,12 @@ import type { PremiumInputData } from "./PremiumTripInput";
 
 type TravelParty = "solo" | "couple" | "friends" | "family" | "group";
 
-const PARTY_OPTIONS: { key: TravelParty; label: string; emoji: string }[] = [
-  { key: "solo", label: "Solo", emoji: "🧑" },
-  { key: "couple", label: "Couple", emoji: "💑" },
-  { key: "friends", label: "Friends", emoji: "👯" },
-  { key: "family", label: "Family", emoji: "👨‍👩‍👧‍👦" },
-  { key: "group", label: "Group", emoji: "👥" },
+const PARTY_OPTIONS: { key: TravelParty; label: string; Icon: LucideIcon }[] = [
+  { key: "solo", label: "Solo", Icon: User },
+  { key: "couple", label: "Couple", Icon: Users },
+  { key: "friends", label: "Friends", Icon: Users },
+  { key: "family", label: "Family", Icon: Home },
+  { key: "group", label: "Group", Icon: UsersRound },
 ];
 
 const BUDGET_OPTIONS: { key: BudgetLevel; label: string; symbol: string }[] = [
@@ -30,15 +47,15 @@ const PACE_OPTIONS: { key: PaceLevel; label: string }[] = [
   { key: "packed", label: "Active" },
 ];
 
-const VIBE_OPTIONS = [
-  { emoji: "🍜", label: "Food" },
-  { emoji: "🏛️", label: "Culture" },
-  { emoji: "⛰️", label: "Adventure" },
-  { emoji: "🧘", label: "Relaxation" },
-  { emoji: "🌙", label: "Nightlife" },
-  { emoji: "🌿", label: "Nature" },
-  { emoji: "💎", label: "Hidden gems" },
-  { emoji: "📸", label: "Photography" },
+const VIBE_OPTIONS: { label: string; Icon: LucideIcon }[] = [
+  { label: "Food", Icon: UtensilsCrossed },
+  { label: "Culture", Icon: Landmark },
+  { label: "Adventure", Icon: Mountain },
+  { label: "Relaxation", Icon: Sparkles },
+  { label: "Nightlife", Icon: Moon },
+  { label: "Nature", Icon: Leaf },
+  { label: "Hidden gems", Icon: Gem },
+  { label: "Photography", Icon: Camera },
 ];
 
 const MAX_VIBES = 3;
@@ -57,6 +74,7 @@ export function InlineStepFields({ onGenerate }: Props) {
   const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | null>(null);
   const [pace, setPace] = useState<PaceLevel | null>(null);
   const [vibes, setVibes] = useState<string[]>([]);
+  const [dealBreakers, setDealBreakers] = useState("");
   const [showErrors, setShowErrors] = useState(false);
 
   const destRef = useRef<HTMLInputElement>(null);
@@ -87,15 +105,22 @@ export function InlineStepFields({ onGenerate }: Props) {
       budgetLevel,
       pace,
       vibes,
-      dealBreakers: "",
+      dealBreakers: dealBreakers.trim(),
       freeText: "",
     });
-  }, [canGenerate, destination, dateRange, travelParty, budgetLevel, pace, vibes, onGenerate]);
+  }, [canGenerate, destination, dateRange, travelParty, budgetLevel, pace, vibes, dealBreakers, onGenerate]);
+
+  // Shared pill styles. Selected pills render with a teal background to
+  // match the rest of the in-app accent system.
+  const pillBase =
+    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all active:scale-[0.96] border";
+  const pillSelected = "text-white border-transparent shadow-sm bg-[#0D9488]";
+  const pillIdle = "bg-card text-foreground border-border hover:border-[#0D9488]/40";
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200 bg-white shadow-sm p-5 space-y-5 animate-fade-in text-left">
+    <div className="w-full rounded-2xl border border-gray-200 bg-white shadow-sm p-4 space-y-3.5 animate-fade-in text-left">
       {/* Destination */}
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <label className="text-[12.5px] font-semibold text-foreground">
           Where to? <span className="text-[#0D9488]">*</span>
         </label>
@@ -121,7 +146,7 @@ export function InlineStepFields({ onGenerate }: Props) {
       </div>
 
       {/* Dates */}
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <label className="text-[12.5px] font-semibold text-foreground">
           When? <span className="text-[#0D9488]">*</span>
         </label>
@@ -134,28 +159,22 @@ export function InlineStepFields({ onGenerate }: Props) {
       </div>
 
       {/* Who's going */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <label className="text-[12.5px] font-semibold text-foreground px-0.5">
           Who's going? <span className="text-muted-foreground font-normal">(optional)</span>
         </label>
         <div className="flex flex-wrap gap-1.5">
-          {PARTY_OPTIONS.map((opt) => {
-            const selected = travelParty === opt.key;
+          {PARTY_OPTIONS.map(({ key, label, Icon }) => {
+            const selected = travelParty === key;
             return (
               <button
-                key={opt.key}
+                key={key}
                 type="button"
-                onClick={() => setTravelParty(selected ? null : opt.key)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all active:scale-[0.96] border",
-                  selected
-                    ? "text-primary-foreground border-transparent shadow-sm"
-                    : "bg-card text-foreground border-border hover:border-primary/40"
-                )}
-                style={selected ? { background: "var(--gradient-primary)" } : undefined}
+                onClick={() => setTravelParty(selected ? null : key)}
+                className={cn(pillBase, selected ? pillSelected : pillIdle)}
               >
-                <span>{opt.emoji}</span>
-                {opt.label}
+                <Icon className={cn("h-4 w-4", selected ? "text-white" : "text-muted-foreground")} />
+                {label}
               </button>
             );
           })}
@@ -163,7 +182,7 @@ export function InlineStepFields({ onGenerate }: Props) {
       </div>
 
       {/* Budget */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <label className="text-[12.5px] font-semibold text-foreground px-0.5">
           Budget <span className="text-muted-foreground font-normal">(optional)</span>
         </label>
@@ -175,15 +194,9 @@ export function InlineStepFields({ onGenerate }: Props) {
                 key={opt.key}
                 type="button"
                 onClick={() => setBudgetLevel(selected ? null : opt.key)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all active:scale-[0.96] border",
-                  selected
-                    ? "text-primary-foreground border-transparent shadow-sm"
-                    : "bg-card text-foreground border-border hover:border-primary/40"
-                )}
-                style={selected ? { background: "var(--gradient-primary)" } : undefined}
+                className={cn(pillBase, selected ? pillSelected : pillIdle)}
               >
-                <span className="font-mono text-[11px] opacity-70">{opt.symbol}</span>
+                <span className={cn("font-mono text-[11px]", selected ? "opacity-90" : "opacity-70")}>{opt.symbol}</span>
                 {opt.label}
               </button>
             );
@@ -192,7 +205,7 @@ export function InlineStepFields({ onGenerate }: Props) {
       </div>
 
       {/* Pace */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <label className="text-[12.5px] font-semibold text-foreground px-0.5">
           Daily pace <span className="text-muted-foreground font-normal">(optional)</span>
         </label>
@@ -204,13 +217,7 @@ export function InlineStepFields({ onGenerate }: Props) {
                 key={opt.key}
                 type="button"
                 onClick={() => setPace(selected ? null : opt.key)}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-[13px] font-medium transition-all active:scale-[0.96] border",
-                  selected
-                    ? "text-primary-foreground border-transparent shadow-sm"
-                    : "bg-card text-foreground border-border hover:border-primary/40"
-                )}
-                style={selected ? { background: "var(--gradient-primary)" } : undefined}
+                className={cn(pillBase, selected ? pillSelected : pillIdle)}
               >
                 {opt.label}
               </button>
@@ -220,7 +227,7 @@ export function InlineStepFields({ onGenerate }: Props) {
       </div>
 
       {/* Vibes */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between px-0.5">
           <label className="text-[12.5px] font-semibold text-foreground">
             Vibes <span className="text-muted-foreground font-normal">(optional)</span>
@@ -228,41 +235,49 @@ export function InlineStepFields({ onGenerate }: Props) {
           <span className="text-[11px] text-muted-foreground">Pick up to 3</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {VIBE_OPTIONS.map((opt) => {
-            const selected = vibes.includes(opt.label);
+          {VIBE_OPTIONS.map(({ label, Icon }) => {
+            const selected = vibes.includes(label);
             return (
               <button
-                key={opt.label}
+                key={label}
                 type="button"
-                onClick={() => toggleVibe(opt.label)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all active:scale-[0.96] border",
-                  selected
-                    ? "text-primary-foreground border-transparent shadow-sm"
-                    : "bg-card text-foreground border-border hover:border-primary/40"
-                )}
-                style={selected ? { background: "var(--gradient-primary)" } : undefined}
+                onClick={() => toggleVibe(label)}
+                className={cn(pillBase, selected ? pillSelected : pillIdle)}
               >
-                <span>{opt.emoji}</span>
-                {opt.label}
+                <Icon className={cn("h-4 w-4", selected ? "text-white" : "text-muted-foreground")} />
+                {label}
               </button>
             );
           })}
         </div>
       </div>
 
+      {/* Anything to avoid (visible by default — restored from PremiumTripInput) */}
+      <div className="space-y-1.5">
+        <label className="text-[12.5px] font-semibold text-foreground px-0.5">
+          Anything to avoid? <span className="text-muted-foreground font-normal">(optional)</span>
+        </label>
+        <Textarea
+          value={dealBreakers}
+          onChange={(e) => setDealBreakers(e.target.value)}
+          placeholder="e.g. no tourist traps, no early mornings, no seafood"
+          rows={2}
+          className="rounded-xl bg-background border-border resize-none text-[14px] placeholder:text-[14px]"
+        />
+      </div>
+
       {/* Generate */}
       <button
         type="button"
         onClick={handleSubmit}
-        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-primary text-white font-semibold text-[15px] shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)] transition-all hover:brightness-110 active:scale-[0.99]"
+        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-primary text-white font-semibold text-[15px] shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)] transition-all hover:brightness-110 active:scale-[0.99] mt-1"
       >
         <Sparkles className="h-4 w-4" />
         Generate my trip
         <ArrowRight className="h-4 w-4" />
       </button>
       {!canGenerate && (
-        <p className="text-[11.5px] text-muted-foreground text-center -mt-2">
+        <p className="text-[11.5px] text-muted-foreground text-center -mt-1.5">
           Add a destination and dates to continue
         </p>
       )}
