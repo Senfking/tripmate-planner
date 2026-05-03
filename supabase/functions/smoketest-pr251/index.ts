@@ -73,14 +73,21 @@ Deno.serve(async () => {
     user_id: TEST_USER_ID, title: "Smoke test", body: "Testing PR #251 end-to-end",
   }));
 
+  // Look up real url + file_path so we exercise the membership guard, not the input validator
+  const { data: nonMemberUrlAtt } = await admin.from("attachments").select("id, url").eq("id", NON_MEMBER_ATTACHMENT_ID).maybeSingle();
+  const { data: nonMemberFileAtt } = await admin.from("attachments").select("id, file_path").eq("id", FILE_ATTACHMENT_NONMEMBER).maybeSingle();
+
   // TEST 3a — fetch-link-preview NON-member (test user not in trip yet)
   results.push(await probe("T3a_linkpreview_nonmember", "fetch-link-preview", userJwt, {
     attachment_id: NON_MEMBER_ATTACHMENT_ID,
+    url: nonMemberUrlAtt?.url ?? "https://example.com",
   }));
 
   // TEST 4a — extract-booking-info NON-member
   results.push(await probe("T4a_extractbooking_nonmember", "extract-booking-info", userJwt, {
     attachment_id: FILE_ATTACHMENT_NONMEMBER,
+    file_path: nonMemberFileAtt?.file_path ?? "fake/path.pdf",
+    file_type: "application/pdf",
   }));
 
   // Now add test user to the trip and re-run member probes
