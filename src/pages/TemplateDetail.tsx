@@ -15,6 +15,7 @@ import {
   FileText,
   PiggyBank,
   CloudSun,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 
