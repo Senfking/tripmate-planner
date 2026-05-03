@@ -499,6 +499,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
             onGenerate={handleInputComplete}
             onStartBlank={handleStartBlank}
             initialDestination={initialDestination}
+            initialFreeText={effectiveInitialFreeText}
           />
         </div>
         <ConfirmationCard
@@ -523,6 +524,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           onGenerate={handleInputComplete}
           onStartBlank={handleStartBlank}
           initialDestination={initialDestination}
+          initialFreeText={effectiveInitialFreeText}
         />
       </div>
       <BlankTripModal open={blankModalOpen} onOpenChange={setBlankModalOpen} />
