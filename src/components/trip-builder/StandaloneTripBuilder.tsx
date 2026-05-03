@@ -529,6 +529,18 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     );
   }
 
+  // Template-aware UI props for the input form. When opened from a template,
+  // we lock destination, swap the title, and hide the free-text shortcut.
+  const templateInputProps = templateContext
+    ? {
+        lockedDestination: true,
+        title: `Personalize your ${templateContext.defaults.destination} trip`,
+        subtitle: "Tweak any of these to make it yours.",
+        hideFreeText: true,
+        initialData: initialInputData ?? undefined,
+      }
+    : ({} as const);
+
   // Confirmation card overlay
   if (phase === "confirming" && inputData) {
     return (
@@ -544,6 +556,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
             onStartBlank={handleStartBlank}
             initialDestination={initialDestination}
             initialFreeText={effectiveInitialFreeText}
+            {...templateInputProps}
           />
         </div>
         <ConfirmationCard
@@ -569,6 +582,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           onStartBlank={handleStartBlank}
           initialDestination={initialDestination}
           initialFreeText={effectiveInitialFreeText}
+          {...templateInputProps}
         />
       </div>
       <BlankTripModal open={blankModalOpen} onOpenChange={setBlankModalOpen} />

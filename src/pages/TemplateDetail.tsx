@@ -15,6 +15,7 @@ import {
   FileText,
   PiggyBank,
   CloudSun,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -171,22 +172,22 @@ export default function TemplateDetail() {
     </div>
   );
 
+  // Floating back button shared between both states.
+  const FloatingBack = (
+    <button
+      onClick={() => navigate("/templates")}
+      className="fixed top-[calc(env(safe-area-inset-top,0px)+12px)] left-4 z-40 inline-flex items-center justify-center h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/20 hover:bg-black/55 transition"
+      aria-label="Back to templates"
+    >
+      <ArrowLeft className="h-5 w-5" />
+    </button>
+  );
+
   // STATE 1: cached result exists
   if (template.cached_result) {
     return (
       <>
-        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-2.5">
-          <div className="max-w-6xl mx-auto flex items-center gap-3">
-            <button
-              onClick={() => navigate("/templates")}
-              className="text-gray-600 hover:text-gray-900 transition"
-              aria-label="Back to templates"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-medium text-gray-600 truncate">Trip template</span>
-          </div>
-        </div>
+        {FloatingBack}
 
         <div className="pb-32">
           <QuickFactsStrip
@@ -235,19 +236,8 @@ export default function TemplateDetail() {
   // STATE 2: no cache — premium destination guide preview
   return (
     <>
+      {FloatingBack}
       <div className="min-h-screen bg-white pb-32">
-        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-2.5">
-          <div className="max-w-3xl mx-auto flex items-center gap-3">
-            <button
-              onClick={() => navigate("/templates")}
-              className="text-gray-600 hover:text-gray-900 transition"
-              aria-label="Back to templates"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-medium text-gray-600 truncate">Trip template</span>
-          </div>
-        </div>
 
         {/* Hero */}
         <div className="relative h-[280px] md:h-[400px]">
@@ -423,17 +413,25 @@ function JuntoValueGrid() {
       >
         What you'll get with Junto AI
       </h2>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {items.map(({ icon: Icon, title, copy }) => (
           <div
             key={title}
-            className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex flex-col gap-2"
+            className="rounded-2xl bg-white shadow-sm p-5 flex items-center gap-4"
           >
-            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Icon className="h-5 w-5 text-primary" />
+            <div
+              className="h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.06))",
+              }}
+            >
+              <Icon className="h-6 w-6 text-primary" />
             </div>
-            <p className="text-sm font-semibold text-gray-900 leading-snug">{title}</p>
-            <p className="text-xs text-gray-600 leading-snug">{copy}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 leading-snug">{title}</p>
+              <p className="text-xs text-gray-600 leading-snug mt-0.5">{copy}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -492,15 +490,20 @@ function TravelEssentialsSection() {
       <p className="text-sm text-gray-600 mb-4 leading-relaxed">
         Unlocked when you build your trip.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {items.map(({ icon: Icon, title, copy }) => (
           <div
             key={title}
-            className="rounded-2xl bg-gray-50 border border-gray-200 p-4 flex flex-col gap-1.5"
+            className="relative rounded-2xl bg-gray-50 p-5 flex items-center gap-4"
           >
-            <Icon className="h-4 w-4 text-gray-500" />
-            <p className="text-sm font-semibold text-gray-700 leading-snug">{title}</p>
-            <p className="text-xs text-gray-500 leading-snug">{copy}</p>
+            <Lock className="absolute top-3 right-3 h-3.5 w-3.5 text-gray-400" />
+            <div className="h-12 w-12 shrink-0 rounded-2xl bg-gray-200/70 flex items-center justify-center">
+              <Icon className="h-5 w-5 text-gray-500" />
+            </div>
+            <div className="min-w-0 pr-5">
+              <p className="text-sm font-semibold text-gray-700 leading-snug">{title}</p>
+              <p className="text-xs text-gray-500 leading-snug mt-0.5">{copy}</p>
+            </div>
           </div>
         ))}
       </div>

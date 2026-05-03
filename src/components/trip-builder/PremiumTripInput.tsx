@@ -39,6 +39,17 @@ type Props = {
    *  builder's textarea. The user still clicks Generate themselves — we
    *  do not auto-submit. */
   initialFreeText?: string;
+  /** Full prefill — vibes/budget/pace/party. Used when opened from a
+   *  template so the user sees their template defaults applied. */
+  initialData?: Partial<PremiumInputData>;
+  /** When true, "Where to?" renders as a static, non-editable label. */
+  lockedDestination?: boolean;
+  /** Override the hero title (default: "Plan your trip"). */
+  title?: string;
+  /** Override the hero subtitle. */
+  subtitle?: string;
+  /** Hide the free-text prompt + "or build step by step" divider. */
+  hideFreeText?: boolean;
 };
 
 /* ─── Constants ───────────────────────────────────── */
@@ -79,19 +90,35 @@ const MAX_VIBES = 3;
 
 /* ─── Component ───────────────────────────────────── */
 
-export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination, initialFreeText }: Props) {
-  const [destination, setDestination] = useState(initialDestination ?? "");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [travelParty, setTravelParty] = useState<TravelParty | null>(null);
-  const [kidsAges, setKidsAges] = useState("");
-  const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | null>(null);
-  const [pace, setPace] = useState<PaceLevel | null>(null);
-  const [vibes, setVibes] = useState<string[]>([]);
+export function PremiumTripInput({
+  onGenerate,
+  onStartBlank,
+  initialDestination,
+  initialFreeText,
+  initialData,
+  lockedDestination,
+  title,
+  subtitle,
+  hideFreeText,
+}: Props) {
+  const [destination, setDestination] = useState(
+    initialData?.destination ?? initialDestination ?? ""
+  );
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(initialData?.dateRange);
+  const [travelParty, setTravelParty] = useState<TravelParty | null>(
+    initialData?.travelParty ?? null
+  );
+  const [kidsAges, setKidsAges] = useState(initialData?.kidsAges ?? "");
+  const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | null>(
+    initialData?.budgetLevel ?? null
+  );
+  const [pace, setPace] = useState<PaceLevel | null>(initialData?.pace ?? null);
+  const [vibes, setVibes] = useState<string[]>(initialData?.vibes ?? []);
   const [vibeWarning, setVibeWarning] = useState(false);
-  const [dealBreakers, setDealBreakers] = useState("");
-  const [freeText, setFreeText] = useState(initialFreeText ?? "");
+  const [dealBreakers, setDealBreakers] = useState(initialData?.dealBreakers ?? "");
+  const [freeText, setFreeText] = useState(initialData?.freeText ?? initialFreeText ?? "");
   // (deal-breakers is now always visible — no collapsible state needed)
-  
+
   const [showErrors, setShowErrors] = useState(false);
   const [paceInfoOpen, setPaceInfoOpen] = useState(false);
 
@@ -147,9 +174,13 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
     });
   }, [destination, dateRange, travelParty, kidsAges, budgetLevel, pace, vibes, dealBreakers, freeText, canGenerate, destMissing, onGenerate]);
 
+  const heroTitle = title ?? "Plan your trip";
+  const heroSubtitle =
+    subtitle ?? "Describe your dream trip — or fill in the form below";
+
   return (
     <div className="w-full max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]">
-      {/* ── Hero with embedded free-text ── */}
+      {/* ── Hero ── */}
       <div className="relative pt-8 pb-6 -mx-4 px-4 mb-5 bg-gradient-to-b from-primary/5 via-primary/[0.02] to-transparent">
         <div className="text-center mb-5">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
@@ -157,36 +188,40 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
             <span className="text-xs font-semibold text-primary tracking-wider uppercase">Junto AI</span>
           </div>
           <h1 className="text-[28px] sm:text-3xl font-bold text-foreground tracking-tight leading-[1.15]">
-            Plan your trip
+            {heroTitle}
           </h1>
           <p className="text-muted-foreground text-sm mt-2 px-2">
-            Describe your dream trip — or fill in the form below
+            {heroSubtitle}
           </p>
         </div>
 
-        <div className="rounded-2xl bg-card/80 backdrop-blur border border-border shadow-sm p-3">
-          <Textarea
-            value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
-            placeholder='e.g. "10 days in Japan with my partner — food, temples, no early mornings"'
-            rows={3}
-            className="rounded-xl bg-background border-border resize-none text-[14px] placeholder:text-[14px] focus-visible:ring-primary/40 focus-visible:ring-offset-0"
-          />
-          {freeText.trim().length > 0 && (
-            <p className="text-[11px] text-primary/80 mt-2 px-1 flex items-center gap-1 animate-fade-in">
-              <Sparkles className="h-3 w-3" />
-              We'll prioritize this over the form below
-            </p>
-          )}
-        </div>
+        {!hideFreeText && (
+          <>
+            <div className="rounded-2xl bg-card/80 backdrop-blur border border-border shadow-sm p-3">
+              <Textarea
+                value={freeText}
+                onChange={(e) => setFreeText(e.target.value)}
+                placeholder='e.g. "10 days in Japan with my partner — food, temples, no early mornings"'
+                rows={3}
+                className="rounded-xl bg-background border-border resize-none text-[14px] placeholder:text-[14px] focus-visible:ring-primary/40 focus-visible:ring-offset-0"
+              />
+              {freeText.trim().length > 0 && (
+                <p className="text-[11px] text-primary/80 mt-2 px-1 flex items-center gap-1 animate-fade-in">
+                  <Sparkles className="h-3 w-3" />
+                  We'll prioritize this over the form below
+                </p>
+              )}
+            </div>
 
-        <div className="flex items-center gap-3 mt-6 px-1">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-            Or build it step by step
-          </span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
+            <div className="flex items-center gap-3 mt-6 px-1">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+                Or build it step by step
+              </span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Required fields card ── */}
@@ -194,26 +229,41 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
         {/* Destination */}
         <div ref={destRef} className="space-y-1.5 scroll-mt-24">
           <label className="text-[13px] font-semibold text-foreground">Where to? *</label>
-          <div className="relative">
-            <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              placeholder="e.g. Bali"
-              className={cn(
-                "h-12 pl-10 rounded-xl bg-background text-[14px] placeholder:text-[14px]",
-                showErrors && destMissing
-                  ? "border-red-300 focus-visible:ring-red-200"
-                  : "border-border"
-              )}
-              aria-invalid={showErrors && destMissing}
-              autoFocus
-            />
-          </div>
+          {lockedDestination ? (
+            <div
+              className="relative h-12 pl-10 pr-3 rounded-xl bg-muted/50 border border-border flex items-center"
+              aria-readonly="true"
+            >
+              <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none" />
+              <span className="text-[14px] font-semibold text-foreground truncate">
+                {destination}
+              </span>
+              <span className="ml-auto text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                From template
+              </span>
+            </div>
+          ) : (
+            <div className="relative">
+              <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder="e.g. Bali"
+                className={cn(
+                  "h-12 pl-10 rounded-xl bg-background text-[14px] placeholder:text-[14px]",
+                  showErrors && destMissing
+                    ? "border-red-300 focus-visible:ring-red-200"
+                    : "border-border"
+                )}
+                aria-invalid={showErrors && destMissing}
+                autoFocus
+              />
+            </div>
+          )}
           {showErrors && destMissing && (
             <p className="text-[12px] text-red-500 pl-1 animate-fade-in">Required</p>
           )}
-          {looksMultiDestination && (
+          {!lockedDestination && looksMultiDestination && (
             <p className="text-[12px] text-muted-foreground pl-1 leading-snug animate-fade-in">
               We currently support single-destination trips. Try one city at a time for best results.
             </p>
