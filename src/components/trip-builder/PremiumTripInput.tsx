@@ -6,18 +6,6 @@ import {
   AlertCircle,
   ArrowRight,
   Info,
-  User,
-  Users,
-  Home,
-  UsersRound,
-  UtensilsCrossed,
-  Landmark,
-  Mountain,
-  Moon,
-  Leaf,
-  Gem,
-  Camera,
-  type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,12 +43,12 @@ type Props = {
 
 /* ─── Constants ───────────────────────────────────── */
 
-const PARTY_OPTIONS: { key: TravelParty; label: string; Icon: LucideIcon }[] = [
-  { key: "solo", label: "Solo", Icon: User },
-  { key: "couple", label: "Couple", Icon: Users },
-  { key: "friends", label: "Friends", Icon: Users },
-  { key: "family", label: "Family", Icon: Home },
-  { key: "group", label: "Group", Icon: UsersRound },
+const PARTY_OPTIONS: { key: TravelParty; label: string; emoji: string }[] = [
+  { key: "solo", label: "Solo", emoji: "🧍" },
+  { key: "couple", label: "Couple", emoji: "💑" },
+  { key: "friends", label: "Friends", emoji: "👯" },
+  { key: "family", label: "Family", emoji: "👨‍👩‍👧" },
+  { key: "group", label: "Group", emoji: "👥" },
 ];
 
 const BUDGET_OPTIONS: { key: BudgetLevel; label: string; symbol: string }[] = [
@@ -76,15 +64,15 @@ const PACE_OPTIONS: { key: PaceLevel; label: string; tag: string; desc: string; 
   { key: "packed", label: "Active", tag: "morning to night", desc: "3 activities + breakfast, lunch, dinner — morning, afternoon, and evening.", intensity: 3 },
 ];
 
-const VIBE_OPTIONS: { label: string; Icon: LucideIcon }[] = [
-  { label: "Food", Icon: UtensilsCrossed },
-  { label: "Culture", Icon: Landmark },
-  { label: "Adventure", Icon: Mountain },
-  { label: "Relaxation", Icon: Sparkles },
-  { label: "Nightlife", Icon: Moon },
-  { label: "Nature", Icon: Leaf },
-  { label: "Hidden gems", Icon: Gem },
-  { label: "Photography", Icon: Camera },
+const VIBE_OPTIONS: { label: string; emoji: string }[] = [
+  { label: "Food", emoji: "🍜" },
+  { label: "Culture", emoji: "🏛️" },
+  { label: "Adventure", emoji: "🥾" },
+  { label: "Relaxation", emoji: "🧘" },
+  { label: "Nightlife", emoji: "🌃" },
+  { label: "Nature", emoji: "🌿" },
+  { label: "Hidden gems", emoji: "💎" },
+  { label: "Photography", emoji: "📸" },
 ];
 
 const MAX_VIBES = 3;
@@ -253,7 +241,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
         <div className="space-y-2">
           <label className="text-[13px] font-semibold text-foreground px-1">Who's going?</label>
           <div className="flex flex-wrap gap-2">
-            {PARTY_OPTIONS.map(({ key, label, Icon }) => {
+            {PARTY_OPTIONS.map(({ key, label, emoji }) => {
               const selected = travelParty === key;
               return (
                 <button
@@ -268,7 +256,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
                   )}
                   style={selected ? { background: "var(--gradient-primary)" } : undefined}
                 >
-                  <Icon className={cn("h-4 w-4", selected ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <span className="text-base leading-none" aria-hidden>{emoji}</span>
                   {label}
                 </button>
               );
@@ -427,7 +415,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
             <span className="text-xs text-muted-foreground">Pick up to 3</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {VIBE_OPTIONS.map(({ label, Icon }) => {
+            {VIBE_OPTIONS.map(({ label, emoji }) => {
               const selected = vibes.includes(label);
               return (
                 <button
@@ -442,7 +430,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
                   )}
                   style={selected ? { background: "var(--gradient-primary)" } : undefined}
                 >
-                  <Icon className={cn("h-4 w-4", selected ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <span className="text-base leading-none" aria-hidden>{emoji}</span>
                   {label}
                 </button>
               );

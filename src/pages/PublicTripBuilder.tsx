@@ -12,6 +12,7 @@ import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
 import { InlineStepFields } from "@/components/trip-builder/InlineStepFields";
 import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 import { SAMPLE_TRIPS } from "@/components/hero/sampleTrips";
+import { SampleTripCard } from "@/components/hero/SampleTripCard";
 
 // Public trip-builder route at /trips/new. Hero on top.
 //
@@ -84,25 +85,21 @@ export default function PublicTripBuilder() {
         type="button"
         onClick={() => setStepMode((v) => !v)}
         aria-expanded={stepMode}
-        className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-foreground/80 hover:text-foreground transition-colors group"
+        className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-200 hover:border-gray-300 px-5 py-2.5 text-sm text-gray-700 hover:text-gray-900 transition-colors shadow-sm"
       >
-        <ListChecks className="h-4 w-4 text-muted-foreground" />
-        <span className="underline-offset-4 group-hover:underline">
-          Or fill in details step by step
-        </span>
+        <ListChecks className="h-4 w-4 text-gray-500" />
+        <span>Plan step by step instead</span>
         <ChevronDown
-          className={`h-4 w-4 text-muted-foreground transition-transform ${stepMode ? "rotate-180" : ""}`}
+          className={`h-4 w-4 text-gray-400 transition-transform ${stepMode ? "rotate-180" : ""}`}
         />
       </button>
       <button
         type="button"
         onClick={() => setBlankOpen(true)}
-        className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-foreground/80 hover:text-foreground transition-colors group"
+        className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-200 hover:border-gray-300 px-5 py-2.5 text-sm text-gray-700 hover:text-gray-900 transition-colors shadow-sm"
       >
-        <FileText className="h-4 w-4 text-muted-foreground" />
-        <span className="underline-offset-4 group-hover:underline">
-          Or start without an itinerary
-        </span>
+        <FileText className="h-4 w-4 text-gray-500" />
+        <span>Skip the itinerary for now</span>
       </button>
 
       {stepMode && (
@@ -133,45 +130,27 @@ export default function PublicTripBuilder() {
         secondaryAction={secondaryAction}
       />
 
-      {/* Sample trips strip (in-app variant only) — shown below the
-          empty-state pattern with a soft top border for separation.
-          Reuses the same data the public landing uses. */}
+      {/* Sample trips strip — uses the SAME large image-led card as the
+          public landing page (full reuse, no app-specific variant). */}
       {user && (
-        <section className="mx-auto w-full max-w-2xl px-5 sm:px-8 pb-12 pt-2">
+        <section className="mx-auto w-full max-w-5xl px-5 sm:px-8 pb-12 pt-2">
           <div className="border-t border-gray-200/70 pt-6">
-            <p className="text-sm text-muted-foreground mb-3 text-center">
+            <p className="text-sm text-muted-foreground mb-4 text-center">
               Or browse a sample trip
             </p>
             <div
               className={[
-                "flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 pb-2",
-                "sm:mx-0 sm:px-0 sm:overflow-visible sm:grid sm:grid-cols-3 sm:gap-3",
+                "flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 pb-2",
+                "sm:mx-0 sm:px-0 sm:overflow-visible sm:grid sm:grid-cols-3 sm:gap-4",
               ].join(" ")}
             >
               {SAMPLE_TRIPS.map((trip) => (
-                <button
+                <div
                   key={trip.id}
-                  type="button"
-                  onClick={() => navigate(`/trips/sample/${trip.id}`)}
-                  className="snap-start shrink-0 sm:shrink flex items-center gap-3 text-left rounded-xl bg-white hover:bg-gray-50 border border-gray-200 px-3 py-2.5 shadow-sm transition-colors min-w-[240px] sm:min-w-0"
+                  className="snap-start shrink-0 w-[260px] sm:w-auto"
                 >
-                  <img
-                    src={trip.image}
-                    alt=""
-                    loading="lazy"
-                    className="h-10 w-10 rounded-full object-cover shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                      {trip.title}
-                    </div>
-                    <div className="mt-0.5">
-                      <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                        {trip.tags[0]}
-                      </span>
-                    </div>
-                  </div>
-                </button>
+                  <SampleTripCard trip={trip} />
+                </div>
               ))}
             </div>
           </div>
