@@ -125,6 +125,21 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   const [pendingNormalized, setPendingNormalized] = useState<AITripResult | null>(null);
   const streaming = useStreamingTripGeneration();
 
+  // Resolve the effective initial free-text prompt exactly once on mount.
+  // Priority: explicit prop (in-page Hero handoff on /trips/new) > stashed
+  // sessionStorage value (cross-nav resume after signup). Consuming the
+  // stash here clears it so subsequent mounts don't keep auto-filling.
+  // We do NOT auto-submit — the user clicks Generate themselves.
+  const effectiveInitialFreeText = useMemo(
+    () => initialFreeTextPrompt ?? consumePendingPrompt() ?? undefined,
+    // Mount-only on purpose. If the host swaps the prop later (e.g. user
+    // submits the Hero a second time on /trips/new), they'll get a new
+    // value via PublicTripBuilder re-rendering with a new key if needed.
+    // For our current flows the mount-only behavior is correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const handleStartBlank = useCallback(() => {
     setBlankModalOpen(true);
   }, []);
