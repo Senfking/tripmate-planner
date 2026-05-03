@@ -39,23 +39,38 @@ export default function Templates() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
           {filtered.map(c => (
             <Link
               key={c.slug}
               to={`/templates/${c.slug}`}
-              className="group rounded-[20px] overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow"
+              className="group/card block"
             >
-              <div className="relative aspect-[4/3] sm:aspect-[3/2] overflow-hidden">
-                <img src={c.img} alt={c.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                <h3 className="absolute bottom-3 left-3 text-white font-bold text-lg drop-shadow-lg">{c.name}</h3>
-              </div>
-              <div className="p-3">
-                <p className="text-[13px] text-[#6b7280]">{c.duration} · {c.vibe}</p>
-                <div className="flex items-center gap-1 mt-1.5">
-                  <Sparkles className="h-3 w-3 text-[#0D9488]" />
-                  <span className="text-[11px] font-medium text-[#0D9488]">Junto AI plan</span>
+              <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
+                <div className="relative aspect-[4/3] sm:aspect-[3/2] overflow-hidden">
+                  <img
+                    src={c.img}
+                    alt={c.name}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-[1.03]"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <h4 className="absolute bottom-3 left-4 right-4 text-base sm:text-xl font-bold text-white drop-shadow-lg">
+                    {c.name} · {c.duration}
+                  </h4>
+                </div>
+                <div className="px-3 py-3 sm:px-4 sm:py-3.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {c.chips.map((chip) => (
+                      <span key={chip} className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-[11px] sm:text-xs text-gray-700">
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    <span className="text-[11px] font-medium text-primary">Junto AI plan</span>
+                  </div>
                 </div>
               </div>
             </Link>
