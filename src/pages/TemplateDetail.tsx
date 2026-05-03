@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useTripTemplate } from "@/hooks/useTripTemplates";
+import { useTripTemplate, type CuratedHighlight } from "@/hooks/useTripTemplates";
 import { stashIntent } from "@/lib/templateIntent";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
@@ -196,6 +196,12 @@ export default function TemplateDetail() {
         </div>
 
         <div className="pb-32">
+          {template.curated_highlights && template.curated_highlights.length > 0 && (
+            <CuratedHighlightsSection
+              destination={template.destination}
+              highlights={template.curated_highlights}
+            />
+          )}
           <TripResultsView
             tripId={`template-${template.slug}`}
             planId={null}
@@ -321,28 +327,36 @@ export default function TemplateDetail() {
           </div>
         </section>
 
-        {/* Day-by-day preview */}
-        <section className="max-w-3xl mx-auto px-5 pb-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Your day-by-day plan</h2>
-          <div className="space-y-3">
-            {Array.from({ length: template.duration_days }, (_, i) => i + 1).map((n) => (
-              <div
-                key={n}
-                className="rounded-2xl border border-border bg-card px-5 py-4"
-              >
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-bold text-foreground">Day {n}</span>
-                  <span className="text-base font-medium text-foreground/80">
-                    · {dayTheme(n)}
-                  </span>
+        {/* Highlights — curated, Google-Places-backed venues. Falls back to
+            the generic day-by-day teaser if the backfill hasn't run yet. */}
+        {template.curated_highlights && template.curated_highlights.length > 0 ? (
+          <CuratedHighlightsSection
+            destination={template.destination}
+            highlights={template.curated_highlights}
+          />
+        ) : (
+          <section className="max-w-3xl mx-auto px-5 pb-8">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Your day-by-day plan</h2>
+            <div className="space-y-3">
+              {Array.from({ length: template.duration_days }, (_, i) => i + 1).map((n) => (
+                <div
+                  key={n}
+                  className="rounded-2xl border border-border bg-card px-5 py-4"
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-bold text-foreground">Day {n}</span>
+                    <span className="text-base font-medium text-foreground/80">
+                      · {dayTheme(n)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Junto AI will pick the best places in {template.destination} for this day
+                  </p>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Junto AI will pick the best places in {template.destination} for this day
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Sticky bottom action — single CTA on this state */}
@@ -376,5 +390,48 @@ export default function TemplateDetail() {
         />
       )}
     </>
+  );
+}
+
+function CuratedHighlightsSection({
+  destination,
+  highlights,
+}: {
+  destination: string;
+  highlights: CuratedHighlight[];
+}) {
+  return (
+    <section className="max-w-3xl mx-auto px-5 py-8">
+      <h2 className="text-xl font-semibold text-foreground mb-1">
+        Highlights you'll actually want to do
+      </h2>
+      <p className="text-sm text-muted-foreground mb-5">
+        Hand-picked spots in {destination}, sourced from Google Places.
+      </p>
+      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {highlights.map((h) => (
+          <li
+            key={h.place_id}
+            className="rounded-2xl border border-border bg-card overflow-hidden flex flex-col"
+          >
+            <div className="aspect-[16/10] bg-muted overflow-hidden">
+              <img
+                src={h.photo_url}
+                alt={h.name}
+                loading="lazy"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="px-4 py-3 flex-1 flex flex-col gap-1">
+              <p className="text-base font-semibold text-foreground leading-tight">{h.name}</p>
+              {h.area && (
+                <p className="text-xs text-muted-foreground">{h.area}</p>
+              )}
+              <p className="text-sm text-foreground/80 leading-snug mt-1">{h.description}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

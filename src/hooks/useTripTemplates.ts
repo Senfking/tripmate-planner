@@ -2,6 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 
+export type CuratedHighlight = {
+  name: string;
+  area: string;
+  description: string;
+  place_id: string;
+  photo_url: string;
+};
+
 export type TripTemplate = {
   slug: string;
   destination: string;
@@ -20,6 +28,7 @@ export type TripTemplate = {
   cached_at: string | null;
   cached_from_trip_id: string | null;
   display_order: number;
+  curated_highlights: CuratedHighlight[] | null;
 };
 
 async function fetchTemplates(): Promise<TripTemplate[]> {
