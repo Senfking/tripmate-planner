@@ -296,24 +296,6 @@ export default function TemplateDetail() {
         </div>
       </div>
 
-      {personalizeOpen && (
-        <StandaloneTripBuilder
-          onClose={() => setPersonalizeOpen(false)}
-          initialInputData={templateToInputData(template)}
-          templateContext={{
-            slug: template.slug,
-            hero_image_url: template.cover_image_url,
-            defaults: {
-              destination: template.destination,
-              duration_days: template.duration_days,
-              vibes: template.default_vibes,
-              pace: template.default_pace,
-              budget_tier: template.default_budget_tier,
-            },
-          }}
-          forceInputFirst
-        />
-      )}
     </>
   );
 }
