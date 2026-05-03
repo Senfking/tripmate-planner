@@ -47,7 +47,10 @@ function buildMonthGrid(monthDate: Date, today: Date): MonthCell[] {
     const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), d);
     cells.push({ date, inPast: isBefore(date, today) });
   }
-  while (cells.length % 7 !== 0) cells.push({ date: null, inPast: false });
+  // Always pad to a fixed 6-row (42-cell) grid so months don't change
+  // height when navigating — prevents the jarring "jump" when the popover
+  // resizes between a 4/5/6-week month.
+  while (cells.length < 42) cells.push({ date: null, inPast: false });
   return cells;
 }
 
@@ -102,7 +105,7 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
           type="button"
           onClick={goPrev}
           aria-label="Previous month"
-          className="h-11 w-11 inline-flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+          className="h-11 w-11 inline-flex items-center justify-center rounded-full hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]/40"
           style={{ color: TEAL }}
         >
           <ChevronLeft className="h-5 w-5" />
@@ -111,7 +114,7 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
         <button
           type="button"
           onClick={() => setYearPickerOpen((v) => !v)}
-          className="min-h-[44px] px-3 rounded-lg text-base font-semibold text-foreground hover:bg-muted transition-colors"
+          className="min-h-[44px] px-3 rounded-lg text-base font-semibold text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]/40"
           aria-label="Select year"
         >
           {format(viewMonth, "MMMM yyyy")}
@@ -121,7 +124,7 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
           type="button"
           onClick={goNext}
           aria-label="Next month"
-          className="h-11 w-11 inline-flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+          className="h-11 w-11 inline-flex items-center justify-center rounded-full hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]/40"
           style={{ color: TEAL }}
         >
           <ChevronRight className="h-5 w-5" />
@@ -129,7 +132,7 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
       </div>
 
       {/* Weekday header */}
-      <div className="grid grid-cols-7 px-3 pb-1">
+      <div className="grid grid-cols-7 px-2 pb-1">
         {WEEKDAYS.map((w, i) => (
           <div
             key={i}
@@ -140,10 +143,13 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
         ))}
       </div>
 
-      {/* Day grid */}
-      <div className="grid grid-cols-7 gap-y-1 px-3 pb-4">
+      {/* Day grid — fixed 6-row height (cells * 44px = 264px) so month
+          navigation never resizes the popover. Side padding trimmed so the
+          range highlight bar meets the calendar's inner edge cleanly. */}
+      <div className="grid grid-cols-7 gap-y-1 px-2 pb-4">
         {cells.map((cell, ci) => {
-          if (!cell.date) return <div key={ci} className="h-11" />;
+          if (!cell.date)
+            return <div key={ci} className="h-11" aria-hidden />;
           const d = cell.date;
           const disabled = cell.inPast;
           const isFrom = from && isSameDay(d, from);
@@ -151,6 +157,12 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
           const isEndpoint = isFrom || isTo;
           const inRange = isInRange(d) && !isEndpoint;
           const singleEndpoint = from && to && isSameDay(from, to);
+          const col = ci % 7;
+          // Round the highlight bar at week boundaries so cross-week
+          // ranges read as a series of clean pills rather than a stripe
+          // that visually clips against the calendar edge.
+          const stripeEdgeRound =
+            col === 0 ? "rounded-l-full" : col === 6 ? "rounded-r-full" : "";
 
           return (
             <button
@@ -159,26 +171,32 @@ function SingleMonthCalendar({ draft, onSelect, warning }: CalendarBodyProps) {
               disabled={disabled}
               onClick={() => !disabled && onSelect(d)}
               className={cn(
-                "relative h-11 flex items-center justify-center text-sm transition-colors",
+                "relative h-11 flex items-center justify-center text-sm transition-colors focus:outline-none",
                 disabled && "text-muted-foreground/40 cursor-not-allowed",
                 !disabled && !isEndpoint && !inRange && "text-foreground"
               )}
             >
               {inRange && (
                 <span
-                  className="absolute inset-y-1 left-0 right-0"
+                  className={cn("absolute inset-y-1 left-0 right-0", stripeEdgeRound)}
                   style={{ background: TEAL_BG_LIGHT }}
                 />
               )}
               {isFrom && to && !singleEndpoint && (
                 <span
-                  className="absolute inset-y-1 left-1/2 right-0"
+                  className={cn(
+                    "absolute inset-y-1 left-1/2 right-0",
+                    col === 6 && "rounded-r-full"
+                  )}
                   style={{ background: TEAL_BG_LIGHT }}
                 />
               )}
               {isTo && from && !singleEndpoint && (
                 <span
-                  className="absolute inset-y-1 left-0 right-1/2"
+                  className={cn(
+                    "absolute inset-y-1 left-0 right-1/2",
+                    col === 0 && "rounded-l-full"
+                  )}
                   style={{ background: TEAL_BG_LIGHT }}
                 />
               )}
