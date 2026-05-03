@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ListChecks, PencilLine } from "lucide-react";
+import { ListChecks, FileText, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
 import {
@@ -9,13 +9,24 @@ import {
 } from "@/components/hero/usePendingPrompt";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
+import { InlineStepFields } from "@/components/trip-builder/InlineStepFields";
+import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 
-// Public trip-builder route at /trips/new. Hero on top; StandaloneTripBuilder
-// (which is itself a fixed-position fullscreen modal) opens as an overlay
-// only when explicitly triggered — either by the secondary "Prefer to fill
-// in details step by step?" link, or by an authed Hero submission.
+// Public trip-builder route at /trips/new. Hero on top.
 //
-// Authed Hero submit: open the modal with the prompt seeded.
+// Authed users get an inline experience: free-text pill above, plus a
+// collapsible "Fill in details step by step" panel that expands beneath
+// the hero card with structured fields (destination, dates, party,
+// budget, pace, vibes). Either-or — when step mode is open and the user
+// has typed in the free-text pill, we show a banner clarifying which
+// input wins.
+//
+// On submit (free-text or inline form), we open StandaloneTripBuilder as
+// the AI generation surface. For inline, we skip its input phase by
+// passing initialInputData so the user goes straight to confirm/generate.
+//
+// "Start without an itinerary" opens BlankTripModal directly.
+//
 // Unauth Hero submit: stash to sessionStorage and route to /ref. After
 // signup, the builder consumes the stashed prompt on mount.
 export default function PublicTripBuilder() {
@@ -27,6 +38,8 @@ export default function PublicTripBuilder() {
   });
   const [builderOpen, setBuilderOpen] = useState(false);
   const [blankOpen, setBlankOpen] = useState(false);
+  const [stepMode, setStepMode] = useState(false);
+  const [inlineData, setInlineData] = useState<PremiumInputData | null>(null);
 
   // If the user signs in mid-session, re-check the stash so we still pick
   // up the prompt. Auto-open the builder if there's a pending prompt.
@@ -44,6 +57,8 @@ export default function PublicTripBuilder() {
 
   function handleHeroSubmit(prompt: string) {
     if (user) {
+      // Free-text wins when the user submits the pill — drop any inline data.
+      setInlineData(null);
       setPending(prompt);
       setBuilderOpen(true);
     } else {
@@ -52,26 +67,50 @@ export default function PublicTripBuilder() {
     }
   }
 
-  // Two stacked secondary links for authed users; single white link
+  function handleInlineGenerate(data: PremiumInputData) {
+    // Inline-form submit wins — drop any free-text prompt that was typed.
+    setPending(undefined);
+    setInlineData(data);
+    setBuilderOpen(true);
+  }
+
+  // Two text-link secondary actions for authed users; single white link
   // (gates to /ref) for the public/atmospheric variant.
   const secondaryAction = user ? (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-center gap-2 w-full max-w-md mx-auto">
+    <div className="flex flex-col items-center gap-2.5 w-full">
       <button
         type="button"
-        onClick={() => setBuilderOpen(true)}
-        className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-[13.5px] font-medium text-foreground shadow-sm transition-all hover:border-foreground/30 hover:bg-muted/40 active:scale-[0.98] flex-1"
+        onClick={() => setStepMode((v) => !v)}
+        aria-expanded={stepMode}
+        className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-foreground/80 hover:text-foreground transition-colors group"
       >
         <ListChecks className="h-4 w-4 text-muted-foreground" />
-        Fill in step by step
+        <span className="underline-offset-4 group-hover:underline">
+          Or fill in details step by step
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform ${stepMode ? "rotate-180" : ""}`}
+        />
       </button>
       <button
         type="button"
         onClick={() => setBlankOpen(true)}
-        className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-[13.5px] font-medium text-foreground shadow-sm transition-all hover:border-foreground/30 hover:bg-muted/40 active:scale-[0.98] flex-1"
+        className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-foreground/80 hover:text-foreground transition-colors group"
       >
-        <PencilLine className="h-4 w-4 text-muted-foreground" />
-        Build it manually
+        <FileText className="h-4 w-4 text-muted-foreground" />
+        <span className="underline-offset-4 group-hover:underline">
+          Or start without an itinerary
+        </span>
       </button>
+
+      {stepMode && (
+        <div className="w-full pt-3 space-y-3">
+          <p className="text-[12px] text-muted-foreground text-center leading-snug">
+            Step-by-step mode is on. The fields below will be used to plan your trip — anything typed in the box above will be ignored.
+          </p>
+          <InlineStepFields onGenerate={handleInlineGenerate} />
+        </div>
+      )}
     </div>
   ) : (
     <button
@@ -94,13 +133,16 @@ export default function PublicTripBuilder() {
 
       {builderOpen && user && (
         <StandaloneTripBuilder
-          onClose={() => setBuilderOpen(false)}
-          initialFreeTextPrompt={pending}
+          onClose={() => {
+            setBuilderOpen(false);
+            setInlineData(null);
+          }}
+          initialFreeTextPrompt={inlineData ? undefined : pending}
+          initialInputData={inlineData ?? undefined}
         />
       )}
 
-      {/* Blank trip path — opened directly from the Hero's "build it
-          manually" link, no intermediary StandaloneTripBuilder needed. */}
+      {/* Blank trip path */}
       {user && (
         <BlankTripModal open={blankOpen} onOpenChange={setBlankOpen} />
       )}
