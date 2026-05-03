@@ -11,6 +11,7 @@ import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripB
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
 import { InlineStepFields } from "@/components/trip-builder/InlineStepFields";
 import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
+import { SAMPLE_TRIPS } from "@/components/hero/sampleTrips";
 
 // Public trip-builder route at /trips/new. Hero on top.
 //
@@ -74,10 +75,11 @@ export default function PublicTripBuilder() {
     setBuilderOpen(true);
   }
 
-  // Two text-link secondary actions for authed users; single white link
-  // (gates to /ref) for the public/atmospheric variant.
+  // Two stacked secondary actions for authed users; single white link
+  // (gates to /ref) for the public/atmospheric variant. The OR divider
+  // above this slot is rendered by the Hero's app-variant card itself.
   const secondaryAction = user ? (
-    <div className="flex flex-col items-center gap-2.5 w-full">
+    <div className="flex flex-col items-center gap-2 w-full">
       <button
         type="button"
         onClick={() => setStepMode((v) => !v)}
@@ -130,6 +132,51 @@ export default function PublicTripBuilder() {
         variant={user ? "app" : "public"}
         secondaryAction={secondaryAction}
       />
+
+      {/* Sample trips strip (in-app variant only) — shown below the
+          empty-state pattern with a soft top border for separation.
+          Reuses the same data the public landing uses. */}
+      {user && (
+        <section className="mx-auto w-full max-w-2xl px-5 sm:px-8 pb-12 pt-2">
+          <div className="border-t border-gray-200/70 pt-6">
+            <p className="text-sm text-muted-foreground mb-3 text-center">
+              Or browse a sample trip
+            </p>
+            <div
+              className={[
+                "flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 pb-2",
+                "sm:mx-0 sm:px-0 sm:overflow-visible sm:grid sm:grid-cols-3 sm:gap-3",
+              ].join(" ")}
+            >
+              {SAMPLE_TRIPS.map((trip) => (
+                <button
+                  key={trip.id}
+                  type="button"
+                  onClick={() => navigate(`/trips/sample/${trip.id}`)}
+                  className="snap-start shrink-0 sm:shrink flex items-center gap-3 text-left rounded-xl bg-white hover:bg-gray-50 border border-gray-200 px-3 py-2.5 shadow-sm transition-colors min-w-[240px] sm:min-w-0"
+                >
+                  <img
+                    src={trip.image}
+                    alt=""
+                    loading="lazy"
+                    className="h-10 w-10 rounded-full object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {trip.title}
+                    </div>
+                    <div className="mt-0.5">
+                      <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                        {trip.tags[0]}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {builderOpen && user && (
         <StandaloneTripBuilder
