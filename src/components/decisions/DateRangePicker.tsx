@@ -47,7 +47,10 @@ function buildMonthGrid(monthDate: Date, today: Date): MonthCell[] {
     const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), d);
     cells.push({ date, inPast: isBefore(date, today) });
   }
-  while (cells.length % 7 !== 0) cells.push({ date: null, inPast: false });
+  // Always pad to a fixed 6-row (42-cell) grid so months don't change
+  // height when navigating — prevents the jarring "jump" when the popover
+  // resizes between a 4/5/6-week month.
+  while (cells.length < 42) cells.push({ date: null, inPast: false });
   return cells;
 }
 
