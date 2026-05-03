@@ -253,12 +253,12 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
         <div className="space-y-2">
           <label className="text-[13px] font-semibold text-foreground px-1">Who's going?</label>
           <div className="flex flex-wrap gap-2">
-            {PARTY_OPTIONS.map((opt) => {
-              const selected = travelParty === opt.key;
+            {PARTY_OPTIONS.map(({ key, label, Icon }) => {
+              const selected = travelParty === key;
               return (
                 <button
-                  key={opt.key}
-                  onClick={() => setTravelParty(selected ? null : opt.key)}
+                  key={key}
+                  onClick={() => setTravelParty(selected ? null : key)}
                   className={cn(
                     "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.96]",
                     "border",
@@ -268,8 +268,8 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
                   )}
                   style={selected ? { background: "var(--gradient-primary)" } : undefined}
                 >
-                  <span>{opt.emoji}</span>
-                  {opt.label}
+                  <Icon className={cn("h-4 w-4", selected ? "text-primary-foreground" : "text-muted-foreground")} />
+                  {label}
                 </button>
               );
             })}
