@@ -15,7 +15,9 @@ import {
   FileText,
   PiggyBank,
   CloudSun,
-  Lock,
+  ExternalLink,
+  Vote,
+  FileArchive,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -123,7 +125,7 @@ export default function TemplateDetail() {
   // Sticky bottom action bar (rendered in both states)
   const StickyActions = (
     <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-2 sm:justify-end">
+      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-2 sm:justify-center">
         <Button
           variant="outline"
           onClick={handlePersonalize}
@@ -185,7 +187,7 @@ export default function TemplateDetail() {
             dateMode="generic"
             readOnly
           />
-          <TravelEssentialsSection />
+          <JuntoValueGrid />
         </div>
 
         {StickyActions}
@@ -250,24 +252,21 @@ export default function TemplateDetail() {
           <p className="text-base text-gray-600 leading-relaxed">{template.description}</p>
         </section>
 
-        {/* What you'll get with Junto AI */}
-        <JuntoValueGrid />
-
-        {/* Highlights */}
+        {/* Highlights — destination-specific hook first */}
         {template.curated_highlights && template.curated_highlights.length > 0 && (
           <HighlightsSection highlights={template.curated_highlights} />
         )}
 
-        {/* Travel essentials scaffolding */}
-        <TravelEssentialsSection />
+        {/* Everything you'll get with Junto AI — product pitch second */}
+        <JuntoValueGrid />
       </div>
 
-      {/* Sticky CTA */}
+      {/* Sticky CTA — centered */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-        <div className="max-w-3xl mx-auto flex sm:justify-end">
+        <div className="max-w-3xl mx-auto flex justify-center">
           <Button
             onClick={handlePersonalize}
-            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto sm:px-6 h-12 text-base font-semibold"
+            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto sm:px-8 h-12 text-base font-semibold"
           >
             <Sparkles className="h-4 w-4 mr-2" />
             {ctaLabel}
@@ -328,40 +327,33 @@ function QuickFactsStrip({
 
 function JuntoValueGrid() {
   const items = [
-    {
-      icon: CalendarDays,
-      title: "Day-by-day itinerary",
-      copy: "A full plan timed to your dates and pace.",
-    },
-    {
-      icon: MapPin,
-      title: "Curated venues & bookings",
-      copy: "Hand-picked stays, food, and activities.",
-    },
-    {
-      icon: Wallet,
-      title: "Group expense splitting",
-      copy: "Track costs and settle up effortlessly.",
-    },
-    {
-      icon: Users,
-      title: "Real-time collaboration",
-      copy: "Plan together, vote, and decide as a group.",
-    },
+    { icon: CalendarDays, title: "Day-by-day itinerary", copy: "A full plan timed to your dates and pace." },
+    { icon: MapPin, title: "Curated venues", copy: "Hand-picked stays, food, and activities." },
+    { icon: ExternalLink, title: "Booking links", copy: "One-tap booking for hotels and experiences." },
+    { icon: Wallet, title: "Group expense splitting", copy: "Track costs and settle up effortlessly." },
+    { icon: Vote, title: "Group decisions & polls", copy: "Vote on options, decide together." },
+    { icon: Users, title: "Real-time collaboration", copy: "Plan together, edit live." },
+    { icon: FileText, title: "Visa & entry", copy: "Personalized entry requirements." },
+    { icon: PiggyBank, title: "Budget guide", copy: "Cost breakdown for your travel style." },
+    { icon: CloudSun, title: "Packing & weather", copy: "Smart list and forecast for your dates." },
+    { icon: FileArchive, title: "Trip docs & receipts", copy: "Keep tickets, confirmations, receipts in one place." },
   ];
   return (
-    <section className="max-w-3xl mx-auto px-5 py-6">
+    <section className="max-w-3xl mx-auto px-5 py-8">
       <h2
-        className="text-xl font-semibold text-gray-900 mb-4"
+        className="text-xl font-semibold text-gray-900 mb-1"
         style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
       >
-        What you'll get with Junto AI
+        Everything you'll get with Junto AI
       </h2>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <p className="text-sm text-gray-600 mb-5 leading-relaxed">
+        From itinerary to settle-up, one tool for the whole trip.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {items.map(({ icon: Icon, title, copy }) => (
           <div
             key={title}
-            className="rounded-2xl bg-white shadow-sm p-5 flex items-center gap-4"
+            className="rounded-2xl bg-white shadow-sm p-5 flex items-center gap-4 transition-shadow hover:shadow-md"
           >
             <div
               className="h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center"
@@ -373,8 +365,13 @@ function JuntoValueGrid() {
               <Icon className="h-6 w-6 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 leading-snug">{title}</p>
-              <p className="text-xs text-gray-600 leading-snug mt-0.5">{copy}</p>
+              <p
+                className="text-sm font-semibold text-gray-900 leading-snug"
+                style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+              >
+                {title}
+              </p>
+              <p className="text-xs text-gray-600 leading-snug mt-0.5 truncate">{copy}</p>
             </div>
           </div>
         ))}
@@ -396,7 +393,7 @@ function HighlightsSection({ highlights }: { highlights: CuratedHighlight[] }) {
         A taste of what your itinerary will include. Junto AI builds the full plan around your
         dates, pace, and group.
       </p>
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {highlights.map((h) => (
           <HighlightCard key={h.place_id} highlight={h} />
         ))}
@@ -405,52 +402,3 @@ function HighlightsSection({ highlights }: { highlights: CuratedHighlight[] }) {
   );
 }
 
-function TravelEssentialsSection() {
-  const items = [
-    {
-      icon: FileText,
-      title: "Visa & entry",
-      copy: "Personalized entry requirements based on your nationality.",
-    },
-    {
-      icon: PiggyBank,
-      title: "Budget guide",
-      copy: "Cost breakdown tailored to your travel style and group size.",
-    },
-    {
-      icon: CloudSun,
-      title: "Packing & weather",
-      copy: "Smart packing list and forecast for your travel window.",
-    },
-  ];
-  return (
-    <section className="max-w-3xl mx-auto px-5 py-6">
-      <h2
-        className="text-xl font-semibold text-gray-900 mb-1"
-        style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
-      >
-        Travel essentials
-      </h2>
-      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-        Unlocked when you build your trip.
-      </p>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {items.map(({ icon: Icon, title, copy }) => (
-          <div
-            key={title}
-            className="relative rounded-2xl bg-gray-50 p-5 flex items-center gap-4"
-          >
-            <Lock className="absolute top-3 right-3 h-3.5 w-3.5 text-gray-400" />
-            <div className="h-12 w-12 shrink-0 rounded-2xl bg-gray-200/70 flex items-center justify-center">
-              <Icon className="h-5 w-5 text-gray-500" />
-            </div>
-            <div className="min-w-0 pr-5">
-              <p className="text-sm font-semibold text-gray-700 leading-snug">{title}</p>
-              <p className="text-xs text-gray-500 leading-snug mt-0.5">{copy}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}

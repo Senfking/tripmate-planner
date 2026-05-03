@@ -50,9 +50,9 @@ const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 // brand-new entries with two reviews, photo-less long tail).
 const MIN_RATING = 4.0;
 const MIN_REVIEWS = 200;
-const TARGET_HIGHLIGHTS = 7;          // 6-8 desired; aim for 7
+const TARGET_HIGHLIGHTS = 8;          // 4-up grid: 2 rows of 4
 const TARGET_ATTRACTIONS = 5;
-const TARGET_RESTAURANTS = TARGET_HIGHLIGHTS - TARGET_ATTRACTIONS; // 2
+const TARGET_RESTAURANTS = TARGET_HIGHLIGHTS - TARGET_ATTRACTIONS; // 3
 
 type TemplateRow = {
   slug: string;
@@ -80,7 +80,25 @@ type Highlight = {
   description: string;
   place_id: string;
   photo_url: string;
+  category: string;
 };
+
+// Map Google Places `types` → human-readable category. The first matching
+// rule wins, so order matters: more specific types come before more generic
+// ones (e.g. "art_gallery" → Museum before "tourist_attraction" → Landmark).
+function deriveCategory(types: string[] | undefined): string {
+  const set = new Set((types ?? []).map((t) => t.toLowerCase()));
+  const has = (...keys: string[]) => keys.some((k) => set.has(k));
+
+  if (has("restaurant", "cafe", "bar", "bakery", "meal_takeaway", "meal_delivery", "food")) return "Restaurant";
+  if (has("museum", "art_gallery")) return "Museum";
+  if (has("market", "supermarket", "shopping_mall", "department_store")) return "Market";
+  if (has("park", "national_park", "natural_feature", "campground", "beach", "zoo", "aquarium", "botanical_garden")) return "Nature";
+  if (has("neighborhood", "sublocality", "locality")) return "Neighborhood";
+  if (has("amusement_park", "stadium", "spa", "night_club")) return "Experience";
+  if (has("tourist_attraction", "landmark", "place_of_worship", "church", "mosque", "hindu_temple", "synagogue", "monument", "historical_landmark", "point_of_interest")) return "Landmark";
+  return "Experience";
+}
 
 type PerTemplateLog = {
   slug: string;
@@ -395,6 +413,7 @@ async function curateOneTemplate(
         description,
         place_id: placeId,
         photo_url: photoUrl,
+        category: deriveCategory(place.types),
       };
 
       // Defense-in-depth assertion: the row's `name` and `place_id` must
