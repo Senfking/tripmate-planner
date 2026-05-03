@@ -235,19 +235,8 @@ export default function TemplateDetail() {
   // STATE 2: no cache — premium destination guide preview
   return (
     <>
+      {FloatingBack}
       <div className="min-h-screen bg-white pb-32">
-        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-2.5">
-          <div className="max-w-3xl mx-auto flex items-center gap-3">
-            <button
-              onClick={() => navigate("/templates")}
-              className="text-gray-600 hover:text-gray-900 transition"
-              aria-label="Back to templates"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-medium text-gray-600 truncate">Trip template</span>
-          </div>
-        </div>
 
         {/* Hero */}
         <div className="relative h-[280px] md:h-[400px]">
