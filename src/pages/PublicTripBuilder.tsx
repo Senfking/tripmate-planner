@@ -142,7 +142,7 @@ export default function PublicTripBuilder() {
               </p>
             </div>
           </div>
-          <TripCarousels />
+          <TripCarousels showHeader={false} />
         </section>
       )}
 
