@@ -137,7 +137,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   const { user } = useAuth();
 
   const [phase, setPhase] = useState<Phase>(
-    draftResult ? "results" : initialInputData ? "confirming" : "input"
+    draftResult ? "results" : initialInputData && !forceInputFirst ? "confirming" : "input"
   );
   const [inputData, setInputData] = useState<PremiumInputData | null>(initialInputData ?? null);
   const [results, setResults] = useState<AITripResult | null>(draftResult ?? null);
