@@ -36,9 +36,21 @@ export default function TemplateDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { template, isLoading } = useTripTemplate(slug);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [cloning, setCloning] = useState(false);
   const [personalizeOpen, setPersonalizeOpen] = useState(false);
+
+  // Auto-open personalize modal when arriving with ?personalize=1 (post-auth
+  // intent drain bounces here). We only trigger once the template is loaded.
+  useEffect(() => {
+    if (template && user && searchParams.get("personalize") === "1") {
+      setPersonalizeOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("personalize");
+      setSearchParams(next, { replace: true });
+    }
+  }, [template, user, searchParams, setSearchParams]);
 
   const handleClone = useCallback(async () => {
     if (!slug) return;
