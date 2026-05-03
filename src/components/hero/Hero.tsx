@@ -355,11 +355,18 @@ export function Hero({
             ))}
           </ul>
 
-          {/* OR divider + stacked secondary actions */}
+          {/* OR divider + stacked secondary actions. Auth-page pattern:
+              centered "OR" chip with horizontal rules on either side. */}
           {secondaryAction && (
-            <div className="mt-6 flex flex-col items-center">
-              <p className="text-[11.5px] uppercase tracking-[0.14em] text-muted-foreground/60">OR</p>
-              <div className="mt-2 w-full">{secondaryAction}</div>
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center gap-3" aria-hidden>
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
+                  OR
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <div className="w-full">{secondaryAction}</div>
             </div>
           )}
         </div>
