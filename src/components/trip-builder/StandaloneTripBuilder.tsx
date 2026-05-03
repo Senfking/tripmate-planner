@@ -108,14 +108,20 @@ interface Props {
    *  shared Hero on /trips/new and /. We do NOT auto-submit — the user
    *  clicks Generate themselves once the field is populated. */
   initialFreeTextPrompt?: string;
+  /** When provided, opens the builder directly into the confirmation
+   *  phase with this data prefilled. Used by the inline step-by-step
+   *  panel on /trips/new so the user doesn't see a separate input page. */
+  initialInputData?: PremiumInputData;
 }
 
-export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt }: Props) {
+export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt, initialInputData }: Props) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [phase, setPhase] = useState<Phase>(draftResult ? "results" : "input");
-  const [inputData, setInputData] = useState<PremiumInputData | null>(null);
+  const [phase, setPhase] = useState<Phase>(
+    draftResult ? "results" : initialInputData ? "confirming" : "input"
+  );
+  const [inputData, setInputData] = useState<PremiumInputData | null>(initialInputData ?? null);
   const [results, setResults] = useState<AITripResult | null>(draftResult ?? null);
   const [savedPlanId, setSavedPlanId] = useState<string | null>(draftPlanId ?? null);
   const [creatingTrip, setCreatingTrip] = useState(false);

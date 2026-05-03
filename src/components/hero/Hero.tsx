@@ -105,13 +105,13 @@ export function Hero({
     ? [
         "relative flex flex-col sm:flex-row sm:items-stretch gap-2 sm:gap-0",
         "rounded-3xl sm:rounded-full bg-white border border-gray-200",
-        "shadow-md p-2 sm:pl-6 sm:pr-1.5 sm:py-1.5 transition-all",
+        "shadow-md p-2 sm:pl-5 sm:pr-1 sm:py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
         "relative flex flex-col sm:flex-row sm:items-stretch gap-2 sm:gap-0",
         "rounded-3xl sm:rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl p-2 sm:pl-6 sm:pr-1.5 sm:py-1.5 transition-all",
+        "shadow-2xl p-2 sm:pl-5 sm:pr-1 sm:py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
@@ -136,7 +136,7 @@ export function Hero({
           }}
           onKeyDown={handleKeyDown}
           disabled={busy}
-          rows={2}
+          rows={1}
           placeholder={
             isApp
               ? "Describe your trip — destination, dates, who's coming"
@@ -146,10 +146,10 @@ export function Hero({
           aria-invalid={!!error}
           className={[
             "block w-full flex-1 resize-none bg-transparent",
-            "px-3 py-2 sm:px-0 sm:py-3.5",
-            "text-[15px] sm:text-base text-gray-900 placeholder:text-gray-500",
+            "px-3 py-2 sm:px-0 sm:py-2.5",
+            "text-[15px] sm:text-[15px] text-gray-900 placeholder:text-gray-500",
             "outline-none",
-            "min-h-[44px] sm:min-h-0 max-h-[160px] overflow-y-auto",
+            "min-h-[44px] sm:min-h-0 max-h-[140px] overflow-y-auto",
             "disabled:opacity-60",
             "text-left sm:text-center leading-snug",
           ].join(" ")}
@@ -161,7 +161,7 @@ export function Hero({
           className={[
             "inline-flex items-center justify-center gap-2",
             "rounded-2xl sm:rounded-full bg-primary text-white font-semibold",
-            "px-5 py-3 sm:px-7 sm:py-3.5 text-sm sm:text-[15px] whitespace-nowrap",
+            "px-5 py-3 sm:px-6 sm:py-2.5 text-sm sm:text-[14px] whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
             "transition-all",
             "hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
