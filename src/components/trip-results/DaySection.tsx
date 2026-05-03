@@ -256,16 +256,18 @@ export function DaySection({
                   <MapIcon className="h-3 w-3" /> View day on map
                 </button>
               )}
-              <button
-                onClick={(e) => { e.stopPropagation(); setEditDayOpen(true); }}
-                className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-              >
-                <PenLine className="h-3 w-3" /> Edit day
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEditDayOpen(true); }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                >
+                  <PenLine className="h-3 w-3" /> Edit day
+                </button>
+              )}
             </div>
 
             {/* Day-level comments */}
-            {planId && (
+            {planId && !readOnly && (
               <div className="px-4 py-3 border-b border-border bg-accent/20">
                 <TripDiscussion
                   planId={planId}
