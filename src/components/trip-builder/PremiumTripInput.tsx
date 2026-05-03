@@ -478,13 +478,10 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
             <button
               type="button"
               onClick={onStartBlank}
-              className="w-full min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl text-[14px] font-semibold transition-colors hover:bg-[#0D9488]/5"
-              style={{ color: "#0D9488" }}
+              className="w-full inline-flex items-center justify-center gap-1 text-[13px] text-muted-foreground hover:text-foreground transition-colors py-1"
             >
-              <span className="underline underline-offset-4 decoration-[#0D9488]/40">
-                Start with a blank trip
-              </span>
-              <ArrowRight className="h-4 w-4" />
+              Or start without an itinerary
+              <ArrowRight className="h-3.5 w-3.5" />
             </button>
           )}
         </div>

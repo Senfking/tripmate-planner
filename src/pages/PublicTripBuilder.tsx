@@ -55,11 +55,16 @@ export default function PublicTripBuilder() {
       <Hero
         onSubmit={handleHeroSubmit}
         prefill={pending}
+        variant={user ? "app" : "public"}
         secondaryAction={
           <button
             type="button"
             onClick={() => setBuilderOpen(true)}
-            className="underline-offset-4 hover:underline text-white/85 hover:text-white transition-colors"
+            className={
+              user
+                ? "underline-offset-4 hover:underline text-gray-600 hover:text-gray-900 transition-colors"
+                : "underline-offset-4 hover:underline text-white/85 hover:text-white transition-colors"
+            }
           >
             Prefer to fill in details step by step?
           </button>

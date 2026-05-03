@@ -1,16 +1,47 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
 import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
+import { FeatureCards } from "@/components/landing/FeatureCards";
+import { TripCarousels } from "@/components/landing/TripCarousel";
 
-// Public landing at /. Hero on top, plus a minimal placeholder marketing
-// strip below — the real marketing sections come in a separate prompt.
-//
-// Submission flow: stash the prompt to sessionStorage and route the user
-// to the right place. Authed users go straight to /trips/new (which
-// consumes the stash on mount). Unauth users go to /ref (existing
-// signup form), which post-signup will land them somewhere from which
-// they can return to /trips/new and pick up where they left off.
+// Scroll-reveal hook (ported from /landing-old). Keeps the dark-section
+// + carousels feeling premium on first scroll without bringing in extra
+// animation libraries.
+function useReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          el.classList.add("landing-visible");
+          io.unobserve(el);
+        }
+      },
+      { threshold: 0.1 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
+function Reveal({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useReveal();
+  return (
+    <div ref={ref} className={`landing-reveal ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+// Public landing at /. Hero (atmospheric photo) on top, then the dark
+// "Get to know Junto" feature/phone-mockup section (FeatureCards), then
+// the destination card carousels (TripCarousels), then footer. Sections
+// are ported as-is from /landing-old per the brief.
 export default function PublicLanding() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -21,23 +52,30 @@ export default function PublicLanding() {
   }
 
   return (
-    <div className="min-h-dvh bg-background">
-      <Hero onSubmit={handleSubmit} />
+    <div className="bg-[#fafaf9] text-[#1a1a1a] min-h-dvh overflow-x-hidden">
+      <Hero onSubmit={handleSubmit} variant="public" />
 
-      {/* Placeholder marketing strip — three feature pills only. Real
-          marketing sections will land in a follow-up prompt. */}
-      <section
-        aria-label="Junto features"
-        className="border-t border-border bg-card/40"
-      >
-        <div className="mx-auto max-w-3xl px-5 sm:px-8 py-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
-          <span className="font-medium">AI trip planning</span>
-          <span aria-hidden className="opacity-40">·</span>
-          <span className="font-medium">Group decisions</span>
-          <span aria-hidden className="opacity-40">·</span>
-          <span className="font-medium">Expense splitting</span>
-        </div>
+      {/* Dark phone-mockup feature section (ported) */}
+      <FeatureCards />
+
+      {/* Destination card carousels (ported) */}
+      <section className="py-20 sm:py-28">
+        <Reveal>
+          <TripCarousels />
+        </Reveal>
       </section>
+
+      {/* Footer (ported) */}
+      <footer className="py-8 px-5 border-t border-[#e5e5e5]">
+        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#9ca3af]">
+          <span className="font-bold tracking-[0.2em] uppercase text-[#1a1a1a] text-xs">Junto</span>
+          <div className="flex items-center gap-6">
+            <Link to="/privacy" className="hover:text-[#1a1a1a] transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-[#1a1a1a] transition-colors">Terms</Link>
+          </div>
+          <span className="text-xs">&copy; {new Date().getFullYear()} Junto</span>
+        </div>
+      </footer>
     </div>
   );
 }
