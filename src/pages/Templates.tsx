@@ -155,18 +155,33 @@ export default function Templates() {
                       {c.destination}
                       <span className="ml-1.5 font-semibold text-white/85">· {c.duration_days}d</span>
                     </h4>
-                    {/* Single row of chips, no wrap, ellipsis-style overflow */}
-                    <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
+                    {/* Single row of chips: 1 visible on mobile, 2 on sm+ — never wraps */}
+                    <div className="mt-2 flex items-center gap-1.5 overflow-hidden sm:hidden">
+                      {mobileVisible.map((chip) => (
+                        <span
+                          key={chip}
+                          className="inline-flex shrink-0 items-center rounded-full bg-white/90 px-2 py-0.5 text-[10.5px] font-medium text-foreground shadow-sm backdrop-blur"
+                        >
+                          {chip}
+                        </span>
+                      ))}
+                      {mobileExtra > 0 && (
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-white/30 px-2 py-0.5 text-[10.5px] font-medium text-white shadow-sm backdrop-blur">
+                          +{mobileExtra}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 hidden items-center gap-1.5 overflow-hidden sm:flex">
                       {visibleChips.map((chip) => (
                         <span
                           key={chip}
-                          className="inline-flex shrink-0 items-center rounded-full bg-white/90 px-2 py-0.5 text-[10.5px] font-medium text-foreground shadow-sm backdrop-blur sm:text-[11px]"
+                          className="inline-flex shrink-0 items-center rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm backdrop-blur"
                         >
                           {chip}
                         </span>
                       ))}
                       {extraChips > 0 && (
-                        <span className="inline-flex shrink-0 items-center rounded-full bg-white/30 px-2 py-0.5 text-[10.5px] font-medium text-white shadow-sm backdrop-blur sm:text-[11px]">
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-white/30 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm backdrop-blur">
                           +{extraChips}
                         </span>
                       )}
