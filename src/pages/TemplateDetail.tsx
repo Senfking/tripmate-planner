@@ -57,16 +57,15 @@ export default function TemplateDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [cloning, setCloning] = useState(false);
-  const [personalizeOpen, setPersonalizeOpen] = useState(false);
 
   useEffect(() => {
-    if (template && user && searchParams.get("personalize") === "1") {
-      setPersonalizeOpen(true);
+    if (template && user && slug && searchParams.get("personalize") === "1") {
       const next = new URLSearchParams(searchParams);
       next.delete("personalize");
       setSearchParams(next, { replace: true });
+      navigate(`/templates/${slug}/personalize`, { replace: true });
     }
-  }, [template, user, searchParams, setSearchParams]);
+  }, [template, user, slug, searchParams, setSearchParams, navigate]);
 
   const handleClone = useCallback(async () => {
     if (!slug) return;
