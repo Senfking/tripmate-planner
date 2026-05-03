@@ -121,7 +121,7 @@ export default function PublicTripBuilder() {
             <div ref={formAnchorRef} className="py-6 scroll-mt-4">
               <PremiumTripInput
                 onGenerate={handleInlineGenerate}
-                initialData={inlineSeed ?? undefined}
+                initialData={undefined}
                 hideHero
                 hideFreeText
                 inline
