@@ -90,19 +90,35 @@ const MAX_VIBES = 3;
 
 /* ─── Component ───────────────────────────────────── */
 
-export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination, initialFreeText }: Props) {
-  const [destination, setDestination] = useState(initialDestination ?? "");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [travelParty, setTravelParty] = useState<TravelParty | null>(null);
-  const [kidsAges, setKidsAges] = useState("");
-  const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | null>(null);
-  const [pace, setPace] = useState<PaceLevel | null>(null);
-  const [vibes, setVibes] = useState<string[]>([]);
+export function PremiumTripInput({
+  onGenerate,
+  onStartBlank,
+  initialDestination,
+  initialFreeText,
+  initialData,
+  lockedDestination,
+  title,
+  subtitle,
+  hideFreeText,
+}: Props) {
+  const [destination, setDestination] = useState(
+    initialData?.destination ?? initialDestination ?? ""
+  );
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(initialData?.dateRange);
+  const [travelParty, setTravelParty] = useState<TravelParty | null>(
+    initialData?.travelParty ?? null
+  );
+  const [kidsAges, setKidsAges] = useState(initialData?.kidsAges ?? "");
+  const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | null>(
+    initialData?.budgetLevel ?? null
+  );
+  const [pace, setPace] = useState<PaceLevel | null>(initialData?.pace ?? null);
+  const [vibes, setVibes] = useState<string[]>(initialData?.vibes ?? []);
   const [vibeWarning, setVibeWarning] = useState(false);
-  const [dealBreakers, setDealBreakers] = useState("");
-  const [freeText, setFreeText] = useState(initialFreeText ?? "");
+  const [dealBreakers, setDealBreakers] = useState(initialData?.dealBreakers ?? "");
+  const [freeText, setFreeText] = useState(initialData?.freeText ?? initialFreeText ?? "");
   // (deal-breakers is now always visible — no collapsible state needed)
-  
+
   const [showErrors, setShowErrors] = useState(false);
   const [paceInfoOpen, setPaceInfoOpen] = useState(false);
 
