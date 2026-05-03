@@ -1803,6 +1803,7 @@ export type Database = {
           value: string
         }[]
       }
+      get_legacy_service_role_jwt: { Args: never; Returns: string }
       get_poll_vote_counts: {
         Args: { _poll_id: string }
         Returns: {

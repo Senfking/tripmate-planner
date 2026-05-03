@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { ensureLegacyJwtLoaded, isServiceRoleAuthorized } from "./auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,9 +25,9 @@ Deno.serve(async (req) => {
   // The frontend feedback path goes through submit-feedback-alert, which
   // applies per-user auth + rate limiting before re-entering this code
   // path internally (out of scope for this gate).
+  await ensureLegacyJwtLoaded();
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const auth = req.headers.get("Authorization") || "";
-  if (auth !== `Bearer ${serviceRoleKey}`) {
+  if (!isServiceRoleAuthorized(req.headers.get("Authorization"))) {
     return new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

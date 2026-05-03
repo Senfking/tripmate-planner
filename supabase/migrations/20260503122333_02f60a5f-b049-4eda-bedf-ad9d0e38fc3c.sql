@@ -1,0 +1,1 @@
+INSERT INTO public._smoketest_results (label, payload) VALUES ('push_auth_run2', public._smoketest_push_auth());
