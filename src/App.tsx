@@ -22,7 +22,7 @@ import AuthCallback from "./pages/AuthCallback";
 
 // Lazy loaded routes
 const TripList = lazy(() => import("./pages/TripList"));
-const TripNew = lazy(() => import("./pages/TripNew"));
+// TripNew (lazy import) removed: /app/trips/new now redirects to /trips/new (PublicTripBuilder).
 const TripOnboarding = lazy(() => import("./pages/TripOnboarding"));
 const TripHome = lazy(() => import("./pages/TripHome"));
 const TripSection = lazy(() => import("./pages/TripSection"));
