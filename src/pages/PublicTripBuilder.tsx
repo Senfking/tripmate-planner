@@ -158,6 +158,4 @@ export default function PublicTripBuilder() {
   );
 }
 
-// Keep the seed setter referenced so future template-style prefills could plug in.
-// (No-op for /trips/new — no template defaults.)
-void [/* inlineSeed unused setter */];
+}
