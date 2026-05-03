@@ -231,10 +231,19 @@ export default function TemplateDetail() {
     );
   }
 
-  // STATE 2: no cache — minimal SEO hero with single CTA
+  // STATE 2: no cache — structured "proof of substance" preview that mirrors
+  // the shape of a real trip page using only honest, derived metadata.
+  const vibes = template.default_vibes?.length ? template.default_vibes : ["Highlights"];
+  const curatedPlaces = Math.ceil(template.duration_days * 2.5);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const dayTheme = (n: number) => `${cap(vibes[(n - 1) % vibes.length])} day`;
+
+  const ctaLabel = `Build my ${template.destination} itinerary`;
+
   return (
     <>
       <div className="min-h-screen bg-background pb-32">
+        {/* Slim back nav */}
         <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-border px-4 py-2.5">
           <div className="max-w-3xl mx-auto flex items-center gap-3">
             <button
@@ -248,40 +257,106 @@ export default function TemplateDetail() {
           </div>
         </div>
 
-        {template.cover_image_url && (
-          <div className="relative h-[240px] sm:h-[320px]">
+        {/* Hero banner */}
+        <div className="relative h-[280px] md:h-[400px]">
+          {template.cover_image_url ? (
             <img
               src={template.cover_image_url}
               alt={template.destination}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            <div className="absolute bottom-5 left-5 right-5 max-w-3xl mx-auto">
-              <h1 className="text-3xl sm:text-4xl font-bold text-white">{pageTitle}</h1>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/10" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute bottom-6 left-5 right-5">
+            <div className="max-w-3xl mx-auto">
+              <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight">
+                {template.destination}
+              </h1>
+              <p className="mt-2 text-white/85 text-sm md:text-base">
+                {template.duration_days} days
+                {template.recommended_season ? ` · ${template.recommended_season}` : ""}
+              </p>
+              {template.chips?.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {template.chips.map((chip) => (
+                    <span
+                      key={chip}
+                      className="inline-flex items-center text-[11px] md:text-xs font-medium px-2.5 py-1 rounded-full bg-white/20 text-white backdrop-blur-sm border border-white/20"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
-        <div className="max-w-3xl mx-auto px-5 py-8">
-          {!template.cover_image_url && (
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">{pageTitle}</h1>
-          )}
-          <p className="text-base text-muted-foreground leading-relaxed mb-8">
+        {/* "What's inside" section */}
+        <section className="max-w-3xl mx-auto px-5 py-8">
+          <h2 className="text-xl font-semibold text-foreground mb-3">What's inside this trip</h2>
+          <p className="text-base text-muted-foreground leading-relaxed mb-6">
             {template.description}
           </p>
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-border bg-card px-4 py-3">
+              <p className="text-xs text-muted-foreground">Length</p>
+              <p className="text-base font-semibold text-foreground mt-0.5">
+                {template.duration_days} days
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-card px-4 py-3">
+              <p className="text-xs text-muted-foreground">Curated places</p>
+              <p className="text-base font-semibold text-foreground mt-0.5">
+                ~{curatedPlaces} picks
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-card px-4 py-3">
+              <p className="text-xs text-muted-foreground">Format</p>
+              <p className="text-base font-semibold text-foreground mt-0.5">Day-by-day plan</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Day-by-day preview */}
+        <section className="max-w-3xl mx-auto px-5 pb-8">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Your day-by-day plan</h2>
+          <div className="space-y-3">
+            {Array.from({ length: template.duration_days }, (_, i) => i + 1).map((n) => (
+              <div
+                key={n}
+                className="rounded-2xl border border-border bg-card px-5 py-4"
+              >
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-foreground">Day {n}</span>
+                  <span className="text-base font-medium text-foreground/80">
+                    · {dayTheme(n)}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Junto AI will pick the best places in {template.destination} for this day
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* Sticky bottom action — single CTA on this state */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
+        <div className="max-w-3xl mx-auto flex sm:justify-end">
           <Button
             onClick={handlePersonalize}
-            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-6"
+            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto sm:px-6 h-12 text-base font-semibold"
           >
             <Sparkles className="h-4 w-4 mr-2" />
-            Build this trip with Junto AI
+            {ctaLabel}
           </Button>
         </div>
       </div>
-
-      {/* Sticky bar with both options also available here */}
-      {StickyActions}
 
       {personalizeOpen && (
         <StandaloneTripBuilder
