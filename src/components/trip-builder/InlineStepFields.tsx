@@ -152,7 +152,7 @@ export function InlineStepFields({ onGenerate }: Props) {
           Who's going? <span className="text-muted-foreground font-normal">(optional)</span>
         </label>
         <div className="flex flex-wrap gap-1.5">
-          {PARTY_OPTIONS.map(({ key, label, Icon }) => {
+          {PARTY_OPTIONS.map(({ key, label, emoji }) => {
             const selected = travelParty === key;
             return (
               <button
@@ -161,7 +161,7 @@ export function InlineStepFields({ onGenerate }: Props) {
                 onClick={() => setTravelParty(selected ? null : key)}
                 className={cn(pillBase, selected ? pillSelected : pillIdle)}
               >
-                <Icon className={cn("h-4 w-4", selected ? "text-white" : "text-muted-foreground")} />
+                <span className="text-base leading-none" aria-hidden>{emoji}</span>
                 {label}
               </button>
             );
@@ -223,7 +223,7 @@ export function InlineStepFields({ onGenerate }: Props) {
           <span className="text-[11px] text-muted-foreground">Pick up to 3</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {VIBE_OPTIONS.map(({ label, Icon }) => {
+          {VIBE_OPTIONS.map(({ label, emoji }) => {
             const selected = vibes.includes(label);
             return (
               <button
@@ -232,7 +232,7 @@ export function InlineStepFields({ onGenerate }: Props) {
                 onClick={() => toggleVibe(label)}
                 className={cn(pillBase, selected ? pillSelected : pillIdle)}
               >
-                <Icon className={cn("h-4 w-4", selected ? "text-white" : "text-muted-foreground")} />
+                <span className="text-base leading-none" aria-hidden>{emoji}</span>
                 {label}
               </button>
             );
