@@ -40,6 +40,12 @@ interface Props {
   /** Per-person cost formatter — when present, ActivityCard renders prices
    *  in user's profile currency primary with destination currency subtitle. */
   costFormatter?: ActivityCostFormatter;
+  /** "calendar" (default) shows a real "MMM d" date; "generic" hides it
+   *  so date-agnostic templates don't render sentinel dates. */
+  dateMode?: "calendar" | "generic";
+  /** When true, hide editing affordances: edit-day, add-activity,
+   *  request-change, remove, and the comments panel. */
+  readOnly?: boolean;
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
