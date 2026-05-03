@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Loader2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
@@ -21,6 +21,7 @@ import {
   buildPartialResult,
   getSkeletonDayNumbers,
 } from "@/hooks/useStreamingTripGeneration";
+import { consumePendingPrompt } from "@/components/hero/usePendingPrompt";
 
 const STAGE_LABELS: Record<string, string> = {
   starting: "Connecting…",
@@ -103,9 +104,13 @@ interface Props {
   initialDestination?: string;
   draftPlanId?: string;
   draftResult?: AITripResult;
+  /** Pre-fills the free-text prompt in the builder's input. Used by the
+   *  shared Hero on /trips/new and /. We do NOT auto-submit — the user
+   *  clicks Generate themselves once the field is populated. */
+  initialFreeTextPrompt?: string;
 }
 
-export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult }: Props) {
+export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt }: Props) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -119,6 +124,21 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
   const [pendingNormalized, setPendingNormalized] = useState<AITripResult | null>(null);
   const streaming = useStreamingTripGeneration();
+
+  // Resolve the effective initial free-text prompt exactly once on mount.
+  // Priority: explicit prop (in-page Hero handoff on /trips/new) > stashed
+  // sessionStorage value (cross-nav resume after signup). Consuming the
+  // stash here clears it so subsequent mounts don't keep auto-filling.
+  // We do NOT auto-submit — the user clicks Generate themselves.
+  const effectiveInitialFreeText = useMemo(
+    () => initialFreeTextPrompt ?? consumePendingPrompt() ?? undefined,
+    // Mount-only on purpose. If the host swaps the prop later (e.g. user
+    // submits the Hero a second time on /trips/new), they'll get a new
+    // value via PublicTripBuilder re-rendering with a new key if needed.
+    // For our current flows the mount-only behavior is correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const handleStartBlank = useCallback(() => {
     setBlankModalOpen(true);
@@ -479,6 +499,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
             onGenerate={handleInputComplete}
             onStartBlank={handleStartBlank}
             initialDestination={initialDestination}
+            initialFreeText={effectiveInitialFreeText}
           />
         </div>
         <ConfirmationCard
@@ -503,6 +524,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           onGenerate={handleInputComplete}
           onStartBlank={handleStartBlank}
           initialDestination={initialDestination}
+          initialFreeText={effectiveInitialFreeText}
         />
       </div>
       <BlankTripModal open={blankModalOpen} onOpenChange={setBlankModalOpen} />

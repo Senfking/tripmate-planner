@@ -29,6 +29,11 @@ type Props = {
   onGenerate: (data: PremiumInputData) => void;
   onStartBlank?: () => void;
   initialDestination?: string;
+  /** Pre-fills the free-text prompt field. Used by the Hero handoff so a
+   *  prompt typed on the landing or trip-builder hero pre-populates the
+   *  builder's textarea. The user still clicks Generate themselves — we
+   *  do not auto-submit. */
+  initialFreeText?: string;
 };
 
 /* ─── Constants ───────────────────────────────────── */
@@ -69,7 +74,7 @@ const MAX_VIBES = 3;
 
 /* ─── Component ───────────────────────────────────── */
 
-export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination }: Props) {
+export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination, initialFreeText }: Props) {
   const [destination, setDestination] = useState(initialDestination ?? "");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [travelParty, setTravelParty] = useState<TravelParty | null>(null);
@@ -79,7 +84,7 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination 
   const [vibes, setVibes] = useState<string[]>([]);
   const [vibeWarning, setVibeWarning] = useState(false);
   const [dealBreakers, setDealBreakers] = useState("");
-  const [freeText, setFreeText] = useState("");
+  const [freeText, setFreeText] = useState(initialFreeText ?? "");
   const [moreOpen, setMoreOpen] = useState(false);
   
   const [showErrors, setShowErrors] = useState(false);

@@ -22,7 +22,7 @@ import AuthCallback from "./pages/AuthCallback";
 
 // Lazy loaded routes
 const TripList = lazy(() => import("./pages/TripList"));
-const TripNew = lazy(() => import("./pages/TripNew"));
+// TripNew (lazy import) removed: /app/trips/new now redirects to /trips/new (PublicTripBuilder).
 const TripOnboarding = lazy(() => import("./pages/TripOnboarding"));
 const TripHome = lazy(() => import("./pages/TripHome"));
 const TripSection = lazy(() => import("./pages/TripSection"));
@@ -44,6 +44,8 @@ const AdminAIErrors = lazy(() => import("./pages/AdminAIErrors"));
 const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
 const Landing = lazy(() => import("./pages/Landing"));
+const PublicLanding = lazy(() => import("./pages/PublicLanding"));
+const PublicTripBuilder = lazy(() => import("./pages/PublicTripBuilder"));
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
@@ -208,6 +210,9 @@ function AppInner() {
             <Route path="/templates" element={<Templates />} />
             <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
+
+            {/* Public Hero-led pages (PR: shared Hero) */}
+            <Route path="/trips/new" element={<PublicTripBuilder />} />
             
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
@@ -215,7 +220,7 @@ function AppInner() {
               <Route path="/app/admin/ai-errors" element={<AdminAIErrors />} />
               <Route element={<AppLayout />}>
                 <Route path="/app/trips" element={<TripList />} />
-                <Route path="/app/trips/new" element={<TripNew />} />
+                <Route path="/app/trips/new" element={<Navigate to="/trips/new" replace />} />
                 <Route path="/app/trips/:tripId" element={<TripHome />} />
                 <Route path="/app/trips/:tripId/onboarding" element={<TripOnboarding />} />
                 <Route path="/app/trips/:tripId/ai-plan/:planId" element={<AIPlan />} />
@@ -232,6 +237,7 @@ function AppInner() {
             <Route path="/" element={<RootRoute />} />
             <Route path="/app" element={<Navigate to="/app/trips" replace />} />
             <Route path="/trips" element={<Navigate to="/app/trips" replace />} />
+            <Route path="/landing-old" element={<Landing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
@@ -246,8 +252,8 @@ function RootRoute() {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
   if (user) return <Navigate to="/app/trips" replace />;
-  // Landing page not ready — send unauthenticated users to /ref for now.
-  return <Navigate to="/ref" replace />;
+  // Unauthenticated visitors land on the Hero-led public landing.
+  return <PublicLanding />;
 }
 
 function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
