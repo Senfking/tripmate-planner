@@ -252,24 +252,21 @@ export default function TemplateDetail() {
           <p className="text-base text-gray-600 leading-relaxed">{template.description}</p>
         </section>
 
-        {/* What you'll get with Junto AI */}
-        <JuntoValueGrid />
-
-        {/* Highlights */}
+        {/* Highlights — destination-specific hook first */}
         {template.curated_highlights && template.curated_highlights.length > 0 && (
           <HighlightsSection highlights={template.curated_highlights} />
         )}
 
-        {/* Travel essentials scaffolding */}
-        <TravelEssentialsSection />
+        {/* Everything you'll get with Junto AI — product pitch second */}
+        <JuntoValueGrid />
       </div>
 
-      {/* Sticky CTA */}
+      {/* Sticky CTA — centered */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-        <div className="max-w-3xl mx-auto flex sm:justify-end">
+        <div className="max-w-3xl mx-auto flex justify-center">
           <Button
             onClick={handlePersonalize}
-            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto sm:px-6 h-12 text-base font-semibold"
+            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto sm:px-8 h-12 text-base font-semibold"
           >
             <Sparkles className="h-4 w-4 mr-2" />
             {ctaLabel}
