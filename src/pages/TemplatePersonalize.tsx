@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
@@ -8,7 +8,7 @@ import { stashIntent } from "@/lib/templateIntent";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
 import { TripCreationSurface } from "@/components/trip-builder/TripCreationSurface";
-import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
+import { PremiumTripInput, type PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 
 function templateToInputData(
   t: {
@@ -33,11 +33,10 @@ function templateToInputData(
 }
 
 /**
- * /templates/:slug/personalize — context B for the unified
- * TripCreationSurface. Hosts a destination-locked hero + the same two
- * text CTAs as /trips/new. The detailed step-by-step modal is reused
- * (StandaloneTripBuilder); BlankTripModal is reused with destination
- * pre-filled.
+ * /templates/:slug/personalize — looks like /trips/new (same hero, same
+ * CTAs) but with a full-image template card next to the hero on desktop.
+ * Step-by-step expands the form INLINE below the hero (destination
+ * locked + vibes pre-selected). Skip-itinerary opens BlankTripModal.
  */
 export default function TemplatePersonalize() {
   const { slug } = useParams<{ slug: string }>();
@@ -46,17 +45,20 @@ export default function TemplatePersonalize() {
   const { template, isLoading } = useTripTemplate(slug);
 
   const [builderOpen, setBuilderOpen] = useState(false);
-  const [builderFreeText, setBuilderFreeText] = useState("");
+  const [submittedInputData, setSubmittedInputData] = useState<PremiumInputData | null>(null);
+  const [submittedFreeText, setSubmittedFreeText] = useState("");
   const [blankOpen, setBlankOpen] = useState(false);
+  const [stepExpanded, setStepExpanded] = useState(false);
+  const formAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const close = useCallback(() => {
     if (slug) navigate(`/templates/${slug}`);
     else navigate("/templates");
   }, [navigate, slug]);
 
-  const initialData = useMemo(
-    () => (template ? templateToInputData(template, builderFreeText) : null),
-    [template, builderFreeText],
+  const seedData = useMemo(
+    () => (template ? templateToInputData(template, "") : null),
+    [template],
   );
 
   if (isLoading) {
@@ -92,14 +94,23 @@ export default function TemplatePersonalize() {
 
   function handleFreeTextSubmit(prompt: string) {
     if (!handleAuthGuard()) return;
-    setBuilderFreeText(prompt);
+    setSubmittedFreeText(prompt);
+    // Hand off to StandaloneTripBuilder with template defaults + free text.
+    setSubmittedInputData(seedData ? { ...seedData, freeText: prompt } : null);
     setBuilderOpen(true);
   }
 
   function handleStepByStep() {
     if (!handleAuthGuard()) return;
-    setBuilderFreeText("");
-    setBuilderOpen(true);
+    setStepExpanded((v) => {
+      const next = !v;
+      if (next) {
+        window.requestAnimationFrame(() => {
+          formAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+      return next;
+    });
   }
 
   function handleSkipItinerary() {
@@ -107,25 +118,39 @@ export default function TemplatePersonalize() {
     setBlankOpen(true);
   }
 
+  function handleInlineGenerate(data: PremiumInputData) {
+    setSubmittedInputData(data);
+    setBuilderOpen(true);
+  }
+
+  function handleBuilderClose() {
+    setBuilderOpen(false);
+    setSubmittedInputData(null);
+    setSubmittedFreeText("");
+  }
+
+  // Full-image template card (replaces the small horizontal banner).
   const templateCard = (
-    <div className="mb-5 rounded-2xl bg-white border border-gray-100 shadow-sm p-3 flex items-center gap-3">
+    <div className="relative h-full min-h-[260px] overflow-hidden rounded-2xl bg-gray-900 shadow-sm md:min-h-[420px]">
       {template.cover_image_url ? (
         <img
           src={template.cover_image_url}
-          alt=""
-          className="h-16 w-16 rounded-xl object-cover shrink-0"
+          alt={template.destination}
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="eager"
         />
       ) : (
-        <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 shrink-0" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-primary/10" />
       )}
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0D9488]">
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 text-white">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/80">
           From template
         </p>
-        <p className="text-[15px] font-semibold text-foreground truncate">
+        <h3 className="mt-1 text-[26px] sm:text-[32px] font-semibold leading-tight tracking-tight">
           {template.destination}
-        </p>
-        <p className="text-[12.5px] text-muted-foreground truncate">
+        </h3>
+        <p className="mt-1 text-[13px] text-white/85">
           {template.duration_days} days
           {template.recommended_season ? ` · ${template.recommended_season}` : ""}
         </p>
@@ -158,12 +183,28 @@ export default function TemplatePersonalize() {
         onFreeTextSubmit={handleFreeTextSubmit}
         onStepByStep={handleStepByStep}
         onSkipItinerary={handleSkipItinerary}
+        stepByStepExpanded={stepExpanded}
+        expandedSlot={
+          stepExpanded && seedData ? (
+            <div ref={formAnchorRef} className="py-6 scroll-mt-4">
+              <PremiumTripInput
+                onGenerate={handleInlineGenerate}
+                initialData={seedData}
+                lockedDestination
+                hideHero
+                hideFreeText
+                inline
+              />
+            </div>
+          ) : null
+        }
       />
 
-      {builderOpen && initialData && (
+      {builderOpen && submittedInputData && (
         <StandaloneTripBuilder
-          onClose={() => setBuilderOpen(false)}
-          initialInputData={initialData}
+          onClose={handleBuilderClose}
+          initialInputData={submittedInputData}
+          initialFreeTextPrompt={submittedFreeText || undefined}
           templateContext={{
             slug: template.slug,
             hero_image_url: template.cover_image_url,
@@ -175,7 +216,6 @@ export default function TemplatePersonalize() {
               budget_tier: template.default_budget_tier,
             },
           }}
-          forceInputFirst
         />
       )}
 
