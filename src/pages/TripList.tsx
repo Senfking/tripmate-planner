@@ -488,6 +488,37 @@ export default function TripList() {
   const [showBuilder, setShowBuilder] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [builderInitDest, setBuilderInitDest] = useState("");
+
+  // Post-auth template intent drain. If a visitor clicked "Use this trip" or
+  // "Personalize for me" on a template while signed out, we stashed the
+  // intent in sessionStorage and bounced them through /ref. On first
+  // authenticated render here, drain it and execute the action.
+  const intentHandled = useRef(false);
+  useEffect(() => {
+    if (!user || intentHandled.current) return;
+    import("@/lib/templateIntent").then(async ({ drainIntent }) => {
+      const intent = drainIntent();
+      if (!intent) return;
+      intentHandled.current = true;
+      if (intent.action === "clone") {
+        try {
+          const { data, error } = await (supabase as any).rpc("clone_template_to_user_trip", {
+            _slug: intent.slug,
+          });
+          if (error) throw error;
+          const tripId = (data as any)?.trip_id ?? data;
+          if (!tripId) throw new Error("Clone returned no trip_id");
+          toast.success("Trip created — adjust dates anytime in trip settings");
+          navigate(`/app/trips/${tripId}`, { replace: true });
+        } catch (err: any) {
+          console.error("[TripList] post-auth clone failed", err);
+          toast.error(err?.message || "Couldn't create your trip.");
+        }
+      } else if (intent.action === "personalize") {
+        navigate(`/templates/${intent.slug}?personalize=1`, { replace: true });
+      }
+    });
+  }, [user, navigate]);
   // (PR #237) Drafts now live as trips with status='draft'; tapping a draft
   // card navigates to /app/trips/:id where TripHome branches into the
   // results-style draft view. No in-memory resume state needed anymore.
