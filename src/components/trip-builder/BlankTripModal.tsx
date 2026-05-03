@@ -74,10 +74,10 @@ export function BlankTripModal({ open, onOpenChange }: Props) {
   }, [user, canSubmit, hasName, name, destination, dateRange, navigate, onOpenChange]);
 
   return (
-    <ResponsiveModal open={open} onOpenChange={onOpenChange} title="Create a blank trip">
+    <ResponsiveModal open={open} onOpenChange={onOpenChange} title="Start without an itinerary">
       <div className="space-y-4 pt-1">
         <p className="text-[13px] text-muted-foreground -mt-1">
-          Create a trip you'll fill in as you go — just a name to start.
+          Create an empty trip you'll fill in manually — add days, places, and details as you go.
         </p>
 
         <div className="space-y-1.5">
