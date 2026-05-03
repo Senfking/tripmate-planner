@@ -211,8 +211,10 @@ function AppInner() {
             <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
 
-            {/* Public Hero-led pages (PR: shared Hero) */}
-            <Route path="/trips/new" element={<PublicTripBuilder />} />
+            {/* /trips/new is reachable by everyone, but logged-in visitors
+                see it wrapped in the app shell so the sidebar/header stay
+                consistent with the rest of the authenticated app. */}
+            <Route path="/trips/new" element={<TripsNewRoute />} />
             
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
