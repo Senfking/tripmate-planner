@@ -450,28 +450,6 @@ export function PremiumTripInput({
                   style={selected ? { background: "var(--gradient-primary)" } : undefined}
                   title={opt.tag}
                 >
-                  <span className="flex items-end gap-0.5" aria-hidden="true">
-                    {[1, 2, 3].map((i) => {
-                      const active = i <= opt.intensity;
-                      const heights = ["h-1.5", "h-2.5", "h-3.5"];
-                      return (
-                        <span
-                          key={i}
-                          className={cn(
-                            "w-1 rounded-full",
-                            heights[i - 1],
-                            active
-                              ? selected
-                                ? "bg-primary-foreground"
-                                : "bg-primary"
-                              : selected
-                              ? "bg-primary-foreground/30"
-                              : "bg-muted-foreground/30"
-                          )}
-                        />
-                      );
-                    })}
-                  </span>
                   <span className="text-base leading-none" aria-hidden>{opt.emoji}</span>
                   {opt.label}
                 </button>
