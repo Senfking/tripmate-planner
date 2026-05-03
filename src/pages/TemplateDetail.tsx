@@ -218,6 +218,8 @@ export default function TemplateDetail() {
             initialInputData={templateToInputData(template)}
             templateContext={{
               slug: template.slug,
+              hero_image_url: template.cover_image_url,
+              slug: template.slug,
               defaults: {
                 destination: template.destination,
                 duration_days: template.duration_days,
@@ -319,6 +321,8 @@ export default function TemplateDetail() {
           onClose={() => setPersonalizeOpen(false)}
           initialInputData={templateToInputData(template)}
           templateContext={{
+            slug: template.slug,
+            hero_image_url: template.cover_image_url,
             slug: template.slug,
             defaults: {
               destination: template.destination,
