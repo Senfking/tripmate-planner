@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import webpush from "https://esm.sh/web-push@3.6.7";
+import { isServiceRoleAuthorized } from "./auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,6 +47,21 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Defense-in-depth: this function is only ever invoked by DB triggers
+  // (see notify_trip_members_push in
+  // supabase/migrations/20260404100000_push_notification_triggers.sql) and
+  // by other server-side callers. It must never be reachable to a regular
+  // logged-in user, who could otherwise spam any user UUID with arbitrary
+  // titles and bodies. Require the service-role key in Authorization.
+  // Mirrors the guard used by check-admin-alerts.
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  if (!isServiceRoleAuthorized(req.headers.get("Authorization"), serviceRoleKey)) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const { user_id, title, body, url } = await req.json();
 
@@ -57,7 +73,6 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const vapidPublic = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivate = Deno.env.get("VAPID_PRIVATE_KEY")!;
     const vapidSubject = Deno.env.get("VAPID_SUBJECT")!;

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkTripMembership } from "./authz.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,6 +76,17 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // Authorization: caller must belong to the trip that owns this attachment.
+    // Done before downloading from storage so a non-member can't read arbitrary
+    // file_path values.
+    const authzResult = await checkTripMembership(supabaseAdmin, attachment_id, authUser.id);
+    if (!authzResult.ok) {
+      return new Response(JSON.stringify({ error: authzResult.error }), {
+        status: authzResult.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Download file from storage
     const { data: fileData, error: dlError } = await supabaseAdmin.storage

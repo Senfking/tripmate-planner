@@ -19,3 +19,9 @@ project_id = "dwtbqomfleihcvkfoopm"
   # supabase/functions/get-entry-requirements/index.ts.
   [functions.get-entry-requirements]
     verify_jwt = true
+  # Locked behind verify_jwt + an internal SUPABASE_SERVICE_ROLE_KEY bearer
+  # check (see supabase/functions/send-push-notification/index.ts). Called
+  # only by DB triggers in
+  # supabase/migrations/20260404100000_push_notification_triggers.sql.
+  [functions.send-push-notification]
+    verify_jwt = true

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isUrlAllowedForFetch } from "./url-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -92,10 +93,14 @@ Deno.serve(async (req) => {
       if (!url || typeof url !== "string") {
         return jsonResponse({ success: false, error: "url is required for type=url" }, 400);
       }
+      if (!isUrlAllowedForFetch(url)) {
+        return jsonResponse({ success: false, error: "URL not allowed" }, 400);
+      }
       try {
         const res = await fetch(url, {
           headers: { "User-Agent": "TripCrew-ItineraryParser/1.0" },
           redirect: "follow",
+          signal: AbortSignal.timeout(8000),
         });
         if (!res.ok) {
           return jsonResponse({ success: false, error: `Failed to fetch URL (${res.status})` }, 400);
