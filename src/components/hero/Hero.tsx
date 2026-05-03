@@ -141,12 +141,12 @@ export function Hero({
   const buttonContent = busy ? (
     <>
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      <span className="hidden min-[375px]:inline">Planning…</span>
+      <span className="hidden min-[380px]:inline">Planning…</span>
     </>
   ) : (
     <>
       <Sparkles className="h-4 w-4" aria-hidden />
-      <span className="hidden min-[375px]:inline">Plan with Junto AI</span>
+      <span className="hidden min-[380px]:inline">Plan with Junto AI</span>
       <ArrowRight className="h-4 w-4" aria-hidden />
     </>
   );
