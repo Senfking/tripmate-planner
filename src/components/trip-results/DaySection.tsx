@@ -92,6 +92,8 @@ export function DaySection({
   onOpenDayMap,
   skeleton = false,
   costFormatter,
+  dateMode = "calendar",
+  readOnly = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editDayOpen, setEditDayOpen] = useState(false);
@@ -99,6 +101,7 @@ export function DaySection({
   const cardRef = useRef<HTMLDivElement>(null);
 
   const dateStr = (() => {
+    if (dateMode === "generic") return "";
     try {
       return format(parseISO(day.date), "MMM d");
     } catch {
