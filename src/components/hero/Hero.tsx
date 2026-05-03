@@ -156,14 +156,17 @@ export function Hero({
           AI trip planning, expense splitting, and group decisions in one app.
         </p>
 
-        {/* Glass input */}
+        {/* Glass input — fully rounded pill, button nested inside on the right */}
         <form onSubmit={handleSubmit} className="mt-8 sm:mt-10 w-full max-w-2xl">
           <div
             className={[
-              "flex flex-col sm:flex-row sm:items-end gap-2",
-              "rounded-2xl bg-white/95 backdrop-blur-xl border border-white/40",
-              "shadow-2xl p-2 transition-all",
-              "focus-within:ring-2 focus-within:ring-white/60",
+              // Pill container. Single row on desktop with the button
+              // floating inside on the right; stacks vertically on mobile
+              // but stays fully rounded.
+              "relative flex flex-col sm:flex-row sm:items-center gap-2",
+              "rounded-[28px] bg-white/95 backdrop-blur-xl border border-white/50",
+              "shadow-2xl pl-2 pr-2 py-2 sm:pl-6 sm:pr-2 sm:py-2 transition-all",
+              "focus-within:ring-2 focus-within:ring-white/70",
               error ? "ring-2 ring-destructive/50" : "",
               shake ? "hero-shake" : "",
             ].join(" ")}
@@ -177,18 +180,18 @@ export function Hero({
               }}
               onKeyDown={handleKeyDown}
               disabled={busy}
-              rows={2}
+              rows={1}
               placeholder="Tell Junto AI about your trip — destination, dates, who's coming"
               aria-label="Describe your trip"
               aria-invalid={!!error}
               className={[
-                "block w-full resize-none bg-transparent",
-                "px-3 py-2.5 sm:px-4 sm:py-3",
+                "block w-full flex-1 resize-none bg-transparent",
+                "px-3 py-2.5 sm:px-0 sm:py-3",
                 "text-base text-gray-900 placeholder:text-gray-500",
-                "outline-none rounded-xl",
-                "max-h-[180px] overflow-y-auto",
+                "outline-none",
+                "max-h-[160px] overflow-y-auto",
                 "disabled:opacity-60",
-                "text-left",
+                "text-left leading-snug",
               ].join(" ")}
             />
 
@@ -197,11 +200,13 @@ export function Hero({
               disabled={busy}
               className={[
                 "inline-flex items-center justify-center gap-2",
-                "rounded-xl bg-primary text-white font-semibold",
+                "rounded-full bg-primary text-white font-semibold",
                 "px-5 py-3 text-sm whitespace-nowrap",
-                "shadow-md transition-all",
-                "hover:brightness-110 hover:shadow-lg active:brightness-95",
-                "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-md",
+                "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
+                "transition-all",
+                "hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
+                "active:brightness-95",
+                "disabled:opacity-60 disabled:cursor-not-allowed",
                 "w-full sm:w-auto sm:shrink-0",
               ].join(" ")}
             >
