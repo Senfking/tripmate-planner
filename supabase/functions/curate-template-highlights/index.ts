@@ -130,8 +130,50 @@ function extractArea(p: GooglePlace, destination: string): string {
   return segments[0] ?? "";
 }
 
-function buildPhotoUrl(photoName: string, apiKey: string): string {
-  return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=800&key=${apiKey}`;
+const HIGHLIGHTS_BUCKET = "template-highlights";
+
+// Place ids are mostly base64ish ("ChIJ..."), but Google occasionally returns
+// values with characters that aren't safe in storage paths. Belt-and-braces
+// strip — the path doesn't need to be reversible, just deterministic.
+function safePathSegment(s: string): string {
+  return s.replace(/[^A-Za-z0-9_-]+/g, "_").slice(0, 128);
+}
+
+// Mirror a Google Places photo into our public Storage bucket and return
+// the resulting public URL. Idempotent on re-run: same path + upsert means
+// the second invocation overwrites the same object instead of creating
+// duplicates. The Places media endpoint redirects to a CDN; we follow that
+// to get the actual JPEG bytes (Deno fetch follows redirects by default).
+async function mirrorPhotoToStorage(
+  db: SupabaseClient,
+  apiKey: string,
+  slug: string,
+  placeId: string,
+  photoName: string,
+): Promise<string> {
+  const sourceUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=800&key=${apiKey}`;
+  const res = await fetch(sourceUrl);
+  if (!res.ok) {
+    throw new Error(`Places photo fetch failed (${res.status}) for ${photoName.slice(0, 60)}`);
+  }
+  const contentType = res.headers.get("content-type") ?? "image/jpeg";
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.byteLength === 0) {
+    throw new Error(`Places photo body empty for ${photoName.slice(0, 60)}`);
+  }
+
+  const path = `${safePathSegment(slug)}/${safePathSegment(placeId)}.jpg`;
+  const { error: upErr } = await db.storage
+    .from(HIGHLIGHTS_BUCKET)
+    .upload(path, bytes, { upsert: true, contentType });
+  if (upErr) {
+    throw new Error(`Storage upload failed for ${path}: ${upErr.message}`);
+  }
+  const { data } = db.storage.from(HIGHLIGHTS_BUCKET).getPublicUrl(path);
+  if (!data?.publicUrl) {
+    throw new Error(`getPublicUrl returned empty for ${path}`);
+  }
+  return data.publicUrl;
 }
 
 async function placesTextSearch(
@@ -332,12 +374,27 @@ async function curateOneTemplate(
       }
       if (!description) continue;
 
+      // Mirror the Places photo to our own bucket. We never persist the raw
+      // Google media URL because (a) it embeds GOOGLE_PLACES_API_KEY and
+      // would leak it to every visitor of /templates/{slug}, and (b) the
+      // photo `name` rotates over time so the URL would silently 404.
+      let photoUrl: string;
+      try {
+        photoUrl = await mirrorPhotoToStorage(db, apiKey, template.slug, placeId, photoName);
+      } catch (e) {
+        console.warn(`[curate-template-highlights] photo mirror failed for ${placeName}:`, (e as Error).message);
+        // Skip this entry entirely — a highlight without a photo is what
+        // the upstream filter is already rejecting, and we don't want to
+        // fall back to the leaky Places URL.
+        continue;
+      }
+
       const highlight: Highlight = {
         name: placeName,
         area: extractArea(place, template.destination),
         description,
         place_id: placeId,
-        photo_url: buildPhotoUrl(photoName, apiKey),
+        photo_url: photoUrl,
       };
 
       // Defense-in-depth assertion: the row's `name` and `place_id` must
