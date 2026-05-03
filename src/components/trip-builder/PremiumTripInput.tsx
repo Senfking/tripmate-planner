@@ -457,23 +457,21 @@ export function PremiumTripInput({ onGenerate, onStartBlank, initialDestination,
         </div>
       </div>
 
-      {/* ── Collapsible: Deal-breakers ── */}
-      <Collapsible open={moreOpen} onOpenChange={setMoreOpen} className="mt-5">
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-foreground transition-colors w-full px-1 py-2 group">
-          <ChevronDown className={cn("h-4 w-4 transition-transform", moreOpen && "rotate-180")} />
-          Anything to avoid? <span className="text-xs font-normal text-muted-foreground/70">(optional)</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2 space-y-2 animate-fade-in">
-          <p className="text-xs text-primary/80 italic px-1">This is the question that makes the difference</p>
-          <Textarea
-            value={dealBreakers}
-            onChange={(e) => setDealBreakers(e.target.value)}
-            placeholder="e.g. no tourist traps, no early mornings, no seafood, nothing requiring 3-month-ahead reservations"
-            rows={3}
-            className="rounded-xl bg-card border-border resize-none"
-          />
-        </CollapsibleContent>
-      </Collapsible>
+      {/* ── Deal-breakers (always visible) ── */}
+      <div className="mt-5 space-y-2">
+        <label className="flex items-center gap-2 text-sm font-semibold text-foreground px-1">
+          Anything to avoid?
+          <span className="text-xs font-normal text-muted-foreground/70">(optional)</span>
+        </label>
+        <p className="text-xs text-primary/80 italic px-1">This is the question that makes the difference</p>
+        <Textarea
+          value={dealBreakers}
+          onChange={(e) => setDealBreakers(e.target.value)}
+          placeholder="e.g. no tourist traps, no early mornings, no seafood, nothing requiring 3-month-ahead reservations"
+          rows={3}
+          className="rounded-xl bg-card border-border resize-none"
+        />
+      </div>
 
       {/* ── Generate CTA (fixed bottom) ── */}
       <div className="fixed bottom-0 inset-x-0 bg-background/90 backdrop-blur-lg border-t border-border z-10">
