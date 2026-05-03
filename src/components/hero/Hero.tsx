@@ -98,19 +98,21 @@ export function Hero({
   }
 
   // ── Shared: pill input form ──────────────────────────────────────────
-  // Fully rounded (rounded-full both ends), button nested inside on the
-  // right with no visible gap. Visual treatment differs per variant.
+  // Mobile: stacked card (rounded-3xl) — textarea on top, full-width
+  // button below. Desktop (sm+): single-row rounded-full pill with the
+  // button nested on the right. Avoids the half-circle "skew" that
+  // happens when stacked content lives inside a rounded-full container.
   const pillClasses = isApp
     ? [
         "relative flex flex-col sm:flex-row sm:items-center gap-2",
-        "rounded-full bg-white border border-gray-200",
-        "shadow-md pl-2 pr-2 py-2 sm:pl-6 sm:pr-2 sm:py-2 transition-all",
+        "rounded-3xl sm:rounded-full bg-white border border-gray-200",
+        "shadow-md p-2 sm:pl-6 sm:pr-2 sm:py-2 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
         "relative flex flex-col sm:flex-row sm:items-center gap-2",
-        "rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl pl-2 pr-2 py-2 sm:pl-6 sm:pr-2 sm:py-2 transition-all",
+        "rounded-3xl sm:rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
+        "shadow-2xl p-2 sm:pl-6 sm:pr-2 sm:py-2 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
@@ -135,7 +137,7 @@ export function Hero({
           }}
           onKeyDown={handleKeyDown}
           disabled={busy}
-          rows={1}
+          rows={2}
           placeholder={
             isApp
               ? "Describe your trip — destination, dates, who's coming"
@@ -145,10 +147,10 @@ export function Hero({
           aria-invalid={!!error}
           className={[
             "block w-full flex-1 resize-none bg-transparent",
-            "px-3 py-2.5 sm:px-0 sm:py-3",
-            "text-base text-gray-900 placeholder:text-gray-500",
+            "px-3 py-2 sm:px-0 sm:py-3",
+            "text-[15px] sm:text-base text-gray-900 placeholder:text-gray-500",
             "outline-none",
-            "max-h-[160px] overflow-y-auto",
+            "min-h-[44px] sm:min-h-0 max-h-[160px] overflow-y-auto",
             "disabled:opacity-60",
             "text-left leading-snug",
           ].join(" ")}
@@ -159,7 +161,7 @@ export function Hero({
           disabled={busy}
           className={[
             "inline-flex items-center justify-center gap-2",
-            "rounded-full bg-primary text-white font-semibold",
+            "rounded-2xl sm:rounded-full bg-primary text-white font-semibold",
             "px-5 py-3 text-sm whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
             "transition-all",
