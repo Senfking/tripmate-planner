@@ -171,22 +171,22 @@ export default function TemplateDetail() {
     </div>
   );
 
+  // Floating back button shared between both states.
+  const FloatingBack = (
+    <button
+      onClick={() => navigate("/templates")}
+      className="fixed top-[calc(env(safe-area-inset-top,0px)+12px)] left-4 z-40 inline-flex items-center justify-center h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/20 hover:bg-black/55 transition"
+      aria-label="Back to templates"
+    >
+      <ArrowLeft className="h-5 w-5" />
+    </button>
+  );
+
   // STATE 1: cached result exists
   if (template.cached_result) {
     return (
       <>
-        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-2.5">
-          <div className="max-w-6xl mx-auto flex items-center gap-3">
-            <button
-              onClick={() => navigate("/templates")}
-              className="text-gray-600 hover:text-gray-900 transition"
-              aria-label="Back to templates"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-medium text-gray-600 truncate">Trip template</span>
-          </div>
-        </div>
+        {FloatingBack}
 
         <div className="pb-32">
           <QuickFactsStrip
