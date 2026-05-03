@@ -1597,7 +1597,6 @@ export type Database = {
           country_iso: string | null
           cover_image_url: string
           created_at: string
-          curated_highlights: Json | null
           default_budget_tier: string
           default_pace: string
           default_vibes: string[]
@@ -1618,7 +1617,6 @@ export type Database = {
           country_iso?: string | null
           cover_image_url: string
           created_at?: string
-          curated_highlights?: Json | null
           default_budget_tier?: string
           default_pace?: string
           default_vibes?: string[]
@@ -1639,7 +1637,6 @@ export type Database = {
           country_iso?: string | null
           cover_image_url?: string
           created_at?: string
-          curated_highlights?: Json | null
           default_budget_tier?: string
           default_pace?: string
           default_vibes?: string[]
