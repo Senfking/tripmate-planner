@@ -50,9 +50,9 @@ const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 // brand-new entries with two reviews, photo-less long tail).
 const MIN_RATING = 4.0;
 const MIN_REVIEWS = 200;
-const TARGET_HIGHLIGHTS = 7;          // 6-8 desired; aim for 7
+const TARGET_HIGHLIGHTS = 8;          // 4-up grid: 2 rows of 4
 const TARGET_ATTRACTIONS = 5;
-const TARGET_RESTAURANTS = TARGET_HIGHLIGHTS - TARGET_ATTRACTIONS; // 2
+const TARGET_RESTAURANTS = TARGET_HIGHLIGHTS - TARGET_ATTRACTIONS; // 3
 
 type TemplateRow = {
   slug: string;
