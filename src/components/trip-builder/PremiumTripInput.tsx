@@ -39,6 +39,17 @@ type Props = {
    *  builder's textarea. The user still clicks Generate themselves — we
    *  do not auto-submit. */
   initialFreeText?: string;
+  /** Full prefill — vibes/budget/pace/party. Used when opened from a
+   *  template so the user sees their template defaults applied. */
+  initialData?: Partial<PremiumInputData>;
+  /** When true, "Where to?" renders as a static, non-editable label. */
+  lockedDestination?: boolean;
+  /** Override the hero title (default: "Plan your trip"). */
+  title?: string;
+  /** Override the hero subtitle. */
+  subtitle?: string;
+  /** Hide the free-text prompt + "or build step by step" divider. */
+  hideFreeText?: boolean;
 };
 
 /* ─── Constants ───────────────────────────────────── */
