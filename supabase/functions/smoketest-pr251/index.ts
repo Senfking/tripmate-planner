@@ -99,20 +99,22 @@ Deno.serve(async () => {
   // TEST 3b — fetch-link-preview MEMBER
   results.push(await probe("T3b_linkpreview_member", "fetch-link-preview", userJwt, {
     attachment_id: MEMBER_ATTACHMENT_ID,
+    url: nonMemberUrlAtt?.url ?? "https://example.com",
   }));
 
   // TEST 4b — extract-booking-info MEMBER (need a file attachment in this trip)
-  // Find one in the member trip
   const { data: memberAttachments } = await admin
     .from("attachments")
     .select("id, file_path, type")
     .eq("trip_id", MEMBER_TRIP_ID)
     .not("file_path", "is", null)
     .limit(1);
-  const memberFileAttachment = memberAttachments?.[0]?.id;
+  const memberFileAttachment = memberAttachments?.[0];
   if (memberFileAttachment) {
     results.push(await probe("T4b_extractbooking_member", "extract-booking-info", userJwt, {
-      attachment_id: memberFileAttachment,
+      attachment_id: memberFileAttachment.id,
+      file_path: memberFileAttachment.file_path,
+      file_type: "application/pdf",
     }));
   } else {
     results.push({ name: "T4b_extractbooking_member", skipped: "no file-attachment in trip" });
