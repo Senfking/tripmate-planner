@@ -189,48 +189,66 @@ export function PremiumTripInput({
   return (
     <div className="w-full max-w-lg mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12rem)]">
       {/* ── Hero ── */}
-      <div className="relative pt-8 pb-6 -mx-4 px-4 mb-5 bg-gradient-to-b from-primary/5 via-primary/[0.02] to-transparent">
-        <div className="text-center mb-5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-semibold text-primary tracking-wider uppercase">Junto AI</span>
+      {!hideHero && (
+        <div className="relative pt-8 pb-6 -mx-4 px-4 mb-5 bg-gradient-to-b from-primary/5 via-primary/[0.02] to-transparent">
+          <div className="text-center mb-5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 bg-primary/10 border border-primary/30">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-semibold text-primary tracking-wider uppercase">Junto AI</span>
+            </div>
+            <h1 className="text-[28px] sm:text-3xl font-bold text-foreground tracking-tight leading-[1.15]">
+              {heroTitle}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-2 px-2">
+              {heroSubtitle}
+            </p>
+            {templateBadge && (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/8 border border-primary/20 pl-1 pr-3 py-1">
+                {templateBadge.thumbnailUrl ? (
+                  <img
+                    src={templateBadge.thumbnailUrl}
+                    alt=""
+                    className="h-6 w-6 rounded-full object-cover ring-1 ring-primary/20"
+                  />
+                ) : (
+                  <span className="h-6 w-6 rounded-full bg-primary/15" />
+                )}
+                <span className="text-[11px] font-medium text-primary tracking-wide">
+                  {templateBadge.label}
+                </span>
+              </div>
+            )}
           </div>
-          <h1 className="text-[28px] sm:text-3xl font-bold text-foreground tracking-tight leading-[1.15]">
-            {heroTitle}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-2 px-2">
-            {heroSubtitle}
-          </p>
+
+          {!hideFreeText && (
+            <>
+              <div className="rounded-2xl bg-card/80 backdrop-blur border border-border shadow-sm p-3">
+                <Textarea
+                  value={freeText}
+                  onChange={(e) => setFreeText(e.target.value)}
+                  placeholder='e.g. "10 days in Japan with my partner — food, temples, no early mornings"'
+                  rows={3}
+                  className="rounded-xl bg-background border-border resize-none text-[14px] placeholder:text-[14px] focus-visible:ring-primary/40 focus-visible:ring-offset-0"
+                />
+                {freeText.trim().length > 0 && (
+                  <p className="text-[11px] text-primary/80 mt-2 px-1 flex items-center gap-1 animate-fade-in">
+                    <Sparkles className="h-3 w-3" />
+                    We'll prioritize this over the form below
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 mt-6 px-1">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+                  Or build it step by step
+                </span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            </>
+          )}
         </div>
-
-        {!hideFreeText && (
-          <>
-            <div className="rounded-2xl bg-card/80 backdrop-blur border border-border shadow-sm p-3">
-              <Textarea
-                value={freeText}
-                onChange={(e) => setFreeText(e.target.value)}
-                placeholder='e.g. "10 days in Japan with my partner — food, temples, no early mornings"'
-                rows={3}
-                className="rounded-xl bg-background border-border resize-none text-[14px] placeholder:text-[14px] focus-visible:ring-primary/40 focus-visible:ring-offset-0"
-              />
-              {freeText.trim().length > 0 && (
-                <p className="text-[11px] text-primary/80 mt-2 px-1 flex items-center gap-1 animate-fade-in">
-                  <Sparkles className="h-3 w-3" />
-                  We'll prioritize this over the form below
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 mt-6 px-1">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-                Or build it step by step
-              </span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-          </>
-        )}
-      </div>
+      )}
 
       {/* ── Required fields card ── */}
       <div className="rounded-2xl bg-card border border-border shadow-sm p-5 space-y-4">
