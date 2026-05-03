@@ -1777,6 +1777,7 @@ export type Database = {
           prefix: string
         }[]
       }
+      _tmp_pr251_vault_read: { Args: never; Returns: string }
       check_error_spike: { Args: never; Returns: undefined }
       cleanup_expired_entry_requirements_cache: {
         Args: never
