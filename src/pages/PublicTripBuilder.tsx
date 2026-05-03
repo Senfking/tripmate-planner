@@ -80,26 +80,28 @@ export default function PublicTripBuilder() {
   // above this slot is rendered by the Hero's app-variant card itself.
   const secondaryAction = user ? (
     <div className="flex flex-col items-center gap-2 w-full">
-      <button
-        type="button"
-        onClick={() => setStepMode((v) => !v)}
-        aria-expanded={stepMode}
-        className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-200 hover:border-gray-300 px-5 py-2.5 text-sm text-gray-700 hover:text-gray-900 transition-colors shadow-sm"
-      >
-        <ListChecks className="h-4 w-4 text-gray-500" />
-        <span>Plan step by step instead</span>
-        <ChevronDown
-          className={`h-4 w-4 text-gray-400 transition-transform ${stepMode ? "rotate-180" : ""}`}
-        />
-      </button>
-      <button
-        type="button"
-        onClick={() => setBlankOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-200 hover:border-gray-300 px-5 py-2.5 text-sm text-gray-700 hover:text-gray-900 transition-colors shadow-sm"
-      >
-        <FileText className="h-4 w-4 text-gray-500" />
-        <span>Skip the itinerary for now</span>
-      </button>
+      <div className="flex flex-col md:flex-row md:justify-center items-stretch md:items-center gap-2 md:gap-3 w-full">
+        <button
+          type="button"
+          onClick={() => setStepMode((v) => !v)}
+          aria-expanded={stepMode}
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-white border border-gray-200 hover:border-gray-300 px-5 py-2.5 text-sm text-gray-700 hover:text-gray-900 transition-colors shadow-sm"
+        >
+          <ListChecks className="h-4 w-4 text-gray-500" />
+          <span>Plan step by step instead</span>
+          <ChevronDown
+            className={`h-4 w-4 text-gray-400 transition-transform ${stepMode ? "rotate-180" : ""}`}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => setBlankOpen(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-white border border-gray-200 hover:border-gray-300 px-5 py-2.5 text-sm text-gray-700 hover:text-gray-900 transition-colors shadow-sm"
+        >
+          <FileText className="h-4 w-4 text-gray-500" />
+          <span>Skip the itinerary for now</span>
+        </button>
+      </div>
 
       {stepMode && (
         <div className="w-full pt-3 space-y-3">
