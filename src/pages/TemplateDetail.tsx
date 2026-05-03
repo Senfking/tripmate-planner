@@ -25,29 +25,8 @@ import { useTripTemplate, type CuratedHighlight } from "@/hooks/useTripTemplates
 import { stashIntent } from "@/lib/templateIntent";
 import { getCountryFacts } from "@/lib/countryFacts";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
-import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
-import type { PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 import { Button } from "@/components/ui/button";
 import { HighlightCard } from "@/components/templates/HighlightCard";
-
-function templateToInputData(t: {
-  destination: string;
-  default_vibes: string[];
-  default_pace: string;
-  default_budget_tier: string;
-}): PremiumInputData {
-  return {
-    destination: t.destination,
-    dateRange: undefined,
-    travelParty: null,
-    kidsAges: "",
-    budgetLevel: (t.default_budget_tier as PremiumInputData["budgetLevel"]) ?? null,
-    pace: (t.default_pace as PremiumInputData["pace"]) ?? null,
-    vibes: t.default_vibes ?? [],
-    dealBreakers: "",
-    freeText: "",
-  };
-}
 
 export default function TemplateDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -57,16 +36,15 @@ export default function TemplateDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [cloning, setCloning] = useState(false);
-  const [personalizeOpen, setPersonalizeOpen] = useState(false);
 
   useEffect(() => {
-    if (template && user && searchParams.get("personalize") === "1") {
-      setPersonalizeOpen(true);
+    if (template && user && slug && searchParams.get("personalize") === "1") {
       const next = new URLSearchParams(searchParams);
       next.delete("personalize");
       setSearchParams(next, { replace: true });
+      navigate(`/templates/${slug}/personalize`, { replace: true });
     }
-  }, [template, user, searchParams, setSearchParams]);
+  }, [template, user, slug, searchParams, setSearchParams, navigate]);
 
   const handleClone = useCallback(async () => {
     if (!slug) return;
@@ -100,7 +78,7 @@ export default function TemplateDetail() {
       navigate("/ref");
       return;
     }
-    setPersonalizeOpen(true);
+    navigate(`/templates/${slug}/personalize`);
   }, [slug, user, navigate]);
 
   const pageTitle = template ? `${template.destination} · ${template.duration_days} days` : "";
@@ -212,24 +190,6 @@ export default function TemplateDetail() {
 
         {StickyActions}
 
-        {personalizeOpen && (
-          <StandaloneTripBuilder
-            onClose={() => setPersonalizeOpen(false)}
-            initialInputData={templateToInputData(template)}
-            templateContext={{
-              slug: template.slug,
-              hero_image_url: template.cover_image_url,
-              defaults: {
-                destination: template.destination,
-                duration_days: template.duration_days,
-                vibes: template.default_vibes,
-                pace: template.default_pace,
-                budget_tier: template.default_budget_tier,
-              },
-            }}
-            forceInputFirst
-          />
-        )}
       </>
     );
   }
@@ -315,24 +275,6 @@ export default function TemplateDetail() {
         </div>
       </div>
 
-      {personalizeOpen && (
-        <StandaloneTripBuilder
-          onClose={() => setPersonalizeOpen(false)}
-          initialInputData={templateToInputData(template)}
-          templateContext={{
-            slug: template.slug,
-            hero_image_url: template.cover_image_url,
-            defaults: {
-              destination: template.destination,
-              duration_days: template.duration_days,
-              vibes: template.default_vibes,
-              pace: template.default_pace,
-              budget_tier: template.default_budget_tier,
-            },
-          }}
-          forceInputFirst
-        />
-      )}
     </>
   );
 }

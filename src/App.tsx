@@ -44,6 +44,7 @@ const AdminAIErrors = lazy(() => import("./pages/AdminAIErrors"));
 const AdminTemplates = lazy(() => import("./pages/AdminTemplates"));
 const Templates = lazy(() => import("./pages/Templates"));
 const TemplateDetail = lazy(() => import("./pages/TemplateDetail"));
+const TemplatePersonalize = lazy(() => import("./pages/TemplatePersonalize"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PublicLanding = lazy(() => import("./pages/PublicLanding"));
 const PublicTripBuilder = lazy(() => import("./pages/PublicTripBuilder"));
@@ -211,6 +212,7 @@ function AppInner() {
             <Route path="/templates" element={<Templates />} />
             <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
+            <Route path="/templates/:slug/personalize" element={<TemplatePersonalize />} />
 
             {/* /trips/new is reachable by everyone, but logged-in visitors
                 see it wrapped in the app shell so the sidebar/header stay
