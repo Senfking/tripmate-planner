@@ -31,12 +31,12 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
               data-carousel-card="true"
               className="group/card w-[280px] shrink-0 snap-start sm:w-[320px]"
             >
-              <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
-                <div className="relative aspect-[3/2] overflow-hidden">
+              <div className="overflow-hidden rounded-[1.25rem] border border-border/40 bg-card shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 transform-gpu [backface-visibility:hidden] [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12),0_12px_36px_-10px_rgba(0,0,0,0.1)]">
+                <div className="relative aspect-[3/2] overflow-hidden rounded-t-[1.25rem]">
                   <img
                     src={card.cover_image_url}
                     alt={card.destination}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-[1.03]"
+                    className="h-full w-full object-cover transition-transform duration-700 [@media(hover:hover)]:group-hover/card:scale-[1.03]"
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
