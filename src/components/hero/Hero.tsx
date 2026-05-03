@@ -105,13 +105,13 @@ export function Hero({
     ? [
         "relative flex flex-col sm:flex-row sm:items-stretch gap-2 sm:gap-0",
         "rounded-3xl sm:rounded-full bg-white border border-gray-200",
-        "shadow-md p-2 sm:pl-6 sm:pr-1.5 sm:py-1.5 transition-all",
+        "shadow-md p-2 sm:pl-5 sm:pr-1 sm:py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
         "relative flex flex-col sm:flex-row sm:items-stretch gap-2 sm:gap-0",
         "rounded-3xl sm:rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl p-2 sm:pl-6 sm:pr-1.5 sm:py-1.5 transition-all",
+        "shadow-2xl p-2 sm:pl-5 sm:pr-1 sm:py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
