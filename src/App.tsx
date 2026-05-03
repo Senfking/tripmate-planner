@@ -221,6 +221,7 @@ function AppInner() {
             <Route element={<ProtectedRoute />}>
               <Route path="/app/admin" element={<Admin />} />
               <Route path="/app/admin/ai-errors" element={<AdminAIErrors />} />
+              <Route path="/app/admin/templates" element={<AdminTemplates />} />
               <Route element={<AppLayout />}>
                 <Route path="/app/trips" element={<TripList />} />
                 <Route path="/app/trips/new" element={<Navigate to="/trips/new" replace />} />
