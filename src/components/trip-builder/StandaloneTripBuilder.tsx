@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Loader2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
@@ -21,6 +21,7 @@ import {
   buildPartialResult,
   getSkeletonDayNumbers,
 } from "@/hooks/useStreamingTripGeneration";
+import { consumePendingPrompt } from "@/components/hero/usePendingPrompt";
 
 const STAGE_LABELS: Record<string, string> = {
   starting: "Connecting…",
