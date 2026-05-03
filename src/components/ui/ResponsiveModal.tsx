@@ -48,7 +48,10 @@ export function ResponsiveModal({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[70vh]">{children}</div>
+        {/* Horizontal padding + negative margin gives focus rings room to
+            render without being clipped by overflow-y-auto, while keeping
+            the children visually flush with the dialog edges. */}
+        <div className="overflow-y-auto max-h-[70vh] px-1 -mx-1">{children}</div>
       </DialogContent>
     </Dialog>
   );
