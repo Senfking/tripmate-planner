@@ -331,22 +331,24 @@ export function DaySection({
             </div>
 
             {/* Add activity */}
-            {addingActivity ? (
-              <AddActivityForm
-                dayDate={day.date}
-                onAdd={(act) => {
-                  onAddLocalActivity(day.date, act);
-                  setAddingActivity(false);
-                }}
-                onClose={() => setAddingActivity(false)}
-              />
-            ) : (
-              <button
-                onClick={() => setAddingActivity(true)}
-                className="mx-4 mb-3 w-[calc(100%-2rem)] flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#0D9488]/30 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/5 transition-colors"
-              >
-                <Plus className="h-3 w-3" /> Add activity
-              </button>
+            {!readOnly && (
+              addingActivity ? (
+                <AddActivityForm
+                  dayDate={day.date}
+                  onAdd={(act) => {
+                    onAddLocalActivity(day.date, act);
+                    setAddingActivity(false);
+                  }}
+                  onClose={() => setAddingActivity(false)}
+                />
+              ) : (
+                <button
+                  onClick={() => setAddingActivity(true)}
+                  className="mx-4 mb-3 w-[calc(100%-2rem)] flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#0D9488]/30 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/5 transition-colors"
+                >
+                  <Plus className="h-3 w-3" /> Add activity
+                </button>
+              )
             )}
 
           </div>
