@@ -106,6 +106,8 @@ export function PremiumTripInput({
   title,
   subtitle,
   hideFreeText,
+  hideHero,
+  templateBadge,
 }: Props) {
   const [destination, setDestination] = useState(
     initialData?.destination ?? initialDestination ?? ""
