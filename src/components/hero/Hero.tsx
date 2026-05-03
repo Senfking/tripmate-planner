@@ -157,7 +157,10 @@ export function Hero({
             "px-3 py-2 sm:px-0 sm:py-2.5",
             "text-[15px] sm:text-[15px] text-gray-900 placeholder:text-gray-500",
             "outline-none",
-            "min-h-[44px] sm:min-h-0 max-h-[140px] overflow-y-auto",
+            // Mobile: auto-grows up to 140px (multiline card). Desktop:
+            // fixed single-line height that matches the button so the
+            // pill shape stays constant; overflow scrolls internally.
+            "min-h-[44px] max-h-[140px] sm:max-h-none sm:h-10 overflow-y-auto",
             "disabled:opacity-60",
             "text-left sm:text-center leading-snug",
           ].join(" ")}
