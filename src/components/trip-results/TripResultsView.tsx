@@ -584,111 +584,120 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
-        {/* Trip budget */}
+        {/* Trip budget — fintech-style card */}
         <div id="section-budget" className={cn("mx-4 mb-6", rc)} style={revealStyle("overview-budget")}>
-          <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-primary" /> Estimated budget
-          </h3>
-          <p className="text-[11px] text-muted-foreground/70 mb-3 ml-7">Based on typical prices · actual costs may vary</p>
+          {(() => {
+            const converted = convertToUserCurrency(costBreakdown.total);
+            const showConverted = conversionEnabled && converted !== null;
+            const primaryAmount = showConverted
+              ? formatBudget(converted!, userCurrency)
+              : `${currency} ${costBreakdown.total.toLocaleString()}`;
 
-          <div className="rounded-2xl border border-border bg-gradient-to-b from-card to-muted/20 shadow-sm overflow-hidden">
-            {/* Summary header */}
-            <button
-              onClick={() => setCostOpen(!costOpen)}
-              className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-accent/30 transition-colors"
-            >
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <CreditCard className="h-4.5 w-4.5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                {(() => {
-                  const converted = convertToUserCurrency(costBreakdown.total);
-                  const showConverted = conversionEnabled && converted !== null;
-                  const primaryDisplay = showConverted
-                    ? `~${formatBudget(converted!, userCurrency)}`
-                    : `~${currency}${costBreakdown.total.toLocaleString()}`;
+            const activitiesConv = convertToUserCurrency(costBreakdown.activitiesTotal);
+            const stayConv = convertToUserCurrency(costBreakdown.accommodationTotal);
+            const dailyConv = convertToUserCurrency(costBreakdown.dailyAvg);
 
-                  const activitiesConv = convertToUserCurrency(costBreakdown.activitiesTotal);
-                  const stayConv = convertToUserCurrency(costBreakdown.accommodationTotal);
-                  const dailyConv = convertToUserCurrency(costBreakdown.dailyAvg);
+            const activitiesDisplay = showConverted && activitiesConv !== null
+              ? formatBudget(activitiesConv, userCurrency)
+              : `${currency} ${costBreakdown.activitiesTotal.toLocaleString()}`;
+            const stayDisplay = showConverted && stayConv !== null
+              ? formatBudget(stayConv, userCurrency)
+              : `${currency} ${costBreakdown.accommodationTotal.toLocaleString()}`;
+            const dailyDisplay = showConverted && dailyConv !== null
+              ? formatBudget(dailyConv, userCurrency)
+              : `${currency} ${costBreakdown.dailyAvg.toLocaleString()}`;
 
-                  const activitiesDisplay = showConverted && activitiesConv !== null
-                    ? `~${formatBudget(activitiesConv, userCurrency)}`
-                    : `~${currency}${costBreakdown.activitiesTotal.toLocaleString()}`;
-                  const stayDisplay = showConverted && stayConv !== null
-                    ? `~${formatBudget(stayConv, userCurrency)}`
-                    : `~${currency}${costBreakdown.accommodationTotal.toLocaleString()}`;
-                  const dailyDisplay = showConverted && dailyConv !== null
-                    ? `~${formatBudget(dailyConv, userCurrency)}/day`
-                    : `~${currency}${costBreakdown.dailyAvg.toLocaleString()}/day`;
+            return (
+              <div className="relative rounded-3xl overflow-hidden border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)]">
+                {/* Hero amount block */}
+                <div className="relative px-5 pt-5 pb-5 bg-gradient-to-br from-primary/[0.06] via-card to-card overflow-hidden">
+                  {/* Subtle backdrop glow */}
+                  <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
 
-                  return (
-                    <>
-                      <div className="text-base font-semibold text-foreground">
-                        {primaryDisplay}
-                        <span className="text-sm font-normal text-muted-foreground"> per person</span>
+                  <div className="relative flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Wallet className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <span className="text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground">Estimated budget</span>
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-                        Activities {activitiesDisplay}
-                        {costBreakdown.accommodationTotal > 0 && (
-                          <> · Stay {stayDisplay}</>
+                      <div className="flex items-baseline gap-1.5 font-mono">
+                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">~</span>
+                        <span className="text-3xl sm:text-[34px] font-semibold tracking-tight text-foreground tabular-nums leading-none">
+                          {primaryAmount}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span>per person</span>
+                        {showConverted && (
+                          <>
+                            <span className="text-muted-foreground/40">·</span>
+                            <span className="font-mono tabular-nums">≈ {currency} {costBreakdown.total.toLocaleString()}</span>
+                          </>
                         )}
-                        {" · "}
-                        {dailyDisplay}
                       </div>
-                      {showConverted && (
-                        <div className="text-[10px] text-muted-foreground/60 mt-0.5 font-mono">
-                          ≈ {currency} {costBreakdown.total.toLocaleString()} locally
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-              <div className={`p-1.5 rounded-lg bg-muted/50 transition-transform duration-200 ${costOpen ? "rotate-180" : ""}`}>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </button>
+                    </div>
 
-            {/* Category breakdown */}
-            {costOpen && (
-              <div className="px-5 pb-4 animate-fade-in">
-                <div className="space-y-0">
-                  {costBreakdown.categories.map(([cat, amount], i) => {
-                    const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
-                    const catConverted = convertToUserCurrency(amount);
-                    const catShowConverted = conversionEnabled && catConverted !== null;
-                    const catDisplay = catShowConverted
-                      ? `~${formatBudget(catConverted!, userCurrency)}`
-                      : `~${currency}${Math.round(amount).toLocaleString()}`;
-                    return (
-                      <div key={cat} className={`flex items-center gap-3 py-2.5 ${i > 0 ? "border-t border-border" : ""}`}>
-                        <span className="text-xs text-muted-foreground flex-1">{cat}</span>
-                        <div className="w-20 h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                          <div className="h-full rounded-full bg-primary/40" style={{ width: `${Math.min(pct, 100)}%` }} />
-                        </div>
-                        <span className="text-xs font-mono text-foreground w-24 text-right">{catDisplay}</span>
-                      </div>
-                    );
-                  })}
+                    <button
+                      onClick={() => setCostOpen(!costOpen)}
+                      className="shrink-0 h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center hover:bg-accent transition-colors"
+                      aria-label={costOpen ? "Hide breakdown" : "Show breakdown"}
+                    >
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${costOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
+
+                  {/* Stat tiles */}
+                  <div className="relative mt-4 grid grid-cols-3 gap-2">
+                    <div className="rounded-xl bg-card/80 backdrop-blur border border-border/60 px-3 py-2.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium">Activities</div>
+                      <div className="mt-0.5 text-[13px] font-mono font-medium text-foreground tabular-nums truncate">{activitiesDisplay}</div>
+                    </div>
+                    <div className="rounded-xl bg-card/80 backdrop-blur border border-border/60 px-3 py-2.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium">Stay</div>
+                      <div className="mt-0.5 text-[13px] font-mono font-medium text-foreground tabular-nums truncate">{stayDisplay}</div>
+                    </div>
+                    <div className="rounded-xl bg-card/80 backdrop-blur border border-border/60 px-3 py-2.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium">Per day</div>
+                      <div className="mt-0.5 text-[13px] font-mono font-medium text-foreground tabular-nums truncate">{dailyDisplay}</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="border-t border-border mt-1 pt-3 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">Total per person</span>
-                  {(() => {
-                    const totalConv = convertToUserCurrency(costBreakdown.total);
-                    const showConv = conversionEnabled && totalConv !== null;
-                    const display = showConv
-                      ? `~${formatBudget(totalConv!, userCurrency)}`
-                      : `~${currency}${costBreakdown.total.toLocaleString()}`;
-                    return (
-                      <span className="text-sm font-mono font-bold text-primary">{display}</span>
-                    );
-                  })()}
-                </div>
-                <p className="text-[10px] text-muted-foreground/50 mt-2 italic">Estimates based on average local prices. Actual costs depend on season, availability, and personal choices.</p>
+
+                {/* Category breakdown */}
+                {costOpen && (
+                  <div className="px-5 py-4 border-t border-border bg-card animate-fade-in">
+                    <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-muted-foreground mb-3">Breakdown</div>
+                    <div className="space-y-2.5">
+                      {costBreakdown.categories.map(([cat, amount]) => {
+                        const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
+                        const catConverted = convertToUserCurrency(amount);
+                        const catShowConverted = conversionEnabled && catConverted !== null;
+                        const catDisplay = catShowConverted
+                          ? formatBudget(catConverted!, userCurrency)
+                          : `${currency} ${Math.round(amount).toLocaleString()}`;
+                        return (
+                          <div key={cat} className="flex items-center gap-3">
+                            <span className="text-xs text-foreground/80 w-24 shrink-0 truncate">{cat}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div className="h-full rounded-full bg-primary/70" style={{ width: `${Math.min(pct, 100)}%` }} />
+                            </div>
+                            <span className="text-xs font-mono text-foreground tabular-nums w-24 text-right">{catDisplay}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+                      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Total</span>
+                      <span className="text-sm font-mono font-semibold text-primary tabular-nums">~{primaryAmount}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60 mt-3">Based on typical prices · actual costs may vary by season and availability.</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
 
         {/* Divider before destinations */}
