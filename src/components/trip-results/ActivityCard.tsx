@@ -326,7 +326,7 @@ export function ActivityCard({
 
             <div className="flex items-center gap-2">
               <button
-                onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }}
+                onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-foreground bg-muted hover:bg-accent border border-border transition-colors whitespace-nowrap"
                 aria-label="View details"
               >
