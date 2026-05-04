@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 2080" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <pattern id="dots" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#cbd5e1" opacity="0.5"/>
+    </pattern>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="1680" height="2080" fill="#f8fafc"/>
+  <rect width="1680" height="2080" fill="url(#dots)"/>
+
+  <!-- Title -->
+  <text x="40" y="50" font-size="26" font-weight="700" fill="#0f172a">Junto · AI Trip Builder Workflow</text>
+  <text x="40" y="76" font-size="14" fill="#64748b">React wizard → Edge Function orchestrator → Claude Haiku 4.5 + Google Places · multi-agent fan-out per day</text>
+
+  <!-- Legend -->
+  <g transform="translate(940,32)" font-size="12" fill="#334155">
+    <rect x="0" y="0" width="700" height="56" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <circle cx="20" cy="20" r="6" fill="#a78bfa"/><text x="32" y="24">LLM agent (Claude Haiku 4.5)</text>
+    <circle cx="200" cy="20" r="6" fill="#22c55e"/><text x="212" y="24">Google Places API v2</text>
+    <circle cx="360" cy="20" r="6" fill="#f59e0b"/><text x="372" y="24">External (Brave / Maps)</text>
+    <circle cx="540" cy="20" r="6" fill="#0ea5e9"/><text x="552" y="24">Pure code step</text>
+    <circle cx="20" cy="42" r="6" fill="#ef4444"/><text x="32" y="46">Gate / circuit-breaker</text>
+    <circle cx="200" cy="42" r="6" fill="#eab308"/><text x="212" y="46">Supabase write</text>
+  </g>
+
+  <!-- ============= SECTION 1: WIZARD ============= -->
+  <text x="40" y="130" font-size="13" font-weight="600" fill="#475569" letter-spacing="1">① USER WIZARD · TripBuilderFlow.tsx</text>
+  <line x1="40" y1="140" x2="1640" y2="140" stroke="#e2e8f0"/>
+
+  <g font-size="13" fill="#0f172a">
+    <!-- Start -->
+    <g transform="translate(40,170)" filter="url(#shadow)">
+      <rect width="170" height="68" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="28" cy="34" r="14" fill="#dcfce7"/>
+      <text x="22" y="39" font-size="16">⚡</text>
+      <text x="52" y="32" font-weight="600">Start</text>
+      <text x="52" y="50" font-size="11" fill="#64748b">/trips/new</text>
+    </g>
+
+    <g transform="translate(240,170)" filter="url(#shadow)">
+      <rect width="170" height="68" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="28" cy="34" r="14" fill="#ede9fe"/><text x="22" y="39" font-size="14">🧭</text>
+      <text x="52" y="32" font-weight="600">Entry choice</text>
+      <text x="52" y="50" font-size="11" fill="#64748b">step-by-step / free text</text>
+    </g>
+
+    <g transform="translate(440,170)" filter="url(#shadow)">
+      <rect width="170" height="68" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="28" cy="34" r="14" fill="#dbeafe"/><text x="22" y="39" font-size="14">📍</text>
+      <text x="52" y="32" font-weight="600">Destination</text>
+      <text x="52" y="50" font-size="11" fill="#64748b">+ Surprise Me toggle</text>
+    </g>
+
+    <g transform="translate(640,170)" filter="url(#shadow)">
+      <rect width="170" height="68" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="28" cy="34" r="14" fill="#dbeafe"/><text x="22" y="39" font-size="14">📅</text>
+      <text x="52" y="32" font-weight="600">Dates</text>
+      <text x="52" y="50" font-size="11" fill="#64748b">fixed or flexible</text>
+    </g>
+
+    <g transform="translate(840,170)" filter="url(#shadow)">
+      <rect width="170" height="68" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="28" cy="34" r="14" fill="#dbeafe"/><text x="22" y="39" font-size="14">💰</text>
+      <text x="52" y="32" font-weight="600">Budget</text>
+      <text x="52" y="50" font-size="11" fill="#64748b">budget · mid · premium</text>
+    </g>
+
+    <g transform="translate(1040,170)" filter="url(#shadow)">
+      <rect width="170" height="68" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="28" cy="34" r="14" fill="#dbeafe"/><text x="22" y="39" font-size="14">🎨</text>
+      <text x="52" y="32" font-weight="600">Vibes</text>
+      <text x="52" y="50" font-size="11" fill="#64748b">multi-select activities</text>
+    </g>
+
+    <g transform="translate(1240,170)" filter="url(#shadow)">
+      <rect width="170" height="68" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="28" cy="34" r="14" fill="#dbeafe"/><text x="22" y="39" font-size="14">🐢</text>
+      <text x="52" y="32" font-weight="600">Pace</text>
+      <text x="52" y="50" font-size="11" fill="#64748b">leisurely · balanced · active</text>
+    </g>
+
+    <g transform="translate(1440,170)" filter="url(#shadow)">
+      <rect width="200" height="68" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="28" cy="34" r="14" fill="#dbeafe"/><text x="22" y="39" font-size="14">📝</text>
+      <text x="52" y="32" font-weight="600">Extras</text>
+      <text x="52" y="50" font-size="11" fill="#64748b">dietary + free notes</text>
+    </g>
+  </g>
+
+  <!-- Connector line through wizard -->
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none">
+    <line x1="210" y1="204" x2="240" y2="204"/>
+    <line x1="410" y1="204" x2="440" y2="204"/>
+    <line x1="610" y1="204" x2="640" y2="204"/>
+    <line x1="810" y1="204" x2="840" y2="204"/>
+    <line x1="1010" y1="204" x2="1040" y2="204"/>
+    <line x1="1210" y1="204" x2="1240" y2="204"/>
+    <line x1="1410" y1="204" x2="1440" y2="204"/>
+  </g>
+
+  <!-- ============= SECTION 2: PRE-FLIGHT ============= -->
+  <text x="40" y="290" font-size="13" font-weight="600" fill="#475569" letter-spacing="1">② OPTIONAL PREVIEW · ConfirmationCard.tsx</text>
+  <line x1="40" y1="300" x2="1640" y2="300" stroke="#e2e8f0"/>
+
+  <g font-size="13" fill="#0f172a">
+    <g transform="translate(540,330)" filter="url(#shadow)">
+      <rect width="240" height="74" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <circle cx="32" cy="37" r="16" fill="#dbeafe"/><text x="24" y="42" font-size="16">💬</text>
+      <text x="58" y="34" font-weight="600">ConfirmationCard</text>
+      <text x="58" y="52" font-size="11" fill="#64748b">summarises intent before submit</text>
+    </g>
+
+    <g transform="translate(860,330)" filter="url(#shadow)">
+      <rect width="280" height="74" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="1.5"/>
+      <circle cx="32" cy="37" r="16" fill="#ede9fe"/><text x="24" y="42" font-size="16">🟣</text>
+      <text x="58" y="34" font-weight="600">confirm-trip-summary</text>
+      <text x="58" y="52" font-size="11" fill="#64748b">Claude Haiku · temp 0.9 · one-liner</text>
+    </g>
+  </g>
+
+  <line x1="780" y1="367" x2="860" y2="367" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="660" y1="238" x2="660" y2="330" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ============= SECTION 3: ORCHESTRATOR GATES ============= -->
+  <text x="40" y="450" font-size="13" font-weight="600" fill="#475569" letter-spacing="1">③ EDGE FUNCTION · generate-trip-itinerary · gates &amp; cache</text>
+  <line x1="40" y1="460" x2="1640" y2="460" stroke="#e2e8f0"/>
+
+  <g font-size="13" fill="#0f172a">
+    <!-- Submit -->
+    <g transform="translate(40,490)" filter="url(#shadow)">
+      <rect width="220" height="78" rx="14" fill="#0f172a"/>
+      <text x="20" y="34" fill="#ffffff" font-weight="600">Submit → SSE stream</text>
+      <text x="20" y="54" fill="#cbd5e1" font-size="11">useStreamingTripGeneration()</text>
+      <text x="20" y="68" fill="#94a3b8" font-size="11">Accept: text/event-stream</text>
+    </g>
+
+    <!-- Rate limit gate -->
+    <g transform="translate(310,490)" filter="url(#shadow)">
+      <rect width="220" height="78" rx="14" fill="#fef2f2" stroke="#ef4444"/>
+      <circle cx="32" cy="40" r="16" fill="#fecaca"/><text x="25" y="45" font-size="16">🛑</text>
+      <text x="58" y="34" font-weight="600">Rate limit gate</text>
+      <text x="58" y="52" font-size="11" fill="#64748b">5 generations / hour / user</text>
+      <text x="58" y="68" font-size="11" fill="#64748b">admin bypass</text>
+    </g>
+
+    <!-- Cache lookup -->
+    <g transform="translate(580,490)" filter="url(#shadow)">
+      <rect width="220" height="78" rx="14" fill="#fffbeb" stroke="#eab308"/>
+      <circle cx="32" cy="40" r="16" fill="#fde68a"/><text x="25" y="45" font-size="16">💾</text>
+      <text x="58" y="34" font-weight="600">ai_response_cache</text>
+      <text x="58" y="52" font-size="11" fill="#64748b">intent-hash · 7–30d TTL</text>
+      <text x="58" y="68" font-size="11" fill="#64748b">HIT → rewrite dates &amp; events</text>
+    </g>
+
+    <!-- Circuit breaker -->
+    <g transform="translate(850,490)" filter="url(#shadow)">
+      <rect width="220" height="78" rx="14" fill="#fef2f2" stroke="#ef4444"/>
+      <circle cx="32" cy="40" r="16" fill="#fecaca"/><text x="25" y="45" font-size="16">⚡</text>
+      <text x="58" y="34" font-weight="600">Places budget breaker</text>
+      <text x="58" y="52" font-size="11" fill="#64748b">$50 daily cap</text>
+      <text x="58" y="68" font-size="11" fill="#64748b">PLACES_DAILY_BUDGET_USD</text>
+    </g>
+
+    <!-- Pass arrow -->
+    <g transform="translate(1130,490)" filter="url(#shadow)">
+      <rect width="240" height="78" rx="14" fill="#ecfeff" stroke="#06b6d4"/>
+      <circle cx="32" cy="40" r="16" fill="#cffafe"/><text x="25" y="45" font-size="16">▶</text>
+      <text x="58" y="34" font-weight="600">Begin pipeline</text>
+      <text x="58" y="52" font-size="11" fill="#64748b">PIPELINE_WALL_CLOCK_MS</text>
+      <text x="58" y="68" font-size="11" fill="#64748b">global wall-clock budget</text>
+    </g>
+  </g>
+
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <line x1="260" y1="529" x2="310" y2="529"/>
+    <line x1="530" y1="529" x2="580" y2="529"/>
+    <line x1="800" y1="529" x2="850" y2="529"/>
+    <line x1="1070" y1="529" x2="1130" y2="529"/>
+  </g>
+  <line x1="1000" y1="404" x2="1000" y2="490" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ============= SECTION 4: PIPELINE LINEAR ============= -->
+  <text x="40" y="630" font-size="13" font-weight="600" fill="#475569" letter-spacing="1">④ DETERMINISTIC PIPELINE · steps 1–7</text>
+  <line x1="40" y1="640" x2="1640" y2="640" stroke="#e2e8f0"/>
+
+  <g font-size="13" fill="#0f172a">
+    <!-- 1 parseIntent -->
+    <g transform="translate(40,670)" filter="url(#shadow)">
+      <rect width="220" height="86" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="1.5"/>
+      <circle cx="32" cy="40" r="16" fill="#ede9fe"/><text x="22" y="46" font-size="18">🟣</text>
+      <text x="58" y="32" font-weight="600">1 · parseIntent</text>
+      <text x="58" y="50" font-size="11" fill="#64748b">Claude Haiku · temp 0</text>
+      <text x="58" y="64" font-size="11" fill="#64748b">structured intent JSON</text>
+      <text x="58" y="78" font-size="11" fill="#94a3b8">index.ts:1032</text>
+    </g>
+
+    <!-- 2 buildSkeleton -->
+    <g transform="translate(290,670)" filter="url(#shadow)">
+      <rect width="220" height="86" rx="14" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.5"/>
+      <circle cx="32" cy="40" r="16" fill="#e0f2fe"/><text x="22" y="46" font-size="18">⚙️</text>
+      <text x="58" y="32" font-weight="600">2 · buildSkeleton</text>
+      <text x="58" y="50" font-size="11" fill="#64748b">pure code · pace-aware</text>
+      <text x="58" y="64" font-size="11" fill="#64748b">slot budget per day</text>
+      <text x="58" y="78" font-size="11" fill="#94a3b8">index.ts:1253</text>
+    </g>
+
+    <!-- 3 geocodeDestination -->
+    <g transform="translate(540,670)" filter="url(#shadow)">
+      <rect width="220" height="86" rx="14" fill="#ffffff" stroke="#22c55e" stroke-width="1.5"/>
+      <circle cx="32" cy="40" r="16" fill="#dcfce7"/><text x="22" y="46" font-size="18">🟢</text>
+      <text x="58" y="32" font-weight="600">3 · geocodeDestination</text>
+      <text x="58" y="50" font-size="11" fill="#64748b">Google Places</text>
+      <text x="58" y="64" font-size="11" fill="#64748b">coords + country code</text>
+    </g>
+
+    <!-- 4 buildPlacesQueries -->
+    <g transform="translate(790,670)" filter="url(#shadow)">
+      <rect width="220" height="86" rx="14" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.5"/>
+      <circle cx="32" cy="40" r="16" fill="#e0f2fe"/><text x="22" y="46" font-size="18">⚙️</text>
+      <text x="58" y="32" font-weight="600">4 · buildPlacesQueries</text>
+      <text x="58" y="50" font-size="11" fill="#64748b">pure code · max 12 queries</text>
+      <text x="58" y="64" font-size="11" fill="#64748b">type-aware, vibes-aware</text>
+      <text x="58" y="78" font-size="11" fill="#94a3b8">index.ts:1474</text>
+    </g>
+
+    <!-- 5 searchPlacesBatch -->
+    <g transform="translate(1040,670)" filter="url(#shadow)">
+      <rect width="220" height="86" rx="14" fill="#ffffff" stroke="#22c55e" stroke-width="1.5"/>
+      <circle cx="32" cy="40" r="16" fill="#dcfce7"/><text x="22" y="46" font-size="18">🟢</text>
+      <text x="58" y="32" font-weight="600">5 · searchPlacesBatch</text>
+      <text x="58" y="50" font-size="11" fill="#64748b">Places · ESSENTIALS mask</text>
+      <text x="58" y="64" font-size="11" fill="#64748b">ranking pool</text>
+      <text x="58" y="78" font-size="11" fill="#94a3b8">index.ts:2052</text>
+    </g>
+
+    <!-- 6 hydrateFinalists -->
+    <g transform="translate(1290,670)" filter="url(#shadow)">
+      <rect width="220" height="86" rx="14" fill="#ffffff" stroke="#22c55e" stroke-width="1.5"/>
+      <circle cx="32" cy="40" r="16" fill="#dcfce7"/><text x="22" y="46" font-size="18">🟢</text>
+      <text x="58" y="32" font-weight="600">6 · hydrateFinalists</text>
+      <text x="58" y="50" font-size="11" fill="#64748b">Places · PRO mask</text>
+      <text x="58" y="64" font-size="11" fill="#64748b">~15 venues · photos · hours</text>
+      <text x="58" y="78" font-size="11" fill="#94a3b8">index.ts:2184</text>
+    </g>
+
+    <!-- Optional events -->
+    <g transform="translate(1040,790)" filter="url(#shadow)">
+      <rect width="220" height="74" rx="14" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <circle cx="32" cy="37" r="16" fill="#fef3c7"/><text x="22" y="42" font-size="18">🟠</text>
+      <text x="58" y="32" font-weight="600">searchEvents (optional)</text>
+      <text x="58" y="50" font-size="11" fill="#64748b">Brave / Google CSE</text>
+      <text x="58" y="64" font-size="11" fill="#64748b">parallel to hydration</text>
+    </g>
+  </g>
+
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <line x1="260" y1="713" x2="290" y2="713"/>
+    <line x1="510" y1="713" x2="540" y2="713"/>
+    <line x1="760" y1="713" x2="790" y2="713"/>
+    <line x1="1010" y1="713" x2="1040" y2="713"/>
+    <line x1="1260" y1="713" x2="1290" y2="713"/>
+    <line x1="1150" y1="756" x2="1150" y2="790" stroke-dasharray="4 3"/>
+  </g>
+  <line x1="1250" y1="568" x2="1250" y2="670" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Surprise branch -->
+  <g transform="translate(40,790)" filter="url(#shadow)">
+    <rect width="220" height="74" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <circle cx="32" cy="37" r="16" fill="#ede9fe"/><text x="22" y="42" font-size="18">🟣</text>
+    <text x="58" y="32" font-weight="600" font-size="13">pickSurpriseDestination</text>
+    <text x="58" y="50" font-size="11" fill="#64748b">if Surprise Me toggled</text>
+    <text x="58" y="64" font-size="11" fill="#64748b">Claude Haiku</text>
+  </g>
+  <path d="M 150 756 L 150 790" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- ============= SECTION 5: MULTI-AGENT FAN-OUT ============= -->
+  <text x="40" y="930" font-size="13" font-weight="600" fill="#475569" letter-spacing="1">⑤ MULTI-AGENT FAN-OUT · step 7 · rankInParallel · index.ts:3458</text>
+  <line x1="40" y1="940" x2="1640" y2="940" stroke="#e2e8f0"/>
+
+  <!-- Dispatcher -->
+  <g transform="translate(640,970)" filter="url(#shadow)">
+    <rect width="400" height="80" rx="14" fill="#0f172a"/>
+    <text x="24" y="34" fill="#ffffff" font-weight="700" font-size="15">Dispatcher · rankInParallel</text>
+    <text x="24" y="54" fill="#cbd5e1" font-size="11">trip.length &lt; 4 days → parallel</text>
+    <text x="24" y="70" fill="#cbd5e1" font-size="11">trip.length ≥ 4 days → sequential (avoid pool depletion)</text>
+  </g>
+
+  <!-- Day agents -->
+  <g font-size="13" fill="#0f172a">
+    <g transform="translate(60,1090)" filter="url(#shadow)">
+      <rect width="280" height="100" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#ede9fe"/><text x="22" y="46" font-size="20">🤖</text>
+      <text x="64" y="32" font-weight="700">Day 1 Agent</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">Claude Haiku · prompt cached</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">picks venues from finalists</text>
+      <text x="64" y="80" font-size="11" fill="#64748b">fills time slots from skeleton</text>
+      <text x="64" y="93" font-size="10" fill="#94a3b8">tools: pruned venue list · day context</text>
+    </g>
+
+    <g transform="translate(370,1090)" filter="url(#shadow)">
+      <rect width="280" height="100" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#ede9fe"/><text x="22" y="46" font-size="20">🤖</text>
+      <text x="64" y="32" font-weight="700">Day 2 Agent</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">Claude Haiku · prompt cached</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">venues already selected by Day 1</text>
+      <text x="64" y="80" font-size="11" fill="#64748b">excluded to reduce repeats</text>
+    </g>
+
+    <g transform="translate(680,1090)" filter="url(#shadow)">
+      <rect width="280" height="100" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#ede9fe"/><text x="22" y="46" font-size="20">🤖</text>
+      <text x="64" y="32" font-weight="700">Day N Agent</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">Claude Haiku · prompt cached</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">one call per remaining day</text>
+    </g>
+
+    <g transform="translate(990,1090)" filter="url(#shadow)">
+      <rect width="320" height="100" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#ede9fe"/><text x="22" y="46" font-size="20">🤖</text>
+      <text x="64" y="32" font-weight="700">Metadata Agent</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">Claude Haiku · prompt cached</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">title · summary · packing list</text>
+      <text x="64" y="80" font-size="11" fill="#64748b">budget estimate · cover hints</text>
+    </g>
+
+    <g transform="translate(1340,1090)" filter="url(#shadow)">
+      <rect width="280" height="100" rx="14" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#e0f2fe"/><text x="22" y="46" font-size="20">🔀</text>
+      <text x="64" y="32" font-weight="700">Merge results</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">collect all day + metadata</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">into AITripResult shape</text>
+    </g>
+  </g>
+
+  <!-- Connectors from dispatcher to agents -->
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none">
+    <path d="M 800 1050 C 800 1075 200 1065 200 1090" marker-end="url(#arrow)"/>
+    <path d="M 800 1050 C 800 1075 510 1065 510 1090" marker-end="url(#arrow)"/>
+    <path d="M 800 1050 C 800 1075 820 1075 820 1090" marker-end="url(#arrow)"/>
+    <path d="M 800 1050 C 800 1075 1150 1065 1150 1090" marker-end="url(#arrow)"/>
+  </g>
+  <!-- Connectors from agents to merge -->
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none">
+    <path d="M 340 1140 C 700 1240 1000 1240 1340 1140" marker-end="url(#arrow)"/>
+    <line x1="650" y1="1190" x2="1340" y2="1140" marker-end="url(#arrow)"/>
+    <line x1="960" y1="1140" x2="1340" y2="1140" marker-end="url(#arrow)"/>
+    <line x1="1310" y1="1140" x2="1340" y2="1140" marker-end="url(#arrow)"/>
+  </g>
+  <!-- arrow from hydrate to dispatcher -->
+  <line x1="1400" y1="756" x2="1400" y2="900" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <path d="M 1400 900 L 1400 970 L 1040 970 L 1040 1010" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- ============= SECTION 6: FINALIZATION ============= -->
+  <text x="40" y="1290" font-size="13" font-weight="600" fill="#475569" letter-spacing="1">⑥ FINALIZATION · steps 8–10</text>
+  <line x1="40" y1="1300" x2="1640" y2="1300" stroke="#e2e8f0"/>
+
+  <g font-size="13" fill="#0f172a">
+    <g transform="translate(120,1330)" filter="url(#shadow)">
+      <rect width="320" height="86" rx="14" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#e0f2fe"/><text x="22" y="46" font-size="20">⭐</text>
+      <text x="64" y="32" font-weight="700">8 · markJuntoPicks</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">pure code heuristic</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">rating × reviews × intent-match</text>
+    </g>
+
+    <g transform="translate(490,1330)" filter="url(#shadow)">
+      <rect width="320" height="86" rx="14" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#e0f2fe"/><text x="22" y="46" font-size="20">🔗</text>
+      <text x="64" y="32" font-weight="700">9 · buildAffiliateUrls</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">Booking · Viator · GetYourGuide</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">Maps fallback · type-based routing</text>
+    </g>
+
+    <g transform="translate(860,1330)" filter="url(#shadow)">
+      <rect width="320" height="86" rx="14" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#e0f2fe"/><text x="22" y="46" font-size="20">🛡️</text>
+      <text x="64" y="32" font-weight="700">10 · validateActivities</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">drop hallucinations</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">missing place_id · OPERATIONAL · distance</text>
+    </g>
+
+    <g transform="translate(1230,1330)" filter="url(#shadow)">
+      <rect width="320" height="86" rx="14" fill="#0f172a"/>
+      <text x="22" y="34" fill="#ffffff" font-weight="700">AITripResult</text>
+      <text x="22" y="54" fill="#cbd5e1" font-size="11">days · activities · metadata</text>
+      <text x="22" y="70" fill="#94a3b8" font-size="11">emitted via SSE: progress · meta · day · trip_complete</text>
+    </g>
+  </g>
+
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <line x1="440" y1="1373" x2="490" y2="1373"/>
+    <line x1="810" y1="1373" x2="860" y2="1373"/>
+    <line x1="1180" y1="1373" x2="1230" y2="1373"/>
+    <path d="M 1480 1190 C 1480 1260 280 1260 280 1330"/>
+  </g>
+
+  <!-- ============= SECTION 7: PERSIST ============= -->
+  <text x="40" y="1490" font-size="13" font-weight="600" fill="#475569" letter-spacing="1">⑦ PERSIST · Supabase writes</text>
+  <line x1="40" y1="1500" x2="1640" y2="1500" stroke="#e2e8f0"/>
+
+  <g font-size="13" fill="#0f172a">
+    <g transform="translate(40,1530)" filter="url(#shadow)">
+      <rect width="300" height="100" rx="14" fill="#ffffff" stroke="#eab308" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#fef3c7"/><text x="24" y="46" font-size="20">🗃️</text>
+      <text x="64" y="32" font-weight="700">ai_trip_plans</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">trip_id · created_by</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">prompt (normalized form)</text>
+      <text x="64" y="82" font-size="11" fill="#64748b">result (full AITripResult JSON)</text>
+    </g>
+
+    <g transform="translate(370,1530)" filter="url(#shadow)">
+      <rect width="300" height="100" rx="14" fill="#ffffff" stroke="#eab308" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#fef3c7"/><text x="24" y="46" font-size="20">💾</text>
+      <text x="64" y="32" font-weight="700">ai_response_cache</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">cache_key (intent hash)</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">response_json · expires_at</text>
+      <text x="64" y="82" font-size="11" fill="#64748b">7–30d bucketed TTL</text>
+    </g>
+
+    <g transform="translate(700,1530)" filter="url(#shadow)">
+      <rect width="300" height="100" rx="14" fill="#ffffff" stroke="#eab308" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#fef3c7"/><text x="24" y="46" font-size="20">📊</text>
+      <text x="64" y="32" font-weight="700">ai_request_log</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">per-call tokens + cost_usd</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">feature: trip_builder_total</text>
+      <text x="64" y="82" font-size="11" fill="#64748b">cached flag, model, user_id</text>
+    </g>
+
+    <g transform="translate(1030,1530)" filter="url(#shadow)">
+      <rect width="300" height="100" rx="14" fill="#ffffff" stroke="#eab308" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#fef3c7"/><text x="24" y="46" font-size="20">🖼️</text>
+      <text x="64" y="32" font-weight="700">trips.destination_image_url</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">best-effort update</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">only if currently null</text>
+    </g>
+
+    <g transform="translate(1360,1530)" filter="url(#shadow)">
+      <rect width="280" height="100" rx="14" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="18" fill="#d1fae5"/><text x="24" y="46" font-size="20">✅</text>
+      <text x="64" y="32" font-weight="700">UI: Itinerary view</text>
+      <text x="64" y="50" font-size="11" fill="#64748b">renders day-by-day</text>
+      <text x="64" y="66" font-size="11" fill="#64748b">SSE-driven progressive load</text>
+      <text x="64" y="82" font-size="11" fill="#64748b">~20s wall-clock cold cache</text>
+    </g>
+  </g>
+
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <path d="M 1390 1416 C 1390 1450 190 1480 190 1530"/>
+    <line x1="340" y1="1580" x2="370" y2="1580"/>
+    <line x1="670" y1="1580" x2="700" y2="1580"/>
+    <line x1="1000" y1="1580" x2="1030" y2="1580"/>
+    <line x1="1330" y1="1580" x2="1360" y2="1580"/>
+  </g>
+
+  <!-- ============= SECTION 8: KEY FACTS ============= -->
+  <text x="40" y="1700" font-size="13" font-weight="600" fill="#475569" letter-spacing="1">⑧ KEY FACTS</text>
+  <line x1="40" y1="1710" x2="1640" y2="1710" stroke="#e2e8f0"/>
+
+  <g font-size="12" fill="#0f172a">
+    <g transform="translate(40,1740)">
+      <rect width="500" height="150" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="30" font-weight="700" font-size="13" fill="#0f172a">Models</text>
+      <text x="20" y="54" fill="#475569">• Claude Haiku 4.5 · claude-haiku-4-5-20251001</text>
+      <text x="20" y="74" fill="#475569">• Direct Anthropic API · prompt caching enabled</text>
+      <text x="20" y="94" fill="#475569">• temp 0 for parseIntent / rankers · 0.9 for confirm</text>
+      <text x="20" y="114" fill="#475569">• Gemini 2.5 Flash via Lovable Gateway · alternatives_mode only</text>
+      <text x="20" y="134" fill="#475569">• PER_ATTEMPT_MAX_MS timeout per call</text>
+    </g>
+
+    <g transform="translate(570,1740)">
+      <rect width="500" height="150" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="30" font-weight="700" font-size="13" fill="#0f172a">Pattern</text>
+      <text x="20" y="54" fill="#475569">• Orchestrated chain + parallel fan-out</text>
+      <text x="20" y="74" fill="#475569">• Sequential: intent → skeleton → queries → search → hydrate</text>
+      <text x="20" y="94" fill="#475569">• Parallel: per-day rankers + metadata agent</text>
+      <text x="20" y="114" fill="#475569">• Sequential finalization: picks → affiliate → validate</text>
+      <text x="20" y="134" fill="#475569">• Streamed via SSE so days render as they finish</text>
+    </g>
+
+    <g transform="translate(1100,1740)">
+      <rect width="540" height="150" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="30" font-weight="700" font-size="13" fill="#0f172a">Guard rails</text>
+      <text x="20" y="54" fill="#475569">• Rate limit · 5 generations / hour / user</text>
+      <text x="20" y="74" fill="#475569">• Circuit breaker · $50 / day Places spend</text>
+      <text x="20" y="94" fill="#475569">• Cache · 7–30d intent-keyed TTL · nightly cron cleanup</text>
+      <text x="20" y="114" fill="#475569">• validateActivities drops LLM hallucinations vs Places truth</text>
+      <text x="20" y="134" fill="#475569">• PIPELINE_WALL_CLOCK_MS bounds total time</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <text x="40" y="1980" font-size="11" fill="#94a3b8">supabase/functions/generate-trip-itinerary/index.ts · src/components/trip-builder/TripBuilderFlow.tsx · src/components/trip-builder/ConfirmationCard.tsx</text>
+  <text x="40" y="2000" font-size="11" fill="#94a3b8">Junto · 2026</text>
+</svg>
