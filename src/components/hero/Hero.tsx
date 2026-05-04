@@ -154,7 +154,7 @@ export function Hero({
   const formEl = (
     <form
       onSubmit={handleSubmit}
-      className={isApp ? "mt-6 w-full max-w-2xl" : "mt-8 sm:mt-10 w-full max-w-2xl"}
+      className={isApp ? "mt-6 w-full max-w-2xl" : "mt-8 sm:mt-10 w-full max-w-xl"}
     >
       {/* ── Single integrated pill (all viewports) ── */}
       <div
