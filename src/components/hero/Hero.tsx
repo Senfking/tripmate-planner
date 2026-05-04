@@ -169,11 +169,11 @@ export function Hero({
           rows={2}
           className={[
             "block w-full min-w-0 flex-1 resize-none bg-transparent",
-            "px-0 sm:px-4 py-2 sm:py-2",
+            "px-0 sm:px-4 py-0 sm:py-2",
             "text-[15px] sm:text-[14.5px] text-gray-500 placeholder:text-gray-500",
             "outline-none border-0",
-            "leading-[1.35] sm:leading-[1.4] overflow-hidden",
-            "h-[44px] sm:min-h-[56px]",
+            "leading-[1.4] sm:leading-[1.4] overflow-hidden",
+            "min-h-[48px] sm:min-h-[56px]",
             "disabled:opacity-60 text-left",
           ].join(" ")}
         />
