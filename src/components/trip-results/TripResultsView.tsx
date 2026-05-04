@@ -608,91 +608,122 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               : `${currency} ${costBreakdown.dailyAvg.toLocaleString()}`;
 
             return (
-              <div className="relative rounded-3xl overflow-hidden border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)]">
+              <div className="relative rounded-3xl overflow-hidden bg-[hsl(180_25%_10%)] text-white shadow-[0_20px_50px_-20px_rgba(13,148,136,0.45)]">
                 {/* Hero amount block */}
-                <div className="relative px-5 pt-5 pb-5 bg-gradient-to-br from-primary/[0.06] via-card to-card overflow-hidden">
-                  {/* Subtle backdrop glow */}
-                  <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+                <div className="relative px-6 pt-6 pb-5 overflow-hidden">
+                  {/* Ambient glows */}
+                  <div className="absolute -top-20 -right-16 w-64 h-64 rounded-full bg-[#0D9488]/30 blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-24 -left-10 w-56 h-56 rounded-full bg-[#0D9488]/15 blur-3xl pointer-events-none" />
+                  {/* Grid texture */}
+                  <div
+                    className="absolute inset-0 opacity-[0.035] pointer-events-none"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
+                      backgroundSize: "24px 24px",
+                    }}
+                  />
 
                   <div className="relative flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Wallet className="h-3.5 w-3.5 text-primary" />
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-md bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                          <Wallet className="h-3 w-3 text-[#5EEAD4]" />
                         </div>
-                        <span className="text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground">Estimated budget</span>
+                        <span className="text-[10px] uppercase tracking-[0.18em] font-medium text-white/60">Estimated budget · per person</span>
                       </div>
-                      <div className="flex items-baseline gap-1.5 font-mono">
-                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">~</span>
-                        <span className="text-3xl sm:text-[34px] font-semibold tracking-tight text-foreground tabular-nums leading-none">
-                          {primaryAmount}
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs font-medium text-white/50 tabular-nums tracking-wider">{showConverted ? userCurrency : currency}</span>
+                        <span className="text-[40px] sm:text-[44px] font-semibold tracking-tight text-white tabular-nums leading-none">
+                          {showConverted
+                            ? converted!.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                            : costBreakdown.total.toLocaleString()}
                         </span>
                       </div>
-                      <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <span>per person</span>
-                        {showConverted && (
-                          <>
-                            <span className="text-muted-foreground/40">·</span>
-                            <span className="font-mono tabular-nums">≈ {currency} {costBreakdown.total.toLocaleString()}</span>
-                          </>
-                        )}
-                      </div>
+                      {showConverted && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-white/50 font-mono tabular-nums">
+                          <span className="inline-block w-1 h-1 rounded-full bg-[#5EEAD4]" />
+                          ≈ {currency} {costBreakdown.total.toLocaleString()} locally
+                        </div>
+                      )}
                     </div>
 
                     <button
                       onClick={() => setCostOpen(!costOpen)}
-                      className="shrink-0 h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center hover:bg-accent transition-colors"
+                      className="shrink-0 h-9 w-9 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-sm flex items-center justify-center transition-colors"
                       aria-label={costOpen ? "Hide breakdown" : "Show breakdown"}
                     >
-                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${costOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`h-4 w-4 text-white transition-transform duration-200 ${costOpen ? "rotate-180" : ""}`} />
                     </button>
+                  </div>
+
+                  {/* Stacked progress bar */}
+                  <div className="relative mt-5 h-1.5 w-full rounded-full bg-white/10 overflow-hidden flex">
+                    {costBreakdown.categories.map(([cat, amount], i) => {
+                      const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
+                      const colors = ["#5EEAD4", "#2DD4BF", "#14B8A6", "#0D9488", "#0F766E", "#115E59"];
+                      return (
+                        <div
+                          key={cat}
+                          style={{ width: `${pct}%`, background: colors[i % colors.length] }}
+                          className="h-full"
+                        />
+                      );
+                    })}
                   </div>
 
                   {/* Stat tiles */}
                   <div className="relative mt-4 grid grid-cols-3 gap-2">
-                    <div className="rounded-xl bg-card/80 backdrop-blur border border-border/60 px-3 py-2.5">
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium">Activities</div>
-                      <div className="mt-0.5 text-[13px] font-mono font-medium text-foreground tabular-nums truncate">{activitiesDisplay}</div>
-                    </div>
-                    <div className="rounded-xl bg-card/80 backdrop-blur border border-border/60 px-3 py-2.5">
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium">Stay</div>
-                      <div className="mt-0.5 text-[13px] font-mono font-medium text-foreground tabular-nums truncate">{stayDisplay}</div>
-                    </div>
-                    <div className="rounded-xl bg-card/80 backdrop-blur border border-border/60 px-3 py-2.5">
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium">Per day</div>
-                      <div className="mt-0.5 text-[13px] font-mono font-medium text-foreground tabular-nums truncate">{dailyDisplay}</div>
-                    </div>
+                    {[
+                      { label: "Activities", value: activitiesDisplay },
+                      { label: "Stay", value: stayDisplay },
+                      { label: "Per day", value: dailyDisplay },
+                    ].map((s) => (
+                      <div
+                        key={s.label}
+                        className="rounded-xl bg-white/[0.06] backdrop-blur-sm px-3 py-2.5 border border-white/[0.06]"
+                      >
+                        <div className="text-[9px] uppercase tracking-[0.14em] text-white/50 font-medium">{s.label}</div>
+                        <div className="mt-1 text-[13px] font-mono font-medium text-white tabular-nums truncate">{s.value}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 {/* Category breakdown */}
                 {costOpen && (
-                  <div className="px-5 py-4 border-t border-border bg-card animate-fade-in">
-                    <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-muted-foreground mb-3">Breakdown</div>
-                    <div className="space-y-2.5">
-                      {costBreakdown.categories.map(([cat, amount]) => {
+                  <div className="px-6 py-5 border-t border-white/[0.08] bg-[hsl(180_25%_8%)] animate-fade-in">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-[10px] uppercase tracking-[0.18em] font-medium text-white/50">Breakdown</div>
+                      <div className="text-[10px] uppercase tracking-wider text-white/40">{costBreakdown.categories.length} categories</div>
+                    </div>
+                    <div className="space-y-3">
+                      {costBreakdown.categories.map(([cat, amount], i) => {
                         const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
                         const catConverted = convertToUserCurrency(amount);
                         const catShowConverted = conversionEnabled && catConverted !== null;
                         const catDisplay = catShowConverted
                           ? formatBudget(catConverted!, userCurrency)
                           : `${currency} ${Math.round(amount).toLocaleString()}`;
+                        const colors = ["#5EEAD4", "#2DD4BF", "#14B8A6", "#0D9488", "#0F766E", "#115E59"];
+                        const color = colors[i % colors.length];
                         return (
                           <div key={cat} className="flex items-center gap-3">
-                            <span className="text-xs text-foreground/80 w-24 shrink-0 truncate">{cat}</span>
-                            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full rounded-full bg-primary/70" style={{ width: `${Math.min(pct, 100)}%` }} />
-                            </div>
-                            <span className="text-xs font-mono text-foreground tabular-nums w-24 text-right">{catDisplay}</span>
+                            <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+                            <span className="text-xs text-white/80 flex-1 truncate">{cat}</span>
+                            <span className="text-[10px] text-white/40 font-mono tabular-nums w-10 text-right">{pct.toFixed(0)}%</span>
+                            <span className="text-xs font-mono text-white tabular-nums w-24 text-right">{catDisplay}</span>
                           </div>
                         );
                       })}
                     </div>
-                    <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Total</span>
-                      <span className="text-sm font-mono font-semibold text-primary tabular-nums">~{primaryAmount}</span>
+                    <div className="mt-5 pt-4 border-t border-white/[0.08] flex items-center justify-between">
+                      <span className="text-[11px] uppercase tracking-[0.14em] text-white/60 font-medium">Total per person</span>
+                      <span className="text-base font-mono font-semibold text-[#5EEAD4] tabular-nums">
+                        {showConverted ? userCurrency : currency} {(showConverted ? converted! : costBreakdown.total).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground/60 mt-3">Based on typical prices · actual costs may vary by season and availability.</p>
+                    <p className="text-[10px] text-white/40 mt-3">Based on typical prices · actual costs may vary by season and availability.</p>
                   </div>
                 )}
               </div>
