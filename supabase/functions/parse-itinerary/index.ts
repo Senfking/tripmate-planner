@@ -56,10 +56,36 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: false, error: "file_path and file_type required for type=file" }, 400);
       }
 
+      // Authorization: file_path must be under imports/{tripId}/... and the
+      // caller must be a member of that trip. The frontend uploads to
+      // `imports/${tripId}/${uuid}.${ext}`, so we extract trip_id from segment 1.
+      // Without this, any signed-in user could pass an arbitrary path and have
+      // the service-role client read & AI-extract someone else's attachment.
+      const segments = String(file_path).split("/");
+      if (segments.length < 3 || segments[0] !== "imports") {
+        return jsonResponse({ success: false, error: "Invalid file_path" }, 400);
+      }
+      const pathTripId = segments[1];
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRe.test(pathTripId)) {
+        return jsonResponse({ success: false, error: "Invalid file_path" }, 400);
+      }
+
       const supabaseAdmin = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       );
+
+      const { data: isMember, error: rpcErr } = await supabaseAdmin.rpc("is_trip_member", {
+        _trip_id: pathTripId,
+        _user_id: user.id,
+      });
+      if (rpcErr) {
+        return jsonResponse({ success: false, error: "Failed to verify trip membership" }, 500);
+      }
+      if (!isMember) {
+        return jsonResponse({ success: false, error: "Forbidden" }, 403);
+      }
 
       const { data: fileData, error: dlError } = await supabaseAdmin.storage
         .from("trip-attachments")
