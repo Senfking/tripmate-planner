@@ -925,9 +925,10 @@ destination:
 - Never invent a destination from thin air.
 
 vibes:
-- Start from the user's explicit vibes[] array.
-- Add vibes that are clearly implied by free_text (e.g. "we want to eat our way through" => add "foodie"; "chill beach days" => add "beach", "slow").
-- Short lowercase tags, 1-3 words each. De-duplicate.
+- PRESERVE EVERY explicit vibe from the user's vibes[] array — never drop one. These are mandatory inclusion criteria for the trip, not soft hints.
+- Normalize each preserved vibe to a short lowercase tag (e.g. "Nightlife" => "nightlife", "Hidden gems" => "hidden gems"). Keep multi-word tags intact; do not split "hidden gems" into two entries.
+- THEN add vibes that are clearly implied by free_text (e.g. "we want to eat our way through" => add "foodie"; "chill beach days" => add "beach", "slow"). De-duplicate against the preserved set.
+- Output is short lowercase tags, 1-3 words each. The downstream pipeline matches these tags against a Places-retrieval map — preserving the user's exact form selections (lowercased) is critical.
 
 must_haves:
 - Specific experiences the user explicitly asked for. Examples: "cooking class", "see the Northern Lights", "visit the Miffy Museum", "sunrise hike".
@@ -1316,6 +1317,9 @@ function buildSkeleton(
       // above) so travel days don't collapse around a flight.
       slots.push({ type: "afternoon_major", start_time: hhmm(15, 0), duration_minutes: 120, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      if (wantsNightlife) {
+        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
+      }
     } else if (intent.pace === "active") {
       // Active: early start, morning + two afternoon majors, optional nightlife.
       slots.push({ type: "breakfast", start_time: hhmm(8, 30), duration_minutes: 45, region_tag_for_queries: primary });
@@ -1329,13 +1333,17 @@ function buildSkeleton(
       }
     } else {
       // Balanced (default): morning anchor + lunch + afternoon anchor + dinner.
-      // Breakfast and nightlife are not part of the balanced shape — those are
-      // active-pace concerns. Four slots is the reference shape; everything
-      // else is calibrated against this.
+      // Breakfast is reserved for active pace. Nightlife is appended only when
+      // the user signalled it (vibe / must-have / notes via hasNightlifeSignal,
+      // which already vetoes on family/kids signals) — see PR for vibes
+      // fidelity fix that decoupled nightlife from active-only pacing.
       slots.push({ type: "morning_major", start_time: hhmm(10, 0), duration_minutes: 150, region_tag_for_queries: primary });
       slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
       slots.push({ type: "afternoon_major", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      if (wantsNightlife) {
+        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
+      }
     }
 
     days.push({
@@ -1465,6 +1473,95 @@ function detectFoodVibe(vibes: string[]): string | null {
   return match ?? null;
 }
 
+// Vibe → Places retrieval spec. Each user-selected vibe fires one extra
+// Places query so the ranker sees venues that genuinely match the vibe.
+// Without this map, the only vibe with dedicated retrieval was nightlife —
+// the other 7 chips were essentially decorative (see PR for vibes fidelity
+// fix).
+//
+// Constraints:
+//   - Total Places queries are capped at MAX_PLACES_QUERIES_PER_TRIP (12).
+//     Baseline (lodging + meals + attractions + nightlife) is ~6, so we have
+//     ~5–6 budget for vibe queries — enough for all 8 chips with one query
+//     each (some share types, dedupKey collapses overlap).
+//   - includedType is a single Google Places type. For vibes that span
+//     multiple types (Culture: museum + art_gallery + ...) we pick the most
+//     representative type; the textBias keyword pulls in adjacent venues via
+//     text search.
+//   - Hidden gems has no type filter — Places has no "hidden gem" type. The
+//     keyword bias plus an explicit ranker instruction (see RANKER_DAY_SYSTEM_PROMPT)
+//     handle the off-tourist-trail preference.
+//   - Photography rides on tourist_attraction with photogenic-keyword bias.
+//     Venues with high photo counts surface naturally because Places' text
+//     ranking favours review/photo volume.
+interface VibeRetrievalSpec {
+  matches: RegExp;
+  includedType?: string;
+  textBias: string;       // prepended to "<bias> <city>"
+  poolKey: PoolKey;
+  dedupKey: string;
+}
+
+const VIBE_PLACES_MAP: VibeRetrievalSpec[] = [
+  // Food: caught by the existing meal queries; the vibe-driven query layers
+  // an additional "best restaurants" pull into the restaurants pool.
+  { matches: /^food$|foodie|culinary|cuisine|gastronomy/i,
+    includedType: "restaurant", textBias: "best restaurants",
+    poolKey: "restaurants", dedupKey: "vibe:food" },
+  // Culture: museum is the canonical type; the keyword bias rakes in
+  // galleries, historic sites, and religious landmarks via text match.
+  { matches: /culture|cultural|history|historic|heritage|art\b/i,
+    includedType: "museum", textBias: "museums galleries historic landmarks",
+    poolKey: "attractions", dedupKey: "vibe:culture" },
+  // Adventure: tourist_attraction is broad enough to catch tour operators,
+  // adventure-park style listings; keyword bias targets the active-outdoor
+  // operators specifically.
+  { matches: /adventure|outdoor|active|hike|hiking|kayak|rafting|climb|zip ?line/i,
+    includedType: "tourist_attraction", textBias: "outdoor adventure hiking kayak",
+    poolKey: "attractions", dedupKey: "vibe:adventure" },
+  // Relaxation: spa is the strongest signal; parks/beaches come in via
+  // separate vibes (Nature) so we don't double-up here.
+  { matches: /relax|relaxation|wellness|spa|chill|slow|unwind/i,
+    includedType: "spa", textBias: "spa wellness retreat",
+    poolKey: "experiences", dedupKey: "vibe:relax" },
+  // Nightlife: bar is the dominant type; a second night_club entry lives in
+  // the nightlife block in buildPlacesQueries to also surface clubs.
+  { matches: /nightlife|party|club|bar\b|cocktail|lively|live music|rooftop/i,
+    includedType: "bar", textBias: "bars cocktail nightlife",
+    poolKey: "nightlife", dedupKey: "vibe:nightlife" },
+  // Nature: park is the canonical type; viewpoint/waterfall/beach venues
+  // come through the keyword bias.
+  { matches: /^nature$|natural|park\b|forest|lake|beach|viewpoint|waterfall|garden/i,
+    includedType: "park", textBias: "parks gardens viewpoints natural sights",
+    poolKey: "attractions", dedupKey: "vibe:nature" },
+  // Hidden gems: no type filter (Google has no such category). Pure keyword
+  // bias steers Places' text ranking toward smaller venues; the ranker
+  // prompt also prefers lower-review-count picks when this vibe is set.
+  { matches: /hidden|hidden gem|off the beaten|local|authentic|underrated|secret/i,
+    textBias: "local authentic hidden gems off the beaten path",
+    poolKey: "attractions", dedupKey: "vibe:hidden" },
+  // Photography: tourist_attraction + photogenic keywords. High-photo-count
+  // venues bubble up naturally in Places' ranking.
+  { matches: /photo|photography|instagram|view\b|viewpoint|lookout|sunset|skyline|scenic/i,
+    includedType: "tourist_attraction", textBias: "scenic viewpoints lookouts photogenic spots",
+    poolKey: "attractions", dedupKey: "vibe:photo" },
+];
+
+function matchedVibeSpecs(vibes: string[]): VibeRetrievalSpec[] {
+  const matched: VibeRetrievalSpec[] = [];
+  const seen = new Set<string>();
+  for (const v of vibes) {
+    for (const spec of VIBE_PLACES_MAP) {
+      if (seen.has(spec.dedupKey)) continue;
+      if (spec.matches.test(v)) {
+        matched.push(spec);
+        seen.add(spec.dedupKey);
+      }
+    }
+  }
+  return matched;
+}
+
 function budgetLodgingTerm(tier: Intent["budget_tier"]): string {
   if (tier === "premium") return "4 star boutique";
   if (tier === "budget") return "budget";
@@ -1499,7 +1596,6 @@ function buildPlacesQueries(
 
   const dinnerTone = detectDinnerTone(intent.vibes);
   const foodVibe = detectFoodVibe(intent.vibes);
-  const topVibe = intent.vibes[0] ?? "";
   const wantsRooftop = intent.vibes.some((v) => /rooftop|skyline|view/i.test(v));
 
   const queries: PlacesSearchQuery[] = [];
@@ -1565,26 +1661,35 @@ function buildPlacesQueries(
     });
   }
 
-  // ---- Attractions (base + top vibe specialization) ----
+  // ---- Attractions ----
+  // Base "top attractions" query feeds morning/afternoon major slots. The
+  // per-vibe specialization that used to live here (attractions:vibe:<topVibe>)
+  // moved into VIBE_PLACES_MAP — it now fires for EVERY user-selected vibe,
+  // not just the first one, and uses a real Places includedType.
   if (slotTypesSeen.has("morning_major") || slotTypesSeen.has("afternoon_major")) {
     add("attractions:base", {
       textQuery: `${sightPrefix}top attractions ${city}`,
       locationBias,
       poolKey: "attractions",
     });
-    if (topVibe) {
-      add(`attractions:vibe:${topVibe.toLowerCase()}`, {
-        textQuery: `${sightPrefix}${topVibe} ${city}`,
-        locationBias,
-        poolKey: "attractions",
-      });
-    }
   }
 
   // ---- Nightlife ----
+  // Two typed queries (bars + clubs) so Google returns actual nightlife
+  // venues, not the mixed-bag the old typeless "bars <city>" text search
+  // produced. Vibe-driven nightlife retrieval (also typed) lives in
+  // VIBE_PLACES_MAP below — both feed the same nightlife pool and dedupe by
+  // place_id at batch-merge time.
   if (slotTypesSeen.has("nightlife")) {
-    add("nightlife:base", {
+    add("nightlife:bars", {
       textQuery: `${wantsRooftop ? "rooftop " : ""}bars ${city}`,
+      includedType: "bar",
+      locationBias,
+      poolKey: "nightlife",
+    });
+    add("nightlife:clubs", {
+      textQuery: `night clubs ${city}`,
+      includedType: "night_club",
       locationBias,
       poolKey: "nightlife",
     });
@@ -1597,6 +1702,22 @@ function buildPlacesQueries(
       textQuery: `${mh} ${city}`,
       locationBias,
       poolKey: "experiences",
+    });
+  }
+
+  // ---- Vibes → typed retrieval (one query per matched vibe) ----
+  // Each user-selected vibe contributes one Places query with a real
+  // includedType so the ranker sees venues that genuinely fit that vibe.
+  // Without this loop the Nightlife / Culture / Adventure / etc. chips were
+  // decoration only — the prompt mentioned them but no nightlife/museum/park
+  // venues ever entered the candidate pool. Cap-aware: add() bails if we'd
+  // exceed MAX_PLACES_QUERIES_PER_TRIP, so must_haves still take priority.
+  for (const spec of matchedVibeSpecs(intent.vibes)) {
+    add(spec.dedupKey, {
+      textQuery: `${spec.textBias} ${city}`,
+      ...(spec.includedType ? { includedType: spec.includedType } : {}),
+      locationBias,
+      poolKey: spec.poolKey,
     });
   }
 
@@ -2744,6 +2865,14 @@ COST GUIDANCE:
 - For bars/nightlife, cost is a reasonable 2-drink average.
 - NEVER quote USD when the trip currency is something else.
 
+VIBES — MANDATORY INCLUSION CRITERIA:
+- Every vibe in intent.vibes is a HARD inclusion signal, not a soft preference. The user explicitly selected each one and expects to see it reflected in their itinerary.
+- Across the WHOLE trip (not necessarily this single day) each vibe should be reflected in at least one activity. Coordinate via the venue pool — vibe-aligned venues live in dedicated entries (e.g. nightlife pool for nightlife vibe, parks/viewpoints in attractions for nature/photography vibes).
+- For THIS day, prefer venues whose Place types or signature align with the user's vibes when picking activity slots, even when the slot type is generic ("morning_major", "afternoon_major"). Example: vibe = "culture" → prefer a museum venue from the attractions pool over a generic top sight.
+- "hidden gems" / "local" / "authentic" / "off the beaten path" — when this vibe is present, prefer venues with FEWER reviews (e.g. 50–500) over the megasights with 50,000+ reviews, even if the latter have higher ratings. Cite the off-trail angle in why_for_you.
+- "nightlife" — when this vibe is present AND the day's skeleton has a nightlife slot, the slot MUST be filled from the nightlife pool. Do not swap it for a generic activity.
+- If a vibe TRULY cannot be honored on this day (e.g. user picked "beach" for an inland city), say so honestly in the affected activity's why_for_you. Do NOT silently drop the vibe — the validation layer downstream will flag any selected vibe that gets zero coverage.
+
 DIETARY:
 - If intent.dietary contains values, only pick food venues that plausibly serve them — or annotate dietary_notes with a specific caveat.
 - dietary_notes is OPTIONAL. Only fill it for food activities when there's a real consideration.
@@ -2849,6 +2978,88 @@ const DAY_MAX_TOKENS: Record<Intent["pace"], number> = {
   active: 4_500,
 };
 const METADATA_MAX_TOKENS = 1_500;
+const COPY_MAX_TOKENS = 600;
+
+// Trip title + summary regenerator. Runs AFTER the per-day rankers complete,
+// so it sees the ACTUAL venues in the itinerary (not just the candidate pool
+// the metadata writer sees in parallel). Eliminates the confabulation bug
+// where summaries name venues like "WONDERS CLUB" that never made it into
+// any day's pick. Source-of-truth fix per CLAUDE.md AI Features rule:
+// "Never trust LLM to generate factual data like venue names."
+const RANKER_COPY_SYSTEM_PROMPT = `You are an editorial trip curator for Junto. You write the FINAL trip title and summary using only the actual venues that appear in the user's itinerary.
+
+ABSOLUTE RULES — violating these makes your output a lie:
+1. ALLOWLIST: You will receive a venue allowlist. The trip_summary may name venues ONLY from that list. Spelling MUST match the allowlist verbatim — do not paraphrase, abbreviate, translate, or "tidy up" venue names.
+2. NEVER invent a venue name. NEVER name a bar, restaurant, museum, hotel, neighborhood-as-brand, or any proper-noun venue that is not in the allowlist. If you cannot remember whether something is on the list, do not name it.
+3. If you want to convey atmosphere without naming a specific venue, use generic terms ("cocktail bars in the old town", "hilltop viewpoints", "back-street trattorias"). Generic phrasing is preferred over a fabricated name.
+4. trip_title is 4-7 words, evocative, grounded in the trip's actual character. May reference a neighborhood, a ritual, a season, or an anchor activity. Naming a specific venue in the title is allowed ONLY if that venue appears in the allowlist AND is genuinely the trip's anchor (rare — usually skip).
+5. trip_summary is 2-3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. Concrete over generic. No adjective spam.
+6. Honor intent.pace, intent.budget_tier, and intent.must_avoids in the narrative.
+7. NEVER quote USD when the trip currency is something else.
+8. Do NOT include emojis, decorative symbols, or pictographs.
+9. The downstream validation layer will scan your output for any proper-noun venue not in the allowlist. Mismatches are logged as confabulation. Do not gamble.
+
+OUTPUT: call the emit_trip_copy tool exactly once. No prose outside the tool call.`;
+
+const RANKER_COPY_TOOL: ClaudeTool = {
+  name: "emit_trip_copy",
+  description: "Emit grounded trip title + summary. Call exactly once.",
+  input_schema: {
+    type: "object",
+    required: ["trip_title", "trip_summary"],
+    properties: {
+      trip_title: { type: "string", description: "4-7 words, specific, grounded." },
+      trip_summary: { type: "string", description: "2-3 sentences. Only names venues from the allowlist." },
+    },
+    additionalProperties: false,
+  },
+};
+
+interface RawTripCopy {
+  trip_title: string;
+  trip_summary: string;
+}
+
+// Builds the user message for rankTripCopy. Surfaces the allowlist as a
+// machine-readable JSON list AND a top-of-prompt cognitive emphasis block,
+// mirroring the CLAIMED PLACES dual-surface pattern in buildDayInstruction —
+// long lists buried in nested JSON get under-attended by the model.
+function buildCopyInstruction(
+  intent: Intent,
+  destination: string,
+  venueAllowlist: string[],
+  accommodationName: string | null,
+  currency: string,
+  numDays: number,
+): string {
+  const allowList = accommodationName
+    ? [...venueAllowlist, accommodationName]
+    : [...venueAllowlist];
+  const dedupAllow = Array.from(new Set(allowList.filter((s) => s && s.trim().length > 0)));
+
+  const allowlistBlock = dedupAllow.length > 0
+    ? `VENUE ALLOWLIST — HARD CONSTRAINT — these are the ONLY proper-noun venues you may name in trip_summary. Spell each one EXACTLY as written:\n${dedupAllow.map((n) => `  - ${n}`).join("\n")}\n\n`
+    : `VENUE ALLOWLIST — HARD CONSTRAINT — the itinerary contains no nameable venues. Write a generic but specific summary using neighborhoods/cuisines/activity types only.\n\n`;
+
+  const payload = {
+    trip_shape: {
+      destination,
+      num_days: numDays,
+      pace: intent.pace,
+      budget_tier: intent.budget_tier,
+      currency,
+    },
+    intent: {
+      vibes: intent.vibes,
+      must_haves: intent.must_haves,
+      must_avoids: intent.must_avoids,
+      dietary: intent.dietary,
+      group_composition: intent.group_composition,
+    },
+    venue_allowlist: dedupAllow,
+  };
+  return `Generate the FINAL trip_title and trip_summary. Call emit_trip_copy exactly once.\n\n${allowlistBlock}${JSON.stringify(payload)}`;
+}
 
 // ---------------------------------------------------------------------------
 // User-message builder. All dynamic content goes HERE, not in the system
@@ -3359,6 +3570,34 @@ async function rankDay(
   return result;
 }
 
+// Grounded title + summary regenerator. Runs AFTER day rankings complete so
+// it can be told the actual chosen venues as an allowlist. The output
+// overwrites the trip_title + trip_summary the parallel rankTripMetadata
+// call produced from the (broader, often confabulation-prone) candidate pool.
+async function rankTripCopy(
+  anthropicKey: string,
+  intent: Intent,
+  destination: string,
+  venueAllowlist: string[],
+  accommodationName: string | null,
+  currency: string,
+  numDays: number,
+  pipelineStartedAt: number,
+): Promise<{ data: RawTripCopy | null; usage: ClaudeUsage }> {
+  return await callClaudeHaiku<RawTripCopy>(
+    anthropicKey,
+    [{ type: "text", text: RANKER_COPY_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    [
+      { type: "text", text: buildCopyInstruction(intent, destination, venueAllowlist, accommodationName, currency, numDays) },
+    ],
+    RANKER_COPY_TOOL,
+    COPY_MAX_TOKENS,
+    pipelineStartedAt,
+    "rankTripCopy",
+    0,
+  );
+}
+
 // Trip-level fields + accommodation. Runs in parallel with the per-day calls.
 async function rankTripMetadata(
   anthropicKey: string,
@@ -3629,6 +3868,33 @@ async function rankInParallel(
     `fallback_days=${fallbackDays} thin_days=${thinDays}`,
   );
 
+  // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
+  // The parallel rankTripMetadata call writes title/summary from the broader
+  // candidate pool — it can name venues that didn't survive the day rankers'
+  // selection. Re-run a narrow Claude call now that we know which venues are
+  // ACTUALLY in the itinerary, with that list as a strict allowlist. On
+  // failure, fall back to the parallel call's output (current behavior).
+  const venueAllowlist = collectVenueAllowlist(ranked_days);
+  const accommodationName =
+    meta?.accommodation?.title?.trim() ||
+    (placeById.get(meta?.accommodation?.place_id ?? accommodationPlaceId ?? "")?.displayName ?? null);
+  const groundedCopy = await rankTripCopy(
+    anthropicKey, intent, intent.destination, venueAllowlist, accommodationName, currency, numDays, pipelineStartedAt,
+  ).then(async (res) => {
+    if (res.usage) {
+      await logger.log({
+        feature: "trip_builder_rank_copy", model: HAIKU_MODEL,
+        input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
+        cost_usd: computeHaikuCost(res.usage),
+        cached: res.usage.cache_read_input_tokens > 0,
+      }).catch(() => {});
+    }
+    return res.data;
+  }).catch((e) => {
+    console.warn("[rankInParallel] grounded copy failed, falling back to parallel-metadata copy:", (e as Error).message);
+    return null;
+  });
+
   // ---- Accommodation ----
   let accommodation: EnrichedActivity | undefined;
   const accomPlaceId = meta?.accommodation?.place_id ?? accommodationPlaceId;
@@ -3667,18 +3933,21 @@ async function rankInParallel(
     ? Math.round(dailySpend.reduce((s, n) => s + n, 0) / numDays)
     : 0;
 
+  const finalTitle = stripEmojis(groundedCopy?.trip_title) || stripEmojis(meta?.trip_title) || intent.destination;
+  const finalSummary = (groundedCopy?.trip_summary?.trim() || meta?.trip_summary?.trim()) ?? "";
+
   const destination: RankedDestination = {
     name: intent.destination,
     start_date: skeleton[0]?.date ?? "",
     end_date: skeleton[skeleton.length - 1]?.date ?? "",
-    intro: meta?.trip_summary?.trim() ?? "",
+    intro: finalSummary,
     days: ranked_days,
     accommodation,
   };
 
   return {
-    trip_title: stripEmojis(meta?.trip_title) || intent.destination,
-    trip_summary: meta?.trip_summary?.trim() ?? "",
+    trip_title: finalTitle,
+    trip_summary: finalSummary,
     destinations: [destination],
     map_center: { lat: geo.lat, lng: geo.lng },
     map_zoom: 12,
@@ -3792,6 +4061,186 @@ function markJuntoPicks(result: PipelineResult, intent: Intent): void {
   perDayPicks.sort(compare);
   for (const c of perDayPicks.slice(0, tripCap)) {
     c.act.is_junto_pick = true;
+  }
+}
+
+// ---- collectVenueAllowlist ----
+//
+// Extracts the canonical activity titles (and underlying Place displayNames
+// when available via the title fallback in hydrateActivity) from the
+// finalized day venues. Drives:
+//   - rankTripCopy's allowlist input (prevents the model from inventing
+//     venue names in trip_summary)
+//   - logDescriptionGrounding's verification scan (catches confabulations
+//     that slip past the prompt)
+//
+// Skips events (no place-backed venue) and any activity without a title.
+function collectVenueAllowlist(days: RankedDay[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const day of days) {
+    for (const act of day.activities) {
+      if (!act.title) continue;
+      const t = act.title.trim();
+      if (!t) continue;
+      const key = t.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(t);
+    }
+  }
+  return out;
+}
+
+// ---- logVibeCoverage ----
+//
+// Observability-only post-generation check. For each user-selected vibe,
+// count how many activities in the final itinerary plausibly match it (by
+// keyword scan over title/category/description). Emits a structured
+// console.log line per vibe and a console.warn when coverage is zero — the
+// "silent vibe drop" failure mode this PR exists to fix.
+//
+// NOT a gate: the response is returned regardless of coverage. The warning
+// is for log-aggregation alerts so we can iterate when a vibe stops landing
+// in production.
+function logVibeCoverage(result: PipelineResult, intent: Intent): void {
+  if (intent.vibes.length === 0) return;
+
+  const haystacks: string[] = [];
+  for (const dest of result.destinations) {
+    for (const day of dest.days) {
+      for (const act of day.activities) {
+        const parts = [act.title, act.category, act.description, act.why_for_you]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (parts) haystacks.push(parts);
+      }
+    }
+  }
+
+  for (const vibe of intent.vibes) {
+    const spec = VIBE_PLACES_MAP.find((s) => s.matches.test(vibe));
+    if (!spec) {
+      // Vibe doesn't match any known retrieval spec — can't validate, but
+      // worth surfacing so we know to extend the map.
+      console.warn(`[vibe_coverage] vibe="${vibe}" unmapped — no retrieval spec; skipping coverage check`);
+      continue;
+    }
+    let matches = 0;
+    for (const hs of haystacks) {
+      if (spec.matches.test(hs)) matches++;
+    }
+    const line = `[vibe_coverage] vibe="${vibe}" matches=${matches} total_activities=${haystacks.length}`;
+    if (matches === 0) {
+      console.warn(`${line} — SILENT DROP: user selected this vibe but the itinerary contains no matching activities`);
+    } else {
+      console.log(line);
+    }
+  }
+}
+
+// ---- logDescriptionGrounding ----
+//
+// Scans the trip title + summary for proper-noun-shaped phrases (Title Case
+// runs and ALL CAPS runs of 2+ words) and verifies each appears in the
+// itinerary's actual venue allowlist. Confabulations — venue names the LLM
+// invented that don't exist in the trip — produce a structured console.warn.
+//
+// Observability only — never gates the response. Mirrors logVibeCoverage's
+// pattern. Catches anything the rankTripCopy allowlist prompt failed to
+// prevent (model is not perfect; the validator is the safety net).
+//
+// Heuristic note: this is a best-effort proper-noun extractor, not a NER
+// model. False positives include common Title Case words (e.g. "Old Town")
+// that aren't venues. To suppress noise we exclude:
+//   - Single-word matches (most legitimate venue names are 2+ words)
+//   - The destination name itself ("Stuttgart", "Tokyo")
+//   - A small allowlist of geographic/generic terms
+function logDescriptionGrounding(result: PipelineResult, intent: Intent): void {
+  // Join with " . " so the segment splitter below treats the title and
+  // summary as separate inputs — otherwise "Cocktail and Club Scene" (title
+  // tail) and "Four days immersed" (summary head) chain into a fake
+  // "Club Scene Four" venue match.
+  const titleAndSummary = `${result.trip_title ?? ""} . ${result.trip_summary ?? ""}`.trim();
+  if (!titleAndSummary) return;
+
+  // Build allowlist (lowercased, normalized) from actual itinerary.
+  const allow = new Set<string>();
+  for (const dest of result.destinations) {
+    for (const day of dest.days) {
+      for (const act of day.activities) {
+        if (act.title) allow.add(act.title.trim().toLowerCase());
+      }
+    }
+    if (dest.accommodation?.title) allow.add(dest.accommodation.title.trim().toLowerCase());
+  }
+  // Also allowlist destination tokens so "Lisbon" / "Stuttgart" don't flag.
+  for (const tok of (intent.destination ?? "").split(/[,\s]+/)) {
+    if (tok) allow.add(tok.trim().toLowerCase());
+  }
+
+  // Generic Title Case phrases that aren't venues. Keep this list small —
+  // anything legitimately venue-shaped should remain flaggable.
+  const genericPhrases = new Set([
+    "old town", "new town", "city center", "city centre", "old quarter",
+    "north side", "south side", "east side", "west side",
+    "michelin star", "michelin starred", "happy hour", "live music",
+  ]);
+  // Title-fragment tails. Phrases ending with one of these are almost
+  // certainly editorial titles ("Club Scene", "Souk Days"), not venue names.
+  // Real venues end with brand words (Bar, Hotel, Studios, Club, etc.) —
+  // these tails are descriptive nouns the LLM uses to frame a trip.
+  const titleFragmentTails = new Set([
+    "scene", "days", "nights", "evenings", "mornings", "trip", "tour",
+    "crawl", "vibes", "adventure", "adventures", "time", "weekend",
+    "getaway", "escape", "experience", "experiences", "journey",
+  ]);
+
+  // Match Title Case runs (e.g. "Schwarz Weiß Bar", "Jigger & Spoon") OR
+  // ALL CAPS runs of 2+ words (e.g. "WONDERS CLUB", "COMODO STUDIOS"). Both
+  // are common venue-name shapes. We deliberately allow the ampersand and
+  // diacritics inside a run so multi-word venue names stay intact.
+  // Note: Unicode property classes (\p{Lu}/\p{L}) require the /u flag.
+  //
+  // We split on sentence/clause boundaries (.,;:!?) BEFORE running the regex
+  // so a Title Case word ending one sentence can't chain into the Title Case
+  // word starting the next ("Cocktail and Club Scene. Four days immersed" must
+  // not produce "Club Scene Four" as a match).
+  const proper = /(?:[\p{Lu}][\p{L}'’.&-]*\s+){1,5}[\p{Lu}][\p{L}'’.&-]*|(?:[A-Z]{2,}\s+){1,4}[A-Z]{2,}/gu;
+  const segments = titleAndSummary.split(/[.,;:!?\n]+/);
+  const matches: string[] = [];
+  for (const seg of segments) {
+    const found = seg.match(proper);
+    if (found) matches.push(...found);
+  }
+
+  const flagged: string[] = [];
+  for (const raw of matches) {
+    const phrase = raw.trim();
+    const lower = phrase.toLowerCase();
+    if (genericPhrases.has(lower)) continue;
+    const tail = lower.split(/\s+/).pop() ?? "";
+    if (titleFragmentTails.has(tail)) continue;
+    // Substring check both ways: allow "Schwarz Weiß Bar" to match
+    // "Schwarz Weiß Bar Stuttgart" in the allowlist (and vice versa).
+    let ok = false;
+    for (const allowed of allow) {
+      if (allowed.includes(lower) || lower.includes(allowed)) { ok = true; break; }
+    }
+    if (!ok) flagged.push(phrase);
+  }
+
+  if (flagged.length > 0) {
+    console.warn(
+      `[description_grounding] CONFABULATION: trip_title/trip_summary names ${flagged.length} ` +
+      `proper-noun phrase(s) NOT in the itinerary allowlist: ${JSON.stringify(flagged)}. ` +
+      `title="${result.trip_title}" summary="${result.trip_summary}"`,
+    );
+  } else {
+    console.log(
+      `[description_grounding] ok proper_nouns_checked=${matches.length} allowlist_size=${allow.size}`,
+    );
   }
 }
 
@@ -4945,6 +5394,8 @@ Deno.serve(async (req) => {
                 // differ for this caller. markJuntoPicks resets stale flags
                 // internally.
                 markJuntoPicks(payload as unknown as PipelineResult, intent);
+                logVibeCoverage(payload as unknown as PipelineResult, intent);
+                logDescriptionGrounding(payload as unknown as PipelineResult, intent);
                 for (const d of dest?.days ?? []) send("day", d);
                 const juntoPlaceIds: string[] = [];
                 for (const day of dest?.days ?? []) {
@@ -5361,6 +5812,31 @@ Deno.serve(async (req) => {
               }
             }
 
+            // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
+            // See rankInParallel for rationale: parallel metadata writes copy
+            // from the candidate pool and can name venues that didn't survive
+            // the day rankers. Re-run with the actual itinerary venues as a
+            // strict allowlist. Failure path falls back to parallel-metadata
+            // copy.
+            const venueAllowlist = collectVenueAllowlist(ranked_days);
+            const accommodationName = accommodation?.title?.trim() || (accommodation?.place_id ? placeById.get(accommodation.place_id)?.displayName ?? null : null);
+            const groundedCopy = await rankTripCopy(
+              anthropicKey, intent, intent.destination, venueAllowlist, accommodationName, currency, numDays, pipelineStartedAt,
+            ).then(async (res) => {
+              if (res.usage) {
+                await logger.log({
+                  feature: "trip_builder_rank_copy", model: HAIKU_MODEL,
+                  input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
+                  cost_usd: computeHaikuCost(res.usage),
+                  cached: res.usage.cache_read_input_tokens > 0,
+                }).catch(() => {});
+              }
+              return res.data;
+            }).catch((e) => {
+              console.warn("[stream.copy] grounded copy failed, falling back to parallel-metadata copy:", (e as Error).message);
+              return null;
+            });
+
             // ---- Trip-level rollups + junto picks ----
             const total_activities = ranked_days.reduce((n, d) => n + d.activities.length, 0);
             const dailySpend = ranked_days.map((d) => d.activities.reduce((s, a) => s + (a.estimated_cost_per_person || 0), 0));
@@ -5368,17 +5844,20 @@ Deno.serve(async (req) => {
               ? Math.round(dailySpend.reduce((s, n) => s + n, 0) / ranked_days.length)
               : 0;
 
+            const finalTitle = stripEmojis(groundedCopy?.trip_title) || stripEmojis(meta?.trip_title) || intent.destination;
+            const finalSummary = (groundedCopy?.trip_summary?.trim() || meta?.trip_summary?.trim()) ?? "";
+
             const destinationFinal: RankedDestination = {
               name: intent.destination,
               start_date: skeleton[0]?.date ?? "",
               end_date: skeleton[skeleton.length - 1]?.date ?? "",
-              intro: meta?.trip_summary?.trim() ?? "",
+              intro: finalSummary,
               days: ranked_days,
               accommodation,
             };
             const pipelineResult: PipelineResult = {
-              trip_title: stripEmojis(meta?.trip_title) || intent.destination,
-              trip_summary: meta?.trip_summary?.trim() ?? "",
+              trip_title: finalTitle,
+              trip_summary: finalSummary,
               destinations: [destinationFinal],
               map_center: { lat: geo.lat, lng: geo.lng },
               map_zoom: 12,
@@ -5390,6 +5869,8 @@ Deno.serve(async (req) => {
             };
 
             markJuntoPicks(pipelineResult, intent);
+            logVibeCoverage(pipelineResult, intent);
+            logDescriptionGrounding(pipelineResult, intent);
 
             const juntoPlaceIds: string[] = [];
             for (const day of ranked_days) {
@@ -5626,6 +6107,8 @@ Deno.serve(async (req) => {
           // pre-PR #244 entries were tagged under the strict hidden-gem rule
           // and may have zero picks). Mirrors the streaming cache-hit branch.
           markJuntoPicks(payload as unknown as PipelineResult, intent);
+          logVibeCoverage(payload as unknown as PipelineResult, intent);
+          logDescriptionGrounding(payload as unknown as PipelineResult, intent);
           let juntoPicksTagged = 0;
           for (const day of payload?.destinations?.[0]?.days ?? []) {
             for (const a of day.activities ?? []) if (a?.is_junto_pick) juntoPicksTagged++;
@@ -5809,6 +6292,8 @@ Deno.serve(async (req) => {
     // ---- Step 7-9: junto picks, affiliate URLs, validation ----
     const tJunto = Date.now();
     markJuntoPicks(ranked, intent);
+    logVibeCoverage(ranked, intent);
+    logDescriptionGrounding(ranked, intent);
 
     const affEnv: AffiliateEnv = {
       viator: viatorMcid,
