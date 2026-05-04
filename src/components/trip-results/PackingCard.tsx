@@ -12,28 +12,26 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 type Category = {
   label: string;
   Icon: React.ElementType;
-  // Subtle, monochromatic-ish tints. We keep saturation low so the grid
-  // reads as a calm system rather than a rainbow of badges. The accent
-  // dot in the corner of each tile is the only saturated touch.
-  tile: string;
-  icon: string;
-  dot: string;
+  // A single accent color per category, used consistently across the
+  // icon, the chip, and the hover ring — matches the ActivityCard system.
+  color: string; // hex, used inline for tinted backgrounds
 };
 
 const CATEGORIES: Record<string, Category> = {
-  clothing:   { label: "Clothing",   Icon: Shirt,      tile: "bg-amber-50",    icon: "text-amber-700",   dot: "bg-amber-500" },
-  footwear:   { label: "Footwear",   Icon: Footprints, tile: "bg-orange-50",   icon: "text-orange-700",  dot: "bg-orange-500" },
-  weather:    { label: "Weather",    Icon: CloudRain,  tile: "bg-sky-50",      icon: "text-sky-700",     dot: "bg-sky-500" },
-  sun:        { label: "Sun care",   Icon: Sun,        tile: "bg-yellow-50",   icon: "text-yellow-700",  dot: "bg-yellow-500" },
-  tech:       { label: "Tech",       Icon: Plug,       tile: "bg-slate-100",   icon: "text-slate-700",   dot: "bg-slate-500" },
-  documents:  { label: "Documents",  Icon: FileCheck,  tile: "bg-emerald-50",  icon: "text-emerald-700", dot: "bg-emerald-500" },
-  toiletries: { label: "Toiletries", Icon: Sparkles,   tile: "bg-pink-50",     icon: "text-pink-700",    dot: "bg-pink-500" },
-  bag:        { label: "Bag",        Icon: Backpack,   tile: "bg-rose-50",     icon: "text-rose-700",    dot: "bg-rose-500" },
-  default:    { label: "Essential",  Icon: Package,    tile: "bg-primary/10",  icon: "text-primary",     dot: "bg-primary" },
+  clothing:   { label: "Clothing",   Icon: Shirt,      color: "#D97706" },
+  footwear:   { label: "Footwear",   Icon: Footprints, color: "#EA580C" },
+  weather:    { label: "Weather",    Icon: CloudRain,  color: "#0284C7" },
+  sun:        { label: "Sun care",   Icon: Sun,        color: "#CA8A04" },
+  tech:       { label: "Tech",       Icon: Plug,       color: "#475569" },
+  documents:  { label: "Documents",  Icon: FileCheck,  color: "#059669" },
+  toiletries: { label: "Toiletries", Icon: Sparkles,   color: "#DB2777" },
+  bag:        { label: "Bag",        Icon: Backpack,   color: "#E11D48" },
+  default:    { label: "Essential",  Icon: Package,    color: "#E07A5F" },
 };
 
 function categorize(text: string): Category {
@@ -75,6 +73,8 @@ interface Props {
 }
 
 export function PackingCard({ items, open, onToggle, className, itemClassName }: Props) {
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ id: string }>).detail;
@@ -86,32 +86,51 @@ export function PackingCard({ items, open, onToggle, className, itemClassName }:
     return () => window.removeEventListener("results:expand", handler as EventListener);
   }, [open, onToggle]);
 
+  const toggleItem = (i: number) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
+  const packedCount = checked.size;
+  const progress = items.length > 0 ? Math.round((packedCount / items.length) * 100) : 0;
+
   return (
     <div id="section-packing" className={cn("mx-4 mt-2 mb-6", className)}>
-      <div className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)]">
+      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm transition-all">
         {/* Header */}
         <button
           onClick={onToggle}
-          className="group w-full flex items-center gap-3.5 p-4 text-left hover:bg-muted/40 transition-colors"
+          className="group/header w-full flex items-center gap-3.5 p-4 text-left hover:bg-muted/30 transition-colors"
           aria-expanded={open}
         >
-          <div className="relative h-11 w-11 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 text-primary flex items-center justify-center shrink-0 ring-1 ring-inset ring-primary/10">
-            <Backpack className="h-5 w-5" strokeWidth={2} />
+          <div className="relative h-11 w-11 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 text-primary flex items-center justify-center shrink-0 ring-1 ring-inset ring-primary/15">
+            <Backpack className="h-[18px] w-[18px]" strokeWidth={2} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="text-[15px] font-semibold text-foreground leading-tight tracking-tight">
                 Packing essentials
               </p>
-              <span className="text-[10.5px] font-mono px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground tabular-nums">
-                {items.length}
+              <span className="text-[10.5px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground tabular-nums">
+                {packedCount}/{items.length}
               </span>
             </div>
             <p className="text-[11.5px] text-muted-foreground mt-1 leading-snug">
               Curated for your destination and season
             </p>
+            {/* Progress bar */}
+            <div className="mt-2 h-1 w-full max-w-[180px] rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
-          <div className="h-7 w-7 rounded-full bg-muted/60 flex items-center justify-center shrink-0 group-hover:bg-muted transition-colors">
+          <div className="h-7 w-7 rounded-full bg-muted/60 flex items-center justify-center shrink-0 group-hover/header:bg-muted transition-colors">
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-300",
@@ -121,53 +140,91 @@ export function PackingCard({ items, open, onToggle, className, itemClassName }:
           </div>
         </button>
 
-        {/* Grid of categorized chips */}
+        {/* Item list */}
         {open && (
-          <>
-            <div className="mx-4 border-t border-border/60" />
-            <div className="px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="border-t border-border/60">
+            <ul className="divide-y divide-border/50">
               {items.map((item, i) => {
                 const cat = categorize(item);
                 const { Icon } = cat;
                 const { title, detail } = splitTitleDetail(item);
+                const isChecked = checked.has(i);
                 return (
-                  <div
+                  <li
                     key={i}
                     className={cn(
-                      "group/item relative flex items-start gap-3 p-3 rounded-xl bg-card border border-border/60 hover:border-foreground/15 hover:bg-muted/30 hover:shadow-sm transition-all duration-200 animate-fade-in",
+                      "group/item relative flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors animate-fade-in cursor-pointer",
                       itemClassName
                     )}
                     style={{ animationDelay: `${i * 25}ms`, animationFillMode: "both" }}
+                    onClick={() => toggleItem(i)}
                   >
-                    {/* Icon tile with subtle accent dot */}
-                    <div className={cn(
-                      "relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ring-1 ring-inset ring-foreground/[0.04]",
-                      cat.tile
-                    )}>
-                      <Icon className={cn("h-[17px] w-[17px]", cat.icon)} strokeWidth={1.85} />
-                      <span className={cn(
-                        "absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ring-2 ring-card",
-                        cat.dot
-                      )} />
+                    {/* Leading icon — color tinted, no heavy box */}
+                    <div
+                      className="relative h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover/item:scale-105"
+                      style={{
+                        backgroundColor: `${cat.color}14`,
+                        boxShadow: `inset 0 0 0 1px ${cat.color}25`,
+                      }}
+                    >
+                      <Icon className="h-[16px] w-[16px]" strokeWidth={1.9} style={{ color: cat.color }} />
                     </div>
+
+                    {/* Body */}
                     <div className="min-w-0 flex-1 pt-0.5">
-                      <p className="text-[13.5px] font-medium leading-snug text-foreground break-words">
-                        {title}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p
+                          className={cn(
+                            "text-[13.5px] font-medium leading-snug break-words transition-all",
+                            isChecked
+                              ? "text-muted-foreground line-through decoration-muted-foreground/40"
+                              : "text-foreground"
+                          )}
+                        >
+                          {title}
+                        </p>
+                        <span
+                          className="inline-flex items-center px-1.5 py-px rounded-full text-[9.5px] font-medium uppercase tracking-[0.06em]"
+                          style={{
+                            backgroundColor: `${cat.color}12`,
+                            color: cat.color,
+                            boxShadow: `inset 0 0 0 1px ${cat.color}25`,
+                          }}
+                        >
+                          {cat.label}
+                        </span>
+                      </div>
                       {detail && (
-                        <p className="text-[12px] text-muted-foreground leading-snug mt-1 break-words">
+                        <p className={cn(
+                          "text-[12px] leading-snug mt-1 break-words transition-colors",
+                          isChecked ? "text-muted-foreground/60" : "text-muted-foreground"
+                        )}>
                           {detail}
                         </p>
                       )}
-                      <p className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.08em] mt-1.5 font-semibold">
-                        {cat.label}
-                      </p>
                     </div>
-                  </div>
+
+                    {/* Check toggle */}
+                    <div
+                      className={cn(
+                        "h-5 w-5 mt-1 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                        isChecked
+                          ? "bg-primary border-primary"
+                          : "border-muted-foreground/30 group-hover/item:border-foreground/50"
+                      )}
+                      aria-hidden
+                    >
+                      {isChecked && (
+                        <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 text-primary-foreground">
+                          <path d="M2 6.5L5 9.5L10 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                  </li>
                 );
               })}
-            </div>
-          </>
+            </ul>
+          </div>
         )}
       </div>
     </div>
