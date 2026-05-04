@@ -62,7 +62,7 @@ export function ActivityCard({
   costFormatter,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const [descExpanded, setDescExpanded] = useState(false);
+  
   const [imgError, setImgError] = useState(false);
   const [swapMode, setSwapMode] = useState<SwapMode>(null);
   const [swapText, setSwapText] = useState("");
@@ -114,7 +114,7 @@ export function ActivityCard({
   }, [swapMode]);
 
   const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
-  const descIsLong = (activity.description?.length || 0) > 120;
+  
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activity.title || '') + ' ' + (activity.location_name || ''))}`;
   const displayRating = rating ?? (typeof (activity as any).rating === "number" ? (activity as any).rating : null);
   const categoryLabel = activity.category ? activity.category.charAt(0).toUpperCase() + activity.category.slice(1).toLowerCase() : "";
@@ -279,20 +279,15 @@ export function ActivityCard({
             </div>
           </div>
 
-          {/* Title + description */}
+          {/* Title — description hidden in collapsed view (shown when expanded) */}
           <div className="cursor-pointer" onClick={() => setExpanded((e) => !e)}>
             <h4 className="text-[15px] font-semibold text-foreground leading-snug tracking-tight">
               {activity.title}
             </h4>
-            {activity.description && (
-              <p className="text-[12px] text-muted-foreground leading-snug mt-1 line-clamp-2">
-                {activity.description}
-              </p>
-            )}
           </div>
 
-          {/* Meta row — time / duration / rating */}
-          <div className="flex items-center gap-3 mt-2.5 text-[11px] text-muted-foreground font-mono tabular-nums">
+          {/* Meta row — time / duration only (rating moves to expanded view) */}
+          <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground font-mono tabular-nums">
             {activity.start_time && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3 text-muted-foreground/60" />
@@ -301,13 +296,6 @@ export function ActivityCard({
             )}
             {activity.duration_minutes != null && (
               <span>{activity.duration_minutes}min</span>
-            )}
-            {displayRating != null && (
-              <span className="flex items-center gap-1">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="text-foreground/80">{displayRating.toFixed(1)}</span>
-                {totalRatings != null && <span className="text-muted-foreground/60">({totalRatings})</span>}
-              </span>
             )}
           </div>
 
@@ -374,21 +362,25 @@ export function ActivityCard({
       {/* Expanded details */}
       {expanded && (
         <div className="border-t border-border bg-muted/30 animate-fade-in">
+          {/* Rating row — surfaced only when expanded */}
+          {displayRating != null && (
+            <div className="px-4 pt-3 flex items-center gap-2 text-[11px] text-muted-foreground font-mono tabular-nums">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <span className="text-foreground/80 font-semibold">{displayRating.toFixed(1)}</span>
+              {totalRatings != null && <span className="text-muted-foreground/60">({totalRatings} reviews)</span>}
+            </div>
+          )}
+
           {activity.description && (
-            <div className="px-4 pt-3 pb-2">
-              <p className={`text-xs text-muted-foreground leading-relaxed ${!descExpanded && descIsLong ? "line-clamp-3" : ""}`}>
+            <div className="px-4 pt-3 pb-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 {activity.description}
               </p>
-              {descIsLong && !descExpanded && (
-                <button onClick={(e) => { e.stopPropagation(); setDescExpanded(true); }} className="text-[11px] text-primary font-medium mt-1 hover:underline">
-                  Read more
-                </button>
-              )}
             </div>
           )}
 
           {activity.tips && (
-            <div className="mx-4 mb-2 border-l-2 border-primary/50 pl-3 py-1.5 bg-primary/5 rounded-r-lg">
+            <div className="mx-4 mb-3 border-l-2 border-primary/50 pl-3 py-2 bg-primary/5 rounded-r-lg">
               <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
                 <Lightbulb className="h-3 w-3 text-primary shrink-0 mt-0.5" />
                 <span><span className="font-semibold text-primary mr-1">Tip:</span><span className="text-foreground/80">{activity.tips}</span></span>
@@ -397,7 +389,7 @@ export function ActivityCard({
           )}
 
           {activity.dietary_notes && (
-            <div className="px-4 pb-2">
+            <div className="px-4 pb-3">
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0D9488]/10 text-[#0D9488] inline-flex items-center gap-1">
                 <Leaf className="h-2.5 w-2.5" /> {activity.dietary_notes}
               </span>
@@ -409,9 +401,9 @@ export function ActivityCard({
               <Skeleton className="h-14 w-full rounded-lg" />
             </div>
           ) : reviews.length > 0 ? (
-            <div className="px-4 pb-2 space-y-1.5">
+            <div className="px-4 pb-3 space-y-2">
               {reviews.map((review, i) => (
-                <div key={i} className="flex gap-2 p-2 rounded-lg bg-background border border-border">
+                <div key={i} className="flex gap-2 p-2.5 rounded-lg bg-background border border-border">
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
                     style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}
@@ -428,7 +420,7 @@ export function ActivityCard({
                   </div>
                 </div>
               ))}
-              <p className="text-[9px] text-muted-foreground/60 pb-1">Photos & reviews from Google</p>
+              <p className="text-[9px] text-muted-foreground/60">Photos & reviews from Google</p>
             </div>
           ) : null}
 

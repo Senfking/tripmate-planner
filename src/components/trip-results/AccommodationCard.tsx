@@ -165,11 +165,11 @@ export function AccommodationCard({
   return (
     <div
       id={`section-stay-${(locationHint || name).replace(/\s+/g, "-")}`}
-      className="mx-4 mb-4 rounded-2xl border border-border bg-card shadow-sm relative"
+      className="mx-4 mb-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-lg transition-shadow relative overflow-hidden"
     >
-      {/* Photo */}
+      {/* Photo — larger hero for premium feel */}
       <div
-        className="w-full h-[160px] bg-muted relative cursor-pointer overflow-hidden rounded-t-2xl"
+        className="w-full h-[220px] sm:h-[260px] bg-muted relative cursor-pointer overflow-hidden"
         onClick={() => setExpanded((e) => !e)}
       >
         {isLoading ? (
@@ -178,7 +178,7 @@ export function AccommodationCard({
           <img
             src={heroSrc}
             alt={name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.03]"
             loading="lazy"
             onError={() => setImgError(true)}
           />
@@ -187,8 +187,12 @@ export function AccommodationCard({
             <Hotel className="h-10 w-10 text-primary/30" />
           </div>
         )}
-        <div className="absolute top-2 left-2">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-bold text-white bg-black/50 backdrop-blur-sm">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute top-3 left-3">
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white backdrop-blur-md ring-1 ring-white/20 shadow-md"
+            style={{ backgroundColor: "#0D9488E6" }}
+          >
             <Hotel className="h-2.5 w-2.5" /> Stay
           </span>
         </div>
@@ -196,7 +200,7 @@ export function AccommodationCard({
 
       {/* Persistent Swap button — top right, sibling of hero so the popover
           escapes the hero's overflow-hidden clipping. */}
-      <div className="absolute top-2 right-2 z-20">
+      <div className="absolute top-3 right-3 z-20">
         <button
           type="button"
           onClick={(e) => {
@@ -233,55 +237,52 @@ export function AccommodationCard({
       </div>
 
       {/* Summary row */}
-      <div className="px-3.5 py-3 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-foreground leading-snug">{name}</h4>
-            {neighborhood && (
-              <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                <span className="truncate">{neighborhood}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              {rating != null && (
-                <div className="flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  <span className="text-[11px] text-foreground font-mono font-medium">
-                    {rating.toFixed(1)}
-                  </span>
-                  {reviewCount ? (
-                    <span className="text-[11px] text-muted-foreground font-mono">
-                      ({reviewCount.toLocaleString()})
-                    </span>
-                  ) : null}
-                </div>
-              )}
-              {priceLabel && rating != null && (
-                <span className="text-muted-foreground/30">·</span>
-              )}
-              {priceLabel && (
-                <span className="text-[11px] text-muted-foreground font-mono">
-                  {priceLabel}
-                </span>
-              )}
-            </div>
+      <div className="px-4 py-3.5 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+        <h4 className="text-[15px] font-semibold text-foreground leading-snug tracking-tight">{name}</h4>
+        {neighborhood && (
+          <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
+            <MapPin className="h-3 w-3" />
+            <span className="truncate">{neighborhood}</span>
           </div>
+        )}
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          {rating != null && (
+            <div className="flex items-center gap-1">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <span className="text-[11px] text-foreground font-mono font-medium">
+                {rating.toFixed(1)}
+              </span>
+              {reviewCount ? (
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  ({reviewCount.toLocaleString()})
+                </span>
+              ) : null}
+            </div>
+          )}
+          {priceLabel && rating != null && (
+            <span className="text-muted-foreground/30">·</span>
+          )}
+          {priceLabel && (
+            <span className="text-[11px] text-muted-foreground font-mono">
+              {priceLabel}
+            </span>
+          )}
+        </div>
 
-          {/* Persistent Booking CTA — always visible regardless of expand
-              state so it never jumps. */}
-          {hasBooking && bookingUrlWithDates && (
+        {/* Booking CTA — bottom-right anchor, consistent with activity cards */}
+        {hasBooking && bookingUrlWithDates && (
+          <div className="mt-3 pt-3 border-t border-border flex justify-end">
             <a
               href={bookingUrlWithDates}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
             >
               Book on {partnerLabel} <ExternalLink className="h-3 w-3" />
             </a>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Expanded details */}
