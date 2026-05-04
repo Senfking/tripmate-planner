@@ -200,14 +200,14 @@ export function DaySection({
 
   return (
     <>
-      <div ref={cardRef} id={`section-day-${day.day_number}`} className="rounded-xl border border-border bg-card overflow-hidden transition-all">
-        {/* Collapsed card */}
+      <div ref={cardRef} id={`section-day-${day.day_number}`} className="rounded-2xl border border-border bg-card overflow-hidden transition-all shadow-sm hover:shadow-md">
+        {/* Collapsed card — substantial day header */}
         <button
           onClick={() => setOpen(!open)}
-          className="w-full flex items-center gap-3 p-3 text-left hover:bg-accent/50 transition-colors"
+          className="w-full flex items-center gap-3.5 p-3.5 text-left hover:bg-accent/30 transition-colors"
         >
           {/* Thumbnail */}
-          <div className="w-[72px] h-[56px] rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+          <div className="w-[80px] h-[64px] rounded-xl overflow-hidden flex-shrink-0 bg-muted ring-1 ring-border">
             {firstActivity && (
               <DayThumbnail activity={firstActivity} location={destinationName} />
             )}
@@ -216,20 +216,20 @@ export function DaySection({
           {/* Day info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/25 text-[10px] font-bold uppercase tracking-wide">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/25 text-[10px] font-bold uppercase tracking-wider">
                 Day {day.day_number}
               </span>
-              <span className="text-xs text-muted-foreground font-mono">
-                {dateStr} · {visibleActivities.length === 0
-                  ? "No activities scheduled"
-                  : `${visibleActivities.length} ${visibleActivities.length === 1 ? "Experience" : "Experiences"}`}
+              <span className="text-[11px] text-muted-foreground font-mono tabular-nums uppercase tracking-wide">
+                {dateStr} {dateStr ? "·" : ""} {visibleActivities.length === 0
+                  ? "No activities"
+                  : `${visibleActivities.length} ${visibleActivities.length === 1 ? "experience" : "experiences"}`}
               </span>
               {planId && !isDraft && (
                 <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
               )}
             </div>
             {day.theme && (
-              <p className="text-[13px] font-medium text-foreground mt-1 truncate">
+              <p className="text-[15px] font-semibold text-foreground mt-1 leading-snug tracking-tight truncate">
                 {day.theme}
               </p>
             )}
@@ -246,8 +246,8 @@ export function DaySection({
         {/* Expanded content */}
         {open && (
           <div className="border-t border-border animate-fade-in">
-            {/* Day toolbar */}
-            <div className="flex items-center justify-end gap-3 px-3 py-2">
+            {/* Day toolbar — subordinate but accessible */}
+            <div className="flex items-center justify-end gap-3 px-3.5 py-2 bg-muted/20">
               {onOpenDayMap && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onOpenDayMap(dayIndex); }}
@@ -266,8 +266,9 @@ export function DaySection({
               )}
             </div>
 
-            {/* Day-level comments */}
-            {planId && !readOnly && (
+            {/* Day-level comments — only when trip is saved (draft notice
+                shown once at top of timeline instead of per-day) */}
+            {planId && !readOnly && !isDraft && (
               <div className="px-4 py-3 border-b border-border bg-accent/20">
                 <TripDiscussion
                   planId={planId}
