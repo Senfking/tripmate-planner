@@ -218,7 +218,7 @@ export function DaySection({
               <div className="w-full h-full bg-gradient-to-br from-[#0D9488]/20 to-[#0D9488]/5" />
             )}
             {/* Dark gradient overlay — bottom-up for text legibility */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(180_25%_8%)]/95 via-[hsl(180_25%_8%)]/40 to-transparent transition-opacity duration-300 group-hover:from-[hsl(180_25%_8%)]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(180_25%_8%)] via-[hsl(180_25%_8%)]/70 via-40% to-transparent transition-opacity duration-300" />
             {/* Subtle teal accent vignette */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(13,148,136,0.18),_transparent_60%)] pointer-events-none" />
 
