@@ -169,8 +169,8 @@ export function Hero({
           rows={2}
           className={[
             "block w-full min-w-0 flex-1 resize-none bg-transparent",
-            "px-0 sm:px-4 py-0 sm:py-2",
-            "text-[15px] sm:text-[14.5px] text-gray-500 placeholder:text-gray-500",
+            "pl-2 pr-0 sm:px-5 py-0 sm:py-2",
+            "text-[14px] sm:text-[13.5px] text-gray-500 placeholder:text-gray-500",
             "outline-none border-0",
             "leading-[1.4] sm:leading-[1.4] overflow-hidden",
             "min-h-[48px] sm:min-h-[48px]",
