@@ -1897,6 +1897,7 @@ export type Database = {
           avatar_url: string
           display_name: string
           id: string
+          nationality_iso: string
         }[]
       }
       get_trip_proposal_reaction_counts: {
