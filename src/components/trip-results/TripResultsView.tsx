@@ -735,6 +735,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         </>)}{/* end !streaming overview */}
 
+        {/* Single draft notice — replaces per-day repetitions */}
+        {standalone && (
+          <div className="mx-4 mb-3 flex items-start gap-2 rounded-xl bg-muted/40 border border-dashed border-border px-3 py-2.5">
+            <span className="text-[11px] text-muted-foreground leading-snug">
+              💬 Comments unlock once you create the trip. Save it and invite your group to start the conversation.
+            </span>
+          </div>
+        )}
+
         {/* ===== PER-DESTINATION CONTENT ===== */}
         {result.destinations.map((dest, destIdx) => {
           const destDays = allDays.filter(
