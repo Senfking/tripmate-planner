@@ -1,25 +1,37 @@
-## Problem
+I’m sorry — the recent iterations over-corrected the pill and made it look worse. I inspected the current `Hero.tsx` and previewed the landing page at the mobile viewport. The current issue is that the input pill is too short/narrow compared with your reference, the button is too small, and the textarea sizing/alignment hacks are fighting the pill shape.
 
-1. Tapping the "Entry & visa" card on the trip dashboard (or any link to `/app/trips/:id/bookings#visa-entry-section`) lands on the Bookings & Docs **empty state**, which returns early before rendering `EntryRequirementsBlock` or the `#visa-entry-section` anchor. So the hash target doesn't exist and the user just sees the generic "Snap or upload" hero with no visa info — feels broken.
-2. The dashboard card is labeled just "Bookings", but the section is actually "Bookings & Docs".
+Plan:
 
-## Fix
+1. Restore the pill to a reference-like mobile shape
+   - Use a taller integrated pill on mobile, roughly matching the uploaded reference: large rounded white capsule, generous horizontal padding, and an oversized circular teal action button tucked inside the right edge.
+   - Keep desktop responsive behavior separate so this mobile fix doesn’t break larger layouts.
 
-### 1. Always render the entry/visa block in `BookingsTab`
-File: `src/components/bookings/BookingsTab.tsx`
+2. Replace the textarea sizing hacks with predictable layout
+   - Remove the problematic `[align-content:center]` textarea centering approach.
+   - Use a fixed two-line textarea height on mobile with normal line-height and padding so the placeholder wraps naturally without clipping.
+   - Make the placeholder visually closer to the reference: larger, softer gray text, two lines, left-aligned.
 
-In the `attachments.length === 0` empty-state branch (around lines 424–534), render the `EntryRequirementsBlock` **above** the hero card, wrapped in a `<div id="visa-entry-section">` so the hash anchor resolves and the user immediately sees personalized entry/visa guidance for their destination.
+3. Make the CTA button match the reference better
+   - Increase the mobile button from the current small 44px icon button to a larger round button.
+   - Keep the sparkles icon centered and white.
+   - Use the existing primary teal color and a soft shadow, like the reference.
 
-- Reuses the existing `EntryRequirementsBlock` component (already imported) and the same `openManualFormForRequirement` handler used in the populated view.
-- The block already handles its own internal states (loading, no nationality set, generated requirements, etc.), so it's safe to mount unconditionally.
-- Also add a small scroll-on-mount effect: if `location.hash === "#visa-entry-section"`, smooth-scroll to it after first paint (mirrors the existing `scrollToVisa` helper but auto-fires from the URL).
+4. Fix the route used for preview checks
+   - The `/index` route is a 404 in this app; the landing page is `/`.
+   - I’ll verify the final result on `/` at the closest available mobile viewport.
 
-### 2. Rename the dashboard card
-File: `src/components/trip/TripDashboard.tsx` (line 850)
+Technical changes:
 
-Change `Bookings` → `Bookings & Docs` so it matches the section title used in `TripSection.tsx` (`SECTION_TITLES.bookings = "Bookings & Docs"`).
+- Edit only `src/components/hero/Hero.tsx`.
+- Adjust the shared pill wrapper, textarea classes, and button classes with responsive Tailwind values.
+- Preserve existing submit behavior, busy state, accessibility labels, and app/public variants.
+- Do not embed the uploaded screenshot; use it only as visual reference.
 
-## Out of scope
+Target mobile layout:
 
-- No changes to `TravellersSection` — its CTA target is correct, the destination just wasn't rendering the anchor.
-- No restructuring of the empty-state hero; just prepending the entry/visa block.
+```text
+[  Tell Junto AI about your trip —        ( sparkles ) ]
+[  destination, dates, who's coming                    ]
+```
+
+The pill should feel like one clean capsule wrapped around the big circular action button, not like a compressed form control.
