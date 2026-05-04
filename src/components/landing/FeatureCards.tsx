@@ -179,14 +179,14 @@ function PhoneMockup({ variant }: { variant: number }) {
   return (
     <div className="mx-auto w-[220px] sm:w-[240px]">
       <div className="rounded-[2rem] border-[4px] border-white/10 bg-[#17191b] p-1 shadow-[0_36px_70px_-30px_rgba(0,0,0,0.75)]">
-        <div className="aspect-[9/18] overflow-hidden rounded-[1.55rem] bg-[linear-gradient(180deg,rgba(15,31,29,1)_0%,rgba(12,20,19,1)_100%)] [&_*]:scale-[1] [&>*:nth-child(3)]:[&_.text-\[6px\]]:text-[9px]">
+        <div className="aspect-[9/18] overflow-hidden rounded-[1.55rem] bg-[linear-gradient(180deg,rgba(15,31,29,1)_0%,rgba(12,20,19,1)_100%)]">
           <div className="flex h-9 items-center justify-between px-4 text-[9px] font-semibold text-white/60">
             <span>9:41</span>
             <div className="h-5 w-14 rounded-full bg-black/60" />
             <CheckSquare className="h-3.5 w-3.5" />
           </div>
           <div className="px-4 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-primary/90">{FEATURES[variant].category}</div>
-          <div className="phone-screen-content">{screens[variant]}</div>
+          {screens[variant]}
         </div>
       </div>
     </div>
