@@ -659,13 +659,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
                   {/* Stacked progress bar */}
                   <div className="relative mt-5 h-1.5 w-full rounded-full bg-white/10 overflow-hidden flex">
-                    {costBreakdown.categories.map(([cat, amount], i) => {
+                    {costBreakdown.categories.map(([cat, amount]) => {
                       const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
-                      const colors = ["#5EEAD4", "#2DD4BF", "#14B8A6", "#0D9488", "#0F766E", "#115E59"];
                       return (
                         <div
                           key={cat}
-                          style={{ width: `${pct}%`, background: colors[i % colors.length] }}
+                          style={{ width: `${pct}%`, background: getCategoryColor(cat) }}
                           className="h-full"
                         />
                       );
