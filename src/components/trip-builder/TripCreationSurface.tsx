@@ -162,7 +162,7 @@ export function TripCreationSurface({
   );
 
   return (
-    <section className="relative w-full bg-gray-50">
+    <section className="relative w-full bg-gray-50" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
       <div className="relative z-10 mx-auto w-full max-w-6xl px-5 sm:px-8 py-8 sm:py-12">
         {templateCard ? (
           <div className="grid gap-6 md:grid-cols-5 md:items-stretch">
