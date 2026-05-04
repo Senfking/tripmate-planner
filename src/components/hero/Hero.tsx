@@ -424,8 +424,10 @@ export function Hero({
         aria-hidden
       />
 
-      <div className="relative z-10 flex items-center justify-between px-5 sm:px-10 pt-5 sm:pt-7">
-        <JuntoWordmark variant="light" />
+      <div className="relative z-10 flex items-center justify-end px-5 sm:px-10 pt-5 sm:pt-7">
+        <div className="pointer-events-none absolute left-1/2 top-5 sm:top-7 -translate-x-1/2">
+          <JuntoWordmark variant="light" />
+        </div>
         <Link
           to="/ref"
           className="inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 transition-colors"
