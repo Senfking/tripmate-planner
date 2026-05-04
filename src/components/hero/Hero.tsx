@@ -106,15 +106,15 @@ export function Hero({
   // textarea can use normal, predictable padding instead of centering hacks.
   const pillWrapper = isApp
     ? [
-        "flex items-center gap-1.5 sm:gap-1 min-h-[68px] sm:min-h-0",
+        "flex items-center gap-2",
         "rounded-full bg-white border border-gray-100",
-        "shadow-sm pl-1.5 pr-1.5 py-1.5 sm:pl-1 sm:pr-1 sm:py-1 transition-all",
+        "shadow-sm p-2 sm:p-1.5 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
-        "flex items-center gap-1.5 sm:gap-1 min-h-[68px] sm:min-h-0",
+        "flex items-center gap-2",
         "rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl pl-1.5 pr-1.5 py-1.5 sm:pl-1 sm:pr-1 sm:py-1 transition-all",
+        "shadow-2xl p-2 sm:p-1.5 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
@@ -168,12 +168,12 @@ export function Hero({
           {...sharedTextareaProps}
           rows={2}
           className={[
-            "block w-full min-w-0 flex-1 resize-none bg-transparent self-center",
-            "px-2.5 sm:px-4 py-[12px] sm:py-[10px]",
-            "text-[15px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
+            "block w-full min-w-0 flex-1 resize-none bg-transparent",
+            "px-3 sm:px-4 py-0",
+            "text-[14px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
             "outline-none border-0",
-            "leading-[20px] sm:leading-[1.4] overflow-hidden",
-            "h-[64px] sm:h-[56px]",
+            "leading-[1.35] sm:leading-[1.4] overflow-hidden",
+            "h-[40px] sm:h-[44px] [align-content:center]",
             "disabled:opacity-60 text-left",
           ].join(" ")}
         />
@@ -185,7 +185,7 @@ export function Hero({
           className={[
             "inline-flex items-center justify-center gap-2 shrink-0",
             "rounded-full bg-primary text-white font-medium",
-            "h-[52px] w-[52px] p-0 sm:h-[56px] sm:w-auto sm:px-6 sm:py-0 text-sm whitespace-nowrap",
+            "h-[44px] w-[44px] p-0 sm:h-[48px] sm:w-auto sm:px-6 text-sm whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
             "transition-all hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
             "active:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed",
