@@ -882,76 +882,48 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       <div className={cn("fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]", rc)} style={revealStyle("complete")}>
         <div className="max-w-[700px] mx-auto relative">
           {standalone ? (
-            <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <CostBottomPanel
-                  totalActivities={totalActivities}
-                  total={costBreakdown.total}
-                  dailyAvg={costBreakdown.dailyAvg}
-                  currency={currency}
-                  categories={costBreakdown.categories}
-                  userCurrency={userCurrency}
-                  convertToUserCurrency={convertToUserCurrency}
-                  formatBudget={formatBudget}
-                />
-              </div>
-              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  onClick={() => setEditTripOpen(true)}
-                  className="h-9 px-3 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={onSaveDraft}
-                  className="h-9 px-4 rounded-xl text-[13px] font-semibold flex-1 sm:flex-none"
-                >
-                  Save draft
-                </Button>
-                <Button
-                  onClick={onCreateTrip}
-                  disabled={creatingTrip || !!streaming}
-                  title={streaming ? "Available once your trip finishes generating" : undefined}
-                  className="h-9 px-4 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white flex-1 sm:flex-none"
-                >
-                  {creatingTrip ? "Creating..." : streaming ? "Generating…" : "Create trip"}
-                </Button>
-              </div>
+            <div className="flex items-center justify-center gap-2 px-4 py-3">
+              <Button
+                variant="outline"
+                onClick={() => setEditTripOpen(true)}
+                className="h-10 px-4 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+              </Button>
+              <Button
+                variant="outline"
+                onClick={onSaveDraft}
+                className="h-10 px-4 rounded-xl text-[13px] font-semibold flex-1 sm:flex-none"
+              >
+                Save draft
+              </Button>
+              <Button
+                onClick={onCreateTrip}
+                disabled={creatingTrip || !!streaming}
+                title={streaming ? "Available once your trip finishes generating" : undefined}
+                className="h-10 px-5 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white flex-1 sm:flex-none"
+              >
+                {creatingTrip ? "Creating..." : streaming ? "Generating…" : "Create trip"}
+              </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <CostBottomPanel
-                  totalActivities={totalActivities}
-                  total={costBreakdown.total}
-                  dailyAvg={costBreakdown.dailyAvg}
-                  currency={currency}
-                  categories={costBreakdown.categories}
-                  userCurrency={userCurrency}
-                  convertToUserCurrency={convertToUserCurrency}
-                  formatBudget={formatBudget}
-                />
-              </div>
-              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleShare}
-                  className="h-9 rounded-lg text-xs gap-1 flex-1 sm:flex-none sm:px-3"
-                >
-                  <Share2 className="h-3.5 w-3.5" /> Share
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditTripOpen(true)}
-                  className="h-9 rounded-lg text-xs gap-1 flex-1 sm:flex-none sm:px-3"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-                </Button>
-              </div>
+            <div className="flex items-center justify-center gap-2 px-4 py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="h-10 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none sm:px-4"
+              >
+                <Share2 className="h-3.5 w-3.5" /> Share
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditTripOpen(true)}
+                className="h-10 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none sm:px-4"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+              </Button>
             </div>
           )}
         </div>
