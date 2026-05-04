@@ -436,47 +436,6 @@ export function ActivityCard({
           </div>
         )}
       </div>
-            return <span className="text-[11px] font-mono font-medium text-foreground">{`~${code}${amount}`}</span>;
-          })()}
-
-          {/* Persistent booking CTA — right column. Always visible regardless
-              of expand state so it doesn't jump around. */}
-          {(() => {
-            const gygEligible = isGetYourGuideEligible(activity);
-            const partner = (activity as any).booking_partner as string | null | undefined;
-            const showRealBooking =
-              !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
-            if (gygEligible) {
-              return (
-                <a
-                  href={buildGetYourGuideUrl(activity.title, destinationName)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm whitespace-nowrap"
-                >
-                  Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
-                </a>
-              );
-            }
-            if (showRealBooking) {
-              return (
-                <a
-                  href={activity.booking_url!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-sm whitespace-nowrap"
-                >
-                  Book <ExternalLink className="h-2.5 w-2.5" />
-                </a>
-              );
-            }
-            return null;
-          })()}
-        </div>
-      </div>
-
       {/* Expanded details */}
       {expanded && (
         <div className="border-t border-border animate-fade-in">
