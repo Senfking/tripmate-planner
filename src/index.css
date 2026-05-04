@@ -234,8 +234,8 @@ html.dark, html.dark body, html.dark #root {
   /* Native-feel button tap feedback */
   button:active,
   [role="button"]:active {
-    transform: scale(0.97);
-    transition: transform 100ms ease;
+    opacity: 0.86;
+    transition: opacity 100ms ease;
   }
 
   /* Attendance overlay animations */

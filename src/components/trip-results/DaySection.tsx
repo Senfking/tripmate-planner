@@ -203,7 +203,7 @@ export function DaySection({
       <div
         ref={cardRef}
         id={`section-day-${day.day_number}`}
-        className="group rounded-2xl border border-border bg-card overflow-visible transition-all shadow-sm hover:shadow-xl hover:-translate-y-0.5"
+        className="group rounded-2xl border border-border bg-card overflow-visible transition-[box-shadow,border-color] shadow-sm hover:shadow-xl"
       >
         {/* Collapsed card — cinematic banner header with dark overlay */}
         <button
