@@ -5,6 +5,7 @@ import { Hero } from "@/components/hero/Hero";
 import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 import { FeatureCards } from "@/components/landing/FeatureCards";
 import { TripCarousels } from "@/components/landing/TripCarousel";
+import { ShimmerButton } from "@/components/landing/ShimmerButton";
 
 // Scroll-reveal hook (ported from /landing-old). Keeps the dark-section
 // + carousels feeling premium on first scroll without bringing in extra
