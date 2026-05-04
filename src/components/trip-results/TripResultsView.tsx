@@ -21,6 +21,7 @@ import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
 import { computeTripBudget } from "@/lib/budgetCalc";
 // ConciergeButton intentionally not imported — floating "What to do?" pill removed.
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
+import { CONCIERGE_ENABLED } from "@/lib/featureFlags";
 import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
 import { MapSlidePanel, type MapState } from "./MapSlidePanel";
