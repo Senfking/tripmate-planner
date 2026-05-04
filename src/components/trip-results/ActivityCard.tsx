@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Star, ExternalLink, Trash2, ArrowLeftRight, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf, Loader2, Clock } from "lucide-react";
+import { Star, ExternalLink, Trash2, ArrowLeftRight, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf, Loader2, Clock, Info, X, MapPin } from "lucide-react";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
