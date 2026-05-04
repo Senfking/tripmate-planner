@@ -738,19 +738,19 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   checkOutDate={dest.end_date || null}
                 />
               ) : (
-                <div className="mx-4 mb-4 rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
-                  <Building2 className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Hotel search coming soon</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    We'll suggest stays matched to your trip
-                  </p>
-                  <button
-                    onClick={() => toast.success("We'll let you know when hotel search is available!")}
-                    className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0D9488]/15 border border-[#0D9488]/25 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/25 transition-colors"
-                  >
-                    <Bell className="h-3 w-3" />
-                    Notify me
-                  </button>
+                <div
+                  className="mx-4 mb-4 rounded-xl overflow-hidden border border-border bg-card"
+                  aria-label="Loading accommodation"
+                >
+                  <div className="h-40 w-full skeleton-shimmer" />
+                  <div className="p-4 space-y-2.5">
+                    <div className="h-4 w-2/3 rounded skeleton-shimmer" />
+                    <div className="h-3 w-1/2 rounded skeleton-shimmer" />
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="h-3 w-16 rounded skeleton-shimmer" />
+                      <div className="h-3 w-20 rounded skeleton-shimmer" />
+                    </div>
+                  </div>
                 </div>
               )}
 
