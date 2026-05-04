@@ -545,6 +545,15 @@ interface AddressComponent {
   types: string[];
 }
 
+// Google Places v1 regularOpeningHours.periods entry. open is always present
+// for venues that are open at least once a week; close is null for 24h-open
+// venues. day: 0=Sunday..6=Saturday. Cross-midnight periods have
+// close.day !== open.day.
+interface OpeningHoursPeriod {
+  open: { day: number; hour: number; minute: number };
+  close: { day: number; hour: number; minute: number } | null;
+}
+
 interface BatchPlaceResult {
   id: string;
   displayName: string | null;
@@ -561,6 +570,10 @@ interface BatchPlaceResult {
   googleMapsUri: string | null;
   businessStatus: string | null;
   addressComponents: AddressComponent[];
+  // Null when Places didn't return regularOpeningHours OR the cached entry
+  // pre-dates the field-mask change. Callers must fall back to category
+  // hours in that case (categoryFallbackHoursForTypes).
+  openingHours: OpeningHoursPeriod[] | null;
   poolKey: PoolKey;
 }
 
@@ -608,6 +621,11 @@ interface EnrichedActivity {
   booking_partner: AffiliatePartner;
   is_junto_pick: boolean;
   dietary_notes?: string;
+  // Snapshot of Google Places types — propagated from BatchPlaceResult.types
+  // so post-pipeline validators (logOpeningHoursViolations) can do
+  // category-fallback checks even on cached payloads where the underlying
+  // BatchPlaceResult is no longer in scope. Optional — events have no types.
+  place_types?: string[];
   // Populated for is_event rows via fuzzy-match against events[] in hydration.
   // Null for place-backed rows and for events that never matched a candidate.
   event_url: string | null;
@@ -2129,8 +2147,15 @@ const PLACES_RANKING_FIELD_MASK =
 // HYDRATION pass — Pro fields for the ~15 venues the ranker actually picked.
 // Called via the Place Details endpoint (/places/{id}) per finalist. We only
 // pay this per-finalist, not per ranking candidate.
+//
+// regularOpeningHours.periods is included so the ranker can avoid putting a
+// nightclub at 09:30 or a cocktail bar at 14:30 (real bug from production —
+// see logOpeningHoursViolations for the post-rank validator). currentOpeningHours
+// would respect special holiday hours but is twice the response size for the
+// same reliability win we'd get most of the year — Plan: revisit if holiday
+// trips show drift.
 const PLACES_DETAILS_FIELD_MASK =
-  "id,displayName,formattedAddress,location,rating,userRatingCount,priceLevel,priceRange,types,photos,googleMapsUri,businessStatus,addressComponents";
+  "id,displayName,formattedAddress,location,rating,userRatingCount,priceLevel,priceRange,types,photos,googleMapsUri,businessStatus,addressComponents,regularOpeningHours";
 
 // Currency code → symbol for formatting Places priceRange strings. Falls back
 // to the raw code when unknown — "CHF 20-40" reads fine without a symbol.
@@ -2289,6 +2314,7 @@ async function searchPlacesBatch(
         googleMapsUri: null,
         businessStatus: (p.businessStatus as string | null) ?? null,
         addressComponents: [],
+        openingHours: null,
         poolKey: pool,
       });
     }
@@ -2403,6 +2429,26 @@ function applyDetailsToBatch(base: BatchPlaceResult, details: Record<string, unk
   base.businessStatus = (details.businessStatus as string | null) ?? base.businessStatus ?? null;
   const ac = details.addressComponents as AddressComponent[] | undefined;
   if (Array.isArray(ac) && ac.length) base.addressComponents = ac;
+  // regularOpeningHours.periods: extract only if present + well-formed.
+  // Cached details written before this PR added the field will lack it —
+  // callers fall back to categoryFallbackHoursForTypes in that case.
+  const roh = details.regularOpeningHours as { periods?: unknown } | undefined;
+  const periods = roh?.periods;
+  if (Array.isArray(periods) && periods.length > 0) {
+    const parsed: OpeningHoursPeriod[] = [];
+    for (const raw of periods) {
+      const p = raw as { open?: { day?: number; hour?: number; minute?: number }; close?: { day?: number; hour?: number; minute?: number } | null };
+      const o = p.open;
+      if (!o || typeof o.day !== "number" || typeof o.hour !== "number") continue;
+      const open = { day: o.day, hour: o.hour, minute: o.minute ?? 0 };
+      const c = p.close;
+      const close = (c && typeof c.day === "number" && typeof c.hour === "number")
+        ? { day: c.day, hour: c.hour, minute: c.minute ?? 0 }
+        : null;
+      parsed.push({ open, close });
+    }
+    if (parsed.length > 0) base.openingHours = parsed;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2756,6 +2802,156 @@ function priceLevelIndex(level: string | null): number {
   }
 }
 
+// ===========================================================================
+// Opening-hours validation
+// ---------------------------------------------------------------------------
+// Real bug from production: Jigger & Spoon (cocktail bar) was scheduled at
+// 14:30, Amber Club Lounge (nightclub) at 09:30. The skeleton assigns slot
+// times by slot type (afternoon_major=14:30, morning_major=09:30, etc.) and
+// the ranker had no opening-hours data — so it could happily file a bar into
+// any open slot. Three layers of defence:
+//   1. PLACES_DETAILS_FIELD_MASK now fetches regularOpeningHours.
+//   2. The ranker digest exposes a compact "open Mon-Sat 17:00-02:00" string
+//      AND the day prompt hard-rules venues must be open at slot.start_time.
+//   3. Hydration drops any LLM pick whose Places hours data flatly contradicts
+//      the slot start_time. logOpeningHoursViolations also runs post-pipeline
+//      as observability for whatever slips past the prompt + drop layers.
+// ---------------------------------------------------------------------------
+
+// Convert "HH:MM" → minutes-from-midnight. Returns -1 on malformed input so
+// callers get a stable failure mode rather than NaN propagation.
+function hhmmToMinutes(hhmm: string): number {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
+  if (!m) return -1;
+  const h = Number(m[1]), mi = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(mi)) return -1;
+  return h * 60 + mi;
+}
+
+// 0=Sunday..6=Saturday from an ISO yyyy-mm-dd. UTC-based — slot.date is a
+// pure calendar date, never a timestamp, so DST/timezone skew is irrelevant.
+function isoDateToWeekday(iso: string): number {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return -1;
+  return d.getUTCDay();
+}
+
+// Tests whether (weekday, minutesIntoDay) falls inside any period. Handles
+// cross-midnight periods (close.day !== open.day) by walking the period
+// forward in (day,minute) space. Returns:
+//   true  → venue is open at this moment
+//   false → venue is closed at this moment AND we have hours data
+//   null  → no hours data (caller must fall back to category-typical hours)
+function isVenueOpenAt(
+  periods: OpeningHoursPeriod[] | null,
+  weekday: number,
+  minutesIntoDay: number,
+): boolean | null {
+  if (!periods || periods.length === 0) return null;
+  if (weekday < 0 || minutesIntoDay < 0) return null;
+  // Normalise the query point to a single integer in [0, 7*1440).
+  const queryPoint = weekday * 1440 + minutesIntoDay;
+  for (const p of periods) {
+    const openPt = p.open.day * 1440 + p.open.hour * 60 + p.open.minute;
+    // 24h-open venues: close is null → period covers the entire week from open.
+    if (!p.close) return true;
+    let closePt = p.close.day * 1440 + p.close.hour * 60 + p.close.minute;
+    // Cross-midnight wrap: bar opens Mon 22:00, closes Tue 04:00 →
+    // close.day=2, openPt < closePt naturally. Cross-week wrap (close on
+    // Sunday after a Saturday open) → add a full week to the close point.
+    if (closePt <= openPt) closePt += 7 * 1440;
+    // Account for queries at the cross-midnight tail of a Mon-opened period
+    // hitting on Tuesday: Tue 02:00 = 2*1440 + 120 = 3000; openPt = 1320,
+    // closePt = 1*1440+22*60 + 1440 = 1320+360+1440 = 3120. queryPoint=3000
+    // is between 1320 and 3120 → matches. Or query lands BEFORE openPt by a
+    // week's worth: shift queryPoint forward and retest.
+    const shifted = queryPoint < openPt ? queryPoint + 7 * 1440 : queryPoint;
+    if (shifted >= openPt && shifted < closePt) return true;
+  }
+  return false;
+}
+
+// Category-typical hours fallback for venues with no Places hours data.
+// Intentionally permissive — we only want to BLOCK obvious mismatches
+// (cocktail bar at 09:30) and never let a fallback prevent a valid pick.
+// Each entry is [openMinutes, closeMinutes] where close > 1440 means cross-midnight.
+const CATEGORY_FALLBACK_HOURS: Array<{ match: RegExp; range: [number, number] }> = [
+  { match: /night_club/i,                      range: [22 * 60, 28 * 60] }, // 22:00 - 04:00
+  { match: /bar(?!ber)|wine_bar|cocktail/i,    range: [16 * 60, 26 * 60] }, // 16:00 - 02:00
+  { match: /restaurant/i,                      range: [11 * 60, 23 * 60] }, // 11:00 - 23:00
+  { match: /cafe|bakery|coffee/i,              range: [7  * 60, 18 * 60] }, // 07:00 - 18:00
+  { match: /museum|art_gallery|library/i,      range: [10 * 60, 18 * 60] }, // 10:00 - 18:00
+  { match: /spa|hair_care|beauty_salon/i,      range: [10 * 60, 20 * 60] }, // 10:00 - 20:00
+  { match: /park|natural_feature|tourist_attraction|landmark|church|mosque|temple/i,
+    range: [8  * 60, 20 * 60] }, // permissive default for outdoor + sights
+];
+
+function categoryFallbackHoursForTypes(types: string[] | null | undefined): [number, number] | null {
+  if (!types || types.length === 0) return null;
+  const joined = types.join(" ");
+  for (const e of CATEGORY_FALLBACK_HOURS) {
+    if (e.match.test(joined)) return e.range;
+  }
+  return null;
+}
+
+// Combined check: try Places hours first, fall back to category hours, fall
+// back to "unknown" (caller decides). Returns:
+//   { open: true|false, source: "places" | "category" | "unknown" }
+function checkVenueOpen(
+  place: Pick<BatchPlaceResult, "openingHours" | "types"> | null,
+  date: string,
+  hhmm: string,
+): { open: boolean; source: "places" | "category" | "unknown" } {
+  if (!place) return { open: true, source: "unknown" };
+  const minutesIntoDay = hhmmToMinutes(hhmm);
+  const weekday = isoDateToWeekday(date);
+  if (minutesIntoDay < 0 || weekday < 0) return { open: true, source: "unknown" };
+  const placesAns = isVenueOpenAt(place.openingHours, weekday, minutesIntoDay);
+  if (placesAns !== null) return { open: placesAns, source: "places" };
+  const fallback = categoryFallbackHoursForTypes(place.types);
+  if (!fallback) return { open: true, source: "unknown" };
+  // Cross-midnight handling for fallback: close > 1440 means the close is on
+  // the next day, so [open..1440) plus [0..close-1440) on the following day
+  // are both "open". For a daytime query within [open, close mod 1440), match.
+  const [open, close] = fallback;
+  const inOpenSpan =
+    minutesIntoDay >= open && (close > 1440
+      ? true   // open from `open` until past midnight
+      : minutesIntoDay < close);
+  // Cross-midnight tail: 02:00 should match a "22:00 - 04:00" range. The
+  // fallback ranges are weekday-agnostic so we treat each early-morning hour
+  // as belonging to the previous calendar evening's range.
+  const inWrapTail = close > 1440 && minutesIntoDay < (close - 1440);
+  return { open: inOpenSpan || inWrapTail, source: "category" };
+}
+
+// Render hours for the ranker digest. One short string ("Mon-Sun 17:00-02:00",
+// "Mon closed; Tue-Sun 10:00-18:00", or "hours unknown — assume typical
+// daytime"). Keeps the prompt token cost down vs. full structured periods.
+function digestHoursSummary(periods: OpeningHoursPeriod[] | null): string | null {
+  if (!periods || periods.length === 0) return null;
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const byDay: Record<number, string[]> = {};
+  for (const p of periods) {
+    if (!p.close) {
+      byDay[p.open.day] = ["24h"];
+      continue;
+    }
+    const oh = String(p.open.hour).padStart(2, "0");
+    const om = String(p.open.minute).padStart(2, "0");
+    const ch = String(p.close.hour).padStart(2, "0");
+    const cm = String(p.close.minute).padStart(2, "0");
+    (byDay[p.open.day] ??= []).push(`${oh}:${om}-${ch}:${cm}`);
+  }
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    if (byDay[i]) days.push(`${dayNames[i]} ${byDay[i].join(",")}`);
+    else days.push(`${dayNames[i]} closed`);
+  }
+  return days.join("; ");
+}
+
 // Clamp LLM-quoted cost against Google's priceLevel band in the trip's local
 // currency. LLM is allowed to exceed the band by ≤ 20 % before we clamp — this
 // avoids noise on values that are plausibly right but unlucky. Free venues
@@ -2864,6 +3060,13 @@ COST GUIDANCE:
 - For attractions with free admission, use 0.
 - For bars/nightlife, cost is a reasonable 2-drink average.
 - NEVER quote USD when the trip currency is something else.
+
+OPENING HOURS — HARD CONSTRAINT (DO NOT VIOLATE):
+- Every slot has start_time (HH:MM) and the day has a date (YYYY-MM-DD). Compute the weekday from the date and check it against each candidate venue's hours field.
+- If venue.hours indicates the venue is CLOSED at slot.start_time on that weekday, you MUST NOT pick that venue. Pick a different one from the same pool, or emit place_id=null with a short description if nothing in the pool fits.
+- Banned: cocktail bar at 14:30, nightclub at 09:30, dinner restaurant at 11:30, museum at 21:00. These are real production failures the system is now guarded against — the validator post-filters violations and your slot will go empty if you pick wrong.
+- venue.hours format: "Mon 10:00-18:00; Tue closed; Wed 10:00-18:00; ..." Each day lists open windows; "closed" means no hours that day; "24h" means continuous. Cross-midnight closes appear on the OPENING day (e.g. a bar open Mon 22:00 to Tue 02:00 shows as "Mon 22:00-02:00" — the close hour wraps).
+- venue.hours may be null when Google Places didn't return hours. In that case, fall back to category-typical hours: bars open 16:00-02:00, nightclubs 22:00-04:00, restaurants 11:00-23:00, cafes 07:00-18:00, museums 10:00-18:00, spas 10:00-20:00. NEVER pick a bar/nightclub for a morning or early-afternoon slot even when hours are unknown.
 
 VIBES — MANDATORY INCLUSION CRITERIA:
 - Every vibe in intent.vibes is a HARD inclusion signal, not a soft preference. The user explicitly selected each one and expects to see it reflected in their itinerary.
@@ -3076,6 +3279,11 @@ interface VenueDigestEntry {
   address: string | null;
   lat: number | null;
   lng: number | null;
+  // Compact "Mon 10:00-18:00; Tue closed; ..." summary so the ranker can
+  // honour opening hours when picking a slot. Null when Places didn't return
+  // hours (cached pre-PR or venue genuinely lacks data) — ranker is told to
+  // treat null as "assume category-typical hours" via the day prompt.
+  hours: string | null;
 }
 
 function dedupeByIdKeepFirst(venues: BatchPlaceResult[]): BatchPlaceResult[] {
@@ -3100,6 +3308,7 @@ function digestVenue(p: BatchPlaceResult): VenueDigestEntry {
     address: p.formattedAddress,
     lat: p.location?.latitude ?? null,
     lng: p.location?.longitude ?? null,
+    hours: digestHoursSummary(p.openingHours),
   };
 }
 
@@ -3185,10 +3394,18 @@ function buildDayInstruction(
   // showing it to the LLM would let it echo the placeholder. The system prompt
   // tells the ranker to invent a specific 2–5 word theme from the venues it
   // picks. Dedup + derive happens downstream if the LLM fails to comply.
+  // weekday: 0=Sunday..6=Saturday, computed once per day so the ranker can
+  // map slot.start_time + day.weekday against venue.hours without parsing
+  // the date itself. Mirrors the calculation in checkVenueOpen.
+  const dayWeekdayIdx = isoDateToWeekday(day.date);
+  const dayWeekdayName = dayWeekdayIdx >= 0
+    ? ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dayWeekdayIdx]
+    : null;
   const slotPayload = {
     day: {
       day_number: day.day_number,
       date: day.date,
+      weekday: dayWeekdayName,
       slots: day.slots.map((s, i) => ({
         slot_index: i,
         type: s.type,
@@ -3383,6 +3600,9 @@ function hydrateActivity(
     longitude: place?.location?.longitude ?? 0,
     rating: place?.rating ?? null,
     user_rating_count: place?.userRatingCount ?? null,
+    // Snapshot for downstream validators. Empty array (not omitted) when no
+    // place — keeps JSON shape stable across event/non-event rows.
+    place_types: place?.types ?? [],
     // Sourced directly from Places — never from the ranker. Even if the LLM
     // fabricates these on RawRankerActivity (it can't — schema doesn't expose
     // the fields), we'd overwrite here.
@@ -3781,6 +4001,24 @@ async function rankInParallel(
       if (!rawAct.is_event && rawAct.place_id && !place) {
         dropReasons.push("place_id_not_in_pool");
         continue;
+      }
+      // Hard-drop: Places returned hours AND those hours say the venue is
+      // closed at slot.start_time. We do NOT drop on category-fallback
+      // closures here — fallbacks are approximate and dropping on them
+      // would break too many edge cases (e.g. lunch spots open at 11:00 vs
+      // a slot at 13:30 falling under our 11:00-23:00 default). The
+      // post-pipeline validator (logOpeningHoursViolations) still surfaces
+      // category-fallback closures as observability warnings.
+      if (place) {
+        const openCheck = checkVenueOpen(place, day.date, slot.start_time);
+        if (!openCheck.open && openCheck.source === "places") {
+          console.warn(
+            `[opening_hours] drop: place_id=${place.id} "${place.displayName}" ` +
+            `closed at ${day.date} ${slot.start_time} (slot=${slot.type})`,
+          );
+          dropReasons.push("closed_at_slot");
+          continue;
+        }
       }
       const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
       if (!activity) {
@@ -4241,6 +4479,53 @@ function logDescriptionGrounding(result: PipelineResult, intent: Intent): void {
     console.log(
       `[description_grounding] ok proper_nouns_checked=${matches.length} allowlist_size=${allow.size}`,
     );
+  }
+}
+
+// ---- logOpeningHoursViolations ----
+//
+// Post-pipeline observability for opening-hours mismatches. The hard guard
+// runs at hydrate time (drops Places-confirmed closures) but cannot drop
+// when Places didn't return hours OR when the cached payload is older than
+// the field-mask change. This validator catches the leftover cases via
+// category-typical hours and surfaces them as console.warn.
+//
+// Never gates the response. Mirrors logVibeCoverage's pattern.
+function logOpeningHoursViolations(result: PipelineResult): void {
+  let checked = 0;
+  let violations = 0;
+  for (const dest of result.destinations) {
+    for (const day of dest.days) {
+      for (const act of day.activities) {
+        if (!act.place_id) continue; // events / downtime — no venue to validate
+        if (!act.start_time) continue;
+        if (!act.place_types || act.place_types.length === 0) continue;
+        const fallback = categoryFallbackHoursForTypes(act.place_types);
+        if (!fallback) continue;
+        checked++;
+        const minutes = hhmmToMinutes(act.start_time);
+        if (minutes < 0) continue;
+        const [open, close] = fallback;
+        const inOpenSpan =
+          minutes >= open && (close > 1440 ? true : minutes < close);
+        const inWrapTail = close > 1440 && minutes < (close - 1440);
+        if (!(inOpenSpan || inWrapTail)) {
+          violations++;
+          console.warn(
+            `[opening_hours] CATEGORY-FALLBACK VIOLATION: "${act.title}" ` +
+            `at ${day.date} ${act.start_time} — types=${JSON.stringify(act.place_types.slice(0, 4))} ` +
+            `expected ${Math.floor(open/60)}:${String(open%60).padStart(2,"0")}` +
+            `-${Math.floor((close % 1440)/60)}:${String((close%1440)%60).padStart(2,"0")}` +
+            `${close > 1440 ? " (cross-midnight)" : ""}`,
+          );
+        }
+      }
+    }
+  }
+  if (violations === 0) {
+    console.log(`[opening_hours] ok checked=${checked}`);
+  } else {
+    console.warn(`[opening_hours] ${violations}/${checked} activities flagged via category fallback`);
   }
 }
 
@@ -5396,6 +5681,7 @@ Deno.serve(async (req) => {
                 markJuntoPicks(payload as unknown as PipelineResult, intent);
                 logVibeCoverage(payload as unknown as PipelineResult, intent);
                 logDescriptionGrounding(payload as unknown as PipelineResult, intent);
+                logOpeningHoursViolations(payload as unknown as PipelineResult);
                 for (const d of dest?.days ?? []) send("day", d);
                 const juntoPlaceIds: string[] = [];
                 for (const day of dest?.days ?? []) {
@@ -5614,6 +5900,20 @@ Deno.serve(async (req) => {
                 if (!rawAct.is_event && rawAct.place_id && !place) {
                   dropReasons.push("place_id_not_in_pool");
                   continue;
+                }
+                // Hard-drop on Places-confirmed closures (mirrors rankInParallel
+                // hydrateDay; see comment there for why category-fallback
+                // closures only log, not drop).
+                if (place) {
+                  const openCheck = checkVenueOpen(place, day.date, slot.start_time);
+                  if (!openCheck.open && openCheck.source === "places") {
+                    console.warn(
+                      `[opening_hours] drop: place_id=${place.id} "${place.displayName}" ` +
+                      `closed at ${day.date} ${slot.start_time} (slot=${slot.type})`,
+                    );
+                    dropReasons.push("closed_at_slot");
+                    continue;
+                  }
                 }
                 const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, events);
                 if (!activity) {
@@ -5871,6 +6171,7 @@ Deno.serve(async (req) => {
             markJuntoPicks(pipelineResult, intent);
             logVibeCoverage(pipelineResult, intent);
             logDescriptionGrounding(pipelineResult, intent);
+            logOpeningHoursViolations(pipelineResult);
 
             const juntoPlaceIds: string[] = [];
             for (const day of ranked_days) {
@@ -6109,6 +6410,7 @@ Deno.serve(async (req) => {
           markJuntoPicks(payload as unknown as PipelineResult, intent);
           logVibeCoverage(payload as unknown as PipelineResult, intent);
           logDescriptionGrounding(payload as unknown as PipelineResult, intent);
+          logOpeningHoursViolations(payload as unknown as PipelineResult);
           let juntoPicksTagged = 0;
           for (const day of payload?.destinations?.[0]?.days ?? []) {
             for (const a of day.activities ?? []) if (a?.is_junto_pick) juntoPicksTagged++;
@@ -6294,6 +6596,7 @@ Deno.serve(async (req) => {
     markJuntoPicks(ranked, intent);
     logVibeCoverage(ranked, intent);
     logDescriptionGrounding(ranked, intent);
+    logOpeningHoursViolations(ranked);
 
     const affEnv: AffiliateEnv = {
       viator: viatorMcid,
