@@ -129,8 +129,8 @@ export function ActivityCard({
       <div className="flex flex-col sm:flex-row sm:items-stretch">
         {/* Hero image — left column on desktop, fixed height to prevent tall images from stretching the card */}
         <div
-          className="relative shrink-0 w-full sm:w-[40%] sm:max-w-[240px] h-[140px] sm:h-[200px] overflow-hidden bg-muted cursor-pointer"
-          onClick={() => setExpanded((e) => !e)}
+          className="relative shrink-0 w-full sm:w-[38%] sm:max-w-[260px] h-[160px] sm:h-[220px] overflow-hidden bg-muted cursor-pointer"
+          onClick={() => setExpanded(true)}
         >
           {isLoading ? (
             <Skeleton className="w-full h-full rounded-none" />
