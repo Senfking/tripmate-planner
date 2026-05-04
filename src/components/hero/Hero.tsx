@@ -170,10 +170,10 @@ export function Hero({
           className={[
             "block w-full min-w-0 flex-1 resize-none bg-transparent self-center",
             "px-3 sm:px-4 py-0",
-            "text-[10px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
+            "text-[12px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
             "outline-none border-0",
-            "leading-[1.35] sm:leading-[1.4] overflow-hidden",
-            "h-[48px] sm:h-auto sm:min-h-[56px] sm:max-h-[100px]",
+            "leading-[1.3] sm:leading-[1.4] overflow-hidden",
+            "h-[60px] sm:h-auto sm:min-h-[56px] sm:max-h-[100px]",
             "disabled:opacity-60 text-left",
             "[align-content:center]",
           ].join(" ")}
