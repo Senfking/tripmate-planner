@@ -42,14 +42,14 @@ const FEATURES = [
 
 function PhoneMockup({ variant }: { variant: number }) {
   const screens = [
-    <div className="w-full space-y-2 px-3" key="plan">
-      <div className="mb-1 flex items-center gap-1.5">
-        <Sparkles className="h-3 w-3 text-primary" />
-        <span className="text-[8px] font-bold text-white/85">Bali Adventure</span>
+    <div className="w-full space-y-2.5 px-4" key="plan">
+      <div className="mb-1 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <span className="text-[12px] font-bold text-white/85">Bali Adventure</span>
       </div>
-      <div className="flex gap-1">
+      <div className="flex gap-1.5">
         {["7d", "3 cities", "14 acts"].map((item) => (
-          <span key={item} className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[6px] font-medium text-primary-foreground/90">
+          <span key={item} className="rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-medium text-primary-foreground/90">
             {item}
           </span>
         ))}
@@ -59,13 +59,13 @@ function PhoneMockup({ variant }: { variant: number }) {
         { name: "Tirta Empul Temple", time: "1 PM", cost: "$3" },
         { name: "Monkey Forest", time: "4 PM", cost: "$7" },
       ].map((item) => (
-        <div key={item.name} className="flex items-center gap-2 rounded-lg bg-white/[0.06] p-1.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 shrink-0">
-            <MapPin className="h-2.5 w-2.5 text-primary" />
+        <div key={item.name} className="flex items-center gap-2.5 rounded-xl bg-white/[0.06] p-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 shrink-0">
+            <MapPin className="h-4 w-4 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[7px] font-medium text-white/85">{item.name}</div>
-            <div className="flex gap-1.5 text-[6px] text-white/45">
+            <div className="truncate text-[11px] font-medium text-white/85">{item.name}</div>
+            <div className="flex gap-2 text-[9px] text-white/45">
               <span>{item.time}</span>
               <span className="text-primary">{item.cost}</span>
             </div>
@@ -73,107 +73,103 @@ function PhoneMockup({ variant }: { variant: number }) {
         </div>
       ))}
     </div>,
-    <div className="w-full space-y-2 px-3" key="voting">
-      <div className="text-[8px] font-medium text-white/60">Where should we go?</div>
+    <div className="w-full space-y-2.5 px-4" key="voting">
+      <div className="text-[11px] font-medium text-white/60">Where should we go?</div>
       {["Bali 🏝️", "Japan 🏯", "Greece 🇬🇷"].map((item, index) => (
-        <div key={item} className="flex items-center gap-2 rounded-lg p-1.5" style={{ background: index === 0 ? "hsl(var(--primary) / 0.2)" : "rgba(255,255,255,0.04)" }}>
-          <div className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${index === 0 ? "border-primary bg-primary/30" : "border-white/20"}`}>
-            {index === 0 ? <div className="h-1.5 w-1.5 rounded-full bg-primary" /> : null}
+        <div key={item} className="flex items-center gap-2.5 rounded-xl p-2.5" style={{ background: index === 0 ? "hsl(var(--primary) / 0.2)" : "rgba(255,255,255,0.04)" }}>
+          <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${index === 0 ? "border-primary bg-primary/30" : "border-white/20"}`}>
+            {index === 0 ? <div className="h-2 w-2 rounded-full bg-primary" /> : null}
           </div>
-          <span className="flex-1 text-[7px] text-white/75">{item}</span>
-          <div className={`h-1.5 rounded ${index === 0 ? "w-10 bg-primary/45" : index === 1 ? "w-5 bg-white/10" : "w-3 bg-white/10"}`} />
+          <span className="flex-1 text-[11px] text-white/75">{item}</span>
+          <div className={`h-2 rounded ${index === 0 ? "w-14 bg-primary/45" : index === 1 ? "w-7 bg-white/10" : "w-4 bg-white/10"}`} />
         </div>
       ))}
-      <div className="mt-2 flex items-center gap-1.5">
-        <div className="flex -space-x-1">
-          {[
-            "bg-primary",
-            "bg-orange-500",
-            "bg-violet-500",
-          ].map((className, index) => (
-            <div key={index} className={`h-4 w-4 rounded-full border border-[#111] ${className}`} />
+      <div className="mt-3 flex items-center gap-2">
+        <div className="flex -space-x-1.5">
+          {["bg-primary", "bg-orange-500", "bg-violet-500"].map((className, index) => (
+            <div key={index} className={`h-5 w-5 rounded-full border-2 border-[#111] ${className}`} />
           ))}
         </div>
-        <span className="text-[6px] text-white/45">3 votes</span>
+        <span className="text-[9px] text-white/45">3 votes</span>
       </div>
     </div>,
-    <div className="w-full space-y-2 px-3" key="expenses">
+    <div className="w-full space-y-2.5 px-4" key="expenses">
       <div className="py-2 text-center">
-        <span className="text-[13px] font-bold text-primary">$347.50</span>
-        <div className="mt-0.5 text-[6px] text-white/45">Total group expenses</div>
+        <span className="text-[22px] font-bold text-primary">$347.50</span>
+        <div className="mt-0.5 text-[9px] text-white/45">Total group expenses</div>
       </div>
       <div className="h-px bg-white/10" />
       {[
         { name: "Dinner at Locavore", who: "Sarah paid", amount: "$142" },
         { name: "Surf lesson", who: "Mike paid", amount: "$90" },
       ].map((item) => (
-        <div key={item.name} className="flex items-center gap-1.5 rounded-lg bg-white/[0.04] p-1.5">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 shrink-0">
-            <DollarSign className="h-2.5 w-2.5 text-primary" />
+        <div key={item.name} className="flex items-center gap-2 rounded-xl bg-white/[0.04] p-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 shrink-0">
+            <DollarSign className="h-4 w-4 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[7px] font-medium text-white/85">{item.name}</div>
-            <div className="text-[6px] text-white/45">{item.who}</div>
+            <div className="truncate text-[11px] font-medium text-white/85">{item.name}</div>
+            <div className="text-[9px] text-white/45">{item.who}</div>
           </div>
-          <span className="text-[8px] font-medium text-white/65">{item.amount}</span>
+          <span className="text-[12px] font-medium text-white/65">{item.amount}</span>
         </div>
       ))}
-      <div className="rounded-lg bg-primary/10 p-1.5 text-center">
-        <span className="text-[6px] font-medium text-primary">You owe Sarah $23.50</span>
+      <div className="rounded-xl bg-primary/10 p-2 text-center">
+        <span className="text-[10px] font-medium text-primary">You owe Sarah $23.50</span>
       </div>
     </div>,
-    <div className="w-full space-y-2 px-3" key="concierge">
-      <div className="ml-3 rounded-lg bg-white/[0.06] p-2">
-        <div className="text-[7px] text-white/65">Where should we eat tonight?</div>
+    <div className="w-full space-y-2.5 px-4" key="concierge">
+      <div className="ml-4 rounded-2xl bg-white/[0.06] p-2.5">
+        <div className="text-[11px] text-white/65">Where should we eat tonight?</div>
       </div>
-      <div className="mr-3 rounded-lg bg-primary/15 p-2">
-        <div className="text-[7px] text-primary">Here are 3 places nearby:</div>
+      <div className="mr-4 rounded-2xl bg-primary/15 p-2.5">
+        <div className="text-[11px] text-primary">Here are 3 places nearby:</div>
       </div>
       {[
         { name: "Locavore", rating: "4.8" },
         { name: "Mozaic", rating: "4.7" },
       ].map((item) => (
-        <div key={item.name} className="rounded-lg bg-white/[0.05] p-1.5">
-          <div className="mb-1 h-8 w-full rounded bg-white/[0.08]" />
-          <div className="text-[7px] font-medium text-white/75">{item.name}</div>
-          <div className="mt-0.5 flex items-center gap-0.5">
-            <Star className="h-2 w-2 fill-amber-400 text-amber-400" />
-            <span className="text-[6px] text-white/45">{item.rating}</span>
+        <div key={item.name} className="rounded-xl bg-white/[0.05] p-2">
+          <div className="mb-1.5 h-12 w-full rounded-lg bg-white/[0.08]" />
+          <div className="text-[11px] font-medium text-white/75">{item.name}</div>
+          <div className="mt-0.5 flex items-center gap-1">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span className="text-[9px] text-white/45">{item.rating}</span>
           </div>
         </div>
       ))}
     </div>,
-    <div className="w-full space-y-2 px-3" key="sync">
-      <div className="mb-1 flex items-center gap-1.5">
-        <RefreshCw className="h-3 w-3 text-primary" />
-        <span className="text-[8px] font-bold text-white/85">Live updates</span>
+    <div className="w-full space-y-2.5 px-4" key="sync">
+      <div className="mb-1 flex items-center gap-2">
+        <RefreshCw className="h-4 w-4 text-primary" />
+        <span className="text-[12px] font-bold text-white/85">Live updates</span>
       </div>
       {[
         "Sarah added an activity",
         "Mike updated the booking",
         "Alex swapped a restaurant",
       ].map((line, index) => (
-        <div key={line} className={`rounded-lg p-2 ${index === 0 ? "border border-primary/25 bg-primary/10" : "bg-white/[0.04]"}`}>
-          <div className={`text-[7px] ${index === 0 ? "font-medium text-primary" : "text-white/65"}`}>{line}</div>
-          <div className="mt-0.5 text-[6px] text-white/40">{index === 0 ? "just now" : `${index + 1} min ago`}</div>
+        <div key={line} className={`rounded-xl p-2.5 ${index === 0 ? "border border-primary/25 bg-primary/10" : "bg-white/[0.04]"}`}>
+          <div className={`text-[11px] ${index === 0 ? "font-medium text-primary" : "text-white/65"}`}>{line}</div>
+          <div className="mt-0.5 text-[9px] text-white/40">{index === 0 ? "just now" : `${index + 1} min ago`}</div>
         </div>
       ))}
     </div>,
-    <div className="w-full space-y-2 px-3" key="docs">
-      <div className="mb-1 flex items-center gap-1.5">
-        <FileText className="h-3 w-3 text-primary" />
-        <span className="text-[8px] font-bold text-white/85">Bookings & docs</span>
+    <div className="w-full space-y-2.5 px-4" key="docs">
+      <div className="mb-1 flex items-center gap-2">
+        <FileText className="h-4 w-4 text-primary" />
+        <span className="text-[12px] font-bold text-white/85">Bookings & docs</span>
       </div>
       {[
         { label: "Emirates EK357", meta: "Confirmed · Jul 15", icon: "✈️" },
         { label: "The Slow Hotel", meta: "2 nights · Canggu", icon: "🏨" },
         { label: "Travel insurance", meta: "PDF · 240 KB", icon: "📄" },
       ].map((item) => (
-        <div key={item.label} className="flex items-center gap-2 rounded-lg bg-white/[0.04] p-1.5">
-          <span className="text-sm">{item.icon}</span>
+        <div key={item.label} className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] p-2">
+          <span className="text-xl">{item.icon}</span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[7px] font-medium text-white/85">{item.label}</div>
-            <div className="text-[6px] text-white/45">{item.meta}</div>
+            <div className="truncate text-[11px] font-medium text-white/85">{item.label}</div>
+            <div className="text-[9px] text-white/45">{item.meta}</div>
           </div>
         </div>
       ))}
@@ -181,15 +177,15 @@ function PhoneMockup({ variant }: { variant: number }) {
   ];
 
   return (
-    <div className="mx-auto w-[148px]">
-      <div className="rounded-[1.4rem] border-[3px] border-white/10 bg-[#17191b] p-0.5 shadow-[0_28px_60px_-30px_rgba(0,0,0,0.65)]">
-        <div className="aspect-[9/18] overflow-hidden rounded-[1.05rem] bg-[linear-gradient(180deg,rgba(15,31,29,1)_0%,rgba(12,20,19,1)_100%)]">
-          <div className="flex h-6 items-center justify-between px-3 text-[6px] font-semibold text-white/60">
+    <div className="mx-auto w-[220px] sm:w-[240px]">
+      <div className="rounded-[2rem] border-[4px] border-white/10 bg-[#17191b] p-1 shadow-[0_36px_70px_-30px_rgba(0,0,0,0.75)]">
+        <div className="aspect-[9/18] overflow-hidden rounded-[1.55rem] bg-[linear-gradient(180deg,rgba(15,31,29,1)_0%,rgba(12,20,19,1)_100%)]">
+          <div className="flex h-9 items-center justify-between px-4 text-[9px] font-semibold text-white/60">
             <span>9:41</span>
-            <div className="h-3.5 w-10 rounded-full bg-black/60" />
-            <CheckSquare className="h-2.5 w-2.5" />
+            <div className="h-5 w-14 rounded-full bg-black/60" />
+            <CheckSquare className="h-3.5 w-3.5" />
           </div>
-          <div className="px-3 pb-2 text-[7px] font-medium uppercase tracking-[0.18em] text-primary/90">{FEATURES[variant].category}</div>
+          <div className="px-4 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-primary/90">{FEATURES[variant].category}</div>
           {screens[variant]}
         </div>
       </div>
@@ -217,26 +213,27 @@ export function FeatureCards() {
             <article
               key={feature.headline}
               data-carousel-card="true"
-              className="relative flex min-h-[480px] w-[288px] shrink-0 snap-start flex-col overflow-hidden rounded-[1.6rem] border border-primary/15 bg-[hsl(173_34%_9%)] shadow-[0_24px_56px_-30px_hsl(var(--foreground)/0.28)] sm:w-[330px]"
+              className="relative flex aspect-[4/5] w-[320px] shrink-0 snap-start flex-col overflow-hidden rounded-[1.6rem] border border-primary/15 bg-[hsl(173_34%_9%)] shadow-[0_24px_56px_-30px_hsl(var(--foreground)/0.28)] sm:w-[380px]"
             >
-              <div className="flex flex-1 flex-col p-6">
-                <span className="mb-3 text-[12px] font-medium text-primary">{feature.category}</span>
-                <h3 className="mb-3 text-xl font-bold leading-tight text-white sm:text-2xl">{feature.headline}</h3>
-                <p className="text-[14px] leading-relaxed text-white/62">{feature.description}</p>
+              <div className="flex flex-col p-6 pb-3">
+                <span className="mb-2 text-[12px] font-medium text-primary">{feature.category}</span>
+                <h3 className="mb-2.5 text-xl font-bold leading-tight text-white sm:text-2xl">{feature.headline}</h3>
+                <p className="text-[13px] leading-relaxed text-white/62 line-clamp-3">{feature.description}</p>
               </div>
-              <div className="relative px-6 pb-10 pt-2">
-                <PhoneMockup variant={feature.variant} />
+              <div className="relative flex-1 overflow-hidden">
+                <div className="absolute inset-x-0 top-0 flex justify-center">
+                  <PhoneMockup variant={feature.variant} />
+                </div>
+                {/* Soft inner fade so the phone bottom melts into the card */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
+                  style={{
+                    background:
+                      "linear-gradient(to bottom, transparent 0%, hsl(173 34% 9%) 90%)",
+                  }}
+                />
               </div>
-              {/* Soft inner fade so the card bottom doesn't slice the
-                  phone visually — gives it a planted-in-card feel. */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-16"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, transparent 0%, hsl(173 34% 9%) 100%)",
-                }}
-              />
             </article>
           ))}
           <div className="shrink-0 w-5 sm:w-10 lg:w-16" aria-hidden="true" />
