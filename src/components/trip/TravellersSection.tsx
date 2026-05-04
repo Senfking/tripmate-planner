@@ -279,7 +279,7 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
         }
       }}
       id="travellers-section"
-      className={`w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 p-4 transition-all ${isInteractive ? "hover:shadow-md active:scale-[0.99] cursor-pointer" : "cursor-default"}`}
+      className={`w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 p-4 transition-all ${isInteractive ? "hover:shadow-md active:opacity-80 cursor-pointer" : "cursor-default"}`}
     >
       <div className="flex items-center gap-3">
         {/* Route visual: my flag → destination flag */}

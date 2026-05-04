@@ -117,7 +117,7 @@ export function AttendanceRow({ members, attendance, itemId, currentUserId, onCy
         <button
           data-rsvp
           onClick={(e) => { e.stopPropagation(); onCycle(); }}
-          className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-colors active:scale-95"
+          className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-colors active:opacity-80"
           style={{ color: rsvpStyle.color, backgroundColor: rsvpStyle.bg }}
         >
           {RSVP_LABEL[myStatus]}

@@ -377,7 +377,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           <button
             onClick={onClose}
             aria-label="Back"
-            className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:scale-95 hover:bg-black/40"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
             style={{
               background: "rgba(0,0,0,0.3)",
               backdropFilter: "blur(8px)",
@@ -399,7 +399,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 setMapState(isDesktop ? "partial" : "full");
               }}
               aria-label={mapState === "closed" ? "Show map" : "Hide map"}
-              className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:scale-95 hover:bg-black/40"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
               style={{
                 background: mapState !== "closed" ? "rgba(13,148,136,0.6)" : "rgba(0,0,0,0.3)",
                 backdropFilter: "blur(8px)",
@@ -413,7 +413,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               <button
                 onClick={onDashboard}
                 aria-label="Trip overview"
-                className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:scale-95 hover:bg-black/40"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
                 style={{
                   background: "rgba(0,0,0,0.3)",
                   backdropFilter: "blur(8px)",
@@ -427,7 +427,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <button
               onClick={() => setEditTripOpen(true)}
               aria-label="Edit trip"
-              className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:scale-95 hover:bg-black/40"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
               style={{
                 background: "rgba(0,0,0,0.3)",
                 backdropFilter: "blur(8px)",

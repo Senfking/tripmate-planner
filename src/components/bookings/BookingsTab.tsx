@@ -379,7 +379,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
             <button
               type="button"
               onClick={() => galleryInputRef.current?.click()}
-              className="flex-1 flex items-center gap-3 rounded-xl border-2 border-[#0D9488]/20 bg-[#0D9488]/[0.04] px-4 py-3.5 text-left transition-colors hover:bg-[#0D9488]/[0.08] active:scale-[0.98]"
+              className="flex-1 flex items-center gap-3 rounded-xl border-2 border-[#0D9488]/20 bg-[#0D9488]/[0.04] px-4 py-3.5 text-left transition-colors hover:bg-[#0D9488]/[0.08] active:opacity-80"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0D9488]/15">
                 <Sparkles className="h-5 w-5 text-[#0D9488]" />
@@ -477,7 +477,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0D9488] py-3 text-[13.5px] font-semibold text-white shadow-[0_6px_20px_-6px_rgba(13,148,136,0.5)] transition-transform active:scale-[0.97]"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0D9488] py-3 text-[13.5px] font-semibold text-white shadow-[0_6px_20px_-6px_rgba(13,148,136,0.5)] transition-transform active:opacity-80"
               >
                 <Camera className="h-4 w-4" />
                 Snap photo
@@ -485,7 +485,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-[#0D9488]/30 bg-background py-3 text-[13.5px] font-semibold text-[#0D9488] transition-colors hover:bg-[#0D9488]/[0.06] active:scale-[0.97]"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-[#0D9488]/30 bg-background py-3 text-[13.5px] font-semibold text-[#0D9488] transition-colors hover:bg-[#0D9488]/[0.06] active:opacity-80"
               >
                 <Upload className="h-4 w-4" />
                 Upload file
@@ -546,7 +546,7 @@ export function BookingsTab({ tripId, myRole, newItemIds }: Props) {
           <button
             type="button"
             onClick={openManualForm}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-muted/50 active:scale-[0.97]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-muted/50 active:opacity-80"
           >
             <Plus className="h-3.5 w-3.5" />
             Add booking manually

@@ -39,7 +39,7 @@ export function StepVibes({ selected, source, prefilledFromFreeText, hasVibeBoar
               key={v.label}
               onClick={() => onToggle(v.label)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-full border text-sm font-medium transition-all active:scale-[0.95]",
+                "flex items-center gap-2 px-4 py-2.5 rounded-full border text-sm font-medium transition-all active:opacity-80",
                 isOn
                   ? "text-primary-foreground border-transparent shadow-md"
                   : "bg-card text-foreground border-border hover:border-primary/40"

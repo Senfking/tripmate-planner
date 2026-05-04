@@ -36,7 +36,7 @@ export function StepBudget({ value, source, prefilledFromFreeText, onChange }: P
               key={opt.key}
               onClick={() => onChange(opt.key)}
               className={cn(
-                "flex items-center gap-4 p-5 rounded-2xl border transition-all text-left active:scale-[0.98]",
+                "flex items-center gap-4 p-5 rounded-2xl border transition-all text-left active:opacity-80",
                 selected
                   ? "border-transparent text-primary-foreground shadow-lg"
                   : "bg-card border-border hover:border-primary/40 hover:shadow-sm"

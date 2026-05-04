@@ -687,7 +687,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   type="button"
                   disabled={scanning}
                   onClick={() => receiptCameraRef.current?.click()}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0D9488] py-3 text-[13.5px] font-semibold text-white shadow-[0_6px_20px_-6px_rgba(13,148,136,0.5)] transition-transform active:scale-[0.97] disabled:opacity-60"
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0D9488] py-3 text-[13.5px] font-semibold text-white shadow-[0_6px_20px_-6px_rgba(13,148,136,0.5)] transition-transform active:opacity-80 disabled:opacity-60"
                 >
                   {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                   Scan receipt
@@ -696,7 +696,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                   type="button"
                   disabled={scanning}
                   onClick={() => receiptFileRef.current?.click()}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#0D9488]/30 bg-background py-3 text-[13.5px] font-semibold text-[#0D9488] transition-colors hover:bg-[#0D9488]/[0.06] active:scale-[0.97] disabled:opacity-60"
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#0D9488]/30 bg-background py-3 text-[13.5px] font-semibold text-[#0D9488] transition-colors hover:bg-[#0D9488]/[0.06] active:opacity-80 disabled:opacity-60"
                 >
                   <Upload className="h-4 w-4" />
                   Upload photo
@@ -731,7 +731,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
             <button
               type="button"
               onClick={() => { setEditingExpense(null); setFormOpen(true); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-muted/50 active:scale-[0.97]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-muted/50 active:opacity-80"
             >
               <Plus className="h-3.5 w-3.5" />
               Add expense manually

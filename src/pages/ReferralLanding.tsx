@@ -602,7 +602,7 @@ export default function ReferralLanding() {
                   trackEvent("get_started_click", { referral_code: code || null });
                   setFormOpen(true);
                 }}
-                className="w-full flex items-center justify-center text-white font-semibold rounded-2xl active:scale-[0.97] transition-transform"
+                className="w-full flex items-center justify-center text-white font-semibold rounded-2xl active:opacity-80 transition-transform"
                 style={{
                   height: 52,
                   fontSize: 16,
@@ -648,7 +648,7 @@ export default function ReferralLanding() {
                   type="button"
                   disabled={googleLoading}
                   onClick={handleGoogleSignIn}
-                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:scale-[0.97] transition-transform"
+                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80 transition-transform"
                   style={{
                     height: 52,
                     fontSize: 15,
@@ -669,7 +669,7 @@ export default function ReferralLanding() {
                   type="button"
                   disabled={appleLoading}
                   onClick={handleAppleSignIn}
-                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:scale-[0.97] transition-transform"
+                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80 transition-transform"
                   style={{
                     height: 52,
                     fontSize: 15,
@@ -755,7 +755,7 @@ export default function ReferralLanding() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-2xl active:scale-[0.97] transition-transform"
+                    className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-2xl active:opacity-80 transition-transform"
                     style={{
                       height: 52,
                       fontSize: 16,

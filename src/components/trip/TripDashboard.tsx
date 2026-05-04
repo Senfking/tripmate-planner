@@ -615,7 +615,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             <div className="flex gap-2.5">
               <button
                 onClick={() => { if (hasPlan) navigate(`/app/trips/${tripId}/plan`); else toggleBuilder(true); }}
-                className="text-left rounded-2xl p-3.5 transition-all active:scale-[0.97]"
+                className="text-left rounded-2xl p-3.5 transition-all active:opacity-80"
                 style={{
                   flex: isLiveWithPlan ? 1.2 : 1,
                   background: "rgba(255,255,255,0.18)",
@@ -652,7 +652,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               {CONCIERGE_ENABLED && (
                 <button
                   onClick={() => setConciergeOpen(true)}
-                  className="text-left rounded-2xl p-3.5 transition-all active:scale-[0.97]"
+                  className="text-left rounded-2xl p-3.5 transition-all active:opacity-80"
                   style={{
                     flex: isLiveWithPlan ? 0.8 : 1,
                     background: "rgba(255,255,255,0.18)",
@@ -680,7 +680,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
-            className="w-full text-left rounded-2xl overflow-hidden transition-all active:scale-[0.98] hover:shadow-lg relative"
+            className="w-full text-left rounded-2xl overflow-hidden transition-all active:opacity-80 hover:shadow-lg relative"
             style={{
               background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",
               boxShadow: "0 4px 16px rgba(13,148,136,0.25)",
@@ -755,7 +755,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
-            className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:scale-[0.98] hover:shadow-md"
+            className="w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all active:opacity-80 hover:shadow-md"
           >
             <div className="grid grid-cols-2 h-[90px]">
               <div className="relative overflow-hidden">
@@ -802,7 +802,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/decisions`)}
-            className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
+            className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:opacity-80 hover:shadow-md"
           >
             <div className="h-[80px] relative overflow-hidden bg-muted">
               <picture>
@@ -832,7 +832,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
-            className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:scale-[0.98] hover:shadow-md"
+            className="isolate w-full text-left bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-[transform,box-shadow] active:opacity-80 hover:shadow-md"
           >
             <div className="h-[80px] relative overflow-hidden bg-muted">
               <picture>
@@ -861,7 +861,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/itinerary`)}
-            className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+            className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 text-left transition-all active:opacity-80 hover:shadow-md"
           >
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[15px] text-foreground">Itinerary</p>

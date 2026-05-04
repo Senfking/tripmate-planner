@@ -32,7 +32,7 @@ function NavTab({ to, label, icon: Icon }: { to: string; label: string; icon: Lu
     >
       <div
         className={cn(
-          "relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-150 active:scale-90",
+          "relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-150 active:opacity-80",
           isActive && "bg-primary/10"
         )}
       >
@@ -90,7 +90,7 @@ export function BottomNav() {
           <div className="flex flex-col items-center -mt-6 px-2">
             <button
               onClick={() => navigate("/app/trips/new")}
-              className="flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-background bg-gradient-primary text-primary-foreground shadow-lg transition-transform duration-300 active:scale-95"
+              className="flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-background bg-gradient-primary text-primary-foreground shadow-lg transition-transform duration-300 active:opacity-80"
               aria-label="Start a new trip"
             >
               <Plus className="h-7 w-7" strokeWidth={2.5} />

@@ -418,7 +418,7 @@ transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
 className="transition-all duration-250 ease-in-out"
 
 // Micro interaction (press)
-className="transition-transform duration-150 active:scale-95"`}</CodeSnippet>
+className="transition-transform duration-150 active:opacity-80"`}</CodeSnippet>
             </div>
 
             {/* Live demos */}
@@ -443,7 +443,7 @@ className="transition-transform duration-150 active:scale-95"`}</CodeSnippet>
                 </div>
 
                 {/* Button press */}
-                <button className="rounded-xl border border-gray-100 p-5 text-center active:scale-[0.96] transition-transform duration-150">
+                <button className="rounded-xl border border-gray-100 p-5 text-center active:opacity-80 transition-transform duration-150">
                   <p className="text-sm font-semibold">Button Press</p>
                   <p className="text-[10px] text-muted-foreground mt-1">scale(0.96) on active</p>
                 </button>
