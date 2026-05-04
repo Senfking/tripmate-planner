@@ -573,7 +573,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                 <span className="text-[12px] font-medium text-muted-foreground">Balances</span>
               </div>
               {!balancesOpen && myBalance && (
-                <span className="text-[12px] font-medium">
+                <span className="text-[12px] font-medium tabular-nums">
                   {myBalance.balance > 0.005
                     ? <span style={{ color: "#0D9488" }}>+{formatCurrency(myBalance.balance, settlementCurrency)}</span>
                     : myBalance.balance < -0.005
