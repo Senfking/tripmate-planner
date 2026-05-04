@@ -5,6 +5,7 @@ import { Hero } from "@/components/hero/Hero";
 import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 import { FeatureCards } from "@/components/landing/FeatureCards";
 import { TripCarousels } from "@/components/landing/TripCarousel";
+import { ShimmerButton } from "@/components/landing/ShimmerButton";
 
 // Scroll-reveal hook (ported from /landing-old). Keeps the dark-section
 // + carousels feeling premium on first scroll without bringing in extra
@@ -63,6 +64,26 @@ export default function PublicLanding() {
         <Reveal>
           <TripCarousels />
         </Reveal>
+      </section>
+
+      {/* Bottom CTA — re-prompt with shimmer button */}
+      <section className="py-20 sm:py-28 px-5">
+        <div className="mx-auto max-w-md text-center">
+          <Reveal>
+            <h2 className="text-2xl sm:text-4xl font-bold text-[#1a1a1a] mb-3">
+              Your next trip starts here
+            </h2>
+            <p className="text-[15px] text-[#9ca3af] mb-10">
+              Plan smarter. Travel better. No spreadsheets required.
+            </p>
+            <ShimmerButton
+              onClick={() => navigate(user ? "/trips/new" : "/ref")}
+              className="w-full sm:w-auto sm:px-14 mx-auto rounded-2xl py-4 text-[16px]"
+            >
+              Start planning
+            </ShimmerButton>
+          </Reveal>
+        </div>
       </section>
 
       {/* Footer (ported) */}
