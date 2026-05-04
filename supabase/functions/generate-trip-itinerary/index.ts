@@ -925,9 +925,10 @@ destination:
 - Never invent a destination from thin air.
 
 vibes:
-- Start from the user's explicit vibes[] array.
-- Add vibes that are clearly implied by free_text (e.g. "we want to eat our way through" => add "foodie"; "chill beach days" => add "beach", "slow").
-- Short lowercase tags, 1-3 words each. De-duplicate.
+- PRESERVE EVERY explicit vibe from the user's vibes[] array — never drop one. These are mandatory inclusion criteria for the trip, not soft hints.
+- Normalize each preserved vibe to a short lowercase tag (e.g. "Nightlife" => "nightlife", "Hidden gems" => "hidden gems"). Keep multi-word tags intact; do not split "hidden gems" into two entries.
+- THEN add vibes that are clearly implied by free_text (e.g. "we want to eat our way through" => add "foodie"; "chill beach days" => add "beach", "slow"). De-duplicate against the preserved set.
+- Output is short lowercase tags, 1-3 words each. The downstream pipeline matches these tags against a Places-retrieval map — preserving the user's exact form selections (lowercased) is critical.
 
 must_haves:
 - Specific experiences the user explicitly asked for. Examples: "cooking class", "see the Northern Lights", "visit the Miffy Museum", "sunrise hike".
@@ -1316,6 +1317,9 @@ function buildSkeleton(
       // above) so travel days don't collapse around a flight.
       slots.push({ type: "afternoon_major", start_time: hhmm(15, 0), duration_minutes: 120, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      if (wantsNightlife) {
+        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
+      }
     } else if (intent.pace === "active") {
       // Active: early start, morning + two afternoon majors, optional nightlife.
       slots.push({ type: "breakfast", start_time: hhmm(8, 30), duration_minutes: 45, region_tag_for_queries: primary });
@@ -1329,13 +1333,17 @@ function buildSkeleton(
       }
     } else {
       // Balanced (default): morning anchor + lunch + afternoon anchor + dinner.
-      // Breakfast and nightlife are not part of the balanced shape — those are
-      // active-pace concerns. Four slots is the reference shape; everything
-      // else is calibrated against this.
+      // Breakfast is reserved for active pace. Nightlife is appended only when
+      // the user signalled it (vibe / must-have / notes via hasNightlifeSignal,
+      // which already vetoes on family/kids signals) — see PR for vibes
+      // fidelity fix that decoupled nightlife from active-only pacing.
       slots.push({ type: "morning_major", start_time: hhmm(10, 0), duration_minutes: 150, region_tag_for_queries: primary });
       slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
       slots.push({ type: "afternoon_major", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
       slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+      if (wantsNightlife) {
+        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
+      }
     }
 
     days.push({
@@ -1465,6 +1473,95 @@ function detectFoodVibe(vibes: string[]): string | null {
   return match ?? null;
 }
 
+// Vibe → Places retrieval spec. Each user-selected vibe fires one extra
+// Places query so the ranker sees venues that genuinely match the vibe.
+// Without this map, the only vibe with dedicated retrieval was nightlife —
+// the other 7 chips were essentially decorative (see PR for vibes fidelity
+// fix).
+//
+// Constraints:
+//   - Total Places queries are capped at MAX_PLACES_QUERIES_PER_TRIP (12).
+//     Baseline (lodging + meals + attractions + nightlife) is ~6, so we have
+//     ~5–6 budget for vibe queries — enough for all 8 chips with one query
+//     each (some share types, dedupKey collapses overlap).
+//   - includedType is a single Google Places type. For vibes that span
+//     multiple types (Culture: museum + art_gallery + ...) we pick the most
+//     representative type; the textBias keyword pulls in adjacent venues via
+//     text search.
+//   - Hidden gems has no type filter — Places has no "hidden gem" type. The
+//     keyword bias plus an explicit ranker instruction (see RANKER_DAY_SYSTEM_PROMPT)
+//     handle the off-tourist-trail preference.
+//   - Photography rides on tourist_attraction with photogenic-keyword bias.
+//     Venues with high photo counts surface naturally because Places' text
+//     ranking favours review/photo volume.
+interface VibeRetrievalSpec {
+  matches: RegExp;
+  includedType?: string;
+  textBias: string;       // prepended to "<bias> <city>"
+  poolKey: PoolKey;
+  dedupKey: string;
+}
+
+const VIBE_PLACES_MAP: VibeRetrievalSpec[] = [
+  // Food: caught by the existing meal queries; the vibe-driven query layers
+  // an additional "best restaurants" pull into the restaurants pool.
+  { matches: /^food$|foodie|culinary|cuisine|gastronomy/i,
+    includedType: "restaurant", textBias: "best restaurants",
+    poolKey: "restaurants", dedupKey: "vibe:food" },
+  // Culture: museum is the canonical type; the keyword bias rakes in
+  // galleries, historic sites, and religious landmarks via text match.
+  { matches: /culture|cultural|history|historic|heritage|art\b/i,
+    includedType: "museum", textBias: "museums galleries historic landmarks",
+    poolKey: "attractions", dedupKey: "vibe:culture" },
+  // Adventure: tourist_attraction is broad enough to catch tour operators,
+  // adventure-park style listings; keyword bias targets the active-outdoor
+  // operators specifically.
+  { matches: /adventure|outdoor|active|hike|hiking|kayak|rafting|climb|zip ?line/i,
+    includedType: "tourist_attraction", textBias: "outdoor adventure hiking kayak",
+    poolKey: "attractions", dedupKey: "vibe:adventure" },
+  // Relaxation: spa is the strongest signal; parks/beaches come in via
+  // separate vibes (Nature) so we don't double-up here.
+  { matches: /relax|relaxation|wellness|spa|chill|slow|unwind/i,
+    includedType: "spa", textBias: "spa wellness retreat",
+    poolKey: "experiences", dedupKey: "vibe:relax" },
+  // Nightlife: bar is the dominant type; a second night_club entry lives in
+  // the nightlife block in buildPlacesQueries to also surface clubs.
+  { matches: /nightlife|party|club|bar\b|cocktail|lively|live music|rooftop/i,
+    includedType: "bar", textBias: "bars cocktail nightlife",
+    poolKey: "nightlife", dedupKey: "vibe:nightlife" },
+  // Nature: park is the canonical type; viewpoint/waterfall/beach venues
+  // come through the keyword bias.
+  { matches: /^nature$|natural|park\b|forest|lake|beach|viewpoint|waterfall|garden/i,
+    includedType: "park", textBias: "parks gardens viewpoints natural sights",
+    poolKey: "attractions", dedupKey: "vibe:nature" },
+  // Hidden gems: no type filter (Google has no such category). Pure keyword
+  // bias steers Places' text ranking toward smaller venues; the ranker
+  // prompt also prefers lower-review-count picks when this vibe is set.
+  { matches: /hidden|hidden gem|off the beaten|local|authentic|underrated|secret/i,
+    textBias: "local authentic hidden gems off the beaten path",
+    poolKey: "attractions", dedupKey: "vibe:hidden" },
+  // Photography: tourist_attraction + photogenic keywords. High-photo-count
+  // venues bubble up naturally in Places' ranking.
+  { matches: /photo|photography|instagram|view\b|viewpoint|lookout|sunset|skyline|scenic/i,
+    includedType: "tourist_attraction", textBias: "scenic viewpoints lookouts photogenic spots",
+    poolKey: "attractions", dedupKey: "vibe:photo" },
+];
+
+function matchedVibeSpecs(vibes: string[]): VibeRetrievalSpec[] {
+  const matched: VibeRetrievalSpec[] = [];
+  const seen = new Set<string>();
+  for (const v of vibes) {
+    for (const spec of VIBE_PLACES_MAP) {
+      if (seen.has(spec.dedupKey)) continue;
+      if (spec.matches.test(v)) {
+        matched.push(spec);
+        seen.add(spec.dedupKey);
+      }
+    }
+  }
+  return matched;
+}
+
 function budgetLodgingTerm(tier: Intent["budget_tier"]): string {
   if (tier === "premium") return "4 star boutique";
   if (tier === "budget") return "budget";
@@ -1499,7 +1596,6 @@ function buildPlacesQueries(
 
   const dinnerTone = detectDinnerTone(intent.vibes);
   const foodVibe = detectFoodVibe(intent.vibes);
-  const topVibe = intent.vibes[0] ?? "";
   const wantsRooftop = intent.vibes.some((v) => /rooftop|skyline|view/i.test(v));
 
   const queries: PlacesSearchQuery[] = [];
@@ -1565,26 +1661,35 @@ function buildPlacesQueries(
     });
   }
 
-  // ---- Attractions (base + top vibe specialization) ----
+  // ---- Attractions ----
+  // Base "top attractions" query feeds morning/afternoon major slots. The
+  // per-vibe specialization that used to live here (attractions:vibe:<topVibe>)
+  // moved into VIBE_PLACES_MAP — it now fires for EVERY user-selected vibe,
+  // not just the first one, and uses a real Places includedType.
   if (slotTypesSeen.has("morning_major") || slotTypesSeen.has("afternoon_major")) {
     add("attractions:base", {
       textQuery: `${sightPrefix}top attractions ${city}`,
       locationBias,
       poolKey: "attractions",
     });
-    if (topVibe) {
-      add(`attractions:vibe:${topVibe.toLowerCase()}`, {
-        textQuery: `${sightPrefix}${topVibe} ${city}`,
-        locationBias,
-        poolKey: "attractions",
-      });
-    }
   }
 
   // ---- Nightlife ----
+  // Two typed queries (bars + clubs) so Google returns actual nightlife
+  // venues, not the mixed-bag the old typeless "bars <city>" text search
+  // produced. Vibe-driven nightlife retrieval (also typed) lives in
+  // VIBE_PLACES_MAP below — both feed the same nightlife pool and dedupe by
+  // place_id at batch-merge time.
   if (slotTypesSeen.has("nightlife")) {
-    add("nightlife:base", {
+    add("nightlife:bars", {
       textQuery: `${wantsRooftop ? "rooftop " : ""}bars ${city}`,
+      includedType: "bar",
+      locationBias,
+      poolKey: "nightlife",
+    });
+    add("nightlife:clubs", {
+      textQuery: `night clubs ${city}`,
+      includedType: "night_club",
       locationBias,
       poolKey: "nightlife",
     });
@@ -1597,6 +1702,22 @@ function buildPlacesQueries(
       textQuery: `${mh} ${city}`,
       locationBias,
       poolKey: "experiences",
+    });
+  }
+
+  // ---- Vibes → typed retrieval (one query per matched vibe) ----
+  // Each user-selected vibe contributes one Places query with a real
+  // includedType so the ranker sees venues that genuinely fit that vibe.
+  // Without this loop the Nightlife / Culture / Adventure / etc. chips were
+  // decoration only — the prompt mentioned them but no nightlife/museum/park
+  // venues ever entered the candidate pool. Cap-aware: add() bails if we'd
+  // exceed MAX_PLACES_QUERIES_PER_TRIP, so must_haves still take priority.
+  for (const spec of matchedVibeSpecs(intent.vibes)) {
+    add(spec.dedupKey, {
+      textQuery: `${spec.textBias} ${city}`,
+      ...(spec.includedType ? { includedType: spec.includedType } : {}),
+      locationBias,
+      poolKey: spec.poolKey,
     });
   }
 
@@ -2744,6 +2865,14 @@ COST GUIDANCE:
 - For bars/nightlife, cost is a reasonable 2-drink average.
 - NEVER quote USD when the trip currency is something else.
 
+VIBES — MANDATORY INCLUSION CRITERIA:
+- Every vibe in intent.vibes is a HARD inclusion signal, not a soft preference. The user explicitly selected each one and expects to see it reflected in their itinerary.
+- Across the WHOLE trip (not necessarily this single day) each vibe should be reflected in at least one activity. Coordinate via the venue pool — vibe-aligned venues live in dedicated entries (e.g. nightlife pool for nightlife vibe, parks/viewpoints in attractions for nature/photography vibes).
+- For THIS day, prefer venues whose Place types or signature align with the user's vibes when picking activity slots, even when the slot type is generic ("morning_major", "afternoon_major"). Example: vibe = "culture" → prefer a museum venue from the attractions pool over a generic top sight.
+- "hidden gems" / "local" / "authentic" / "off the beaten path" — when this vibe is present, prefer venues with FEWER reviews (e.g. 50–500) over the megasights with 50,000+ reviews, even if the latter have higher ratings. Cite the off-trail angle in why_for_you.
+- "nightlife" — when this vibe is present AND the day's skeleton has a nightlife slot, the slot MUST be filled from the nightlife pool. Do not swap it for a generic activity.
+- If a vibe TRULY cannot be honored on this day (e.g. user picked "beach" for an inland city), say so honestly in the affected activity's why_for_you. Do NOT silently drop the vibe — the validation layer downstream will flag any selected vibe that gets zero coverage.
+
 DIETARY:
 - If intent.dietary contains values, only pick food venues that plausibly serve them — or annotate dietary_notes with a specific caveat.
 - dietary_notes is OPTIONAL. Only fill it for food activities when there's a real consideration.
@@ -3792,6 +3921,54 @@ function markJuntoPicks(result: PipelineResult, intent: Intent): void {
   perDayPicks.sort(compare);
   for (const c of perDayPicks.slice(0, tripCap)) {
     c.act.is_junto_pick = true;
+  }
+}
+
+// ---- logVibeCoverage ----
+//
+// Observability-only post-generation check. For each user-selected vibe,
+// count how many activities in the final itinerary plausibly match it (by
+// keyword scan over title/category/description). Emits a structured
+// console.log line per vibe and a console.warn when coverage is zero — the
+// "silent vibe drop" failure mode this PR exists to fix.
+//
+// NOT a gate: the response is returned regardless of coverage. The warning
+// is for log-aggregation alerts so we can iterate when a vibe stops landing
+// in production.
+function logVibeCoverage(result: PipelineResult, intent: Intent): void {
+  if (intent.vibes.length === 0) return;
+
+  const haystacks: string[] = [];
+  for (const dest of result.destinations) {
+    for (const day of dest.days) {
+      for (const act of day.activities) {
+        const parts = [act.title, act.category, act.description, act.why_for_you]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (parts) haystacks.push(parts);
+      }
+    }
+  }
+
+  for (const vibe of intent.vibes) {
+    const spec = VIBE_PLACES_MAP.find((s) => s.matches.test(vibe));
+    if (!spec) {
+      // Vibe doesn't match any known retrieval spec — can't validate, but
+      // worth surfacing so we know to extend the map.
+      console.warn(`[vibe_coverage] vibe="${vibe}" unmapped — no retrieval spec; skipping coverage check`);
+      continue;
+    }
+    let matches = 0;
+    for (const hs of haystacks) {
+      if (spec.matches.test(hs)) matches++;
+    }
+    const line = `[vibe_coverage] vibe="${vibe}" matches=${matches} total_activities=${haystacks.length}`;
+    if (matches === 0) {
+      console.warn(`${line} — SILENT DROP: user selected this vibe but the itinerary contains no matching activities`);
+    } else {
+      console.log(line);
+    }
   }
 }
 
@@ -4945,6 +5122,7 @@ Deno.serve(async (req) => {
                 // differ for this caller. markJuntoPicks resets stale flags
                 // internally.
                 markJuntoPicks(payload as unknown as PipelineResult, intent);
+                logVibeCoverage(payload as unknown as PipelineResult, intent);
                 for (const d of dest?.days ?? []) send("day", d);
                 const juntoPlaceIds: string[] = [];
                 for (const day of dest?.days ?? []) {
@@ -5390,6 +5568,7 @@ Deno.serve(async (req) => {
             };
 
             markJuntoPicks(pipelineResult, intent);
+            logVibeCoverage(pipelineResult, intent);
 
             const juntoPlaceIds: string[] = [];
             for (const day of ranked_days) {
@@ -5626,6 +5805,7 @@ Deno.serve(async (req) => {
           // pre-PR #244 entries were tagged under the strict hidden-gem rule
           // and may have zero picks). Mirrors the streaming cache-hit branch.
           markJuntoPicks(payload as unknown as PipelineResult, intent);
+          logVibeCoverage(payload as unknown as PipelineResult, intent);
           let juntoPicksTagged = 0;
           for (const day of payload?.destinations?.[0]?.days ?? []) {
             for (const a of day.activities ?? []) if (a?.is_junto_pick) juntoPicksTagged++;
@@ -5809,6 +5989,7 @@ Deno.serve(async (req) => {
     // ---- Step 7-9: junto picks, affiliate URLs, validation ----
     const tJunto = Date.now();
     markJuntoPicks(ranked, intent);
+    logVibeCoverage(ranked, intent);
 
     const affEnv: AffiliateEnv = {
       viator: viatorMcid,
