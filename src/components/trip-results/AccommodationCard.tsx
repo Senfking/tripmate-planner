@@ -362,21 +362,7 @@ export function AccommodationCard({
             </div>
           ) : null}
 
-          {/* Secondary link — Booking CTA stays in the persistent summary
-              right column, so we only show View on Maps here. */}
-          {googleMapsUrl && (
-            <div className="px-3.5 pb-3 pt-1 flex flex-wrap items-center gap-3 text-[11px]">
-              <a
-                href={googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
-              >
-                View on Maps <ExternalLink className="h-2.5 w-2.5" />
-              </a>
-            </div>
-          )}
+          {/* View on Maps lives in the action row above — no duplicate here */}
         </div>
       )}
     </div>
