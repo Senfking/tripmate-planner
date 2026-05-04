@@ -123,7 +123,7 @@ export function ActivityCard({
   return (
     <div
       data-activity-id={`${day.date}-${index}`}
-      className="group/card mx-4 mb-3 rounded-2xl bg-card border border-border transition-all duration-300 animate-fade-in shadow-sm hover:-translate-y-0.5 hover:shadow-lg relative overflow-visible"
+      className="group/card mx-4 mb-3 rounded-2xl bg-card border border-border transition-[box-shadow,border-color] duration-300 animate-fade-in shadow-sm hover:shadow-lg relative overflow-visible"
       style={{ animationDelay: `${animDelay}ms` }}
     >
       <div className="flex flex-col sm:flex-row sm:items-stretch">
