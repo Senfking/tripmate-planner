@@ -258,6 +258,13 @@ function RootRoute() {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
   if (user) return <Navigate to="/app/trips" replace />;
+  // Installed PWA users skip the marketing landing and go straight to login.
+  const isStandalone =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(display-mode: standalone)").matches ||
+      // iOS Safari
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true);
+  if (isStandalone) return <Navigate to="/ref" replace />;
   // Unauthenticated visitors land on the Hero-led public landing.
   return <PublicLanding />;
 }
