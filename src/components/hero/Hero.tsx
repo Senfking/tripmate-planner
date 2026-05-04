@@ -106,15 +106,15 @@ export function Hero({
   // textarea can use normal, predictable padding instead of centering hacks.
   const pillWrapper = isApp
     ? [
-        "flex items-center gap-1.5 sm:gap-1 min-h-[68px] sm:min-h-0",
+        "flex items-center gap-2",
         "rounded-full bg-white border border-gray-100",
-        "shadow-sm pl-1.5 pr-1.5 py-1.5 sm:pl-1 sm:pr-1 sm:py-1 transition-all",
+        "shadow-sm p-2 sm:p-1.5 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
-        "flex items-center gap-1.5 sm:gap-1 min-h-[68px] sm:min-h-0",
+        "flex items-center gap-2",
         "rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl pl-1.5 pr-1.5 py-1.5 sm:pl-1 sm:pr-1 sm:py-1 transition-all",
+        "shadow-2xl p-2 sm:p-1.5 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
