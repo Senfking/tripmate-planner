@@ -281,7 +281,7 @@ export function ActivityCard({
           </div>
 
           {/* Title — description hidden in collapsed view (shown when expanded) */}
-          <div className="cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+          <div className="cursor-pointer" onClick={() => setExpanded(true)}>
             <h4 className="text-[15px] font-semibold text-foreground leading-snug tracking-tight">
               {activity.title}
             </h4>
