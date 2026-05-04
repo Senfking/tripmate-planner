@@ -546,26 +546,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             so users see progress without flashes. */}
         {!streaming && (<>
 
-        {/* Flights */}
-        <div id="section-flights" className={cn("px-4 mb-4", rc)} style={revealStyle("overview-flights")}>
-          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Plane className="h-5 w-5 text-[#0D9488]" /> Flights
-          </h3>
-          <div className="rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
-            <Plane className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm font-medium text-foreground">Flight search coming soon</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              We're working on finding the best flights for your trip
-            </p>
-            <button
-              onClick={() => toast.success("We'll let you know when flights are available!")}
-              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0D9488]/15 border border-[#0D9488]/25 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/25 transition-colors"
-            >
-              <Bell className="h-3 w-3" />
-              Notify me
-            </button>
-          </div>
-        </div>
+        {/* Flights section intentionally hidden until the feature ships. */}
 
         {/* All stays overview — multi-destination only (compact horizontal carousel) */}
         {isMultiDestination && result.destinations.some(d => d.accommodation) && (
@@ -757,19 +738,19 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   checkOutDate={dest.end_date || null}
                 />
               ) : (
-                <div className="mx-4 mb-4 rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
-                  <Building2 className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Hotel search coming soon</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    We'll suggest stays matched to your trip
-                  </p>
-                  <button
-                    onClick={() => toast.success("We'll let you know when hotel search is available!")}
-                    className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0D9488]/15 border border-[#0D9488]/25 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/25 transition-colors"
-                  >
-                    <Bell className="h-3 w-3" />
-                    Notify me
-                  </button>
+                <div
+                  className="mx-4 mb-4 rounded-xl overflow-hidden border border-border bg-card"
+                  aria-label="Loading accommodation"
+                >
+                  <div className="h-40 w-full skeleton-shimmer" />
+                  <div className="p-4 space-y-2.5">
+                    <div className="h-4 w-2/3 rounded skeleton-shimmer" />
+                    <div className="h-3 w-1/2 rounded skeleton-shimmer" />
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="h-3 w-16 rounded skeleton-shimmer" />
+                      <div className="h-3 w-20 rounded skeleton-shimmer" />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -867,6 +848,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 />
               </div>
               <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => setEditTripOpen(true)}
+                  className="h-9 px-3 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+                </Button>
                 <Button
                   variant="outline"
                   onClick={onSaveDraft}
