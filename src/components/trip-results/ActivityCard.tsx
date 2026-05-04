@@ -279,20 +279,15 @@ export function ActivityCard({
             </div>
           </div>
 
-          {/* Title + description */}
+          {/* Title — description hidden in collapsed view (shown when expanded) */}
           <div className="cursor-pointer" onClick={() => setExpanded((e) => !e)}>
             <h4 className="text-[15px] font-semibold text-foreground leading-snug tracking-tight">
               {activity.title}
             </h4>
-            {activity.description && (
-              <p className="text-[12px] text-muted-foreground leading-snug mt-1 line-clamp-2">
-                {activity.description}
-              </p>
-            )}
           </div>
 
-          {/* Meta row — time / duration / rating */}
-          <div className="flex items-center gap-3 mt-2.5 text-[11px] text-muted-foreground font-mono tabular-nums">
+          {/* Meta row — time / duration only (rating moves to expanded view) */}
+          <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground font-mono tabular-nums">
             {activity.start_time && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3 text-muted-foreground/60" />
@@ -301,13 +296,6 @@ export function ActivityCard({
             )}
             {activity.duration_minutes != null && (
               <span>{activity.duration_minutes}min</span>
-            )}
-            {displayRating != null && (
-              <span className="flex items-center gap-1">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="text-foreground/80">{displayRating.toFixed(1)}</span>
-                {totalRatings != null && <span className="text-muted-foreground/60">({totalRatings})</span>}
-              </span>
             )}
           </div>
 
