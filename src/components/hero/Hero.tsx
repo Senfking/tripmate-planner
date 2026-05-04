@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Loader2, Map, Sparkles, Users } from "lucide-react";
+import { ArrowRight, ChevronDown, Loader2, Map, Sparkles, Users } from "lucide-react";
 import { JuntoWordmark } from "./JuntoWordmark";
 import { SAMPLE_TRIPS } from "./sampleTrips";
 
@@ -381,24 +381,45 @@ export function Hero({
   }
 
   // ─── PUBLIC variant: full-bleed atmospheric photo ──────────────────
+  // "Browse trip ideas" chip smooth-scrolls to the TripCarousels section
+  // below — replaces the redundant sample-trip cards which duplicated
+  // the templates rail. Pure-anchor behavior, no router push.
+  function scrollToTemplates() {
+    const el = document.getElementById("trip-ideas");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <section
       className="relative w-full overflow-hidden isolate"
-      style={{ minHeight: "min(85vh, 900px)" }}
+      style={{ minHeight: "min(100dvh, 940px)" }}
     >
+      {/* Responsive hero image — smaller on mobile cuts ~70% of bytes.
+          decoding="async" + fetchpriority="high" keep LCP healthy. */}
       <img
-        src={HERO_BG}
+        src="https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1200&q=70&auto=format&fit=crop"
+        srcSet={[
+          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=800&q=65&auto=format&fit=crop 800w",
+          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1200&q=70&auto=format&fit=crop 1200w",
+          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1800&q=72&auto=format&fit=crop 1800w",
+          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=2400&q=75&auto=format&fit=crop 2400w",
+        ].join(", ")}
+        sizes="100vw"
         alt=""
         aria-hidden
+        decoding="async"
         // @ts-expect-error -- fetchpriority is valid HTML, not yet typed
         fetchpriority="high"
         className="absolute inset-0 -z-20 h-full w-full object-cover"
       />
+      {/* Layered gradient: darker at top for legibility, AND a deep fade
+          at the very bottom into the page background (#fafaf9) so the
+          image never hard-cuts against the next section. */}
       <div
         className="absolute inset-0 -z-10"
         style={{
           background:
-            "linear-gradient(to top, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.30) 45%, rgba(0,0,0,0.55) 100%)",
+            "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.20) 30%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0.55) 88%, #fafaf9 100%)",
         }}
         aria-hidden
       />
@@ -414,19 +435,19 @@ export function Hero({
       </div>
 
       <div
-        className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-5 sm:px-8 text-center"
-        style={{ minHeight: "min(75vh, 760px)" }}
+        className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-6 sm:px-8 pb-20 sm:pb-28 text-center"
+        style={{ minHeight: "min(85vh, 820px)" }}
       >
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3 py-1.5 text-xs font-medium text-white shadow-sm">
           <Sparkles className="h-3 w-3" aria-hidden />
           AI-powered group travel
         </div>
 
-        <h1 className="mt-5 text-5xl sm:text-7xl font-bold tracking-tight text-white leading-[1.05] drop-shadow-md">
+        <h1 className="mt-5 text-[2.6rem] leading-[1.05] sm:text-7xl font-bold tracking-tight text-white drop-shadow-md">
           Plan, split, decide. Together.
         </h1>
 
-        <p className="mt-4 sm:mt-5 text-lg sm:text-xl text-white/90 max-w-2xl leading-relaxed drop-shadow-sm">
+        <p className="mt-4 sm:mt-5 text-[15px] sm:text-xl text-white/90 max-w-2xl leading-relaxed drop-shadow-sm">
           AI trip planning, expense splitting, and group decisions in one app.
         </p>
 
@@ -438,7 +459,17 @@ export function Hero({
           </div>
         )}
 
-        {sampleRow}
+        {/* Browse-ideas anchor chip replaces the redundant sample-trip
+            cards — scrolls down to the templates rail rather than
+            duplicating it inside the hero. */}
+        <button
+          type="button"
+          onClick={scrollToTemplates}
+          className="mt-10 sm:mt-12 inline-flex items-center gap-2 rounded-full bg-white/12 hover:bg-white/20 backdrop-blur-md border border-white/25 px-5 py-2.5 text-[13px] font-medium text-white transition-colors shadow-sm"
+        >
+          Or browse trip ideas
+          <ChevronDown className="h-4 w-4 animate-bounce" aria-hidden />
+        </button>
       </div>
 
       <style>{`

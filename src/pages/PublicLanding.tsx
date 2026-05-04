@@ -59,8 +59,9 @@ export default function PublicLanding() {
       {/* Dark phone-mockup feature section (ported) */}
       <FeatureCards />
 
-      {/* Destination card carousels (ported) */}
-      <section className="py-20 sm:py-28">
+      {/* Destination card carousels (ported). id used by Hero's
+          "Browse trip ideas" chip to smooth-scroll here. */}
+      <section id="trip-ideas" className="py-20 sm:py-28 scroll-mt-4">
         <Reveal>
           <TripCarousels />
         </Reveal>
