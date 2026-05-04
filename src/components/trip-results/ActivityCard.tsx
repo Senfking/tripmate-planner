@@ -138,7 +138,7 @@ export function ActivityCard({
             <img
               src={heroSrc}
               alt={activity.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-[1.04]"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-[1.04] rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none"
               loading="lazy"
               onError={() => setImgError(true)}
             />
