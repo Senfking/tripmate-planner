@@ -169,21 +169,21 @@ export function AccommodationCard({
     >
       {/* Cinematic banner — taller, with overlay typography */}
       <div
-        className="w-full h-[280px] sm:h-[340px] bg-muted relative cursor-pointer overflow-hidden"
+        className="w-full h-[280px] sm:h-[340px] bg-muted relative cursor-pointer overflow-hidden [contain:paint]"
         onClick={() => setExpanded((e) => !e)}
       >
         {isLoading ? (
-          <Skeleton className="w-full h-full rounded-none" />
+          <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
         ) : heroSrc ? (
           <img
             src={heroSrc}
             alt={name}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+            className="absolute inset-0 block h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
             loading="lazy"
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-primary/5">
+          <div className="absolute inset-0 flex items-center justify-center bg-primary/5">
             <Hotel className="h-12 w-12 text-primary/30" />
           </div>
         )}
