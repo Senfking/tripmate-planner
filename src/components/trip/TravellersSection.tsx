@@ -75,26 +75,24 @@ export function TravellersSection({ tripId, myRole: _myRole }: TravellersSection
       const ids = data.map((m) => m.user_id);
       if (ids.length === 0) return [] as MemberLite[];
 
-      const [pub, profs] = await Promise.all([
-        supabase.rpc("get_public_profiles", { _user_ids: ids }),
-        supabase.from("profiles").select("id, nationality_iso").in("id", ids),
-      ]);
+      const { data: pub } = await supabase.rpc("get_public_profiles", { _user_ids: ids });
 
       const pubMap = new Map(
-        pub.data?.map((p) => [
+        pub?.map((p) => [
           p.id,
-          { name: p.display_name || "Member", avatar: p.avatar_url ?? null },
+          {
+            name: p.display_name || "Member",
+            avatar: p.avatar_url ?? null,
+            nationality: (p.nationality_iso as string | null) ?? null,
+          },
         ]) ?? [],
-      );
-      const natMap = new Map(
-        profs.data?.map((p) => [p.id, p.nationality_iso as string | null]) ?? [],
       );
 
       return data.map<MemberLite>((m) => ({
         userId: m.user_id,
         displayName: pubMap.get(m.user_id)?.name ?? "Member",
         avatarUrl: pubMap.get(m.user_id)?.avatar ?? null,
-        nationalityIso: natMap.get(m.user_id) ?? null,
+        nationalityIso: pubMap.get(m.user_id)?.nationality ?? null,
       }));
     },
     enabled: !!tripId,
