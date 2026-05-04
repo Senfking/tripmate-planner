@@ -64,7 +64,7 @@ export function TemplateCard({
       <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
         <h4 className="text-[17px] font-bold leading-tight text-white drop-shadow-md sm:text-xl">
           {c.destination}
-          <span className="ml-1.5 font-semibold text-white/85">· {c.duration_days}d</span>
+          <span className="ml-1.5 font-mono font-semibold text-white/85">· {c.duration_days}d</span>
         </h4>
 
         {/* Mobile: 1 chip */}
