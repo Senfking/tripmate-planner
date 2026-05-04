@@ -102,17 +102,17 @@ export function Hero({
 
   // ── Shared: pill input form ──────────────────────────────────────────
   // Single integrated pill on ALL viewports — textarea on the left,
-  // nested button on the right. The textarea allows 2 rows so the
-  // pill is just slightly taller on mobile than on desktop.
+  // nested button on the right. The pill owns the vertical rhythm so the
+  // textarea can use normal, predictable padding instead of centering hacks.
   const pillWrapper = isApp
     ? [
-        "flex items-center gap-1.5 sm:gap-1",
+        "flex items-center gap-1.5 sm:gap-1 min-h-[68px] sm:min-h-0",
         "rounded-full bg-white border border-gray-100",
         "shadow-sm pl-1.5 pr-1.5 py-1.5 sm:pl-1 sm:pr-1 sm:py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
-        "flex items-center gap-1.5 sm:gap-1",
+        "flex items-center gap-1.5 sm:gap-1 min-h-[68px] sm:min-h-0",
         "rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
         "shadow-2xl pl-1.5 pr-1.5 py-1.5 sm:pl-1 sm:pr-1 sm:py-1 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
@@ -169,13 +169,12 @@ export function Hero({
           rows={2}
           className={[
             "block w-full min-w-0 flex-1 resize-none bg-transparent self-center",
-            "px-3 sm:px-4 py-0",
-            "text-[12px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
+            "px-2.5 sm:px-4 py-[12px] sm:py-[10px]",
+            "text-[15px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
             "outline-none border-0",
-            "leading-[1.3] sm:leading-[1.4] overflow-hidden",
-            "h-[60px] sm:h-auto sm:min-h-[56px] sm:max-h-[100px]",
+            "leading-[20px] sm:leading-[1.4] overflow-hidden",
+            "h-[64px] sm:h-[56px]",
             "disabled:opacity-60 text-left",
-            "[align-content:center]",
           ].join(" ")}
         />
 
