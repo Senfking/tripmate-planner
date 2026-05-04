@@ -122,63 +122,200 @@ export function ActivityCard({
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activity.title || '') + ' ' + (activity.location_name || ''))}`;
   const displayRating = rating ?? (typeof (activity as any).rating === "number" ? (activity as any).rating : null);
 
+  // Subtle category tinting (teal-adjacent system) for chips & accents
+  const cat = (activity.category || "").toLowerCase();
+  const catTone: { bg: string; text: string; ring: string } = (() => {
+    if (["food", "restaurant", "cafe"].includes(cat))
+      return { bg: "bg-amber-50", text: "text-amber-800", ring: "ring-amber-200/60" };
+    if (["culture", "museum", "history", "attraction"].includes(cat))
+      return { bg: "bg-indigo-50", text: "text-indigo-800", ring: "ring-indigo-200/60" };
+    if (["nature", "park", "activity"].includes(cat))
+      return { bg: "bg-emerald-50", text: "text-emerald-800", ring: "ring-emerald-200/60" };
+    if (["nightlife", "bar"].includes(cat))
+      return { bg: "bg-fuchsia-50", text: "text-fuchsia-800", ring: "ring-fuchsia-200/60" };
+    if (["adventure", "sport"].includes(cat))
+      return { bg: "bg-rose-50", text: "text-rose-800", ring: "ring-rose-200/60" };
+    if (["relaxation", "wellness", "spa"].includes(cat))
+      return { bg: "bg-sky-50", text: "text-sky-800", ring: "ring-sky-200/60" };
+    if (["shopping"].includes(cat))
+      return { bg: "bg-orange-50", text: "text-orange-800", ring: "ring-orange-200/60" };
+    return { bg: "bg-teal-50", text: "text-teal-800", ring: "ring-teal-200/60" };
+  })();
+
+  const catLabel = activity.category
+    ? activity.category.charAt(0).toUpperCase() + activity.category.slice(1).toLowerCase()
+    : null;
+
+  const renderPrice = () => {
+    const amount = activity.estimated_cost_per_person;
+    if (!amount) {
+      return (
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70 font-medium">Cost</span>
+          <span className="text-base font-mono font-semibold text-[#0D9488] tabular-nums leading-tight">Free</span>
+        </div>
+      );
+    }
+    const code = activity.currency || "USD";
+    if (costFormatter) {
+      const primary = costFormatter.primary(amount);
+      const secondary = costFormatter.secondary(amount);
+      return (
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70 font-medium">Per person</span>
+          <span className="text-base font-mono font-semibold text-foreground tabular-nums leading-tight">{primary}</span>
+          {secondary && (
+            <span className="text-[10px] font-mono text-muted-foreground/70 mt-0.5 tabular-nums">{secondary}</span>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col items-end">
+        <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70 font-medium">Per person</span>
+        <span className="text-base font-mono font-semibold text-foreground tabular-nums leading-tight">{`~${code}${amount}`}</span>
+      </div>
+    );
+  };
+
+  const renderBookButton = () => {
+    const gygEligible = isGetYourGuideEligible(activity);
+    const partner = (activity as any).booking_partner as string | null | undefined;
+    const showRealBooking =
+      !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
+    if (gygEligible) {
+      return (
+        <a
+          href={buildGetYourGuideUrl(activity.title, destinationName)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold border border-[#0D9488]/30 bg-[#0D9488]/5 text-[#0D9488] hover:bg-[#0D9488] hover:text-white transition-colors whitespace-nowrap"
+        >
+          Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
+        </a>
+      );
+    }
+    if (showRealBooking) {
+      return (
+        <a
+          href={activity.booking_url!}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold border border-[#0D9488]/30 bg-[#0D9488]/5 text-[#0D9488] hover:bg-[#0D9488] hover:text-white transition-colors whitespace-nowrap"
+        >
+          Book <ExternalLink className="h-2.5 w-2.5" />
+        </a>
+      );
+    }
+    return null;
+  };
+
   return (
     <div
       data-activity-id={`${day.date}-${index}`}
-      className="mx-4 mb-3 rounded-2xl border border-border bg-card transition-all duration-200 animate-fade-in shadow-sm relative"
+      className="group mx-4 mb-3 rounded-2xl border border-border/60 bg-card overflow-hidden transition-all duration-300 animate-fade-in shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 relative"
       style={{ animationDelay: `${animDelay}ms` }}
     >
-      {/* Hero image */}
-      <div className="relative w-full h-[120px] overflow-hidden bg-muted cursor-pointer rounded-t-2xl" onClick={() => setExpanded((e) => !e)}>
-        {isLoading ? (
-          <Skeleton className="w-full h-full rounded-none" />
-        ) : heroSrc ? (
-          <img
-            src={heroSrc}
-            alt={activity.title}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}
-          >
-            <IconComponent className="h-8 w-8 opacity-40" style={{ color }} />
-          </div>
-        )}
-        {/* Single badge: Junto Pick (hero) OR category (subtle) */}
-        <div className="absolute top-2 left-2">
-          {activity.is_junto_pick ? (
-            <span
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-md"
-              style={{ backgroundColor: "#0D9488" }}
-            >
-              <Sparkles className="h-3 w-3" />
-              Junto Pick
-            </span>
+      <div className="flex flex-col sm:flex-row">
+        {/* Hero image — larger, with subtle zoom on hover */}
+        <div
+          className="relative w-full sm:w-[40%] sm:max-w-[260px] sm:shrink-0 h-[180px] sm:h-auto sm:min-h-[180px] overflow-hidden bg-muted cursor-pointer"
+          onClick={() => setExpanded((e) => !e)}
+        >
+          {isLoading ? (
+            <Skeleton className="absolute inset-0 rounded-none" />
+          ) : heroSrc ? (
+            <img
+              src={heroSrc}
+              alt={activity.title}
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#0D9488]/15 text-[#0D9488] backdrop-blur-sm">
-              <IconComponent className="h-2.5 w-2.5" />
-              {activity.category ? activity.category.charAt(0).toUpperCase() + activity.category.slice(1).toLowerCase() : ""}
-            </span>
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}
+            >
+              <IconComponent className="h-10 w-10 opacity-40" style={{ color }} />
+            </div>
+          )}
+          {/* Gradient scrim for legibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 pointer-events-none" />
+          {/* Pin number — refined glass pill */}
+          <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-semibold tabular-nums">
+            <span className="opacity-60">#</span>{index + 1}
+          </div>
+          {/* Junto Pick — bottom-left over image */}
+          {activity.is_junto_pick && (
+            <div className="absolute bottom-2.5 left-2.5">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white bg-[#0D9488] shadow-md">
+                <Sparkles className="h-2.5 w-2.5" />
+                Junto Pick
+              </span>
+            </div>
           )}
         </div>
-        {/* Pin number */}
-        <div className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-primary-foreground shadow-md bg-primary">
-          {index + 1}
+
+        {/* Content side */}
+        <div className="flex-1 min-w-0 p-4 sm:p-5 flex flex-col cursor-pointer" onClick={() => setExpanded((e) => !e)}>
+          {/* Chips row */}
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+            {catLabel && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ring-1 ${catTone.bg} ${catTone.text} ${catTone.ring}`}
+              >
+                <IconComponent className="h-2.5 w-2.5" />
+                {catLabel}
+              </span>
+            )}
+            {activity.start_time && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-muted text-foreground/70 tabular-nums">
+                {activity.start_time}
+              </span>
+            )}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-muted text-foreground/70 tabular-nums">
+              {activity.duration_minutes}min
+            </span>
+            {displayRating != null && (
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 ring-1 ring-amber-200/60">
+                <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                <span className="tabular-nums">{displayRating.toFixed(1)}</span>
+              </span>
+            )}
+          </div>
+
+          {/* Title — confident */}
+          <h4 className="text-[15px] sm:text-base font-semibold text-foreground leading-snug tracking-tight">
+            {activity.title}
+          </h4>
+
+          {/* Description */}
+          {activity.description && (
+            <p className="text-[12px] text-muted-foreground leading-relaxed mt-1.5 line-clamp-2">
+              {activity.description}
+            </p>
+          )}
+
+          {/* Spacer pushes price/CTA to bottom */}
+          <div className="flex-1" />
+
+          {/* Bottom row: price anchor + Book CTA */}
+          <div className="mt-3 pt-3 border-t border-border/60 flex items-end justify-between gap-3">
+            {renderPrice()}
+            {renderBookButton()}
+          </div>
         </div>
       </div>
 
-      {/* Persistent action cluster — Delete + Swap. Positioned over the hero
-          but as a sibling so the swap popover can escape the hero's
-          overflow-hidden clip and render above subsequent siblings. */}
-      <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20" ref={swapRef}>
+      {/* Persistent action cluster — Delete + Swap, anchored to card top-right */}
+      <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-20" ref={swapRef}>
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           aria-label="Remove activity"
-          className="p-1.5 rounded-lg shadow-lg bg-card/90 backdrop-blur-sm text-muted-foreground hover:text-destructive border border-border hover:bg-destructive/10 transition-colors"
+          className="p-1.5 rounded-lg shadow-md bg-card/90 backdrop-blur-md text-muted-foreground hover:text-destructive border border-border/80 hover:bg-destructive/10 transition-colors"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -188,7 +325,7 @@ export function ActivityCard({
             setSwapMode(swapMode === "menu" ? null : "menu");
             setSwapText("");
           }}
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-md bg-card/90 backdrop-blur-md text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
         >
           <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
         </button>
@@ -299,48 +436,6 @@ export function ActivityCard({
           </div>
         )}
       </div>
-
-      {/* Summary row */}
-      <div className="flex items-start justify-between px-3 py-2 cursor-pointer gap-3" onClick={() => setExpanded((e) => !e)}>
-        <div className="flex-1 min-w-0">
-          <h4 className="text-[13px] font-semibold text-foreground leading-snug truncate">
-            {activity.title}
-          </h4>
-          {activity.description && (
-            <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-1">
-              {activity.description}
-            </p>
-          )}
-          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground flex-wrap">
-            {displayRating != null && (
-              <span className="flex items-center gap-0.5">
-                <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
-                <span className="font-medium text-foreground/80">{displayRating.toFixed(1)}</span>
-              </span>
-            )}
-            <span className="font-mono">{activity.duration_minutes}min</span>
-            {activity.start_time && <span className="font-mono">{activity.start_time}</span>}
-          </div>
-        </div>
-        <div className="flex flex-col items-end whitespace-nowrap mt-0.5 gap-1.5">
-          {(() => {
-            const amount = activity.estimated_cost_per_person;
-            if (!amount) {
-              return <span className="text-[11px] font-mono font-medium text-foreground">Free</span>;
-            }
-            const code = activity.currency || "USD";
-            if (costFormatter) {
-              const primary = costFormatter.primary(amount);
-              const secondary = costFormatter.secondary(amount);
-              return (
-                <div className="flex flex-col items-end">
-                  <span className="text-[11px] font-mono font-medium text-foreground">{primary}</span>
-                  {secondary && (
-                    <span className="text-[9px] font-mono text-muted-foreground/70 mt-0.5">{secondary}</span>
-                  )}
-                </div>
-              );
-            }
             return <span className="text-[11px] font-mono font-medium text-foreground">{`~${code}${amount}`}</span>;
           })()}
 
