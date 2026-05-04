@@ -522,7 +522,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           ) : (
             <div className="relative">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">You're owed</p>
-              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1.5">
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1.5 tabular-nums">
                 {formatCurrency(heroData.amount, settlementCurrency)}
               </p>
               <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">
