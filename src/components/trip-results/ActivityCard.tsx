@@ -365,6 +365,7 @@ export function ActivityCard({
                 return null;
               })()}
             </div>
+          </div>
         </div>
       </div>
 
