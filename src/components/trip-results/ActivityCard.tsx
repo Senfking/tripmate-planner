@@ -34,7 +34,7 @@ function MiniStars({ rating }: { rating: number }) {
         <Star
           key={i}
           className={`h-2.5 w-2.5 ${
-            i <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "text-white/20"
+            i <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"
           }`}
         />
       ))}
@@ -43,33 +43,6 @@ function MiniStars({ rating }: { rating: number }) {
 }
 
 type SwapMode = null | "menu" | "describe" | "custom";
-
-// Category tone mapping — subtle accent colors for chips that hint at the
-// vibe of each activity type without overwhelming the dark surface.
-const CAT_TONE: Record<string, { bg: string; text: string; ring: string }> = {
-  food:        { bg: "bg-amber-400/15",  text: "text-amber-300",  ring: "ring-amber-400/20" },
-  restaurant:  { bg: "bg-amber-400/15",  text: "text-amber-300",  ring: "ring-amber-400/20" },
-  cafe:        { bg: "bg-amber-400/15",  text: "text-amber-300",  ring: "ring-amber-400/20" },
-  culture:     { bg: "bg-indigo-400/15", text: "text-indigo-300", ring: "ring-indigo-400/20" },
-  museum:      { bg: "bg-indigo-400/15", text: "text-indigo-300", ring: "ring-indigo-400/20" },
-  history:     { bg: "bg-indigo-400/15", text: "text-indigo-300", ring: "ring-indigo-400/20" },
-  nature:      { bg: "bg-emerald-400/15",text: "text-emerald-300",ring: "ring-emerald-400/20" },
-  park:        { bg: "bg-emerald-400/15",text: "text-emerald-300",ring: "ring-emerald-400/20" },
-  nightlife:   { bg: "bg-pink-400/15",   text: "text-pink-300",   ring: "ring-pink-400/20" },
-  bar:         { bg: "bg-pink-400/15",   text: "text-pink-300",   ring: "ring-pink-400/20" },
-  adventure:   { bg: "bg-red-400/15",    text: "text-red-300",    ring: "ring-red-400/20" },
-  sport:       { bg: "bg-red-400/15",    text: "text-red-300",    ring: "ring-red-400/20" },
-  relaxation:  { bg: "bg-sky-400/15",    text: "text-sky-300",    ring: "ring-sky-400/20" },
-  wellness:    { bg: "bg-sky-400/15",    text: "text-sky-300",    ring: "ring-sky-400/20" },
-  spa:         { bg: "bg-sky-400/15",    text: "text-sky-300",    ring: "ring-sky-400/20" },
-  shopping:    { bg: "bg-yellow-400/15", text: "text-yellow-300", ring: "ring-yellow-400/20" },
-  attraction:  { bg: "bg-violet-400/15", text: "text-violet-300", ring: "ring-violet-400/20" },
-  activity:    { bg: "bg-teal-400/15",   text: "text-teal-300",   ring: "ring-teal-400/20" },
-};
-
-function getCatTone(category: string) {
-  return CAT_TONE[category?.toLowerCase()] || { bg: "bg-white/10", text: "text-white/70", ring: "ring-white/15" };
-}
 
 export function ActivityCard({
   activity,
@@ -117,7 +90,6 @@ export function ActivityCard({
 
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
-  const tone = getCatTone(activity.category);
   const actKey = dayIndex != null && activityIndex != null ? `day-${dayIndex}-activity-${activityIndex}` : null;
 
   const { photos, reviews, rating, totalRatings, googleMapsUrl, latitude: refinedLat, longitude: refinedLng, isLoading } =
@@ -150,17 +122,17 @@ export function ActivityCard({
   return (
     <div
       data-activity-id={`${day.date}-${index}`}
-      className="group mx-4 mb-3 rounded-2xl bg-[hsl(180_25%_10%)] text-white border border-white/5 transition-all duration-300 animate-fade-in shadow-[0_12px_40px_-20px_rgba(13,148,136,0.35)] hover:-translate-y-0.5 hover:shadow-[0_20px_50px_-20px_rgba(13,148,136,0.5)] relative overflow-hidden"
+      className="group mx-4 mb-3 rounded-2xl bg-card border border-border transition-all duration-300 animate-fade-in shadow-sm hover:-translate-y-0.5 hover:shadow-lg relative overflow-hidden"
       style={{ animationDelay: `${animDelay}ms` }}
     >
       <div className="flex flex-col sm:flex-row">
         {/* Hero image — left column on desktop */}
         <div
-          className="relative shrink-0 w-full sm:w-[40%] sm:max-w-[220px] h-[140px] sm:h-auto sm:min-h-[170px] overflow-hidden bg-[hsl(180_25%_8%)] cursor-pointer"
+          className="relative shrink-0 w-full sm:w-[40%] sm:max-w-[220px] h-[140px] sm:h-auto sm:min-h-[170px] overflow-hidden bg-muted cursor-pointer"
           onClick={() => setExpanded((e) => !e)}
         >
           {isLoading ? (
-            <Skeleton className="w-full h-full rounded-none bg-white/5" />
+            <Skeleton className="w-full h-full rounded-none" />
           ) : heroSrc ? (
             <img
               src={heroSrc}
@@ -172,22 +144,22 @@ export function ActivityCard({
           ) : (
             <div
               className="w-full h-full flex items-center justify-center"
-              style={{ background: `linear-gradient(135deg, ${color}40, ${color}10)` }}
+              style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}
             >
               <IconComponent className="h-10 w-10 opacity-50" style={{ color }} />
             </div>
           )}
-          {/* Gradient scrim for legibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/20 pointer-events-none" />
+          {/* Subtle scrim — keeps overlay chips legible without darkening the image */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
           {/* Pin number — top-left glass pill */}
-          <div className="absolute top-2 left-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold text-white bg-black/40 backdrop-blur-md ring-1 ring-white/15">
+          <div className="absolute top-2 left-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold text-white bg-black/45 backdrop-blur-md ring-1 ring-white/20">
             #{index + 1}
           </div>
 
           {/* Junto pick — bottom-left teal chip */}
           {activity.is_junto_pick && (
-            <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-[#5EEAD4] bg-[#0D9488]/30 backdrop-blur-md ring-1 ring-[#5EEAD4]/30">
+            <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white bg-[#0D9488]/90 backdrop-blur-md ring-1 ring-white/20 shadow-md">
               <Sparkles className="h-2.5 w-2.5" />
               Junto Pick
             </div>
@@ -198,17 +170,25 @@ export function ActivityCard({
         <div className="flex-1 min-w-0 p-3.5 sm:p-4 flex flex-col">
           {/* Header row — category chip + actions */}
           <div className="flex items-start justify-between gap-2 mb-2">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${tone.bg} ${tone.text} ring-1 ${tone.ring}`}>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ring-1"
+              style={{
+                backgroundColor: `${color}15`,
+                color,
+                // ringColor isn't a CSS prop — use boxShadow for the inset ring
+                boxShadow: `inset 0 0 0 1px ${color}30`,
+              }}
+            >
               <IconComponent className="h-2.5 w-2.5" />
               {categoryLabel}
             </span>
 
             {/* Floating action cluster */}
-            <div className="flex items-center gap-1" ref={swapRef}>
+            <div className="flex items-center gap-1 relative" ref={swapRef}>
               <button
                 onClick={(e) => { e.stopPropagation(); onRemove(); }}
                 aria-label="Remove activity"
-                className="p-1.5 rounded-lg bg-white/[0.06] backdrop-blur-sm text-white/60 hover:text-red-300 hover:bg-red-500/15 ring-1 ring-white/10 transition-colors"
+                className="p-1.5 rounded-lg bg-muted/60 text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-border transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -218,62 +198,62 @@ export function ActivityCard({
                   setSwapMode(swapMode === "menu" ? null : "menu");
                   setSwapText("");
                 }}
-                className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-[#0D9488]/20 text-[#5EEAD4] ring-1 ring-[#5EEAD4]/30 hover:bg-[#0D9488]/30 transition-colors flex items-center gap-1"
+                className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-[#0D9488]/10 text-[#0D9488] border border-[#0D9488]/30 hover:bg-[#0D9488]/15 transition-colors flex items-center gap-1"
               >
                 <ArrowLeftRight className="h-3 w-3" /> Swap
               </button>
 
               {swapMode === "menu" && (
-                <div className="absolute right-3 top-12 w-56 bg-[hsl(180_25%_12%)] border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={(e) => { e.stopPropagation(); onRequestChange(); setSwapMode(null); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-white/5 transition-colors">
-                    <Sparkles className="h-3.5 w-3.5 text-[#5EEAD4]" />
+                <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-xl shadow-xl p-1.5 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={(e) => { e.stopPropagation(); onRequestChange(); setSwapMode(null); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors">
+                    <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
                     <div>
-                      <span className="font-medium text-white">Get Junto AI suggestions</span>
-                      <p className="text-[10px] text-white/50 mt-0.5">Auto-suggest similar experiences</p>
+                      <span className="font-medium text-foreground">Get Junto AI suggestions</span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Auto-suggest similar experiences</p>
                     </div>
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); setSwapMode("describe"); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-white/5 transition-colors">
-                    <MessageSquare className="h-3.5 w-3.5 text-[#5EEAD4]" />
+                  <button onClick={(e) => { e.stopPropagation(); setSwapMode("describe"); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors">
+                    <MessageSquare className="h-3.5 w-3.5 text-[#0D9488]" />
                     <div>
-                      <span className="font-medium text-white">Describe what you want</span>
-                      <p className="text-[10px] text-white/50 mt-0.5">"Something more casual…"</p>
+                      <span className="font-medium text-foreground">Describe what you want</span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">"Something more casual…"</p>
                     </div>
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); setSwapMode("custom"); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-white/5 transition-colors">
-                    <PenLine className="h-3.5 w-3.5 text-[#5EEAD4]" />
+                  <button onClick={(e) => { e.stopPropagation(); setSwapMode("custom"); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors">
+                    <PenLine className="h-3.5 w-3.5 text-[#0D9488]" />
                     <div>
-                      <span className="font-medium text-white">Choose your own</span>
-                      <p className="text-[10px] text-white/50 mt-0.5">Type a specific place name</p>
+                      <span className="font-medium text-foreground">Choose your own</span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Type a specific place name</p>
                     </div>
                   </button>
                 </div>
               )}
 
               {swapMode === "describe" && (
-                <div className="absolute right-3 top-12 w-64 bg-[hsl(180_25%_12%)] border border-white/10 rounded-xl shadow-2xl p-3 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-[11px] font-medium text-white mb-2">What are you looking for instead?</p>
+                <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-[11px] font-medium text-foreground mb-2">What are you looking for instead?</p>
                   <input
                     type="text"
                     autoFocus
                     value={swapText}
                     onChange={(e) => setSwapText(e.target.value)}
                     placeholder="e.g. a rooftop bar instead"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-white/10 bg-black/30 text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-[#5EEAD4]"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && swapText.trim()) handleDescribeSwap();
                       if (e.key === "Escape") { setSwapMode(null); setSwapText(""); }
                     }}
                   />
                   <div className="flex justify-end mt-2 gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); setSwapMode(null); setSwapText(""); }} className="text-[10px] text-white/60 hover:text-white px-2 py-1">Cancel</button>
+                    <button onClick={(e) => { e.stopPropagation(); setSwapMode(null); setSwapText(""); }} className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1">Cancel</button>
                     <button onClick={(e) => { e.stopPropagation(); handleDescribeSwap(); }} disabled={!swapText.trim()} className="text-[10px] font-medium text-white bg-[#0D9488] hover:bg-[#0D9488]/90 px-3 py-1 rounded-md">Find</button>
                   </div>
                 </div>
               )}
 
               {swapMode === "custom" && (
-                <div className="absolute right-3 top-12 w-64 bg-[hsl(180_25%_12%)] border border-white/10 rounded-xl shadow-2xl p-3 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-[11px] font-medium text-white mb-2">{swapLoading ? "Looking up place..." : "Enter the place name"}</p>
+                <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-[11px] font-medium text-foreground mb-2">{swapLoading ? "Looking up place..." : "Enter the place name"}</p>
                   <input
                     type="text"
                     autoFocus
@@ -281,14 +261,14 @@ export function ActivityCard({
                     onChange={(e) => setSwapText(e.target.value)}
                     placeholder="e.g. Potato Head Beach Club"
                     disabled={swapLoading}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-white/10 bg-black/30 text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-[#5EEAD4]"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && swapText.trim()) handleCustomSwap();
                       if (e.key === "Escape") { setSwapMode(null); setSwapText(""); }
                     }}
                   />
                   <div className="flex justify-end mt-2 gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); if (!swapLoading) { setSwapMode(null); setSwapText(""); } }} className="text-[10px] text-white/60 hover:text-white px-2 py-1">Cancel</button>
+                    <button onClick={(e) => { e.stopPropagation(); if (!swapLoading) { setSwapMode(null); setSwapText(""); } }} className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1">Cancel</button>
                     <button onClick={(e) => { e.stopPropagation(); handleCustomSwap(); }} disabled={!swapText.trim() || swapLoading} className="text-[10px] font-medium text-white bg-[#0D9488] hover:bg-[#0D9488]/90 px-3 py-1 rounded-md disabled:opacity-50 inline-flex items-center gap-1">
                       {swapLoading && <Loader2 className="h-3 w-3 animate-spin" />}
                       {swapLoading ? "Searching..." : "Replace"}
@@ -301,44 +281,44 @@ export function ActivityCard({
 
           {/* Title + description */}
           <div className="cursor-pointer" onClick={() => setExpanded((e) => !e)}>
-            <h4 className="text-[15px] font-semibold text-white leading-snug tracking-tight">
+            <h4 className="text-[15px] font-semibold text-foreground leading-snug tracking-tight">
               {activity.title}
             </h4>
             {activity.description && (
-              <p className="text-[12px] text-white/55 leading-snug mt-1 line-clamp-2">
+              <p className="text-[12px] text-muted-foreground leading-snug mt-1 line-clamp-2">
                 {activity.description}
               </p>
             )}
           </div>
 
           {/* Meta row — time / duration / rating */}
-          <div className="flex items-center gap-3 mt-2.5 text-[11px] text-white/60 font-mono tabular-nums">
+          <div className="flex items-center gap-3 mt-2.5 text-[11px] text-muted-foreground font-mono tabular-nums">
             {activity.start_time && (
               <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3 text-white/40" />
+                <Clock className="h-3 w-3 text-muted-foreground/60" />
                 {activity.start_time}
               </span>
             )}
             {activity.duration_minutes != null && (
-              <span className="text-white/50">{activity.duration_minutes}min</span>
+              <span>{activity.duration_minutes}min</span>
             )}
             {displayRating != null && (
               <span className="flex items-center gap-1">
                 <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="text-white/80">{displayRating.toFixed(1)}</span>
-                {totalRatings != null && <span className="text-white/40">({totalRatings})</span>}
+                <span className="text-foreground/80">{displayRating.toFixed(1)}</span>
+                {totalRatings != null && <span className="text-muted-foreground/60">({totalRatings})</span>}
               </span>
             )}
           </div>
 
           {/* Footer row — pricing anchor + booking CTA */}
-          <div className="mt-3 pt-3 border-t border-white/5 flex items-end justify-between gap-3">
+          <div className="mt-3 pt-3 border-t border-border flex items-end justify-between gap-3">
             <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-wider text-white/40 font-medium">Per person</span>
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70 font-medium">Per person</span>
               {(() => {
                 const amount = activity.estimated_cost_per_person;
                 if (!amount) {
-                  return <span className="text-[14px] font-semibold text-[#5EEAD4] tabular-nums">Free</span>;
+                  return <span className="text-[14px] font-semibold text-[#0D9488] tabular-nums">Free</span>;
                 }
                 const code = activity.currency || "USD";
                 if (costFormatter) {
@@ -346,12 +326,12 @@ export function ActivityCard({
                   const secondary = costFormatter.secondary(amount);
                   return (
                     <div className="flex flex-col">
-                      <span className="text-[14px] font-semibold text-white font-mono tabular-nums leading-tight">{primary}</span>
-                      {secondary && <span className="text-[10px] font-mono text-white/40 mt-0.5 tabular-nums">{secondary}</span>}
+                      <span className="text-[14px] font-semibold text-foreground font-mono tabular-nums leading-tight">{primary}</span>
+                      {secondary && <span className="text-[10px] font-mono text-muted-foreground/70 mt-0.5 tabular-nums">{secondary}</span>}
                     </div>
                   );
                 }
-                return <span className="text-[14px] font-semibold text-white font-mono tabular-nums">{`~${code}${amount}`}</span>;
+                return <span className="text-[14px] font-semibold text-foreground font-mono tabular-nums">{`~${code}${amount}`}</span>;
               })()}
             </div>
 
@@ -366,7 +346,7 @@ export function ActivityCard({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.6)] whitespace-nowrap"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
                   >
                     Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
                   </a>
@@ -379,7 +359,7 @@ export function ActivityCard({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.6)] whitespace-nowrap"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
                   >
                     Book <ExternalLink className="h-2.5 w-2.5" />
                   </a>
@@ -393,14 +373,14 @@ export function ActivityCard({
 
       {/* Expanded details */}
       {expanded && (
-        <div className="border-t border-white/5 bg-[hsl(180_25%_8%)] animate-fade-in">
+        <div className="border-t border-border bg-muted/30 animate-fade-in">
           {activity.description && (
             <div className="px-4 pt-3 pb-2">
-              <p className={`text-xs text-white/70 leading-relaxed ${!descExpanded && descIsLong ? "line-clamp-3" : ""}`}>
+              <p className={`text-xs text-muted-foreground leading-relaxed ${!descExpanded && descIsLong ? "line-clamp-3" : ""}`}>
                 {activity.description}
               </p>
               {descIsLong && !descExpanded && (
-                <button onClick={(e) => { e.stopPropagation(); setDescExpanded(true); }} className="text-[11px] text-[#5EEAD4] font-medium mt-1 hover:underline">
+                <button onClick={(e) => { e.stopPropagation(); setDescExpanded(true); }} className="text-[11px] text-primary font-medium mt-1 hover:underline">
                   Read more
                 </button>
               )}
@@ -408,17 +388,17 @@ export function ActivityCard({
           )}
 
           {activity.tips && (
-            <div className="mx-4 mb-2 border-l-2 border-[#5EEAD4]/60 pl-3 py-1.5 bg-[#0D9488]/10 rounded-r-lg">
-              <p className="text-[11px] text-white/70 flex items-start gap-1.5">
-                <Lightbulb className="h-3 w-3 text-[#5EEAD4] shrink-0 mt-0.5" />
-                <span><span className="font-semibold text-[#5EEAD4] mr-1">Tip:</span>{activity.tips}</span>
+            <div className="mx-4 mb-2 border-l-2 border-primary/50 pl-3 py-1.5 bg-primary/5 rounded-r-lg">
+              <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
+                <Lightbulb className="h-3 w-3 text-primary shrink-0 mt-0.5" />
+                <span><span className="font-semibold text-primary mr-1">Tip:</span><span className="text-foreground/80">{activity.tips}</span></span>
               </p>
             </div>
           )}
 
           {activity.dietary_notes && (
             <div className="px-4 pb-2">
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0D9488]/15 text-[#5EEAD4] inline-flex items-center gap-1">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0D9488]/10 text-[#0D9488] inline-flex items-center gap-1">
                 <Leaf className="h-2.5 w-2.5" /> {activity.dietary_notes}
               </span>
             </div>
@@ -426,29 +406,29 @@ export function ActivityCard({
 
           {isLoading ? (
             <div className="px-4 pb-3 space-y-1.5">
-              <Skeleton className="h-14 w-full rounded-lg bg-white/5" />
+              <Skeleton className="h-14 w-full rounded-lg" />
             </div>
           ) : reviews.length > 0 ? (
             <div className="px-4 pb-2 space-y-1.5">
               {reviews.map((review, i) => (
-                <div key={i} className="flex gap-2 p-2 rounded-lg bg-white/[0.04] border border-white/5">
+                <div key={i} className="flex gap-2 p-2 rounded-lg bg-background border border-border">
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
-                    style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 45%)` }}
+                    style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}
                   >
                     {review.author.charAt(0) || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-medium text-white">{review.author}</span>
+                      <span className="text-[11px] font-medium text-foreground">{review.author}</span>
                       <MiniStars rating={review.rating} />
-                      {review.time && <span className="text-[10px] text-white/40">{review.time}</span>}
+                      {review.time && <span className="text-[10px] text-muted-foreground">{review.time}</span>}
                     </div>
-                    <p className="text-[11px] text-white/60 leading-snug mt-0.5 line-clamp-2">{review.text}</p>
+                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">{review.text}</p>
                   </div>
                 </div>
               ))}
-              <p className="text-[9px] text-white/30 pb-1">Photos & reviews from Google</p>
+              <p className="text-[9px] text-muted-foreground/60 pb-1">Photos & reviews from Google</p>
             </div>
           ) : null}
 
@@ -458,7 +438,7 @@ export function ActivityCard({
                 href={mapsLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#5EEAD4] hover:text-[#5EEAD4]/80 flex items-center gap-0.5 transition-colors"
+                className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
               >
                 View on Maps <ExternalLink className="h-2.5 w-2.5" />
               </a>
@@ -466,7 +446,7 @@ export function ActivityCard({
           )}
 
           {planId && actKey && (
-            <div className="border-t border-white/5">
+            <div className="border-t border-border">
               {!isDraft && <ActivityReactions planId={planId} activityKey={actKey} />}
               <ActivityComments planId={planId} activityKey={actKey} isDraft={isDraft} />
             </div>
