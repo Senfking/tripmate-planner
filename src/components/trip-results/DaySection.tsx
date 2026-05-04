@@ -208,10 +208,10 @@ export function DaySection({
         {/* Collapsed card — cinematic banner header with dark overlay */}
         <button
           onClick={() => setOpen(!open)}
-          className="w-full text-left relative block overflow-hidden"
+          className="w-full text-left relative block overflow-hidden rounded-2xl"
         >
           {/* Background image — full-bleed banner */}
-          <div className="relative h-[140px] sm:h-[160px] w-full bg-muted overflow-hidden">
+          <div className="relative h-[140px] sm:h-[160px] w-full bg-muted overflow-hidden rounded-2xl">
             {firstActivity ? (
               <DayThumbnail activity={firstActivity} location={destinationName} />
             ) : (
