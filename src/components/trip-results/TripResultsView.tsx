@@ -1010,9 +1010,10 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         />
       )}
 
-      {/* Concierge panel kept for future re-entry; floating "What to do?" button
-          removed per spec to reduce hero-area clutter. */}
-      {!standalone && (
+      {/* Concierge panel hidden behind CONCIERGE_ENABLED flag for launch.
+          No UI entry point currently opens this in TripResultsView, but kept
+          gated for symmetry with TripDashboard. */}
+      {CONCIERGE_ENABLED && !standalone && (
         <ConciergePanel
           tripId={tripId}
           open={conciergeOpen}

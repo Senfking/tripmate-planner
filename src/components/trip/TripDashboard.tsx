@@ -33,6 +33,7 @@ import { resolvePhoto } from "@/lib/tripPhoto";
 import { TripBuilderFlow } from "@/components/trip-builder/TripBuilderFlow";
 import { Button } from "@/components/ui/button";
 import { ConciergePanel } from "@/components/concierge/ConciergePanel";
+import { CONCIERGE_ENABLED } from "@/lib/featureFlags";
 import { captureReactError } from "@/lib/sentry";
 import {
   DndContext, rectIntersection, PointerSensor, TouchSensor,
@@ -648,22 +649,24 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                 )}
               </button>
 
-              <button
-                onClick={() => setConciergeOpen(true)}
-                className="text-left rounded-2xl p-3.5 transition-all active:scale-[0.97]"
-                style={{
-                  flex: isLiveWithPlan ? 0.8 : 1,
-                  background: "rgba(255,255,255,0.18)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                }}
-              >
-                <p className="text-white font-semibold text-[14px] leading-tight">What to do?</p>
-                <p className="text-white/70 text-[12px] mt-1 leading-snug">
-                  {isLiveWithPlan ? "Nearby spots" : "Restaurants, bars, spots"}
-                </p>
-              </button>
+              {CONCIERGE_ENABLED && (
+                <button
+                  onClick={() => setConciergeOpen(true)}
+                  className="text-left rounded-2xl p-3.5 transition-all active:scale-[0.97]"
+                  style={{
+                    flex: isLiveWithPlan ? 0.8 : 1,
+                    background: "rgba(255,255,255,0.18)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                  }}
+                >
+                  <p className="text-white font-semibold text-[14px] leading-tight">What to do?</p>
+                  <p className="text-white/70 text-[12px] mt-1 leading-snug">
+                    {isLiveWithPlan ? "Nearby spots" : "Restaurants, bars, spots"}
+                  </p>
+                </button>
+              )}
             </div>
           </div>
         );
@@ -969,17 +972,19 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         </div>
       )}
 
-      {/* Concierge Panel */}
-      <ConciergePanel
-        tripId={tripId}
-        open={conciergeOpen}
-        onClose={() => setConciergeOpen(false)}
-        destination={stops?.[0]?.destination || undefined}
-        tripName={tripName}
-        memberCount={memberCount ?? undefined}
-        tripStartDate={startDate || undefined}
-        tripEndDate={endDate || undefined}
-      />
+      {/* Concierge Panel — hidden behind CONCIERGE_ENABLED flag for launch */}
+      {CONCIERGE_ENABLED && (
+        <ConciergePanel
+          tripId={tripId}
+          open={conciergeOpen}
+          onClose={() => setConciergeOpen(false)}
+          destination={stops?.[0]?.destination || undefined}
+          tripName={tripName}
+          memberCount={memberCount ?? undefined}
+          tripStartDate={startDate || undefined}
+          tripEndDate={endDate || undefined}
+        />
+      )}
     </div>
   );
 }
