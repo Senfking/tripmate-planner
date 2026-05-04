@@ -125,10 +125,10 @@ export function ActivityCard({
       className="group mx-4 mb-3 rounded-2xl bg-card border border-border transition-all duration-300 animate-fade-in shadow-sm hover:-translate-y-0.5 hover:shadow-lg relative overflow-hidden"
       style={{ animationDelay: `${animDelay}ms` }}
     >
-      <div className="flex flex-col sm:flex-row">
-        {/* Hero image — left column on desktop */}
+      <div className="flex flex-col sm:flex-row sm:items-stretch">
+        {/* Hero image — left column on desktop, fixed height to prevent tall images from stretching the card */}
         <div
-          className="relative shrink-0 w-full sm:w-[40%] sm:max-w-[220px] h-[140px] sm:h-auto sm:min-h-[170px] overflow-hidden bg-muted cursor-pointer"
+          className="relative shrink-0 w-full sm:w-[40%] sm:max-w-[240px] h-[140px] sm:h-[200px] overflow-hidden bg-muted cursor-pointer"
           onClick={() => setExpanded((e) => !e)}
         >
           {isLoading ? (
