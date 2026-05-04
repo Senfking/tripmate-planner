@@ -23,12 +23,10 @@ export function TemplateCard({
 }) {
   const c = template;
 
-  // Chip overflow strategy — never wraps to a 2nd row.
-  // mobile: 1 chip + overflow counter; sm+: 2 chips + counter.
+  // Mobile: 1 chip; sm+: 2 chips. Extra chips are simply not rendered —
+  // full detail lives on the template detail page.
   const mobileVisible = c.chips.slice(0, 1);
-  const mobileExtra = c.chips.length - mobileVisible.length;
   const desktopVisible = c.chips.slice(0, 2);
-  const desktopExtra = c.chips.length - desktopVisible.length;
 
   const sizing =
     variant === "carousel"
@@ -69,7 +67,7 @@ export function TemplateCard({
           <span className="ml-1.5 font-semibold text-white/85">· {c.duration_days}d</span>
         </h4>
 
-        {/* Mobile: 1 chip + overflow */}
+        {/* Mobile: 1 chip */}
         <div className="mt-2 flex items-center gap-1.5 overflow-hidden sm:hidden">
           {mobileVisible.map((chip) => (
             <span
@@ -79,14 +77,9 @@ export function TemplateCard({
               {chip}
             </span>
           ))}
-          {mobileExtra > 0 && (
-            <span className="inline-flex shrink-0 items-center rounded-full bg-white/30 px-2 py-0.5 text-[10.5px] font-medium text-white shadow-sm backdrop-blur">
-              +{mobileExtra}
-            </span>
-          )}
         </div>
 
-        {/* sm+: 2 chips + overflow */}
+        {/* sm+: 2 chips */}
         <div className="mt-2 hidden items-center gap-1.5 overflow-hidden sm:flex">
           {desktopVisible.map((chip) => (
             <span
@@ -96,11 +89,6 @@ export function TemplateCard({
               {chip}
             </span>
           ))}
-          {desktopExtra > 0 && (
-            <span className="inline-flex shrink-0 items-center rounded-full bg-white/30 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm backdrop-blur">
-              +{desktopExtra}
-            </span>
-          )}
         </div>
       </div>
     </Link>
