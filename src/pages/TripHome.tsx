@@ -31,6 +31,24 @@ import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 import { NameTripModal } from "@/components/trip-builder/NameTripModal";
 import { stripEmoji } from "@/lib/stripEmoji";
+import {
+  useStreamingTripGeneration,
+  buildPartialResult,
+  getSkeletonDayNumbers,
+} from "@/hooks/useStreamingTripGeneration";
+
+const REGEN_STAGE_LABELS: Record<string, string> = {
+  starting: "Connecting…",
+  parsing_intent: "Reading your refinements…",
+  picking_destination: "Picking your surprise destination…",
+  destination_picked: "Destination locked in",
+  geocoding: "Locating your destination…",
+  searching_venues: "Finding venues that match your vibe…",
+  hydrating_finalists: "Looking up venue details…",
+  ranking: "Composing your day-by-day itinerary…",
+  complete: "Your trip is ready!",
+  error: "Something went wrong",
+};
 
 function getInitial(name: string | null | undefined) {
   return (name || "?").charAt(0).toUpperCase();
@@ -334,16 +352,103 @@ export default function TripHome() {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("ai_trip_plans") as any)
-        .select("id, result")
+        .select("id, result, prompt")
         .eq("trip_id", tripId!)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data as { id: string; result: AITripResult } | null;
+      return data as {
+        id: string;
+        result: AITripResult;
+        prompt: Record<string, unknown> | null;
+      } | null;
     },
     enabled: !!tripId && !!user && isDraft,
   });
+
+  // ─── In-place regeneration of a draft plan ───
+  // Runs the streaming edge function with the original payload + the user's
+  // refinement merged into free_text, then overwrites ai_trip_plans.result so
+  // the existing draft view re-renders with the revised plan. No navigation.
+  const [regenerating, setRegenerating] = useState(false);
+  const streaming = useStreamingTripGeneration();
+  const regenPayloadRef = useRef<Record<string, unknown> | null>(null);
+  const regenPersistedRef = useRef(false);
+
+  const handleRegenerate = useCallback(
+    async (prompt?: string) => {
+      if (!draftPlan) return;
+      const original = (draftPlan.prompt ?? {}) as Record<string, unknown>;
+      const origFreeText =
+        typeof original.free_text === "string" ? original.free_text : "";
+      const mergedFreeText = [origFreeText, prompt ?? ""]
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join("\n\n");
+      const newPayload = { ...original, free_text: mergedFreeText };
+      regenPayloadRef.current = newPayload;
+      regenPersistedRef.current = false;
+      setRegenerating(true);
+      streaming.reset();
+      await streaming.start(newPayload);
+    },
+    [draftPlan, streaming],
+  );
+
+  useEffect(() => {
+    if (!regenerating) {
+      regenPersistedRef.current = false;
+      return;
+    }
+    if (streaming.state.stage === "error") {
+      toast.error(streaming.state.error ?? "Couldn't regenerate plan");
+      regenPayloadRef.current = null;
+      setRegenerating(false);
+      streaming.reset();
+      return;
+    }
+    if (
+      streaming.state.stage !== "complete" ||
+      !streaming.state.result ||
+      !draftPlan ||
+      regenPersistedRef.current
+    ) {
+      return;
+    }
+    regenPersistedRef.current = true;
+    const newResult = streaming.state.result;
+    const newPrompt = regenPayloadRef.current;
+    void (async () => {
+      try {
+        const { error } = await (supabase
+          .from("ai_trip_plans") as any)
+          .update({
+            result: newResult,
+            ...(newPrompt ? { prompt: newPrompt } : {}),
+          })
+          .eq("id", draftPlan.id);
+        if (error) throw error;
+        await qc.invalidateQueries({ queryKey: ["trip-draft-plan", tripId] });
+        toast.success("Plan updated!");
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to save updated plan");
+      } finally {
+        regenPayloadRef.current = null;
+        setRegenerating(false);
+        streaming.reset();
+      }
+    })();
+  }, [
+    streaming.state.stage,
+    streaming.state.result,
+    streaming.state.error,
+    regenerating,
+    draftPlan,
+    qc,
+    tripId,
+    streaming,
+  ]);
 
   const [promoteNameOpen, setPromoteNameOpen] = useState(false);
   const promoteDraft = useMutation({
@@ -424,6 +529,46 @@ export default function TripHome() {
       || draftPlan.result.trip_title
       || "Your trip";
 
+    // Mid-regeneration: render TripResultsView with the in-flight stream so
+    // day cards arrive incrementally without leaving the page. Pre-meta we
+    // briefly show a loader (matches StandaloneTripBuilder's pattern).
+    if (regenerating) {
+      const partial = buildPartialResult(streaming.state);
+      const skeletonNums = getSkeletonDayNumbers(streaming.state);
+      const isStreaming =
+        streaming.state.stage !== "complete" && streaming.state.stage !== "error";
+      const stageMsg =
+        REGEN_STAGE_LABELS[streaming.state.stage] ?? "Refreshing your trip…";
+
+      if (!partial) {
+        return (
+          <div className="flex flex-col items-center justify-center min-h-dvh gap-3 bg-background">
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+            <p className="text-sm text-muted-foreground">{stageMsg}</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex flex-col min-h-dvh bg-background">
+          <TripResultsView
+            tripId={trip.id}
+            planId={draftPlan.id}
+            result={partial}
+            onClose={() => navigate("/app/trips")}
+            onRegenerate={() => { /* gated mid-regeneration */ }}
+            standalone
+            onCreateTrip={() => setPromoteNameOpen(true)}
+            onSaveDraft={() => navigate("/app/trips")}
+            creatingTrip={promoteDraft.isPending}
+            streaming={isStreaming}
+            streamingDayNumbers={skeletonNums}
+            streamingMessage={stageMsg}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col min-h-dvh bg-background">
         <TripResultsView
@@ -431,11 +576,7 @@ export default function TripHome() {
           planId={draftPlan.id}
           result={draftPlan.result}
           onClose={() => navigate("/app/trips")}
-          onRegenerate={() => {
-            const dest = draftPlan.result.destinations?.[0]?.name ?? "";
-            const qs = dest ? `?initialDestination=${encodeURIComponent(dest)}` : "";
-            navigate(`/app/trips/new${qs}`);
-          }}
+          onRegenerate={handleRegenerate}
           standalone
           onCreateTrip={() => setPromoteNameOpen(true)}
           onSaveDraft={() => navigate("/app/trips")}
