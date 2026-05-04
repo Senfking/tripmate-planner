@@ -424,8 +424,8 @@ export function Hero({
         aria-hidden
       />
 
-      <div className="relative z-10 flex items-center justify-end px-5 sm:px-10 pt-5 sm:pt-7">
-        <div className="pointer-events-none absolute left-1/2 top-5 sm:top-7 -translate-x-1/2">
+      <div className="relative z-10 flex items-center justify-end px-5 sm:px-10 pt-2 sm:pt-3">
+        <div className="pointer-events-none absolute left-1/2 top-2 sm:top-3 -translate-x-1/2">
           <JuntoWordmark variant="light" />
         </div>
         <Link
