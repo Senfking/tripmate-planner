@@ -112,9 +112,9 @@ export function Hero({
         "focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40",
       ].join(" ")
     : [
-        "flex items-center gap-3",
+        "flex items-center gap-2",
         "rounded-[36px] sm:rounded-full bg-white/95 backdrop-blur-xl border border-white/50",
-        "shadow-2xl pl-5 pr-2 py-2 sm:p-1.5 transition-all",
+        "shadow-2xl pl-4 pr-2 py-2 sm:p-1.5 transition-all",
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
