@@ -185,7 +185,7 @@ export function Hero({
           className={[
             "inline-flex items-center justify-center gap-2 shrink-0",
             "rounded-full bg-primary text-white font-medium",
-            "h-[52px] w-[52px] p-0 sm:h-[48px] sm:w-auto sm:px-6 text-sm whitespace-nowrap",
+            "h-[52px] w-[52px] p-0 sm:h-auto sm:w-auto sm:self-stretch sm:px-6 text-sm whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
             "transition-all hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
             "active:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed",
