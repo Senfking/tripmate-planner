@@ -8,6 +8,7 @@ import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
 import type { ActivityCostFormatter } from "./formatActivityCost";
 import { isGetYourGuideEligible, buildGetYourGuideUrl } from "@/lib/affiliateLinks";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface Props {
   activity: AIActivity;
