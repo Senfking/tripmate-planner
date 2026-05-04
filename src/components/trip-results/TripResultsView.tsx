@@ -697,19 +697,18 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                       <div className="text-[10px] uppercase tracking-wider text-white/40">{costBreakdown.categories.length} categories</div>
                     </div>
                     <div className="space-y-3">
-                      {costBreakdown.categories.map(([cat, amount], i) => {
+                      {costBreakdown.categories.map(([cat, amount]) => {
                         const pct = costBreakdown.total > 0 ? (amount / costBreakdown.total) * 100 : 0;
                         const catConverted = convertToUserCurrency(amount);
                         const catShowConverted = conversionEnabled && catConverted !== null;
                         const catDisplay = catShowConverted
                           ? formatBudget(catConverted!, userCurrency)
                           : `${currency} ${Math.round(amount).toLocaleString()}`;
-                        const colors = ["#5EEAD4", "#2DD4BF", "#14B8A6", "#0D9488", "#0F766E", "#115E59"];
-                        const color = colors[i % colors.length];
+                        const color = getCategoryColor(cat);
                         return (
                           <div key={cat} className="flex items-center gap-3">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
-                            <span className="text-xs text-white/80 flex-1 truncate">{cat}</span>
+                            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                            <span className="text-xs text-white/80 flex-1 truncate capitalize">{cat}</span>
                             <span className="text-[10px] text-white/40 font-mono tabular-nums w-10 text-right">{pct.toFixed(0)}%</span>
                             <span className="text-xs font-mono text-white tabular-nums w-24 text-right">{catDisplay}</span>
                           </div>
