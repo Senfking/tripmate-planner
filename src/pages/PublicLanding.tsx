@@ -85,13 +85,14 @@ export default function PublicLanding() {
                 style={{ background: "radial-gradient(circle, #2dd4bf 0%, transparent 70%)" }}
               />
               <h2 className="relative text-3xl sm:text-4xl font-bold text-[#1a1a1a] mb-3 leading-tight tracking-tight">
-                Your next trip{" "}
+                Your{" "}
                 <span
                   className="bg-clip-text text-transparent"
                   style={{ backgroundImage: "linear-gradient(90deg, #0D9488 0%, #2dd4bf 60%, #0D9488 100%)" }}
                 >
-                  starts here
+                  next trip
                 </span>
+                {" "}starts here
               </h2>
               <p className="relative text-[15px] text-[#6b7280] mb-8 max-w-sm mx-auto">
                 Plan smarter. Travel better. No spreadsheets required.
