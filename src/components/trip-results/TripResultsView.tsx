@@ -962,18 +962,39 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       )}
 
       {planId && standalone && (
-        <button
-          onClick={() => toast.info("Create the trip to chat with your group", {
-            description: "Save it as a trip and invite your travel buddies to start chatting.",
-          })}
-          className="fixed right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-muted text-muted-foreground border border-border shadow-lg hover:bg-muted/80 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
-          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 9rem)" }}
-          title="Group chat unlocks after creating the trip"
-        >
-          <Users className="h-4 w-4 opacity-60" />
-          <span className="text-xs font-semibold">Group Chat</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-background/80 font-medium">Locked</span>
-        </button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className="fixed right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-muted text-muted-foreground border border-border shadow-lg hover:bg-muted/80 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
+              style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 9rem)" }}
+              aria-label="Group chat is locked — tap to learn more"
+            >
+              <Lock className="h-3.5 w-3.5 opacity-70" />
+              <span className="text-xs font-semibold">Group Chat</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-background/80 font-medium">Locked</span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="top"
+            align="end"
+            sideOffset={10}
+            className="w-[280px] p-4 rounded-2xl border border-border shadow-xl"
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13.5px] font-semibold text-foreground leading-tight">
+                  Group chat is locked
+                </p>
+                <p className="text-[12px] text-muted-foreground leading-snug mt-1">
+                  Create the trip and invite your travel buddies to start chatting together.
+                </p>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       )}
 
       {/* Group Activity Panel — never opens in draft mode */}
