@@ -127,9 +127,9 @@ export function ActivityCard({
       style={{ animationDelay: `${animDelay}ms` }}
     >
       <div className="flex flex-col sm:flex-row sm:items-stretch">
-        {/* Hero image — left column on desktop, fixed height to prevent tall images from stretching the card */}
+        {/* Hero image — clipped independently so hover/repaint layers cannot square off its corners */}
         <div
-          className="relative shrink-0 w-full sm:w-[38%] sm:max-w-[260px] h-[160px] sm:h-[220px] overflow-hidden rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none bg-muted cursor-pointer isolate [transform:translateZ(0)]"
+          className="relative shrink-0 w-full sm:w-[38%] sm:max-w-[260px] h-[160px] sm:h-auto sm:min-h-[220px] sm:self-stretch overflow-hidden rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none bg-muted cursor-pointer [clip-path:inset(0_round_1rem_1rem_0_0)] sm:[clip-path:inset(0_round_1rem_0_0_1rem)]"
           onClick={() => setExpanded(true)}
         >
           {isLoading ? (
@@ -138,7 +138,7 @@ export function ActivityCard({
             <img
               src={heroSrc}
               alt={activity.title}
-              className="w-full h-full object-cover transition-[filter] duration-300 group-hover/card:brightness-105"
+              className="absolute inset-0 block h-full w-full object-cover"
               loading="lazy"
               onError={() => setImgError(true)}
             />
