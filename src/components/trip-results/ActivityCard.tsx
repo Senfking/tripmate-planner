@@ -123,7 +123,7 @@ export function ActivityCard({
   return (
     <div
       data-activity-id={`${day.date}-${index}`}
-      className="group mx-4 mb-3 rounded-2xl bg-card border border-border transition-all duration-300 animate-fade-in shadow-sm hover:-translate-y-0.5 hover:shadow-lg relative overflow-visible"
+      className="group/card mx-4 mb-3 rounded-2xl bg-card border border-border transition-all duration-300 animate-fade-in shadow-sm hover:-translate-y-0.5 hover:shadow-lg relative overflow-visible"
       style={{ animationDelay: `${animDelay}ms` }}
     >
       <div className="flex flex-col sm:flex-row sm:items-stretch">
@@ -138,7 +138,7 @@ export function ActivityCard({
             <img
               src={heroSrc}
               alt={activity.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-[1.04]"
               loading="lazy"
               onError={() => setImgError(true)}
             />
