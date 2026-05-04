@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       try {
         const res = await fetch(url, {
           headers: { "User-Agent": "TripCrew-ItineraryParser/1.0" },
-          redirect: "follow",
+          redirect: "error",
           signal: AbortSignal.timeout(8000),
         });
         if (!res.ok) {
