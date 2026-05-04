@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Star, ExternalLink, Trash2, ArrowLeftRight, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf, Loader2, Clock } from "lucide-react";
+import { Star, ExternalLink, Trash2, ArrowLeftRight, Sparkles, MessageSquare, PenLine, Lightbulb, Leaf, Loader2, Clock, Info, X, MapPin } from "lucide-react";
 import { getCategoryColor, getCategoryIcon } from "./categoryColors";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +8,7 @@ import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
 import type { ActivityCostFormatter } from "./formatActivityCost";
 import { isGetYourGuideEligible, buildGetYourGuideUrl } from "@/lib/affiliateLinks";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface Props {
   activity: AIActivity;
@@ -125,10 +126,10 @@ export function ActivityCard({
       className="group mx-4 mb-3 rounded-2xl bg-card border border-border transition-all duration-300 animate-fade-in shadow-sm hover:-translate-y-0.5 hover:shadow-lg relative overflow-hidden"
       style={{ animationDelay: `${animDelay}ms` }}
     >
-      <div className="flex flex-col sm:flex-row">
-        {/* Hero image — left column on desktop */}
+      <div className="flex flex-col sm:flex-row sm:items-stretch">
+        {/* Hero image — left column on desktop, fixed height to prevent tall images from stretching the card */}
         <div
-          className="relative shrink-0 w-full sm:w-[40%] sm:max-w-[220px] h-[140px] sm:h-auto sm:min-h-[170px] overflow-hidden bg-muted cursor-pointer"
+          className="relative shrink-0 w-full sm:w-[40%] sm:max-w-[240px] h-[140px] sm:h-[200px] overflow-hidden bg-muted cursor-pointer"
           onClick={() => setExpanded((e) => !e)}
         >
           {isLoading ? (
@@ -323,128 +324,230 @@ export function ActivityCard({
               })()}
             </div>
 
-            {(() => {
-              const gygEligible = isGetYourGuideEligible(activity);
-              const partner = (activity as any).booking_partner as string | null | undefined;
-              const showRealBooking = !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
-              if (gygEligible) {
-                return (
-                  <a
-                    href={buildGetYourGuideUrl(activity.title, destinationName)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
-                  >
-                    Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
-                  </a>
-                );
-              }
-              if (showRealBooking) {
-                return (
-                  <a
-                    href={activity.booking_url!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
-                  >
-                    Book <ExternalLink className="h-2.5 w-2.5" />
-                  </a>
-                );
-              }
-              return null;
-            })()}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-foreground bg-muted hover:bg-accent border border-border transition-colors whitespace-nowrap"
+                aria-label="View details"
+              >
+                <Info className="h-3 w-3" /> Details
+              </button>
+
+              {(() => {
+                const gygEligible = isGetYourGuideEligible(activity);
+                const partner = (activity as any).booking_partner as string | null | undefined;
+                const showRealBooking = !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
+                if (gygEligible) {
+                  return (
+                    <a
+                      href={buildGetYourGuideUrl(activity.title, destinationName)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
+                    >
+                      Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  );
+                }
+                if (showRealBooking) {
+                  return (
+                    <a
+                      href={activity.booking_url!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
+                    >
+                      Book <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Expanded details */}
-      {expanded && (
-        <div className="border-t border-border bg-muted/30 animate-fade-in">
-          {/* Rating row — surfaced only when expanded */}
-          {displayRating != null && (
-            <div className="px-4 pt-3 flex items-center gap-2 text-[11px] text-muted-foreground font-mono tabular-nums">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              <span className="text-foreground/80 font-semibold">{displayRating.toFixed(1)}</span>
-              {totalRatings != null && <span className="text-muted-foreground/60">({totalRatings} reviews)</span>}
-            </div>
-          )}
+      {/* Details Sheet — slides in from right (or bottom on mobile) */}
+      <Sheet open={expanded} onOpenChange={setExpanded}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-[480px] p-0 overflow-y-auto bg-background"
+        >
+          {/* Hero — full-bleed image with overlay title */}
+          <div className="relative h-[260px] w-full bg-muted overflow-hidden">
+            {heroSrc ? (
+              <img src={heroSrc} alt={activity.title} className="w-full h-full object-cover" />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}
+              >
+                <IconComponent className="h-12 w-12 opacity-50" style={{ color }} />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(180_25%_8%)] via-[hsl(180_25%_8%)]/50 to-transparent" />
 
-          {activity.description && (
-            <div className="px-4 pt-3 pb-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {activity.description}
-              </p>
-            </div>
-          )}
-
-          {activity.tips && (
-            <div className="mx-4 mb-3 border-l-2 border-primary/50 pl-3 py-2 bg-primary/5 rounded-r-lg">
-              <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
-                <Lightbulb className="h-3 w-3 text-primary shrink-0 mt-0.5" />
-                <span><span className="font-semibold text-primary mr-1">Tip:</span><span className="text-foreground/80">{activity.tips}</span></span>
-              </p>
-            </div>
-          )}
-
-          {activity.dietary_notes && (
-            <div className="px-4 pb-3">
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0D9488]/10 text-[#0D9488] inline-flex items-center gap-1">
-                <Leaf className="h-2.5 w-2.5" /> {activity.dietary_notes}
+            {/* Top: category + close */}
+            <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold uppercase tracking-[0.15em] backdrop-blur-md ring-1"
+                style={{
+                  backgroundColor: `${color}25`,
+                  color: "white",
+                  boxShadow: `inset 0 0 0 1px ${color}50`,
+                }}
+              >
+                <IconComponent className="h-2.5 w-2.5" />
+                {categoryLabel}
               </span>
             </div>
-          )}
 
-          {isLoading ? (
-            <div className="px-4 pb-3 space-y-1.5">
-              <Skeleton className="h-14 w-full rounded-lg" />
+            {/* Bottom: title + meta */}
+            <div className="absolute inset-x-0 bottom-0 p-5">
+              <h2 className="text-[22px] font-semibold text-white leading-tight tracking-tight drop-shadow-md">
+                {activity.title}
+              </h2>
+              <div className="flex items-center gap-3 mt-2 flex-wrap text-[11px] font-mono text-white/85 tabular-nums">
+                {activity.start_time && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> {activity.start_time}
+                  </span>
+                )}
+                {activity.duration_minutes != null && <span>{activity.duration_minutes}min</span>}
+                {displayRating != null && (
+                  <span className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="font-semibold">{displayRating.toFixed(1)}</span>
+                    {totalRatings != null && <span className="text-white/60">({totalRatings})</span>}
+                  </span>
+                )}
+              </div>
             </div>
-          ) : reviews.length > 0 ? (
-            <div className="px-4 pb-3 space-y-2">
-              {reviews.map((review, i) => (
-                <div key={i} className="flex gap-2 p-2.5 rounded-lg bg-background border border-border">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
-                    style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}
-                  >
-                    {review.author.charAt(0) || "?"}
+          </div>
+
+          {/* Body */}
+          <div className="p-5 space-y-5">
+            {activity.description && (
+              <div>
+                <h3 className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-2">About</h3>
+                <p className="text-sm text-foreground/85 leading-relaxed">{activity.description}</p>
+              </div>
+            )}
+
+            {activity.tips && (
+              <div className="rounded-xl bg-[#0D9488]/8 border border-[#0D9488]/20 p-4">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-7 w-7 rounded-full bg-[#0D9488]/15 flex items-center justify-center shrink-0">
+                    <Lightbulb className="h-3.5 w-3.5 text-[#0D9488]" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-medium text-foreground">{review.author}</span>
-                      <MiniStars rating={review.rating} />
-                      {review.time && <span className="text-[10px] text-muted-foreground">{review.time}</span>}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">{review.text}</p>
+                  <div>
+                    <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-[#0D9488] mb-1">Insider Tip</p>
+                    <p className="text-sm text-foreground/85 leading-relaxed">{activity.tips}</p>
                   </div>
                 </div>
-              ))}
-              <p className="text-[9px] text-muted-foreground/60">Photos & reviews from Google</p>
-            </div>
-          ) : null}
+              </div>
+            )}
 
-          {mapsLink && (
-            <div className="px-4 pb-3 flex flex-wrap items-center gap-3 text-[11px]">
-              <a
-                href={mapsLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
-              >
-                View on Maps <ExternalLink className="h-2.5 w-2.5" />
-              </a>
-            </div>
-          )}
+            {activity.dietary_notes && (
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <Leaf className="h-3 w-3 text-[#0D9488]" />
+                <span>{activity.dietary_notes}</span>
+              </div>
+            )}
 
-          {planId && actKey && (
-            <div className="border-t border-border">
-              {!isDraft && <ActivityReactions planId={planId} activityKey={actKey} />}
-              <ActivityComments planId={planId} activityKey={actKey} isDraft={isDraft} />
+            {/* Reviews */}
+            {isLoading ? (
+              <div className="space-y-2">
+                <h3 className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-muted-foreground">Reviews</h3>
+                <Skeleton className="h-16 w-full rounded-lg" />
+                <Skeleton className="h-16 w-full rounded-lg" />
+              </div>
+            ) : reviews.length > 0 ? (
+              <div>
+                <h3 className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-2.5">
+                  What visitors say
+                </h3>
+                <div className="space-y-2">
+                  {reviews.map((review, i) => (
+                    <div key={i} className="flex gap-2.5 p-3 rounded-xl bg-muted/40 border border-border">
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                        style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}
+                      >
+                        {review.author.charAt(0) || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[12px] font-semibold text-foreground">{review.author}</span>
+                          <MiniStars rating={review.rating} />
+                          {review.time && <span className="text-[10px] text-muted-foreground">{review.time}</span>}
+                        </div>
+                        <p className="text-[12px] text-muted-foreground leading-snug mt-1 line-clamp-3">{review.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground/60 mt-2">Photos & reviews from Google</p>
+              </div>
+            ) : null}
+
+            {/* Footer actions */}
+            <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
+              {mapsLink && (
+                <a
+                  href={mapsLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono uppercase tracking-wider transition-colors"
+                >
+                  <MapPin className="h-3 w-3" /> View on Maps
+                </a>
+              )}
+              {(() => {
+                const gygEligible = isGetYourGuideEligible(activity);
+                const partner = (activity as any).booking_partner as string | null | undefined;
+                const showRealBooking = !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
+                if (gygEligible) {
+                  return (
+                    <a
+                      href={buildGetYourGuideUrl(activity.title, destinationName)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3.5 py-2 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
+                    >
+                      Book on GetYourGuide <ExternalLink className="h-3 w-3" />
+                    </a>
+                  );
+                }
+                if (showRealBooking) {
+                  return (
+                    <a
+                      href={activity.booking_url!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3.5 py-2 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
+                    >
+                      Book <ExternalLink className="h-3 w-3" />
+                    </a>
+                  );
+                }
+                return null;
+              })()}
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Reactions / comments — kept at the bottom */}
+            {planId && actKey && (
+              <div className="pt-2 border-t border-border -mx-5 px-5">
+                {!isDraft && <ActivityReactions planId={planId} activityKey={actKey} />}
+                <ActivityComments planId={planId} activityKey={actKey} isDraft={isDraft} />
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
