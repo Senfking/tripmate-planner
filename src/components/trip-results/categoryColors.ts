@@ -5,28 +5,45 @@ import {
   type LucideIcon
 } from "lucide-react";
 
+// Shared category palette — used by budget breakdown legend, progress bar,
+// and activity card chips so colors stay consistent across the trip page.
 export const CATEGORY_COLORS: Record<string, string> = {
+  // Accommodation — brand teal (biggest line item)
+  accommodation: "#0D9488",
+  hotel: "#0D9488",
+  stay: "#0D9488",
+  // Food — warm orange
   food: "#F97316",
   restaurant: "#F97316",
   cafe: "#F97316",
-  culture: "#A855F7",
-  museum: "#A855F7",
-  history: "#A855F7",
+  dining: "#F97316",
+  // Nightlife — purple
+  nightlife: "#A855F7",
+  bar: "#A855F7",
+  club: "#A855F7",
+  // Culture — blue
+  culture: "#3B82F6",
+  museum: "#3B82F6",
+  history: "#3B82F6",
+  attraction: "#3B82F6",
+  // Experience / activities — pink coral
+  experience: "#EC4899",
+  experiences: "#EC4899",
+  activity: "#EC4899",
+  activities: "#EC4899",
+  adventure: "#EC4899",
+  sport: "#EC4899",
+  // Nature — green
   nature: "#22C55E",
   park: "#22C55E",
-  nightlife: "#EC4899",
-  bar: "#EC4899",
-  adventure: "#EF4444",
-  sport: "#EF4444",
-  relaxation: "#3B82F6",
-  wellness: "#3B82F6",
-  spa: "#3B82F6",
-  transport: "#6B7280",
-  accommodation: "#0D9488",
-  hotel: "#0D9488",
+  // Relaxation / wellness — sky
+  relaxation: "#0EA5E9",
+  wellness: "#0EA5E9",
+  spa: "#0EA5E9",
+  // Shopping — amber
   shopping: "#F59E0B",
-  attraction: "#A855F7",
-  activity: "#22C55E",
+  // Transport — slate
+  transport: "#64748B",
 };
 
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
