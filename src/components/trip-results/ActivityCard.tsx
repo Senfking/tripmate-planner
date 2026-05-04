@@ -62,7 +62,7 @@ export function ActivityCard({
   costFormatter,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const [descExpanded, setDescExpanded] = useState(false);
+  
   const [imgError, setImgError] = useState(false);
   const [swapMode, setSwapMode] = useState<SwapMode>(null);
   const [swapText, setSwapText] = useState("");
