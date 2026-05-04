@@ -199,6 +199,43 @@ export function AccommodationCard({
           </span>
         </div>
 
+        {/* Top-right: Swap button (glass on hero) */}
+        <div className="absolute top-3 right-3 z-20">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setSwapOpen((o) => !o);
+            }}
+            className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full transition-all bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/20 flex items-center gap-1"
+          >
+            <ArrowLeftRight className="h-3 w-3" /> Swap
+          </button>
+
+          {swapOpen && (
+            <div
+              ref={swapPopoverRef}
+              className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-[11px] font-medium text-foreground mb-1">Swap this stay</p>
+              <p className="text-[10px] text-muted-foreground mb-2.5 leading-relaxed">
+                In-app swap is coming soon. For now, browse alternative stays for your dates on Booking.com.
+              </p>
+              <a
+                href={browseAlternativesUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setSwapOpen(false)}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors"
+              >
+                Browse alternatives <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+        </div>
+
         {/* Bottom: name + meta over the image */}
         <div className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-12 pointer-events-none">
           <h4 className="text-[22px] sm:text-[26px] font-semibold text-white leading-tight tracking-tight drop-shadow-md">
