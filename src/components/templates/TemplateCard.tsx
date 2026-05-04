@@ -23,12 +23,10 @@ export function TemplateCard({
 }) {
   const c = template;
 
-  // Chip overflow strategy — never wraps to a 2nd row.
-  // mobile: 1 chip + overflow counter; sm+: 2 chips + counter.
+  // Mobile: 1 chip; sm+: 2 chips. Extra chips are simply not rendered —
+  // full detail lives on the template detail page.
   const mobileVisible = c.chips.slice(0, 1);
-  const mobileExtra = c.chips.length - mobileVisible.length;
   const desktopVisible = c.chips.slice(0, 2);
-  const desktopExtra = c.chips.length - desktopVisible.length;
 
   const sizing =
     variant === "carousel"
