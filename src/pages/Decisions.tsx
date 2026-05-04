@@ -162,7 +162,7 @@ const Decisions = () => {
                   date: "where",
                   poll: "polls",
                 }[item.type]}${item.pollId ? `&pollId=${item.pollId}` : ""}`}
-                className="group flex items-center gap-3 bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:scale-[0.98] transition-transform"
+                className="group flex items-center gap-3 bg-white rounded-[14px] border border-[#F1F5F9] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 active:opacity-80 transition-opacity duration-150"
               >
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"

@@ -172,7 +172,7 @@ const Expenses = () => {
               <Link
                 key={trip.tripId}
                 to={`/app/trips/${trip.tripId}/expenses`}
-                className="group block rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] active:scale-[0.98] transition-transform"
+                className="group block rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] active:opacity-80 transition-opacity duration-150"
               >
                 {/* Photo header */}
                 <div className="relative h-[72px] overflow-hidden">

@@ -379,7 +379,7 @@ const Itinerary = () => {
                           key={item.id}
                           to={`/app/trips/${item.tripId}/itinerary`}
                           className={cn(
-                            "block rounded-[14px] border shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-3 active:scale-[0.98] transition-transform",
+                            "block rounded-[14px] border shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-3 active:opacity-80 transition-opacity duration-150",
                             isActiveDay ? "bg-white border-[#0D9488]/15" : "bg-white border-[#F1F5F9]"
                           )}
                         >

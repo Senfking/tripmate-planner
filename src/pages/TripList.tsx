@@ -991,7 +991,7 @@ export default function TripList() {
               <Link
                 key={trip.id}
                 to={`/app/trips/${trip.id}`}
-                className="group relative shrink-0 w-[220px] h-[120px] rounded-2xl overflow-hidden shadow-md text-left active:scale-[0.98] transition-transform"
+                className="group relative shrink-0 w-[220px] h-[120px] rounded-2xl overflow-hidden shadow-md text-left active:opacity-80 transition-opacity duration-150"
               >
                 <img
                   src={trip.photoUrl}
@@ -1055,7 +1055,7 @@ export default function TripList() {
                 <Link
                   key={draft.id}
                   to={`/app/trips/${draft.id}`}
-                  className="group relative shrink-0 w-[220px] h-[120px] rounded-2xl overflow-hidden shadow-md text-left active:scale-[0.98] transition-transform"
+                  className="group relative shrink-0 w-[220px] h-[120px] rounded-2xl overflow-hidden shadow-md text-left active:opacity-80 transition-opacity duration-150"
                 >
                   <img
                     src={photoUrl}
