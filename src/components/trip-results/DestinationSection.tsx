@@ -13,7 +13,7 @@ interface Props {
   dateMode?: "calendar" | "generic";
 }
 
-export function DestinationSection({ name, startDate, endDate, intro, dayRange, dateMode = "calendar" }: Props) {
+export function DestinationSection({ name, startDate, endDate, dayRange, dateMode = "calendar" }: Props) {
   const showDates = dateMode !== "generic";
   const startStr = (() => {
     try { return format(parseISO(startDate), "MMM d"); } catch { return startDate; }
@@ -32,17 +32,15 @@ export function DestinationSection({ name, startDate, endDate, intro, dayRange, 
           <h2 className="text-xl font-bold text-foreground leading-tight">
             {name}
           </h2>
-          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
             {showDates && <span>{startStr} — {endStr}</span>}
-            <span className="px-1.5 py-0.5 rounded bg-accent font-mono text-[10px]">
+            {showDates && <span className="text-muted-foreground/40">·</span>}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium text-[11px] ring-1 ring-inset ring-primary/20">
               {dayRange}
             </span>
           </div>
         </div>
       </div>
-      <p className="text-sm text-muted-foreground mt-3 leading-relaxed pl-11">
-        {intro}
-      </p>
     </div>
   );
 }
