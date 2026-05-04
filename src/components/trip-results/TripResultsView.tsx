@@ -546,26 +546,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             so users see progress without flashes. */}
         {!streaming && (<>
 
-        {/* Flights */}
-        <div id="section-flights" className={cn("px-4 mb-4", rc)} style={revealStyle("overview-flights")}>
-          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Plane className="h-5 w-5 text-[#0D9488]" /> Flights
-          </h3>
-          <div className="rounded-xl border-2 border-dashed border-border bg-accent/30 p-5 text-center">
-            <Plane className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm font-medium text-foreground">Flight search coming soon</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              We're working on finding the best flights for your trip
-            </p>
-            <button
-              onClick={() => toast.success("We'll let you know when flights are available!")}
-              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0D9488]/15 border border-[#0D9488]/25 text-[#0D9488] text-xs font-medium hover:bg-[#0D9488]/25 transition-colors"
-            >
-              <Bell className="h-3 w-3" />
-              Notify me
-            </button>
-          </div>
-        </div>
+        {/* Flights section intentionally hidden until the feature ships. */}
 
         {/* All stays overview — multi-destination only (compact horizontal carousel) */}
         {isMultiDestination && result.destinations.some(d => d.accommodation) && (
