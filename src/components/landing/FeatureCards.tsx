@@ -213,26 +213,27 @@ export function FeatureCards() {
             <article
               key={feature.headline}
               data-carousel-card="true"
-              className="relative flex min-h-[480px] w-[288px] shrink-0 snap-start flex-col overflow-hidden rounded-[1.6rem] border border-primary/15 bg-[hsl(173_34%_9%)] shadow-[0_24px_56px_-30px_hsl(var(--foreground)/0.28)] sm:w-[330px]"
+              className="relative flex aspect-[4/5] w-[320px] shrink-0 snap-start flex-col overflow-hidden rounded-[1.6rem] border border-primary/15 bg-[hsl(173_34%_9%)] shadow-[0_24px_56px_-30px_hsl(var(--foreground)/0.28)] sm:w-[380px]"
             >
-              <div className="flex flex-1 flex-col p-6">
-                <span className="mb-3 text-[12px] font-medium text-primary">{feature.category}</span>
-                <h3 className="mb-3 text-xl font-bold leading-tight text-white sm:text-2xl">{feature.headline}</h3>
-                <p className="text-[14px] leading-relaxed text-white/62">{feature.description}</p>
+              <div className="flex flex-col p-6 pb-3">
+                <span className="mb-2 text-[12px] font-medium text-primary">{feature.category}</span>
+                <h3 className="mb-2.5 text-xl font-bold leading-tight text-white sm:text-2xl">{feature.headline}</h3>
+                <p className="text-[13px] leading-relaxed text-white/62 line-clamp-3">{feature.description}</p>
               </div>
-              <div className="relative px-6 pb-10 pt-2">
-                <PhoneMockup variant={feature.variant} />
+              <div className="relative flex-1 overflow-hidden">
+                <div className="absolute inset-x-0 top-0 flex justify-center">
+                  <PhoneMockup variant={feature.variant} />
+                </div>
+                {/* Soft inner fade so the phone bottom melts into the card */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
+                  style={{
+                    background:
+                      "linear-gradient(to bottom, transparent 0%, hsl(173 34% 9%) 90%)",
+                  }}
+                />
               </div>
-              {/* Soft inner fade so the card bottom doesn't slice the
-                  phone visually — gives it a planted-in-card feel. */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-16"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, transparent 0%, hsl(173 34% 9%) 100%)",
-                }}
-              />
             </article>
           ))}
           <div className="shrink-0 w-5 sm:w-10 lg:w-16" aria-hidden="true" />
