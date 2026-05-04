@@ -184,6 +184,10 @@ html.dark, html.dark body, html.dark #root {
     animation: fade-in 0.2s ease-out;
   }
 
+  .animate-activity-card-in {
+    animation: activity-card-in 0.2s ease-out backwards;
+  }
+
   @keyframes fade-in {
     from {
       opacity: 0;
@@ -193,6 +197,11 @@ html.dark, html.dark body, html.dark #root {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  @keyframes activity-card-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   @keyframes slideInRight {
