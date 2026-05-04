@@ -119,8 +119,8 @@ export function Hero({
       ].join(" ");
 
   const placeholder = isApp
-    ? "Describe your trip — destination, dates, who's coming"
-    : "Tell Junto AI about your trip — destination, dates, who's coming";
+    ? "Describe your trip — destination, dates, group"
+    : "Tell Junto AI about your trip — destination, dates, group";
 
   const sharedTextareaProps = {
     ref: textareaRef,
