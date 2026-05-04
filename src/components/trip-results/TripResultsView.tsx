@@ -803,7 +803,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               )}
 
               {/* Day cards */}
-              <div className="space-y-2 px-4 pb-4">
+              <div className="space-y-4 px-4 pb-6">
                 {destDays.map((day) => (
                   <div key={day.date} className={rc} style={revealStyle(`day-${day.day_number}`)}>
                   <DaySection
