@@ -970,7 +970,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 9rem)" }}
               aria-label="Group chat is locked — tap to learn more"
             >
-              <Lock className="h-3.5 w-3.5 opacity-70" />
+              <LockIcon className="h-3.5 w-3.5 opacity-70" />
               <span className="text-xs font-semibold">Group Chat</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-background/80 font-medium">Locked</span>
             </button>
