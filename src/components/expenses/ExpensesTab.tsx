@@ -478,7 +478,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           {members.length <= 1 ? (
             <div className="relative flex flex-col items-center gap-1.5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Total spent</p>
-              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1">
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1 tabular-nums">
                 {totalExpenses != null ? formatCurrency(totalExpenses, settlementCurrency) : "€0.00"}
               </p>
               <button
