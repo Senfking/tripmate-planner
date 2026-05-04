@@ -114,7 +114,7 @@ export function ActivityCard({
   }, [swapMode]);
 
   const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
-  const descIsLong = (activity.description?.length || 0) > 120;
+  
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activity.title || '') + ' ' + (activity.location_name || ''))}`;
   const displayRating = rating ?? (typeof (activity as any).rating === "number" ? (activity as any).rating : null);
   const categoryLabel = activity.category ? activity.category.charAt(0).toUpperCase() + activity.category.slice(1).toLowerCase() : "";
