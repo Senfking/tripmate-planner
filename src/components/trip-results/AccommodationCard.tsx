@@ -165,11 +165,11 @@ export function AccommodationCard({
   return (
     <div
       id={`section-stay-${(locationHint || name).replace(/\s+/g, "-")}`}
-      className="mx-4 mb-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-lg transition-shadow relative overflow-hidden"
+      className="group mx-4 mb-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden"
     >
-      {/* Photo — larger hero for premium feel */}
+      {/* Cinematic banner — taller, with overlay typography */}
       <div
-        className="w-full h-[220px] sm:h-[260px] bg-muted relative cursor-pointer overflow-hidden"
+        className="w-full h-[280px] sm:h-[340px] bg-muted relative cursor-pointer overflow-hidden"
         onClick={() => setExpanded((e) => !e)}
       >
         {isLoading ? (
@@ -178,112 +178,88 @@ export function AccommodationCard({
           <img
             src={heroSrc}
             alt={name}
-            className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.03]"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
             loading="lazy"
             onError={() => setImgError(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-primary/5">
-            <Hotel className="h-10 w-10 text-primary/30" />
+            <Hotel className="h-12 w-12 text-primary/30" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+        {/* Layered gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(180_25%_8%)]/95 via-[hsl(180_25%_8%)]/30 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.18),_transparent_55%)] pointer-events-none" />
+
+        {/* Top-left: Stay chip */}
         <div className="absolute top-3 left-3">
-          <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white backdrop-blur-md ring-1 ring-white/20 shadow-md"
-            style={{ backgroundColor: "#0D9488E6" }}
-          >
-            <Hotel className="h-2.5 w-2.5" /> Stay
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-white bg-white/10 backdrop-blur-md ring-1 ring-white/20">
+            <Hotel className="h-2.5 w-2.5" /> Your Stay
           </span>
         </div>
-      </div>
 
-      {/* Persistent Swap button — top right, sibling of hero so the popover
-          escapes the hero's overflow-hidden clipping. */}
-      <div className="absolute top-3 right-3 z-20">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            setSwapOpen((o) => !o);
-          }}
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-lg bg-card/90 backdrop-blur-sm text-[#0D9488] border border-[#0D9488]/40 hover:bg-[#0D9488]/10 flex items-center gap-1"
-        >
-          <ArrowLeftRight className="h-3.5 w-3.5" /> Swap
-        </button>
-
-        {swapOpen && (
-          <div
-            ref={swapPopoverRef}
-            className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-[11px] font-medium text-foreground mb-1">Swap this stay</p>
-            <p className="text-[10px] text-muted-foreground mb-2.5 leading-relaxed">
-              In-app swap is coming soon. For now, browse alternative stays for your dates on Booking.com.
-            </p>
-            <a
-              href={browseAlternativesUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setSwapOpen(false)}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors"
-            >
-              Browse alternatives <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
-        )}
-      </div>
-
-      {/* Summary row */}
-      <div className="px-4 py-3.5 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
-        <h4 className="text-[15px] font-semibold text-foreground leading-snug tracking-tight">{name}</h4>
-        {neighborhood && (
-          <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
-            <MapPin className="h-3 w-3" />
-            <span className="truncate">{neighborhood}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          {rating != null && (
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              <span className="text-[11px] text-foreground font-mono font-medium">
-                {rating.toFixed(1)}
-              </span>
-              {reviewCount ? (
-                <span className="text-[11px] text-muted-foreground font-mono">
-                  ({reviewCount.toLocaleString()})
-                </span>
-              ) : null}
+        {/* Bottom: name + meta over the image */}
+        <div className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-12 pointer-events-none">
+          <h4 className="text-[22px] sm:text-[26px] font-semibold text-white leading-tight tracking-tight drop-shadow-md">
+            {name}
+          </h4>
+          {neighborhood && (
+            <div className="flex items-center gap-1 mt-1.5 text-[11px] text-white/80">
+              <MapPin className="h-3 w-3" />
+              <span className="truncate font-mono uppercase tracking-wider">{neighborhood}</span>
             </div>
           )}
-          {priceLabel && rating != null && (
-            <span className="text-muted-foreground/30">·</span>
-          )}
-          {priceLabel && (
-            <span className="text-[11px] text-muted-foreground font-mono">
-              {priceLabel}
-            </span>
-          )}
+          <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+            {rating != null && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 backdrop-blur-md ring-1 ring-white/15">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                <span className="text-[11px] text-white font-mono font-semibold tabular-nums">
+                  {rating.toFixed(1)}
+                </span>
+                {reviewCount ? (
+                  <span className="text-[10px] text-white/60 font-mono tabular-nums">
+                    ({reviewCount.toLocaleString()})
+                  </span>
+                ) : null}
+              </div>
+            )}
+            {priceLabel && (
+              <span className="text-[11px] text-[#5EEAD4] font-mono font-medium uppercase tracking-wider">
+                {priceLabel}
+              </span>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Booking CTA — bottom-right anchor, consistent with activity cards */}
-        {hasBooking && bookingUrlWithDates && (
-          <div className="mt-3 pt-3 border-t border-border flex justify-end">
+      {/* Action row beneath hero */}
+      {((hasBooking && bookingUrlWithDates) || googleMapsUrl) && (
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          {googleMapsUrl ? (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono uppercase tracking-wider transition-colors"
+            >
+              <MapPin className="h-3 w-3" /> View on Maps
+            </a>
+          ) : <span />}
+          {hasBooking && bookingUrlWithDates && (
             <a
               href={bookingUrlWithDates}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
+              className="inline-flex items-center gap-1 px-3.5 py-2 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
             >
               Book on {partnerLabel} <ExternalLink className="h-3 w-3" />
             </a>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Expanded details */}
       {expanded && (
