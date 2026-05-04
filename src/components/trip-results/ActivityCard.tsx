@@ -123,13 +123,13 @@ export function ActivityCard({
   return (
     <div
       data-activity-id={`${day.date}-${index}`}
-      className="group mx-4 mb-3 rounded-2xl bg-card border border-border transition-all duration-300 animate-fade-in shadow-sm hover:-translate-y-0.5 hover:shadow-lg relative overflow-hidden"
+      className="group mx-4 mb-3 rounded-2xl bg-card border border-border transition-all duration-300 animate-fade-in shadow-sm hover:-translate-y-0.5 hover:shadow-lg relative overflow-visible"
       style={{ animationDelay: `${animDelay}ms` }}
     >
       <div className="flex flex-col sm:flex-row sm:items-stretch">
         {/* Hero image — left column on desktop, fixed height to prevent tall images from stretching the card */}
         <div
-          className="relative shrink-0 w-full sm:w-[38%] sm:max-w-[260px] h-[160px] sm:h-[220px] overflow-hidden bg-muted cursor-pointer"
+          className="relative shrink-0 w-full sm:w-[38%] sm:max-w-[260px] h-[160px] sm:h-[220px] overflow-hidden rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none bg-muted cursor-pointer"
           onClick={() => setExpanded(true)}
         >
           {isLoading ? (
@@ -205,7 +205,7 @@ export function ActivityCard({
               </button>
 
               {swapMode === "menu" && (
-                <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-xl shadow-xl p-1.5 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-xl shadow-xl p-1.5 z-[60] animate-fade-in" onClick={(e) => e.stopPropagation()}>
                   <button onClick={(e) => { e.stopPropagation(); onRequestChange(); setSwapMode(null); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs hover:bg-accent transition-colors">
                     <Sparkles className="h-3.5 w-3.5 text-[#0D9488]" />
                     <div>
@@ -231,7 +231,7 @@ export function ActivityCard({
               )}
 
               {swapMode === "describe" && (
-                <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-[60] animate-fade-in" onClick={(e) => e.stopPropagation()}>
                   <p className="text-[11px] font-medium text-foreground mb-2">What are you looking for instead?</p>
                   <input
                     type="text"
@@ -253,7 +253,7 @@ export function ActivityCard({
               )}
 
               {swapMode === "custom" && (
-                <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-xl shadow-xl p-3 z-[60] animate-fade-in" onClick={(e) => e.stopPropagation()}>
                   <p className="text-[11px] font-medium text-foreground mb-2">{swapLoading ? "Looking up place..." : "Enter the place name"}</p>
                   <input
                     type="text"
