@@ -323,39 +323,48 @@ export function ActivityCard({
               })()}
             </div>
 
-            {(() => {
-              const gygEligible = isGetYourGuideEligible(activity);
-              const partner = (activity as any).booking_partner as string | null | undefined;
-              const showRealBooking = !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
-              if (gygEligible) {
-                return (
-                  <a
-                    href={buildGetYourGuideUrl(activity.title, destinationName)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
-                  >
-                    Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
-                  </a>
-                );
-              }
-              if (showRealBooking) {
-                return (
-                  <a
-                    href={activity.booking_url!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
-                  >
-                    Book <ExternalLink className="h-2.5 w-2.5" />
-                  </a>
-                );
-              }
-              return null;
-            })()}
-          </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-foreground bg-muted hover:bg-accent border border-border transition-colors whitespace-nowrap"
+                aria-label="View details"
+              >
+                <Info className="h-3 w-3" /> Details
+              </button>
+
+              {(() => {
+                const gygEligible = isGetYourGuideEligible(activity);
+                const partner = (activity as any).booking_partner as string | null | undefined;
+                const showRealBooking = !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
+                if (gygEligible) {
+                  return (
+                    <a
+                      href={buildGetYourGuideUrl(activity.title, destinationName)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
+                    >
+                      Book on GetYourGuide <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  );
+                }
+                if (showRealBooking) {
+                  return (
+                    <a
+                      href={activity.booking_url!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
+                    >
+                      Book <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  );
+                }
+                return null;
+              })()}
+            </div>
         </div>
       </div>
 
