@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, ArrowLeft, Search, X } from "lucide-react";
+import { ArrowLeft, Search, X } from "lucide-react";
 import { useTripTemplates, type TripTemplate } from "@/hooks/useTripTemplates";
+import { TemplateCard } from "@/components/templates/TemplateCard";
 
 function matchesQuery(t: TripTemplate, q: string) {
   if (!q) return true;
@@ -114,82 +115,9 @@ export default function Templates() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-            {filtered.map((c) => {
-              const visibleCount = 2;
-              const visibleChips = c.chips.slice(0, visibleCount);
-              const extraChips = c.chips.length - visibleChips.length;
-              // On mobile we only have ~165px of card width — show 1 chip + overflow.
-              // On sm+ we have room for 2 + overflow.
-              const mobileVisible = c.chips.slice(0, 1);
-              const mobileExtra = c.chips.length - mobileVisible.length;
-              return (
-                <Link
-                  key={c.slug}
-                  to={`/templates/${c.slug}`}
-                  className="group/card relative block aspect-[4/5] sm:aspect-[3/4] overflow-hidden rounded-[1.25rem] bg-muted shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_28px_-6px_rgba(0,0,0,0.18),0_16px_40px_-10px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2"
-                >
-                  {/* Inner wrapper isolates the transform from the rounded clip,
-                      eliminating the brief "sharp edge" flash on hover */}
-                  <div className="absolute inset-0 overflow-hidden rounded-[inherit] [transform:translateZ(0)] [backface-visibility:hidden]">
-                    <img
-                      src={c.cover_image_url}
-                      alt={c.destination}
-                      className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover/card:scale-[1.06] transform-gpu [backface-visibility:hidden]"
-                      loading="lazy"
-                    />
-                    {/* Strong bottom-up gradient for legibility on any image */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                    {/* Subtle top vignette to balance + frame */}
-                    <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/20 to-transparent" />
-                  </div>
-
-                  {/* Junto AI badge top-right */}
-                  <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-foreground shadow-md backdrop-blur sm:text-[11px]">
-                    <Sparkles className="h-3 w-3 text-primary" />
-                    Junto AI
-                  </div>
-
-                  {/* Title + chips bottom */}
-                  <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                    <h4 className="text-[17px] font-bold leading-tight text-white drop-shadow-md sm:text-xl">
-                      {c.destination}
-                      <span className="ml-1.5 font-semibold text-white/85">· {c.duration_days}d</span>
-                    </h4>
-                    {/* Single row of chips: 1 visible on mobile, 2 on sm+ — never wraps */}
-                    <div className="mt-2 flex items-center gap-1.5 overflow-hidden sm:hidden">
-                      {mobileVisible.map((chip) => (
-                        <span
-                          key={chip}
-                          className="inline-flex shrink-0 items-center rounded-full bg-white/90 px-2 py-0.5 text-[10.5px] font-medium text-foreground shadow-sm backdrop-blur"
-                        >
-                          {chip}
-                        </span>
-                      ))}
-                      {mobileExtra > 0 && (
-                        <span className="inline-flex shrink-0 items-center rounded-full bg-white/30 px-2 py-0.5 text-[10.5px] font-medium text-white shadow-sm backdrop-blur">
-                          +{mobileExtra}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 hidden items-center gap-1.5 overflow-hidden sm:flex">
-                      {visibleChips.map((chip) => (
-                        <span
-                          key={chip}
-                          className="inline-flex shrink-0 items-center rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm backdrop-blur"
-                        >
-                          {chip}
-                        </span>
-                      ))}
-                      {extraChips > 0 && (
-                        <span className="inline-flex shrink-0 items-center rounded-full bg-white/30 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm backdrop-blur">
-                          +{extraChips}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+            {filtered.map((c) => (
+              <TemplateCard key={c.slug} template={c} variant="grid" />
+            ))}
           </div>
         )}
       </div>
