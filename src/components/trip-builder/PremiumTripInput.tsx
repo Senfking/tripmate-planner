@@ -332,7 +332,7 @@ export function PremiumTripInput({
                   key={key}
                   onClick={() => setTravelParty(selected ? null : key)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.96]",
+                    "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:opacity-80",
                     "border",
                     selected
                       ? "text-primary-foreground border-transparent shadow-md"
@@ -379,7 +379,7 @@ export function PremiumTripInput({
                   key={opt.key}
                   onClick={() => setBudgetLevel(selected ? null : opt.key)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.96]",
+                    "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:opacity-80",
                     "border",
                     selected
                       ? "text-primary-foreground border-transparent shadow-md"
@@ -405,7 +405,7 @@ export function PremiumTripInput({
                 onClick={() => setPaceInfoOpen((v) => !v)}
                 aria-label="What does each pace mean?"
                 aria-expanded={paceInfoOpen}
-                className="inline-flex items-center justify-center h-5 w-5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors active:scale-95"
+                className="inline-flex items-center justify-center h-5 w-5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors active:opacity-80"
               >
                 <Info className="h-3.5 w-3.5" />
               </button>
@@ -449,7 +449,7 @@ export function PremiumTripInput({
                   onClick={() => setPace(selected ? null : opt.key)}
                   aria-pressed={selected}
                   className={cn(
-                    "flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.96]",
+                    "flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:opacity-80",
                     "border",
                     selected
                       ? "text-primary-foreground border-transparent shadow-md"
@@ -485,7 +485,7 @@ export function PremiumTripInput({
                   key={label}
                   onClick={() => toggleVibe(label)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.96]",
+                    "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all active:opacity-80",
                     "border",
                     selected
                       ? "text-primary-foreground border-transparent shadow-md"

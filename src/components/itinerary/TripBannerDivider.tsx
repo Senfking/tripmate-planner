@@ -42,7 +42,7 @@ export function TripStartBanner({
   return (
     <Link
       to={`/app/trips/${tripId}`}
-      className="block mx-0 my-3 rounded-xl overflow-hidden active:scale-[0.98] transition-transform"
+      className="block mx-0 my-3 rounded-xl overflow-hidden active:opacity-80 transition-transform"
       style={{ height: 80 }}
     >
       <div className="relative w-full h-full">
@@ -87,7 +87,7 @@ export function TripEndBanner({
   return (
     <Link
       to={`/app/trips/${tripId}`}
-      className="block mx-0 my-3 rounded-xl overflow-hidden active:scale-[0.98] transition-transform"
+      className="block mx-0 my-3 rounded-xl overflow-hidden active:opacity-80 transition-transform"
       style={{ height: 48 }}
     >
       <div className="relative w-full h-full">

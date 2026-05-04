@@ -236,7 +236,7 @@ function CustomFilterInput({ filterKey, onAdd }: { filterKey: string; onAdd: (ke
     return (
       <button
         onClick={() => setOpen(true)}
-        className="px-3 py-2 rounded-full text-xs font-medium border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-[#0D9488]/50 hover:text-[#0D9488] transition-all active:scale-95 flex items-center gap-1"
+        className="px-3 py-2 rounded-full text-xs font-medium border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-[#0D9488]/50 hover:text-[#0D9488] transition-all active:opacity-80 flex items-center gap-1"
       >
         <Plus className="h-3 w-3" /> Custom
       </button>
@@ -1212,7 +1212,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                     <button
                       key={cat.id}
                       onClick={() => handleCategorySelect(cat)}
-                      className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02] text-left"
+                      className="relative flex items-center gap-2.5 p-3 rounded-xl overflow-hidden transition-transform active:opacity-80 hover:scale-[1.02] text-left"
                       style={{ minHeight: "62px" }}
                     >
                       {/* Photo background */}
@@ -1249,7 +1249,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                 {/* Surprise Me — full width */}
                 <button
                   onClick={handleSurpriseMe}
-                  className="col-span-2 relative flex items-center justify-center gap-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97] hover:scale-[1.02]"
+                  className="col-span-2 relative flex items-center justify-center gap-3 rounded-xl overflow-hidden transition-transform active:opacity-80 hover:scale-[1.02]"
                   style={{ minHeight: "62px" }}
                 >
                   <img
@@ -1398,7 +1398,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         <button
                           key={opt}
                           onClick={() => toggleFilter(section.key, opt)}
-                          className={`px-3.5 py-2 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                          className={`px-3.5 py-2 rounded-full text-xs font-medium transition-all active:opacity-80 ${
                             isSelected
                               ? "bg-[#0D9488] text-white shadow-md border border-[#0D9488]"
                               : "bg-white dark:bg-card border border-gray-200 dark:border-border text-gray-700 dark:text-foreground hover:border-[#0D9488]/40"
@@ -1414,7 +1414,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
                         <button
                           key={v}
                           onClick={() => toggleFilter(section.key, v)}
-                          className="px-3.5 py-2 rounded-full text-xs font-medium bg-[#0D9488] text-white shadow-md border border-[#0D9488] transition-all active:scale-95"
+                          className="px-3.5 py-2 rounded-full text-xs font-medium bg-[#0D9488] text-white shadow-md border border-[#0D9488] transition-all active:opacity-80"
                         >
                           {v}
                         </button>
@@ -1436,7 +1436,7 @@ export function ConciergePanel({ tripId, open, onClose, tripResult, memberCount,
               <div className="border-t border-border pt-4">
                 <button
                   onClick={handleFeelingLucky}
-                  className="w-full relative flex items-center justify-center gap-2.5 py-3 rounded-xl overflow-hidden transition-transform active:scale-[0.97]"
+                  className="w-full relative flex items-center justify-center gap-2.5 py-3 rounded-xl overflow-hidden transition-transform active:opacity-80"
                 >
                   <div
                     className="absolute inset-0"

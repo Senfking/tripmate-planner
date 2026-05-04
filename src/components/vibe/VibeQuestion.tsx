@@ -58,7 +58,7 @@ export function VibeQuestion({
                 multiSelect ? "min-h-[48px] justify-center text-center items-center" : "min-h-[60px] text-left flex-col items-start justify-center",
                 isSelected
                   ? "text-white border border-transparent shadow-md"
-                  : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#0D9488]/40 hover:shadow-sm active:scale-[0.97]"
+                  : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#0D9488]/40 hover:shadow-sm active:opacity-80"
               )}
               style={isSelected ? { background: "linear-gradient(135deg, #0D9488, #0369a1)" } : undefined}
             >

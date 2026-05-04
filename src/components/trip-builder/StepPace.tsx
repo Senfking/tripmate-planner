@@ -92,7 +92,7 @@ export function StepPace({ value, source, onChange }: Props) {
               onClick={() => onChange(opt.key)}
               aria-pressed={selected}
               className={cn(
-                "w-full flex items-start gap-4 p-4 sm:p-5 rounded-2xl border text-left transition-all active:scale-[0.99]",
+                "w-full flex items-start gap-4 p-4 sm:p-5 rounded-2xl border text-left transition-all active:opacity-80",
                 selected
                   ? "border-transparent text-primary-foreground shadow-lg"
                   : "bg-card border-border hover:border-primary/40 hover:shadow-sm",

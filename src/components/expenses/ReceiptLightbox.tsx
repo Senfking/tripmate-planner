@@ -115,7 +115,7 @@ export function ReceiptLightbox({ open, onOpenChange, imageUrl }: Props) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-11 w-11 rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95"
+            className="h-11 w-11 rounded-full bg-white/15 text-white hover:bg-white/25 active:opacity-80"
             onClick={() => setScale((s) => clampScale(s * 1.5))}
           >
             <ZoomIn className="h-5 w-5" />
@@ -123,7 +123,7 @@ export function ReceiptLightbox({ open, onOpenChange, imageUrl }: Props) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-11 w-11 rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95"
+            className="h-11 w-11 rounded-full bg-white/15 text-white hover:bg-white/25 active:opacity-80"
             onClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }); }}
           >
             <RotateCcw className="h-5 w-5" />
@@ -132,7 +132,7 @@ export function ReceiptLightbox({ open, onOpenChange, imageUrl }: Props) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-11 w-11 rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95"
+          className="h-11 w-11 rounded-full bg-white/15 text-white hover:bg-white/25 active:opacity-80"
           onClick={() => onOpenChange(false)}
         >
           <X className="h-5 w-5" />

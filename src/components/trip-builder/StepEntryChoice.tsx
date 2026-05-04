@@ -92,7 +92,7 @@ export function StepEntryChoice({ onStepByStep, onFreeText }: Props) {
               "w-full max-w-lg flex items-center gap-3 rounded-full",
               "bg-card border border-border shadow-lg hover:shadow-xl",
               "px-6 py-4 transition-all duration-300 hover:border-primary/30",
-              "active:scale-[0.99] group cursor-text"
+              "active:opacity-80 group cursor-text"
             )}
           >
             <Sparkles className="h-5 w-5 text-primary shrink-0" />
@@ -167,7 +167,7 @@ export function StepEntryChoice({ onStepByStep, onFreeText }: Props) {
                 className={cn(
                   "h-10 px-5 rounded-full flex items-center gap-2 text-sm font-semibold transition-all",
                   canSubmit
-                    ? "text-primary-foreground shadow-md hover:shadow-lg active:scale-[0.97]"
+                    ? "text-primary-foreground shadow-md hover:shadow-lg active:opacity-80"
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 )}
                 style={canSubmit ? { background: "var(--gradient-primary)" } : undefined}

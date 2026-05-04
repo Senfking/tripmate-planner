@@ -593,7 +593,7 @@ export function ExpenseFormModal({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-white border border-[#E5E7EB] py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white border border-[#E5E7EB] py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:opacity-80"
                 >
                   <Camera className="h-4 w-4 text-[#0D9488]" />
                   Take photo
@@ -601,7 +601,7 @@ export function ExpenseFormModal({
                 <button
                   type="button"
                   onClick={() => galleryInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-white border border-[#E5E7EB] py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:scale-[0.97]"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white border border-[#E5E7EB] py-2.5 text-[13px] font-medium text-foreground hover:border-[#0D9488]/40 transition-colors active:opacity-80"
                 >
                   <Upload className="h-4 w-4 text-[#0D9488]" />
                   Upload file

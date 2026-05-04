@@ -42,7 +42,7 @@ export function ArrivalsCard({ tripId }: Props) {
   return (
     <button
       onClick={() => navigate(`/app/trips/${tripId}/bookings`)}
-      className="w-full text-left rounded-2xl border bg-card p-4 space-y-2 transition-all active:scale-[0.98] hover:shadow-md"
+      className="w-full text-left rounded-2xl border bg-card p-4 space-y-2 transition-all active:opacity-80 hover:shadow-md"
     >
       <div className="flex items-center gap-2">
         <Plane className="h-4 w-4 text-[#0D9488]" />

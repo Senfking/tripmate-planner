@@ -139,7 +139,7 @@ export function TripCreationSurface({
             type="button"
             onClick={onStepByStep}
             aria-pressed={stepByStepExpanded ? true : undefined}
-            className={`group inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border bg-white px-4 py-3 text-[13px] font-medium transition-all active:scale-[0.98] ${
+            className={`group inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border bg-white px-4 py-3 text-[13px] font-medium transition-all active:opacity-80 ${
               stepByStepExpanded
                 ? "border-primary text-primary shadow-sm"
                 : "border-gray-200 text-gray-700 hover:border-primary/40 hover:text-foreground"
@@ -151,7 +151,7 @@ export function TripCreationSurface({
           <button
             type="button"
             onClick={onSkipItinerary}
-            className="group inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-gray-200 bg-white px-4 py-3 text-[13px] font-medium text-gray-700 transition-all hover:border-primary/40 hover:text-foreground active:scale-[0.98]"
+            className="group inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-gray-200 bg-white px-4 py-3 text-[13px] font-medium text-gray-700 transition-all hover:border-primary/40 hover:text-foreground active:opacity-80"
           >
             <FileText className="h-4 w-4" />
             Skip itinerary

@@ -88,7 +88,7 @@ export function JuntoAIChat({ onSubmit, onBack }: Props) {
                 }}
                 className={cn(
                   "text-left text-sm px-3 py-2 rounded-xl border border-border bg-card/60",
-                  "hover:border-primary/40 hover:bg-card transition-all active:scale-[0.98]",
+                  "hover:border-primary/40 hover:bg-card transition-all active:opacity-80",
                   "text-muted-foreground hover:text-foreground"
                 )}
               >

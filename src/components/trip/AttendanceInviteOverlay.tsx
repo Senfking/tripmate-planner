@@ -358,7 +358,7 @@ export function AttendanceInviteOverlay({
                   <button
                     onClick={() => handleRespond("going")}
                     disabled={isPending}
-                    className="w-full rounded-2xl text-[16px] font-bold text-white transition-all active:scale-[0.97]"
+                    className="w-full rounded-2xl text-[16px] font-bold text-white transition-all active:opacity-80"
                     style={{ background: "linear-gradient(135deg, #0D9488, #0369a1)", height: 52 }}
                   >
                     I'm going!
@@ -366,7 +366,7 @@ export function AttendanceInviteOverlay({
                   <button
                     onClick={() => handleRespond("maybe")}
                     disabled={isPending}
-                    className="w-full rounded-2xl text-[15px] font-semibold transition-colors active:scale-[0.97]"
+                    className="w-full rounded-2xl text-[15px] font-semibold transition-colors active:opacity-80"
                     style={{ height: 48, border: "2px solid #0D9488", color: "#0D9488", background: "transparent" }}
                   >
                     🤔  Maybe
@@ -374,7 +374,7 @@ export function AttendanceInviteOverlay({
                   <button
                     onClick={() => handleRespond("not_going")}
                     disabled={isPending}
-                    className="w-full rounded-xl text-[14px] text-muted-foreground border border-muted transition-colors active:scale-[0.97]"
+                    className="w-full rounded-xl text-[14px] text-muted-foreground border border-muted transition-colors active:opacity-80"
                     style={{ height: 44 }}
                   >
                     ✗  Can't make it

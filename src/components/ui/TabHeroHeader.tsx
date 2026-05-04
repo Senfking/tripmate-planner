@@ -107,7 +107,7 @@ export function TabHeroHeader({ title, subtitle, pills, children }: TabHeroHeade
               const inner = (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/90 cursor-pointer active:scale-95 transition-transform"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/90 cursor-pointer active:opacity-80 transition-transform"
                   style={{
                     background: "rgba(255,255,255,0.12)",
                     backdropFilter: "blur(8px)",

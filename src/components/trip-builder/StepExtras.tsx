@@ -30,7 +30,7 @@ export function StepExtras({ dietary, notes, prefilledFromFreeText, onToggleDiet
                 key={d}
                 onClick={() => onToggleDietary(d)}
                 className={cn(
-                  "px-3.5 py-2 rounded-full border text-sm font-medium transition-all active:scale-[0.95]",
+                  "px-3.5 py-2 rounded-full border text-sm font-medium transition-all active:opacity-80",
                   isOn
                     ? "text-primary-foreground border-transparent shadow-md"
                     : "bg-card text-foreground border-border hover:border-primary/40"

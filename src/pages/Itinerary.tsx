@@ -224,7 +224,7 @@ const Itinerary = () => {
                     const el = document.getElementById(`day-${date}`);
                     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
-                  className="flex flex-col items-center shrink-0 cursor-pointer active:scale-95 transition-transform"
+                  className="flex flex-col items-center shrink-0 cursor-pointer active:opacity-80 transition-transform"
                   style={{
                     minWidth: 44,
                     padding: "5px 4px",
