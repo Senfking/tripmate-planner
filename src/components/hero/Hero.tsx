@@ -169,11 +169,11 @@ export function Hero({
           rows={2}
           className={[
             "block w-full min-w-0 flex-1 resize-none bg-transparent",
-            "px-3 sm:px-4 py-2 sm:py-2",
-            "text-[13px] sm:text-[14.5px] text-gray-900 placeholder:text-gray-500",
+            "px-0 sm:px-4 py-2 sm:py-2",
+            "text-[15px] sm:text-[14.5px] text-gray-500 placeholder:text-gray-500",
             "outline-none border-0",
             "leading-[1.35] sm:leading-[1.4] overflow-hidden",
-            "min-h-[52px] sm:min-h-[56px] [align-content:center]",
+            "h-[44px] sm:min-h-[56px]",
             "disabled:opacity-60 text-left",
           ].join(" ")}
         />
@@ -185,7 +185,7 @@ export function Hero({
           className={[
             "inline-flex items-center justify-center gap-2 shrink-0",
             "rounded-full bg-primary text-white font-medium",
-            "h-[44px] w-[44px] p-0 sm:h-[48px] sm:w-auto sm:px-6 text-sm whitespace-nowrap",
+            "h-[56px] w-[56px] p-0 sm:h-[48px] sm:w-auto sm:px-6 text-sm whitespace-nowrap",
             "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
             "transition-all hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
             "active:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed",
