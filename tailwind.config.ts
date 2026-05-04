@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['IBM Plex Sans', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
       spacing: {
         "safe-t": "env(safe-area-inset-top, 0px)",
         "safe-b": "env(safe-area-inset-bottom, 0px)",

@@ -106,21 +106,21 @@ export function ExpenseCard({
               {!isSettlement && isPayer && youLentAmount > 0 ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#0D9488" }}>you lent</p>
-                  <p className="text-[17px] font-bold text-foreground">{formatCurrency(youLentAmount, expense.currency)}</p>
+                  <p className="text-[17px] font-bold text-foreground tabular-nums">{formatCurrency(youLentAmount, expense.currency)}</p>
                   {youLentAmount !== expense.amount && (
-                    <p className="text-[11px] text-muted-foreground">total {formatCurrency(expense.amount, expense.currency)}</p>
+                    <p className="text-[11px] text-muted-foreground">total <span className="tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span></p>
                   )}
                 </>
               ) : !isSettlement && !isPayer && mySplit ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#EF4444" }}>you owe</p>
-                  <p className="text-[17px] font-bold text-foreground">{formatCurrency(mySplit.share_amount, expense.currency)}</p>
+                  <p className="text-[17px] font-bold text-foreground tabular-nums">{formatCurrency(mySplit.share_amount, expense.currency)}</p>
                   {mySplit.share_amount !== expense.amount && (
-                    <p className="text-[11px] text-muted-foreground">total {formatCurrency(expense.amount, expense.currency)}</p>
+                    <p className="text-[11px] text-muted-foreground">total <span className="tabular-nums">{formatCurrency(expense.amount, expense.currency)}</span></p>
                   )}
                 </>
               ) : (
-                <p className="font-bold text-[15px]">{formatCurrency(expense.amount, expense.currency)}</p>
+                <p className="font-bold text-[15px] tabular-nums">{formatCurrency(expense.amount, expense.currency)}</p>
               )}
             </div>
           </div>

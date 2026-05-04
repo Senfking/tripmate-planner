@@ -43,11 +43,11 @@ export function BalancesSummary({ balances, currency, expenses, splits, members,
                   {b.displayName}{isMe ? " (you)" : ""}
                 </span>
                 {b.balance > 0.005 ? (
-                  <span className="text-[15px] font-semibold" style={{ color: "#0D9488" }}>
+                  <span className="text-[15px] font-semibold tabular-nums" style={{ color: "#0D9488" }}>
                     +{formatCurrency(b.balance, currency)}
                   </span>
                 ) : b.balance < -0.005 ? (
-                  <span className="text-[15px] font-semibold" style={{ color: "#EF4444" }}>
+                  <span className="text-[15px] font-semibold tabular-nums" style={{ color: "#EF4444" }}>
                     −{formatCurrency(Math.abs(b.balance), currency)}
                   </span>
                 ) : (

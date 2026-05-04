@@ -478,7 +478,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           {members.length <= 1 ? (
             <div className="relative flex flex-col items-center gap-1.5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Total spent</p>
-              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1">
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1 tabular-nums">
                 {totalExpenses != null ? formatCurrency(totalExpenses, settlementCurrency) : "€0.00"}
               </p>
               <button
@@ -501,7 +501,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           ) : heroData.type === "owe" ? (
             <div className="relative">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">You owe</p>
-              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1.5">
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1.5 tabular-nums">
                 {formatCurrency(heroData.amount, settlementCurrency)}
               </p>
               <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-orange-400/15 px-2.5 py-1 text-[11px] font-semibold text-orange-200">
@@ -522,7 +522,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
           ) : (
             <div className="relative">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">You're owed</p>
-              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1.5">
+              <p className="text-[34px] font-extrabold text-white tracking-tight leading-none mt-1.5 tabular-nums">
                 {formatCurrency(heroData.amount, settlementCurrency)}
               </p>
               <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">
@@ -573,7 +573,7 @@ export function ExpensesTab({ tripId, myRole, newItemIds }: Props) {
                 <span className="text-[12px] font-medium text-muted-foreground">Balances</span>
               </div>
               {!balancesOpen && myBalance && (
-                <span className="text-[12px] font-medium">
+                <span className="text-[12px] font-medium tabular-nums">
                   {myBalance.balance > 0.005
                     ? <span style={{ color: "#0D9488" }}>+{formatCurrency(myBalance.balance, settlementCurrency)}</span>
                     : myBalance.balance < -0.005

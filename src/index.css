@@ -158,7 +158,7 @@ html.dark, html.dark body, html.dark #root {
   }
 
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif;
   }
 
   body {
@@ -170,6 +170,12 @@ html.dark, html.dark body, html.dark #root {
   h1, h2, h3, h4, h5, h6 {
     font-weight: 500;
     letter-spacing: -0.3px;
+  }
+
+  /* Tabular/numeric data uses IBM Plex Mono for precise alignment */
+  .tabular-nums {
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-feature-settings: "tnum" 1;
   }
 }
 
