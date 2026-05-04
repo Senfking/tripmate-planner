@@ -2978,6 +2978,88 @@ const DAY_MAX_TOKENS: Record<Intent["pace"], number> = {
   active: 4_500,
 };
 const METADATA_MAX_TOKENS = 1_500;
+const COPY_MAX_TOKENS = 600;
+
+// Trip title + summary regenerator. Runs AFTER the per-day rankers complete,
+// so it sees the ACTUAL venues in the itinerary (not just the candidate pool
+// the metadata writer sees in parallel). Eliminates the confabulation bug
+// where summaries name venues like "WONDERS CLUB" that never made it into
+// any day's pick. Source-of-truth fix per CLAUDE.md AI Features rule:
+// "Never trust LLM to generate factual data like venue names."
+const RANKER_COPY_SYSTEM_PROMPT = `You are an editorial trip curator for Junto. You write the FINAL trip title and summary using only the actual venues that appear in the user's itinerary.
+
+ABSOLUTE RULES — violating these makes your output a lie:
+1. ALLOWLIST: You will receive a venue allowlist. The trip_summary may name venues ONLY from that list. Spelling MUST match the allowlist verbatim — do not paraphrase, abbreviate, translate, or "tidy up" venue names.
+2. NEVER invent a venue name. NEVER name a bar, restaurant, museum, hotel, neighborhood-as-brand, or any proper-noun venue that is not in the allowlist. If you cannot remember whether something is on the list, do not name it.
+3. If you want to convey atmosphere without naming a specific venue, use generic terms ("cocktail bars in the old town", "hilltop viewpoints", "back-street trattorias"). Generic phrasing is preferred over a fabricated name.
+4. trip_title is 4-7 words, evocative, grounded in the trip's actual character. May reference a neighborhood, a ritual, a season, or an anchor activity. Naming a specific venue in the title is allowed ONLY if that venue appears in the allowlist AND is genuinely the trip's anchor (rare — usually skip).
+5. trip_summary is 2-3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. Concrete over generic. No adjective spam.
+6. Honor intent.pace, intent.budget_tier, and intent.must_avoids in the narrative.
+7. NEVER quote USD when the trip currency is something else.
+8. Do NOT include emojis, decorative symbols, or pictographs.
+9. The downstream validation layer will scan your output for any proper-noun venue not in the allowlist. Mismatches are logged as confabulation. Do not gamble.
+
+OUTPUT: call the emit_trip_copy tool exactly once. No prose outside the tool call.`;
+
+const RANKER_COPY_TOOL: ClaudeTool = {
+  name: "emit_trip_copy",
+  description: "Emit grounded trip title + summary. Call exactly once.",
+  input_schema: {
+    type: "object",
+    required: ["trip_title", "trip_summary"],
+    properties: {
+      trip_title: { type: "string", description: "4-7 words, specific, grounded." },
+      trip_summary: { type: "string", description: "2-3 sentences. Only names venues from the allowlist." },
+    },
+    additionalProperties: false,
+  },
+};
+
+interface RawTripCopy {
+  trip_title: string;
+  trip_summary: string;
+}
+
+// Builds the user message for rankTripCopy. Surfaces the allowlist as a
+// machine-readable JSON list AND a top-of-prompt cognitive emphasis block,
+// mirroring the CLAIMED PLACES dual-surface pattern in buildDayInstruction —
+// long lists buried in nested JSON get under-attended by the model.
+function buildCopyInstruction(
+  intent: Intent,
+  destination: string,
+  venueAllowlist: string[],
+  accommodationName: string | null,
+  currency: string,
+  numDays: number,
+): string {
+  const allowList = accommodationName
+    ? [...venueAllowlist, accommodationName]
+    : [...venueAllowlist];
+  const dedupAllow = Array.from(new Set(allowList.filter((s) => s && s.trim().length > 0)));
+
+  const allowlistBlock = dedupAllow.length > 0
+    ? `VENUE ALLOWLIST — HARD CONSTRAINT — these are the ONLY proper-noun venues you may name in trip_summary. Spell each one EXACTLY as written:\n${dedupAllow.map((n) => `  - ${n}`).join("\n")}\n\n`
+    : `VENUE ALLOWLIST — HARD CONSTRAINT — the itinerary contains no nameable venues. Write a generic but specific summary using neighborhoods/cuisines/activity types only.\n\n`;
+
+  const payload = {
+    trip_shape: {
+      destination,
+      num_days: numDays,
+      pace: intent.pace,
+      budget_tier: intent.budget_tier,
+      currency,
+    },
+    intent: {
+      vibes: intent.vibes,
+      must_haves: intent.must_haves,
+      must_avoids: intent.must_avoids,
+      dietary: intent.dietary,
+      group_composition: intent.group_composition,
+    },
+    venue_allowlist: dedupAllow,
+  };
+  return `Generate the FINAL trip_title and trip_summary. Call emit_trip_copy exactly once.\n\n${allowlistBlock}${JSON.stringify(payload)}`;
+}
 
 // ---------------------------------------------------------------------------
 // User-message builder. All dynamic content goes HERE, not in the system
@@ -3488,6 +3570,34 @@ async function rankDay(
   return result;
 }
 
+// Grounded title + summary regenerator. Runs AFTER day rankings complete so
+// it can be told the actual chosen venues as an allowlist. The output
+// overwrites the trip_title + trip_summary the parallel rankTripMetadata
+// call produced from the (broader, often confabulation-prone) candidate pool.
+async function rankTripCopy(
+  anthropicKey: string,
+  intent: Intent,
+  destination: string,
+  venueAllowlist: string[],
+  accommodationName: string | null,
+  currency: string,
+  numDays: number,
+  pipelineStartedAt: number,
+): Promise<{ data: RawTripCopy | null; usage: ClaudeUsage }> {
+  return await callClaudeHaiku<RawTripCopy>(
+    anthropicKey,
+    [{ type: "text", text: RANKER_COPY_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    [
+      { type: "text", text: buildCopyInstruction(intent, destination, venueAllowlist, accommodationName, currency, numDays) },
+    ],
+    RANKER_COPY_TOOL,
+    COPY_MAX_TOKENS,
+    pipelineStartedAt,
+    "rankTripCopy",
+    0,
+  );
+}
+
 // Trip-level fields + accommodation. Runs in parallel with the per-day calls.
 async function rankTripMetadata(
   anthropicKey: string,
@@ -3758,6 +3868,33 @@ async function rankInParallel(
     `fallback_days=${fallbackDays} thin_days=${thinDays}`,
   );
 
+  // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
+  // The parallel rankTripMetadata call writes title/summary from the broader
+  // candidate pool — it can name venues that didn't survive the day rankers'
+  // selection. Re-run a narrow Claude call now that we know which venues are
+  // ACTUALLY in the itinerary, with that list as a strict allowlist. On
+  // failure, fall back to the parallel call's output (current behavior).
+  const venueAllowlist = collectVenueAllowlist(ranked_days);
+  const accommodationName =
+    meta?.accommodation?.title?.trim() ||
+    (placeById.get(meta?.accommodation?.place_id ?? accommodationPlaceId ?? "")?.displayName ?? null);
+  const groundedCopy = await rankTripCopy(
+    anthropicKey, intent, intent.destination, venueAllowlist, accommodationName, currency, numDays, pipelineStartedAt,
+  ).then(async (res) => {
+    if (res.usage) {
+      await logger.log({
+        feature: "trip_builder_rank_copy", model: HAIKU_MODEL,
+        input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
+        cost_usd: computeHaikuCost(res.usage),
+        cached: res.usage.cache_read_input_tokens > 0,
+      }).catch(() => {});
+    }
+    return res.data;
+  }).catch((e) => {
+    console.warn("[rankInParallel] grounded copy failed, falling back to parallel-metadata copy:", (e as Error).message);
+    return null;
+  });
+
   // ---- Accommodation ----
   let accommodation: EnrichedActivity | undefined;
   const accomPlaceId = meta?.accommodation?.place_id ?? accommodationPlaceId;
@@ -3796,18 +3933,21 @@ async function rankInParallel(
     ? Math.round(dailySpend.reduce((s, n) => s + n, 0) / numDays)
     : 0;
 
+  const finalTitle = stripEmojis(groundedCopy?.trip_title) || stripEmojis(meta?.trip_title) || intent.destination;
+  const finalSummary = (groundedCopy?.trip_summary?.trim() || meta?.trip_summary?.trim()) ?? "";
+
   const destination: RankedDestination = {
     name: intent.destination,
     start_date: skeleton[0]?.date ?? "",
     end_date: skeleton[skeleton.length - 1]?.date ?? "",
-    intro: meta?.trip_summary?.trim() ?? "",
+    intro: finalSummary,
     days: ranked_days,
     accommodation,
   };
 
   return {
-    trip_title: stripEmojis(meta?.trip_title) || intent.destination,
-    trip_summary: meta?.trip_summary?.trim() ?? "",
+    trip_title: finalTitle,
+    trip_summary: finalSummary,
     destinations: [destination],
     map_center: { lat: geo.lat, lng: geo.lng },
     map_zoom: 12,
@@ -3924,6 +4064,34 @@ function markJuntoPicks(result: PipelineResult, intent: Intent): void {
   }
 }
 
+// ---- collectVenueAllowlist ----
+//
+// Extracts the canonical activity titles (and underlying Place displayNames
+// when available via the title fallback in hydrateActivity) from the
+// finalized day venues. Drives:
+//   - rankTripCopy's allowlist input (prevents the model from inventing
+//     venue names in trip_summary)
+//   - logDescriptionGrounding's verification scan (catches confabulations
+//     that slip past the prompt)
+//
+// Skips events (no place-backed venue) and any activity without a title.
+function collectVenueAllowlist(days: RankedDay[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const day of days) {
+    for (const act of day.activities) {
+      if (!act.title) continue;
+      const t = act.title.trim();
+      if (!t) continue;
+      const key = t.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(t);
+    }
+  }
+  return out;
+}
+
 // ---- logVibeCoverage ----
 //
 // Observability-only post-generation check. For each user-selected vibe,
@@ -3969,6 +4137,110 @@ function logVibeCoverage(result: PipelineResult, intent: Intent): void {
     } else {
       console.log(line);
     }
+  }
+}
+
+// ---- logDescriptionGrounding ----
+//
+// Scans the trip title + summary for proper-noun-shaped phrases (Title Case
+// runs and ALL CAPS runs of 2+ words) and verifies each appears in the
+// itinerary's actual venue allowlist. Confabulations — venue names the LLM
+// invented that don't exist in the trip — produce a structured console.warn.
+//
+// Observability only — never gates the response. Mirrors logVibeCoverage's
+// pattern. Catches anything the rankTripCopy allowlist prompt failed to
+// prevent (model is not perfect; the validator is the safety net).
+//
+// Heuristic note: this is a best-effort proper-noun extractor, not a NER
+// model. False positives include common Title Case words (e.g. "Old Town")
+// that aren't venues. To suppress noise we exclude:
+//   - Single-word matches (most legitimate venue names are 2+ words)
+//   - The destination name itself ("Stuttgart", "Tokyo")
+//   - A small allowlist of geographic/generic terms
+function logDescriptionGrounding(result: PipelineResult, intent: Intent): void {
+  // Join with " . " so the segment splitter below treats the title and
+  // summary as separate inputs — otherwise "Cocktail and Club Scene" (title
+  // tail) and "Four days immersed" (summary head) chain into a fake
+  // "Club Scene Four" venue match.
+  const titleAndSummary = `${result.trip_title ?? ""} . ${result.trip_summary ?? ""}`.trim();
+  if (!titleAndSummary) return;
+
+  // Build allowlist (lowercased, normalized) from actual itinerary.
+  const allow = new Set<string>();
+  for (const dest of result.destinations) {
+    for (const day of dest.days) {
+      for (const act of day.activities) {
+        if (act.title) allow.add(act.title.trim().toLowerCase());
+      }
+    }
+    if (dest.accommodation?.title) allow.add(dest.accommodation.title.trim().toLowerCase());
+  }
+  // Also allowlist destination tokens so "Lisbon" / "Stuttgart" don't flag.
+  for (const tok of (intent.destination ?? "").split(/[,\s]+/)) {
+    if (tok) allow.add(tok.trim().toLowerCase());
+  }
+
+  // Generic Title Case phrases that aren't venues. Keep this list small —
+  // anything legitimately venue-shaped should remain flaggable.
+  const genericPhrases = new Set([
+    "old town", "new town", "city center", "city centre", "old quarter",
+    "north side", "south side", "east side", "west side",
+    "michelin star", "michelin starred", "happy hour", "live music",
+  ]);
+  // Title-fragment tails. Phrases ending with one of these are almost
+  // certainly editorial titles ("Club Scene", "Souk Days"), not venue names.
+  // Real venues end with brand words (Bar, Hotel, Studios, Club, etc.) —
+  // these tails are descriptive nouns the LLM uses to frame a trip.
+  const titleFragmentTails = new Set([
+    "scene", "days", "nights", "evenings", "mornings", "trip", "tour",
+    "crawl", "vibes", "adventure", "adventures", "time", "weekend",
+    "getaway", "escape", "experience", "experiences", "journey",
+  ]);
+
+  // Match Title Case runs (e.g. "Schwarz Weiß Bar", "Jigger & Spoon") OR
+  // ALL CAPS runs of 2+ words (e.g. "WONDERS CLUB", "COMODO STUDIOS"). Both
+  // are common venue-name shapes. We deliberately allow the ampersand and
+  // diacritics inside a run so multi-word venue names stay intact.
+  // Note: Unicode property classes (\p{Lu}/\p{L}) require the /u flag.
+  //
+  // We split on sentence/clause boundaries (.,;:!?) BEFORE running the regex
+  // so a Title Case word ending one sentence can't chain into the Title Case
+  // word starting the next ("Cocktail and Club Scene. Four days immersed" must
+  // not produce "Club Scene Four" as a match).
+  const proper = /(?:[\p{Lu}][\p{L}'’.&-]*\s+){1,5}[\p{Lu}][\p{L}'’.&-]*|(?:[A-Z]{2,}\s+){1,4}[A-Z]{2,}/gu;
+  const segments = titleAndSummary.split(/[.,;:!?\n]+/);
+  const matches: string[] = [];
+  for (const seg of segments) {
+    const found = seg.match(proper);
+    if (found) matches.push(...found);
+  }
+
+  const flagged: string[] = [];
+  for (const raw of matches) {
+    const phrase = raw.trim();
+    const lower = phrase.toLowerCase();
+    if (genericPhrases.has(lower)) continue;
+    const tail = lower.split(/\s+/).pop() ?? "";
+    if (titleFragmentTails.has(tail)) continue;
+    // Substring check both ways: allow "Schwarz Weiß Bar" to match
+    // "Schwarz Weiß Bar Stuttgart" in the allowlist (and vice versa).
+    let ok = false;
+    for (const allowed of allow) {
+      if (allowed.includes(lower) || lower.includes(allowed)) { ok = true; break; }
+    }
+    if (!ok) flagged.push(phrase);
+  }
+
+  if (flagged.length > 0) {
+    console.warn(
+      `[description_grounding] CONFABULATION: trip_title/trip_summary names ${flagged.length} ` +
+      `proper-noun phrase(s) NOT in the itinerary allowlist: ${JSON.stringify(flagged)}. ` +
+      `title="${result.trip_title}" summary="${result.trip_summary}"`,
+    );
+  } else {
+    console.log(
+      `[description_grounding] ok proper_nouns_checked=${matches.length} allowlist_size=${allow.size}`,
+    );
   }
 }
 
@@ -5123,6 +5395,7 @@ Deno.serve(async (req) => {
                 // internally.
                 markJuntoPicks(payload as unknown as PipelineResult, intent);
                 logVibeCoverage(payload as unknown as PipelineResult, intent);
+                logDescriptionGrounding(payload as unknown as PipelineResult, intent);
                 for (const d of dest?.days ?? []) send("day", d);
                 const juntoPlaceIds: string[] = [];
                 for (const day of dest?.days ?? []) {
@@ -5539,6 +5812,31 @@ Deno.serve(async (req) => {
               }
             }
 
+            // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
+            // See rankInParallel for rationale: parallel metadata writes copy
+            // from the candidate pool and can name venues that didn't survive
+            // the day rankers. Re-run with the actual itinerary venues as a
+            // strict allowlist. Failure path falls back to parallel-metadata
+            // copy.
+            const venueAllowlist = collectVenueAllowlist(ranked_days);
+            const accommodationName = accommodation?.title?.trim() || (accommodation?.place_id ? placeById.get(accommodation.place_id)?.displayName ?? null : null);
+            const groundedCopy = await rankTripCopy(
+              anthropicKey, intent, intent.destination, venueAllowlist, accommodationName, currency, numDays, pipelineStartedAt,
+            ).then(async (res) => {
+              if (res.usage) {
+                await logger.log({
+                  feature: "trip_builder_rank_copy", model: HAIKU_MODEL,
+                  input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens,
+                  cost_usd: computeHaikuCost(res.usage),
+                  cached: res.usage.cache_read_input_tokens > 0,
+                }).catch(() => {});
+              }
+              return res.data;
+            }).catch((e) => {
+              console.warn("[stream.copy] grounded copy failed, falling back to parallel-metadata copy:", (e as Error).message);
+              return null;
+            });
+
             // ---- Trip-level rollups + junto picks ----
             const total_activities = ranked_days.reduce((n, d) => n + d.activities.length, 0);
             const dailySpend = ranked_days.map((d) => d.activities.reduce((s, a) => s + (a.estimated_cost_per_person || 0), 0));
@@ -5546,17 +5844,20 @@ Deno.serve(async (req) => {
               ? Math.round(dailySpend.reduce((s, n) => s + n, 0) / ranked_days.length)
               : 0;
 
+            const finalTitle = stripEmojis(groundedCopy?.trip_title) || stripEmojis(meta?.trip_title) || intent.destination;
+            const finalSummary = (groundedCopy?.trip_summary?.trim() || meta?.trip_summary?.trim()) ?? "";
+
             const destinationFinal: RankedDestination = {
               name: intent.destination,
               start_date: skeleton[0]?.date ?? "",
               end_date: skeleton[skeleton.length - 1]?.date ?? "",
-              intro: meta?.trip_summary?.trim() ?? "",
+              intro: finalSummary,
               days: ranked_days,
               accommodation,
             };
             const pipelineResult: PipelineResult = {
-              trip_title: stripEmojis(meta?.trip_title) || intent.destination,
-              trip_summary: meta?.trip_summary?.trim() ?? "",
+              trip_title: finalTitle,
+              trip_summary: finalSummary,
               destinations: [destinationFinal],
               map_center: { lat: geo.lat, lng: geo.lng },
               map_zoom: 12,
@@ -5569,6 +5870,7 @@ Deno.serve(async (req) => {
 
             markJuntoPicks(pipelineResult, intent);
             logVibeCoverage(pipelineResult, intent);
+            logDescriptionGrounding(pipelineResult, intent);
 
             const juntoPlaceIds: string[] = [];
             for (const day of ranked_days) {
@@ -5806,6 +6108,7 @@ Deno.serve(async (req) => {
           // and may have zero picks). Mirrors the streaming cache-hit branch.
           markJuntoPicks(payload as unknown as PipelineResult, intent);
           logVibeCoverage(payload as unknown as PipelineResult, intent);
+          logDescriptionGrounding(payload as unknown as PipelineResult, intent);
           let juntoPicksTagged = 0;
           for (const day of payload?.destinations?.[0]?.days ?? []) {
             for (const a of day.activities ?? []) if (a?.is_junto_pick) juntoPicksTagged++;
@@ -5990,6 +6293,7 @@ Deno.serve(async (req) => {
     const tJunto = Date.now();
     markJuntoPicks(ranked, intent);
     logVibeCoverage(ranked, intent);
+    logDescriptionGrounding(ranked, intent);
 
     const affEnv: AffiliateEnv = {
       viator: viatorMcid,
