@@ -850,6 +850,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
                 <Button
                   variant="outline"
+                  onClick={() => setEditTripOpen(true)}
+                  className="h-9 px-3 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={onSaveDraft}
                   className="h-9 px-4 rounded-xl text-[13px] font-semibold flex-1 sm:flex-none"
                 >
