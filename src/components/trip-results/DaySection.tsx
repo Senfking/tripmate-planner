@@ -200,47 +200,72 @@ export function DaySection({
 
   return (
     <>
-      <div ref={cardRef} id={`section-day-${day.day_number}`} className="rounded-2xl border border-border bg-card overflow-hidden transition-all shadow-sm hover:shadow-md">
-        {/* Collapsed card — substantial day header */}
+      <div
+        ref={cardRef}
+        id={`section-day-${day.day_number}`}
+        className="group rounded-2xl border border-border bg-card overflow-hidden transition-all shadow-sm hover:shadow-xl hover:-translate-y-0.5"
+      >
+        {/* Collapsed card — cinematic banner header with dark overlay */}
         <button
           onClick={() => setOpen(!open)}
-          className="w-full flex items-center gap-3.5 p-3.5 text-left hover:bg-accent/30 transition-colors"
+          className="w-full text-left relative block overflow-hidden"
         >
-          {/* Thumbnail */}
-          <div className="w-[80px] h-[64px] rounded-xl overflow-hidden flex-shrink-0 bg-muted ring-1 ring-border">
-            {firstActivity && (
+          {/* Background image — full-bleed banner */}
+          <div className="relative h-[140px] sm:h-[160px] w-full bg-muted overflow-hidden">
+            {firstActivity ? (
               <DayThumbnail activity={firstActivity} location={destinationName} />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-[#0D9488]/20 to-[#0D9488]/5" />
             )}
-          </div>
+            {/* Dark gradient overlay — bottom-up for text legibility */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(180_25%_8%)]/95 via-[hsl(180_25%_8%)]/40 to-transparent transition-opacity duration-300 group-hover:from-[hsl(180_25%_8%)]" />
+            {/* Subtle teal accent vignette */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(13,148,136,0.18),_transparent_60%)] pointer-events-none" />
 
-          {/* Day info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/25 text-[10px] font-bold uppercase tracking-wider">
-                Day {day.day_number}
+            {/* Top-left: oversized day numeral */}
+            <div className="absolute top-3 left-4 flex items-baseline gap-2">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-white/60">Day</span>
+              <span className="text-[28px] font-bold leading-none tabular-nums text-white drop-shadow-md">
+                {String(day.day_number).padStart(2, "0")}
               </span>
-              <span className="text-[11px] text-muted-foreground font-mono tabular-nums uppercase tracking-wide">
-                {dateStr} {dateStr ? "·" : ""} {visibleActivities.length === 0
-                  ? "No activities"
-                  : `${visibleActivities.length} ${visibleActivities.length === 1 ? "experience" : "experiences"}`}
-              </span>
-              {planId && !isDraft && (
-                <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
+            </div>
+
+            {/* Top-right: chevron in glass pill */}
+            <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-white/10 backdrop-blur-md ring-1 ring-white/20 flex items-center justify-center transition-transform duration-300 group-hover:bg-white/20">
+              {open ? (
+                <ChevronDown className="h-3.5 w-3.5 text-white" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-white" />
               )}
             </div>
-            {day.theme && (
-              <p className="text-[15px] font-semibold text-foreground mt-1 leading-snug tracking-tight truncate">
-                {day.theme}
-              </p>
-            )}
-          </div>
 
-          {/* Chevron */}
-          {open ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          )}
+            {/* Bottom: theme + meta */}
+            <div className="absolute inset-x-0 bottom-0 px-4 pb-3.5 pt-6">
+              {day.theme && (
+                <h3 className="text-[18px] sm:text-[20px] font-semibold text-white leading-tight tracking-tight line-clamp-2 drop-shadow-sm">
+                  {day.theme}
+                </h3>
+              )}
+              <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/75 tabular-nums">
+                  {dateStr}
+                </span>
+                {dateStr && (
+                  <span className="text-white/30">•</span>
+                )}
+                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#5EEAD4]">
+                  {visibleActivities.length === 0
+                    ? "No activities"
+                    : `${visibleActivities.length} ${visibleActivities.length === 1 ? "experience" : "experiences"}`}
+                </span>
+                {planId && !isDraft && (
+                  <div className="ml-auto">
+                    <DayReactionSummary planId={planId} dayIndex={dayIndex} activityCount={day.activities.length} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </button>
 
         {/* Expanded content */}
