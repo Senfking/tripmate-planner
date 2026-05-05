@@ -355,6 +355,13 @@ const HAIKU_PRICING = {
 const PLACES_RANKING_COST_PER_CALL = 0.005;
 const PLACES_DETAILS_COST_PER_CALL = 0.017;
 const MAX_PLACES_QUERIES_PER_TRIP = 12; // was 20 — tighter budget; consolidated queries cover same ground
+// Multi-destination cap: each leg gets up to MAX_PLACES_QUERIES_PER_LEG
+// queries, total capped at MAX_PLACES_QUERIES_PER_TRIP * 2 to keep ranking
+// pass cost in line with single-destination trips. Long multi-leg trips
+// (3-5 destinations) still get coverage because per-leg queries are smaller
+// (no per-vibe variant explosion when only 2-3 user vibes match).
+const MAX_PLACES_QUERIES_PER_LEG = 8;
+const MAX_PLACES_QUERIES_PER_MULTI_TRIP = MAX_PLACES_QUERIES_PER_TRIP * 2;
 // Slot budget scales with trip length AND with the user's chosen pace. Light
 // trips should feel light — empty afternoons are a feature, not a bug — so
 // the per-day allowance is tight and the ceiling caps short. Balanced is the
@@ -507,8 +514,29 @@ const DEFAULT_MEAL_PATTERN = { lunch: [12, 14] as [number, number], dinner: [19,
 // New types
 // ---------------------------------------------------------------------------
 
+// Multi-destination types. The LLM intent call produces a destinations[] array
+// with one entry per place the user named. A separate transit-estimation Haiku
+// call (estimateTransitLegs) annotates each adjacent pair with travel time and
+// whether to insert a dedicated transit day. Single-destination trips collapse
+// to destinations.length === 1 and transit_legs.length === 0.
+interface IntentDestination {
+  name: string;            // "Bangkok, Thailand" (full geocodable string)
+  days_allocated: number;  // LLM-reasoned day count for this leg
+  reasoning: string;       // short rationale, e.g. "City exploration + street food"
+}
+
+interface IntentTransitLeg {
+  from_index: number;
+  to_index: number;
+  estimated_duration_hours: number;
+  transit_type: "flight" | "train" | "drive" | "ferry" | "mixed";
+  needs_transit_day: boolean;   // true if 4+ hours total → full transit day
+  half_day_transit: boolean;    // true if 1.5-3 hours → half-day arrangement
+  description: string;          // "Flight from BKK to USM + ferry, ~6 hours total"
+}
+
 interface Intent {
-  destination: string;             // resolved or surprise-picked
+  destination: string;             // mirrors destinations[0].name; kept for legacy callsites
   vibes: string[];
   must_haves: string[];
   must_avoids: string[];
@@ -517,16 +545,23 @@ interface Intent {
   dietary: string[];
   group_composition: string;       // e.g. "couple", "family with young kids", "friends 20s"
   raw_notes: string;               // original notes/free_text passthrough
-  // Free-text-derived hints. Populated when the user expressed them in notes /
-  // free_text; null/[] otherwise. Pipeline is still single-leg today —
-  // duration_days overrides the form-supplied duration when the user typed
-  // something like "10 day trip", and named_destinations[0] short-circuits
-  // pickSurpriseDestination so "Bangkok and Koh Phangan" lands on Bangkok
-  // deterministically instead of letting the surprise picker re-derive.
-  // Multi-leg generation will land in a separate change and start consuming
-  // named_destinations[1..N].
+  // Free-text-derived hints. duration_days overrides the form-supplied
+  // duration when the user typed "10 day trip"; named_destinations is the
+  // ordered list of place names parsed from notes/free_text.
   duration_days: number | null;
   named_destinations: string[];
+  // Multi-destination structure. Always populated post-parseIntent —
+  // single-destination trips have destinations.length === 1 and
+  // transit_legs === []. The intent parser writes destinations[] when the user
+  // named multiple places; the surprise-picker / single-name fallbacks build
+  // destinations[] from intent.destination after parseIntent returns.
+  destinations: IntentDestination[];
+  transit_legs: IntentTransitLeg[];
+  // Set when the LLM dropped destinations or rebalanced day allocation away
+  // from a naive split. Surfaced to the UI via trip_complete + persisted in
+  // the trip payload as adjustment_notice. Null when the LLM took the user
+  // request as-is (and on single-destination trips).
+  adjustment_notice: string | null;
 }
 
 type SlotType =
@@ -554,11 +589,25 @@ interface PacingSlot {
   region_tag_for_queries: string;
 }
 
+interface TransitDayMeta {
+  from_index: number;
+  to_index: number;
+  half_day: boolean;
+  description: string;
+}
+
 interface DaySkeleton {
   date: string;
   day_number: number;
   theme: string;
   slots: PacingSlot[];
+  // Index into the unified leg list (legs[] in builders / SSE). Each day
+  // belongs to exactly one leg. For single-destination trips this is always 0.
+  destination_index: number;
+  // Present iff this day IS a dedicated transit leg. Half-day transit days
+  // keep an arrival-shaped slot list at the destination; full transit days
+  // have a transit-only slot list and skip the ranker.
+  transit?: TransitDayMeta;
 }
 
 interface PlacesSearchQuery {
@@ -568,6 +617,11 @@ interface PlacesSearchQuery {
   locationBias: { circle: { center: { latitude: number; longitude: number }; radius: number } };
   // For routing the result back to the right slot pool:
   poolKey: PoolKey;
+  // Index into the unified leg list (legs[]). Multi-destination trips fire
+  // separate batches per leg with leg-specific location bias; the result rows
+  // carry this index forward so the ranker can scope its candidate pool to
+  // the day's leg. Single-destination trips always emit destinationIndex=0.
+  destinationIndex: number;
 }
 
 type PoolKey =
@@ -617,6 +671,10 @@ interface BatchPlaceResult {
   // hours in that case (categoryFallbackHoursForTypes).
   openingHours: OpeningHoursPeriod[] | null;
   poolKey: PoolKey;
+  // Carries the leg index forward from the search query so the ranker can
+  // scope its candidate pool to the day's leg (multi-destination trips).
+  // Single-destination trips always have 0 here.
+  destinationIndex: number;
 }
 
 interface EventCandidate {
@@ -678,20 +736,41 @@ interface RankedDay {
   day_number: number;
   theme: string;
   activities: EnrichedActivity[];
+  // Index into PipelineResult.destinations[] (which is the unified leg list).
+  // Lets the frontend route days into the correct leg rail. Single-destination
+  // trips always have destination_index=0 on every day.
+  destination_index: number;
+  // Present iff this is a dedicated transit day. UI renders transit days
+  // differently (no activity list, just a "Travel: A → B" card). Carries the
+  // same metadata as DaySkeleton.transit so cache-hit paths can reconstruct
+  // the visual without re-running the transit estimator.
+  transit?: TransitDayMeta;
 }
 
 interface RankedDestination {
+  // For real destinations: "Bangkok, Thailand". For transit pseudo-legs:
+  // "Bangkok → Koh Phangan transit" or similar — kept as a short display label.
   name: string;
   start_date: string;
   end_date: string;
   intro: string;
   days: RankedDay[];
   accommodation?: EnrichedActivity;
+  // "destination" for real legs, "transit" for transit pseudo-legs. Frontend
+  // rails check this to decide between activity-card list vs transit summary.
+  kind?: "destination" | "transit";
+  // Mirrors RankedDay.transit on the leg level so the frontend can render a
+  // header/banner without scanning days. Only present when kind === "transit".
+  transit?: TransitDayMeta;
 }
 
 interface PipelineResult {
   trip_title: string;
   trip_summary: string;
+  // Unified leg list: real-destination legs interleaved with transit
+  // pseudo-legs. Single-destination trips → destinations.length === 1.
+  // Multi-destination trips → real legs + transit legs (where the transit
+  // estimator decided needs_transit_day=true).
   destinations: RankedDestination[];
   map_center: { lat: number; lng: number };
   map_zoom: number;
@@ -702,6 +781,10 @@ interface PipelineResult {
   // Propagated from Intent so the frontend budget helper can pick a sensible
   // per-night default when Places returns no hotel pricing.
   budget_tier: "budget" | "mid-range" | "premium";
+  // Surfaced from intent.adjustment_notice when the LLM dropped destinations
+  // or rebalanced day allocation. Null on plain single-destination trips and
+  // on multi-destination trips where the LLM honored the user as-is.
+  adjustment_notice?: string | null;
 }
 
 interface ClaudeUsage {
@@ -1027,6 +1110,32 @@ named_destinations (OPTIONAL — omit the field entirely when absent):
 - OMIT this property entirely (or pass an empty array) when the user didn't name any place. Do NOT invent destinations from vibes / must_haves. "EDM and nightlife" alone does NOT imply Bangkok — wait for an explicit place name.
 - Country-only mentions ("Thailand") count as a region, not a city — include them only if the user wrote nothing more specific.
 
+destinations (OPTIONAL — omit the field entirely when the user named zero or one place):
+- When the user named MULTIPLE places (named_destinations.length >= 2), populate this array with one entry per place the trip should actually visit. Each entry has:
+  * name: full geocodable string ("Bangkok, Thailand", "Koh Phangan, Thailand"). Add the country only when it disambiguates ("Cambridge, UK" vs "Cambridge, MA"); for famously-unambiguous islands/cities you may emit just the locality.
+  * days_allocated: integer count of days for this leg (sums across the whole array MUST equal the trip's total duration_days, AFTER accounting for transit-day buffer the system will add for long hops between adjacent legs — when in doubt, allocate full days to the destinations and let the system insert a transit day inside one of them).
+  * reasoning: one short phrase explaining the day count ("vibrant city worth 3 days for street food + culture", "island chill for the back end of the trip").
+
+REASONING RULES for days_allocated:
+- Honor explicit user signals first: "end with island chill" → more days at the end leg; "quick stop in X then on to Y" → fewer days for X.
+- Otherwise allocate by destination character (rough typical-stay anchors that you can adjust by ±1):
+    Tokyo / Bangkok / NYC / Paris / Istanbul: 3-5 days
+    Smaller capitals (Lisbon, Vienna, Prague, Edinburgh): 2-4 days
+    Beach / island destinations (Phuket, Koh Phangan, Bali, Santorini): 3-5 days
+    Day-trip-scale towns (Bruges, Cinque Terre, Hallstatt): 1-2 days
+- Sanity check: total days_allocated MUST equal duration_days (or the form-supplied trip length when you didn't extract one).
+
+CAP RULE — apply BEFORE writing destinations[]:
+- max_destinations = max(2, floor(duration_days / 2)). For a 10-day trip that's 5; for a 5-day trip that's 2; for a 3-day trip that's 2.
+- If the user named MORE places than max_destinations, drop the least-anchored ones (the ones the user mentioned in passing rather than as a must-visit) and write adjustment_notice explaining which were dropped and why.
+- If the user named EXACTLY max_destinations or fewer, include all of them and re-check pacing — if any leg ends up with < 2 days, raise it to 2 by trimming a longer leg. Note this in adjustment_notice.
+
+adjustment_notice (OPTIONAL — omit when the user's request was honored as-is):
+- One concise sentence describing what you adjusted: dropped destinations, rebalanced days, or merged similar legs. Examples:
+  * "5 destinations in 10 days would be rushed. Suggesting 4: Bangkok (3), Chiang Mai (2), Krabi (2), Koh Phangan (3)."
+  * "Allocated more time to Koh Phangan (5 days) than Bangkok (4 days) based on your 'end with island chill' note."
+- OMIT this field entirely on single-destination trips and when the days_allocated split matches the most natural reading of the user's text.
+
 Return exactly one tool_use call. Do not add commentary.`;
 
 const INTENT_TOOL: ClaudeTool = {
@@ -1084,6 +1193,38 @@ const INTENT_TOOL: ClaudeTool = {
         items: { type: "string" },
         description:
           "Lowercased city / island / region names the user explicitly wrote in notes/free_text, in the order they were mentioned. OMIT this field or pass an empty array when none were named. Do not invent destinations from vibes.",
+      },
+      destinations: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description:
+                "Full geocodable destination string, e.g. 'Bangkok, Thailand' or 'Koh Phangan, Thailand'. Add country when it disambiguates.",
+            },
+            days_allocated: {
+              type: "integer",
+              minimum: 1,
+              maximum: 21,
+              description: "Days allocated to this leg. Sum across all entries equals trip duration.",
+            },
+            reasoning: {
+              type: "string",
+              description:
+                "Short rationale for the day count, e.g. 'vibrant city worth 3 days for street food + culture'.",
+            },
+          },
+          required: ["name", "days_allocated", "reasoning"],
+        },
+        description:
+          "Multi-destination plan: one entry per leg with a day allocation. Populate ONLY when the user named MULTIPLE destinations (named_destinations.length >= 2). OMIT this field on single-destination requests; the caller will build a 1-entry array from intent.destination.",
+      },
+      adjustment_notice: {
+        type: "string",
+        description:
+          "One sentence describing any adjustment you made (dropped destinations, rebalanced day allocation, etc.). OMIT this field when the user's request was honored as-is.",
       },
     },
     required: [
@@ -1202,6 +1343,33 @@ async function parseIntent(
   const stringArray = (v: unknown): string[] =>
     Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
 
+  // destinations[]: optional in the schema. The model populates it when the
+  // user named 2+ places; when it's omitted we leave the array empty here and
+  // let buildIntentDestinations (called after parseIntent) materialize a
+  // single-entry array from intent.destination once that's resolved.
+  const rawDests = data.destinations;
+  const parsedDestinations: IntentDestination[] = Array.isArray(rawDests)
+    ? rawDests
+        .map((d): IntentDestination | null => {
+          if (!d || typeof d !== "object") return null;
+          const obj = d as Record<string, unknown>;
+          const name = typeof obj.name === "string" ? obj.name.trim() : "";
+          const daysRaw = obj.days_allocated;
+          const days = typeof daysRaw === "number" && Number.isFinite(daysRaw) && daysRaw >= 1 && daysRaw <= 21
+            ? Math.round(daysRaw)
+            : 0;
+          const reasoning = typeof obj.reasoning === "string" ? obj.reasoning.trim() : "";
+          if (!name || days < 1) return null;
+          return { name, days_allocated: days, reasoning };
+        })
+        .filter((d): d is IntentDestination => d !== null)
+    : [];
+
+  const adjustmentNotice =
+    typeof data.adjustment_notice === "string" && data.adjustment_notice.trim().length > 0
+      ? data.adjustment_notice.trim()
+      : null;
+
   return {
     destination: typeof data.destination === "string" ? data.destination : "",
     vibes: stringArray(data.vibes),
@@ -1214,7 +1382,98 @@ async function parseIntent(
     raw_notes: rawNotes,
     duration_days: durationDays,
     named_destinations: namedDestinations,
+    destinations: parsedDestinations,
+    transit_legs: [],
+    adjustment_notice: adjustmentNotice,
   };
+}
+
+// Materialize intent.destinations[] post-parseIntent. Called from the pipeline
+// AFTER applyNamedDestination / pickSurpriseDestination have populated
+// intent.destination, AND AFTER intent.duration_days reconciliation.
+//
+// Behavior matrix:
+//   - LLM filled destinations[] (multi-leg user prompt): validate the days_allocated
+//     sum equals numDays. If off, scale or pad/trim the last leg to make it
+//     match (and append a note to adjustment_notice).
+//   - LLM left destinations[] empty AND intent.destination is set: build a
+//     1-entry array [{name: intent.destination, days_allocated: numDays, reasoning: ""}].
+//   - Cap enforcement: max(2, floor(numDays / 2)). The LLM is instructed to
+//     respect this; we re-enforce defensively in case it overshot.
+function buildIntentDestinations(intent: Intent, numDays: number): void {
+  const cap = Math.max(2, Math.floor(numDays / 2));
+
+  // No multi-leg input from the LLM → build a single-leg trivial structure.
+  if (intent.destinations.length === 0) {
+    intent.destinations = [{
+      name: intent.destination || "",
+      days_allocated: numDays,
+      reasoning: "",
+    }];
+    return;
+  }
+
+  // Enforce cap defensively. If the LLM emitted more legs than the cap, keep
+  // the first `cap` (they were emitted in the order the user mentioned them,
+  // so prefix-truncation matches user intent best).
+  if (intent.destinations.length > cap) {
+    const dropped = intent.destinations.slice(cap).map((d) => d.name);
+    intent.destinations = intent.destinations.slice(0, cap);
+    const droppedNotice =
+      `Capped to ${cap} destinations for ${numDays} days; dropped: ${dropped.join(", ")}.`;
+    intent.adjustment_notice = intent.adjustment_notice
+      ? `${intent.adjustment_notice} ${droppedNotice}`
+      : droppedNotice;
+  }
+
+  // Reconcile days_allocated total against numDays. If the LLM's split sums
+  // wrong (overshoots or undershoots), rescale proportionally and round, then
+  // absorb the rounding remainder into the longest leg.
+  const sum = intent.destinations.reduce((n, d) => n + d.days_allocated, 0);
+  if (sum !== numDays && intent.destinations.length > 0) {
+    if (sum > 0) {
+      // Proportional rescale.
+      const scaled = intent.destinations.map((d) => ({
+        ...d,
+        days_allocated: Math.max(1, Math.round((d.days_allocated / sum) * numDays)),
+      }));
+      const scaledSum = scaled.reduce((n, d) => n + d.days_allocated, 0);
+      let delta = numDays - scaledSum;
+      // Distribute the rounding remainder into the longest legs (delta can be
+      // negative — trim from the longest until it's at 1).
+      const order = [...scaled.keys()].sort(
+        (a, b) => scaled[b].days_allocated - scaled[a].days_allocated,
+      );
+      let i = 0;
+      while (delta !== 0 && order.length > 0) {
+        const idx = order[i % order.length];
+        if (delta > 0) {
+          scaled[idx].days_allocated += 1;
+          delta -= 1;
+        } else if (scaled[idx].days_allocated > 1) {
+          scaled[idx].days_allocated -= 1;
+          delta += 1;
+        }
+        i += 1;
+        if (i > numDays * 4) break; // hard safety against pathological inputs
+      }
+      intent.destinations = scaled;
+    } else {
+      // Degenerate case (LLM emitted zeros) — fall back to even split.
+      const each = Math.max(1, Math.floor(numDays / intent.destinations.length));
+      intent.destinations = intent.destinations.map((d) => ({
+        ...d,
+        days_allocated: each,
+      }));
+      const fixSum = intent.destinations.reduce((n, d) => n + d.days_allocated, 0);
+      if (fixSum < numDays && intent.destinations[0]) {
+        intent.destinations[0].days_allocated += numDays - fixSum;
+      }
+    }
+  }
+
+  // Mirror first leg into intent.destination so legacy callsites keep working.
+  if (intent.destinations[0]?.name) intent.destination = intent.destinations[0].name;
 }
 
 // ---------------------------------------------------------------------------
@@ -1307,6 +1566,291 @@ async function pickSurpriseDestination(
     throw new Error("pickSurpriseDestination: Claude returned no destination");
   }
   return picked;
+}
+
+// ---------------------------------------------------------------------------
+// Transit-legs estimator (Haiku, cached for 30 days)
+//
+// For multi-destination trips: takes the ordered destinations[] array and
+// returns one transit-leg description per adjacent pair. Drives whether the
+// skeleton inserts a full transit day, a half-day transit, or a smooth handoff.
+//
+// Cached in ai_response_cache under transit:v1:{sha256(from|to)} per pair —
+// most pairs (Bangkok ↔ Koh Phangan, Tokyo ↔ Kyoto, etc.) are answered the
+// same regardless of who's asking, so the cache hit rate after warmup is high.
+// We don't bake user preferences into the cache key on purpose; transit
+// reality is preference-independent.
+//
+// Returns transit_legs.length === destinations.length - 1 in normal cases.
+// On any hard failure we return [] and the caller falls back to a "no
+// transit day" assumption (smooth handoff). This is the right failure mode:
+// missing a transit day at worst gives the user one rushed day; it never
+// breaks the trip.
+// ---------------------------------------------------------------------------
+
+const TRANSIT_LEGS_SYSTEM_PROMPT = `You are estimating realistic transit between adjacent legs of a multi-destination trip.
+
+For EACH adjacent pair (from → to) the caller will give you, return one entry with:
+- estimated_duration_hours: realistic door-to-door travel time in hours, including transfers/buffers. Use 0.5 increments. Cite the typical mode in description.
+- transit_type: one of "flight", "train", "drive", "ferry", "mixed". Pick the dominant mode; "mixed" only when no single mode covers the majority of door-to-door time (e.g. flight + ferry).
+- needs_transit_day: true when total door-to-door time is 4+ hours OR the route requires an early-morning departure / late-evening arrival that wipes out a normal activity day.
+- half_day_transit: true when 1.5-3 hours total — light morning activity at the origin + afternoon arrival activity at the destination is realistic. Mutually exclusive with needs_transit_day.
+- description: ONE concise sentence the UI can show on a transit card, e.g. "Flight from BKK to USM (1h) + ferry to Koh Phangan (~3h), 5–6h total" or "Direct train, ~2h 40m".
+
+DECISION RULES:
+- < 1.5 hours total → needs_transit_day=false, half_day_transit=false (smooth handoff, no separate transit slot)
+- 1.5–3 hours total → needs_transit_day=false, half_day_transit=true
+- 3+ hours total OR awkward connections → needs_transit_day=true, half_day_transit=false
+
+Be realistic about island/remote destinations: factor in mandatory transfers (e.g. Koh Phangan = flight to Surat Thani + bus + ferry). Be conservative on flight days (2 hours airport buffer + actual flight + 1 hour to hotel).
+
+Return exactly one tool_use call with the legs array in order, one entry per adjacent pair.`;
+
+const TRANSIT_LEGS_TOOL: ClaudeTool = {
+  name: "record_transit_legs",
+  description: "Record estimated transit between each adjacent pair of destinations.",
+  input_schema: {
+    type: "object",
+    properties: {
+      legs: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            from_index: { type: "integer", minimum: 0 },
+            to_index: { type: "integer", minimum: 1 },
+            estimated_duration_hours: {
+              type: "number",
+              minimum: 0,
+              maximum: 48,
+              description: "Door-to-door hours, 0.5 increments.",
+            },
+            transit_type: {
+              type: "string",
+              enum: ["flight", "train", "drive", "ferry", "mixed"],
+            },
+            needs_transit_day: { type: "boolean" },
+            half_day_transit: { type: "boolean" },
+            description: { type: "string" },
+          },
+          required: [
+            "from_index",
+            "to_index",
+            "estimated_duration_hours",
+            "transit_type",
+            "needs_transit_day",
+            "half_day_transit",
+            "description",
+          ],
+        },
+      },
+    },
+    required: ["legs"],
+    additionalProperties: false,
+  },
+};
+
+const TRANSIT_LEGS_CACHE_TTL_MS = 30 * 86_400_000; // 30 days
+
+function transitPairCacheKeyShape(from: string, to: string): string {
+  return JSON.stringify({
+    from: from.toLowerCase().trim(),
+    to: to.toLowerCase().trim(),
+  });
+}
+
+interface TransitCachedLeg {
+  estimated_duration_hours: number;
+  transit_type: IntentTransitLeg["transit_type"];
+  needs_transit_day: boolean;
+  half_day_transit: boolean;
+  description: string;
+}
+
+function normalizeRawTransitLeg(
+  raw: unknown,
+  fromIndex: number,
+  toIndex: number,
+): IntentTransitLeg | null {
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  const dur = obj.estimated_duration_hours;
+  const ttype = obj.transit_type;
+  const desc = obj.description;
+  if (typeof dur !== "number" || !Number.isFinite(dur) || dur < 0) return null;
+  if (
+    ttype !== "flight" &&
+    ttype !== "train" &&
+    ttype !== "drive" &&
+    ttype !== "ferry" &&
+    ttype !== "mixed"
+  ) return null;
+  if (typeof desc !== "string") return null;
+  // Recompute the day flags from duration so a confused LLM can't ship
+  // contradictory hour/flag pairs (e.g. "1 hour" + "needs_transit_day=true").
+  const hours = Math.round(dur * 2) / 2;
+  const needsDay = hours >= 3;
+  const halfDay = !needsDay && hours >= 1.5;
+  return {
+    from_index: fromIndex,
+    to_index: toIndex,
+    estimated_duration_hours: hours,
+    transit_type: ttype,
+    needs_transit_day: needsDay,
+    half_day_transit: halfDay,
+    description: desc.trim(),
+  };
+}
+
+async function estimateTransitLegs(
+  apiKey: string,
+  destinations: IntentDestination[],
+  svcClient: ReturnType<typeof createClient>,
+  logger: LLMLogger,
+  pipelineStartedAt: number,
+): Promise<IntentTransitLeg[]> {
+  if (destinations.length < 2) return [];
+
+  // Check cache pair-by-pair first. We can return a fully-cached answer
+  // without any LLM call when every pair is warm.
+  const pairs: Array<{ from: number; to: number; key: string }> = [];
+  for (let i = 0; i < destinations.length - 1; i++) {
+    const shape = transitPairCacheKeyShape(destinations[i].name, destinations[i + 1].name);
+    let key: string;
+    try {
+      key = `transit:v1:${await sha256Hex(shape)}`;
+    } catch {
+      // Hash failed (extreme edge); skip caching this pair so we still try LLM.
+      key = "";
+    }
+    pairs.push({ from: i, to: i + 1, key });
+  }
+
+  const cached: Map<number, IntentTransitLeg> = new Map();
+  if (pairs.every((p) => p.key)) {
+    try {
+      const keys = pairs.map((p) => p.key);
+      const { data } = await svcClient
+        .from("ai_response_cache")
+        .select("cache_key, response_json")
+        .in("cache_key", keys)
+        .gt("expires_at", new Date().toISOString());
+      if (Array.isArray(data)) {
+        for (const row of data as Array<{ cache_key: string; response_json: unknown }>) {
+          const idx = pairs.findIndex((p) => p.key === row.cache_key);
+          if (idx < 0) continue;
+          const resp = row.response_json as TransitCachedLeg | null;
+          if (!resp || typeof resp !== "object") continue;
+          const leg = normalizeRawTransitLeg(resp, pairs[idx].from, pairs[idx].to);
+          if (leg) cached.set(idx, leg);
+        }
+      }
+    } catch (e) {
+      console.warn("[transit_legs] cache lookup failed:", (e as Error).message);
+    }
+  }
+
+  if (cached.size === pairs.length) {
+    const result: IntentTransitLeg[] = [];
+    for (let i = 0; i < pairs.length; i++) {
+      const leg = cached.get(i);
+      if (leg) result.push(leg);
+    }
+    console.log(`[transit_legs] cache hit pairs=${pairs.length}`);
+    return result;
+  }
+
+  // At least one pair missing — issue a single LLM call for ALL pairs and let
+  // the cached ones get rewritten with a fresh TTL. Cheaper than fanning out
+  // per-pair calls.
+  const userPayload = {
+    destinations: destinations.map((d, i) => ({ index: i, name: d.name })),
+  };
+  let result: ClaudeCallResult<{ legs: unknown[] }>;
+  try {
+    result = await callClaudeHaiku<{ legs: unknown[] }>(
+      apiKey,
+      [{ type: "text", text: TRANSIT_LEGS_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      `Estimate transit for these adjacent legs:\n\n${JSON.stringify(userPayload, null, 2)}`,
+      TRANSIT_LEGS_TOOL,
+      512,
+      pipelineStartedAt,
+      "estimateTransitLegs",
+    );
+  } catch (e) {
+    console.warn("[transit_legs] Haiku failed; assuming no transit days:", (e as Error).message);
+    return [];
+  }
+
+  await logger.log({
+    feature: "trip_builder_transit_legs",
+    model: HAIKU_MODEL,
+    input_tokens: result.usage.input_tokens,
+    output_tokens: result.usage.output_tokens,
+    cost_usd: computeHaikuCost(result.usage),
+    cached: result.usage.cache_read_input_tokens > 0,
+  });
+
+  const rawLegs = Array.isArray(result.data?.legs) ? result.data!.legs : [];
+  const legs: IntentTransitLeg[] = [];
+  for (let i = 0; i < pairs.length; i++) {
+    const cachedLeg = cached.get(i);
+    if (cachedLeg) {
+      legs.push(cachedLeg);
+      continue;
+    }
+    // Find the LLM's emission for this pair (prefer matching from_index/to_index;
+    // tolerate index drift by falling back to position-i).
+    const found = rawLegs.find((rl) => {
+      if (!rl || typeof rl !== "object") return false;
+      const o = rl as Record<string, unknown>;
+      return o.from_index === pairs[i].from && o.to_index === pairs[i].to;
+    }) ?? rawLegs[i];
+    const leg = normalizeRawTransitLeg(found, pairs[i].from, pairs[i].to);
+    if (leg) {
+      legs.push(leg);
+      // Write back to cache (fire-and-forget; single-row insert per pair).
+      if (pairs[i].key) {
+        const writeShape: TransitCachedLeg = {
+          estimated_duration_hours: leg.estimated_duration_hours,
+          transit_type: leg.transit_type,
+          needs_transit_day: leg.needs_transit_day,
+          half_day_transit: leg.half_day_transit,
+          description: leg.description,
+        };
+        svcClient
+          .from("ai_response_cache")
+          .upsert({
+            cache_key: pairs[i].key,
+            response_json: writeShape as unknown as Record<string, unknown>,
+            expires_at: new Date(Date.now() + TRANSIT_LEGS_CACHE_TTL_MS).toISOString(),
+          })
+          .then((r: { error: { message: string; code?: string } | null }) => {
+            if (r.error && r.error.code !== "23505") {
+              console.warn(`[transit_legs] cache write failed: ${r.error.message}`);
+            }
+          });
+      }
+    } else {
+      // The LLM didn't give us a usable answer for this pair — assume smooth
+      // handoff so the skeleton doesn't lose a day. The user-visible price is
+      // a possibly-rushed day; better than dropping the leg entirely.
+      legs.push({
+        from_index: pairs[i].from,
+        to_index: pairs[i].to,
+        estimated_duration_hours: 0,
+        transit_type: "drive",
+        needs_transit_day: false,
+        half_day_transit: false,
+        description: "",
+      });
+    }
+  }
+  console.log(
+    `[transit_legs] estimated pairs=${pairs.length} cache_hits=${cached.size} ` +
+    `transit_days=${legs.filter((l) => l.needs_transit_day).length}`,
+  );
+  return legs;
 }
 
 // ---------------------------------------------------------------------------
@@ -1592,107 +2136,328 @@ function themeForDay(opts: {
   return "";
 }
 
-function buildSkeleton(
-  intent: Intent,
-  numDays: number,
-  startDate: string,
-  countryCode: string | null,
-): DaySkeleton[] {
-  // Placeholder start date for pure-duration flexible mode — downstream uses
-  // the date only for ordering and display, not for factual claims.
-  const base = startDate || new Date().toISOString().slice(0, 10);
+// ---------------------------------------------------------------------------
+// Leg model — internal representation of the unified trip timeline.
+//
+// A trip is a sequence of legs. A leg is either:
+//   - kind="destination": days spent at one named place (Bangkok, Koh Phangan)
+//   - kind="transit":     a dedicated travel day between two destinations
+// Half-day transits don't produce a transit leg — instead the TO destination's
+// first day takes an arrival shape (afternoon-arrival slot list).
+//
+// Each leg's `index` matches the position in PipelineResult.destinations[]
+// AND the destination_index field on every DaySkeleton/RankedDay it owns.
+// Single-destination trips: legs[].length === 1.
+// ---------------------------------------------------------------------------
+interface Leg {
+  index: number;
+  kind: "destination" | "transit";
+  name: string;
+  geo: GeocodeResult | null;       // null for transit legs (no Places search)
+  days_count: number;
+  // For kind=destination: position in intent.destinations[]. For kind=transit: -1.
+  intent_destination_index: number;
+  // For kind=transit: copy of the TransitDayMeta that drove this insertion.
+  transit_meta?: TransitDayMeta;
+  // True iff arrival into this leg involves a half-day transit landing in
+  // afternoon. When true, the leg's first day is shaped as an arrival day
+  // (transit_buffer + dinner) instead of a normal first day.
+  half_day_arrival?: boolean;
+}
 
-  const meal = resolveMealPattern(countryCode);
+// Build the unified leg list. Inputs come from intent (destinations[] and
+// transit_legs[]) and the parallel geocode pass.
+//
+// Transit-day insertion: when transit_legs[i].needs_transit_day is true, we
+// steal ONE day from one of the two adjacent destination legs (preferring the
+// longer one, but never reducing a leg below 1 day) and turn it into a
+// dedicated transit leg. This keeps the trip's total day count fixed at
+// numDays.
+//
+// If both adjacent legs are at 1 day already, we cannot insert a transit day
+// without breaking the trip — in that case we degrade to a half-day arrival
+// at the destination instead and log the compromise.
+function buildLegs(
+  intent: Intent,
+  geos: GeocodeResult[],
+  numDays: number,
+): Leg[] {
+  const legs: Leg[] = [];
+
+  // Mutable copy of the day allocation so we can steal days for transit legs.
+  const allocations = intent.destinations.map((d) => d.days_allocated);
+
+  // Half-day arrival flags, indexed by intent.destinations[i] (i.e. the TO
+  // destination of a half-day transit hop). Used by the skeleton to shape the
+  // first day of that leg as an arrival day even when it's not the first day
+  // of the trip.
+  const halfDayArrival = new Array<boolean>(intent.destinations.length).fill(false);
+
+  // Resolve each transit leg. We iterate in reverse so day-stealing from the
+  // FROM-leg never disturbs an already-resolved transit ahead.
+  // (Trying earlier-first works too in practice; reverse is just defensive.)
+  const transitsToInsert: Array<{ afterLegIndex: number; meta: TransitDayMeta }> = [];
+  for (const tl of intent.transit_legs) {
+    if (tl.needs_transit_day) {
+      const fromIdx = tl.from_index;
+      const toIdx = tl.to_index;
+      // Prefer to steal from the longer of the two adjacent destinations.
+      let stealFrom: number | null = null;
+      if (allocations[fromIdx] >= allocations[toIdx] && allocations[fromIdx] > 1) {
+        stealFrom = fromIdx;
+      } else if (allocations[toIdx] > 1) {
+        stealFrom = toIdx;
+      } else if (allocations[fromIdx] > 1) {
+        stealFrom = fromIdx;
+      }
+      if (stealFrom !== null) {
+        allocations[stealFrom] -= 1;
+        transitsToInsert.push({
+          afterLegIndex: fromIdx,
+          meta: {
+            from_index: fromIdx,
+            to_index: toIdx,
+            half_day: false,
+            description: tl.description,
+          },
+        });
+        continue;
+      }
+      // Both legs at 1 day — can't insert a full transit day. Fall back to
+      // half-day arrival on the destination side and log.
+      console.warn(
+        `[buildLegs] cannot insert transit day between leg ${fromIdx} and ${toIdx} ` +
+        `(both at 1 day); degrading to half-day arrival.`,
+      );
+      halfDayArrival[toIdx] = true;
+      continue;
+    }
+    if (tl.half_day_transit) {
+      halfDayArrival[tl.to_index] = true;
+    }
+  }
+
+  // Build legs in order: dest, optional transit, dest, optional transit, ...
+  let legCounter = 0;
+  for (let i = 0; i < intent.destinations.length; i++) {
+    legs.push({
+      index: legCounter,
+      kind: "destination",
+      name: intent.destinations[i].name,
+      geo: geos[i] ?? null,
+      days_count: allocations[i],
+      intent_destination_index: i,
+      half_day_arrival: halfDayArrival[i] && i > 0,
+    });
+    legCounter += 1;
+    const transit = transitsToInsert.find((t) => t.afterLegIndex === i);
+    if (transit) {
+      const fromName = intent.destinations[transit.meta.from_index]?.name ?? "Origin";
+      const toName = intent.destinations[transit.meta.to_index]?.name ?? "Destination";
+      legs.push({
+        index: legCounter,
+        kind: "transit",
+        name: `${fromName} → ${toName}`,
+        geo: null,
+        days_count: 1,
+        intent_destination_index: -1,
+        transit_meta: transit.meta,
+      });
+      legCounter += 1;
+    }
+  }
+
+  // Sanity check.
+  const totalDays = legs.reduce((n, l) => n + l.days_count, 0);
+  if (totalDays !== numDays) {
+    console.warn(
+      `[buildLegs] day-count drift: legs sum to ${totalDays} but trip is ${numDays} days. ` +
+      `Adjusting last destination leg by ${numDays - totalDays}.`,
+    );
+    // Absorb the delta into the last destination leg.
+    for (let i = legs.length - 1; i >= 0; i--) {
+      if (legs[i].kind === "destination") {
+        legs[i].days_count = Math.max(1, legs[i].days_count + (numDays - totalDays));
+        break;
+      }
+    }
+  }
+
+  return legs;
+}
+
+// Slot list for a single day inside a destination leg. Shape depends on
+// position-in-leg + position-in-trip + pace + rest-day rule.
+function buildDestinationDaySlots(
+  intent: Intent,
+  pace: Intent["pace"],
+  meal: { lunch: [number, number]; dinner: [number, number] },
+  ctx: {
+    isTripFirstDay: boolean;
+    isTripLastDay: boolean;
+    isLegFirstDay: boolean;
+    isLegLastDay: boolean;
+    isRest: boolean;
+    halfDayArrival: boolean;
+  },
+): PacingSlot[] {
   const lunchStart = meal.lunch[0];
   const dinnerStart = meal.dinner[0];
   const wantsNightlife = hasNightlifeSignal(intent);
+  const slots: PacingSlot[] = [];
+  const primary = "primary";
+  const transitHub = "transit_hub";
 
-  const days: DaySkeleton[] = [];
-  for (let d = 0; d < numDays; d++) {
-    const date = addDaysIso(base, d);
-    const isFirst = numDays > 1 && d === 0;
-    const isLast = numDays > 1 && d === numDays - 1;
-    // Rest day: only on longer active trips, never on arrival/departure days.
-    const isRest =
-      numDays >= 6 &&
-      intent.pace === "active" &&
-      !isFirst &&
-      !isLast &&
-      (d + 1) % 4 === 0;
+  // Trip-first OR half-day-arrival into a non-first leg both look the same:
+  // afternoon arrival, optional lunch, one light sight, dinner.
+  const isArrivalShape = ctx.isTripFirstDay || (ctx.isLegFirstDay && ctx.halfDayArrival);
+  const isDepartureShape = ctx.isTripLastDay;
 
-    const slots: PacingSlot[] = [];
-    const primary = "primary";
-    const transitHub = "transit_hub";
-
-    if (isFirst) {
-      // Arrival day: afternoon arrival buffer, one light sight, dinner. On
-      // leisurely pace lunch is dropped — light pace means light bookends too,
-      // and dinner is the day's food anchor. Balanced/active keep lunch so the
-      // post-arrival window has a meal beat before the afternoon sight.
-      slots.push({ type: "arrival", start_time: hhmm(13, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
-      if (intent.pace !== "leisurely") {
-        slots.push({ type: "lunch", start_time: hhmm(lunchStart, 30), duration_minutes: 75, region_tag_for_queries: primary });
-      }
-      slots.push({ type: "afternoon_major", start_time: hhmm(16, 0), duration_minutes: 120, region_tag_for_queries: primary });
-      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
-    } else if (isLast) {
-      // Departure day: morning highlight, farewell lunch, then departure buffer.
-      // Breakfast is dropped — the day already has lunch + a transit anchor;
-      // morning_major is the more valuable slot before flight time. Lunch is
-      // the day's only food anchor (no dinner before a flight) and is
-      // protected from cap-trimming below.
-      slots.push({ type: "morning_major", start_time: hhmm(9, 30), duration_minutes: 120, region_tag_for_queries: primary });
-      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
-      slots.push({ type: "departure", start_time: hhmm(15, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
-    } else if (isRest) {
-      // Rest day: late breakfast, long lunch, afternoon rest, dinner.
-      slots.push({ type: "breakfast", start_time: hhmm(10, 0), duration_minutes: 60, region_tag_for_queries: primary });
-      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
-      slots.push({ type: "rest", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
-      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
-    } else if (intent.pace === "leisurely") {
-      // Leisurely / "Light": one afternoon anchor + dinner. No breakfast, no
-      // lunch, no morning slot, no second afternoon — the empty space is the
-      // whole point. Users on this pace want loose middle days. Arrival and
-      // departure days keep their bookend shape (isFirst/isLast branches
-      // above) so travel days don't collapse around a flight.
-      slots.push({ type: "afternoon_major", start_time: hhmm(15, 0), duration_minutes: 120, region_tag_for_queries: primary });
-      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
-      if (wantsNightlife) {
-        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
-      }
-    } else if (intent.pace === "active") {
-      // Active: early start, morning + two afternoon majors, optional nightlife.
-      slots.push({ type: "breakfast", start_time: hhmm(8, 30), duration_minutes: 45, region_tag_for_queries: primary });
-      slots.push({ type: "morning_major", start_time: hhmm(9, 30), duration_minutes: 150, region_tag_for_queries: primary });
-      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 60, region_tag_for_queries: primary });
-      slots.push({ type: "afternoon_major", start_time: hhmm(14, 0), duration_minutes: 150, region_tag_for_queries: primary });
-      slots.push({ type: "afternoon_major", start_time: hhmm(16, 45), duration_minutes: 105, region_tag_for_queries: primary });
-      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
-      if (wantsNightlife) {
-        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
-      }
-    } else {
-      // Balanced (default): morning anchor + lunch + afternoon anchor + dinner.
-      // Breakfast is reserved for active pace. Nightlife is appended only when
-      // the user signalled it (vibe / must-have / notes via hasNightlifeSignal,
-      // which already vetoes on family/kids signals) — see PR for vibes
-      // fidelity fix that decoupled nightlife from active-only pacing.
-      slots.push({ type: "morning_major", start_time: hhmm(10, 0), duration_minutes: 150, region_tag_for_queries: primary });
-      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
-      slots.push({ type: "afternoon_major", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
-      slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
-      if (wantsNightlife) {
-        slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
-      }
+  if (isArrivalShape) {
+    slots.push({ type: "arrival", start_time: hhmm(13, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
+    if (pace !== "leisurely") {
+      slots.push({ type: "lunch", start_time: hhmm(lunchStart, 30), duration_minutes: 75, region_tag_for_queries: primary });
     }
+    slots.push({ type: "afternoon_major", start_time: hhmm(16, 0), duration_minutes: 120, region_tag_for_queries: primary });
+    slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+    return slots;
+  }
+  if (isDepartureShape) {
+    slots.push({ type: "morning_major", start_time: hhmm(9, 30), duration_minutes: 120, region_tag_for_queries: primary });
+    slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
+    slots.push({ type: "departure", start_time: hhmm(15, 0), duration_minutes: 180, region_tag_for_queries: transitHub });
+    return slots;
+  }
+  if (ctx.isRest) {
+    slots.push({ type: "breakfast", start_time: hhmm(10, 0), duration_minutes: 60, region_tag_for_queries: primary });
+    slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+    slots.push({ type: "rest", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
+    slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+    return slots;
+  }
+  if (pace === "leisurely") {
+    slots.push({ type: "afternoon_major", start_time: hhmm(15, 0), duration_minutes: 120, region_tag_for_queries: primary });
+    slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+    if (wantsNightlife) {
+      slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
+    }
+    return slots;
+  }
+  if (pace === "active") {
+    slots.push({ type: "breakfast", start_time: hhmm(8, 30), duration_minutes: 45, region_tag_for_queries: primary });
+    slots.push({ type: "morning_major", start_time: hhmm(9, 30), duration_minutes: 150, region_tag_for_queries: primary });
+    slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 60, region_tag_for_queries: primary });
+    slots.push({ type: "afternoon_major", start_time: hhmm(14, 0), duration_minutes: 150, region_tag_for_queries: primary });
+    slots.push({ type: "afternoon_major", start_time: hhmm(16, 45), duration_minutes: 105, region_tag_for_queries: primary });
+    slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+    if (wantsNightlife) {
+      slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
+    }
+    return slots;
+  }
+  // Balanced (default).
+  slots.push({ type: "morning_major", start_time: hhmm(10, 0), duration_minutes: 150, region_tag_for_queries: primary });
+  slots.push({ type: "lunch", start_time: hhmm(lunchStart, 0), duration_minutes: 75, region_tag_for_queries: primary });
+  slots.push({ type: "afternoon_major", start_time: hhmm(14, 30), duration_minutes: 150, region_tag_for_queries: primary });
+  slots.push({ type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: primary });
+  if (wantsNightlife) {
+    slots.push({ type: "nightlife", start_time: hhmm(dinnerStart + 2, 30), duration_minutes: 120, region_tag_for_queries: primary });
+  }
+  return slots;
+}
 
-    days.push({
-      date,
-      day_number: d + 1,
-      theme: themeForDay({ isFirst, isLast, isRest, pace: intent.pace, destination: intent.destination }),
-      slots,
-    });
+// Slot list for a transit day. Single transit_buffer slot covering most of
+// the day plus a dinner at the destination so the ranker has at least one
+// food anchor to enrich. The ranker is told to skip activity slots on transit
+// days; only the dinner gets a real venue lookup.
+function buildTransitDaySlots(
+  meal: { lunch: [number, number]; dinner: [number, number] },
+): PacingSlot[] {
+  const dinnerStart = meal.dinner[0];
+  return [
+    { type: "transit_buffer", start_time: hhmm(8, 0), duration_minutes: 600, region_tag_for_queries: "transit_hub" },
+    { type: "dinner", start_time: hhmm(dinnerStart, 0), duration_minutes: 90, region_tag_for_queries: "primary" },
+  ];
+}
+
+function buildSkeleton(
+  intent: Intent,
+  legs: Leg[],
+  numDays: number,
+  startDate: string,
+): DaySkeleton[] {
+  const base = startDate || new Date().toISOString().slice(0, 10);
+  const days: DaySkeleton[] = [];
+  let dayCounter = 0;
+
+  for (const leg of legs) {
+    // Per-leg meal pattern. Transit legs have no geo → fall back to default.
+    const meal = resolveMealPattern(leg.geo?.country_code ?? null);
+
+    for (let dayInLeg = 0; dayInLeg < leg.days_count; dayInLeg++) {
+      const date = addDaysIso(base, dayCounter);
+      const day_number = dayCounter + 1;
+      const isTripFirstDay = numDays > 1 && dayCounter === 0;
+      const isTripLastDay = numDays > 1 && dayCounter === numDays - 1;
+
+      let slots: PacingSlot[];
+      let theme: string;
+      let transit: TransitDayMeta | undefined;
+
+      if (leg.kind === "transit") {
+        slots = buildTransitDaySlots(meal);
+        theme = leg.transit_meta?.description
+          ? `Travel: ${leg.name}`
+          : `Travel day`;
+        transit = leg.transit_meta;
+      } else {
+        const isLegFirstDay = dayInLeg === 0;
+        const isLegLastDay = dayInLeg === leg.days_count - 1;
+        // Rest days only apply within active-pace destination legs of >=4 days.
+        // We use the position WITHIN the leg, not the whole trip — a rest day
+        // mid-Bangkok shouldn't anchor on the trip-global day-4 rule.
+        const isRest =
+          intent.pace === "active" &&
+          leg.days_count >= 4 &&
+          !isLegFirstDay &&
+          !isLegLastDay &&
+          (dayInLeg + 1) % 4 === 0 &&
+          !isTripFirstDay &&
+          !isTripLastDay;
+
+        slots = buildDestinationDaySlots(intent, intent.pace, meal, {
+          isTripFirstDay,
+          isTripLastDay,
+          isLegFirstDay,
+          isLegLastDay,
+          isRest,
+          halfDayArrival: !!leg.half_day_arrival,
+        });
+
+        // Theme for first/last leg-day uses themeForDay; otherwise empty (the
+        // ranker writes the real theme). This matches the legacy single-leg
+        // behavior: arrival day → "Arrival in X", departure day → "Last
+        // highlights & X farewell", interior → "" (LLM-written).
+        const isArrival = isTripFirstDay || (isLegFirstDay && leg.half_day_arrival);
+        theme = themeForDay({
+          isFirst: isArrival,
+          isLast: isTripLastDay,
+          isRest,
+          pace: intent.pace,
+          destination: leg.name,
+        });
+      }
+
+      days.push({
+        date,
+        day_number,
+        theme,
+        slots,
+        destination_index: leg.index,
+        transit,
+      });
+      dayCounter += 1;
+    }
   }
 
   return enforceSlotCap(days, intent.pace);
@@ -1909,10 +2674,15 @@ function budgetLodgingTerm(tier: Intent["budget_tier"]): string {
   return "boutique";
 }
 
-function buildPlacesQueries(
+// Build per-leg query batch. Single-destination trips call this once with
+// destinationIndex=0; multi-destination trips call it once per leg and the
+// outer entry point combines the batches.
+function buildPlacesQueriesForLeg(
   intent: Intent,
-  skeleton: DaySkeleton[],
+  legSkeletonDays: DaySkeleton[],
   center: { lat: number; lng: number; name: string },
+  destinationIndex: number,
+  perLegCap: number,
 ): PlacesSearchQuery[] {
   const city = center.name.split(",")[0].trim() || center.name;
   const locationBias = {
@@ -1933,7 +2703,7 @@ function buildPlacesQueries(
   const cafePrefix = avoidCrowds ? "quiet " : "";
 
   const slotTypesSeen = new Set<SlotType>();
-  for (const day of skeleton) for (const slot of day.slots) slotTypesSeen.add(slot.type);
+  for (const day of legSkeletonDays) for (const slot of day.slots) slotTypesSeen.add(slot.type);
 
   const dinnerTone = detectDinnerTone(intent.vibes);
   const foodVibe = detectFoodVibe(intent.vibes);
@@ -1941,11 +2711,11 @@ function buildPlacesQueries(
 
   const queries: PlacesSearchQuery[] = [];
   const seen = new Set<string>();
-  const add = (dedupKey: string, q: PlacesSearchQuery): void => {
-    if (queries.length >= MAX_PLACES_QUERIES_PER_TRIP) return;
+  const add = (dedupKey: string, q: Omit<PlacesSearchQuery, "destinationIndex">): void => {
+    if (queries.length >= perLegCap) return;
     if (seen.has(dedupKey)) return;
     seen.add(dedupKey);
-    queries.push(q);
+    queries.push({ ...q, destinationIndex });
   };
 
   // ---- Lodging (always 1 query) ----
@@ -2049,10 +2819,6 @@ function buildPlacesQueries(
   // ---- Vibes → typed retrieval (one query per matched vibe) ----
   // Each user-selected vibe contributes one Places query with a real
   // includedType so the ranker sees venues that genuinely fit that vibe.
-  // Without this loop the Nightlife / Culture / Adventure / etc. chips were
-  // decoration only — the prompt mentioned them but no nightlife/museum/park
-  // venues ever entered the candidate pool. Cap-aware: add() bails if we'd
-  // exceed MAX_PLACES_QUERIES_PER_TRIP, so must_haves still take priority.
   for (const spec of matchedVibeSpecs(intent.vibes)) {
     add(spec.dedupKey, {
       textQuery: `${spec.textBias} ${city}`,
@@ -2063,6 +2829,34 @@ function buildPlacesQueries(
   }
 
   return queries;
+}
+
+// Multi-leg entry point. Iterates real-destination legs (transit legs are
+// dinner-only; their dinner queries fall under the FROM destination's leg —
+// the LLM's transit-day shaping handles the actual dinner slot). Single-
+// destination trips end up with one batch tagged destinationIndex=0.
+function buildPlacesQueries(
+  intent: Intent,
+  skeleton: DaySkeleton[],
+  legs: Leg[],
+): PlacesSearchQuery[] {
+  const realLegs = legs.filter((l) => l.kind === "destination");
+  const perLegCap = realLegs.length <= 1
+    ? MAX_PLACES_QUERIES_PER_TRIP
+    : Math.min(MAX_PLACES_QUERIES_PER_LEG, Math.floor(MAX_PLACES_QUERIES_PER_MULTI_TRIP / realLegs.length));
+
+  const out: PlacesSearchQuery[] = [];
+  for (const leg of realLegs) {
+    if (!leg.geo) continue;
+    // Skeleton days that belong to this leg. Transit-leg days are handled by
+    // their adjacent destination legs' dinner pools.
+    const legDays = skeleton.filter((d) => d.destination_index === leg.index);
+    if (legDays.length === 0) continue;
+    const legCenter = { lat: leg.geo.lat, lng: leg.geo.lng, name: leg.name };
+    const legQueries = buildPlacesQueriesForLeg(intent, legDays, legCenter, leg.index, perLegCap);
+    out.push(...legQueries);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -2297,6 +3091,64 @@ async function geocodeDestination(
   // Billed as Pro because Text Search with addressComponents is >= Pro tier.
   await logPlacesCall(svcClient, { userId, feature: "trip_builder", sku: "search_pro" });
   return result;
+}
+
+// Geocode every leg of a multi-destination trip in parallel. Returns the
+// per-leg results in the SAME ORDER as `destinations[]`. The pipeline uses
+// each leg's coordinates for its own Places location bias; the trip-level
+// map_center is computed as the centroid of the leg coordinates (we don't
+// use bounding-box midpoint because longitude wraparound near ±180° would
+// produce a wrong center; centroid is correct enough at city scale and
+// almost always within 50 km of either leg in the multi-destination cases
+// we see in practice).
+//
+// Single-destination trips short-circuit to a 1-element array — the geocode
+// cache layer makes this functionally identical to the legacy single call.
+async function geocodeIntentDestinations(
+  googleKey: string,
+  destinations: IntentDestination[],
+  svcClient: ReturnType<typeof createClient>,
+  userId: string | null,
+): Promise<GeocodeResult[]> {
+  if (destinations.length === 0) {
+    throw new PipelineError(
+      "geocodeDestination",
+      "Could not resolve destination",
+      "intent.destinations is empty",
+    );
+  }
+  return await Promise.all(
+    destinations.map((d) => geocodeDestination(googleKey, d.name, svcClient, userId)),
+  );
+}
+
+function computeMapCenter(geos: GeocodeResult[]): { lat: number; lng: number } {
+  if (geos.length === 0) return { lat: 0, lng: 0 };
+  if (geos.length === 1) return { lat: geos[0].lat, lng: geos[0].lng };
+  const lat = geos.reduce((s, g) => s + g.lat, 0) / geos.length;
+  const lng = geos.reduce((s, g) => s + g.lng, 0) / geos.length;
+  return { lat, lng };
+}
+
+// Trip-level map zoom: zoomed in for single-destination trips, pulled out
+// when legs span a wide area. The thresholds are deliberately coarse — the
+// frontend can override based on viewport.
+function computeMapZoom(geos: GeocodeResult[]): number {
+  if (geos.length <= 1) return 12;
+  let maxKm = 0;
+  for (let i = 0; i < geos.length; i++) {
+    for (let j = i + 1; j < geos.length; j++) {
+      maxKm = Math.max(
+        maxKm,
+        haversineKm(geos[i].lat, geos[i].lng, geos[j].lat, geos[j].lng),
+      );
+    }
+  }
+  if (maxKm > 1500) return 4;
+  if (maxKm > 500) return 6;
+  if (maxKm > 200) return 7;
+  if (maxKm > 80) return 9;
+  return 11;
 }
 
 // ---------------------------------------------------------------------------
@@ -2612,14 +3464,23 @@ async function searchPlacesBatch(
       `live=${stats.live_calls} cache=${stats.cache_hits} ms=${Date.now() - batchStart}`,
   );
 
+  // Dedup by (place_id, destinationIndex). The same physical place can
+  // legitimately surface in two different legs' query batches (rare — only
+  // when legs are close enough that their location-bias circles overlap), in
+  // which case we keep both copies tagged to their respective legs so the
+  // ranker for each leg can use it. Within a single leg, dedup is by place_id
+  // alone (the legacy behavior).
   const seen = new Set<string>();
   const out: BatchPlaceResult[] = [];
   for (let i = 0; i < perQueryResults.length; i++) {
     const pool = queries[i].poolKey;
+    const destIdx = queries[i].destinationIndex;
     for (const p of perQueryResults[i]) {
       const id = p.id as string | undefined;
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
+      if (!id) continue;
+      const compoundKey = `${destIdx}:${id}`;
+      if (seen.has(compoundKey)) continue;
+      seen.add(compoundKey);
       out.push({
         id,
         displayName: (p.displayName as { text?: string } | undefined)?.text ?? null,
@@ -2639,6 +3500,7 @@ async function searchPlacesBatch(
         addressComponents: [],
         openingHours: null,
         poolKey: pool,
+        destinationIndex: destIdx,
       });
     }
   }
@@ -3528,6 +4390,7 @@ ABSOLUTE RULES — violating any of these makes your output useless:
 5. Pick exactly one activity per slot in the skeleton. If a slot is "arrival", "departure", "transit_buffer", or "rest", emit an activity whose category reflects the downtime (e.g. "transit" or "rest") with a short helpful description ("Arrive, check in, unpack" / "Return to the hotel; you've earned it"). place_id=null is acceptable for pure-downtime slots — set is_event=false.
 6. Do not pick the venue listed in shared.accommodation_place_id — that's the lodging for the whole trip and is emitted separately.
 7. HARD CONSTRAINT — DO NOT pick any place_id listed in shared.avoid_place_ids. Those venues are already used by earlier days of this trip. The system will silently drop any slot that reuses a claimed place_id, leaving the slot visibly empty in the user's itinerary. If the unclaimed pool is too thin to fill every slot, RETURN FEWER ACTIVITIES — emit place_id=null for slots you cannot fill from the unclaimed pool (set is_event=false, slot_type matching the skeleton, and a short description explaining "no suitable venue available — leave open"). An empty slot is acceptable. A reused claimed venue is not.
+8. MULTI-DESTINATION ROUTING — HARD CONSTRAINT. The user message includes day.current_leg.{index, name, kind}. You MUST pick venues ONLY from legs[current_leg.index].venue_pool_by_category in the shared trip context. Picks from other legs' pools are silently dropped. If the day's current_leg.kind === "transit", DO NOT pick activity venues for any slot except dinner — emit place_id=null for transit_buffer/morning/afternoon slots (they're travel time, not sightseeing) and a one-sentence description naming the from→to route. Adjacent legs are surfaced in day.adjacent_legs so you can write narrative copy referencing the previous or next destination ("tomorrow you head to <next.name>") — but venues must come from the current leg only.
 
 PACE DISCIPLINE — RESPECT THE EMPTY SPACE:
 - intent.pace tells you how full the user wants their days to feel. The skeleton already encodes this — light-pace days have only an afternoon anchor + dinner; balanced has morning + lunch + afternoon + dinner; active stacks three anchors plus all three meals.
@@ -3821,18 +4684,33 @@ function digestVenue(p: BatchPlaceResult): VenueDigestEntry {
 // IMPORTANT: this string MUST be deterministic for a given (intent, pool,
 // events) triplet. Object key order in JSON.stringify matters; we pin it
 // explicitly above.
-function buildSharedContextText(
-  intent: Intent,
-  venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
-  events: EventCandidate[],
-  currency: string,
-  countryCode: string | null,
-): string {
-  // Merge consolidated "restaurants" pool into both lunch and dinner so each
-  // per-day call sees a rich meal pool under each slot. Tone/vibe-specific
-  // queries (dinner:romantic / lunch:vibe:foodie) stay in their own pools to
-  // preserve biased options.
-  const merged = new Map(venuesByPool);
+// Group pool venues by (destinationIndex, poolKey) so multi-destination trips
+// can present each leg's candidate pool separately to the ranker.
+function groupVenuesByLegAndPool(
+  venues: BatchPlaceResult[],
+): Map<number, Map<PoolKey, BatchPlaceResult[]>> {
+  const out = new Map<number, Map<PoolKey, BatchPlaceResult[]>>();
+  for (const v of venues) {
+    const legIdx = v.destinationIndex ?? 0;
+    let legMap = out.get(legIdx);
+    if (!legMap) {
+      legMap = new Map();
+      out.set(legIdx, legMap);
+    }
+    const arr = legMap.get(v.poolKey) ?? [];
+    arr.push(v);
+    legMap.set(v.poolKey, arr);
+  }
+  return out;
+}
+
+// Merge the shared "restaurants" pool into lunch+dinner per leg so each
+// per-day call sees rich meal options. Mirrors the legacy single-leg
+// behavior, applied independently to each leg's pool map.
+function mergeLegRestaurantPool(
+  legPool: Map<PoolKey, BatchPlaceResult[]>,
+): Map<PoolKey, BatchPlaceResult[]> {
+  const merged = new Map(legPool);
   const shared = merged.get("restaurants") ?? [];
   if (shared.length > 0) {
     const lunch = merged.get("lunch") ?? [];
@@ -3841,16 +4719,58 @@ function buildSharedContextText(
     merged.set("dinner", dedupeByIdKeepFirst([...dinner, ...shared]));
     merged.delete("restaurants");
   }
+  return merged;
+}
 
-  const pool: Record<string, VenueDigestEntry[]> = {};
-  for (const [key, venues] of merged.entries()) {
-    const sorted = [...venues].sort((a, b) => {
-      const ra = a.rating ?? 0, rb = b.rating ?? 0;
-      if (rb !== ra) return rb - ra;
-      return (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0);
-    });
-    pool[key] = sorted.slice(0, 15).map(digestVenue);
-  }
+function buildSharedContextText(
+  intent: Intent,
+  legs: Leg[],
+  venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
+  events: EventCandidate[],
+  currency: string,
+  countryCode: string | null,
+): string {
+  // venuesByPool is the trip-wide map (used for backward-compat at construction
+  // time and for accommodation picking). For multi-destination context we
+  // re-derive a per-leg view so each leg gets its own venue_pool_by_category.
+  const allVenues: BatchPlaceResult[] = [];
+  for (const arr of venuesByPool.values()) for (const v of arr) allVenues.push(v);
+  const byLeg = groupVenuesByLegAndPool(allVenues);
+
+  // Per-leg pool digest. Transit legs get an empty pool — the ranker is told
+  // to skip activity-style picks on transit days; only the dinner slot may be
+  // filled from the TO leg's pool, which the per-day instruction surfaces.
+  const legsContext = legs.map((leg) => {
+    if (leg.kind === "transit") {
+      return {
+        index: leg.index,
+        name: leg.name,
+        kind: "transit" as const,
+        days_count: leg.days_count,
+        transit: leg.transit_meta ?? null,
+        venue_pool_by_category: {},
+      };
+    }
+    const legPool = byLeg.get(leg.index) ?? new Map<PoolKey, BatchPlaceResult[]>();
+    const merged = mergeLegRestaurantPool(legPool);
+    const pool: Record<string, VenueDigestEntry[]> = {};
+    for (const [key, venues] of merged.entries()) {
+      const sorted = [...venues].sort((a, b) => {
+        const ra = a.rating ?? 0, rb = b.rating ?? 0;
+        if (rb !== ra) return rb - ra;
+        return (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0);
+      });
+      pool[key] = sorted.slice(0, 15).map(digestVenue);
+    }
+    return {
+      index: leg.index,
+      name: leg.name,
+      kind: "destination" as const,
+      days_count: leg.days_count,
+      country_code: leg.geo?.country_code ?? null,
+      venue_pool_by_category: pool,
+    };
+  });
 
   const payload = {
     intent: {
@@ -3865,8 +4785,13 @@ function buildSharedContextText(
       dietary: intent.dietary,
       group_composition: intent.group_composition,
       raw_notes: intent.raw_notes,
+      // Surface the multi-destination structure in shared context so the
+      // ranker reasoning can mention adjacent legs ("tomorrow you head to X").
+      destinations: intent.destinations.map((d) => ({
+        name: d.name, days_allocated: d.days_allocated, reasoning: d.reasoning,
+      })),
     },
-    venue_pool_by_category: pool,
+    legs: legsContext,
     events: events.map((e) => ({
       name: e.name,
       date_iso: e.date_iso,
@@ -3887,6 +4812,7 @@ function buildSharedContextText(
 // — the runtime also dedupes after the fact).
 function buildDayInstruction(
   day: DaySkeleton,
+  legs: Leg[],
   accommodationPlaceId: string | null,
   avoidPlaceIds: string[],
 ): string {
@@ -3902,6 +4828,9 @@ function buildDayInstruction(
   const dayWeekdayName = dayWeekdayIdx >= 0
     ? ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dayWeekdayIdx]
     : null;
+  const currentLeg = legs[day.destination_index] ?? legs[0];
+  const prevLeg = day.destination_index > 0 ? legs[day.destination_index - 1] : null;
+  const nextLeg = day.destination_index < legs.length - 1 ? legs[day.destination_index + 1] : null;
   const slotPayload = {
     day: {
       day_number: day.day_number,
@@ -3914,6 +4843,28 @@ function buildDayInstruction(
         duration_minutes: s.duration_minutes,
         region_tag: s.region_tag_for_queries,
       })),
+      // Multi-destination routing. The ranker MUST pick venues from
+      // legs[current_leg.index].venue_pool_by_category in shared context.
+      // Cross-leg picks are silently dropped at hydrate time.
+      current_leg: {
+        index: currentLeg?.index ?? 0,
+        name: currentLeg?.name ?? "",
+        kind: currentLeg?.kind ?? "destination",
+        ...(day.transit
+          ? { transit: {
+              from_index: day.transit.from_index,
+              to_index: day.transit.to_index,
+              description: day.transit.description,
+            } }
+          : {}),
+      },
+      // Adjacent-leg context lets the ranker reference upcoming/previous
+      // destinations in narrative copy ("tomorrow you head to X"). Empty
+      // strings for trip start/end.
+      adjacent_legs: {
+        previous: prevLeg ? { name: prevLeg.name, kind: prevLeg.kind } : null,
+        next: nextLeg ? { name: nextLeg.name, kind: nextLeg.kind } : null,
+      },
     },
     shared: {
       accommodation_place_id: accommodationPlaceId,
@@ -4269,6 +5220,36 @@ function pickAccommodationPlaceId(
   return sorted[0]?.id ?? null;
 }
 
+// Per-leg accommodation. Returns one place_id per real-destination leg
+// (transit legs get null — they don't have lodging). The first lodging entry
+// in each leg's pool (sorted by rating + reviews) wins. Used by multi-leg
+// ranking so each destination gets its own accommodation card.
+function pickAccommodationPlaceIdsByLeg(
+  venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
+  legs: Leg[],
+): Map<number, string | null> {
+  const lodging = venuesByPool.get("lodging") ?? [];
+  const out = new Map<number, string | null>();
+  for (const leg of legs) {
+    if (leg.kind !== "destination") {
+      out.set(leg.index, null);
+      continue;
+    }
+    const candidates = lodging.filter((v) => (v.destinationIndex ?? 0) === leg.index);
+    if (candidates.length === 0) {
+      out.set(leg.index, null);
+      continue;
+    }
+    const sorted = [...candidates].sort((a, b) => {
+      const ra = a.rating ?? 0, rb = b.rating ?? 0;
+      if (rb !== ra) return rb - ra;
+      return (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0);
+    });
+    out.set(leg.index, sorted[0]?.id ?? null);
+  }
+  return out;
+}
+
 // One per-day Anthropic call. Returns the raw tool input on success, null on
 // any failure (caller decides whether to retry / skeleton-fallback).
 //
@@ -4279,6 +5260,7 @@ async function rankDay(
   anthropicKey: string,
   intent: Intent,
   day: DaySkeleton,
+  legs: Leg[],
   sharedContext: string,
   accommodationPlaceId: string | null,
   avoidPlaceIds: string[],
@@ -4290,7 +5272,7 @@ async function rankDay(
     [{ type: "text", text: RANKER_DAY_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     [
       { type: "text", text: sharedContext, cache_control: { type: "ephemeral" } },
-      { type: "text", text: buildDayInstruction(day, accommodationPlaceId, avoidPlaceIds) },
+      { type: "text", text: buildDayInstruction(day, legs, accommodationPlaceId, avoidPlaceIds) },
     ],
     RANKER_DAY_TOOL,
     DAY_MAX_TOKENS[intent.pace],
@@ -4367,6 +5349,7 @@ async function rankDayWithRetry(
   anthropicKey: string,
   intent: Intent,
   day: DaySkeleton,
+  legs: Leg[],
   sharedContext: string,
   accommodationPlaceId: string | null,
   avoidPlaceIds: string[],
@@ -4386,6 +5369,7 @@ async function rankDayWithRetry(
         anthropicKey,
         intent,
         day,
+        legs,
         sharedContext,
         accommodationPlaceId,
         avoidPlaceIds,
@@ -4420,6 +5404,39 @@ async function rankDayWithRetry(
   };
 }
 
+// Build a fallback transit-day activity. Used in place of an LLM call for
+// dedicated transit days — the LLM has no useful work to do (no venues to
+// pick), and skipping the call saves wall time + cost. The fallback emits one
+// transit_buffer activity with the route description.
+function buildTransitDayFallback(day: DaySkeleton): RawRankerDay {
+  const transit = day.transit;
+  const description = transit?.description
+    ? transit.description
+    : `Travel day between destinations`;
+  const slotIdx = day.slots.findIndex((s) => s.type === "transit_buffer");
+  const useIdx = slotIdx >= 0 ? slotIdx : 0;
+  return {
+    day_number: day.day_number,
+    theme: `Travel day`,
+    activities: [
+      {
+        slot_index: useIdx,
+        slot_type: day.slots[useIdx]?.type ?? "transit_buffer",
+        place_id: null,
+        is_event: false,
+        title: "Travel day",
+        description,
+        pro_tip: "Pack snacks, charge devices, and plan a light dinner near your new hotel.",
+        why_for_you: "Long travel days deserve their own breathing room — don't try to squeeze sightseeing in.",
+        skip_if: null,
+        category: "transit",
+        estimated_cost_per_person: 0,
+        dietary_notes: null,
+      },
+    ],
+  };
+}
+
 // rankInParallel — parallel orchestrator used by the non-streaming JSON path.
 // Returns a fully-assembled PipelineResult (still pre-junto-picks, pre-validate,
 // pre-affiliate-decorate; the caller chains those steps the same way it did
@@ -4428,23 +5445,46 @@ async function rankInParallel(
   anthropicKey: string,
   intent: Intent,
   skeleton: DaySkeleton[],
+  legs: Leg[],
   venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
   events: EventCandidate[],
   googleKey: string,
-  geo: GeocodeResult,
+  geos: GeocodeResult[],
   startDate: string,
   endDate: string,
   logger: LLMLogger,
   pipelineStartedAt: number,
 ): Promise<PipelineResult> {
-  const currency = resolveTripCurrency(geo.country_code);
+  // Trip-level currency anchored to leg 0's country. Cross-country trips
+  // reasonably surface the first destination's currency to the user; the
+  // budget UI lets them override.
+  const tripCountryCode = geos[0]?.country_code ?? null;
+  const currency = resolveTripCurrency(tripCountryCode);
   const numDays = skeleton.length;
 
+  // Trip-wide place index (covers all legs), plus per-leg lookup so a day's
+  // hydrate step can confirm a picked place_id belongs to the day's leg.
   const placeById = new Map<string, BatchPlaceResult>();
   for (const venues of venuesByPool.values()) for (const v of venues) placeById.set(v.id, v);
+  const placeByIdByLeg = new Map<number, Map<string, BatchPlaceResult>>();
+  for (const venues of venuesByPool.values()) {
+    for (const v of venues) {
+      const idx = v.destinationIndex ?? 0;
+      let m = placeByIdByLeg.get(idx);
+      if (!m) { m = new Map(); placeByIdByLeg.set(idx, m); }
+      m.set(v.id, v);
+    }
+  }
 
-  const accommodationPlaceId = pickAccommodationPlaceId(venuesByPool);
-  const sharedContext = buildSharedContextText(intent, venuesByPool, events, currency, geo.country_code);
+  const accomByLeg = pickAccommodationPlaceIdsByLeg(venuesByPool, legs);
+  const allAccomIds = new Set<string>();
+  for (const id of accomByLeg.values()) if (id) allAccomIds.add(id);
+  // Trip-level accommodation hint (used by metadata call, which still emits a
+  // single trip_metadata.accommodation). For single-leg trips this matches
+  // the legacy behavior exactly; for multi-leg, the metadata call's
+  // accommodation lands on whichever leg the chosen place_id belongs to.
+  const accommodationPlaceId = accomByLeg.get(0) ?? pickAccommodationPlaceId(venuesByPool);
+  const sharedContext = buildSharedContextText(intent, legs, venuesByPool, events, currency, tripCountryCode);
 
   // Mode selection — see streaming-path comment for rationale.
   const sequentialRanking = numDays >= SEQUENTIAL_RANKING_MIN_DAYS;
@@ -4475,12 +5515,18 @@ async function rankInParallel(
   });
 
   // ---- Walk in skeleton order. In sequential mode, each day's call sees
-  // the cumulative seenIds (built by the prior day's hydrate step) as
-  // avoid_place_ids, so the LLM is told what's claimed instead of guessing.
-  // Receipt-time dedup remains as a safety net. In parallel mode all calls
-  // fire at once with avoid_place_ids=[]; receipt-time dedup is the only
-  // collision check. ----
-  const seenIds = new Set<string>();
+  // the cumulative seenIds for ITS OWN LEG (built by the prior day's hydrate
+  // step) as avoid_place_ids, so the LLM is told what's claimed within the
+  // leg instead of guessing. Cross-leg place_id reuse is allowed (different
+  // physical destinations rarely share venues, and forcing trip-wide unique
+  // when legs are far apart is wasteful). Receipt-time dedup is per-leg too.
+  // ----
+  const seenIdsByLeg = new Map<number, Set<string>>();
+  const getSeenForLeg = (idx: number): Set<string> => {
+    let s = seenIdsByLeg.get(idx);
+    if (!s) { s = new Set(); seenIdsByLeg.set(idx, s); }
+    return s;
+  };
   const ranked_days: RankedDay[] = [];
   const seenThemes = new Set<string>();
   let fallbackDays = 0;
@@ -4491,6 +5537,10 @@ async function rankInParallel(
     rawDay: RawRankerDay | null,
     source: "llm" | "fallback",
   ) => {
+    const legIdx = day.destination_index;
+    const legSeen = getSeenForLeg(legIdx);
+    const legPool = placeByIdByLeg.get(legIdx) ?? new Map();
+    const legAccomId = accomByLeg.get(legIdx) ?? null;
     const theme = rawDay?.theme?.trim() || day.theme;
     const activities: EnrichedActivity[] = [];
     const rawActs = Array.isArray(rawDay?.activities) ? rawDay!.activities : [];
@@ -4499,26 +5549,27 @@ async function rankInParallel(
       const slot = day.slots[i];
       const rawAct = rawActs.find((a) => a?.slot_index === i);
       if (!rawAct) continue;
-      if (rawAct.place_id && seenIds.has(rawAct.place_id)) {
+      if (rawAct.place_id && legSeen.has(rawAct.place_id)) {
         dropReasons.push("dedup");
         continue;
       }
-      if (accommodationPlaceId && rawAct.place_id === accommodationPlaceId) {
+      // Drop picks that collide with this leg's accommodation place_id
+      // (the accommodation is rendered separately at the destination level).
+      if (legAccomId && rawAct.place_id === legAccomId) {
         dropReasons.push("accommodation_collision");
         continue;
       }
-      const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
+      // Multi-destination scope check: drop picks that don't belong to this
+      // leg's pool. This covers both off-leg picks (LLM mistake) and leg
+      // boundaries where the same place_id exists in neighboring legs (we
+      // keep the day's-leg copy only).
+      const place = rawAct.place_id ? legPool.get(rawAct.place_id) ?? null : null;
       if (!rawAct.is_event && rawAct.place_id && !place) {
-        dropReasons.push("place_id_not_in_pool");
+        dropReasons.push("place_id_not_in_leg_pool");
         continue;
       }
       // Hard-drop: Places returned hours AND those hours say the venue is
-      // closed at slot.start_time. We do NOT drop on category-fallback
-      // closures here — fallbacks are approximate and dropping on them
-      // would break too many edge cases (e.g. lunch spots open at 11:00 vs
-      // a slot at 13:30 falling under our 11:00-23:00 default). The
-      // post-pipeline validator (logOpeningHoursViolations) still surfaces
-      // category-fallback closures as observability warnings.
+      // closed at slot.start_time.
       if (place) {
         const openCheck = checkVenueOpen(place, day.date, slot.start_time);
         if (!openCheck.open && openCheck.source === "places") {
@@ -4535,16 +5586,18 @@ async function rankInParallel(
         dropReasons.push("hydrate_failed");
         continue;
       }
-      if (place) seenIds.add(place.id);
+      if (place) legSeen.add(place.id);
       activities.push(activity);
     }
     const rankedDay: RankedDay = {
       date: day.date, day_number: day.day_number, theme, activities,
+      destination_index: legIdx,
+      ...(day.transit ? { transit: day.transit } : {}),
     };
     resolveDayTheme(rankedDay, seenThemes);
     ranked_days.push(rankedDay);
 
-    const minActivities = Math.max(2, Math.floor(day.slots.length * 0.5));
+    const minActivities = day.transit ? 1 : Math.max(2, Math.floor(day.slots.length * 0.5));
     if (activities.length < minActivities) {
       thinDays++;
       const reason =
@@ -4552,17 +5605,33 @@ async function rankInParallel(
         : dropReasons.length > 0 ? dropReasons.join(",")
         : "unknown";
       console.warn(
-        `[rankInParallel] thin day day_number=${day.day_number} ` +
+        `[rankInParallel] thin day day_number=${day.day_number} leg=${legIdx} ` +
         `kept=${activities.length} slots=${day.slots.length} ` +
         `mode=${sequentialRanking ? "sequential" : "parallel"} ` +
-        `claimed_total=${seenIds.size} pool_size=${placeById.size} ` +
+        `claimed_in_leg=${legSeen.size} leg_pool_size=${legPool.size} ` +
         `reason=${reason}`,
       );
     }
   };
 
+  // Helper: rank one day. Transit days bypass the LLM entirely (we generate a
+  // structured fallback). Real-destination days call rankDayWithRetry.
+  const rankOneDay = async (day: DaySkeleton, avoidIds: string[]) => {
+    if (day.transit) {
+      return {
+        raw: buildTransitDayFallback(day),
+        source: "llm" as const,
+        usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+      };
+    }
+    return await rankDayWithRetry(
+      anthropicKey, intent, day, legs, sharedContext,
+      accomByLeg.get(day.destination_index) ?? null,
+      avoidIds, pipelineStartedAt, logger,
+    );
+  };
+
   if (sequentialRanking) {
-    // See streaming-path comment for the budget-exhaustion rationale.
     let budgetExhausted = false;
     for (const day of skeleton) {
       if (!budgetExhausted) {
@@ -4584,19 +5653,14 @@ async function rankInParallel(
         hydrateDay(day, null, "fallback");
         continue;
       }
-      const settled = await rankDayWithRetry(
-        anthropicKey, intent, day, sharedContext, accommodationPlaceId,
-        Array.from(seenIds), pipelineStartedAt, logger,
-      );
+      const avoidIds = Array.from(getSeenForLeg(day.destination_index));
+      const settled = await rankOneDay(day, avoidIds);
       if (settled.source === "fallback") fallbackDays++;
       hydrateDay(day, settled.raw, settled.source);
     }
   } else {
     const dayPromises = skeleton.map((day) =>
-      rankDayWithRetry(
-        anthropicKey, intent, day, sharedContext, accommodationPlaceId, [],
-        pipelineStartedAt, logger,
-      ).then((res) => ({ day, ...res })),
+      rankOneDay(day, []).then((res) => ({ day, ...res })),
     );
     const settledDays = await Promise.all(dayPromises);
     settledDays.sort((a, b) => a.day.day_number - b.day.day_number);
@@ -4643,34 +5707,48 @@ async function rankInParallel(
     return null;
   });
 
-  // ---- Accommodation ----
-  let accommodation: EnrichedActivity | undefined;
-  const accomPlaceId = meta?.accommodation?.place_id ?? accommodationPlaceId;
-  if (accomPlaceId) {
-    const place = placeById.get(accomPlaceId) ?? null;
-    if (place) {
-      const fakeSlot: PacingSlot = {
-        type: "lodging", start_time: "15:00", duration_minutes: 0,
-        region_tag_for_queries: "primary",
-      };
-      const hydrated = hydrateActivity(
-        {
-          slot_index: -1, slot_type: "lodging",
-          place_id: accomPlaceId, is_event: false,
-          title: meta?.accommodation?.title ?? place.displayName ?? "Hotel",
-          description: meta?.accommodation?.description ?? "",
-          pro_tip: meta?.accommodation?.pro_tip ?? "",
-          why_for_you: meta?.accommodation?.why_for_you ?? "",
-          skip_if: meta?.accommodation?.skip_if ?? null,
-          category: "accommodation",
-          estimated_cost_per_person: meta?.accommodation?.estimated_cost_per_person ?? 0,
-          dietary_notes: meta?.accommodation?.dietary_notes ?? null,
-        },
-        fakeSlot, place, googleKey, currency, intent.budget_tier,
-      );
-      if (hydrated) accommodation = hydrated;
+  // ---- Per-leg accommodation hydration. The metadata call's accommodation
+  // editorial copy (title/desc/pro_tip) lands on the leg whose pool contains
+  // its picked place_id; other legs get auto-generated copy from the lodging
+  // pool's top entry. Transit legs get no accommodation. ----
+  const fakeAccomSlot: PacingSlot = {
+    type: "lodging", start_time: "15:00", duration_minutes: 0,
+    region_tag_for_queries: "primary",
+  };
+  const metaAccomPlaceId = meta?.accommodation?.place_id ?? null;
+  const metaAccomLegIdx = (() => {
+    if (!metaAccomPlaceId) return -1;
+    for (const [idx, m] of placeByIdByLeg.entries()) {
+      if (m.has(metaAccomPlaceId)) return idx;
     }
-  }
+    return -1;
+  })();
+
+  const hydrateAccomForLeg = (legIdx: number): EnrichedActivity | undefined => {
+    const placeId = (legIdx === metaAccomLegIdx && metaAccomPlaceId)
+      ? metaAccomPlaceId
+      : accomByLeg.get(legIdx) ?? null;
+    if (!placeId) return undefined;
+    const place = placeById.get(placeId) ?? null;
+    if (!place) return undefined;
+    const useMeta = legIdx === metaAccomLegIdx && meta?.accommodation;
+    const hydrated = hydrateActivity(
+      {
+        slot_index: -1, slot_type: "lodging",
+        place_id: placeId, is_event: false,
+        title: useMeta ? (meta!.accommodation!.title ?? place.displayName ?? "Hotel") : (place.displayName ?? "Hotel"),
+        description: useMeta ? (meta!.accommodation!.description ?? "") : "",
+        pro_tip: useMeta ? (meta!.accommodation!.pro_tip ?? "") : "",
+        why_for_you: useMeta ? (meta!.accommodation!.why_for_you ?? "") : "",
+        skip_if: useMeta ? (meta!.accommodation!.skip_if ?? null) : null,
+        category: "accommodation",
+        estimated_cost_per_person: useMeta ? (meta!.accommodation!.estimated_cost_per_person ?? 0) : 0,
+        dietary_notes: useMeta ? (meta!.accommodation!.dietary_notes ?? null) : null,
+      },
+      fakeAccomSlot, place, googleKey, currency, intent.budget_tier,
+    );
+    return hydrated ?? undefined;
+  };
 
   // ---- Trip-level rollups ----
   const total_activities = ranked_days.reduce((n, d) => n + d.activities.length, 0);
@@ -4684,26 +5762,52 @@ async function rankInParallel(
   const finalTitle = stripEmojis(groundedCopy?.trip_title) || stripEmojis(meta?.trip_title) || intent.destination;
   const finalSummary = (groundedCopy?.trip_summary?.trim() || meta?.trip_summary?.trim()) ?? "";
 
-  const destination: RankedDestination = {
-    name: intent.destination,
-    start_date: skeleton[0]?.date ?? "",
-    end_date: skeleton[skeleton.length - 1]?.date ?? "",
-    intro: finalSummary,
-    days: ranked_days,
-    accommodation,
-  };
+  // ---- Assemble RankedDestination[] = unified leg list. Each leg gets the
+  // days that belong to it, plus accommodation (real legs only). The order
+  // matches legs[].
+  const destinations: RankedDestination[] = legs.map((leg) => {
+    const legDays = ranked_days
+      .filter((d) => d.destination_index === leg.index)
+      .sort((a, b) => a.day_number - b.day_number);
+    const startDate = legDays[0]?.date ?? "";
+    const endDate = legDays[legDays.length - 1]?.date ?? "";
+    if (leg.kind === "transit") {
+      return {
+        name: leg.name,
+        start_date: startDate,
+        end_date: endDate,
+        intro: leg.transit_meta?.description ?? "",
+        days: legDays,
+        kind: "transit",
+        ...(leg.transit_meta ? { transit: leg.transit_meta } : {}),
+      };
+    }
+    return {
+      name: leg.name,
+      start_date: startDate,
+      end_date: endDate,
+      // For multi-leg, the trip summary belongs to the trip; we keep per-leg
+      // intro empty to avoid duplicate copy. Single-leg keeps the legacy
+      // "destination intro = trip_summary" behavior.
+      intro: legs.length === 1 ? finalSummary : "",
+      days: legDays,
+      accommodation: hydrateAccomForLeg(leg.index),
+      kind: "destination",
+    };
+  });
 
   return {
     trip_title: finalTitle,
     trip_summary: finalSummary,
-    destinations: [destination],
-    map_center: { lat: geo.lat, lng: geo.lng },
-    map_zoom: 12,
+    destinations,
+    map_center: computeMapCenter(geos),
+    map_zoom: computeMapZoom(geos),
     daily_budget_estimate,
     currency,
     packing_suggestions: Array.isArray(meta?.packing_suggestions) ? meta!.packing_suggestions.slice(0, 10) : [],
     total_activities,
     budget_tier: intent.budget_tier,
+    adjustment_notice: intent.adjustment_notice ?? null,
   };
 }
 
@@ -5264,11 +6368,19 @@ function validateActivities(
   result: PipelineResult,
   allPlaces: Map<string, BatchPlaceResult>,
   center: { lat: number; lng: number },
+  legCenters?: Map<number, { lat: number; lng: number }>,
 ): PipelineResult {
   let totalBefore = 0;
   let dropped = 0;
 
-  for (const dest of result.destinations) {
+  for (let destIdx = 0; destIdx < result.destinations.length; destIdx++) {
+    const dest = result.destinations[destIdx];
+    // Per-leg center. For real-destination legs, use that leg's geo; for
+    // transit legs, use the trip center (transit days have a dinner pulled
+    // from one of the adjacent destinations — it could legitimately sit
+    // anywhere in the transit corridor). Single-destination trips fall back
+    // to the trip center.
+    const legCenter = legCenters?.get(destIdx) ?? center;
     for (const day of dest.days) {
       totalBefore += day.activities.length;
       const kept: EnrichedActivity[] = [];
@@ -5282,15 +6394,15 @@ function validateActivities(
         }
         const place = act.place_id ? allPlaces.get(act.place_id) ?? null : null;
 
-        // Reason 2: off-continent coords.
+        // Reason 2: off-continent coords (per leg, not trip-wide).
         if (place?.location) {
           const d = haversineKm(
-            center.lat, center.lng,
+            legCenter.lat, legCenter.lng,
             place.location.latitude, place.location.longitude,
           );
           if (d > VALIDATION_MAX_KM_FROM_CENTER) {
             console.warn(
-              `[validateActivities] drop "${act.title}" — ${d.toFixed(0)} km from trip center (limit ${VALIDATION_MAX_KM_FROM_CENTER})`,
+              `[validateActivities] drop "${act.title}" — ${d.toFixed(0)} km from leg center (limit ${VALIDATION_MAX_KM_FROM_CENTER})`,
             );
             dropped++;
             continue;
@@ -5544,10 +6656,12 @@ function normalizeStringArray(arr: unknown): string[] {
 }
 
 // Bump to force every existing ai_response_cache entry to miss and regenerate.
-// Older entries were written before PR #244's markJuntoPicks rewrite (and before
-// the non-streaming cache-hit branch learned to re-tag picks), so they ship
-// with is_junto_pick=false on every activity. v2 evicts them.
-const CACHE_KEY_VERSION = "v2";
+// v3 introduces multi-destination payload shape (destinations[] is now a
+// unified leg list including transit pseudo-legs; days carry destination_index;
+// trip-level adjustment_notice). Pre-v3 entries assume single-destination
+// shape and would mis-validate against the new cache reads (which sum days
+// across all legs). v3 evicts them.
+const CACHE_KEY_VERSION = "v3";
 
 interface RawCacheKeyShape {
   version: string;
@@ -5613,20 +6727,27 @@ function rewriteCachedPayloadDates(
   payload: Record<string, unknown>,
   newStartDate: string,
 ): { days_rewritten: number } {
-  const dest = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations?.[0];
-  if (!dest || !Array.isArray((dest as { days?: unknown }).days)) {
+  const dests = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations;
+  if (!Array.isArray(dests) || dests.length === 0) {
     return { days_rewritten: 0 };
   }
-  const days = (dest as { days: Array<Record<string, unknown>> }).days;
   let daysRewritten = 0;
-  for (const day of days) {
-    const dayNum = typeof day.day_number === "number" ? day.day_number : daysRewritten + 1;
-    day.date = addDaysIso(newStartDate, dayNum - 1);
-    daysRewritten++;
-  }
-  if (days.length > 0) {
-    (dest as Record<string, unknown>).start_date = days[0].date;
-    (dest as Record<string, unknown>).end_date = days[days.length - 1].date;
+  // Walk every leg's days. day_number is global across the trip, so the
+  // newStartDate-based recompute remains correct across multi-leg payloads.
+  for (const dest of dests) {
+    const days = Array.isArray((dest as { days?: unknown }).days)
+      ? (dest as { days: Array<Record<string, unknown>> }).days
+      : null;
+    if (!days) continue;
+    for (const day of days) {
+      const dayNum = typeof day.day_number === "number" ? day.day_number : daysRewritten + 1;
+      day.date = addDaysIso(newStartDate, dayNum - 1);
+      daysRewritten++;
+    }
+    if (days.length > 0) {
+      (dest as Record<string, unknown>).start_date = days[0].date;
+      (dest as Record<string, unknown>).end_date = days[days.length - 1].date;
+    }
   }
   return { days_rewritten: daysRewritten };
 }
@@ -5644,16 +6765,11 @@ function rewriteCachedBookingUrls(
   payload: Record<string, unknown>,
   env: AffiliateEnv,
 ): { rewritten: number } {
-  const dest = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations?.[0];
-  if (!dest) return { rewritten: 0 };
+  const dests = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations;
+  if (!Array.isArray(dests) || dests.length === 0) return { rewritten: 0 };
   let rewritten = 0;
 
-  const destName = typeof (dest as { name?: unknown }).name === "string"
-    ? (dest as { name: string }).name
-    : "";
-  const cityHint = env.cityHint ?? destName ?? null;
-
-  const rebuild = (existingUrl: string, activityTitle: string | null): string => {
+  const rebuild = (existingUrl: string, activityTitle: string | null, cityHint: string | null): string => {
     let bookingUrl = existingUrl;
     try {
       const parsed = new URL(existingUrl);
@@ -5669,12 +6785,8 @@ function rewriteCachedBookingUrls(
       const inner = new URL(bookingUrl);
       existingSs = inner.searchParams.get("ss") ?? "";
     } catch {
-      // unparseable — leave URL unchanged
       return existingUrl;
     }
-    // Prefer the activity title (clean hotel name) + city hint over the
-    // existing ss, which often contains street/postcode noise from older
-    // generations.
     const hotelName = (activityTitle ?? "").trim() || existingSs;
     if (!hotelName) return existingUrl;
     const searchQuery = buildBookingSearchString(hotelName, cityHint);
@@ -5686,28 +6798,36 @@ function rewriteCachedBookingUrls(
     });
   };
 
-  const visit = (activity: Record<string, unknown> | null | undefined) => {
-    if (!activity) return;
-    if (activity.booking_partner !== "booking") return;
-    const current = typeof activity.booking_url === "string" ? activity.booking_url : "";
-    if (!current) return;
-    const title = typeof activity.title === "string" ? activity.title : null;
-    const next = rebuild(current, title);
-    if (next !== current) {
-      activity.booking_url = next;
-      rewritten++;
-    }
-  };
-
-  visit(dest.accommodation as Record<string, unknown> | undefined);
-  const days = Array.isArray((dest as { days?: unknown }).days)
-    ? (dest as { days: Array<Record<string, unknown>> }).days
-    : [];
-  for (const day of days) {
-    const acts = Array.isArray((day as { activities?: unknown }).activities)
-      ? (day as { activities: Array<Record<string, unknown>> }).activities
+  // Walk every leg with its OWN cityHint (the leg's name). Multi-destination
+  // payloads route each leg's hotel link through that leg's city, not the
+  // trip-level intent.destination.
+  for (const dest of dests) {
+    const destName = typeof (dest as { name?: unknown }).name === "string"
+      ? (dest as { name: string }).name
+      : "";
+    const cityHint = destName || env.cityHint || null;
+    const visit = (activity: Record<string, unknown> | null | undefined) => {
+      if (!activity) return;
+      if (activity.booking_partner !== "booking") return;
+      const current = typeof activity.booking_url === "string" ? activity.booking_url : "";
+      if (!current) return;
+      const title = typeof activity.title === "string" ? activity.title : null;
+      const next = rebuild(current, title, cityHint);
+      if (next !== current) {
+        activity.booking_url = next;
+        rewritten++;
+      }
+    };
+    visit((dest as { accommodation?: unknown }).accommodation as Record<string, unknown> | undefined);
+    const days = Array.isArray((dest as { days?: unknown }).days)
+      ? (dest as { days: Array<Record<string, unknown>> }).days
       : [];
-    for (const a of acts) visit(a);
+    for (const day of days) {
+      const acts = Array.isArray((day as { activities?: unknown }).activities)
+        ? (day as { activities: Array<Record<string, unknown>> }).activities
+        : [];
+      for (const a of acts) visit(a);
+    }
   }
   return { rewritten };
 }
@@ -5729,64 +6849,80 @@ async function refreshCachedEvents(
   svcClient: ReturnType<typeof createClient>,
   logger: LLMLogger,
 ): Promise<{ refreshed: number; cleared: number }> {
-  const dest = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations?.[0];
-  const days: Array<Record<string, unknown>> = Array.isArray((dest as { days?: unknown })?.days)
-    ? ((dest as { days: Array<Record<string, unknown>> }).days)
-    : [];
-
-  const eventActivities: Array<Record<string, unknown>> = [];
-  for (const day of days) {
-    const acts = (day as { activities?: unknown }).activities;
-    if (!Array.isArray(acts)) continue;
-    for (const a of acts as Array<Record<string, unknown>>) {
-      if (a && a.event_url) eventActivities.push(a);
-    }
-  }
-  if (eventActivities.length === 0) {
+  const dests = (payload as { destinations?: Array<Record<string, unknown>> })?.destinations;
+  if (!Array.isArray(dests) || dests.length === 0) {
     return { refreshed: 0, cleared: 0 };
   }
 
-  let freshEvents: EventCandidate[] = [];
-  try {
-    freshEvents = await searchEvents(
-      intent.destination,
-      startDate,
-      endDate,
-      intent,
-      [],
-      svcClient,
-      logger,
-      true,
-    );
-  } catch (err) {
-    console.warn(
-      `[stream.cache] events_refresh_failed dest="${intent.destination}" start=${startDate} end=${endDate} err=${(err as Error).message}`,
-    );
-    let cleared = 0;
-    for (const a of eventActivities) {
-      a.event_url = null;
-      cleared++;
+  // Group event-bearing activities by their destination index. Multi-leg
+  // payloads need per-leg event refresh — Bangkok event_url stays bound to
+  // Bangkok's events search, Koh Phangan's to Koh Phangan's.
+  const byDestIdx = new Map<number, { destName: string; activities: Array<Record<string, unknown>> }>();
+  for (let i = 0; i < dests.length; i++) {
+    const dest = dests[i];
+    const destName = typeof (dest as { name?: unknown }).name === "string"
+      ? (dest as { name: string }).name
+      : intent.destination;
+    const days = Array.isArray((dest as { days?: unknown }).days)
+      ? (dest as { days: Array<Record<string, unknown>> }).days
+      : [];
+    const eventActivities: Array<Record<string, unknown>> = [];
+    for (const day of days) {
+      const acts = (day as { activities?: unknown }).activities;
+      if (!Array.isArray(acts)) continue;
+      for (const a of acts as Array<Record<string, unknown>>) {
+        if (a && a.event_url) eventActivities.push(a);
+      }
     }
-    return { refreshed: 0, cleared };
+    if (eventActivities.length > 0) {
+      byDestIdx.set(i, { destName, activities: eventActivities });
+    }
+  }
+  if (byDestIdx.size === 0) {
+    return { refreshed: 0, cleared: 0 };
   }
 
-  let refreshed = 0;
-  let cleared = 0;
-  for (const a of eventActivities) {
-    const match = matchEventCandidate(
-      typeof a.title === "string" ? a.title : "",
-      typeof a.description === "string" ? a.description : "",
-      freshEvents,
-    );
-    if (match?.url) {
-      a.event_url = match.url;
-      refreshed++;
-    } else {
-      a.event_url = null;
-      cleared++;
+  let totalRefreshed = 0;
+  let totalCleared = 0;
+  for (const { destName, activities } of byDestIdx.values()) {
+    let freshEvents: EventCandidate[] = [];
+    try {
+      freshEvents = await searchEvents(
+        destName,
+        startDate,
+        endDate,
+        intent,
+        [],
+        svcClient,
+        logger,
+        true,
+      );
+    } catch (err) {
+      console.warn(
+        `[stream.cache] events_refresh_failed dest="${destName}" start=${startDate} end=${endDate} err=${(err as Error).message}`,
+      );
+      for (const a of activities) {
+        a.event_url = null;
+        totalCleared++;
+      }
+      continue;
+    }
+    for (const a of activities) {
+      const match = matchEventCandidate(
+        typeof a.title === "string" ? a.title : "",
+        typeof a.description === "string" ? a.description : "",
+        freshEvents,
+      );
+      if (match?.url) {
+        a.event_url = match.url;
+        totalRefreshed++;
+      } else {
+        a.event_url = null;
+        totalCleared++;
+      }
     }
   }
-  return { refreshed, cleared };
+  return { refreshed: totalRefreshed, cleared: totalCleared };
 }
 
 // ===========================================================================
@@ -6292,6 +7428,23 @@ Deno.serve(async (req) => {
               }
             }
 
+            // ---- Materialize multi-destination structure ----
+            // After this point intent.destinations[] always has >= 1 entry; for
+            // single-destination requests it's a 1-entry mirror of intent.destination.
+            buildIntentDestinations(intent, numDays);
+
+            // ---- Estimate transit legs (Haiku-cached) ----
+            // Skipped for single-destination trips; returns [] in those cases
+            // anyway, but the early return saves an LLM call wall time.
+            if (intent.destinations.length >= 2) {
+              stepLabel = "estimateTransitLegs";
+              const tTransit = Date.now();
+              intent.transit_legs = await estimateTransitLegs(
+                anthropicKey, intent.destinations, svcClient, logger, pipelineStartedAt,
+              );
+              tStage("estimate_transit", tTransit);
+            }
+
             // ---- Status messages (fire-and-forget, parallel with everything below) ----
             // Destination-specific micro-copy the frontend rotates while waiting
             // on rank_and_enrich. Hard 1500ms timeout inside generateStatusMessages
@@ -6334,12 +7487,14 @@ Deno.serve(async (req) => {
             }
             if (cached?.response_json) {
               const payload = cached.response_json as Record<string, any>;
-              const cachedDayCount: number = Array.isArray(payload?.destinations?.[0]?.days)
-                ? payload.destinations[0].days.length
-                : 0;
-              // Defensive miss: numDays is already in the cache key, so this
-              // should never trip — but if a malformed entry slips through we'd
-              // rather regenerate than ship a 5-day trip for a 6-day request.
+              // Cache validation: sum days across ALL legs. v3 payloads store
+              // destinations[] as the unified leg list (real + transit), so
+              // the sum equals the trip's total day count.
+              const cachedDests = Array.isArray(payload?.destinations) ? payload.destinations : [];
+              const cachedDayCount: number = cachedDests.reduce(
+                (n: number, d: any) => n + (Array.isArray(d?.days) ? d.days.length : 0),
+                0,
+              );
               if (cachedDayCount !== numDays) {
                 console.log(
                   `[stream.cache] miss cache_key=${cacheKey} reason=day_count_mismatch cached=${cachedDayCount} requested=${numDays}`,
@@ -6369,52 +7524,70 @@ Deno.serve(async (req) => {
                 console.log(
                   `[stream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared} booking_urls_rewritten=${bookingRewriteStats.rewritten}`,
                 );
-                const dest = payload?.destinations?.[0];
+                // Flatten cached destinations[] into one days array for the
+                // streaming `day` events, in day_number order.
+                const cachedAllDays: any[] = [];
+                for (const d of cachedDests) {
+                  if (Array.isArray(d?.days)) for (const dd of d.days) cachedAllDays.push(dd);
+                }
+                cachedAllDays.sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0));
+                const firstDest = cachedDests[0];
                 send("meta", {
-                  destination: payload?.destinations?.[0]?.name ?? intent.destination,
+                  destination: firstDest?.name ?? intent.destination,
                   country_code: null,
-                  num_days: dest?.days?.length ?? numDays,
-                  skeleton: (dest?.days ?? []).map((d: any) => ({
+                  num_days: cachedAllDays.length,
+                  skeleton: cachedAllDays.map((d: any) => ({
                     day_number: d.day_number,
                     date: d.date,
                     theme: d.theme ?? "",
+                    destination_index: d.destination_index ?? 0,
+                    ...(d.transit ? { transit: d.transit } : {}),
                   })),
                   currency: payload?.currency ?? "USD",
                   from_cache: true,
                 });
+                // Replay leg structure from cache.
+                send("leg", {
+                  legs: cachedDests.map((d: any, idx: number) => {
+                    const dDays = Array.isArray(d?.days) ? d.days : [];
+                    return {
+                      index: idx,
+                      name: d?.name ?? "",
+                      kind: d?.kind ?? "destination",
+                      days: dDays.length,
+                      day_numbers: dDays.map((dd: any) => dd.day_number),
+                      ...(d?.kind === "transit" && d?.transit
+                        ? { transit: true, description: d.transit.description ?? "" }
+                        : {}),
+                    };
+                  }),
+                  adjustment_notice: payload?.adjustment_notice ?? null,
+                });
                 send("image", { url: payload?.destination_image_url ?? null });
-                // Re-apply junto picks against the current request's intent
-                // before streaming days — cached payloads were tagged under
-                // whatever intent generated them, and signal matches may
-                // differ for this caller. markJuntoPicks resets stale flags
-                // internally.
                 markJuntoPicks(payload as unknown as PipelineResult, intent);
                 logVibeCoverage(payload as unknown as PipelineResult, intent);
                 logDescriptionGrounding(payload as unknown as PipelineResult, intent);
                 logOpeningHoursViolations(payload as unknown as PipelineResult);
                 logPricingAnomalies(payload as unknown as PipelineResult);
-                // Cache-hit fast path: collapse the new stage_progress events
-                // into a single 95% finalize signal so the frontend can
-                // transition directly to filled cards. Days still emit
-                // day_complete per day below.
                 send("stage_progress", {
                   stage: "finalizing",
                   user_text: "Final touches",
                   percent_complete: 95,
                 });
                 console.log("[stream] stage_progress: finalizing (95%) [cache hit]");
-                for (const d of dest?.days ?? []) {
+                for (const d of cachedAllDays) {
                   send("day", d);
                   send("day_complete", {
                     day_number: d.day_number,
                     theme: d.theme ?? "",
                     activity_count: Array.isArray(d.activities) ? d.activities.length : 0,
+                    destination_index: d.destination_index ?? 0,
                   });
                   console.log(`[stream] day_complete: day_number=${d.day_number} [cache hit]`);
                 }
                 const juntoPlaceIds: string[] = [];
-                for (const day of dest?.days ?? []) {
-                  for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
+                for (const d of cachedAllDays) {
+                  for (const a of d.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
                 }
                 console.log(`[stream.cache] junto_picks_tagged=${juntoPlaceIds.length}`);
                 let cacheHitAnonTripId: string | null = null;
@@ -6432,7 +7605,7 @@ Deno.serve(async (req) => {
                 send("trip_complete", {
                   trip_title: stripEmojis(payload?.trip_title),
                   trip_summary: payload?.trip_summary ?? "",
-                  accommodation: dest?.accommodation ?? null,
+                  accommodation: firstDest?.accommodation ?? null,
                   packing_suggestions: payload?.packing_suggestions ?? [],
                   junto_pick_place_ids: juntoPlaceIds,
                   daily_budget_estimate: payload?.daily_budget_estimate ?? 0,
@@ -6443,6 +7616,7 @@ Deno.serve(async (req) => {
                   budget_tier: payload?.budget_tier ?? intent.budget_tier,
                   destination_image_url: payload?.destination_image_url ?? null,
                   destination_country_iso: payload?.destination_country_iso ?? null,
+                  adjustment_notice: payload?.adjustment_notice ?? null,
                   from_cache: true,
                   ...(cacheHitAnonTripId ? { anon_trip_id: cacheHitAnonTripId } : {}),
                 });
@@ -6458,7 +7632,7 @@ Deno.serve(async (req) => {
             }
             tStage("cache_lookup_miss", tCacheLookup);
 
-            // ---- Geocode + skeleton + queries ----
+            // ---- Geocode (multi-leg) + skeleton + queries ----
             send("progress", { stage: "geocoding" });
             send("stage_progress", {
               stage: "geocoding",
@@ -6469,22 +7643,58 @@ Deno.serve(async (req) => {
             stepLabel = "geocodeDestination";
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const tGeocode = Date.now();
-            const geo: GeocodeResult = earlyGeocodePromise
-              ? await earlyGeocodePromise
-              : await geocodeDestination(googleKey, intent.destination, svcClient, actorUserId);
+            // For multi-destination trips: parallel geocode all legs. The
+            // earlyGeocodePromise (started before parseIntent) only covers the
+            // form-supplied destination, which corresponds to leg 0 — we use it
+            // when shape allows, otherwise fall back to a fresh multi-geocode.
+            let geos: GeocodeResult[];
+            if (intent.destinations.length === 1 && earlyGeocodePromise) {
+              const earlyGeo = await earlyGeocodePromise;
+              geos = [earlyGeo];
+            } else {
+              geos = await geocodeIntentDestinations(googleKey, intent.destinations, svcClient, actorUserId);
+            }
+            const geo: GeocodeResult = geos[0];
             tStage("geocode", tGeocode);
 
+            // ---- Build the unified leg list (real + transit pseudo-legs) ----
+            const legs = buildLegs(intent, geos, numDays);
+
             const tSkeleton = Date.now();
-            const skeleton = buildSkeleton(intent, numDays, startDate, geo.country_code);
+            const skeleton = buildSkeleton(intent, legs, numDays, startDate);
             tStage("build_skeleton", tSkeleton);
+
+            const tripCurrency = resolveTripCurrency(geo.country_code);
 
             send("meta", {
               destination: intent.destination,
               country_code: geo.country_code,
               num_days: numDays,
-              skeleton: skeleton.map((d) => ({ day_number: d.day_number, date: d.date, theme: d.theme })),
-              currency: resolveTripCurrency(geo.country_code),
+              skeleton: skeleton.map((d) => ({
+                day_number: d.day_number, date: d.date, theme: d.theme,
+                destination_index: d.destination_index,
+                ...(d.transit ? { transit: d.transit } : {}),
+              })),
+              currency: tripCurrency,
               from_cache: false,
+            });
+
+            // ---- Leg structure event (multi-destination UX) ----
+            send("leg", {
+              legs: legs.map((leg) => {
+                const legDays = skeleton.filter((d) => d.destination_index === leg.index);
+                return {
+                  index: leg.index,
+                  name: leg.name,
+                  kind: leg.kind,
+                  days: legDays.length,
+                  day_numbers: legDays.map((d) => d.day_number),
+                  ...(leg.kind === "transit" && leg.transit_meta
+                    ? { transit: true, description: leg.transit_meta.description }
+                    : {}),
+                };
+              }),
+              adjustment_notice: intent.adjustment_notice ?? null,
             });
 
             // ---- Image in parallel with everything below ----
@@ -6505,16 +7715,25 @@ Deno.serve(async (req) => {
             });
             console.log("[stream] stage_progress: searching_places (30%)");
             const tQueryPlan = Date.now();
-            const queries = buildPlacesQueries(intent, skeleton, { lat: geo.lat, lng: geo.lng, name: intent.destination });
+            const queries = buildPlacesQueries(intent, skeleton, legs);
             tStage("build_queries", tQueryPlan);
 
             stepLabel = "searchPlacesAndEvents";
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const tSearch = Date.now();
-            const [searchResult, events] = await Promise.all([
+            // Events are searched per real-destination leg in parallel. For
+            // single-destination trips this is the legacy single call. We
+            // tag each event with the source leg index so day-level event
+            // routing can prefer events from the day's leg.
+            const realDestLegs = legs.filter((l) => l.kind === "destination");
+            const [searchResult, ...eventsByLeg] = await Promise.all([
               searchPlacesBatch(queries, googleKey, svcClient),
-              searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
+              ...realDestLegs.map((leg) => {
+                const legDays = skeleton.filter((d) => d.destination_index === leg.index);
+                return searchEvents(leg.name, startDate, endDate, intent, legDays, svcClient, logger);
+              }),
             ]);
+            const events: EventCandidate[] = eventsByLeg.flat();
             tStage("search_places_and_events", tSearch);
             const places = searchResult.places;
             const rankingStats = searchResult.stats;
@@ -6599,7 +7818,10 @@ Deno.serve(async (req) => {
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const tRank = Date.now();
 
-            const currency = resolveTripCurrency(geo.country_code);
+            const currency = tripCurrency;
+            // Trip-level affEnv. cityHint is overridden per-leg below at the
+            // buildAffiliateUrl call site so each leg's hotel search uses its
+            // OWN city name, not the first leg's name.
             const affEnv: AffiliateEnv = {
               viator: viatorMcid,
               gyg: gygPid,
@@ -6611,22 +7833,39 @@ Deno.serve(async (req) => {
               cityHint: intent.destination,
             };
             const ranked_days: RankedDay[] = [];
-            const seenIds = new Set<string>();
+            // Per-leg dedup tracking. Within a leg the LLM should not reuse
+            // the same place_id; across legs reuse is allowed (different
+            // physical destinations).
+            const seenIdsByLeg = new Map<number, Set<string>>();
+            const getSeenForLeg = (idx: number): Set<string> => {
+              let s = seenIdsByLeg.get(idx);
+              if (!s) { s = new Set(); seenIdsByLeg.set(idx, s); }
+              return s;
+            };
             const seenThemes = new Set<string>();
             const emittedDayNumbers = new Set<number>();
             let totalDropped = 0;
-            // skeleton-only-fallback days, used in the post-loop drop-threshold
-            // calculation so a fully-failed day doesn't get treated as garbage.
             let fallbackDays = 0;
 
-            const accommodationPlaceId = pickAccommodationPlaceId(venuesByPool);
-            const sharedContext = buildSharedContextText(intent, venuesByPool, events, currency, geo.country_code);
+            // Per-leg accommodation + leg-scoped place pool.
+            const accomByLeg = pickAccommodationPlaceIdsByLeg(venuesByPool, legs);
+            const accommodationPlaceId = accomByLeg.get(0) ?? pickAccommodationPlaceId(venuesByPool);
+            const placeByIdByLeg = new Map<number, Map<string, BatchPlaceResult>>();
+            for (const venues of venuesByPool.values()) {
+              for (const v of venues) {
+                const idx = v.destinationIndex ?? 0;
+                let m = placeByIdByLeg.get(idx);
+                if (!m) { m = new Map(); placeByIdByLeg.set(idx, m); }
+                m.set(v.id, v);
+              }
+            }
+            const sharedContext = buildSharedContextText(intent, legs, venuesByPool, events, currency, geo.country_code);
 
             const sequentialRanking = numDays >= SEQUENTIAL_RANKING_MIN_DAYS;
             let thinDays = 0;
             console.log(
               `[stream.rank] mode=${sequentialRanking ? "sequential" : "parallel"} ` +
-              `numDays=${numDays} pool_size=${placeById.size}`,
+              `numDays=${numDays} pool_size=${placeById.size} legs=${legs.length}`,
             );
 
             const hydrateAndEmit = (
@@ -6635,6 +7874,21 @@ Deno.serve(async (req) => {
               source: "llm" | "fallback",
             ) => {
               if (emittedDayNumbers.has(day.day_number)) return;
+              const legIdx = day.destination_index;
+              const legSeen = getSeenForLeg(legIdx);
+              const legPool = placeByIdByLeg.get(legIdx) ?? new Map<string, BatchPlaceResult>();
+              const legAccomId = accomByLeg.get(legIdx) ?? null;
+              // Per-leg city hint for affiliate hotel search. The leg's name
+              // ("Bangkok, Thailand") feeds buildBookingSearchString so each
+              // leg's hotel link queries that leg's city, not the trip's first.
+              const legAffEnv: AffiliateEnv = {
+                ...affEnv, cityHint: legs[legIdx]?.name ?? intent.destination,
+              };
+              // Per-leg geo for distance validation. Transit days have no own
+              // coords — fall back to the trip-level center so the validator
+              // doesn't reject a transit dinner picked from the destination
+              // pool.
+              const legGeo = legs[legIdx]?.geo ?? geos[0];
               const theme = rawDay?.theme?.trim() || day.theme;
               const activities: EnrichedActivity[] = [];
               const rawActs = Array.isArray(rawDay?.activities) ? rawDay!.activities : [];
@@ -6643,26 +7897,20 @@ Deno.serve(async (req) => {
                 const slot = day.slots[i];
                 const rawAct = rawActs.find((a) => a?.slot_index === i);
                 if (!rawAct) continue;
-                // Trip-wide dedup safety net. In sequential mode the LLM was
-                // told what's claimed via avoid_place_ids, so this should rarely
-                // fire. In parallel mode it's the primary dedup mechanism.
-                if (rawAct.place_id && seenIds.has(rawAct.place_id)) {
+                if (rawAct.place_id && legSeen.has(rawAct.place_id)) {
                   dropReasons.push("dedup");
                   continue;
                 }
-                // Don't let per-day calls double-book the lodging place.
-                if (accommodationPlaceId && rawAct.place_id === accommodationPlaceId) {
+                if (legAccomId && rawAct.place_id === legAccomId) {
                   dropReasons.push("accommodation_collision");
                   continue;
                 }
-                const place = rawAct.place_id ? placeById.get(rawAct.place_id) ?? null : null;
+                // Multi-destination scope check — drop picks from a different leg.
+                const place = rawAct.place_id ? legPool.get(rawAct.place_id) ?? null : null;
                 if (!rawAct.is_event && rawAct.place_id && !place) {
-                  dropReasons.push("place_id_not_in_pool");
+                  dropReasons.push("place_id_not_in_leg_pool");
                   continue;
                 }
-                // Hard-drop on Places-confirmed closures (mirrors rankInParallel
-                // hydrateDay; see comment there for why category-fallback
-                // closures only log, not drop).
                 if (place) {
                   const openCheck = checkVenueOpen(place, day.date, slot.start_time);
                   if (!openCheck.open && openCheck.source === "places") {
@@ -6679,32 +7927,27 @@ Deno.serve(async (req) => {
                   dropReasons.push("hydrate_failed");
                   continue;
                 }
-                if (place) seenIds.add(place.id);
+                if (place) legSeen.add(place.id);
                 const aff = buildAffiliateUrl(
                   activity.place_id ? allPlacesById.get(activity.place_id) ?? null : null,
-                  affEnv, activity.event_url,
+                  legAffEnv, activity.event_url,
                 );
                 activity.booking_url = aff.booking_url;
                 activity.booking_partner = aff.booking_partner;
                 activities.push(activity);
               }
-              const validated = validateDayActivitiesInline(activities, allPlacesById, { lat: geo.lat, lng: geo.lng });
+              const validated = validateDayActivitiesInline(activities, allPlacesById, { lat: legGeo.lat, lng: legGeo.lng });
               totalDropped += validated.dropped;
-              const rankedDay: RankedDay = { date: day.date, day_number: day.day_number, theme, activities: validated.kept };
-              // Dedup theme against earlier-emitted days. Per-day calls run in
-              // parallel and can't see each other's themes, so two days may
-              // land on the same label. Day order is preserved by the await
-              // loop below, so day 1 always wins; day 2+ collisions get a
-              // theme derived from their own activity venues.
+              const rankedDay: RankedDay = {
+                date: day.date, day_number: day.day_number, theme, activities: validated.kept,
+                destination_index: legIdx,
+                ...(day.transit ? { transit: day.transit } : {}),
+              };
               resolveDayTheme(rankedDay, seenThemes);
               ranked_days.push(rankedDay);
               emittedDayNumbers.add(day.day_number);
 
-              // Thin-day signal: kept activities < half the day's slots is
-              // almost always a problem (validator drops, dedup exhaustion, or
-              // a fallback). Logged with a structured reason so the cause is
-              // visible in Edge logs without grep-fu.
-              const minActivities = Math.max(2, Math.floor(day.slots.length * 0.5));
+              const minActivities = day.transit ? 1 : Math.max(2, Math.floor(day.slots.length * 0.5));
               if (validated.kept.length < minActivities) {
                 thinDays++;
                 const reason =
@@ -6712,10 +7955,10 @@ Deno.serve(async (req) => {
                   : dropReasons.length > 0 ? dropReasons.join(",")
                   : "unknown";
                 console.warn(
-                  `[stream.rank] thin day day_number=${day.day_number} ` +
+                  `[stream.rank] thin day day_number=${day.day_number} leg=${legIdx} ` +
                   `kept=${validated.kept.length} slots=${day.slots.length} ` +
                   `mode=${sequentialRanking ? "sequential" : "parallel"} ` +
-                  `claimed_total=${seenIds.size} pool_size=${placeById.size} ` +
+                  `claimed_in_leg=${legSeen.size} leg_pool_size=${legPool.size} ` +
                   `reason=${reason}`,
                 );
               }
@@ -6725,8 +7968,9 @@ Deno.serve(async (req) => {
                 day_number: rankedDay.day_number,
                 theme: rankedDay.theme,
                 activity_count: rankedDay.activities.length,
+                destination_index: rankedDay.destination_index,
               });
-              console.log(`[stream] day_complete: day_number=${rankedDay.day_number}`);
+              console.log(`[stream] day_complete: day_number=${rankedDay.day_number} leg=${legIdx}`);
             };
 
             // Metadata call fires in parallel with day calls in both modes —
@@ -6753,21 +7997,23 @@ Deno.serve(async (req) => {
               };
             });
 
+            // Helper: rank one day. Transit days bypass the LLM entirely.
+            const rankOneDayStream = async (day: DaySkeleton, avoidIds: string[]) => {
+              if (day.transit) {
+                return {
+                  raw: buildTransitDayFallback(day),
+                  source: "llm" as const,
+                  usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                };
+              }
+              return await rankDayWithRetry(
+                anthropicKey, intent, day, legs, sharedContext,
+                accomByLeg.get(day.destination_index) ?? null,
+                avoidIds, pipelineStartedAt, logger,
+              );
+            };
+
             if (sequentialRanking) {
-              // Sequential: each day's call sees the cumulative seenIds (built
-              // by hydrateAndEmit on prior days) as avoid_place_ids. The cached
-              // prompt prefix (system + sharedContext) is identical across
-              // calls, so calls 2..N hit Anthropic's prompt cache; only the
-              // small uncached suffix (buildDayInstruction with the variable
-              // avoid list) re-encodes per call.
-              //
-              // Budget-exhaustion gate: once the global pipeline wall-clock
-              // is gone, firing more rankDayWithRetry calls is wasted work —
-              // callClaudeHaiku would throw PipelineError before sending any
-              // request, and rankDayWithRetry's retry loop would catch+retry
-              // for no reason. Detect exhaustion before each call, log once,
-              // and emit skeleton-only days for the rest of the trip so the
-              // result still has a complete days array.
               let budgetExhausted = false;
               for (const day of skeleton) {
                 if (!budgetExhausted) {
@@ -6789,23 +8035,14 @@ Deno.serve(async (req) => {
                   hydrateAndEmit(null, day, "fallback");
                   continue;
                 }
-                const settled = await rankDayWithRetry(
-                  anthropicKey, intent, day, sharedContext, accommodationPlaceId,
-                  Array.from(seenIds), pipelineStartedAt, logger,
-                );
+                const avoidIds = Array.from(getSeenForLeg(day.destination_index));
+                const settled = await rankOneDayStream(day, avoidIds);
                 if (settled.source === "fallback") fallbackDays++;
                 hydrateAndEmit(settled.raw, day, settled.source);
               }
             } else {
-              // Parallel (single-day trips only after the threshold drop).
-              // Track per-day promises so we can emit in skeleton order — this
-              // preserves the dedup ordering invariant if the mode ever runs
-              // with more than one day.
               const dayPromises = skeleton.map((day) =>
-                rankDayWithRetry(
-                  anthropicKey, intent, day, sharedContext, accommodationPlaceId,
-                  [], pipelineStartedAt, logger,
-                ).then((res) => ({ day, ...res }))
+                rankOneDayStream(day, []).then((res) => ({ day, ...res }))
               );
               for (const p of dayPromises) {
                 const settled = await p;
@@ -6850,38 +8087,55 @@ Deno.serve(async (req) => {
             const metadataResult = await metadataPromise;
             const meta = metadataResult.data;
 
-            let accommodation: EnrichedActivity | undefined;
+            // ---- Per-leg accommodation hydration. The metadata call's
+            // accommodation editorial copy lands on the leg whose pool
+            // contains its picked place_id; other legs get auto-fallback. ----
+            const fakeAccomSlot: PacingSlot = {
+              type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
+            };
             const accomRaw = meta?.accommodation;
-            const accomPlaceId = accomRaw?.place_id ?? accommodationPlaceId;
-            if (accomPlaceId) {
-              const place = placeById.get(accomPlaceId) ?? null;
-              if (place) {
-                const fakeSlot: PacingSlot = {
-                  type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
-                };
-                const hydrated = hydrateActivity(
-                  {
-                    slot_index: -1, slot_type: "lodging",
-                    place_id: accomPlaceId, is_event: false,
-                    title: accomRaw?.title ?? place.displayName ?? "Hotel",
-                    description: accomRaw?.description ?? "",
-                    pro_tip: accomRaw?.pro_tip ?? "",
-                    why_for_you: accomRaw?.why_for_you ?? "",
-                    skip_if: accomRaw?.skip_if ?? null,
-                    category: "accommodation",
-                    estimated_cost_per_person: accomRaw?.estimated_cost_per_person ?? 0,
-                    dietary_notes: accomRaw?.dietary_notes ?? null,
-                  },
-                  fakeSlot, place, googleKey, currency, intent.budget_tier,
-                );
-                if (hydrated) {
-                  const aff = buildAffiliateUrl(place, affEnv, hydrated.event_url);
-                  hydrated.booking_url = aff.booking_url;
-                  hydrated.booking_partner = aff.booking_partner;
-                  accommodation = hydrated;
-                }
+            const metaAccomPlaceId = accomRaw?.place_id ?? null;
+            const metaAccomLegIdx = (() => {
+              if (!metaAccomPlaceId) return -1;
+              for (const [idx, m] of placeByIdByLeg.entries()) {
+                if (m.has(metaAccomPlaceId)) return idx;
               }
-            }
+              return -1;
+            })();
+            const hydrateAccomForLegStream = (legIdx: number): EnrichedActivity | undefined => {
+              const placeId = (legIdx === metaAccomLegIdx && metaAccomPlaceId)
+                ? metaAccomPlaceId
+                : accomByLeg.get(legIdx) ?? null;
+              if (!placeId) return undefined;
+              const place = placeById.get(placeId) ?? null;
+              if (!place) return undefined;
+              const useMeta = legIdx === metaAccomLegIdx && accomRaw;
+              const hydrated = hydrateActivity(
+                {
+                  slot_index: -1, slot_type: "lodging",
+                  place_id: placeId, is_event: false,
+                  title: useMeta ? (accomRaw!.title ?? place.displayName ?? "Hotel") : (place.displayName ?? "Hotel"),
+                  description: useMeta ? (accomRaw!.description ?? "") : "",
+                  pro_tip: useMeta ? (accomRaw!.pro_tip ?? "") : "",
+                  why_for_you: useMeta ? (accomRaw!.why_for_you ?? "") : "",
+                  skip_if: useMeta ? (accomRaw!.skip_if ?? null) : null,
+                  category: "accommodation",
+                  estimated_cost_per_person: useMeta ? (accomRaw!.estimated_cost_per_person ?? 0) : 0,
+                  dietary_notes: useMeta ? (accomRaw!.dietary_notes ?? null) : null,
+                },
+                fakeAccomSlot, place, googleKey, currency, intent.budget_tier,
+              );
+              if (!hydrated) return undefined;
+              // Per-leg cityHint for the booking URL.
+              const legAffEnv: AffiliateEnv = { ...affEnv, cityHint: legs[legIdx]?.name ?? intent.destination };
+              const aff = buildAffiliateUrl(place, legAffEnv, hydrated.event_url);
+              hydrated.booking_url = aff.booking_url;
+              hydrated.booking_partner = aff.booking_partner;
+              return hydrated;
+            };
+            // Trip-level accommodation = leg 0's accommodation (matches legacy
+            // shape; trip_complete still emits a single accommodation field).
+            const accommodation: EnrichedActivity | undefined = hydrateAccomForLegStream(0);
 
             // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
             // See rankInParallel for rationale: parallel metadata writes copy
@@ -6918,25 +8172,48 @@ Deno.serve(async (req) => {
             const finalTitle = stripEmojis(groundedCopy?.trip_title) || stripEmojis(meta?.trip_title) || intent.destination;
             const finalSummary = (groundedCopy?.trip_summary?.trim() || meta?.trip_summary?.trim()) ?? "";
 
-            const destinationFinal: RankedDestination = {
-              name: intent.destination,
-              start_date: skeleton[0]?.date ?? "",
-              end_date: skeleton[skeleton.length - 1]?.date ?? "",
-              intro: finalSummary,
-              days: ranked_days,
-              accommodation,
-            };
+            // ---- Assemble RankedDestination[] = unified leg list. Each leg
+            // gets the days that belong to it plus accommodation (real legs
+            // only). Mirrors rankInParallel's output assembly. ----
+            const destinationsAssembled: RankedDestination[] = legs.map((leg) => {
+              const legDays = ranked_days
+                .filter((d) => d.destination_index === leg.index)
+                .sort((a, b) => a.day_number - b.day_number);
+              const startDate = legDays[0]?.date ?? "";
+              const endDate = legDays[legDays.length - 1]?.date ?? "";
+              if (leg.kind === "transit") {
+                return {
+                  name: leg.name,
+                  start_date: startDate,
+                  end_date: endDate,
+                  intro: leg.transit_meta?.description ?? "",
+                  days: legDays,
+                  kind: "transit",
+                  ...(leg.transit_meta ? { transit: leg.transit_meta } : {}),
+                };
+              }
+              return {
+                name: leg.name,
+                start_date: startDate,
+                end_date: endDate,
+                intro: legs.length === 1 ? finalSummary : "",
+                days: legDays,
+                accommodation: hydrateAccomForLegStream(leg.index),
+                kind: "destination",
+              };
+            });
             const pipelineResult: PipelineResult = {
               trip_title: finalTitle,
               trip_summary: finalSummary,
-              destinations: [destinationFinal],
-              map_center: { lat: geo.lat, lng: geo.lng },
-              map_zoom: 12,
+              destinations: destinationsAssembled,
+              map_center: computeMapCenter(geos),
+              map_zoom: computeMapZoom(geos),
               daily_budget_estimate,
               currency,
               packing_suggestions: Array.isArray(meta?.packing_suggestions) ? meta!.packing_suggestions.slice(0, 10) : [],
               total_activities,
               budget_tier: intent.budget_tier,
+              adjustment_notice: intent.adjustment_notice ?? null,
             };
 
             markJuntoPicks(pipelineResult, intent);
@@ -7011,6 +8288,7 @@ Deno.serve(async (req) => {
               budget_tier: pipelineResult.budget_tier,
               destination_image_url: destinationImageUrl,
               destination_country_iso: destinationCountryIso,
+              adjustment_notice: pipelineResult.adjustment_notice ?? null,
               from_cache: false,
               ...(streamAnonTripId ? { anon_trip_id: streamAnonTripId } : {}),
             });
@@ -7148,6 +8426,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- Multi-destination materialization + transit estimation ----
+    buildIntentDestinations(intent, numDays);
+    if (intent.destinations.length >= 2) {
+      loggedStep = "estimateTransitLegs";
+      const tTransit = Date.now();
+      intent.transit_legs = await estimateTransitLegs(
+        anthropicKey, intent.destinations, svcClient, logger, pipelineStartedAt,
+      );
+      tStage("estimate_transit", tTransit);
+    }
+
     // ---- Cache check by raw-body hash (BEFORE Places spend) ----
     loggedStep = "cacheLookup";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
@@ -7176,9 +8465,12 @@ Deno.serve(async (req) => {
       }
       if (cached?.response_json) {
         const payload = cached.response_json as Record<string, any>;
-        const cachedDayCount: number = Array.isArray(payload?.destinations?.[0]?.days)
-          ? payload.destinations[0].days.length
-          : 0;
+        // Cache validation: sum days across ALL legs (v3 unified-leg shape).
+        const cachedDestsArr = Array.isArray(payload?.destinations) ? payload.destinations : [];
+        const cachedDayCount: number = cachedDestsArr.reduce(
+          (n: number, d: any) => n + (Array.isArray(d?.days) ? d.days.length : 0),
+          0,
+        );
         if (cachedDayCount !== numDays) {
           console.log(
             `[nonstream.cache] miss cache_key=${cacheKey} reason=day_count_mismatch cached=${cachedDayCount} requested=${numDays}`,
@@ -7197,18 +8489,16 @@ Deno.serve(async (req) => {
             cityHint: intent.destination,
           };
           const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
-          // Re-apply junto picks against the current request's intent — cached
-          // payloads were tagged under whatever intent generated them (and
-          // pre-PR #244 entries were tagged under the strict hidden-gem rule
-          // and may have zero picks). Mirrors the streaming cache-hit branch.
           markJuntoPicks(payload as unknown as PipelineResult, intent);
           logVibeCoverage(payload as unknown as PipelineResult, intent);
           logDescriptionGrounding(payload as unknown as PipelineResult, intent);
           logOpeningHoursViolations(payload as unknown as PipelineResult);
           logPricingAnomalies(payload as unknown as PipelineResult);
           let juntoPicksTagged = 0;
-          for (const day of payload?.destinations?.[0]?.days ?? []) {
-            for (const a of day.activities ?? []) if (a?.is_junto_pick) juntoPicksTagged++;
+          for (const dest of cachedDestsArr) {
+            for (const day of dest?.days ?? []) {
+              for (const a of day.activities ?? []) if (a?.is_junto_pick) juntoPicksTagged++;
+            }
           }
           const eventsResult = await refreshCachedEvents(
             payload,
@@ -7260,52 +8550,60 @@ Deno.serve(async (req) => {
     }
     tStage("cache_lookup_miss", tCacheLookup);
 
-    // ---- Step 2a: geocode (must run before buildSkeleton so MEAL_PATTERNS
-    //               gets the country_code rather than parsing the string) ----
-    // Throws PipelineError on API failure or no-match; top-level catch
-    // converts it into a structured { error, step, message } 500 response.
-    //
-    // Non-surprise mode: we kicked off geocoding rawDest in parallel with
-    // parseIntent — await that promise here. Surprise mode: we don't know the
-    // destination until pickSurpriseDestination runs, so we geocode now.
+    // ---- Step 2a: geocode (multi-leg-aware) ----
+    // For single-destination trips: reuse earlyGeocodePromise when available;
+    // for multi-destination trips: parallel-geocode all legs (the
+    // earlyGeocodePromise covers leg 0 only when the user gave a single name).
     loggedStep = "geocodeDestination";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const tGeocode = Date.now();
-    const geo: GeocodeResult = earlyGeocodePromise
-      ? await earlyGeocodePromise
-      : await geocodeDestination(googleKey, intent.destination, svcClient, actorUserId);
+    let geos: GeocodeResult[];
+    if (intent.destinations.length === 1 && earlyGeocodePromise) {
+      const earlyGeo = await earlyGeocodePromise;
+      geos = [earlyGeo];
+    } else {
+      geos = await geocodeIntentDestinations(googleKey, intent.destinations, svcClient, actorUserId);
+    }
+    const geo: GeocodeResult = geos[0];
     tStage("geocode", tGeocode);
+
+    // ---- Build the unified leg list (real + transit pseudo-legs) ----
+    const legs = buildLegs(intent, geos, numDays);
 
     // ---- Step 2b: pacing skeleton (slot count capped inside buildSkeleton) ----
     const tSkeleton = Date.now();
-    const skeleton = buildSkeleton(intent, numDays, startDate, geo.country_code);
+    const skeleton = buildSkeleton(intent, legs, numDays, startDate);
     tStage("build_skeleton", tSkeleton);
 
     // ---- Step 3 + 4: query plan + Places batch (RANKING pass, Essentials SKU) ----
     const tQueryPlan = Date.now();
-    const queries = buildPlacesQueries(intent, skeleton, {
-      lat: geo.lat,
-      lng: geo.lng,
-      name: intent.destination,
-    });
-    if (queries.length > MAX_PLACES_QUERIES_PER_TRIP) {
+    const queries = buildPlacesQueries(intent, skeleton, legs);
+    const queryCap = legs.filter((l) => l.kind === "destination").length <= 1
+      ? MAX_PLACES_QUERIES_PER_TRIP
+      : MAX_PLACES_QUERIES_PER_MULTI_TRIP;
+    if (queries.length > queryCap) {
       console.warn(
-        `[generate-trip-itinerary] query planner produced ${queries.length} queries, exceeding cap ${MAX_PLACES_QUERIES_PER_TRIP}`,
+        `[generate-trip-itinerary] query planner produced ${queries.length} queries, exceeding cap ${queryCap}`,
       );
     }
     tStage("build_queries", tQueryPlan);
 
-    // Step 4 + Step 5 in parallel
+    // Step 4 + Step 5 in parallel — events fetched per real-destination leg.
     loggedStep = "searchPlacesAndEvents";
     checkPipelineTimeout(pipelineStartedAt, loggedStep);
     const tSearch = Date.now();
-    const [searchResult, events] = await Promise.all([
+    const realDestLegs = legs.filter((l) => l.kind === "destination");
+    const [searchResult, ...eventsByLeg] = await Promise.all([
       searchPlacesBatch(queries, googleKey, svcClient),
-      searchEvents(intent.destination, startDate, endDate, intent, skeleton, svcClient, logger),
+      ...realDestLegs.map((leg) => {
+        const legDays = skeleton.filter((d) => d.destination_index === leg.index);
+        return searchEvents(leg.name, startDate, endDate, intent, legDays, svcClient, logger);
+      }),
     ]);
     tStage("search_places_and_events", tSearch);
     const places = searchResult.places;
     const rankingStats = searchResult.stats;
+    const events: EventCandidate[] = eventsByLeg.flat();
 
     // ---- Step 4b: HYDRATION pass — Place Details for ranker candidates ----
     // Rank candidates by pool membership alone is too broad; we'd re-hydrate
@@ -7394,10 +8692,11 @@ Deno.serve(async (req) => {
       anthropicKey,
       intent,
       skeleton,
+      legs,
       venuesByPool,
       events,
       googleKey,
-      geo,
+      geos,
       startDate,
       endDate,
       logger,
@@ -7423,12 +8722,19 @@ Deno.serve(async (req) => {
       checkout: endDate,
       cityHint: intent.destination,
     };
-    for (const dest of ranked.destinations) {
+    // Per-leg affiliate decoration: each leg's hotel + activity URLs use
+    // THAT leg's city as the cityHint, so a multi-destination trip's Bangkok
+    // hotel link queries Bangkok and the Koh Phangan hotel link queries
+    // Koh Phangan. ranked.destinations[i].name aligns with legs[i].name.
+    for (let legIdx = 0; legIdx < ranked.destinations.length; legIdx++) {
+      const dest = ranked.destinations[legIdx];
+      const legAffEnv: AffiliateEnv = {
+        ...affEnv,
+        cityHint: dest.name || intent.destination,
+      };
       const decorate = (a: EnrichedActivity) => {
-        // Events (place_id === "") pass null → event_direct; their event_url
-        // (fuzzy-matched during hydration) becomes booking_url.
         const place = a.place_id ? allPlacesById.get(a.place_id) ?? null : null;
-        const aff = buildAffiliateUrl(place, affEnv, a.event_url);
+        const aff = buildAffiliateUrl(place, legAffEnv, a.event_url);
         a.booking_url = aff.booking_url;
         a.booking_partner = aff.booking_partner;
       };
@@ -7442,7 +8748,15 @@ Deno.serve(async (req) => {
 
     loggedStep = "validateActivities";
     const tValidate = Date.now();
-    const validated = validateActivities(ranked, allPlacesById, { lat: geo.lat, lng: geo.lng });
+    const legCenters = new Map<number, { lat: number; lng: number }>();
+    for (const leg of legs) {
+      if (leg.geo) legCenters.set(leg.index, { lat: leg.geo.lat, lng: leg.geo.lng });
+    }
+    const validated = validateActivities(
+      ranked, allPlacesById,
+      { lat: geo.lat, lng: geo.lng },
+      legCenters,
+    );
     tStage("validate", tValidate);
 
     // ---- Resolve destination cover image (kicked off in parallel with rank) ----
