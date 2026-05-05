@@ -248,7 +248,7 @@ export function useStreamingTripGeneration(): UseStreamingTripGenerationReturn {
   }, []);
 
   const start = useCallback(
-    async (payload: Record<string, unknown>) => {
+    async (payload: Record<string, unknown>, opts?: { anon?: boolean }) => {
       // Always start fresh.
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -258,7 +258,9 @@ export function useStreamingTripGeneration(): UseStreamingTripGenerationReturn {
 
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      if (!token) {
+      const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const isAnon = !!opts?.anon;
+      if (!token && !isAnon) {
         update({ stage: "error", error: "Not signed in. Please sign in and try again." });
         return;
       }
@@ -266,17 +268,24 @@ export function useStreamingTripGeneration(): UseStreamingTripGenerationReturn {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const url = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/generate-trip-itinerary`;
 
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+        "accept": "text/event-stream",
+        "apikey": apikey,
+      };
+      if (token) {
+        headers["authorization"] = `Bearer ${token}`;
+      } else {
+        // Edge function still needs an apikey-bearing Authorization for the
+        // Supabase functions gateway when no user JWT is present.
+        headers["authorization"] = `Bearer ${apikey}`;
+      }
+
       let res: Response;
       try {
         res = await fetch(url, {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "authorization": `Bearer ${token}`,
-            "accept": "text/event-stream",
-            // Supabase functions gateway expects the apikey header for routing.
-            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
-          },
+          headers,
           body: JSON.stringify(payload),
           signal: controller.signal,
         });
@@ -288,12 +297,14 @@ export function useStreamingTripGeneration(): UseStreamingTripGenerationReturn {
 
       if (!res.ok) {
         let msg = `Server returned ${res.status}`;
+        let code: string | null = res.status === 429 ? "rate_limited" : null;
         try {
           const json = await res.json();
           if (json?.message) msg = json.message;
           else if (json?.error) msg = json.error;
+          if (typeof json?.code === "string") code = json.code;
         } catch {}
-        update({ stage: "error", error: msg });
+        update({ stage: "error", error: msg, errorCode: code });
         return;
       }
 
