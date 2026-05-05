@@ -755,6 +755,35 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         </>)}{/* end !streaming overview */}
 
+        {/* Streaming-only: dark budget skeleton so the visual rhythm matches
+            the final state instead of leaving a blank gap above the day cards. */}
+        {streaming && (
+          <div className="mx-4 mb-6">
+            <div className="relative rounded-3xl overflow-hidden bg-[hsl(180_25%_10%)] text-white shadow-[0_20px_50px_-20px_rgba(13,148,136,0.45)]">
+              <div className="relative px-6 pt-6 pb-5 overflow-hidden">
+                <div className="absolute -top-20 -right-16 w-64 h-64 rounded-full bg-[#0D9488]/30 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-24 -left-10 w-56 h-56 rounded-full bg-[#0D9488]/15 blur-3xl pointer-events-none" />
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-md bg-white/10" />
+                  <div className="h-2.5 w-44 rounded bg-white/15 animate-pulse" />
+                </div>
+                <div className="h-10 w-40 rounded bg-white/20 animate-pulse" />
+                <div className="mt-5 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full w-1/3 rounded-full bg-[#0D9488]/70 animate-pulse" />
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="rounded-xl bg-white/[0.06] border border-white/[0.06] px-3 py-2.5 space-y-1.5">
+                      <div className="h-2 w-12 rounded bg-white/15 animate-pulse" />
+                      <div className="h-3 w-16 rounded bg-white/25 animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Single draft notice — replaces per-day repetitions */}
         {standalone && (
           <div className="mx-4 mb-3 flex items-start gap-2 rounded-xl bg-muted/40 border border-dashed border-border px-3 py-2.5">
