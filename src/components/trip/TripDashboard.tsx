@@ -732,7 +732,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                       <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75 animate-ping" />
                       <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-300" />
                     </span>
-                    New since you were here
+                    Recent activity
                   </span>
                   {(groupActivity?.comments ?? 0) > 0 && (
                     <span
