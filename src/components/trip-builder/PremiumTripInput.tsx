@@ -138,9 +138,10 @@ export function PremiumTripInput({
   const destRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
 
-  const destMissing = destination.trim().length === 0;
-  const dateMissing = !dateRange?.from;
-  const canGenerate = !destMissing && !dateMissing;
+  const hasFreeText = freeText.trim().length > 0;
+  const destMissing = !hasFreeText && destination.trim().length === 0;
+  const dateMissing = !hasFreeText && !dateRange?.from;
+  const canGenerate = hasFreeText || (!destMissing && !dateMissing);
 
   // Heuristic: warn (don't block) when the destination string suggests
   // multiple locations. We check for " and ", "+", "/" or 2+ commas
@@ -249,7 +250,7 @@ export function PremiumTripInput({
               <div className="flex items-center gap-3 mt-6 px-1">
                 <div className="flex-1 h-px bg-border" />
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Or build it step by step
+                  {hasFreeText ? "Or build it step by step (optional)" : "Or build it step by step"}
                 </span>
                 <div className="flex-1 h-px bg-border" />
               </div>
@@ -262,7 +263,7 @@ export function PremiumTripInput({
       <div className="rounded-2xl bg-card border border-border shadow-sm p-5 space-y-4">
         {/* Destination */}
         <div ref={destRef} className="space-y-1.5 scroll-mt-24">
-          <label className="text-[13px] font-semibold text-foreground">Where to? *</label>
+          <label className="text-[13px] font-semibold text-foreground">Where to?{!hasFreeText && " *"}</label>
           {lockedDestination ? (
             <div
               className="relative h-12 pl-10 pr-3 rounded-xl bg-muted/50 border border-border flex items-center"
@@ -306,7 +307,7 @@ export function PremiumTripInput({
 
         {/* Date range */}
         <div ref={dateRef} className="space-y-1.5 scroll-mt-24">
-          <label className="text-[13px] font-semibold text-foreground">When? *</label>
+          <label className="text-[13px] font-semibold text-foreground">When?{!hasFreeText && " *"}</label>
           <div className={cn(
             "rounded-xl",
             showErrors && dateMissing && "ring-1 ring-red-300"
