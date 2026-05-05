@@ -637,12 +637,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             Hidden while streaming — flights/stays/budget rely on the full
             assembled trip. Day cards and the hero/stats above remain visible
             so users see progress without flashes. */}
-        {!streaming && (<>
-
-        {/* Flights section intentionally hidden until the feature ships. */}
-
-        {/* All stays overview — multi-destination only (full-image cards w/ transit between) */}
-        {isMultiDestination && result.destinations.some(d => d.accommodation) && (
+        {/* All stays overview — multi-destination only. Visible during streaming
+            too so users see the leg progression as it arrives. */}
+        {isMultiDestination && result.destinations.some(d => d.accommodation || (d.kind ?? "destination") === "destination") && (
           <div id="section-stays-overview" className={cn("mb-4", rc)} style={revealStyle("overview-stays")}>
             <h3 className="px-4 text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <Bed className="h-5 w-5 text-primary" /> Where you'll stay
@@ -729,6 +726,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
+        {!streaming && (<>
         {/* Trip budget — fintech-style card */}
         <div id="section-budget" className={cn("mx-4 mb-6", rc)} style={revealStyle("overview-budget")}>
           {(() => {
