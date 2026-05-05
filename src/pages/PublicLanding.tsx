@@ -5,6 +5,9 @@ import { Hero } from "@/components/hero/Hero";
 import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 import { FeatureAIBuilder } from "@/components/landing/FeatureAIBuilder";
 import { FeatureTripDashboard } from "@/components/landing/FeatureTripDashboard";
+import { FeaturePhoneSection } from "@/components/landing/FeaturePhoneSection";
+import mockupExpenses from "@/assets/mockup-expenses.png";
+import mockupBookings from "@/assets/mockup-bookings.png";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 import { ShimmerButton } from "@/components/landing/ShimmerButton";
 import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
@@ -90,6 +93,24 @@ export default function PublicLanding() {
       {/* Feature sections (part 1 of 3) */}
       <FeatureAIBuilder />
       <FeatureTripDashboard />
+      <FeaturePhoneSection
+        eyebrow="Expenses"
+        headline="Money sorts itself."
+        body="Add a receipt, Junto splits it. Multiple currencies, custom shares, live balances — no end-of-trip spreadsheet."
+        image={mockupExpenses}
+        alt="Junto expenses screen on iPhone showing €255 owed, balances and a list of split expenses"
+        imageSide="left"
+        background="white"
+      />
+      <FeaturePhoneSection
+        eyebrow="Bookings"
+        headline="Bookings and entry requirements, in one place."
+        body="Drag in hotel confirmations, flight tickets, visa requirements. Junto keeps them organized, surfaces what needs attention, and reminds the group what to bring."
+        image={mockupBookings}
+        alt="Junto bookings & docs screen on iPhone showing flight tickets, hotel confirmation and entry document warnings"
+        imageSide="right"
+        background="sand"
+      />
 
       {/* Destination card carousels (ported). id used by Hero's
           "Browse trip ideas" chip to smooth-scroll here. */}
