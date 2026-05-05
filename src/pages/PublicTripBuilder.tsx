@@ -123,13 +123,18 @@ export default function PublicTripBuilder() {
   // Anonymous visitors: Hero → in-place anon stream.
   if (!user) {
     if (anonPrompt) {
-      return <AnonTripGenerator prompt={anonPrompt} onCancel={() => setAnonPrompt(null)} />;
+      return (
+        <AnonTripGenerator
+          prompt={anonPrompt}
+          onCancel={() => setAnonPrompt(null)}
+        />
+      );
     }
     return (
       <div className="min-h-dvh bg-background">
         <Hero
           onSubmit={handlePublicHeroSubmit}
-          prefill={pending}
+          prefill={restorePrompt ?? pending}
           variant="public"
         />
       </div>
