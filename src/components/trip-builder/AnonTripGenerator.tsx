@@ -14,6 +14,9 @@ import { getAnonSessionId } from "@/lib/anonSession";
 interface Props {
   prompt: string;
   onCancel: () => void;
+  /** Optional: parent handles 429 (e.g. opens signup modal over its own
+   *  blurred page) instead of the in-place takeover this component renders. */
+  onRateLimited?: () => void;
 }
 
 /**
