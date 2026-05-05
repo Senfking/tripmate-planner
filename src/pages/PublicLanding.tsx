@@ -114,8 +114,8 @@ export default function PublicLanding() {
 
       <FeaturePhoneSection
         eyebrow="All your trips"
-        headline="Your travel home."
-        body="Past trips, current ones, upcoming, drafts. Every trip you've planned with your groups stays in one place, with expenses, bookings and balances tracked across trips so it's easy to revisit and plan the next one."
+        headline="Every trip you've ever taken, in one place."
+        body="Past trips, current ones, upcoming, drafts. Every trip you've planned with your groups lives in one home, with expenses, bookings and balances tracked across trips — so you can revisit memories and plan the next one in seconds."
         image={mockupTrips}
         alt="Junto trips home screen on iPhone showing a 'Good evening, Oliver' header, a live Bali trip card, and an upcoming Dubai trip"
         imageSide="left"
