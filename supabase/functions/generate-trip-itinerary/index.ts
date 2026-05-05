@@ -6753,6 +6753,53 @@ Deno.serve(async (req) => {
               };
             });
 
+            // Early-emit accommodation as soon as metadata resolves (runs in
+            // parallel with day ranking — typically lands ~10–15s in, well
+            // before the last day completes). The frontend renders the hotel
+            // card immediately instead of waiting for trip_complete.
+            //
+            // destination_index is included for forward-compat with multi-leg
+            // trips; today every trip is single-destination so it's always 0.
+            const accommodationEarlyPromise: Promise<EnrichedActivity | undefined> = metadataPromise.then((res) => {
+              const accomRaw = res.data?.accommodation;
+              const placeId = accomRaw?.place_id ?? accommodationPlaceId;
+              if (!placeId) return undefined;
+              const place = placeById.get(placeId) ?? null;
+              if (!place) return undefined;
+              const fakeSlot: PacingSlot = {
+                type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
+              };
+              const hydrated = hydrateActivity(
+                {
+                  slot_index: -1, slot_type: "lodging",
+                  place_id: placeId, is_event: false,
+                  title: accomRaw?.title ?? place.displayName ?? "Hotel",
+                  description: accomRaw?.description ?? "",
+                  pro_tip: accomRaw?.pro_tip ?? "",
+                  why_for_you: accomRaw?.why_for_you ?? "",
+                  skip_if: accomRaw?.skip_if ?? null,
+                  category: "accommodation",
+                  estimated_cost_per_person: accomRaw?.estimated_cost_per_person ?? 0,
+                  dietary_notes: accomRaw?.dietary_notes ?? null,
+                },
+                fakeSlot, place, googleKey, currency, intent.budget_tier,
+              );
+              if (!hydrated) return undefined;
+              const aff = buildAffiliateUrl(place, affEnv, hydrated.event_url);
+              hydrated.booking_url = aff.booking_url;
+              hydrated.booking_partner = aff.booking_partner;
+              try {
+                send("accommodation", { destination_index: 0, hotel: hydrated });
+                console.log(`[stream] accommodation emitted early place_id=${placeId}`);
+              } catch (e) {
+                console.warn("[stream.accommodation] early emit failed:", (e as Error).message);
+              }
+              return hydrated;
+            }).catch((e) => {
+              console.warn("[stream.accommodation] early hydrate failed:", (e as Error).message);
+              return undefined;
+            });
+
             if (sequentialRanking) {
               // Sequential: each day's call sees the cumulative seenIds (built
               // by hydrateAndEmit on prior days) as avoid_place_ids. The cached
