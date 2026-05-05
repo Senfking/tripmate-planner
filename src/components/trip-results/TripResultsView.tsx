@@ -726,6 +726,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
+        {!streaming && (<>
         {/* Trip budget — fintech-style card */}
         <div id="section-budget" className={cn("mx-4 mb-6", rc)} style={revealStyle("overview-budget")}>
           {(() => {
