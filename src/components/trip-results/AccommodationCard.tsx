@@ -368,7 +368,14 @@ export function AccommodationCard({
 
       {/* Expanded details */}
       {expanded && (
-        <div className="border-t border-border animate-fade-in">
+        <div className="border-t border-border animate-fade-in relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
+            aria-label="Close details"
+            className="absolute top-2 right-2 z-10 h-11 w-11 inline-flex items-center justify-center rounded-full bg-[#0D9488] text-white shadow-lg hover:bg-[#0D9488]/90 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
           {description && (
             <div className="px-3.5 pt-2.5 pb-2">
               <p className={`text-xs text-muted-foreground leading-relaxed ${!descExpanded && descIsLong ? "line-clamp-3" : ""}`}>
