@@ -120,9 +120,34 @@ export function AnonTripGenerator({ prompt, onCancel }: Props) {
 
   if (!partial) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center gap-3 bg-background">
-        <Loader2 className="h-6 w-6 text-primary animate-spin" />
-        <p className="text-sm text-muted-foreground">Crafting your trip…</p>
+      <div className="fixed inset-0 z-[100] overflow-hidden bg-background">
+        <div className="relative h-[36vh] min-h-[260px] lg:h-[42vh] bg-gradient-to-br from-muted/70 to-muted/20">
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.85) 12%, hsl(var(--background) / 0.55) 28%, transparent 75%)",
+            }}
+          />
+        </div>
+        <div className="mx-auto max-w-[700px] px-4 pt-5 lg:pl-[76px]">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-card px-3 py-1.5 shadow-sm">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+            <span className="text-xs font-medium text-foreground">Crafting your trip…</span>
+          </div>
+          <div className="space-y-3">
+            <div className="h-3 w-20 rounded bg-primary/20" />
+            <div className="h-8 w-4/5 max-w-[520px] rounded bg-muted animate-pulse" />
+            <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
+            <div className="mt-5 overflow-hidden rounded-3xl bg-[hsl(180_25%_10%)] p-6 shadow-[0_20px_50px_-20px_rgba(13,148,136,0.45)]">
+              <div className="mb-5 h-3 w-44 rounded bg-white/15 animate-pulse" />
+              <div className="h-11 w-36 rounded bg-white/20 animate-pulse" />
+              <div className="mt-5 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full w-1/3 rounded-full bg-primary/80 animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
