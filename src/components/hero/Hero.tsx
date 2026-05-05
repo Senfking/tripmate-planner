@@ -48,12 +48,73 @@ function useAutoSize(value: string) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Pill is a fixed-height integrated container on every viewport.
-    // Don't auto-grow — let content scroll past the 2-line cap instead,
-    // otherwise the pill shape distorts.
     el.style.height = "";
   }, [value]);
   return ref;
+}
+
+// Elaborate sample prompts that cycle through the placeholder typewriter-style
+// to show users the depth of detail Junto AI can handle.
+const SAMPLE_PROMPTS = [
+  "10 days in Japan in April for 4 friends — Tokyo, Kyoto, Osaka, mid-budget, food and temples",
+  "Honeymoon in Greece, 2 weeks in June — island hopping Santorini & Milos, boutique hotels",
+  "7-day Iceland road trip in September for a couple — northern lights, hot springs, glacier hike",
+  "Family of 5 in Costa Rica over Christmas, 12 days — beaches + rainforest, kid-friendly",
+  "Bachelor weekend in Lisbon for 8 guys, late May — rooftops, surf day, Michelin dinner",
+  "Solo backpacking SE Asia for 3 weeks — Thailand, Vietnam, Cambodia, hostels under $40/night",
+];
+
+function useTypewriterPlaceholder(active: boolean, fallback: string) {
+  const [text, setText] = useState(fallback);
+
+  useEffect(() => {
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+    if (!active || reduced) {
+      setText(fallback);
+      return;
+    }
+
+    let promptIdx = 0;
+    let charIdx = 0;
+    let phase: "typing" | "holding" | "deleting" = "typing";
+    let timer: number;
+
+    const tick = () => {
+      const current = SAMPLE_PROMPTS[promptIdx];
+      if (phase === "typing") {
+        charIdx += 1;
+        setText(current.slice(0, charIdx));
+        if (charIdx >= current.length) {
+          phase = "holding";
+          timer = window.setTimeout(tick, 2400);
+          return;
+        }
+        timer = window.setTimeout(tick, 26 + Math.random() * 38);
+      } else if (phase === "holding") {
+        phase = "deleting";
+        timer = window.setTimeout(tick, 20);
+      } else {
+        charIdx -= 2;
+        if (charIdx <= 0) {
+          charIdx = 0;
+          phase = "typing";
+          promptIdx = (promptIdx + 1) % SAMPLE_PROMPTS.length;
+          setText("");
+          timer = window.setTimeout(tick, 380);
+          return;
+        }
+        setText(current.slice(0, Math.max(charIdx, 0)));
+        timer = window.setTimeout(tick, 14);
+      }
+    };
+
+    timer = window.setTimeout(tick, 700);
+    return () => window.clearTimeout(timer);
+  }, [active, fallback]);
+
+  return text;
 }
 
 export function Hero({
