@@ -19,6 +19,7 @@ const SECTION_TITLES: Record<string, string> = {
   plan: "AI Plan",
   decisions: "Decisions",
   itinerary: "Itinerary",
+  ideas: "Ideas",
   bookings: "Bookings & Docs",
   expenses: "Expenses",
   admin: "Admin",
