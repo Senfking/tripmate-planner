@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
@@ -6,6 +6,7 @@ import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 import { FeatureCards } from "@/components/landing/FeatureCards";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 import { ShimmerButton } from "@/components/landing/ShimmerButton";
+import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
 
 // Scroll-reveal hook (ported from /landing-old). Keeps the dark-section
 // + carousels feeling premium on first scroll without bringing in extra
@@ -46,10 +47,19 @@ function Reveal({ children, className = "" }: { children: React.ReactNode; class
 export default function PublicLanding() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [anonPrompt, setAnonPrompt] = useState<string | null>(null);
 
   function handleSubmit(prompt: string) {
-    stashPendingPrompt(prompt);
-    navigate(user ? "/trips/new" : "/ref");
+    if (user) {
+      stashPendingPrompt(prompt);
+      navigate("/trips/new");
+      return;
+    }
+    setAnonPrompt(prompt);
+  }
+
+  if (anonPrompt) {
+    return <AnonTripGenerator prompt={anonPrompt} onCancel={() => setAnonPrompt(null)} />;
   }
 
   return (
