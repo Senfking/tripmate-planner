@@ -632,24 +632,41 @@ html.dark, html.dark body, html.dark #root {
   transform: translateY(0);
 }
 
-/* Shimmer sweep for CTA buttons */
+/* Shimmer sweep for CTA buttons — uses transform for GPU compositing
+   (smoother than animating background-position) and a long pause between
+   sweeps so the effect feels intentional rather than repetitive. */
 .landing-shimmer {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.landing-shimmer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
   background: linear-gradient(
-    105deg,
-    transparent 30%,
-    rgba(255,255,255,0.15) 45%,
-    rgba(255,255,255,0.25) 50%,
-    rgba(255,255,255,0.15) 55%,
-    transparent 70%
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.18) 45%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.18) 55%,
+    transparent 100%
   );
-  background-size: 250% 100%;
-  animation: landing-shimmer-sweep 5s ease-in-out infinite;
+  transform: translateX(-150%) skewX(-18deg);
+  animation: landing-shimmer-sweep 4.5s linear infinite;
+  will-change: transform;
 }
 @keyframes landing-shimmer-sweep {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% { transform: translateX(-150%) skewX(-18deg); }
+  35%, 100% { transform: translateX(400%) skewX(-18deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-shimmer::before { animation: none; opacity: 0; }
 }
 
 /* Landing showcase highlights */
