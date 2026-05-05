@@ -485,7 +485,7 @@ export default function TripList() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
-  const [emptyDestination, setEmptyDestination] = useState("");
+  
   const [showPast, setShowPast] = useState(false);
 
   // Post-auth template intent drain. If a visitor clicked "Use this trip" or
