@@ -758,7 +758,7 @@ export default function TripHome() {
             {trip?.destination && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 backdrop-blur px-2.5 py-1 text-xs font-medium text-foreground">
                 <MapPin className="h-3 w-3" />
-                {trip.destination}
+                {toTitleCase(trip.destination)}
               </span>
             )}
             {(trip?.tentative_start_date || trip?.tentative_end_date) && (
