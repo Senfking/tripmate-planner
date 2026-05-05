@@ -9,6 +9,7 @@ import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
 import { ExpensesTab } from "@/components/expenses/ExpensesTab";
 import { AdminTab } from "@/components/admin/AdminTab";
+import { IdeasTab } from "@/components/ideas/IdeasTab";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
@@ -18,6 +19,7 @@ const SECTION_TITLES: Record<string, string> = {
   plan: "AI Plan",
   decisions: "Decisions",
   itinerary: "Itinerary",
+  ideas: "Ideas",
   bookings: "Bookings & Docs",
   expenses: "Expenses",
   admin: "Admin",
@@ -175,6 +177,8 @@ export default function TripSection() {
         );
       case "itinerary":
         return <ItineraryTab tripId={trip.id} tripStartDate={trip.tentative_start_date} myRole={myRole} newItemIds={newItemIds} />;
+      case "ideas":
+        return <IdeasTab tripId={trip.id} myRole={myRole} />;
       case "bookings":
         return <BookingsTab tripId={trip.id} myRole={myRole} newItemIds={newItemIds} />;
       case "expenses":

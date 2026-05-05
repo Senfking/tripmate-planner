@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { captureReactError } from "@/lib/sentry";
 import { useNavigate } from "react-router-dom";
+import { TripIdeasStrip } from "@/components/ideas/TripIdeasStrip";
 
 // Error boundary so the builder never crashes the itinerary page
 class BuilderBoundary extends Component<
@@ -233,6 +234,10 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
           <TripBuilderFlow tripId={tripId} onClose={() => setBuilderOpen(false)} />
         </BuilderBoundary>
       )}
+
+      {/* Group ideas strip — surfaced inline so members discover suggestions
+          alongside the AI itinerary instead of behind a separate tab. */}
+      <TripIdeasStrip tripId={tripId} />
 
       {/* Empty state: AI Builder as primary CTA */}
       {isEmpty ? (
