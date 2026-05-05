@@ -223,7 +223,7 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
           disabled={googleLoading}
           onClick={handleGoogle}
           className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80"
-          style={{ height: 50, fontSize: 15, background: "rgba(255,255,255,0.95)", color: "#1f1f1f" }}
+          style={{ height: 50, fontSize: 15, background: "#ffffff", color: "#1f1f1f" }}
         >
           {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
           Continue with Google
