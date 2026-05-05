@@ -214,6 +214,20 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     await streaming.start(payload);
   }, [inputData, buildPayload, streaming]);
 
+  // Auto-kick streaming when the builder opens directly into "generating"
+  // (e.g. template personalization with prefilled initialInputData).
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    if (phase !== "generating") return;
+    if (!inputData || pendingPayload) return;
+    autoStartedRef.current = true;
+    const payload = buildPayload(inputData);
+    setPendingPayload(payload);
+    streaming.reset();
+    void streaming.start(payload);
+  }, [phase, inputData, pendingPayload, buildPayload, streaming]);
+
   // When streaming completes, persist the trip as a `draft` row and navigate
   // to its canonical /app/trips/[id] URL. TripHome owns the draft results UI.
   //
