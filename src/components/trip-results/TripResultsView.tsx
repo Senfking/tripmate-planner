@@ -115,11 +115,43 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   // Helper: returns the reveal-item class when in reveal mode
   const rc = revealMode ? "reveal-item" : "";
 
-  const handleShare = useCallback(() => {
-    navigator.clipboard.writeText(window.location.href).then(
-      () => toast.success("Plan link copied!"),
-      () => toast.error("Failed to copy link")
-    );
+  const handleShare = useCallback(async () => {
+    const url = window.location.href;
+    const title = "Trip plan";
+    // Prefer native share sheet on mobile (works in PWAs/Safari/Chrome on iOS+Android)
+    if (typeof navigator !== "undefined" && typeof (navigator as any).share === "function") {
+      try {
+        await (navigator as any).share({ title, url });
+        return;
+      } catch (err: any) {
+        // User cancelled — don't fall through to a "copied" toast
+        if (err?.name === "AbortError") return;
+      }
+    }
+    // Async clipboard API (requires secure context)
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast.success("Plan link copied!");
+        return;
+      }
+    } catch {
+      /* fall through to legacy */
+    }
+    // Legacy fallback
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      toast.success("Plan link copied!");
+    } catch {
+      toast.error("Failed to copy link");
+    }
   }, []);
 
   const state = useResultsState(tripId);
