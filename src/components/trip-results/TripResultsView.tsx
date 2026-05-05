@@ -120,6 +120,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   }, []);
 
   const state = useResultsState(tripId);
+  // Optimistic per-leg hotel swap overrides; keyed by destination_index.
+  // Persisted to ai_trip_plans.result on selection.
+  const [hotelOverrides, setHotelOverrides] = useState<Record<number, any>>({});
   const [packingOpen, setPackingOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
