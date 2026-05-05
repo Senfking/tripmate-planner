@@ -421,6 +421,18 @@ function handleFrame(
       update({ completedDays: [...cur.completedDays, n] });
       break;
     }
+    case "accommodation": {
+      // Backend hydrates + emits the hotel as soon as the trip-metadata LLM
+      // call resolves (in parallel with day ranking) — typically lands ~10s
+      // into the stream. Keyed by destination_index for forward compat with
+      // multi-leg trips; single-destination trips always use index 0.
+      const idx = typeof data?.destination_index === "number" ? data.destination_index : 0;
+      const hotel = data?.hotel;
+      if (!hotel || typeof hotel !== "object") break;
+      const cur = getState();
+      update({ accommodations: { ...cur.accommodations, [idx]: hotel as AIActivity } });
+      break;
+    }
     case "day": {
       const day = normalizeDayFromServer(data);
       if (!day) break;
