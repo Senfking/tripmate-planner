@@ -514,7 +514,7 @@ export function Hero({
           </Link>
           <Link
             to="/ref"
-            className="group pointer-events-auto relative inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(13,148,136,0.65)] transition-transform hover:scale-[1.03] active:scale-95"
+            className="group pointer-events-auto relative inline-flex items-center rounded-full px-3.5 py-1.5 text-[12px] sm:px-5 sm:py-2 sm:text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(13,148,136,0.65)] transition-transform hover:scale-[1.03] active:scale-95"
             style={{
               background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)",
             }}
