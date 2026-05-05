@@ -839,43 +839,24 @@ export default function TripList() {
           <p className="text-sm text-muted-foreground mt-1">No trips yet — start planning!</p>
         </div>
 
-        <div className="flex flex-1 flex-col items-center px-6 pt-12 md:pt-4 mt-4 md:mt-0 max-w-md mx-auto w-full">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10 mb-4">
-            <Sparkles className="h-8 w-8 text-[#0D9488]" />
-          </div>
-          <h2 className="text-xl font-bold text-foreground text-center">Where do you want to go?</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground text-center">
-            Describe your dream trip and let Junto AI plan it for you
-          </p>
-
-          {/* Landing-style rotating input */}
-          <div className="w-full mt-5">
-            <div
-              className="relative rounded-2xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-border overflow-hidden"
+        {/* Inline Hero (app variant) — same component used at /trips/new */}
+        <Hero
+          variant="app"
+          onSubmit={(prompt) => {
+            stashPendingPrompt(prompt);
+            navigate("/trips/new");
+          }}
+          secondaryAction={
+            <button
+              type="button"
+              onClick={() => setJoinOpen(true)}
+              className="w-full text-sm font-medium bg-transparent border-none cursor-pointer"
+              style={{ color: "#0D9488" }}
             >
-              <RotatingPlaceholder
-                value={emptyDestination}
-                onChange={setEmptyDestination}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && emptyDestination.trim()) {
-                    setBuilderInitDest(emptyDestination.trim());
-                    setShowBuilder(true);
-                  }
-                }}
-              />
-            </div>
-            <Button
-              onClick={() => {
-                setBuilderInitDest(emptyDestination.trim());
-                setShowBuilder(true);
-              }}
-              className="w-full mt-2.5 h-12 rounded-xl font-semibold text-white text-sm"
-              style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
-            >
-              <Sparkles className="h-4 w-4 mr-1.5" />
-              Plan with AI
-            </Button>
-          </div>
+              Join an existing trip with a code
+            </button>
+          }
+        />
 
           <button
             onClick={() => {
