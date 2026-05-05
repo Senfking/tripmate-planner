@@ -102,7 +102,7 @@ export default function JoinByCode() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 relative">
       <button
-        onClick={() => navigate(-1)}
+        onClick={back}
         className="absolute left-4 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
       >
