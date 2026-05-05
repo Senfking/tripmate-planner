@@ -169,15 +169,6 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     setBlankModalOpen(true);
   }, []);
 
-  const handleInputComplete = useCallback(async (data: PremiumInputData) => {
-    setInputData(data);
-    const payload = buildPayload(data);
-    setPendingPayload(payload);
-    setPhase("generating");
-    streaming.reset();
-    await streaming.start(payload);
-  }, [buildPayload, streaming]);
-
   const buildPayload = useCallback((data: PremiumInputData) => ({
     trip_id: null,
     destination: data.destination,
@@ -203,14 +194,15 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     kids_ages: data.kidsAges || undefined,
   }), []);
 
-  const handleConfirm = useCallback(async () => {
-    if (!inputData) return;
-    const payload = buildPayload(inputData);
+  // Submit straight from the input — no confirmation step (matches anonymous flow).
+  const handleInputComplete = useCallback(async (data: PremiumInputData) => {
+    setInputData(data);
+    const payload = buildPayload(data);
     setPendingPayload(payload);
     setPhase("generating");
     streaming.reset();
     await streaming.start(payload);
-  }, [inputData, buildPayload, streaming]);
+  }, [buildPayload, streaming]);
 
   // When streaming completes, persist the trip as a `draft` row and navigate
   // to its canonical /app/trips/[id] URL. TripHome owns the draft results UI.
