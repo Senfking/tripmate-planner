@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime"
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 import { isValidTripId } from "@/lib/tripId";
+import { ShareInviteModal } from "@/components/ShareInviteModal";
 
 const SECTION_TITLES: Record<string, string> = {
   plan: "AI Plan",
@@ -45,6 +46,7 @@ export default function TripSection() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const tripIdValid = isValidTripId(tripId);
+  const [shareInviteOpen, setShareInviteOpen] = useState(false);
 
   // Redirect away from URLs like /app/trips/undefined/expenses before any
   // child queries fire with the literal string "undefined" as a uuid.
@@ -156,6 +158,15 @@ export default function TripSection() {
             navigate(`/app/trips/new${qs}`);
           }}
           onDashboard={() => navigate(`/app/trips/${tripId}?view=dashboard`)}
+          onShare={() => setShareInviteOpen(true)}
+        />
+        <ShareInviteModal
+          tripId={trip.id}
+          tripName={(trip as any).trip_name || trip.name}
+          open={shareInviteOpen}
+          onOpenChange={setShareInviteOpen}
+          isAdmin={myRole === "owner" || myRole === "admin"}
+          trip={trip}
         />
       </div>
     );
