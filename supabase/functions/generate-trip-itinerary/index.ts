@@ -6384,6 +6384,9 @@ Deno.serve(async (req) => {
                   from_cache: true,
                 });
                 send("image", { url: payload?.destination_image_url ?? null });
+                if (dest?.accommodation) {
+                  send("accommodation", { destination_index: 0, hotel: dest.accommodation });
+                }
                 // Re-apply junto picks against the current request's intent
                 // before streaming days — cached payloads were tagged under
                 // whatever intent generated them, and signal matches may
