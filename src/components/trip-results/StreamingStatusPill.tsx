@@ -151,19 +151,6 @@ export function StreamingProgressLadder({ totalDays, completedDays }: LadderProp
 
   return (
     <div className="relative w-full">
-      {/* Fade edges for horizontal scroll */}
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-6 z-10"
-        style={{
-          background: "linear-gradient(to right, hsl(var(--background)), transparent)",
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 w-6 z-10"
-        style={{
-          background: "linear-gradient(to left, hsl(var(--background)), transparent)",
-        }}
-      />
       <div
         ref={scrollRef}
         className="flex items-center gap-1.5 overflow-x-auto px-4 py-1 scrollbar-none justify-start sm:justify-center"
