@@ -260,6 +260,84 @@ export function AccommodationCard({
         </div>
       </div>
 
+      {/* Inline alternatives panel — full card width, between hero and actions */}
+      {swapOpen && hasAlternatives && (
+        <div
+          ref={swapPopoverRef}
+          className="border-t border-border bg-card px-3.5 py-3 animate-fade-in relative"
+        >
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-[11px] font-mono font-semibold uppercase tracking-[0.15em] text-foreground">
+              Swap this stay · {alternatives.length} options
+            </p>
+            <button
+              onClick={() => setSwapOpen(false)}
+              aria-label="Close swap panel"
+              className="h-9 w-9 -mr-1 inline-flex items-center justify-center rounded-full bg-[#0D9488] text-white shadow-md hover:bg-[#0D9488]/90 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
+            {alternatives.map((alt: any, i: number) => {
+              const altName = alt.title || alt.name || "Hotel";
+              const altPhoto = Array.isArray(alt.photos) && alt.photos.length > 0 ? alt.photos[0] : null;
+              const altRating = alt.rating ?? null;
+              const altPriceLevel = alt.price_level as PriceLevel | null | undefined;
+              const altPriceDollars = altPriceLevel ? PRICE_LABELS[altPriceLevel]?.dollars : null;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    onSwap?.(alt);
+                    setSwapOpen(false);
+                  }}
+                  className="snap-start shrink-0 w-[180px] text-left rounded-xl border border-border bg-background hover:border-[#0D9488]/60 hover:shadow-md transition-all overflow-hidden group/alt"
+                >
+                  <div className="relative h-[100px] w-full bg-muted overflow-hidden rounded-t-xl [clip-path:inset(0_round_0.75rem_0.75rem_0_0)]">
+                    {altPhoto ? (
+                      <img src={altPhoto} alt={altName} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover/alt:scale-[1.05]" loading="lazy" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-primary/5">
+                        <Hotel className="h-6 w-6 text-primary/30" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <p className="text-[12px] font-semibold text-foreground line-clamp-1">{altName}</p>
+                    {alt.neighborhood && (
+                      <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider line-clamp-1 mt-0.5">{alt.neighborhood}</p>
+                    )}
+                    <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono tabular-nums">
+                      {altRating != null && (
+                        <span className="flex items-center gap-0.5 text-foreground/80">
+                          <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+                          {altRating.toFixed(1)}
+                        </span>
+                      )}
+                      {altPriceDollars && (
+                        <span className="text-[#0D9488] font-semibold">{altPriceDollars}</span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-end">
+            <a
+              href={browseAlternativesUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-muted-foreground hover:text-foreground font-mono uppercase tracking-wider inline-flex items-center gap-1"
+            >
+              Browse on Booking.com <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Action row beneath hero */}
       {((hasBooking && bookingUrlWithDates) || googleMapsUrl) && (
         <div className="px-4 py-3 flex items-center justify-between gap-3">
