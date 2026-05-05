@@ -27,6 +27,7 @@ type Props = {
   tripId: string;
   onClose: () => void;
   onSuccess?: (data: any, planId?: string) => void;
+  onShare?: () => void;
 };
 
 /**
@@ -117,7 +118,7 @@ type Answers = {
 
 const TOTAL_STEPS = 7; // 0=entry, 1=dest, 2=dates, 3=budget, 4=vibes, 5=pace, 6=extras
 
-export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
+export function TripBuilderFlow({ tripId, onClose, onSuccess, onShare }: Props) {
   const navigate = useNavigate();
   const defaults = useTripBuilderDefaults(tripId);
   const [step, setStep] = useState(0);
@@ -385,6 +386,7 @@ export function TripBuilderFlow({ tripId, onClose, onSuccess }: Props) {
           setRevealing(false);
           setStep(1); // Start at destination step
         }}
+        onShare={onShare}
         revealMode={revealing}
         onRevealComplete={() => setRevealing(false)}
       />
