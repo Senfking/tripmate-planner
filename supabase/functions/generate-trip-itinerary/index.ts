@@ -383,12 +383,16 @@ function computeMaxFinalists(numDays: number): number {
 }
 
 // Trips with this many days or more rank sequentially so each per-day call
-// can be told which place_ids earlier days already claimed. Below this, the
-// candidate pool is wide enough relative to slot count that trip-wide dedup
-// doesn't drain later days, so we keep the parallel speed win. Threshold of 4
-// is calibrated against the 5-day Dubai bug (PR ref: this PR) — at 3 days the
-// failure mode is not reproducible against any tested destination.
-const SEQUENTIAL_RANKING_MIN_DAYS = 4;
+// can be told which place_ids earlier days already claimed. In parallel mode
+// every per-day LLM call sees avoid_place_ids=[] and independently picks the
+// most popular venues from the same pool; receipt-time dedup runs in skeleton
+// order, so the last day always loses contested picks. The previous threshold
+// of 4 assumed 3-day trips had enough pool slack to avoid this — Lisbon and
+// Porto disproved that (day 3 came back empty: kept=0, reason=dedup,
+// hydrate_failed). Lowered to 2 so any multi-day trip benefits from the LLM
+// being told what's claimed; cost is ~20-30s extra wall time on 2-3 day trips,
+// well within PIPELINE_WALL_CLOCK_MS. 1-day trips are unaffected (single call).
+const SEQUENTIAL_RANKING_MIN_DAYS = 2;
 
 // Rate limit + circuit breaker defaults. Override via env if needed.
 const DEFAULT_RATE_LIMIT_PER_HOUR = 5;                 // generations per user per rolling hour
@@ -6295,12 +6299,11 @@ Deno.serve(async (req) => {
             // `day` event so the UI can render progressively.
             //
             // Two ranking modes:
-            //   parallel   (numDays < SEQUENTIAL_RANKING_MIN_DAYS): all per-day
-            //              calls fire at once with avoid_place_ids=[]. Trip-wide
-            //              dedup at receipt time, day 1 wins contested venues.
-            //              Acceptable on short trips because the candidate pool
-            //              is wide enough relative to slot count that exhaustion
-            //              doesn't strip later days.
+            //   parallel   (numDays < SEQUENTIAL_RANKING_MIN_DAYS, i.e.
+            //              single-day trips): all per-day calls fire at once
+            //              with avoid_place_ids=[]. Trip-wide dedup at receipt
+            //              time, day 1 wins contested venues. With only one
+            //              day there's nothing to contend with.
             //   sequential (numDays ≥ SEQUENTIAL_RANKING_MIN_DAYS): per-day
             //              calls fire one-by-one in skeleton order. After each
             //              day's hydrate+emit step, the cumulative `seenIds`
@@ -6507,10 +6510,10 @@ Deno.serve(async (req) => {
                 hydrateAndEmit(settled.raw, day, settled.source);
               }
             } else {
-              // Parallel (short trips). Track per-day promises so we can emit
-              // in skeleton order (day 1 first, then day 2, etc.) — this
-              // preserves the dedup ordering invariant even if day 3's call
-              // returns before day 1's.
+              // Parallel (single-day trips only after the threshold drop).
+              // Track per-day promises so we can emit in skeleton order — this
+              // preserves the dedup ordering invariant if the mode ever runs
+              // with more than one day.
               const dayPromises = skeleton.map((day) =>
                 rankDayWithRetry(
                   anthropicKey, intent, day, sharedContext, accommodationPlaceId,
