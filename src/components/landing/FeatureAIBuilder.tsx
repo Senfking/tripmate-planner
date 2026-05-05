@@ -61,6 +61,8 @@ export function FeatureAIBuilder() {
         <img
           src={mockupAIBuilder}
           alt="Junto AI trip builder showing a Singapore itinerary with interactive map, day tabs, budget breakdown and a featured activity card"
+          width={1672}
+          height={941}
           className="block w-full h-auto select-none"
           draggable={false}
           loading="eager"
