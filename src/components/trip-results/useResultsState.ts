@@ -136,6 +136,10 @@ export interface AITripResult {
   // the get-entry-requirements Edge Function can resolve by trip_id. Optional
   // so older cached plans still typecheck.
   destination_country_iso?: string | null;
+  /** Optional notice from the LLM when it dropped or trimmed destinations
+   *  (max-destinations cap, pacing fix, etc). Surfaced as a notice card
+   *  at the top of the trip view. */
+  adjustment_notice?: string | null;
 }
 
 export function useResultsState(tripId: string) {
