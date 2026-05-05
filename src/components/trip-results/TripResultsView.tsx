@@ -811,6 +811,16 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
+        {/* Adjustment notice — when LLM dropped/trimmed destinations */}
+        {result.adjustment_notice && (
+          <div className="mx-4 mb-3 flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-3 py-2.5">
+            <Bell className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+            <span className="text-[12px] text-amber-900 dark:text-amber-200 leading-snug">
+              {result.adjustment_notice}
+            </span>
+          </div>
+        )}
+
         {/* Single draft notice — replaces per-day repetitions */}
         {standalone && (
           <div className="mx-4 mb-3 flex items-start gap-2 rounded-xl bg-muted/40 border border-dashed border-border px-3 py-2.5">
