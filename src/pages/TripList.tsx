@@ -20,9 +20,8 @@ import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
-import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
-
-import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
+import { Hero } from "@/components/hero/Hero";
+import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
