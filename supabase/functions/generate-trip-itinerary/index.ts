@@ -6185,6 +6185,7 @@ Deno.serve(async (req) => {
     //   event: image           { url }                    (when destination cover resolves)
     //   event: day             { day_number, date, theme, activities }  (one per closed day)
     //   event: day_complete    { day_number, theme, activity_count }    (UI milestone after each day)
+    //   event: accommodation   { destination_index, hotel }              (emitted as soon as metadata resolves)
     //   event: trip_complete   { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, total_activities, map_center, map_zoom, currency, budget_tier }
     //   event: error           { error, step, message }
     //   event: ping            {}                         (10s keepalive)
@@ -6383,6 +6384,9 @@ Deno.serve(async (req) => {
                   from_cache: true,
                 });
                 send("image", { url: payload?.destination_image_url ?? null });
+                if (dest?.accommodation) {
+                  send("accommodation", { destination_index: 0, hotel: dest.accommodation });
+                }
                 // Re-apply junto picks against the current request's intent
                 // before streaming days — cached payloads were tagged under
                 // whatever intent generated them, and signal matches may
@@ -6753,6 +6757,53 @@ Deno.serve(async (req) => {
               };
             });
 
+            // Early-emit accommodation as soon as metadata resolves (runs in
+            // parallel with day ranking — typically lands ~10–15s in, well
+            // before the last day completes). The frontend renders the hotel
+            // card immediately instead of waiting for trip_complete.
+            //
+            // destination_index is included for forward-compat with multi-leg
+            // trips; today every trip is single-destination so it's always 0.
+            const accommodationEarlyPromise: Promise<EnrichedActivity | undefined> = metadataPromise.then((res) => {
+              const accomRaw = res.data?.accommodation;
+              const placeId = accomRaw?.place_id ?? accommodationPlaceId;
+              if (!placeId) return undefined;
+              const place = placeById.get(placeId) ?? null;
+              if (!place) return undefined;
+              const fakeSlot: PacingSlot = {
+                type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
+              };
+              const hydrated = hydrateActivity(
+                {
+                  slot_index: -1, slot_type: "lodging",
+                  place_id: placeId, is_event: false,
+                  title: accomRaw?.title ?? place.displayName ?? "Hotel",
+                  description: accomRaw?.description ?? "",
+                  pro_tip: accomRaw?.pro_tip ?? "",
+                  why_for_you: accomRaw?.why_for_you ?? "",
+                  skip_if: accomRaw?.skip_if ?? null,
+                  category: "accommodation",
+                  estimated_cost_per_person: accomRaw?.estimated_cost_per_person ?? 0,
+                  dietary_notes: accomRaw?.dietary_notes ?? null,
+                },
+                fakeSlot, place, googleKey, currency, intent.budget_tier,
+              );
+              if (!hydrated) return undefined;
+              const aff = buildAffiliateUrl(place, affEnv, hydrated.event_url);
+              hydrated.booking_url = aff.booking_url;
+              hydrated.booking_partner = aff.booking_partner;
+              try {
+                send("accommodation", { destination_index: 0, hotel: hydrated });
+                console.log(`[stream] accommodation emitted early place_id=${placeId}`);
+              } catch (e) {
+                console.warn("[stream.accommodation] early emit failed:", (e as Error).message);
+              }
+              return hydrated;
+            }).catch((e) => {
+              console.warn("[stream.accommodation] early hydrate failed:", (e as Error).message);
+              return undefined;
+            });
+
             if (sequentialRanking) {
               // Sequential: each day's call sees the cumulative seenIds (built
               // by hydrateAndEmit on prior days) as avoid_place_ids. The cached
@@ -6850,10 +6901,13 @@ Deno.serve(async (req) => {
             const metadataResult = await metadataPromise;
             const meta = metadataResult.data;
 
-            let accommodation: EnrichedActivity | undefined;
+            let accommodation: EnrichedActivity | undefined = await accommodationEarlyPromise;
             const accomRaw = meta?.accommodation;
             const accomPlaceId = accomRaw?.place_id ?? accommodationPlaceId;
-            if (accomPlaceId) {
+            if (!accommodation && accomPlaceId) {
+              // Fallback: early hydration didn't produce a result (e.g.
+              // place wasn't in pool at the time, or hydrateActivity
+              // returned null). Retry now that everything has settled.
               const place = placeById.get(accomPlaceId) ?? null;
               if (place) {
                 const fakeSlot: PacingSlot = {
@@ -6879,9 +6933,14 @@ Deno.serve(async (req) => {
                   hydrated.booking_url = aff.booking_url;
                   hydrated.booking_partner = aff.booking_partner;
                   accommodation = hydrated;
+                  // Late fallback: still emit so the streaming UI updates.
+                  try {
+                    send("accommodation", { destination_index: 0, hotel: hydrated });
+                  } catch {}
                 }
               }
             }
+
 
             // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
             // See rankInParallel for rationale: parallel metadata writes copy

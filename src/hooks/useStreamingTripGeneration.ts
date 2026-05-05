@@ -89,6 +89,12 @@ export interface StreamingState {
   currentStage: StageProgress | null;
   /** day_numbers that have fully ranked & hydrated (day_complete event). */
   completedDays: number[];
+  /** Hotels keyed by destination_index. Populated by the `accommodation`
+   *  event the moment the metadata LLM call resolves — well before
+   *  trip_complete fires. Frontend reads `accommodations[0]` for the
+   *  current single-destination flow; multi-leg trips will populate
+   *  multiple keys (forward-compat). */
+  accommodations: Record<number, AIActivity>;
 }
 
 /**
@@ -149,6 +155,7 @@ export function buildPartialResult(state: StreamingState): AITripResult | null {
         end_date: endDate,
         intro: "",
         days: allDays,
+        accommodation: state.accommodations[0] as any,
       },
     ],
     map_center: { lat: 0, lng: 0 },
@@ -194,6 +201,7 @@ const INITIAL: StreamingState = {
   statusMessages: [],
   currentStage: null,
   completedDays: [],
+  accommodations: {},
 };
 
 function assembleResult(
@@ -412,6 +420,18 @@ function handleFrame(
       const cur = getState();
       if (cur.completedDays.includes(n)) break;
       update({ completedDays: [...cur.completedDays, n] });
+      break;
+    }
+    case "accommodation": {
+      // Backend hydrates + emits the hotel as soon as the trip-metadata LLM
+      // call resolves (in parallel with day ranking) — typically lands ~10s
+      // into the stream. Keyed by destination_index for forward compat with
+      // multi-leg trips; single-destination trips always use index 0.
+      const idx = typeof data?.destination_index === "number" ? data.destination_index : 0;
+      const hotel = data?.hotel;
+      if (!hotel || typeof hotel !== "object") break;
+      const cur = getState();
+      update({ accommodations: { ...cur.accommodations, [idx]: hotel as AIActivity } });
       break;
     }
     case "day": {
