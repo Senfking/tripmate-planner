@@ -14,6 +14,10 @@ import { pushError } from "@/lib/errorBuffer";
 // Global error listeners - fire-and-forget, never block
 window.addEventListener("unhandledrejection", (event) => {
   const message = event.reason?.message || String(event.reason);
+  if (/Edge function returned 429:.*anon_limit|"code"\s*:\s*"anon_limit"|signup_required/i.test(message)) {
+    event.preventDefault();
+    return;
+  }
   trackEvent("app_error", {
     type: "unhandled_promise_rejection",
     message,

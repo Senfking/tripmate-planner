@@ -303,7 +303,7 @@ export function useStreamingTripGeneration(): UseStreamingTripGenerationReturn {
           if (json?.message) msg = json.message;
           else if (json?.error) msg = json.error;
           const serverCode = typeof json?.code === "string" ? json.code : typeof json?.error === "string" ? json.error : null;
-          code = res.status === 429 && serverCode === "anon_limit" ? "rate_limited" : serverCode ?? code;
+          code = res.status === 429 && (serverCode === "anon_limit" || json?.reason === "signup_required") ? "rate_limited" : serverCode ?? code;
         } catch {}
         update({ stage: "error", error: msg, errorCode: code });
         return;

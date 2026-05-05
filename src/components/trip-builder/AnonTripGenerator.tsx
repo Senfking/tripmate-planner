@@ -62,7 +62,8 @@ export function AnonTripGenerator({ prompt, onCancel }: Props) {
     if (
       streaming.state.stage === "error" &&
       (streaming.state.errorCode === "rate_limited" ||
-        /rate.?limit|too many|429/i.test(streaming.state.error ?? ""))
+        streaming.state.errorCode === "anon_limit" ||
+        /anon_limit|signup_required|free trip preview|rate.?limit|too many|429/i.test(streaming.state.error ?? ""))
     ) {
       setRateLimitOpen(true);
     }
@@ -81,7 +82,10 @@ export function AnonTripGenerator({ prompt, onCancel }: Props) {
   }, [streaming.state, navigate]);
 
   if (streaming.state.stage === "error") {
-    const isRateLimit = streaming.state.errorCode === "rate_limited";
+    const isRateLimit =
+      streaming.state.errorCode === "rate_limited" ||
+      streaming.state.errorCode === "anon_limit" ||
+      /anon_limit|signup_required|free trip preview|rate.?limit|too many|429/i.test(streaming.state.error ?? "");
 
     if (isRateLimit) {
       // No error UI — just the celebratory signup takeover. Dim teal backdrop

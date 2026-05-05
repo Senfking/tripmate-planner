@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { lovable } from "@/integrations/lovable/index";
 import { friendlyError } from "@/lib/friendlyError";
 import { peekAnonSessionId, clearAnonSessionId } from "@/lib/anonSession";
@@ -338,6 +338,7 @@ export function ContextualSignupModal({ open, onOpenChange, trigger, fallbackRed
           style={{ zIndex: 10001 }}
         >
           <DrawerTitle className="sr-only">Sign up to Junto</DrawerTitle>
+          <DrawerDescription className="sr-only">Create a free account to save your trip and keep planning with Junto.</DrawerDescription>
           <SignupBody trigger={trigger} onClose={() => onOpenChange(false)} fallbackRedirect={fallbackRedirect} />
         </DrawerContent>
       </Drawer>
@@ -351,6 +352,7 @@ export function ContextualSignupModal({ open, onOpenChange, trigger, fallbackRed
         style={{ zIndex: 10001 }}
       >
         <DialogTitle className="sr-only">Sign up to Junto</DialogTitle>
+        <DialogDescription className="sr-only">Create a free account to save your trip and keep planning with Junto.</DialogDescription>
         <SignupBody trigger={trigger} onClose={() => onOpenChange(false)} fallbackRedirect={fallbackRedirect} />
       </DialogContent>
     </Dialog>
