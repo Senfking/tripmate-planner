@@ -529,13 +529,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             just one element disappearing — no other layout change. */}
         {streaming && (
           <div
-            className="sticky z-30 px-4 py-3 space-y-3 animate-fade-in backdrop-blur-lg border-b"
-            style={{
-              top: "env(safe-area-inset-top, 0px)",
-              backgroundColor: "rgba(240, 253, 250, 0.72)",
-              borderColor: "rgba(13, 148, 136, 0.12)",
-              boxShadow: "0 6px 20px -8px rgba(13,148,136,0.18)",
-            }}
+            className="sticky z-30 px-4 py-3 space-y-3 animate-fade-in"
+            style={{ top: "env(safe-area-inset-top, 0px)" }}
           >
             <StreamingStatusPill
               stage={streamingStage ?? null}
