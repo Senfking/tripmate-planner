@@ -48,12 +48,12 @@ export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) 
   return (
     <div className="flex justify-center">
       <div
-        className="inline-flex items-center gap-2.5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full border backdrop-blur-lg"
+        className="inline-flex items-center gap-2.5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full border backdrop-blur-xl backdrop-saturate-150"
         style={{
-          backgroundColor: "rgba(13, 148, 136, 0.12)",
-          borderColor: "rgba(255, 255, 255, 0.55)",
+          backgroundColor: "rgba(255, 255, 255, 0.78)",
+          borderColor: "rgba(13, 148, 136, 0.35)",
           boxShadow:
-            "0 8px 24px rgba(13,148,136,0.12), inset 0 1px 0 rgba(255,255,255,0.6)",
+            "0 10px 28px rgba(13,148,136,0.22), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.85)",
         }}
       >
         <Loader2
@@ -61,7 +61,7 @@ export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) 
           style={{ animation: "spin 1s linear infinite, statusPillPulse 2s ease-in-out infinite" }}
         />
         <span
-          className="text-sm sm:text-base font-semibold text-[#0F766E] transition-opacity duration-250"
+          className="text-sm sm:text-base font-semibold text-[#134E4A] transition-opacity duration-250"
           style={{ opacity: visible ? 1 : 0 }}
         >
           {text}
@@ -164,24 +164,24 @@ export function StreamingProgressLadder({ totalDays, completedDays }: LadderProp
             <div
               key={n}
               {...refProp}
-              className="inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold transition-all duration-300 backdrop-blur-md border"
+              className="inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold transition-all duration-300 backdrop-blur-xl backdrop-saturate-150 border"
               style={{
                 backgroundColor: isDone
-                  ? "rgba(13, 148, 136, 0.18)"
+                  ? "rgba(13, 148, 136, 0.92)"
                   : isCurrent
-                  ? "rgba(13, 148, 136, 0.28)"
-                  : "rgba(255, 255, 255, 0.35)",
+                  ? "rgba(255, 255, 255, 0.92)"
+                  : "rgba(255, 255, 255, 0.7)",
                 borderColor: isDone
-                  ? "rgba(13, 148, 136, 0.45)"
+                  ? "rgba(13, 148, 136, 1)"
                   : isCurrent
-                  ? "rgba(13, 148, 136, 0.55)"
-                  : "rgba(255, 255, 255, 0.6)",
-                color: isDone || isCurrent ? "#0F766E" : "#9CA3AF",
+                  ? "rgba(13, 148, 136, 0.7)"
+                  : "rgba(15, 23, 42, 0.18)",
+                color: isDone ? "#FFFFFF" : isCurrent ? "#0F766E" : "#475569",
                 boxShadow: isDone
-                  ? "0 4px 12px rgba(13,148,136,0.18), inset 0 1px 0 rgba(255,255,255,0.45)"
+                  ? "0 6px 14px rgba(13,148,136,0.35), inset 0 1px 0 rgba(255,255,255,0.3)"
                   : isCurrent
-                  ? "0 6px 18px rgba(13,148,136,0.28), 0 0 0 3px rgba(13,148,136,0.12), inset 0 1px 0 rgba(255,255,255,0.55)"
-                  : "inset 0 1px 0 rgba(255,255,255,0.55)",
+                  ? "0 8px 20px rgba(13,148,136,0.32), 0 0 0 3px rgba(13,148,136,0.18), inset 0 1px 0 rgba(255,255,255,0.9)"
+                  : "0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)",
                 transform: isCurrent ? "scale(1.05)" : "scale(1)",
                 animation: isCurrent ? "ladderPulse 1.6s ease-in-out infinite" : undefined,
               }}
@@ -192,9 +192,9 @@ export function StreamingProgressLadder({ totalDays, completedDays }: LadderProp
               {isDone ? (
                 <span
                   className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full"
-                  style={{ backgroundColor: "#0D9488" }}
+                  style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  <Check className="h-2.5 w-2.5 text-white" strokeWidth={3.5} />
+                  <Check className="h-2.5 w-2.5 text-[#0D9488]" strokeWidth={3.5} />
                 </span>
               ) : isCurrent ? (
                 <span
@@ -208,7 +208,7 @@ export function StreamingProgressLadder({ totalDays, completedDays }: LadderProp
               ) : (
                 <span
                   className="inline-block h-1.5 w-1.5 rounded-full border"
-                  style={{ borderColor: "#9CA3AF" }}
+                  style={{ borderColor: "#64748B" }}
                 />
               )}
               <span>Day {n}</span>
