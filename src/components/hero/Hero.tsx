@@ -441,7 +441,7 @@ export function Hero({
           <Link
             to="/"
             aria-label="Junto home"
-            className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[28px] sm:text-[30px] font-extrabold tracking-[0.32em] uppercase text-white/90 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors"
+            className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors"
             style={{ top: "calc(env(safe-area-inset-top, 0px) + 18px)" }}
           >
             Junto
@@ -461,7 +461,7 @@ export function Hero({
       )}
 
       <div
-        className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-6 sm:px-8 pt-24 sm:pt-28 pb-20 sm:pb-28 text-center"
+        className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center justify-end px-6 sm:px-8 pt-40 sm:pt-56 pb-20 sm:pb-28 text-center"
         style={{ minHeight: "min(85vh, 820px)" }}
       >
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3 py-1.5 text-xs font-medium text-white shadow-sm">
