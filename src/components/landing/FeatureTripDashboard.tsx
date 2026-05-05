@@ -24,15 +24,15 @@ export function FeatureTripDashboard() {
   return (
     <section
       ref={sectionRef}
-      className={`landing-reveal ${visible ? "landing-visible" : ""} relative w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 bg-[#FAFAF9]`}
+      className={`landing-reveal ${visible ? "landing-visible" : ""} relative w-full py-20 sm:py-24 lg:py-28 px-5 sm:px-8 bg-[#FAFAF9]`}
     >
-      <div className="mx-auto max-w-6xl grid gap-12 lg:gap-20 lg:grid-cols-2 items-center relative">
-        <div className="order-2 lg:order-1">
+      <div className="mx-auto max-w-6xl flex flex-col items-center text-center">
+        <div className="max-w-[640px] mb-12 sm:mb-14">
           <p
             className="landing-reveal-child text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0D9488] mb-4"
             style={{ ["--stagger-index" as string]: 0 }}
           >
-            Junto AI dashboard
+            Your trip dashboard
           </p>
           <h2
             className="landing-reveal-child text-[34px] sm:text-[44px] lg:text-[52px] leading-[1.05] tracking-tight font-bold text-[#1a1a1a] mb-6"
@@ -41,7 +41,7 @@ export function FeatureTripDashboard() {
             Everything in one place.
           </h2>
           <p
-            className="landing-reveal-child text-[16px] sm:text-[17px] leading-relaxed text-[#4b5563] max-w-xl font-sans"
+            className="landing-reveal-child text-[16px] sm:text-[17px] leading-relaxed text-[#4b5563] font-sans"
             style={{ ["--stagger-index" as string]: 2 }}
           >
             Trip plan, group activity, expenses, flights, visa requirements.
@@ -51,13 +51,13 @@ export function FeatureTripDashboard() {
         </div>
 
         <div
-          className="order-1 lg:order-2 flex justify-center lg:justify-end landing-reveal-mockup"
+          className="landing-reveal-mockup w-full flex justify-center"
           style={{ ["--stagger-index" as string]: 3 }}
         >
           <img
             src={mockup}
             alt="Junto trip dashboard on iPhone showing a Singapore trip with members, AI plan, expenses, flight and visa info"
-            className="w-full max-w-[520px] h-auto"
+            className="w-full max-w-[460px] h-auto"
             loading="lazy"
             decoding="async"
           />
