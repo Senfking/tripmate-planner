@@ -62,7 +62,8 @@ export function FeatureAIBuilder() {
           alt="Junto AI trip builder showing a Singapore itinerary with interactive map, day tabs, budget breakdown and a featured activity card"
           className="block w-full h-auto select-none"
           draggable={false}
-          loading="lazy"
+          loading="eager"
+          fetchPriority="high"
           decoding="async"
         />
       </div>
