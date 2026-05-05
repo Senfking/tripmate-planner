@@ -25,3 +25,6 @@ project_id = "dwtbqomfleihcvkfoopm"
   # supabase/migrations/20260404100000_push_notification_triggers.sql.
   [functions.send-push-notification]
     verify_jwt = true
+  # Public read of an anonymous_trips row for the /trips/anon/[id] page.
+  [functions.get-anonymous-trip]
+    verify_jwt = false

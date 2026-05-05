@@ -48,6 +48,7 @@ const TemplatePersonalize = lazy(() => import("./pages/TemplatePersonalize"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PublicLanding = lazy(() => import("./pages/PublicLanding"));
 const PublicTripBuilder = lazy(() => import("./pages/PublicTripBuilder"));
+const AnonTripView = lazy(() => import("./pages/AnonTripView"));
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
@@ -218,6 +219,7 @@ function AppInner() {
                 see it wrapped in the app shell so the sidebar/header stay
                 consistent with the rest of the authenticated app. */}
             <Route path="/trips/new" element={<TripsNewRoute />} />
+            <Route path="/trips/anon/:id" element={<AnonTripView />} />
             
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
