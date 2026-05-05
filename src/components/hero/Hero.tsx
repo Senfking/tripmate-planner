@@ -181,8 +181,8 @@ export function Hero({
       ].join(" ");
 
   const staticPlaceholder = isApp
-    ? "Describe your trip — destination, dates, group"
-    : "Tell Junto AI about your trip — destination, dates, group";
+    ? "Describe your trip: destination, dates, group"
+    : "Tell Junto AI about your trip: destination, dates, group";
 
   const animatedPlaceholder = useTypewriterPlaceholder(
     !isApp && value.length === 0,
@@ -364,7 +364,7 @@ export function Hero({
       {
         icon: Sparkles,
         title: "AI-built itineraries",
-        desc: "Junto AI plans your full trip — destinations, days, places, food.",
+        desc: "Junto AI plans your full trip: destinations, days, places, food.",
       },
       {
         icon: Users,
@@ -374,7 +374,7 @@ export function Hero({
       {
         icon: Map,
         title: "Real places, real prices",
-        desc: "Itineraries use Google Places data — no hallucinated venues.",
+        desc: "Itineraries use Google Places data, no hallucinated venues.",
       },
     ];
 
@@ -397,7 +397,7 @@ export function Hero({
                 <span className="text-[#0D9488]">Junto AI does the heavy lifting</span>
               </h2>
               <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-muted-foreground">
-                Describe what you have in mind — destination, dates, who's coming. Junto AI builds an itinerary in seconds.
+                Describe what you have in mind: destination, dates, who's coming. Junto AI builds an itinerary in seconds.
               </p>
 
               {/* Pill input — primary action */}

@@ -29,7 +29,7 @@ const FEATURES = [
   {
     category: "Real-time sync",
     headline: "Everyone sees the same plan.",
-    description: "Changes sync instantly across the group. Add an activity, swap a restaurant, upload a booking — everyone sees it live.",
+    description: "Changes sync instantly across the group. Add an activity, swap a restaurant, upload a booking, everyone sees it live.",
     variant: 4,
   },
   {
