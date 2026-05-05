@@ -807,17 +807,23 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 />
               ) : (
                 <div
-                  className="mx-4 mb-4 rounded-xl overflow-hidden border border-border bg-card"
+                  className="mx-4 mb-4 rounded-2xl overflow-hidden border border-border bg-card shadow-sm"
                   aria-label="Loading accommodation"
+                  aria-busy="true"
                 >
-                  <div className="h-40 w-full skeleton-shimmer" />
-                  <div className="p-4 space-y-2.5">
-                    <div className="h-4 w-2/3 rounded skeleton-shimmer" />
-                    <div className="h-3 w-1/2 rounded skeleton-shimmer" />
-                    <div className="flex items-center gap-2 pt-1">
-                      <div className="h-3 w-16 rounded skeleton-shimmer" />
-                      <div className="h-3 w-20 rounded skeleton-shimmer" />
+                  {/* Hero image area — matches AccommodationCard h-[280px] */}
+                  <div className="relative w-full h-[260px] sm:h-[300px] bg-muted overflow-hidden">
+                    <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-muted via-muted/60 to-muted" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[hsl(180_25%_8%)]/85 via-[hsl(180_25%_8%)]/25 to-transparent" />
+                    <div className="absolute top-3 left-3 h-5 w-20 rounded-full bg-white/15 backdrop-blur-md" />
+                    <div className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-12 space-y-2">
+                      <div className="h-5 w-2/3 rounded bg-white/25 animate-pulse" />
+                      <div className="h-3 w-1/3 rounded bg-white/20 animate-pulse" />
                     </div>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <div className="h-3 w-24 rounded bg-muted animate-pulse" />
+                    <div className="h-7 w-32 rounded-lg bg-[#0D9488]/30 animate-pulse" />
                   </div>
                 </div>
               )}
