@@ -47,10 +47,19 @@ function Reveal({ children, className = "" }: { children: React.ReactNode; class
 export default function PublicLanding() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [anonPrompt, setAnonPrompt] = useState<string | null>(null);
 
   function handleSubmit(prompt: string) {
-    stashPendingPrompt(prompt);
-    navigate(user ? "/trips/new" : "/ref");
+    if (user) {
+      stashPendingPrompt(prompt);
+      navigate("/trips/new");
+      return;
+    }
+    setAnonPrompt(prompt);
+  }
+
+  if (anonPrompt) {
+    return <AnonTripGenerator prompt={anonPrompt} onCancel={() => setAnonPrompt(null)} />;
   }
 
   return (
