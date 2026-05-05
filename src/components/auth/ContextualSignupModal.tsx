@@ -243,7 +243,7 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
       <button
         type="button"
         onClick={() => setShowEmail((v) => !v)}
-        className="mt-4 mx-auto block text-[13px] text-teal-300 hover:text-teal-200 transition-colors"
+        className="mt-4 mx-auto block text-[13px] text-teal-500 hover:text-teal-400 transition-colors"
       >
         {showEmail ? "Hide email signup" : "Or sign up with email"}
       </button>
