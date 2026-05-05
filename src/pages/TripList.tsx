@@ -20,7 +20,8 @@ import { format, differenceInDays, isAfter, isBefore, isWithinInterval, parseISO
 import { resolvePhoto, DEFAULT_TRIP_PHOTO } from "@/lib/tripPhoto";
 import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
-import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
+import { Hero } from "@/components/hero/Hero";
+import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 
 import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 
@@ -484,10 +485,8 @@ export default function TripList() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
-  const [emptyDestination, setEmptyDestination] = useState("");
-  const [showBuilder, setShowBuilder] = useState(false);
+  
   const [showPast, setShowPast] = useState(false);
-  const [builderInitDest, setBuilderInitDest] = useState("");
 
   // Post-auth template intent drain. If a visitor clicked "Use this trip" or
   // "Personalize for me" on a template while signed out, we stashed the
@@ -826,20 +825,8 @@ export default function TripList() {
     tripsPills.unshift({ icon: <Radio className="h-3 w-3" />, label: `${liveCount} live` });
   }
 
-  /* ── Standalone builder overlay ── */
-  if (showBuilder) {
-    return (
-      <StandaloneTripBuilder
-        onClose={() => {
-          setShowBuilder(false);
-          setBuilderInitDest("");
-          queryClient.invalidateQueries({ queryKey: ["draft-trips"] });
-          queryClient.invalidateQueries({ queryKey: ["trips"] });
-        }}
-        initialDestination={builderInitDest || undefined}
-      />
-    );
-  }
+  /* Standalone builder overlay removed — empty state now renders Hero inline,
+     and the "New trip" pill navigates to /trips/new. */
 
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
@@ -852,65 +839,24 @@ export default function TripList() {
           <p className="text-sm text-muted-foreground mt-1">No trips yet — start planning!</p>
         </div>
 
-        <div className="flex flex-1 flex-col items-center px-6 pt-12 md:pt-4 mt-4 md:mt-0 max-w-md mx-auto w-full">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0D9488]/10 mb-4">
-            <Sparkles className="h-8 w-8 text-[#0D9488]" />
-          </div>
-          <h2 className="text-xl font-bold text-foreground text-center">Where do you want to go?</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground text-center">
-            Describe your dream trip and let Junto AI plan it for you
-          </p>
-
-          {/* Landing-style rotating input */}
-          <div className="w-full mt-5">
-            <div
-              className="relative rounded-2xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-border overflow-hidden"
+        {/* Inline Hero (app variant) — same component used at /trips/new */}
+        <Hero
+          variant="app"
+          onSubmit={(prompt) => {
+            stashPendingPrompt(prompt);
+            navigate("/trips/new");
+          }}
+          secondaryAction={
+            <button
+              type="button"
+              onClick={() => setJoinOpen(true)}
+              className="w-full text-sm font-medium bg-transparent border-none cursor-pointer"
+              style={{ color: "#0D9488" }}
             >
-              <RotatingPlaceholder
-                value={emptyDestination}
-                onChange={setEmptyDestination}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && emptyDestination.trim()) {
-                    setBuilderInitDest(emptyDestination.trim());
-                    setShowBuilder(true);
-                  }
-                }}
-              />
-            </div>
-            <Button
-              onClick={() => {
-                setBuilderInitDest(emptyDestination.trim());
-                setShowBuilder(true);
-              }}
-              className="w-full mt-2.5 h-12 rounded-xl font-semibold text-white text-sm"
-              style={{ background: "linear-gradient(135deg, #0f766e 0%, #0D9488 50%, #0891b2 100%)" }}
-            >
-              <Sparkles className="h-4 w-4 mr-1.5" />
-              Plan with AI
-            </Button>
-          </div>
-
-          <button
-            onClick={() => {
-              setBuilderInitDest("");
-              setShowBuilder(true);
-            }}
-            className="mt-3 text-sm font-medium bg-transparent border-none cursor-pointer"
-            style={{ color: "#0D9488" }}
-          >
-            or plan step by step
-          </button>
-
-          <div className="w-full h-px bg-border my-6" />
-
-          <button
-            className="text-sm font-medium bg-transparent border-none cursor-pointer"
-            style={{ color: "#0D9488" }}
-            onClick={() => setJoinOpen(true)}
-          >
-            Join an existing trip with a code
-          </button>
-        </div>
+              Join an existing trip with a code
+            </button>
+          }
+        />
         <JoinDrawer
           open={joinOpen}
           onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}
