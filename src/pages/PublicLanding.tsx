@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
@@ -6,6 +6,7 @@ import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 import { FeatureCards } from "@/components/landing/FeatureCards";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 import { ShimmerButton } from "@/components/landing/ShimmerButton";
+import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
 
 // Scroll-reveal hook (ported from /landing-old). Keeps the dark-section
 // + carousels feeling premium on first scroll without bringing in extra
