@@ -878,6 +878,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               <div className="space-y-4 px-4 pb-6">
                 {destDays.map((day) => (
                   <div key={day.date} className={rc} style={revealStyle(`day-${day.day_number}`)}>
+                  <DayCardReveal
+                    justCompleted={!!streaming && (streamingCompletedDays?.includes(day.day_number) ?? false)}
+                  >
                   <DaySection
                     day={day}
                     planId={planId || null}
@@ -904,6 +907,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     dateMode={dateMode}
                     readOnly={readOnly}
                   />
+                  </DayCardReveal>
                   </div>
                 ))}
               </div>
