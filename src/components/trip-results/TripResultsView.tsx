@@ -9,6 +9,7 @@ import { DestinationSection } from "./DestinationSection";
 import { DaySection } from "./DaySection";
 import { TransportCard } from "./TransportCard";
 import { AccommodationCard } from "./AccommodationCard";
+import { StayMiniCard } from "./StayMiniCard";
 import { getCategoryColor } from "./categoryColors";
 import { buildActivityCostFormatter } from "./formatActivityCost";
 import { AlternativesSheet } from "./AlternativesSheet";
