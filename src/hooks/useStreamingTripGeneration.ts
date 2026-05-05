@@ -449,6 +449,7 @@ function handleFrame(
         trip,
         result,
         anonTripId,
+        currentStage: { stage: "complete", user_text: "Done", percent_complete: 100 },
       });
       break;
     }
