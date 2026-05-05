@@ -169,10 +169,14 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     setBlankModalOpen(true);
   }, []);
 
-  const handleInputComplete = useCallback((data: PremiumInputData) => {
+  const handleInputComplete = useCallback(async (data: PremiumInputData) => {
     setInputData(data);
-    setPhase("confirming");
-  }, []);
+    const payload = buildPayload(data);
+    setPendingPayload(payload);
+    setPhase("generating");
+    streaming.reset();
+    await streaming.start(payload);
+  }, [buildPayload, streaming]);
 
   const buildPayload = useCallback((data: PremiumInputData) => ({
     trip_id: null,
