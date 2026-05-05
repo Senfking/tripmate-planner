@@ -255,8 +255,8 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
                 return (
                   <div key={flight.id} className={`rounded-xl border ${config.border} ${config.bg} p-3.5 space-y-2.5 transition-all ${isPast ? "opacity-75" : ""}`}>
                     {/* Header row */}
-                    <div className="flex items-center gap-2.5">
-                      <Avatar className="h-8 w-8">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Avatar className="h-8 w-8 shrink-0">
                         <AvatarFallback className="text-[10px] font-semibold bg-muted">
                           {getInitials(flight.memberName)}
                         </AvatarFallback>
@@ -264,32 +264,36 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-semibold truncate">{flight.memberName}</p>
                         <div className="flex items-center gap-1">
-                          <DirIcon className={`h-3 w-3 ${config.text}`} />
+                          <DirIcon className={`h-3 w-3 shrink-0 ${config.text}`} />
                           <span className={`text-[11px] font-medium ${config.text}`}>{config.label}</span>
                         </div>
                       </div>
-                      {flight.time && (
-                        <span className="text-[15px] font-bold tabular-nums">{flight.time}</span>
-                      )}
+                      {flight.time && (() => {
+                        // Normalize time: accept "HH:mm", "HH:mm:ss", or full ISO timestamp
+                        let display = flight.time;
+                        const isoMatch = /T(\d{2}:\d{2})/.exec(flight.time);
+                        if (isoMatch) display = isoMatch[1];
+                        else {
+                          const hm = /^(\d{1,2}):(\d{2})/.exec(flight.time);
+                          if (hm) display = `${hm[1].padStart(2, "0")}:${hm[2]}`;
+                        }
+                        return <span className="text-[14px] font-bold tabular-nums shrink-0">{display}</span>;
+                      })()}
                     </div>
 
                     {/* Route visualization */}
                     {(flight.departure || flight.destination) && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         {flight.departure && (
-                          <span className="text-[12px] font-semibold bg-background/80 px-2.5 py-1 rounded-lg border shadow-sm">
+                          <span className="flex-1 min-w-0 text-[11px] font-semibold bg-background/80 px-2 py-1 rounded-lg border shadow-sm text-center break-words leading-tight">
                             {flight.departure}
                           </span>
                         )}
                         {flight.departure && flight.destination && (
-                          <div className="flex-1 flex items-center gap-1 min-w-0">
-                            <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
-                            <Plane className={`h-3.5 w-3.5 ${config.text} shrink-0`} />
-                            <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
-                          </div>
+                          <Plane className={`h-3.5 w-3.5 ${config.text} shrink-0`} />
                         )}
                         {flight.destination && (
-                          <span className="text-[12px] font-semibold bg-background/80 px-2.5 py-1 rounded-lg border shadow-sm">
+                          <span className="flex-1 min-w-0 text-[11px] font-semibold bg-background/80 px-2 py-1 rounded-lg border shadow-sm text-center break-words leading-tight">
                             {flight.destination}
                           </span>
                         )}
