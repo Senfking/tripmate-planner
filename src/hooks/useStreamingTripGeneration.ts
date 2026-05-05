@@ -61,6 +61,13 @@ interface TripCompleteEvent {
   anon_trip_id?: string | null;
 }
 
+/** Pipeline progress milestone emitted by the edge function. */
+export interface StageProgress {
+  stage: string;
+  user_text: string;
+  percent_complete: number;
+}
+
 export interface StreamingState {
   stage: StreamStage;
   meta: StreamMeta | null;
@@ -75,6 +82,13 @@ export interface StreamingState {
    *  trip_complete event lands. Used to navigate to /trips/anon/[id]. */
   anonTripId: string | null;
   isCacheHit: boolean;
+  /** Destination-specific rotating micro-copy (4 strings). Empty until the
+   *  `status_messages` event arrives. */
+  statusMessages: string[];
+  /** Latest pipeline milestone — drives status pill copy and progress bar. */
+  currentStage: StageProgress | null;
+  /** day_numbers that have fully ranked & hydrated (day_complete event). */
+  completedDays: number[];
 }
 
 /**
