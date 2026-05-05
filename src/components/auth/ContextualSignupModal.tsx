@@ -295,7 +295,10 @@ export function ContextualSignupModal({ open, onOpenChange, trigger, fallbackRed
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="z-[10000] bg-[#0a0a0a] border-white/10 text-white">
+        <DrawerContent
+          className="z-[10001] bg-[#0a0a0a] border-white/10 text-white"
+          style={{ zIndex: 10001 }}
+        >
           <DrawerTitle className="sr-only">Sign up to Junto</DrawerTitle>
           <SignupBody trigger={trigger} onClose={() => onOpenChange(false)} fallbackRedirect={fallbackRedirect} />
         </DrawerContent>
@@ -305,7 +308,10 @@ export function ContextualSignupModal({ open, onOpenChange, trigger, fallbackRed
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="z-[10000] max-w-md p-0 bg-[#0a0a0a] border-white/10 overflow-hidden">
+      <DialogContent
+        className="max-w-md p-0 bg-[#0a0a0a] border-white/10 overflow-hidden"
+        style={{ zIndex: 10001 }}
+      >
         <DialogTitle className="sr-only">Sign up to Junto</DialogTitle>
         <SignupBody trigger={trigger} onClose={() => onOpenChange(false)} fallbackRedirect={fallbackRedirect} />
       </DialogContent>
