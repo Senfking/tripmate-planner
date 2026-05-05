@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { subscribeToPush } from "@/lib/pushSubscription";
 import { DesktopFooter } from "@/components/DesktopFooter";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
