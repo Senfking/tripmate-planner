@@ -657,20 +657,14 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             />
 
             <div className="relative p-3.5">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-2.5">
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-white/90" />
-                  <span className="text-white text-[10.5px] font-semibold uppercase tracking-[0.16em]">
-                    Junto AI
-                  </span>
-                </div>
-                {isLiveWithPlan && dayOfTrip > 0 && totalTripDays > 0 && (
+              {/* Header — only show day counter when live */}
+              {isLiveWithPlan && dayOfTrip > 0 && totalTripDays > 0 && (
+                <div className="flex items-center justify-end mb-2">
                   <span className="text-white/75 text-[10.5px] font-semibold uppercase tracking-[0.12em]">
                     Day {dayOfTrip}/{totalTripDays}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Body */}
               {isLiveWithPlan ? (
@@ -685,7 +679,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                         : "Free day — explore at your pace"}
                     </p>
                   </div>
-                  <span className="shrink-0 text-white/85 text-[12px] font-medium">View →</span>
+                  <ChevronRight className="h-4 w-4 text-white/40 shrink-0" />
                 </div>
               ) : isUpcomingWithPlan ? (
                 <div className="flex items-center justify-between gap-3">
@@ -699,7 +693,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                       </p>
                     )}
                   </div>
-                  <span className="shrink-0 text-white/85 text-[12px] font-medium">Open →</span>
+                  <ChevronRight className="h-4 w-4 text-white/40 shrink-0" />
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-3">
