@@ -459,7 +459,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <ArrowLeft className="h-4 w-4" />
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pointer-events-auto">
             <button
               onClick={() => {
                 if (mapState !== "closed") {
