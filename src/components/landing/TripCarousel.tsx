@@ -84,9 +84,8 @@ export function TripCarousels({
   return (
     <div>
       {showHeader && (
-        <div className="mb-8 flex items-center justify-between px-5 sm:px-10 lg:px-16">
+        <div className="mb-8 px-5 sm:px-10 lg:px-16">
           <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Explore trip plans</h2>
-          <Link to="/templates" className="text-sm font-medium text-primary hover:underline">See all</Link>
         </div>
       )}
 
