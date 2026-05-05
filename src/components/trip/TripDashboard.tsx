@@ -697,26 +697,13 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               ) : isUpcomingWithPlan ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-white font-semibold text-[15px] leading-tight tracking-tight mb-2">
+                    <p className="text-white font-semibold text-[15px] leading-tight tracking-tight">
                       Your trip plan is ready
                     </p>
                     {planStats && (
-                      <div className="flex items-center gap-3 text-white/85">
-                        {[
-                          { value: planStats.days, label: planStats.days === 1 ? "day" : "days" },
-                          { value: planStats.cities, label: planStats.cities === 1 ? "city" : "cities" },
-                          { value: planStats.activities, label: "activities" },
-                        ].map((stat, i) => (
-                          <div key={i} className="flex items-baseline gap-1">
-                            <span className="text-white font-bold text-[15px] leading-none tabular-nums">
-                              {stat.value}
-                            </span>
-                            <span className="text-white/70 text-[11px] font-medium">
-                              {stat.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-white/75 text-[12px] mt-1 font-medium">
+                        <span className="text-white font-bold tabular-nums">{planStats.activities}</span> activities planned
+                      </p>
                     )}
                   </div>
                   <span className="shrink-0 text-white/85 text-[12px] font-medium">Open →</span>
