@@ -149,6 +149,15 @@ export default function PublicLanding() {
           <span className="text-xs">&copy; {new Date().getFullYear()} Junto</span>
         </div>
       </footer>
+
+      {/* Rate-limit signup modal — overlay (Dialog/Drawer) provides a
+          backdrop blur so the homepage stays visible behind the modal. */}
+      <ContextualSignupModal
+        open={rateLimitOpen}
+        onOpenChange={setRateLimitOpen}
+        trigger="rate_limit"
+        fallbackRedirect="/trips/new"
+      />
     </div>
   );
 }
