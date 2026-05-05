@@ -67,6 +67,18 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+function sseEventResponse(event: string, body: Record<string, unknown>) {
+  return new Response(`event: ${event}\ndata: ${JSON.stringify(body)}\n\n`, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache, no-transform",
+      "x-accel-buffering": "no",
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Request body
 // ---------------------------------------------------------------------------
