@@ -67,6 +67,18 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+function sseEventResponse(event: string, body: Record<string, unknown>) {
+  return new Response(`event: ${event}\ndata: ${JSON.stringify(body)}\n\n`, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache, no-transform",
+      "x-accel-buffering": "no",
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Request body
 // ---------------------------------------------------------------------------
@@ -5893,6 +5905,7 @@ Deno.serve(async (req) => {
     const ADMIN_USER_ID = "1d5b21fe-f74c-429b-8d9d-938a4f295013";
     const rateLimit = Number.parseInt(Deno.env.get("RATE_LIMIT_TRIPS_PER_HOUR") ?? "", 10);
     const effectiveRateLimit = Number.isFinite(rateLimit) && rateLimit > 0 ? rateLimit : DEFAULT_RATE_LIMIT_PER_HOUR;
+    const wantsStream = (req.headers.get("accept") ?? "").toLowerCase().includes("text/event-stream");
     if (isAnonymous) {
       // Two-tier rate limit:
       //   - per anon_session_id: 1 / 24h    (primary)
@@ -5909,17 +5922,15 @@ Deno.serve(async (req) => {
         console.warn(
           `[anon_rate_limit] blocked anon_session_id=${anonSessionId} ip=${clientIp ?? "unknown"} reason=${decision.reason} count=${decision.count}/${decision.limit}`,
         );
-        return jsonResponse(
-          {
-            success: false,
-            error: "anon_limit",
-            code: "anon_limit",
-            reason: "signup_required",
-            limit: decision.reason,
-            message: "You've used your free trip preview. Sign up to plan more trips.",
-          },
-          429,
-        );
+        const anonLimitBody = {
+          success: false,
+          error: "anon_limit",
+          code: "rate_limited",
+          reason: "signup_required",
+          limit: decision.reason,
+          message: "You've used your free trip preview. Sign up to plan more trips.",
+        };
+        return wantsStream ? sseEventResponse("error", anonLimitBody) : jsonResponse(anonLimitBody, 429);
       }
     } else if (actorUserId !== ADMIN_USER_ID) {
       const recentCount = await userGenerationsInLastHour(svcClient, actorUserId!);
@@ -5970,7 +5981,6 @@ Deno.serve(async (req) => {
     // callers (TripBuilderFlow, useResultsState) keep working from the same
     // intent-keyed cache.
     // =========================================================================
-    const wantsStream = (req.headers.get("accept") ?? "").toLowerCase().includes("text/event-stream");
     if (wantsStream) {
       const encoder = new TextEncoder();
       const closedRef = { closed: false };
