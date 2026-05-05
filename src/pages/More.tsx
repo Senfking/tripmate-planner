@@ -373,6 +373,7 @@ function AvatarCropDrawer({
 const More = () => {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const back = useSmartBack("/app");
   const [searchParams, setSearchParams] = useSearchParams();
 
   /* ── local state ── */
