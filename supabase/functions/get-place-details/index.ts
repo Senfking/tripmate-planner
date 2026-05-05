@@ -29,6 +29,30 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Auth: require a valid Bearer token to prevent anonymous abuse of the
+    // Google Places API quota and the place_details_cache table.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: JSON_HEADERS,
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (supabaseUrl && anonKey) {
+      const authClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: authErr } = await authClient.auth.getUser();
+      if (authErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: JSON_HEADERS,
+        });
+      }
+    }
+
     const { query } = await req.json();
     const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
 

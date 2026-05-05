@@ -151,6 +151,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Auth: require Bearer JWT to avoid anonymous callers burning paid AI credits.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ success: false, error: "Unauthorized" }, 401);
+    }
+    {
+      const url = Deno.env.get("SUPABASE_URL");
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+      if (url && anonKey) {
+        const authClient = createClient(url, anonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: { user }, error: authErr } = await authClient.auth.getUser();
+        if (authErr || !user) {
+          return jsonResponse({ success: false, error: "Unauthorized" }, 401);
+        }
+      }
+    }
+
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       return jsonResponse({ success: false, error: "LOVABLE_API_KEY not configured" }, 500);

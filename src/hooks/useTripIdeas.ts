@@ -46,7 +46,7 @@ export function useTripIdeas(tripId: string | undefined) {
         (supabase.from("trip_idea_votes" as any) as any)
           .select("idea_id, user_id")
           .in("idea_id", ids),
-        supabase.from("profiles").select("id, display_name, avatar_url").in("id", authorIds),
+        supabase.rpc("get_public_profiles", { _user_ids: authorIds }),
       ]);
 
       const voteMap = new Map<string, { count: number; mine: boolean }>();
