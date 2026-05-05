@@ -283,6 +283,7 @@ function assembleResult(
   trip: TripCompleteEvent,
   legs: StreamLeg[],
   accommodations: Record<number, AIActivity>,
+  accommodationAlternatives: Record<number, AIActivity[]>,
   adjustmentNotice: string | null,
 ): AITripResult {
   const juntoSet = new Set(trip.junto_pick_place_ids ?? []);
