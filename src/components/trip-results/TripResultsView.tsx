@@ -200,20 +200,22 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     }
   }, [result]);
 
+  // Real-destination legs only (skip transit pseudo-legs) for header/badges.
+  const realDestinations = useMemo(
+    () => result.destinations.filter((d) => d.kind !== "transit"),
+    [result],
+  );
+
   const uniqueCities = useMemo(() => {
-    const names = new Set(result.destinations.map((d) => d.name));
+    const names = new Set(realDestinations.map((d) => d.name?.trim().toLowerCase()).filter(Boolean));
     return names.size;
-  }, [result]);
+  }, [realDestinations]);
 
   const totalHotels = useMemo(() => {
-    return result.destinations.filter((d) => d.accommodation).length;
-  }, [result]);
+    return realDestinations.filter((d) => d.accommodation).length;
+  }, [realDestinations]);
 
-  // Determine trip shape: single-destination (all days same place) vs multi-destination.
-  const isMultiDestination = useMemo(() => {
-    const names = new Set(result.destinations.map((d) => d.name?.trim().toLowerCase()).filter(Boolean));
-    return names.size >= 2;
-  }, [result]);
+  const isMultiDestination = useMemo(() => uniqueCities >= 2, [uniqueCities]);
 
   // Warn once if backend never marks any activity as a Junto Pick.
   useEffect(() => {
