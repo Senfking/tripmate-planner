@@ -29,30 +29,36 @@ function pickIcon(mode?: string | null): { Icon: LucideIcon; label: string } {
 export function InterLegTransitCard({ from, to, mode, durationHours, arrivalDate }: Props) {
   const { Icon, label } = pickIcon(mode);
   const durLabel = typeof durationHours === "number" && durationHours > 0
-    ? `~${durationHours.toFixed(1).replace(/\.0$/, "")}h`
+    ? `${durationHours.toFixed(1).replace(/\.0$/, "")}h`
     : null;
-  const timing = arrivalDate
-    ? `Morning of ${format(parseISO(arrivalDate), "MMM d")}`
-    : null;
+  const timing = arrivalDate ? format(parseISO(arrivalDate), "MMM d") : null;
+
+  // Meta line: e.g. "Flight · 2h · Jun 8"
+  const meta = [label, durLabel, timing].filter(Boolean).join("  ·  ");
 
   return (
-    <div className="mx-4 my-4">
-      <div className="rounded-2xl border border-[#0D9488]/15 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#0D9488]/10 border border-[#0D9488]/20 flex items-center justify-center shrink-0">
-          <Icon className="h-4 w-4 text-[#0D9488]" />
+    <div className="px-4 py-6">
+      <div className="flex items-center gap-3">
+        {/* Left rule */}
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-foreground/10" />
+
+        {/* Center node */}
+        <div className="flex items-center gap-2.5 px-1">
+          <Icon className="h-3.5 w-3.5 text-[#0D9488]" strokeWidth={2.25} />
+          <span className="text-[11px] font-medium tracking-[0.18em] uppercase text-foreground/70 whitespace-nowrap">
+            {from} <span className="text-foreground/30 mx-1">—</span> {to}
+          </span>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#0D9488]/80">
-            {label}{durLabel ? ` · ${durLabel}` : ""}
-          </p>
-          <p className="text-sm font-semibold text-foreground leading-tight mt-0.5 truncate">
-            {from} <span className="text-muted-foreground/60">→</span> {to}
-          </p>
-          {timing && (
-            <p className="text-[11px] text-muted-foreground mt-0.5">{timing}</p>
-          )}
-        </div>
+
+        {/* Right rule */}
+        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-foreground/10" />
       </div>
+
+      {meta && (
+        <p className="mt-2 text-center text-[10px] tracking-[0.22em] uppercase text-muted-foreground/70">
+          {meta}
+        </p>
+      )}
     </div>
   );
 }
