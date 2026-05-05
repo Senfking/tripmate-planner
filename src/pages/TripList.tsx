@@ -22,6 +22,7 @@ import { useSeedTripCoverUrls, useTripCoverUrl } from "@/hooks/useTripCoverUrl";
 import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 import { Hero } from "@/components/hero/Hero";
 import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
+import { toTitleCase } from "@/lib/titleCase";
 
 import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
 
@@ -201,7 +202,7 @@ function HeroCard({ trip }: { trip: EnrichedTrip }) {
               Happening now
             </span>
             <p className="text-2xl font-bold leading-tight text-white mt-0.5 line-clamp-2">
-              {trip.name}
+              {toTitleCase(trip.name)}
             </p>
             <p className="text-sm text-white/70 mt-0.5">
               {trip.statusInfo.missingEnd
@@ -281,7 +282,7 @@ function RegularCard({ trip }: { trip: EnrichedTrip }) {
 
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-3.5">
           <p className="text-lg font-bold leading-tight text-white line-clamp-2">
-            {trip.name}
+            {toTitleCase(trip.name)}
           </p>
           <p className="mt-0.5 text-sm text-white/70">
             {formatDateRange(trip.tentative_start_date, trip.tentative_end_date)}
@@ -965,7 +966,7 @@ export default function TripList() {
                 {/* Bottom content */}
                 <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
                   <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">
-                    {trip.name}
+                    {toTitleCase(trip.name)}
                   </p>
                   <p className="text-[11px] text-white/75 mt-0.5">Dates TBD</p>
                 </div>
@@ -1046,7 +1047,7 @@ export default function TripList() {
 
                   {/* Bottom content */}
                   <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
-                    <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">{draftName}</p>
+                    <p className="text-[15px] font-bold text-white leading-tight line-clamp-1">{toTitleCase(draftName)}</p>
                     <div className="flex items-center justify-between mt-0.5">
                       <p className="text-[11px] text-white/75">
                         {dateLabel || "Tap to continue"}
@@ -1116,7 +1117,7 @@ export default function TripList() {
                 </button>
               </div>
               <p className="mt-2 font-bold text-[15px] leading-snug">
-                Loved planning {postTripNudge.name}?
+                Loved planning {toTitleCase(postTripNudge.name)}?
               </p>
               <p className="mt-1 text-[13px] text-white/70 leading-relaxed">
                 Share Junto with someone planning their next trip.

@@ -39,6 +39,10 @@ export default function PublicTripBuilder() {
   const [authPrompt, setAuthPrompt] = useState<string | null>(null);
   const [authPayload, setAuthPayload] = useState<Record<string, unknown> | null>(null);
   const [anonPrompt, setAnonPrompt] = useState<string | null>(null);
+  /** Last free-text prompt the user submitted. Restored to the hero input
+   *  when the generator is cancelled (e.g. after an error) so the user can
+   *  edit and retry without retyping. */
+  const [restorePrompt, setRestorePrompt] = useState<string | undefined>(undefined);
   const formAnchorRef = useRef<HTMLDivElement | null>(null);
 
   // Cross-nav resume: signed-in user lands here with a stashed prompt
@@ -48,6 +52,7 @@ export default function PublicTripBuilder() {
     if (authPrompt) return;
     if (pending) {
       setAuthPrompt(pending);
+      setRestorePrompt(pending);
       setPending(undefined);
     }
   }, [user, pending, authPrompt]);
@@ -56,12 +61,14 @@ export default function PublicTripBuilder() {
     const trimmed = prompt.trim();
     if (!trimmed) return;
     setAnonPrompt(trimmed);
+    setRestorePrompt(trimmed);
   }
 
   function handleFreeTextSubmit(prompt: string) {
     const trimmed = prompt.trim();
     if (!trimmed) return;
     setAuthPrompt(trimmed);
+    setRestorePrompt(trimmed);
   }
 
   function handleStepByStep() {
@@ -116,13 +123,18 @@ export default function PublicTripBuilder() {
   // Anonymous visitors: Hero → in-place anon stream.
   if (!user) {
     if (anonPrompt) {
-      return <AnonTripGenerator prompt={anonPrompt} onCancel={() => setAnonPrompt(null)} />;
+      return (
+        <AnonTripGenerator
+          prompt={anonPrompt}
+          onCancel={() => setAnonPrompt(null)}
+        />
+      );
     }
     return (
       <div className="min-h-dvh bg-background">
         <Hero
           onSubmit={handlePublicHeroSubmit}
-          prefill={pending}
+          prefill={restorePrompt ?? pending}
           variant="public"
         />
       </div>
@@ -155,6 +167,7 @@ export default function PublicTripBuilder() {
         placeholder="Describe your trip — destination, dates, who's coming"
         ctaLabel="Plan with Junto AI"
         onFreeTextSubmit={handleFreeTextSubmit}
+        prefill={restorePrompt}
         onStepByStep={handleStepByStep}
         onSkipItinerary={() => setBlankOpen(true)}
         stepByStepExpanded={stepExpanded}
