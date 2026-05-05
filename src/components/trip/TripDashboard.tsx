@@ -584,91 +584,153 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         const isLiveWithPlan = hasPlan && tripIsLive;
         const isUpcomingWithPlan = hasPlan && !tripIsLive;
 
+        const handleClick = () => {
+          if (hasPlan) navigate(`/app/trips/${tripId}/plan`);
+          else toggleBuilder(true);
+        };
+
         return (
-          <div
-            className="relative overflow-hidden p-5"
+          <button
+            onClick={handleClick}
+            className="group relative w-full text-left overflow-hidden transition-all active:scale-[0.99]"
             style={{
-              background: "linear-gradient(135deg, #0D9488 0%, #0a7c72 40%, #065f58 100%)",
-              borderRadius: 20,
+              background: "linear-gradient(135deg, #0f766e 0%, #0D9488 55%, #0891b2 100%)",
+              borderRadius: 24,
+              boxShadow: "0 8px 28px -8px rgba(13,148,136,0.45), 0 2px 6px rgba(13,148,136,0.18)",
             }}
           >
-            <svg className="absolute top-4 right-5 opacity-[0.12]" width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 0L13.5 9L22 6L15 12L24 12L15 14.5L22 18L13.5 15L12 24L10.5 15L2 18L9 14.5L0 12L9 12L2 6L10.5 9Z" fill="white" />
-            </svg>
-            <svg className="absolute top-10 right-20 opacity-[0.08]" width="10" height="10" viewBox="0 0 24 24" fill="none">
-              <path d="M12 0L13.5 9L22 6L15 12L24 12L15 14.5L22 18L13.5 15L12 24L10.5 15L2 18L9 14.5L0 12L9 12L2 6L10.5 9Z" fill="white" />
-            </svg>
-            <svg className="absolute bottom-6 right-8 opacity-[0.15]" width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 0L13.5 9L22 6L15 12L24 12L15 14.5L22 18L13.5 15L12 24L10.5 15L2 18L9 14.5L0 12L9 12L2 6L10.5 9Z" fill="white" />
-            </svg>
+            {/* Soft radial highlight */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(120% 80% at 100% 0%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 55%)",
+              }}
+            />
+            {/* Subtle grain */}
+            <div
+              className="absolute inset-0 pointer-events-none opacity-[0.06] mix-blend-overlay"
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+              }}
+            />
+            {/* Decorative orb */}
+            <div
+              className="absolute -right-10 -bottom-10 w-40 h-40 rounded-full pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%)",
+              }}
+            />
 
-            <div className="flex items-center gap-1.5 mb-3">
-              <Sparkles className="h-4 w-4 text-white/90" />
-              <span className="text-white/90 text-[13px] font-semibold tracking-wide">Junto AI</span>
-              {isLiveWithPlan && dayOfTrip > 0 && totalTripDays > 0 && (
-                <span className="ml-auto text-white/60 text-[12px] font-medium">
-                  Day {dayOfTrip} of {totalTripDays}
-                </span>
-              )}
-            </div>
-
-            <div className="flex gap-2.5">
-              <button
-                onClick={() => { if (hasPlan) navigate(`/app/trips/${tripId}/plan`); else toggleBuilder(true); }}
-                className="text-left rounded-2xl p-3.5 transition-all active:opacity-80"
-                style={{
-                  flex: isLiveWithPlan ? 1.2 : 1,
-                  background: "rgba(255,255,255,0.18)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                }}
-              >
-                {isLiveWithPlan ? (
-                  <>
-                    <p className="text-white/60 text-[11px] font-medium">Today</p>
-                    <p className="text-white font-semibold text-[14px] leading-tight mt-0.5 line-clamp-2">
-                      {todayActivities.length > 0 ? todayActivities.join(", ") : "No activities today"}
-                    </p>
-                    <p className="text-white/50 text-[11px] mt-1.5">View full plan →</p>
-                  </>
-                ) : isUpcomingWithPlan ? (
-                  <>
-                    <p className="text-white font-semibold text-[14px] leading-tight">Your plan</p>
-                    <p className="text-white/70 text-[12px] mt-1 leading-snug">
-                      {planStats
-                        ? `${planStats.days} day${planStats.days !== 1 ? "s" : ""} · ${planStats.cities} cit${planStats.cities !== 1 ? "ies" : "y"} · ${planStats.activities} activities`
-                        : "View your AI itinerary"}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-white font-semibold text-[14px] leading-tight">Plan my trip</p>
-                    <p className="text-white/70 text-[12px] mt-1 leading-snug">Full itinerary in seconds</p>
-                  </>
+            <div className="relative p-5">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex items-center justify-center h-7 w-7 rounded-full"
+                    style={{
+                      background: "rgba(255,255,255,0.18)",
+                      backdropFilter: "blur(8px)",
+                      WebkitBackdropFilter: "blur(8px)",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                    }}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <span className="text-white text-[11px] font-semibold uppercase tracking-[0.16em]">
+                    Junto AI
+                  </span>
+                </div>
+                {isLiveWithPlan && dayOfTrip > 0 && totalTripDays > 0 && (
+                  <span
+                    className="text-white text-[10px] font-semibold uppercase tracking-[0.14em] px-2.5 py-1 rounded-full"
+                    style={{
+                      background: "rgba(255,255,255,0.16)",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                    }}
+                  >
+                    Day {dayOfTrip}/{totalTripDays}
+                  </span>
                 )}
-              </button>
+              </div>
 
-              {CONCIERGE_ENABLED && (
-                <button
-                  onClick={() => setConciergeOpen(true)}
-                  className="text-left rounded-2xl p-3.5 transition-all active:opacity-80"
-                  style={{
-                    flex: isLiveWithPlan ? 0.8 : 1,
-                    background: "rgba(255,255,255,0.18)",
-                    backdropFilter: "blur(8px)",
-                    WebkitBackdropFilter: "blur(8px)",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                  }}
-                >
-                  <p className="text-white font-semibold text-[14px] leading-tight">What to do?</p>
-                  <p className="text-white/70 text-[12px] mt-1 leading-snug">
-                    {isLiveWithPlan ? "Nearby spots" : "Restaurants, bars, spots"}
+              {/* Body */}
+              {isLiveWithPlan ? (
+                <>
+                  <p className="text-white/65 text-[11px] font-semibold uppercase tracking-[0.14em] mb-1.5">
+                    Today
                   </p>
-                </button>
+                  <p className="text-white font-semibold text-[18px] leading-snug line-clamp-2 pr-6">
+                    {todayActivities.length > 0
+                      ? todayActivities.join(" · ")
+                      : "Free day — explore at your pace"}
+                  </p>
+                  <div className="mt-4 flex items-center gap-1.5 text-white/85 text-[12px] font-medium">
+                    <span>View full plan</span>
+                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                  </div>
+                </>
+              ) : isUpcomingWithPlan ? (
+                <>
+                  <p className="text-white font-semibold text-[20px] leading-tight tracking-tight">
+                    Your trip plan is ready
+                  </p>
+                  {planStats && (
+                    <div className="mt-4 flex items-stretch gap-2">
+                      {[
+                        { value: planStats.days, label: planStats.days === 1 ? "day" : "days" },
+                        { value: planStats.cities, label: planStats.cities === 1 ? "city" : "cities" },
+                        { value: planStats.activities, label: "activities" },
+                      ].map((stat, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-2xl px-3 py-2.5"
+                          style={{
+                            background: "rgba(255,255,255,0.14)",
+                            backdropFilter: "blur(10px)",
+                            WebkitBackdropFilter: "blur(10px)",
+                            border: "1px solid rgba(255,255,255,0.18)",
+                          }}
+                        >
+                          <p className="text-white font-bold text-[20px] leading-none tabular-nums">
+                            {stat.value}
+                          </p>
+                          <p className="text-white/70 text-[10.5px] font-medium uppercase tracking-[0.1em] mt-1">
+                            {stat.label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-4 flex items-center gap-1.5 text-white/85 text-[12px] font-medium">
+                    <span>Open itinerary</span>
+                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-white font-semibold text-[20px] leading-tight tracking-tight">
+                    Plan this trip with AI
+                  </p>
+                  <p className="text-white/75 text-[13px] mt-1.5 leading-snug max-w-[85%]">
+                    A full day-by-day itinerary, tailored to your group, in seconds.
+                  </p>
+                  <div
+                    className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold"
+                    style={{
+                      background: "rgba(255,255,255,0.95)",
+                      color: "#0f766e",
+                    }}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Generate plan</span>
+                  </div>
+                </>
               )}
             </div>
-          </div>
+          </button>
         );
       }
       case "expenses": {
