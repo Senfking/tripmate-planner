@@ -88,17 +88,32 @@ export function AnonTripGenerator({ prompt, onCancel }: Props) {
       /anon_limit|signup_required|free trip preview|rate.?limit|too many|429/i.test(streaming.state.error ?? "");
 
     if (isRateLimit) {
-      // No error UI — just the celebratory signup takeover. Dim teal backdrop
-      // hints at the trip they generated previously fading behind the unlock.
+      // Render the previously-generated trip behind the celebratory signup
+      // takeover so the modal's backdrop blur reveals real content (not black).
+      const partialBehind = buildPartialResult(streaming.state);
       return (
         <>
-          <div
-            className="min-h-dvh"
-            style={{
-              background:
-                "radial-gradient(120% 80% at 50% 0%, rgba(13,148,136,0.18) 0%, rgba(10,10,10,0) 55%), #0a0a0a",
-            }}
-          />
+          {partialBehind ? (
+            <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
+              <TripResultsView
+                tripId="anon-streaming"
+                planId={null}
+                result={partialBehind}
+                onClose={() => {}}
+                onRegenerate={() => {}}
+                standalone
+                readOnly
+              />
+            </div>
+          ) : (
+            <div
+              className="min-h-dvh"
+              style={{
+                background:
+                  "radial-gradient(120% 80% at 50% 0%, rgba(13,148,136,0.18) 0%, rgba(10,10,10,0) 55%), #0a0a0a",
+              }}
+            />
+          )}
           <ContextualSignupModal
             open={rateLimitOpen}
             onOpenChange={(o) => { setRateLimitOpen(o); if (!o) onCancel(); }}
