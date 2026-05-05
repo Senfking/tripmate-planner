@@ -239,7 +239,7 @@ export function Hero({
             "pl-2 pr-0 sm:px-5 py-0 sm:py-2",
             "text-[14px] sm:text-[13.5px] text-gray-500 placeholder:text-gray-500",
             "outline-none border-0",
-            "leading-[1.4] sm:leading-[1.4] overflow-hidden",
+            "leading-[1.4] sm:leading-[1.4] overflow-y-auto scrollbar-hide",
             "min-h-[48px] sm:min-h-[48px]",
             "disabled:opacity-60 text-left",
           ].join(" ")}
