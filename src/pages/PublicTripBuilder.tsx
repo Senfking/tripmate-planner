@@ -167,6 +167,7 @@ export default function PublicTripBuilder() {
         placeholder="Describe your trip — destination, dates, who's coming"
         ctaLabel="Plan with Junto AI"
         onFreeTextSubmit={handleFreeTextSubmit}
+        prefill={restorePrompt}
         onStepByStep={handleStepByStep}
         onSkipItinerary={() => setBlankOpen(true)}
         stepByStepExpanded={stepExpanded}
