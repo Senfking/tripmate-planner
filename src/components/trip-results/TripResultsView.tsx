@@ -437,9 +437,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           }}
         />
 
-        {/* Floating glass controls — back (left) + map / dashboard / edit (right) */}
+        {/* Floating glass controls — back (left) + map / dashboard / edit (right).
+            `fixed` so the controls stay reachable while users scroll through the
+            itinerary; the glass background + backdrop-blur keeps them legible
+            over any content underneath. */}
         <div
-          className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4"
+          className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-4 pointer-events-none"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
         >
           <button
