@@ -9,6 +9,7 @@ import { DestinationSection } from "./DestinationSection";
 import { DaySection } from "./DaySection";
 import { TransportCard } from "./TransportCard";
 import { AccommodationCard } from "./AccommodationCard";
+import { StayMiniCard } from "./StayMiniCard";
 import { getCategoryColor } from "./categoryColors";
 import { buildActivityCostFormatter } from "./formatActivityCost";
 import { AlternativesSheet } from "./AlternativesSheet";
@@ -665,32 +666,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   const hero = photos[0] || altPhotos[0] || activityPhotos[0] || null;
 
                   nodes.push(
-                    <button
+                    <StayMiniCard
                       key={`dest-${i}`}
+                      name={dest.name}
+                      hotelName={(acc?.title || acc?.name) as string | undefined}
+                      fallbackHero={hero}
+                      dayLabel={dayLabel}
+                      nightCount={nightCount}
                       onClick={() => scrollToSection(`section-dest-${dest.name}`)}
-                      className="snap-start shrink-0 w-[220px] h-[150px] relative overflow-hidden rounded-2xl border border-border bg-muted text-left group shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      {hero ? (
-                        <img
-                          src={hero}
-                          alt={dest.name}
-                          loading="lazy"
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-                      <div className="absolute inset-x-0 bottom-0 p-3 text-white">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 shrink-0" />
-                          <span className="text-[14px] font-semibold truncate">{dest.name}</span>
-                        </div>
-                        <p className="text-[11px] text-white/85 mt-0.5">
-                          {dayLabel} · {nightCount} {nightCount === 1 ? "night" : "nights"}
-                        </p>
-                      </div>
-                    </button>
+                    />
                   );
 
                   if (i < realDests.length - 1) {
