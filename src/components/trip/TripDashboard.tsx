@@ -624,33 +624,17 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               }}
             />
 
-            <div className="relative p-5">
+            <div className="relative p-3.5">
               {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="flex items-center justify-center h-7 w-7 rounded-full"
-                    style={{
-                      background: "rgba(255,255,255,0.18)",
-                      backdropFilter: "blur(8px)",
-                      WebkitBackdropFilter: "blur(8px)",
-                      border: "1px solid rgba(255,255,255,0.22)",
-                    }}
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-white" />
-                  </div>
-                  <span className="text-white text-[11px] font-semibold uppercase tracking-[0.16em]">
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-white/90" />
+                  <span className="text-white text-[10.5px] font-semibold uppercase tracking-[0.16em]">
                     Junto AI
                   </span>
                 </div>
                 {isLiveWithPlan && dayOfTrip > 0 && totalTripDays > 0 && (
-                  <span
-                    className="text-white text-[10px] font-semibold uppercase tracking-[0.14em] px-2.5 py-1 rounded-full"
-                    style={{
-                      background: "rgba(255,255,255,0.16)",
-                      border: "1px solid rgba(255,255,255,0.22)",
-                    }}
-                  >
+                  <span className="text-white/75 text-[10.5px] font-semibold uppercase tracking-[0.12em]">
                     Day {dayOfTrip}/{totalTripDays}
                   </span>
                 )}
@@ -658,76 +642,64 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
 
               {/* Body */}
               {isLiveWithPlan ? (
-                <>
-                  <p className="text-white/65 text-[11px] font-semibold uppercase tracking-[0.14em] mb-1.5">
-                    Today
-                  </p>
-                  <p className="text-white font-semibold text-[18px] leading-snug line-clamp-2 pr-6">
-                    {todayActivities.length > 0
-                      ? todayActivities.join(" · ")
-                      : "Free day — explore at your pace"}
-                  </p>
-                  <div className="mt-4 flex items-center gap-1.5 text-white/85 text-[12px] font-medium">
-                    <span>View full plan</span>
-                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-white/65 text-[10px] font-semibold uppercase tracking-[0.14em] mb-0.5">
+                      Today
+                    </p>
+                    <p className="text-white font-semibold text-[15px] leading-snug line-clamp-2">
+                      {todayActivities.length > 0
+                        ? todayActivities.join(" · ")
+                        : "Free day — explore at your pace"}
+                    </p>
                   </div>
-                </>
+                  <span className="shrink-0 text-white/85 text-[12px] font-medium">View →</span>
+                </div>
               ) : isUpcomingWithPlan ? (
-                <>
-                  <p className="text-white font-semibold text-[20px] leading-tight tracking-tight">
-                    Your trip plan is ready
-                  </p>
-                  {planStats && (
-                    <div className="mt-4 flex items-stretch gap-2">
-                      {[
-                        { value: planStats.days, label: planStats.days === 1 ? "day" : "days" },
-                        { value: planStats.cities, label: planStats.cities === 1 ? "city" : "cities" },
-                        { value: planStats.activities, label: "activities" },
-                      ].map((stat, i) => (
-                        <div
-                          key={i}
-                          className="flex-1 rounded-2xl px-3 py-2.5"
-                          style={{
-                            background: "rgba(255,255,255,0.14)",
-                            backdropFilter: "blur(10px)",
-                            WebkitBackdropFilter: "blur(10px)",
-                            border: "1px solid rgba(255,255,255,0.18)",
-                          }}
-                        >
-                          <p className="text-white font-bold text-[20px] leading-none tabular-nums">
-                            {stat.value}
-                          </p>
-                          <p className="text-white/70 text-[10.5px] font-medium uppercase tracking-[0.1em] mt-1">
-                            {stat.label}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-4 flex items-center gap-1.5 text-white/85 text-[12px] font-medium">
-                    <span>Open itinerary</span>
-                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white font-semibold text-[15px] leading-tight tracking-tight mb-2">
+                      Your trip plan is ready
+                    </p>
+                    {planStats && (
+                      <div className="flex items-center gap-3 text-white/85">
+                        {[
+                          { value: planStats.days, label: planStats.days === 1 ? "day" : "days" },
+                          { value: planStats.cities, label: planStats.cities === 1 ? "city" : "cities" },
+                          { value: planStats.activities, label: "activities" },
+                        ].map((stat, i) => (
+                          <div key={i} className="flex items-baseline gap-1">
+                            <span className="text-white font-bold text-[15px] leading-none tabular-nums">
+                              {stat.value}
+                            </span>
+                            <span className="text-white/70 text-[11px] font-medium">
+                              {stat.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </>
+                  <span className="shrink-0 text-white/85 text-[12px] font-medium">Open →</span>
+                </div>
               ) : (
-                <>
-                  <p className="text-white font-semibold text-[20px] leading-tight tracking-tight">
-                    Plan this trip with AI
-                  </p>
-                  <p className="text-white/75 text-[13px] mt-1.5 leading-snug max-w-[85%]">
-                    A full day-by-day itinerary, tailored to your group, in seconds.
-                  </p>
-                  <div
-                    className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold"
-                    style={{
-                      background: "rgba(255,255,255,0.95)",
-                      color: "#0f766e",
-                    }}
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>Generate plan</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold text-[15px] leading-tight tracking-tight">
+                      Plan this trip with AI
+                    </p>
+                    <p className="text-white/75 text-[12px] mt-0.5 leading-snug">
+                      Full itinerary in seconds.
+                    </p>
                   </div>
-                </>
+                  <span
+                    className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11.5px] font-semibold"
+                    style={{ background: "rgba(255,255,255,0.95)", color: "#0f766e" }}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Generate
+                  </span>
+                </div>
               )}
             </div>
           </button>
