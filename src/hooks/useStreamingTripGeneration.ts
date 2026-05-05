@@ -129,6 +129,11 @@ export interface StreamingState {
    *  current single-destination flow; multi-leg trips will populate
    *  multiple keys (forward-compat). */
   accommodations: Record<number, AIActivity>;
+  /** Hotel alternatives keyed by destination_index. Up to 5 lodging-filtered
+   *  candidates per leg (excluding the chosen hotel). Populated by the
+   *  `accommodation` event alongside `accommodations`. Used by the in-app
+   *  hotel SWAP UI. */
+  accommodationAlternatives: Record<number, AIActivity[]>;
   /** Unified leg list (real + transit) emitted by the `leg` event right
    *  after `meta`. Drives the multi-destination header/badges and per-leg
    *  rendering. Empty until the leg event lands. */
