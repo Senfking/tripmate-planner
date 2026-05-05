@@ -620,6 +620,8 @@ function normalizeDayFromServer(raw: any): AIDay | null {
     day_number: raw.day_number,
     theme: typeof raw.theme === "string" ? stripEmoji(raw.theme) : "",
     activities,
+    destination_index: typeof raw.destination_index === "number" ? raw.destination_index : 0,
+    transit: raw.transit ?? undefined,
   };
 }
 
