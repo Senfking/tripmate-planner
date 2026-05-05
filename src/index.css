@@ -419,7 +419,7 @@ html.dark, html.dark body, html.dark #root {
     100% { transform: scale(1.08) translate3d(-1.5%, -1%, 0); }
   }
 
-  /* Auto-scrolling browser screenshot inside fixed viewport */
+  /* Auto-scrolling browser screenshot inside fixed viewport (legacy) */
   .auto-scroll-screenshot {
     animation: auto-scroll-screenshot 22s ease-in-out infinite;
     will-change: transform;
@@ -430,9 +430,25 @@ html.dark, html.dark body, html.dark #root {
     100%     { transform: translateY(0); }
   }
 
+  /* AI Trip Builder MacBook overlay scroll. Image is rendered at 100% of
+     the screen rect's width so its height >> screen height; we translate
+     up to (-100% + 100% of container height) — i.e. up to where the
+     bottom of the screenshot meets the bottom of the screen. Using calc
+     against the parent height keeps it accurate at any viewport. */
+  .ai-builder-scroll {
+    animation: ai-builder-scroll 20s ease-in-out infinite;
+    will-change: transform;
+  }
+  @keyframes ai-builder-scroll {
+    0%, 8%    { transform: translateY(0); }
+    55%, 63%  { transform: translateY(calc(-100% + 100cqh)); }
+    100%      { transform: translateY(0); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .hero-kenburns,
-    .auto-scroll-screenshot {
+    .auto-scroll-screenshot,
+    .ai-builder-scroll {
       animation: none !important;
     }
   }
