@@ -111,6 +111,18 @@ export function EntryRequirementsPreview({
     </div>
   );
 
+  // Anonymous user — show signup-prompt preview instead of "Set nationality".
+  if (!user) {
+    return (
+      <Wrapper>
+        <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
+          Sign up to see your personalized visa &amp; entry requirements for{" "}
+          {destName ?? "this destination"}.
+        </div>
+      </Wrapper>
+    );
+  }
+
   // Empty state: no nationality on profile
   if (!hasNationality) {
     return (

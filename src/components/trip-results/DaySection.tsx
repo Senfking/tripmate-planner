@@ -154,33 +154,33 @@ export function DaySection({
     return (
       <div
         id={`section-day-${day.day_number}`}
-        className="rounded-xl border border-border bg-card overflow-hidden"
+        className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm"
         aria-busy="true"
       >
-        <div className="w-full flex items-center gap-3 p-3">
-          {/* Thumbnail placeholder — matches populated 72x56 */}
-          <div className="w-[72px] h-[56px] rounded-lg overflow-hidden flex-shrink-0 bg-muted animate-pulse" />
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/25 text-[10px] font-bold uppercase tracking-wide">
-                Day {day.day_number}
-              </span>
-              <span className="text-xs text-muted-foreground font-mono">
-                {dateStr ? `${dateStr} · ` : ""}
-                <span className="inline-block align-middle h-3 w-20 rounded bg-muted animate-pulse" />
-              </span>
-            </div>
-            {day.theme ? (
-              <p className="text-[13px] font-medium text-foreground mt-1 truncate">
-                {day.theme}
-              </p>
-            ) : (
-              <div className="mt-1.5 h-3 w-2/3 rounded bg-muted animate-pulse" />
-            )}
+        {/* Banner skeleton — matches populated DaySection h-[140-160px] image header */}
+        <div className="relative h-[140px] sm:h-[160px] w-full bg-muted overflow-hidden">
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-muted via-muted/60 to-muted" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(180_25%_8%)] via-[hsl(180_25%_8%)]/70 via-40% to-transparent" />
+          {/* Top-left day numeral */}
+          <div className="absolute top-3 left-4 flex items-baseline gap-2">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-white/60">Day</span>
+            <span className="text-[28px] font-bold leading-none tabular-nums text-white drop-shadow-md">
+              {String(day.day_number).padStart(2, "0")}
+            </span>
           </div>
-
-          <ChevronRight className="h-4 w-4 text-muted-foreground/40 flex-shrink-0" />
+          {/* Top-right chevron */}
+          <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-white/10 backdrop-blur-md ring-1 ring-white/20" />
+          {/* Bottom: theme placeholder */}
+          <div className="absolute inset-x-0 bottom-0 px-4 pb-3.5 pt-6 space-y-2">
+            {day.theme ? (
+              <h3 className="text-[18px] sm:text-[20px] font-semibold text-white leading-tight tracking-tight line-clamp-2 drop-shadow-sm">
+                {day.theme}
+              </h3>
+            ) : (
+              <div className="h-4 w-2/3 rounded bg-white/25 animate-pulse" />
+            )}
+            <div className="h-3 w-32 rounded bg-white/15 animate-pulse" />
+          </div>
         </div>
       </div>
     );

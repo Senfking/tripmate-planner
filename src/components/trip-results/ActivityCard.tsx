@@ -158,9 +158,9 @@ export function ActivityCard({
             #{index + 1}
           </div>
 
-          {/* Junto pick — bottom-left teal chip */}
+          {/* Junto pick — top-right teal chip (consistent across all cards) */}
           {activity.is_junto_pick && (
-            <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white bg-[#0D9488]/90 backdrop-blur-md ring-1 ring-white/20 shadow-md">
+            <div className="absolute top-2 right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white bg-[#0D9488]/90 backdrop-blur-md ring-1 ring-white/20 shadow-md">
               <Sparkles className="h-2.5 w-2.5" />
               Junto Pick
             </div>
