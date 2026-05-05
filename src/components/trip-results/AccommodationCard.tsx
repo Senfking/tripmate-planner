@@ -163,6 +163,13 @@ export function AccommodationCard({
 
   // Booking.com search URL for the destination, pre-filled with trip dates,
   // so users can browse alternative stays in the same area.
+  // Fallback Google Maps search URL when backend didn't provide one
+  // (e.g. second-leg hotels that haven't fully resolved yet).
+  const mapsUrl = googleMapsUrl
+    ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      [name, locationHint || neighborhood].filter(Boolean).join(" ")
+    )}`;
+
   const browseAlternativesUrl = (() => {
     const cityQuery = (locationHint || neighborhood || name).trim();
     const params = new URLSearchParams();
