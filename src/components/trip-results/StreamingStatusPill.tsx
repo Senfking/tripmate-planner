@@ -61,7 +61,7 @@ export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) 
           style={{ animation: "spin 1s linear infinite, statusPillPulse 2s ease-in-out infinite" }}
         />
         <span
-          className="text-sm sm:text-base font-semibold text-[#0F766E] transition-opacity duration-250"
+          className="text-sm sm:text-base font-semibold text-[#134E4A] transition-opacity duration-250"
           style={{ opacity: visible ? 1 : 0 }}
         >
           {text}
