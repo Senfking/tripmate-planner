@@ -999,16 +999,16 @@ group_composition:
 - One short human phrase describing the group. Examples: "solo traveler", "couple", "family with young kids", "friends in their 30s", "multi-generational group".
 - Infer from group_size + any signals in notes/free_text. For plain numbers without context, use "group of N".
 
-duration_days:
+duration_days (OPTIONAL — omit the field entirely when absent):
 - Read notes and free_text for an explicit trip length: "10 day trip", "5 days in Lisbon", "weekend in Tokyo", "two weeks", "long weekend", "a week".
 - Normalize to an integer 1..21. "weekend" => 2. "long weekend" => 3. "a week" / "one week" => 7. "two weeks" => 14. "10 days" => 10.
-- Return null when no explicit duration appears in the text. Do NOT guess from vibes or must_haves. Do NOT echo a default.
+- OMIT this property entirely (do not include the key) when no explicit duration appears in the text. Do NOT guess from vibes or must_haves. Do NOT echo a default. Do NOT emit 0.
 - The form may also supply a duration; the caller decides whether the form value or this extracted value wins. Your job is to faithfully report what the user TYPED.
 
-named_destinations:
+named_destinations (OPTIONAL — omit the field entirely when absent):
 - Read notes and free_text for explicit city / town / island / region names the user wants the trip to include.
 - Return them in the order the user mentioned them, lowercased, each as a short locality string ("bangkok", "koh phangan", "lisbon", "kyoto"). Do NOT include the country unless the user wrote it inseparable from the place ("rio de janeiro" stays whole; "lisbon, portugal" becomes "lisbon").
-- Empty array when the user didn't name any place. Do NOT invent destinations from vibes / must_haves. "EDM and nightlife" alone does NOT imply Bangkok — wait for an explicit place name.
+- OMIT this property entirely (or pass an empty array) when the user didn't name any place. Do NOT invent destinations from vibes / must_haves. "EDM and nightlife" alone does NOT imply Bangkok — wait for an explicit place name.
 - Country-only mentions ("Thailand") count as a region, not a city — include them only if the user wrote nothing more specific.
 
 Return exactly one tool_use call. Do not add commentary.`;
@@ -1057,17 +1057,17 @@ const INTENT_TOOL: ClaudeTool = {
         description: "Short phrase describing the group.",
       },
       duration_days: {
-        type: ["integer", "null"],
+        type: "integer",
         minimum: 1,
         maximum: 21,
         description:
-          "Trip length in days extracted from notes/free_text. Integer 1..21 when the user wrote an explicit duration ('10 day trip', 'weekend', 'two weeks'). null when no duration appeared in the text.",
+          "Trip length in days extracted from notes/free_text. Integer 1..21 when the user wrote an explicit duration ('10 day trip', 'weekend', 'two weeks'). OMIT this field entirely when no duration appeared in the text — do not emit 0 or a guess.",
       },
       named_destinations: {
         type: "array",
         items: { type: "string" },
         description:
-          "Lowercased city / island / region names the user explicitly wrote in notes/free_text, in the order they were mentioned. Empty array when none were named. Do not invent destinations from vibes.",
+          "Lowercased city / island / region names the user explicitly wrote in notes/free_text, in the order they were mentioned. OMIT this field or pass an empty array when none were named. Do not invent destinations from vibes.",
       },
     },
     required: [
@@ -1079,8 +1079,6 @@ const INTENT_TOOL: ClaudeTool = {
       "pace",
       "dietary",
       "group_composition",
-      "duration_days",
-      "named_destinations",
     ],
   },
 };
@@ -1108,27 +1106,34 @@ async function parseIntent(
   logger: LLMLogger,
   pipelineStartedAt: number,
 ): Promise<Intent> {
-  const result = await callClaudeHaiku<{
-    destination: string;
-    vibes: string[];
-    must_haves: string[];
-    must_avoids: string[];
-    budget_tier: "budget" | "mid-range" | "premium";
-    pace: "leisurely" | "balanced" | "active";
-    dietary: string[];
-    group_composition: string;
-    duration_days: number | null;
-    named_destinations: string[];
-  }>(
-    anthropicKey,
-    [{ type: "text", text: INTENT_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-    buildIntentUserMessage(body, destinationHint),
-    INTENT_TOOL,
-    1024,
-    pipelineStartedAt,
-    "parseIntent",
-    0,
-  );
+  // Tool-call result fields are typed as `unknown` because duration_days and
+  // named_destinations are optional in the schema (per PR #256 — making them
+  // required + array-typed broke parseIntent for every prompt). The model may
+  // omit either entirely; extraction below normalizes whatever shape arrives.
+  let result: ClaudeCallResult<Record<string, unknown>>;
+  try {
+    result = await callClaudeHaiku<Record<string, unknown>>(
+      anthropicKey,
+      [{ type: "text", text: INTENT_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      buildIntentUserMessage(body, destinationHint),
+      INTENT_TOOL,
+      1024,
+      pipelineStartedAt,
+      "parseIntent",
+      0,
+    );
+  } catch (e) {
+    // The streaming branch's outer catch swallows the dev-facing message into
+    // a generic user-facing string. Log the real error here so production
+    // logs surface schema-rejection / 4xx / network details immediately.
+    const err = e as Error;
+    console.error(
+      `[parseIntent] callClaudeHaiku threw: name=${err?.name ?? "Error"} ` +
+      `message=${err?.message ?? String(err)}`,
+    );
+    if (err?.stack) console.error(`[parseIntent] stack: ${err.stack}`);
+    throw e;
+  }
 
   await logger.log({
     feature: "trip_builder_intent",
@@ -1142,34 +1147,54 @@ async function parseIntent(
   if (!result.data) {
     throw new Error("parseIntent: Claude returned no tool input");
   }
+  const data = result.data as Record<string, unknown>;
 
   const rawNotes = [body.notes ?? "", body.free_text ?? ""].filter(Boolean).join("\n\n").trim();
 
-  // Clamp duration_days defensively. The schema enforces 1..21 but the model
-  // can emit out-of-range integers when the user wrote something nonsensical
-  // ("100 day epic"); treat anything outside the band as "no extracted
-  // duration" rather than letting it leak past the validator.
-  const rawDur = result.data.duration_days;
-  const durationDays = typeof rawDur === "number" && Number.isFinite(rawDur) && rawDur >= 1 && rawDur <= 21
-    ? Math.round(rawDur)
-    : null;
+  // Clamp duration_days defensively. The field is OPTIONAL in the schema;
+  // the model may omit it (or emit null / 0 / out-of-range) when no duration
+  // appeared in free_text. Anything not in 1..21 is treated as "no extracted
+  // duration" so the form-supplied default still applies.
+  const rawDur = data.duration_days;
+  const durationDays =
+    typeof rawDur === "number" && Number.isFinite(rawDur) && rawDur >= 1 && rawDur <= 21
+      ? Math.round(rawDur)
+      : null;
 
-  const namedDestinations = Array.isArray(result.data.named_destinations)
-    ? result.data.named_destinations
+  // named_destinations is OPTIONAL — model may omit the field entirely.
+  // Tolerate undefined / non-array / non-string entries.
+  const rawNamed = data.named_destinations;
+  const namedDestinations = Array.isArray(rawNamed)
+    ? rawNamed
         .filter((s): s is string => typeof s === "string")
         .map((s) => s.trim())
         .filter(Boolean)
     : [];
 
+  const budgetRaw = data.budget_tier;
+  const budgetTier: Intent["budget_tier"] =
+    budgetRaw === "budget" || budgetRaw === "mid-range" || budgetRaw === "premium"
+      ? budgetRaw
+      : "mid-range";
+
+  const paceRaw = data.pace;
+  const pace: Intent["pace"] =
+    paceRaw === "leisurely" || paceRaw === "balanced" || paceRaw === "active"
+      ? paceRaw
+      : "balanced";
+
+  const stringArray = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
+
   return {
-    destination: result.data.destination ?? "",
-    vibes: Array.isArray(result.data.vibes) ? result.data.vibes : [],
-    must_haves: Array.isArray(result.data.must_haves) ? result.data.must_haves : [],
-    must_avoids: Array.isArray(result.data.must_avoids) ? result.data.must_avoids : [],
-    budget_tier: result.data.budget_tier ?? "mid-range",
-    pace: result.data.pace ?? "balanced",
-    dietary: Array.isArray(result.data.dietary) ? result.data.dietary : [],
-    group_composition: result.data.group_composition ?? "group",
+    destination: typeof data.destination === "string" ? data.destination : "",
+    vibes: stringArray(data.vibes),
+    must_haves: stringArray(data.must_haves),
+    must_avoids: stringArray(data.must_avoids),
+    budget_tier: budgetTier,
+    pace,
+    dietary: stringArray(data.dietary),
+    group_composition: typeof data.group_composition === "string" ? data.group_composition : "group",
     raw_notes: rawNotes,
     duration_days: durationDays,
     named_destinations: namedDestinations,
