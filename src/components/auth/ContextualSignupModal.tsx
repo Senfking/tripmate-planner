@@ -308,6 +308,21 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
           </>
         )}
       </p>
+
+      {trigger === "rate_limit" && (
+        <div className="mt-4 space-y-2 text-center">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[12px] text-white/55 hover:text-white/80 underline underline-offset-2"
+          >
+            Back to trip
+          </button>
+          <p className="text-[11px] text-white/35 px-2">
+            Your previous trip is saved — you'll find it in your dashboard after signup.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
