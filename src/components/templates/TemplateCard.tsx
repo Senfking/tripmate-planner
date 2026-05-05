@@ -2,6 +2,50 @@ import { Link } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import type { TripTemplate } from "@/hooks/useTripTemplates";
 
+/**
+ * Rewrites Unsplash image URLs to request a smaller, more compressed variant
+ * appropriate for card display (~280-320px CSS px, up to ~640px at 2x DPR).
+ * Non-Unsplash URLs are returned unchanged.
+ */
+function optimizeCardSrc(url: string, width: number, quality = 70): string {
+  if (!url || !url.includes("images.unsplash.com")) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set("w", String(width));
+    u.searchParams.set("q", String(quality));
+    if (!u.searchParams.has("auto")) u.searchParams.set("auto", "format");
+    if (!u.searchParams.has("fit")) u.searchParams.set("fit", "crop");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+function OptimizedCardImage({ src, alt }: { src: string; alt: string }) {
+  const isUnsplash = src?.includes("images.unsplash.com");
+  if (!isUnsplash) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className="h-full w-full object-cover transition-transform duration-[900ms] ease-out [@media(hover:hover)]:group-hover/card:scale-[1.06] transform-gpu [backface-visibility:hidden]"
+        loading="lazy"
+      />
+    );
+  }
+  return (
+    <img
+      src={optimizeCardSrc(src, 480)}
+      srcSet={`${optimizeCardSrc(src, 320)} 320w, ${optimizeCardSrc(src, 480)} 480w, ${optimizeCardSrc(src, 640)} 640w`}
+      sizes="(min-width: 640px) 320px, 280px"
+      alt={alt}
+      className="h-full w-full object-cover transition-transform duration-[900ms] ease-out [@media(hover:hover)]:group-hover/card:scale-[1.06] transform-gpu [backface-visibility:hidden]"
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
 type Size = "grid" | "carousel";
 
 /**
@@ -42,12 +86,7 @@ export function TemplateCard({
       {/* Inner wrapper isolates the transform from the rounded clip,
           eliminating the brief "sharp edge" flash on hover */}
       <div className="absolute inset-0 overflow-hidden rounded-[inherit] [transform:translateZ(0)] [backface-visibility:hidden]">
-        <img
-          src={c.cover_image_url}
-          alt={c.destination}
-          className="h-full w-full object-cover transition-transform duration-[900ms] ease-out [@media(hover:hover)]:group-hover/card:scale-[1.06] transform-gpu [backface-visibility:hidden]"
-          loading="lazy"
-        />
+        <OptimizedCardImage src={c.cover_image_url} alt={c.destination} />
         {/* Strong bottom-up gradient for legibility on any image */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
         {/* Subtle top vignette to balance + frame */}
