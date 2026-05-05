@@ -89,6 +89,12 @@ export interface StreamingState {
   currentStage: StageProgress | null;
   /** day_numbers that have fully ranked & hydrated (day_complete event). */
   completedDays: number[];
+  /** Hotels keyed by destination_index. Populated by the `accommodation`
+   *  event the moment the metadata LLM call resolves — well before
+   *  trip_complete fires. Frontend reads `accommodations[0]` for the
+   *  current single-destination flow; multi-leg trips will populate
+   *  multiple keys (forward-compat). */
+  accommodations: Record<number, AIActivity>;
 }
 
 /**
