@@ -32,8 +32,8 @@ const COPY: Record<SignupTrigger, { headline: string; sub: string }> = {
     sub: "Tweak vibes, swap activities, and try again with a free account.",
   },
   rate_limit: {
-    headline: "You've used your free generation",
-    sub: "Sign up to plan unlimited trips with Junto AI.",
+    headline: "You've used your free Junto preview",
+    sub: "Sign up to plan unlimited group trips with AI.",
   },
 };
 
