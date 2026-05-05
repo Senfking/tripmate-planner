@@ -29,7 +29,7 @@ interface Props {
  * 429 from the server triggers the contextual signup modal (rate-limit copy)
  * — the visitor has already used their free generation today.
  */
-export function AnonTripGenerator({ prompt, onCancel }: Props) {
+export function AnonTripGenerator({ prompt, onCancel, onRateLimited }: Props) {
   const navigate = useNavigate();
   const streaming = useStreamingTripGeneration();
   const startedRef = useRef(false);
