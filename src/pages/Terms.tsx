@@ -1,17 +1,20 @@
-import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useSmartBack } from "@/hooks/useSmartBack";
 
-const Terms = () => (
+const Terms = () => {
+  const back = useSmartBack("/");
+  return (
   <div className="min-h-dvh bg-background">
     <div className="max-w-[680px] mx-auto pt-10 pb-20 px-6 md:px-8">
       {/* Header */}
-      <Link
-        to="/app/more"
+      <button
+        type="button"
+        onClick={back}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
       >
         <ArrowLeft className="h-4 w-4" />
         Back
-      </Link>
+      </button>
 
       <span
         className="block font-bold"
