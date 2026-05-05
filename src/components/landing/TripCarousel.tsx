@@ -10,7 +10,7 @@ function CarouselRow({ title, cards, seeAll = false }: { title: string; cards: T
     <div className="mb-12">
       <div className="mb-5 flex items-center justify-between px-5 sm:px-10 lg:px-16">
         <h3 className="text-xl font-bold text-foreground sm:text-2xl">{title}</h3>
-        {seeAll ? <Link to="/templates" className="text-sm font-medium text-primary hover:underline">See all</Link> : null}
+        {seeAll ? <Link to={`/templates?category=${encodeURIComponent(title)}`} className="text-sm font-medium text-primary hover:underline">See all</Link> : null}
       </div>
 
       <div className="group/carousel relative">
