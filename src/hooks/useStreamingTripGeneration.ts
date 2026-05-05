@@ -210,7 +210,12 @@ export function buildPartialResult(state: StreamingState): AITripResult | null {
           }
         : {
             kind: "destination" as const,
-            accommodation: state.accommodations[leg.index] as any,
+            accommodation: state.accommodations[leg.index]
+              ? ({
+                  ...(state.accommodations[leg.index] as any),
+                  alternatives: state.accommodationAlternatives[leg.index] ?? [],
+                } as any)
+              : (undefined as any),
           }),
     };
   });
