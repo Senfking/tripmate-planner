@@ -41,6 +41,25 @@ export interface AIDay {
   day_number: number;
   theme: string;
   activities: AIActivity[];
+  /** Index into AITripResult.destinations (the unified leg list). Lets the
+   *  UI route days into the correct leg. Single-destination trips always
+   *  have destination_index=0. */
+  destination_index?: number;
+  /** Present iff this day IS a transit-leg day. */
+  transit?: TransitDayMeta;
+}
+
+export interface TransitDayMeta {
+  from_index: number;
+  to_index: number;
+  half_day: boolean;
+  description: string;
+}
+
+export interface TransitLegMeta {
+  estimated_duration_hours?: number;
+  transit_type?: "flight" | "train" | "drive" | "ferry" | "mixed";
+  description?: string;
 }
 
 export interface AIDestination {
@@ -87,6 +106,11 @@ export interface AIDestination {
     to: string;
   };
   cost_profile?: CostProfile;
+  /** "destination" for real legs, "transit" for transit pseudo-legs. */
+  kind?: "destination" | "transit";
+  /** When kind === "transit", carries travel metadata for the "Travel: A → B"
+   *  card (mode + estimated duration + description). */
+  transit?: TransitLegMeta;
 }
 
 export interface AITripResult {
