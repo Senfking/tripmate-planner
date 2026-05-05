@@ -22,8 +22,16 @@ function matchesQuery(t: TripTemplate, q: string) {
 
 export default function Templates() {
   const { data, isLoading } = useTripTemplates();
-  const [filter, setFilter] = useState("All");
+  const [searchParams] = useSearchParams();
+  const initialCategory = searchParams.get("category") ?? "All";
+  const [filter, setFilter] = useState(initialCategory);
   const [query, setQuery] = useState("");
+
+  // Sync if URL param changes (e.g. clicking another category link from /)
+  useEffect(() => {
+    const c = searchParams.get("category");
+    if (c) setFilter(c);
+  }, [searchParams]);
 
   const categories = useMemo(() => {
     if (!data) return ["All"];
