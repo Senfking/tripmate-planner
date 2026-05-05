@@ -26,7 +26,7 @@ export function FeatureTripDashboard() {
   return (
     <section
       ref={sectionRef}
-      className={`landing-reveal ${visible ? "landing-visible" : ""} w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 bg-[#FAFAF9]`}
+      className={`landing-reveal ${visible ? "landing-visible" : ""} w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 bg-[#F5EEE9]`}
     >
       <div className="mx-auto max-w-6xl grid gap-12 lg:gap-20 lg:grid-cols-2 items-center">
         {/* Copy — left on desktop, below image on mobile */}
