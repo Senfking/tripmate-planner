@@ -526,13 +526,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             in StandaloneTripBuilder), so the transition to the final state is
             just one element disappearing — no other layout change. */}
         {streaming && (
-          <div className="px-4 pt-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-[#0D9488]/25 shadow-sm">
-              <Loader2 className="h-3.5 w-3.5 text-[#0D9488] animate-spin" />
-              <span className="text-xs font-medium text-foreground">
-                {streamingMessage || "Composing your day-by-day itinerary…"}
-              </span>
-            </div>
+          <div className="px-4 pt-3 space-y-2">
+            <StreamingStatusPill
+              stage={streamingStage ?? null}
+              statusMessages={streamingStatusMessages ?? []}
+              fallback={streamingMessage || "Crafting your trip"}
+            />
+            <StreamingProgressBar percent={streamingStage?.percent_complete ?? null} />
           </div>
         )}
 
