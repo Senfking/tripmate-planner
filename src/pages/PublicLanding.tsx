@@ -144,14 +144,16 @@ export default function PublicLanding() {
       />
 
       {/* Footer (ported) */}
-      <footer className="py-8 px-5 border-t border-[#e5e5e5]">
-        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#9ca3af]">
-          <span className="font-bold tracking-[0.2em] uppercase text-[#1a1a1a] text-xs">Junto</span>
-          <div className="flex items-center gap-6">
+      <footer className="py-10 px-5 border-t border-[#e5e5e5]">
+        <div className="mx-auto max-w-5xl grid grid-cols-3 items-center gap-4 text-sm text-[#9ca3af]">
+          <span className="text-xs justify-self-start">&copy; {new Date().getFullYear()} Junto</span>
+          <span className="font-extrabold tracking-[0.32em] uppercase text-[#1a1a1a] text-2xl sm:text-3xl justify-self-center">
+            Junto
+          </span>
+          <div className="flex items-center gap-6 justify-self-end">
             <Link to="/privacy" className="hover:text-[#1a1a1a] transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-[#1a1a1a] transition-colors">Terms</Link>
           </div>
-          <span className="text-xs">&copy; {new Date().getFullYear()} Junto</span>
         </div>
       </footer>
 
