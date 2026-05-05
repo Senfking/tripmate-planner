@@ -62,7 +62,8 @@ export function AnonTripGenerator({ prompt, onCancel }: Props) {
     if (
       streaming.state.stage === "error" &&
       (streaming.state.errorCode === "rate_limited" ||
-        /rate.?limit|too many|429/i.test(streaming.state.error ?? ""))
+        streaming.state.errorCode === "anon_limit" ||
+        /anon_limit|signup_required|free trip preview|rate.?limit|too many|429/i.test(streaming.state.error ?? ""))
     ) {
       setRateLimitOpen(true);
     }
