@@ -684,7 +684,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
               ) : isUpcomingWithPlan ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-white font-semibold text-[15px] leading-tight tracking-tight">
+                    <p className="text-white font-medium text-[13.5px] leading-tight tracking-tight">
                       Your trip plan is ready
                     </p>
                     {planStats && (
