@@ -34,7 +34,8 @@ import { EntryRequirementsPreview } from "./EntryRequirementsPreview";
 import { PackingCard } from "./PackingCard";
 import { TripIdeasStrip } from "@/components/ideas/TripIdeasStrip";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { fetchEurRates } from "@/lib/fetchCrossRates";
 import { cn } from "@/lib/utils";
 
