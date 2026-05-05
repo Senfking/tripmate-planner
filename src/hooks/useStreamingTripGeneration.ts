@@ -224,7 +224,7 @@ function assembleResult(
 
 interface UseStreamingTripGenerationReturn {
   state: StreamingState;
-  start: (payload: Record<string, unknown>) => Promise<void>;
+  start: (payload: Record<string, unknown>, opts?: { anon?: boolean }) => Promise<void>;
   reset: () => void;
 }
 
