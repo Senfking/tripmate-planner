@@ -250,7 +250,7 @@ export function PremiumTripInput({
               <div className="flex items-center gap-3 mt-6 px-1">
                 <div className="flex-1 h-px bg-border" />
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Or build it step by step
+                  {hasFreeText ? "Or build it step by step (optional)" : "Or build it step by step"}
                 </span>
                 <div className="flex-1 h-px bg-border" />
               </div>
