@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 import { ContextualSignupModal, type SignupTrigger } from "@/components/auth/ContextualSignupModal";
@@ -88,6 +89,24 @@ export default function AnonTripView() {
     setSignupOpen(true);
   }
 
+  async function handleShare() {
+    const url = window.location.href;
+    if (navigator.share && window.matchMedia("(max-width: 767px)").matches) {
+      try {
+        await navigator.share({ title: "My trip plan from Junto", url });
+      } catch {
+        // Native share cancel is not an error state for the user.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Couldn't copy link");
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background">
@@ -151,6 +170,7 @@ export default function AnonTripView() {
           standalone
           onCreateTrip={() => openSignup("save")}
           onSaveDraft={() => openSignup("save")}
+          onShare={handleShare}
           readOnly
         />
       </div>
