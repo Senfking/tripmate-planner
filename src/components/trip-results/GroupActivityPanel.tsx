@@ -326,7 +326,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
         {/* General comment input */}
         {!replyTo && (
-          <div className="px-4 py-3 border-t border-border bg-card shrink-0">
+          <div className="px-4 pt-3 border-t border-border bg-card shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
             <div className="flex gap-2 items-end">
               <input
                 type="text"
