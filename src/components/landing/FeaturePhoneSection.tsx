@@ -41,7 +41,8 @@ export function FeaturePhoneSection({
     return () => io.disconnect();
   }, []);
 
-  const bg = background === "sand" ? "bg-[#FAFAF9]" : "bg-white";
+  const bg = "bg-[#F5EEE9]";
+  void background;
   const imageOrder = imageSide === "right" ? "lg:order-2" : "lg:order-1";
   const copyOrder = imageSide === "right" ? "lg:order-1" : "lg:order-2";
   const imageJustify = imageSide === "right" ? "lg:justify-end" : "lg:justify-start";
