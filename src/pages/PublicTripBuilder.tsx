@@ -5,7 +5,6 @@ import { Hero } from "@/components/hero/Hero";
 import {
   consumePendingPrompt,
 } from "@/components/hero/usePendingPrompt";
-import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
 import {
   TripCreationSurface,
@@ -14,6 +13,7 @@ import {
 import { PremiumTripInput, type PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
+import { AuthTripGenerator } from "@/components/trip-builder/AuthTripGenerator";
 
 /**
  * /trips/new — single trip-creation entry point.
