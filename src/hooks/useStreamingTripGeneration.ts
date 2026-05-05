@@ -270,32 +270,63 @@ function assembleResult(
   days: AIDay[],
   imageUrl: string | null,
   trip: TripCompleteEvent,
+  legs: StreamLeg[],
+  accommodations: Record<number, AIActivity>,
+  adjustmentNotice: string | null,
 ): AITripResult {
-  // Apply junto picks based on place_ids from trip_complete.
   const juntoSet = new Set(trip.junto_pick_place_ids ?? []);
+  const skeletonByNum = new Map(meta.skeleton.map((s) => [s.day_number, s]));
   const annotatedDays: AIDay[] = days
     .slice()
     .sort((a, b) => a.day_number - b.day_number)
-    .map((day) => ({
-      ...day,
-      activities: day.activities.map((a) =>
-        a && a.location_name && juntoSet.has((a as any).place_id) ? { ...a, is_junto_pick: true } : a,
-      ),
-    }));
+    .map((day) => {
+      const sk = skeletonByNum.get(day.day_number);
+      return {
+        ...day,
+        destination_index: sk?.destination_index ?? day.destination_index ?? 0,
+        transit: sk?.transit ?? day.transit,
+        activities: day.activities.map((a) =>
+          a && a.location_name && juntoSet.has((a as any).place_id) ? { ...a, is_junto_pick: true } : a,
+        ),
+      };
+    });
+
+  const effectiveLegs = legs.length > 0
+    ? legs
+    : [{ index: 0, name: meta.destination, kind: "destination" as const, days: annotatedDays.length, day_numbers: annotatedDays.map(d => d.day_number) }];
+
+  const destinations = effectiveLegs.map((leg) => {
+    const legDays = annotatedDays.filter((d) => (d.destination_index ?? 0) === leg.index);
+    const startDate = legDays[0]?.date ?? "";
+    const endDate = legDays[legDays.length - 1]?.date ?? startDate;
+    const isTransit = leg.kind === "transit";
+    return {
+      name: leg.name,
+      start_date: startDate,
+      end_date: endDate,
+      intro: effectiveLegs.length === 1 ? trip.trip_summary : "",
+      days: legDays,
+      ...(isTransit
+        ? {
+            kind: "transit" as const,
+            transit: {
+              description: leg.description ?? leg.transit_meta?.description ?? "",
+              estimated_duration_hours: leg.transit_meta?.estimated_duration_hours,
+              transit_type: leg.transit_meta?.transit_type,
+            },
+          }
+        : {
+            kind: "destination" as const,
+            // Per-leg accommodation from streamed events; fallback to trip.accommodation for legacy single-leg payloads.
+            accommodation: (accommodations[leg.index] ?? (leg.index === 0 ? trip.accommodation : null)) as any,
+          }),
+    };
+  });
 
   return {
     trip_title: stripEmoji(trip.trip_title),
     trip_summary: trip.trip_summary,
-    destinations: [
-      {
-        name: meta.destination,
-        start_date: annotatedDays[0]?.date ?? "",
-        end_date: annotatedDays[annotatedDays.length - 1]?.date ?? "",
-        intro: trip.trip_summary,
-        days: annotatedDays,
-        accommodation: trip.accommodation as any,
-      },
-    ],
+    destinations,
     map_center: trip.map_center ?? { lat: 0, lng: 0 },
     map_zoom: trip.map_zoom ?? 12,
     daily_budget_estimate: trip.daily_budget_estimate ?? 0,
@@ -305,6 +336,7 @@ function assembleResult(
     budget_tier: trip.budget_tier,
     destination_image_url: trip.destination_image_url ?? imageUrl ?? null,
     destination_country_iso: trip.destination_country_iso ?? null,
+    adjustment_notice: (trip as any).adjustment_notice ?? adjustmentNotice ?? null,
   };
 }
 
