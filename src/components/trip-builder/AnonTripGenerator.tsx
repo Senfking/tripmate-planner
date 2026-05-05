@@ -203,7 +203,10 @@ export function AnonTripGenerator({ prompt, onCancel, onRateLimited }: Props) {
         standalone
         streaming={isStreaming}
         streamingDayNumbers={skeletonNums}
-        streamingMessage="Crafting your trip…"
+        streamingMessage="Crafting your trip"
+        streamingStatusMessages={streaming.state.statusMessages}
+        streamingStage={streaming.state.currentStage}
+        streamingCompletedDays={streaming.state.completedDays}
         readOnly
       />
     </div>
