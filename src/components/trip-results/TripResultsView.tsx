@@ -32,6 +32,7 @@ import { DayCardReveal } from "./DayCardReveal";
 import { MapSlidePanel, type MapState } from "./MapSlidePanel";
 import { EntryRequirementsPreview } from "./EntryRequirementsPreview";
 import { PackingCard } from "./PackingCard";
+import { TripIdeasStrip } from "@/components/ideas/TripIdeasStrip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetchEurRates } from "@/lib/fetchCrossRates";
@@ -811,6 +812,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <span className="text-[11px] text-muted-foreground leading-snug">
               💬 Comments unlock once you create the trip. Save it and invite your group to start the conversation.
             </span>
+          </div>
+        )}
+
+        {/* Group ideas strip — discoverable inline on the AI plan view */}
+        {!standalone && !streaming && tripId && (
+          <div className="mx-4 mb-4">
+            <TripIdeasStrip tripId={tripId} />
           </div>
         )}
 
