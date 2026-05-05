@@ -7,6 +7,8 @@ import { FeatureCards } from "@/components/landing/FeatureCards";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 import { ShimmerButton } from "@/components/landing/ShimmerButton";
 import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
+import { ContextualSignupModal } from "@/components/auth/ContextualSignupModal";
+import { isAnonRateLimited, markAnonRateLimited } from "@/lib/anonSession";
 
 // Scroll-reveal hook (ported from /landing-old). Keeps the dark-section
 // + carousels feeling premium on first scroll without bringing in extra
@@ -48,6 +50,7 @@ export default function PublicLanding() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [anonPrompt, setAnonPrompt] = useState<string | null>(null);
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
 
   function handleSubmit(prompt: string) {
     if (user) {
@@ -55,11 +58,28 @@ export default function PublicLanding() {
       navigate("/trips/new");
       return;
     }
+    // If this visitor has already burned their free preview today, skip
+    // the streaming UI entirely — just pop the signup modal over the
+    // (blurred) homepage so they never see a black "generating" screen.
+    if (isAnonRateLimited()) {
+      setRateLimitOpen(true);
+      return;
+    }
     setAnonPrompt(prompt);
   }
 
   if (anonPrompt) {
-    return <AnonTripGenerator prompt={anonPrompt} onCancel={() => setAnonPrompt(null)} />;
+    return (
+      <AnonTripGenerator
+        prompt={anonPrompt}
+        onCancel={() => setAnonPrompt(null)}
+        onRateLimited={() => {
+          markAnonRateLimited();
+          setAnonPrompt(null);
+          setRateLimitOpen(true);
+        }}
+      />
+    );
   }
 
   return (
