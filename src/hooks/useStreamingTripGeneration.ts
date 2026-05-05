@@ -61,6 +61,13 @@ interface TripCompleteEvent {
   anon_trip_id?: string | null;
 }
 
+/** Pipeline progress milestone emitted by the edge function. */
+export interface StageProgress {
+  stage: string;
+  user_text: string;
+  percent_complete: number;
+}
+
 export interface StreamingState {
   stage: StreamStage;
   meta: StreamMeta | null;
@@ -75,6 +82,13 @@ export interface StreamingState {
    *  trip_complete event lands. Used to navigate to /trips/anon/[id]. */
   anonTripId: string | null;
   isCacheHit: boolean;
+  /** Destination-specific rotating micro-copy (4 strings). Empty until the
+   *  `status_messages` event arrives. */
+  statusMessages: string[];
+  /** Latest pipeline milestone — drives status pill copy and progress bar. */
+  currentStage: StageProgress | null;
+  /** day_numbers that have fully ranked & hydrated (day_complete event). */
+  completedDays: number[];
 }
 
 /**
@@ -177,6 +191,9 @@ const INITIAL: StreamingState = {
   errorCode: null,
   anonTripId: null,
   isCacheHit: false,
+  statusMessages: [],
+  currentStage: null,
+  completedDays: [],
 };
 
 function assembleResult(
@@ -375,6 +392,28 @@ function handleFrame(
       update({ imageUrl: data?.url ?? null });
       break;
     }
+    case "status_messages": {
+      const msgs = Array.isArray(data?.messages)
+        ? data.messages.filter((s: unknown): s is string => typeof s === "string" && s.length > 0)
+        : [];
+      if (msgs.length > 0) update({ statusMessages: msgs });
+      break;
+    }
+    case "stage_progress": {
+      const stage = typeof data?.stage === "string" ? data.stage : null;
+      const user_text = typeof data?.user_text === "string" ? data.user_text : "";
+      const percent_complete = typeof data?.percent_complete === "number" ? data.percent_complete : 0;
+      if (stage) update({ currentStage: { stage, user_text, percent_complete } });
+      break;
+    }
+    case "day_complete": {
+      const n = typeof data?.day_number === "number" ? data.day_number : null;
+      if (n == null) break;
+      const cur = getState();
+      if (cur.completedDays.includes(n)) break;
+      update({ completedDays: [...cur.completedDays, n] });
+      break;
+    }
     case "day": {
       const day = normalizeDayFromServer(data);
       if (!day) break;
@@ -410,6 +449,7 @@ function handleFrame(
         trip,
         result,
         anonTripId,
+        currentStage: { stage: "complete", user_text: "Done", percent_complete: 100 },
       });
       break;
     }

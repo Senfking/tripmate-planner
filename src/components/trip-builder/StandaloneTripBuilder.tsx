@@ -525,6 +525,9 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
           streaming={isStreaming}
           streamingDayNumbers={skeletonNums}
           streamingMessage={stageMsg}
+          streamingStatusMessages={streaming.state.statusMessages}
+          streamingStage={streaming.state.currentStage}
+          streamingCompletedDays={streaming.state.completedDays}
         />
       </div>
     );
