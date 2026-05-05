@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { subscribeToPush } from "@/lib/pushSubscription";
 import { DesktopFooter } from "@/components/DesktopFooter";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
@@ -372,6 +373,7 @@ function AvatarCropDrawer({
 const More = () => {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const back = useSmartBack("/app");
   const [searchParams, setSearchParams] = useSearchParams();
 
   /* ── local state ── */
@@ -756,7 +758,7 @@ const More = () => {
       <div className="min-h-dvh flex flex-col px-4 pb-32 space-y-4 md:max-w-[640px] md:mx-auto md:px-8" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.5rem)" }}>
       {/* ── Back button ── */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={back}
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors -mb-2"
       >
         <ArrowLeft className="h-4 w-4" />

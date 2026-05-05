@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +21,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default function JoinByCode() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const back = useSmartBack("/");
   const { code: urlCode } = useParams<{ code?: string }>();
   const [code, setCode] = useState(urlCode?.toUpperCase() || "");
   const attempted = useRef(false);
@@ -100,7 +102,7 @@ export default function JoinByCode() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 relative">
       <button
-        onClick={() => navigate(-1)}
+        onClick={back}
         className="absolute left-4 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
       >
