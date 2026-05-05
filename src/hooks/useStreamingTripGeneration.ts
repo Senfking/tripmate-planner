@@ -396,7 +396,12 @@ function handleFrame(
         break;
       }
       const result = assembleResult(meta, cur.days, cur.imageUrl, trip);
-      update({ stage: "complete", trip, result });
+      update({
+        stage: "complete",
+        trip,
+        result,
+        anonTripId: typeof trip.anon_trip_id === "string" ? trip.anon_trip_id : null,
+      });
       break;
     }
     case "error": {
