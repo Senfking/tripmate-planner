@@ -204,6 +204,16 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     await streaming.start(payload);
   }, [buildPayload, streaming]);
 
+  // Used by retry / regenerate — re-runs the current inputData through streaming.
+  const retryGenerate = useCallback(async () => {
+    if (!inputData) return;
+    const payload = buildPayload(inputData);
+    setPendingPayload(payload);
+    setPhase("generating");
+    streaming.reset();
+    await streaming.start(payload);
+  }, [inputData, buildPayload, streaming]);
+
   // When streaming completes, persist the trip as a `draft` row and navigate
   // to its canonical /app/trips/[id] URL. TripHome owns the draft results UI.
   //
