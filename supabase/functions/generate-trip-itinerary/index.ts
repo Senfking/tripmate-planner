@@ -501,6 +501,16 @@ interface Intent {
   dietary: string[];
   group_composition: string;       // e.g. "couple", "family with young kids", "friends 20s"
   raw_notes: string;               // original notes/free_text passthrough
+  // Free-text-derived hints. Populated when the user expressed them in notes /
+  // free_text; null/[] otherwise. Pipeline is still single-leg today —
+  // duration_days overrides the form-supplied duration when the user typed
+  // something like "10 day trip", and named_destinations[0] short-circuits
+  // pickSurpriseDestination so "Bangkok and Koh Phangan" lands on Bangkok
+  // deterministically instead of letting the surprise picker re-derive.
+  // Multi-leg generation will land in a separate change and start consuming
+  // named_destinations[1..N].
+  duration_days: number | null;
+  named_destinations: string[];
 }
 
 type SlotType =
@@ -989,6 +999,18 @@ group_composition:
 - One short human phrase describing the group. Examples: "solo traveler", "couple", "family with young kids", "friends in their 30s", "multi-generational group".
 - Infer from group_size + any signals in notes/free_text. For plain numbers without context, use "group of N".
 
+duration_days:
+- Read notes and free_text for an explicit trip length: "10 day trip", "5 days in Lisbon", "weekend in Tokyo", "two weeks", "long weekend", "a week".
+- Normalize to an integer 1..21. "weekend" => 2. "long weekend" => 3. "a week" / "one week" => 7. "two weeks" => 14. "10 days" => 10.
+- Return null when no explicit duration appears in the text. Do NOT guess from vibes or must_haves. Do NOT echo a default.
+- The form may also supply a duration; the caller decides whether the form value or this extracted value wins. Your job is to faithfully report what the user TYPED.
+
+named_destinations:
+- Read notes and free_text for explicit city / town / island / region names the user wants the trip to include.
+- Return them in the order the user mentioned them, lowercased, each as a short locality string ("bangkok", "koh phangan", "lisbon", "kyoto"). Do NOT include the country unless the user wrote it inseparable from the place ("rio de janeiro" stays whole; "lisbon, portugal" becomes "lisbon").
+- Empty array when the user didn't name any place. Do NOT invent destinations from vibes / must_haves. "EDM and nightlife" alone does NOT imply Bangkok — wait for an explicit place name.
+- Country-only mentions ("Thailand") count as a region, not a city — include them only if the user wrote nothing more specific.
+
 Return exactly one tool_use call. Do not add commentary.`;
 
 const INTENT_TOOL: ClaudeTool = {
@@ -1034,6 +1056,19 @@ const INTENT_TOOL: ClaudeTool = {
         type: "string",
         description: "Short phrase describing the group.",
       },
+      duration_days: {
+        type: ["integer", "null"],
+        minimum: 1,
+        maximum: 21,
+        description:
+          "Trip length in days extracted from notes/free_text. Integer 1..21 when the user wrote an explicit duration ('10 day trip', 'weekend', 'two weeks'). null when no duration appeared in the text.",
+      },
+      named_destinations: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Lowercased city / island / region names the user explicitly wrote in notes/free_text, in the order they were mentioned. Empty array when none were named. Do not invent destinations from vibes.",
+      },
     },
     required: [
       "destination",
@@ -1044,6 +1079,8 @@ const INTENT_TOOL: ClaudeTool = {
       "pace",
       "dietary",
       "group_composition",
+      "duration_days",
+      "named_destinations",
     ],
   },
 };
@@ -1080,6 +1117,8 @@ async function parseIntent(
     pace: "leisurely" | "balanced" | "active";
     dietary: string[];
     group_composition: string;
+    duration_days: number | null;
+    named_destinations: string[];
   }>(
     anthropicKey,
     [{ type: "text", text: INTENT_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
@@ -1106,6 +1145,22 @@ async function parseIntent(
 
   const rawNotes = [body.notes ?? "", body.free_text ?? ""].filter(Boolean).join("\n\n").trim();
 
+  // Clamp duration_days defensively. The schema enforces 1..21 but the model
+  // can emit out-of-range integers when the user wrote something nonsensical
+  // ("100 day epic"); treat anything outside the band as "no extracted
+  // duration" rather than letting it leak past the validator.
+  const rawDur = result.data.duration_days;
+  const durationDays = typeof rawDur === "number" && Number.isFinite(rawDur) && rawDur >= 1 && rawDur <= 21
+    ? Math.round(rawDur)
+    : null;
+
+  const namedDestinations = Array.isArray(result.data.named_destinations)
+    ? result.data.named_destinations
+        .filter((s): s is string => typeof s === "string")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
   return {
     destination: result.data.destination ?? "",
     vibes: Array.isArray(result.data.vibes) ? result.data.vibes : [],
@@ -1116,6 +1171,8 @@ async function parseIntent(
     dietary: Array.isArray(result.data.dietary) ? result.data.dietary : [],
     group_composition: result.data.group_composition ?? "group",
     raw_notes: rawNotes,
+    duration_days: durationDays,
+    named_destinations: namedDestinations,
   };
 }
 
@@ -5688,9 +5745,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Date resolution. In flexible mode the dates start as a tentative value
+    // (body.duration_days, falling back to 7) and may be re-resolved after
+    // parseIntent if the user typed an explicit duration in free_text
+    // ("10 day trip") that disagrees with the form. Fixed-date requests are
+    // resolved here once and never change.
+    const inFlexibleMode = body.flexible === true || (!body.start_date && !body.end_date);
     let startDate: string;
     let endDate: string;
-    if (body.flexible || (!body.start_date && !body.end_date)) {
+    if (inFlexibleMode) {
       const dur = body.duration_days && body.duration_days > 0 ? Math.min(body.duration_days, 21) : 7;
       const flexDates = generateFlexDates(dur);
       startDate = flexDates.start;
@@ -5706,13 +5769,52 @@ Deno.serve(async (req) => {
       endDate = body.end_date;
     }
 
-    const numDays = daysBetween(startDate, endDate);
+    let numDays = daysBetween(startDate, endDate);
     if (numDays < 1) {
       return jsonResponse({ success: false, error: "end_date must be on or after start_date" }, 400);
     }
     if (numDays > 21) {
       return jsonResponse({ success: false, error: "Trip duration cannot exceed 21 days" }, 400);
     }
+
+    // Helper: in flexible mode, override the tentative duration with whatever
+    // parseIntent extracted from free_text. body.duration_days wins if the
+    // form explicitly carries a value — that's the user's most explicit
+    // statement of intent. Fixed-date trips are never overridden because
+    // start_date / end_date are themselves explicit user input.
+    const applyIntentDuration = (intent: Intent): void => {
+      if (!inFlexibleMode) return;
+      if (typeof body.duration_days === "number" && body.duration_days > 0) return;
+      const extracted = intent.duration_days;
+      if (typeof extracted !== "number" || extracted < 1 || extracted > 21) return;
+      if (extracted === numDays) return;
+      const flex = generateFlexDates(extracted);
+      console.log(
+        `[free_text_duration] override numDays ${numDays} -> ${extracted} ` +
+        `(body.duration_days unset; intent.duration_days=${extracted})`,
+      );
+      startDate = flex.start;
+      endDate = flex.end;
+      numDays = daysBetween(startDate, endDate);
+    };
+
+    // Helper: when surprise_me=true and the user explicitly named at least one
+    // destination in free_text, skip the surprise picker and use the first
+    // named destination. The surprise picker is for empty-hint inputs; when
+    // the user wrote "Bangkok and Koh Phangan are must-haves" we should
+    // honor Bangkok rather than letting the picker re-derive a single city
+    // from vibes. Multi-destination handling for named_destinations[1..N] is
+    // shipping in a separate change.
+    const applyNamedDestination = (intent: Intent): boolean => {
+      const first = intent.named_destinations?.[0]?.trim();
+      if (!first) return false;
+      intent.destination = first;
+      console.log(
+        `[free_text_destination] using named_destinations[0]="${first}" ` +
+        `(skipping surprise picker; named_count=${intent.named_destinations.length})`,
+      );
+      return true;
+    };
 
     // ---- Required env ----
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
@@ -5914,17 +6016,23 @@ Deno.serve(async (req) => {
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const intent = await parseIntent(anthropicKey, body, surpriseMe ? "" : rawDest, logger, pipelineStartedAt);
             tStage("parse_intent", tParseIntent);
+            applyIntentDuration(intent);
             if (intent.destination) loggedDestination = intent.destination;
 
             if (surpriseMe) {
-              send("progress", { stage: "picking_destination" });
-              stepLabel = "pickSurpriseDestination";
-              checkPipelineTimeout(pipelineStartedAt, stepLabel);
-              const tSurprise = Date.now();
-              intent.destination = await pickSurpriseDestination(anthropicKey, intent, numDays, logger, pipelineStartedAt);
-              tStage("pick_surprise", tSurprise);
-              loggedDestination = intent.destination;
-              send("progress", { stage: "destination_picked", destination: intent.destination });
+              if (applyNamedDestination(intent)) {
+                loggedDestination = intent.destination;
+                send("progress", { stage: "destination_picked", destination: intent.destination });
+              } else {
+                send("progress", { stage: "picking_destination" });
+                stepLabel = "pickSurpriseDestination";
+                checkPipelineTimeout(pipelineStartedAt, stepLabel);
+                const tSurprise = Date.now();
+                intent.destination = await pickSurpriseDestination(anthropicKey, intent, numDays, logger, pipelineStartedAt);
+                tStage("pick_surprise", tSurprise);
+                loggedDestination = intent.destination;
+                send("progress", { stage: "destination_picked", destination: intent.destination });
+              }
             }
 
             // ---- Cache lookup ----
@@ -6696,22 +6804,27 @@ Deno.serve(async (req) => {
       pipelineStartedAt,
     );
     tStage("parse_intent", tParseIntent);
+    applyIntentDuration(intent);
     if (intent.destination) loggedDestination = intent.destination;
 
     // ---- Step 1.5: surprise destination picker (only when surprise_me) ----
     if (surpriseMe) {
-      loggedStep = "pickSurpriseDestination";
-      checkPipelineTimeout(pipelineStartedAt, loggedStep);
-      const tSurprise = Date.now();
-      intent.destination = await pickSurpriseDestination(
-        anthropicKey,
-        intent,
-        numDays,
-        logger,
-        pipelineStartedAt,
-      );
-      tStage("pick_surprise", tSurprise);
-      loggedDestination = intent.destination;
+      if (applyNamedDestination(intent)) {
+        loggedDestination = intent.destination;
+      } else {
+        loggedStep = "pickSurpriseDestination";
+        checkPipelineTimeout(pipelineStartedAt, loggedStep);
+        const tSurprise = Date.now();
+        intent.destination = await pickSurpriseDestination(
+          anthropicKey,
+          intent,
+          numDays,
+          logger,
+          pipelineStartedAt,
+        );
+        tStage("pick_surprise", tSurprise);
+        loggedDestination = intent.destination;
+      }
     }
 
     // ---- Cache check by raw-body hash (BEFORE Places spend) ----
