@@ -263,7 +263,7 @@ export function PremiumTripInput({
       <div className="rounded-2xl bg-card border border-border shadow-sm p-5 space-y-4">
         {/* Destination */}
         <div ref={destRef} className="space-y-1.5 scroll-mt-24">
-          <label className="text-[13px] font-semibold text-foreground">Where to? *</label>
+          <label className="text-[13px] font-semibold text-foreground">Where to?{!hasFreeText && " *"}</label>
           {lockedDestination ? (
             <div
               className="relative h-12 pl-10 pr-3 rounded-xl bg-muted/50 border border-border flex items-center"
