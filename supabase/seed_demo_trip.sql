@@ -4,7 +4,8 @@
 -- Populates an existing trip with realistic demo content for landing-page
 -- screenshots: 3 fake group members, 7 expenses + splits, 8 ideas with vote
 -- counts, 6 group-chat messages, 3 activity-level comments + emoji reactions,
--- and 1 preference poll with options + votes.
+-- 7 booking attachments (2 flights + hotel + visa + activity + restaurant
+-- reservation), and 1 preference poll with options + votes.
 --
 -- Designed to be:
 --   * Reusable: pass any trip_id; the function picks up that trip's currency,
@@ -81,6 +82,24 @@ DECLARE
   _comments_inserted int := 0;
   _reactions_inserted int := 0;
   _itin_comments_inserted int := 0;
+
+  _owner_name text;
+  _outbound_date date;
+  _return_date  date;
+  _flight_pax   jsonb;
+
+  -- Demo attachment titles — used for both inserts and cleanup. Owner-created
+  -- attachments are matched by exact title (rather than created_by) so the
+  -- cleanup never touches real attachments the owner uploaded themselves.
+  _att_titles text[] := ARRAY[
+    'Marina Bay Sands hotel booking confirmation.pdf',
+    'Singapore Airlines SQ235 — LHR → SIN.pdf',
+    'Singapore Airlines SQ322 — SIN → LHR.pdf',
+    'Night Safari group booking confirmation.pdf',
+    'Visa entry confirmation.pdf',
+    'Burnt Ends — chef''s table reservation.pdf',
+    'World Nomads travel insurance — group policy.pdf'
+  ];
 BEGIN
   -- ---- Pre-flight ----
   SELECT settlement_currency, tentative_start_date, tentative_end_date
@@ -174,6 +193,12 @@ BEGIN
      WHERE plan_id = _plan_id
        AND user_id = ANY(_demo_ids);
   END IF;
+
+  -- Booking attachments: matched by exact demo title (covers both demo-persona-
+  -- authored and owner-authored demo rows without touching real owner uploads).
+  DELETE FROM public.attachments
+   WHERE trip_id = p_trip_id
+     AND title = ANY(_att_titles);
 
   DELETE FROM public.trip_members
    WHERE trip_id = p_trip_id
@@ -389,6 +414,174 @@ BEGIN
   ELSE
     RAISE NOTICE 'Skipped itinerary-item comments: trip has no itinerary_items rows';
   END IF;
+
+  -- ---- Booking attachments (Bookings tab — public.attachments) ----
+  -- attachments.created_by FKs to profiles(id); demo personas already have
+  -- profiles inserted above. file_path/url left NULL so rows render as
+  -- "manual" entries (the same shape addManual creates from the UI).
+  -- booking_data JSON shapes match what extract-booking-info would produce
+  -- and are read by ArrivalsCard / BookingCrossLinkDrawer / AttachmentCard.
+
+  -- Owner display name for passenger lists (falls back to 'Trip Owner')
+  SELECT coalesce(display_name, 'Trip Owner') INTO _owner_name
+    FROM public.profiles WHERE id = _owner_id;
+  _owner_name := coalesce(_owner_name, 'Trip Owner');
+
+  _outbound_date := _trip_start;
+  _return_date   := _trip_end;
+  _flight_pax    := jsonb_build_array(
+    _owner_name, 'Aisha Rahman', 'Marcus Tan', 'Priya Sharma'
+  );
+
+  -- 1) Hotel: Marina Bay Sands (owner)
+  INSERT INTO public.attachments
+    (trip_id, created_by, type, title, notes, booking_data, is_private, created_at)
+  VALUES (
+    p_trip_id, _owner_id, 'hotel',
+    'Marina Bay Sands hotel booking confirmation.pdf',
+    '4 nights · 2 deluxe rooms · breakfast included',
+    jsonb_build_object(
+      'booking_type',      'hotel',
+      'provider',          'Marina Bay Sands',
+      'check_in',          to_char(_trip_start, 'YYYY-MM-DD'),
+      'check_out',         to_char(_trip_end,   'YYYY-MM-DD'),
+      'booking_reference', 'MBS-7842XK',
+      'total_price',       '1400 ' || _trip_currency,
+      'guests',            4,
+      'destination',       'Singapore'
+    ),
+    false, now() - interval '14 days'
+  );
+
+  -- 2) Flight outbound: SQ235 LHR → SIN (owner)
+  INSERT INTO public.attachments
+    (trip_id, created_by, type, title, notes, booking_data, is_private, created_at)
+  VALUES (
+    p_trip_id, _owner_id, 'flight',
+    'Singapore Airlines SQ235 — LHR → SIN.pdf',
+    'Outbound · 4 passengers · Economy',
+    jsonb_build_object(
+      'booking_type',      'flight',
+      'direction',         'outbound',
+      'provider',          'Singapore Airlines',
+      'flight_number',     'SQ235',
+      'departure',         'London Heathrow (LHR)',
+      'destination',       'Singapore Changi (SIN)',
+      'flight_date',       to_char(_outbound_date - 1, 'YYYY-MM-DD'),
+      'departure_time',    to_char(_outbound_date - 1, 'YYYY-MM-DD') || 'T21:30:00+01:00',
+      'arrival_time',      to_char(_outbound_date,     'YYYY-MM-DD') || 'T17:50:00+08:00',
+      'check_in',          to_char(_outbound_date - 1, 'YYYY-MM-DD'),
+      'class',             'Economy',
+      'booking_reference', 'XKLM4P',
+      'total_price',       '3400 ' || _trip_currency,
+      'passenger_names',   _flight_pax
+    ),
+    false, now() - interval '13 days'
+  );
+
+  -- 3) Flight return: SQ322 SIN → LHR (owner)
+  INSERT INTO public.attachments
+    (trip_id, created_by, type, title, notes, booking_data, is_private, created_at)
+  VALUES (
+    p_trip_id, _owner_id, 'flight',
+    'Singapore Airlines SQ322 — SIN → LHR.pdf',
+    'Return · 4 passengers · Economy',
+    jsonb_build_object(
+      'booking_type',      'flight',
+      'direction',         'return',
+      'provider',          'Singapore Airlines',
+      'flight_number',     'SQ322',
+      'departure',         'Singapore Changi (SIN)',
+      'destination',       'London Heathrow (LHR)',
+      'flight_date',       to_char(_return_date, 'YYYY-MM-DD'),
+      'departure_time',    to_char(_return_date,     'YYYY-MM-DD') || 'T23:55:00+08:00',
+      'arrival_time',      to_char(_return_date + 1, 'YYYY-MM-DD') || 'T06:25:00+01:00',
+      'check_out',         to_char(_return_date, 'YYYY-MM-DD'),
+      'class',             'Economy',
+      'booking_reference', 'XKLM4P',
+      'total_price',       '3400 ' || _trip_currency,
+      'passenger_names',   _flight_pax
+    ),
+    false, now() - interval '13 days'
+  );
+
+  -- 4) Activity: Night Safari (Marcus)
+  INSERT INTO public.attachments
+    (trip_id, created_by, type, title, notes, booking_data, is_private, created_at)
+  VALUES (
+    p_trip_id, _marcus_id, 'activity',
+    'Night Safari group booking confirmation.pdf',
+    '4 adult tickets · Tram tour included · 19:30 entry',
+    jsonb_build_object(
+      'booking_type',      'activity',
+      'provider',          'Mandai Wildlife Reserve — Night Safari',
+      'check_in',          to_char(_trip_start + 2, 'YYYY-MM-DD'),
+      'booking_reference', 'NS-AB7291',
+      'total_price',       '220 ' || _trip_currency,
+      'guests',            4,
+      'destination',       '80 Mandai Lake Rd, Singapore'
+    ),
+    false, now() - interval '8 days'
+  );
+
+  -- 5) Visa: entry confirmation (Priya)
+  INSERT INTO public.attachments
+    (trip_id, created_by, type, title, notes, booking_data, is_private, created_at)
+  VALUES (
+    p_trip_id, _priya_id, 'visa',
+    'Visa entry confirmation.pdf',
+    'SG Arrival Card submitted for all 4 travellers',
+    jsonb_build_object(
+      'booking_type',     'visa',
+      'provider',         'Singapore ICA',
+      'valid_until',      to_char(_trip_end + 30, 'YYYY-MM-DD'),
+      'expiry_date',      to_char(_trip_end + 30, 'YYYY-MM-DD'),
+      'passenger_names',  _flight_pax,
+      'destination',      'Singapore'
+    ),
+    false, now() - interval '10 days'
+  );
+
+  -- 6) Restaurant: Burnt Ends reservation (owner)
+  INSERT INTO public.attachments
+    (trip_id, created_by, type, title, notes, booking_data, is_private, created_at)
+  VALUES (
+    p_trip_id, _owner_id, 'other',
+    'Burnt Ends — chef''s table reservation.pdf',
+    'Table for 4 · 19:30 · Confirmation: pls don''t be late',
+    jsonb_build_object(
+      'booking_type',      'restaurant',
+      'provider',          'Burnt Ends',
+      'check_in',          to_char(_trip_start + 2, 'YYYY-MM-DD'),
+      'departure_time',    to_char(_trip_start + 2, 'YYYY-MM-DD') || 'T19:30:00+08:00',
+      'booking_reference', 'BE-CH4823',
+      'guests',            4,
+      'destination',       '7 Dempsey Rd, Singapore'
+    ),
+    false, now() - interval '6 days'
+  );
+
+  -- 7) Insurance: World Nomads (Priya)
+  INSERT INTO public.attachments
+    (trip_id, created_by, type, title, notes, booking_data, is_private, created_at)
+  VALUES (
+    p_trip_id, _priya_id, 'insurance',
+    'World Nomads travel insurance — group policy.pdf',
+    'Group policy covering all 4 travellers · Standard plan',
+    jsonb_build_object(
+      'booking_type',     'insurance',
+      'provider',         'World Nomads',
+      'check_in',         to_char(_trip_start - 1, 'YYYY-MM-DD'),
+      'check_out',        to_char(_trip_end + 1,   'YYYY-MM-DD'),
+      'valid_until',      to_char(_trip_end + 1,   'YYYY-MM-DD'),
+      'booking_reference','WN-7821-SG',
+      'total_price',      '180 ' || _trip_currency,
+      'passenger_names',  _flight_pax
+    ),
+    false, now() - interval '11 days'
+  );
+
+  RAISE NOTICE 'Inserted 7 booking attachments (1 hotel, 2 flights, 1 activity, 1 visa, 1 restaurant, 1 insurance)';
 
   -- ---- Poll: Sunday brunch ----
   _poll_id := gen_random_uuid();
