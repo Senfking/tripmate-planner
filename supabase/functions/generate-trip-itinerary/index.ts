@@ -775,6 +775,15 @@ interface PipelineResult {
   map_center: { lat: number; lng: number };
   map_zoom: number;
   daily_budget_estimate: number;
+  // Per-person total trip cost = sum of every activity's
+  // estimated_cost_per_person across all days + sum of (per-leg
+  // accommodation.estimated_cost_per_person × that leg's days_count) for
+  // every real-destination leg. Multi-leg trips need this because the
+  // legacy single-leg shape only surfaced ONE accommodation, so a
+  // frontend computing `accommodation × num_days` would only count the
+  // first leg's hotel. Single-destination trips: equals
+  // (daily_budget_estimate × num_days) + (accommodation × num_days).
+  trip_total_estimate: number;
   currency: string;
   packing_suggestions: string[];
   total_activities: number;
@@ -785,6 +794,25 @@ interface PipelineResult {
   // or rebalanced day allocation. Null on plain single-destination trips and
   // on multi-destination trips where the LLM honored the user as-is.
   adjustment_notice?: string | null;
+}
+
+// Compute per-person total trip cost across all real-destination legs.
+// Activities sum to all days (transit days have 0 cost), accommodation
+// sums to (per-leg cost-per-night × leg days_count) for every real leg.
+function computeTripTotalEstimate(destinations: RankedDestination[]): number {
+  let total = 0;
+  for (const dest of destinations) {
+    const realDays = dest.days.length;
+    for (const day of dest.days) {
+      for (const a of day.activities) {
+        total += a.estimated_cost_per_person || 0;
+      }
+    }
+    if (dest.kind !== "transit" && dest.accommodation && realDays > 0) {
+      total += (dest.accommodation.estimated_cost_per_person || 0) * realDays;
+    }
+  }
+  return Math.round(total);
 }
 
 interface ClaudeUsage {
@@ -2446,6 +2474,27 @@ function buildSkeleton(
           pace: intent.pace,
           destination: leg.name,
         });
+
+        // Half-day transit visibility: when this is a destination leg's first
+        // day AND the arrival is a half-day transit (1.5–3h hop), surface the
+        // transit metadata on the day itself. The frontend renders a transit
+        // element on the day based on day.transit. The leg stays a real
+        // destination (no dedicated transit pseudo-leg created), so day count
+        // and accommodation remain unchanged — only the visual marker is
+        // added. Full-day transits keep their dedicated transit leg above.
+        if (isLegFirstDay && leg.half_day_arrival) {
+          const tl = intent.transit_legs.find(
+            (t) => t.to_index === leg.intent_destination_index && t.half_day_transit,
+          );
+          if (tl) {
+            transit = {
+              from_index: tl.from_index,
+              to_index: tl.to_index,
+              half_day: true,
+              description: tl.description,
+            };
+          }
+        }
       }
 
       days.push({
@@ -4560,11 +4609,17 @@ ABSOLUTE RULES — violating these makes your output a lie:
 2. NEVER invent a venue name. NEVER name a bar, restaurant, museum, hotel, neighborhood-as-brand, or any proper-noun venue that is not in the allowlist. If you cannot remember whether something is on the list, do not name it.
 3. If you want to convey atmosphere without naming a specific venue, use generic terms ("cocktail bars in the old town", "hilltop viewpoints", "back-street trattorias"). Generic phrasing is preferred over a fabricated name.
 4. trip_title is 4-7 words, evocative, grounded in the trip's actual character. May reference a neighborhood, a ritual, a season, or an anchor activity. Naming a specific venue in the title is allowed ONLY if that venue appears in the allowlist AND is genuinely the trip's anchor (rare — usually skip).
-5. trip_summary is 2-3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. Concrete over generic. No adjective spam.
-6. Honor intent.pace, intent.budget_tier, and intent.must_avoids in the narrative.
-7. NEVER quote USD when the trip currency is something else.
-8. Do NOT include emojis, decorative symbols, or pictographs.
-9. The downstream validation layer will scan your output for any proper-noun venue not in the allowlist. Mismatches are logged as confabulation. Do not gamble.
+5. MULTI-DESTINATION TITLES — when trip_shape.destinations contains 2+ entries, the title MUST capture the trip's geographic spread. Name the primary cities (not just the first one) or use a connector that conveys the route. Examples:
+   - "Tokyo & Kyoto: Neon Streets, Quiet Temples"
+   - "Bangkok to Koh Phangan: City Lights & Island Chill"
+   - "Lisbon, Porto & the Coast"
+   - "Roman Ruins, Florentine Markets" (city names implicit when paired with anchors)
+   Single-destination trips keep the existing single-city title shape.
+6. trip_summary is 2-3 sentences. Name one thing the traveler will taste, one thing they'll see, one thing they'll feel. Concrete over generic. No adjective spam. For multi-destination trips, weave in at least one beat per major destination so the summary doesn't read as if only one city exists.
+7. Honor intent.pace, intent.budget_tier, and intent.must_avoids in the narrative.
+8. NEVER quote USD when the trip currency is something else.
+9. Do NOT include emojis, decorative symbols, or pictographs.
+10. The downstream validation layer will scan your output for any proper-noun venue not in the allowlist. Mismatches are logged as confabulation. Do not gamble.
 
 OUTPUT: call the emit_trip_copy tool exactly once. No prose outside the tool call.`;
 
@@ -4608,9 +4663,23 @@ function buildCopyInstruction(
     ? `VENUE ALLOWLIST — HARD CONSTRAINT — these are the ONLY proper-noun venues you may name in trip_summary. Spell each one EXACTLY as written:\n${dedupAllow.map((n) => `  - ${n}`).join("\n")}\n\n`
     : `VENUE ALLOWLIST — HARD CONSTRAINT — the itinerary contains no nameable venues. Write a generic but specific summary using neighborhoods/cuisines/activity types only.\n\n`;
 
+  // Multi-destination trip_shape: surface every leg by name + days_allocated
+  // so the title prompt can reference all cities, not just the first. The
+  // legacy `destination` field is kept for back-compat with the prompt's
+  // older single-destination wording.
+  const destinationsList = intent.destinations.map((d) => ({
+    name: d.name,
+    days_allocated: d.days_allocated,
+  }));
+  const isMultiDest = destinationsList.length >= 2;
+  const multiDestBlock = isMultiDest
+    ? `MULTI-DESTINATION TRIP — ${destinationsList.length} legs: ${destinationsList.map((d) => `${d.name} (${d.days_allocated}d)`).join(" -> ")}. The trip_title MUST reference at least the primary city of each leg (or use a route connector like "X to Y" / "X & Y"). The trip_summary MUST weave in at least one beat per major destination.\n\n`
+    : "";
+
   const payload = {
     trip_shape: {
       destination,
+      destinations: destinationsList,
       num_days: numDays,
       pace: intent.pace,
       budget_tier: intent.budget_tier,
@@ -4625,7 +4694,7 @@ function buildCopyInstruction(
     },
     venue_allowlist: dedupAllow,
   };
-  return `Generate the FINAL trip_title and trip_summary. Call emit_trip_copy exactly once.\n\n${allowlistBlock}${JSON.stringify(payload)}`;
+  return `Generate the FINAL trip_title and trip_summary. Call emit_trip_copy exactly once.\n\n${multiDestBlock}${allowlistBlock}${JSON.stringify(payload)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -5207,10 +5276,23 @@ interface RawTripMetadata {
 // told which place_id to skip + the metadata call can edit copy for it. Sort
 // by (rating desc, reviews desc) and take the top — same heuristic the
 // existing ranker leans on, but we don't need an LLM round-trip for the pick.
+// Defensive filter: even though buildPlacesQueries asks Google for
+// includedType="lodging", the Places API occasionally returns mixed-type
+// results (e.g. a hotel restaurant or a hotel-adjacent venue with a
+// non-lodging primary type). And the LLM metadata call's
+// `accommodation.place_id` can land on ANY pool member; we need to refuse
+// non-lodging picks before they ship as a hotel card. Returns true iff the
+// place's types[] intersects LODGING_TYPES.
+function isLodgingPlace(place: BatchPlaceResult | null | undefined): boolean {
+  if (!place || !Array.isArray(place.types)) return false;
+  for (const t of place.types) if (LODGING_TYPES.has(t)) return true;
+  return false;
+}
+
 function pickAccommodationPlaceId(
   venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
 ): string | null {
-  const lodging = venuesByPool.get("lodging") ?? [];
+  const lodging = (venuesByPool.get("lodging") ?? []).filter(isLodgingPlace);
   if (lodging.length === 0) return null;
   const sorted = [...lodging].sort((a, b) => {
     const ra = a.rating ?? 0, rb = b.rating ?? 0;
@@ -5228,7 +5310,7 @@ function pickAccommodationPlaceIdsByLeg(
   venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
   legs: Leg[],
 ): Map<number, string | null> {
-  const lodging = venuesByPool.get("lodging") ?? [];
+  const lodging = (venuesByPool.get("lodging") ?? []).filter(isLodgingPlace);
   const out = new Map<number, string | null>();
   for (const leg of legs) {
     if (leg.kind !== "destination") {
@@ -5248,6 +5330,43 @@ function pickAccommodationPlaceIdsByLeg(
     out.set(leg.index, sorted[0]?.id ?? null);
   }
   return out;
+}
+
+// Validate a metadata-supplied accommodation place_id. Returns the place_id
+// only when the place exists in the lodging pool AND has a lodging-typed
+// types[]. Otherwise returns null and logs the rejection so the caller can
+// fall back to the per-leg auto-pick. Catches the "LLM picks a sushi
+// restaurant for the hotel" failure mode (the metadata call's
+// accommodation.place_id is unconstrained — it can come from any pool —
+// because LLMs occasionally violate the system prompt instruction to pick
+// from the lodging pool only).
+function validateMetaAccommodationPlaceId(
+  candidatePlaceId: string | null,
+  venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
+): string | null {
+  if (!candidatePlaceId) return null;
+  const lodging = (venuesByPool.get("lodging") ?? []).filter(isLodgingPlace);
+  const match = lodging.find((p) => p.id === candidatePlaceId);
+  if (match) return candidatePlaceId;
+  // Diagnostic: was the place id ANYWHERE in the trip pool? If so, log the
+  // type mismatch so we can see what the LLM actually picked.
+  for (const arr of venuesByPool.values()) {
+    for (const p of arr) {
+      if (p.id === candidatePlaceId) {
+        console.warn(
+          `[accommodation] REJECT meta place_id="${candidatePlaceId}" "${p.displayName}" — ` +
+          `not a lodging place (types=${JSON.stringify(p.types?.slice(0, 5) ?? [])}, pool=${p.poolKey}). ` +
+          `Falling back to per-leg auto-pick.`,
+        );
+        return null;
+      }
+    }
+  }
+  console.warn(
+    `[accommodation] REJECT meta place_id="${candidatePlaceId}" — not in trip pool at all. ` +
+    `Falling back to per-leg auto-pick.`,
+  );
+  return null;
 }
 
 // One per-day Anthropic call. Returns the raw tool input on success, null on
@@ -5715,7 +5834,13 @@ async function rankInParallel(
     type: "lodging", start_time: "15:00", duration_minutes: 0,
     region_tag_for_queries: "primary",
   };
-  const metaAccomPlaceId = meta?.accommodation?.place_id ?? null;
+  // Validate the metadata's accommodation pick against the lodging pool
+  // BEFORE we route it to a leg. Catches the "LLM picks a sushi restaurant
+  // for the hotel" failure mode by refusing non-lodging picks.
+  const metaAccomPlaceId = validateMetaAccommodationPlaceId(
+    meta?.accommodation?.place_id ?? null,
+    venuesByPool,
+  );
   const metaAccomLegIdx = (() => {
     if (!metaAccomPlaceId) return -1;
     for (const [idx, m] of placeByIdByLeg.entries()) {
@@ -5803,6 +5928,7 @@ async function rankInParallel(
     map_center: computeMapCenter(geos),
     map_zoom: computeMapZoom(geos),
     daily_budget_estimate,
+    trip_total_estimate: computeTripTotalEstimate(destinations),
     currency,
     packing_suggestions: Array.isArray(meta?.packing_suggestions) ? meta!.packing_suggestions.slice(0, 10) : [],
     total_activities,
@@ -7357,7 +7483,7 @@ Deno.serve(async (req) => {
     //   event: day             { day_number, date, theme, activities }  (one per closed day)
     //   event: day_complete    { day_number, theme, activity_count }    (UI milestone after each day)
     //   event: accommodation   { destination_index, hotel }              (emitted as soon as metadata resolves)
-    //   event: trip_complete   { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, total_activities, map_center, map_zoom, currency, budget_tier }
+    //   event: trip_complete   { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, trip_total_estimate, total_activities, map_center, map_zoom, currency, budget_tier, adjustment_notice }
     //   event: error           { error, step, message }
     //   event: ping            {}                         (10s keepalive)
     //
@@ -7660,6 +7786,12 @@ Deno.serve(async (req) => {
                     },
                   );
                 }
+                // trip_total_estimate: prefer the cached field; legacy
+                // payloads (pre-PR multi-destination) didn't store it, so
+                // recompute from the cached destinations[] in that case.
+                const cachedTripTotal = typeof payload?.trip_total_estimate === "number"
+                  ? payload.trip_total_estimate
+                  : computeTripTotalEstimate(cachedDests as unknown as RankedDestination[]);
                 send("trip_complete", {
                   trip_title: stripEmojis(payload?.trip_title),
                   trip_summary: payload?.trip_summary ?? "",
@@ -7667,6 +7799,7 @@ Deno.serve(async (req) => {
                   packing_suggestions: payload?.packing_suggestions ?? [],
                   junto_pick_place_ids: juntoPlaceIds,
                   daily_budget_estimate: payload?.daily_budget_estimate ?? 0,
+                  trip_total_estimate: cachedTripTotal,
                   total_activities: payload?.total_activities ?? 0,
                   map_center: payload?.map_center ?? null,
                   map_zoom: payload?.map_zoom ?? 12,
@@ -8127,7 +8260,12 @@ Deno.serve(async (req) => {
             const accommodationEarlyPromise: Promise<Map<number, EnrichedActivity>> = metadataPromise.then((res) => {
               const out = new Map<number, EnrichedActivity>();
               const accomRaw = res.data?.accommodation;
-              const metaPlaceId = accomRaw?.place_id ?? null;
+              // Validate the metadata's pick against the lodging pool — refuses
+              // non-lodging picks before they ship as a hotel card.
+              const metaPlaceId = validateMetaAccommodationPlaceId(
+                accomRaw?.place_id ?? null,
+                venuesByPool,
+              );
               // Find the leg whose pool contains metadata's place_id.
               let metaLegIdx = -1;
               if (metaPlaceId) {
@@ -8243,7 +8381,10 @@ Deno.serve(async (req) => {
               type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
             };
             const accomRaw = meta?.accommodation;
-            const metaAccomPlaceId = accomRaw?.place_id ?? null;
+            const metaAccomPlaceId = validateMetaAccommodationPlaceId(
+              accomRaw?.place_id ?? null,
+              venuesByPool,
+            );
             const metaAccomLegIdx = (() => {
               if (!metaAccomPlaceId) return -1;
               for (const [idx, m] of placeByIdByLeg.entries()) {
@@ -8373,6 +8514,7 @@ Deno.serve(async (req) => {
               map_center: computeMapCenter(geos),
               map_zoom: computeMapZoom(geos),
               daily_budget_estimate,
+              trip_total_estimate: computeTripTotalEstimate(destinationsAssembled),
               currency,
               packing_suggestions: Array.isArray(meta?.packing_suggestions) ? meta!.packing_suggestions.slice(0, 10) : [],
               total_activities,
@@ -8445,6 +8587,7 @@ Deno.serve(async (req) => {
               packing_suggestions: pipelineResult.packing_suggestions,
               junto_pick_place_ids: juntoPlaceIds,
               daily_budget_estimate,
+              trip_total_estimate: pipelineResult.trip_total_estimate,
               total_activities,
               map_center: pipelineResult.map_center,
               map_zoom: pipelineResult.map_zoom,
