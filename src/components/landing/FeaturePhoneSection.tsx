@@ -50,15 +50,21 @@ export function FeaturePhoneSection({
   return (
     <section
       ref={sectionRef}
-      className={`landing-reveal ${visible ? "landing-visible" : ""} w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 ${bg}`}
+      className={`landing-reveal ${visible ? "landing-visible" : ""} relative w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 ${bg}`}
+      style={{
+        backgroundImage:
+          imageSide === "right"
+            ? "radial-gradient(ellipse 70% 60% at 80% 50%, rgba(255,238,220,0.55), transparent 70%)"
+            : "radial-gradient(ellipse 70% 60% at 20% 50%, rgba(255,238,220,0.55), transparent 70%)",
+      }}
     >
-      <div className="mx-auto max-w-6xl grid gap-12 lg:gap-20 lg:grid-cols-2 items-center">
+      <div className="mx-auto max-w-6xl grid gap-12 lg:gap-20 lg:grid-cols-2 items-center relative">
         {/* Phone mockup */}
         <div className={`order-1 ${imageOrder} flex justify-center ${imageJustify}`}>
           <img
             src={image}
             alt={alt}
-            className="w-full max-w-[520px] h-auto"
+            className="w-full max-w-[520px] h-auto mix-blend-multiply"
             loading="lazy"
             decoding="async"
           />
