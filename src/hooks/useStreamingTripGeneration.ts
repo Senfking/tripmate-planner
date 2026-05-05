@@ -330,7 +330,11 @@ function assembleResult(
         : {
             kind: "destination" as const,
             // Per-leg accommodation from streamed events; fallback to trip.accommodation for legacy single-leg payloads.
-            accommodation: (accommodations[leg.index] ?? (leg.index === 0 ? trip.accommodation : null)) as any,
+            accommodation: (() => {
+              const base = accommodations[leg.index] ?? (leg.index === 0 ? trip.accommodation : null);
+              if (!base) return null as any;
+              return { ...(base as any), alternatives: accommodationAlternatives[leg.index] ?? [] } as any;
+            })(),
           }),
     };
   });
