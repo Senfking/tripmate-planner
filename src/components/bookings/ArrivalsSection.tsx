@@ -283,21 +283,17 @@ function FlightTimeline({ flights }: { flights: FlightEntry[] }) {
 
                     {/* Route visualization */}
                     {(flight.departure || flight.destination) && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         {flight.departure && (
-                          <span className="text-[12px] font-semibold bg-background/80 px-2.5 py-1 rounded-lg border shadow-sm">
+                          <span className="flex-1 min-w-0 text-[11px] font-semibold bg-background/80 px-2 py-1 rounded-lg border shadow-sm text-center break-words leading-tight">
                             {flight.departure}
                           </span>
                         )}
                         {flight.departure && flight.destination && (
-                          <div className="flex-1 flex items-center gap-1 min-w-0">
-                            <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
-                            <Plane className={`h-3.5 w-3.5 ${config.text} shrink-0`} />
-                            <div className={`flex-1 h-px bg-gradient-to-r ${config.gradient}`} />
-                          </div>
+                          <Plane className={`h-3.5 w-3.5 ${config.text} shrink-0`} />
                         )}
                         {flight.destination && (
-                          <span className="text-[12px] font-semibold bg-background/80 px-2.5 py-1 rounded-lg border shadow-sm">
+                          <span className="flex-1 min-w-0 text-[11px] font-semibold bg-background/80 px-2 py-1 rounded-lg border shadow-sm text-center break-words leading-tight">
                             {flight.destination}
                           </span>
                         )}
