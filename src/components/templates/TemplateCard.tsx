@@ -42,12 +42,7 @@ export function TemplateCard({
       {/* Inner wrapper isolates the transform from the rounded clip,
           eliminating the brief "sharp edge" flash on hover */}
       <div className="absolute inset-0 overflow-hidden rounded-[inherit] [transform:translateZ(0)] [backface-visibility:hidden]">
-        <img
-          src={c.cover_image_url}
-          alt={c.destination}
-          className="h-full w-full object-cover transition-transform duration-[900ms] ease-out [@media(hover:hover)]:group-hover/card:scale-[1.06] transform-gpu [backface-visibility:hidden]"
-          loading="lazy"
-        />
+        <OptimizedCardImage src={c.cover_image_url} alt={c.destination} />
         {/* Strong bottom-up gradient for legibility on any image */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
         {/* Subtle top vignette to balance + frame */}
