@@ -6897,8 +6897,12 @@ Deno.serve(async (req) => {
             const metadataResult = await metadataPromise;
             const meta = metadataResult.data;
 
-            let accommodation: EnrichedActivity | undefined;
+            let accommodation: EnrichedActivity | undefined = await accommodationEarlyPromise;
             const accomRaw = meta?.accommodation;
+            if (accommodation) {
+              // Already hydrated + emitted early; skip re-hydration below.
+            } else
+            
             const accomPlaceId = accomRaw?.place_id ?? accommodationPlaceId;
             if (accomPlaceId) {
               const place = placeById.get(accomPlaceId) ?? null;
