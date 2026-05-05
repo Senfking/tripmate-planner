@@ -129,6 +129,17 @@ export default function PublicTripBuilder() {
     );
   }
 
+  // Authenticated: free-text or form submission → in-place auth stream.
+  if (authPrompt || authPayload) {
+    return (
+      <AuthTripGenerator
+        prompt={authPrompt ?? undefined}
+        payload={authPayload ?? undefined}
+        onCancel={handleGeneratorCancel}
+      />
+    );
+  }
+
   // Logged-in: hero-first TripCreationSurface with optional inline form.
   return (
     <div className="min-h-dvh bg-gray-50">
@@ -174,14 +185,6 @@ export default function PublicTripBuilder() {
           </div>
           <TripCarousels showHeader={false} />
         </section>
-      )}
-
-      {builderOpen && (
-        <StandaloneTripBuilder
-          onClose={handleBuilderClose}
-          initialFreeTextPrompt={submittedInputData ? undefined : pending}
-          initialInputData={submittedInputData ?? undefined}
-        />
       )}
 
       <BlankTripModal open={blankOpen} onOpenChange={setBlankOpen} />
