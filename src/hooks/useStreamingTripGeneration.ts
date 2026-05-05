@@ -155,6 +155,7 @@ export function buildPartialResult(state: StreamingState): AITripResult | null {
         end_date: endDate,
         intro: "",
         days: allDays,
+        accommodation: state.accommodations[0] as any,
       },
     ],
     map_center: { lat: 0, lng: 0 },
