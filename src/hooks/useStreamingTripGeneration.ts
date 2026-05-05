@@ -529,8 +529,13 @@ function handleFrame(
       const idx = typeof data?.destination_index === "number" ? data.destination_index : 0;
       const hotel = data?.hotel;
       if (!hotel || typeof hotel !== "object") break;
+      const altsRaw = Array.isArray(data?.alternatives) ? data.alternatives : [];
+      const alts = altsRaw.filter((a: any) => a && typeof a === "object") as AIActivity[];
       const cur = getState();
-      update({ accommodations: { ...cur.accommodations, [idx]: hotel as AIActivity } });
+      update({
+        accommodations: { ...cur.accommodations, [idx]: hotel as AIActivity },
+        accommodationAlternatives: { ...cur.accommodationAlternatives, [idx]: alts },
+      });
       break;
     }
     case "leg": {
