@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Share2 } from "lucide-react";
+import { toast } from "sonner";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 import { ContextualSignupModal, type SignupTrigger } from "@/components/auth/ContextualSignupModal";
@@ -88,6 +89,24 @@ export default function AnonTripView() {
     setSignupOpen(true);
   }
 
+  async function handleShare() {
+    const url = window.location.href;
+    if (navigator.share && window.matchMedia("(max-width: 767px)").matches) {
+      try {
+        await navigator.share({ title: "My trip plan from Junto", url });
+      } catch {
+        // Native share cancel is not an error state for the user.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Couldn't copy link");
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background">
@@ -122,7 +141,7 @@ export default function AnonTripView() {
     <div className="relative">
       {/* Persistent signup banner pinned to top of viewport. */}
       <div
-        className="fixed top-0 left-0 right-0 z-[110] flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
+        className="fixed top-0 left-0 right-0 z-[110] flex items-center justify-between gap-2 px-4 py-2.5 text-sm"
         style={{
           background: "linear-gradient(90deg,#0D9488 0%,#0F766E 100%)",
           color: "white",
@@ -132,13 +151,23 @@ export default function AnonTripView() {
         <span className="truncate">
           <span className="font-semibold">Sign up</span> to save this trip and plan more like it
         </span>
-        <button
-          type="button"
-          onClick={() => openSignup("save")}
-          className="shrink-0 rounded-full bg-white text-[#0F766E] font-semibold px-4 py-1.5 text-[13px] active:opacity-80"
-        >
-          Sign up
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/15 text-white font-semibold px-3 py-1.5 text-[13px] active:opacity-80"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </button>
+          <button
+            type="button"
+            onClick={() => openSignup("save")}
+            className="rounded-full bg-white text-[#0F766E] font-semibold px-4 py-1.5 text-[13px] active:opacity-80"
+          >
+            Sign up
+          </button>
+        </div>
       </div>
 
       <div style={{ paddingTop: 44 }}>
