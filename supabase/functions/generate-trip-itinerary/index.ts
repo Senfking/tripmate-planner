@@ -38,6 +38,17 @@ import {
   placesSpendLastDayUsd,
   userGenerationsInLastHour,
 } from "../_shared/places/cache.ts";
+import {
+  decideAnonRateLimit,
+  extractClientIp,
+  makeRateLimitDeps,
+  type RateLimitClient,
+} from "../_shared/anon/rate-limit.ts";
+import { decideAuthGate } from "../_shared/anon/auth-gate.ts";
+import {
+  type AnonStorageClient,
+  persistAnonymousTrip,
+} from "../_shared/anon/storage.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -81,6 +92,11 @@ interface TripBuilderRequest {
   free_text?: string | null;
   alternatives_mode?: boolean;
   user_description?: string | null;
+  // Sent by unauthenticated visitors (the public landing-page builder). When
+  // present and no Authorization bearer is supplied, the request runs through
+  // the anonymous flow: tighter rate limits, the result is persisted to
+  // public.anonymous_trips, and `anon_trip_id` comes back on the response.
+  anon_session_id?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1805,7 +1821,7 @@ async function geocodeDestination(
   googleKey: string,
   destination: string,
   svcClient: ReturnType<typeof createClient>,
-  userId: string,
+  userId: string | null,
 ): Promise<GeocodeResult> {
   const normalized = destination.trim().toLowerCase();
   if (!normalized) {
@@ -5053,7 +5069,7 @@ interface LLMLogger {
 
 function makeLLMLogger(
   svcClient: ReturnType<typeof createClient>,
-  userId: string,
+  userId: string | null,
 ): LLMLogger {
   const totals: LLMLoggerTotals = {
     input_tokens: 0,
@@ -5105,7 +5121,7 @@ function computeHaikuCost(usage: ClaudeUsage): number {
 async function logPlacesByTier(
   svcClient: ReturnType<typeof createClient>,
   logger: LLMLogger,
-  userId: string,
+  userId: string | null,
   counts: {
     search_essentials_live: number;
     search_essentials_cache: number;
@@ -5554,26 +5570,67 @@ Deno.serve(async (req) => {
   let svcClientForLogging: ReturnType<typeof createClient> | null = null;
 
   try {
-    // ---- Auth ----
+    // ---- Auth (anon-allowed) ----
+    //
+    // Two actor types are accepted:
+    //   - Authenticated user: standard JWT Bearer token.
+    //   - Anonymous visitor:  no JWT, but `anon_session_id` (uuid v4) supplied
+    //                         in the request body. This is the public landing-
+    //                         page "preview" flow; rate limits are tighter and
+    //                         the result is persisted to anonymous_trips so
+    //                         the visitor can scroll/share via /trips/anon/[id]
+    //                         and (after signup) claim it onto their account.
+    //
+    // Sub-flows that are auth-only fall through to a 401 with
+    // { code: "auth_required" } so the frontend can show a contextual signup
+    // modal:
+    //   - alternatives_mode (refining a saved activity)
+    //   - any request carrying trip_id (regenerate against an existing trip)
     loggedStep = "auth";
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return jsonResponse({ success: false, error: "Unauthorized" }, 401);
-    }
-    const authClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: { user }, error: authErr } = await authClient.auth.getUser();
-    if (authErr || !user) {
-      return jsonResponse({ success: false, error: "Unauthorized" }, 401);
-    }
-    loggedUserId = user.id;
 
-    const body: TripBuilderRequest = await req.json();
+    let body: TripBuilderRequest;
+    try {
+      body = await req.json();
+    } catch (_e) {
+      return jsonResponse({ success: false, error: "Invalid JSON body" }, 400);
+    }
     if (typeof body?.destination === "string" && body.destination.trim()) {
       loggedDestination = body.destination.trim();
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    let user: { id: string } | null = null;
+    if (authHeader?.startsWith("Bearer ")) {
+      const authClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: { user: u }, error: authErr } = await authClient.auth.getUser();
+      if (!authErr && u) {
+        user = u;
+      }
+    }
+
+    const gate = decideAuthGate({
+      authenticatedUserId: user?.id ?? null,
+      body,
+    });
+    if (gate.kind === "reject") {
+      return jsonResponse(
+        { success: false, error: gate.message, code: gate.code },
+        gate.status,
+      );
+    }
+    const isAnonymous = gate.kind === "anonymous";
+    const anonSessionId = gate.kind === "anonymous" ? gate.anonSessionId : null;
+    const actorUserId: string | null = gate.kind === "authenticated" ? gate.userId : null;
+    loggedUserId = actorUserId;
+    const clientIp = isAnonymous ? extractClientIp(req) : null;
+    if (isAnonymous && !clientIp) {
+      console.warn(
+        `[anon_rate_limit] no client ip extractable from headers — falling back to session-only enforcement (anon_session_id=${anonSessionId})`,
+      );
     }
 
     // =========================================================================
@@ -5688,7 +5745,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
     svcClientForLogging = svcClient;
-    const logger = makeLLMLogger(svcClient, user.id);
+    const logger = makeLLMLogger(svcClient, actorUserId);
 
     // ---- Quotas: per-user rate limit + daily circuit breaker ----
     //
@@ -5705,8 +5762,36 @@ Deno.serve(async (req) => {
     const ADMIN_USER_ID = "1d5b21fe-f74c-429b-8d9d-938a4f295013";
     const rateLimit = Number.parseInt(Deno.env.get("RATE_LIMIT_TRIPS_PER_HOUR") ?? "", 10);
     const effectiveRateLimit = Number.isFinite(rateLimit) && rateLimit > 0 ? rateLimit : DEFAULT_RATE_LIMIT_PER_HOUR;
-    if (user.id !== ADMIN_USER_ID) {
-      const recentCount = await userGenerationsInLastHour(svcClient, user.id);
+    if (isAnonymous) {
+      // Two-tier rate limit:
+      //   - per anon_session_id: 1 / 24h    (primary)
+      //   - per source IP:        3 / 24h   (defense-in-depth, skipped if proxy
+      //                                      didn't surface a client ip)
+      // Counts come from anonymous_trips rows in the last 24h via SECURITY
+      // DEFINER RPCs. See _shared/anon/rate-limit.ts for the matrix.
+      const decision = await decideAnonRateLimit(
+        makeRateLimitDeps(svcClient as unknown as RateLimitClient),
+        anonSessionId!,
+        clientIp,
+      );
+      if (decision.kind === "blocked") {
+        console.warn(
+          `[anon_rate_limit] blocked anon_session_id=${anonSessionId} ip=${clientIp ?? "unknown"} reason=${decision.reason} count=${decision.count}/${decision.limit}`,
+        );
+        return jsonResponse(
+          {
+            success: false,
+            error: "anon_limit",
+            code: "anon_limit",
+            reason: "signup_required",
+            limit: decision.reason,
+            message: "You've used your free trip preview. Sign up to plan more trips.",
+          },
+          429,
+        );
+      }
+    } else if (actorUserId !== ADMIN_USER_ID) {
+      const recentCount = await userGenerationsInLastHour(svcClient, actorUserId!);
       if (recentCount >= effectiveRateLimit) {
         return jsonResponse(
           {
@@ -5823,7 +5908,7 @@ Deno.serve(async (req) => {
             // ---- parseIntent in parallel with geocode (non-surprise) ----
             const tParseIntent = Date.now();
             const earlyGeocodePromise: Promise<GeocodeResult> | null = !surpriseMe && rawDest
-              ? geocodeDestination(googleKey, rawDest, svcClient, user.id).catch((e) => { throw e; })
+              ? geocodeDestination(googleKey, rawDest, svcClient, actorUserId).catch((e) => { throw e; })
               : null;
             stepLabel = "parseIntent";
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
@@ -5932,6 +6017,18 @@ Deno.serve(async (req) => {
                   for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
                 }
                 console.log(`[stream.cache] junto_picks_tagged=${juntoPlaceIds.length}`);
+                let cacheHitAnonTripId: string | null = null;
+                if (isAnonymous && anonSessionId) {
+                  cacheHitAnonTripId = await persistAnonymousTrip(
+                    svcClient as unknown as AnonStorageClient,
+                    {
+                      anonSessionId,
+                      prompt: typeof body.free_text === "string" ? body.free_text : null,
+                      sourceIp: clientIp,
+                      payload: payload as Record<string, unknown>,
+                    },
+                  );
+                }
                 send("trip_complete", {
                   trip_title: stripEmojis(payload?.trip_title),
                   trip_summary: payload?.trip_summary ?? "",
@@ -5947,6 +6044,7 @@ Deno.serve(async (req) => {
                   destination_image_url: payload?.destination_image_url ?? null,
                   destination_country_iso: payload?.destination_country_iso ?? null,
                   from_cache: true,
+                  ...(cacheHitAnonTripId ? { anon_trip_id: cacheHitAnonTripId } : {}),
                 });
                 await logger.log({
                   feature: "trip_builder_cache_hit", model: "cache",
@@ -5967,7 +6065,7 @@ Deno.serve(async (req) => {
             const tGeocode = Date.now();
             const geo: GeocodeResult = earlyGeocodePromise
               ? await earlyGeocodePromise
-              : await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
+              : await geocodeDestination(googleKey, intent.destination, svcClient, actorUserId);
             tStage("geocode", tGeocode);
 
             const tSkeleton = Date.now();
@@ -6035,7 +6133,7 @@ Deno.serve(async (req) => {
             const { hydrated: hydratedById, stats: hydrationStats } = await hydrateFinalists(finalistIds, idToBase, googleKey, svcClient);
             tStage("hydrate_finalists", tHydrate);
 
-            await logPlacesByTier(svcClient, logger, user.id, {
+            await logPlacesByTier(svcClient, logger, actorUserId, {
               search_essentials_live: rankingStats.live_calls, search_essentials_cache: rankingStats.cache_hits,
               details_live: hydrationStats.live_calls, details_cache: hydrationStats.cache_hits,
             });
@@ -6454,6 +6552,21 @@ Deno.serve(async (req) => {
             }
             tStage("cache_write", tCacheWrite);
 
+            // ---- Anonymous persistence (before trip_complete so the id can
+            // ride along with the final SSE event) ----
+            let streamAnonTripId: string | null = null;
+            if (isAnonymous && anonSessionId) {
+              streamAnonTripId = await persistAnonymousTrip(
+                svcClient as unknown as AnonStorageClient,
+                {
+                  anonSessionId,
+                  prompt: typeof body.free_text === "string" ? body.free_text : null,
+                  sourceIp: clientIp,
+                  payload: responsePayload,
+                },
+              );
+            }
+
             // ---- Final event ----
             send("trip_complete", {
               trip_title: pipelineResult.trip_title,
@@ -6470,6 +6583,7 @@ Deno.serve(async (req) => {
               destination_image_url: destinationImageUrl,
               destination_country_iso: destinationCountryIso,
               from_cache: false,
+              ...(streamAnonTripId ? { anon_trip_id: streamAnonTripId } : {}),
             });
 
             // ---- Logging (async, best-effort, after we've sent the final event) ----
@@ -6486,20 +6600,21 @@ Deno.serve(async (req) => {
               `;places_cache_hits=${totalCacheHits}/${totalPlacesCalls || 1}` +
               `;sub_calls=${totals.call_count}`;
             await svcClient.from("ai_request_log").insert({
-              user_id: user.id, feature: "trip_builder_total", model: modelLabel,
+              user_id: actorUserId, feature: "trip_builder_total", model: modelLabel,
               input_tokens: totals.input_tokens, output_tokens: totals.output_tokens,
               cost_usd: totals.cost_usd, cached: false,
             }).then((r: { error: { message: string } | null }) => {
               if (r.error) console.error("[stream.ai_request_log] insert failed:", r.error);
             });
             await svcClient.from("analytics_events").insert({
-              event_name: "ai_trip_builder", user_id: user.id,
+              event_name: "ai_trip_builder", user_id: actorUserId,
               properties: {
                 source: "generated_stream", destination: intent.destination, days: numDays,
                 budget_level: intent.budget_tier, pace: intent.pace, duration_ms: durationMs,
                 places_ranking_live: rankingStats.live_calls, places_ranking_cache: rankingStats.cache_hits,
                 places_details_live: hydrationStats.live_calls, places_details_cache: hydrationStats.cache_hits,
                 llm_cost_usd: totals.cost_usd, days_emitted_streaming: emittedDayNumbers.size,
+                anonymous: isAnonymous,
               },
             });
 
@@ -6566,7 +6681,7 @@ Deno.serve(async (req) => {
     // destination pays nothing.
     const tParseIntent = Date.now();
     const earlyGeocodePromise: Promise<GeocodeResult> | null = !surpriseMe && rawDest
-      ? geocodeDestination(googleKey, rawDest, svcClient, user.id).catch((e) => {
+      ? geocodeDestination(googleKey, rawDest, svcClient, actorUserId).catch((e) => {
           // Surface the rejection later when we await — not now.
           throw e;
         })
@@ -6684,7 +6799,26 @@ Deno.serve(async (req) => {
             cost_usd: 0,
             cached: true,
           });
-          return jsonResponse({ success: true, ...payload });
+          // Anon visitors hitting cache still need a stored row so they get
+          // a viewable /trips/anon/[id] URL and the rate-limit counter
+          // increments (cache hits are real generations from the user's POV).
+          let anonTripId: string | null = null;
+          if (isAnonymous && anonSessionId) {
+            anonTripId = await persistAnonymousTrip(
+              svcClient as unknown as AnonStorageClient,
+              {
+                anonSessionId,
+                prompt: typeof body.free_text === "string" ? body.free_text : null,
+                sourceIp: clientIp,
+                payload: payload as Record<string, unknown>,
+              },
+            );
+          }
+          return jsonResponse({
+            success: true,
+            ...payload,
+            ...(anonTripId ? { anon_trip_id: anonTripId } : {}),
+          });
         }
       } else {
         console.log(`[nonstream.cache] miss cache_key=${cacheKey} reason=not_found month_bucket=${monthBucket}`);
@@ -6705,7 +6839,7 @@ Deno.serve(async (req) => {
     const tGeocode = Date.now();
     const geo: GeocodeResult = earlyGeocodePromise
       ? await earlyGeocodePromise
-      : await geocodeDestination(googleKey, intent.destination, svcClient, user.id);
+      : await geocodeDestination(googleKey, intent.destination, svcClient, actorUserId);
     tStage("geocode", tGeocode);
 
     // ---- Step 2b: pacing skeleton (slot count capped inside buildSkeleton) ----
@@ -6776,7 +6910,7 @@ Deno.serve(async (req) => {
     tStage("hydrate_finalists", tHydrate);
 
     // Tier-aware cost instrumentation — one row per SKU category.
-    await logPlacesByTier(svcClient, logger, user.id, {
+    await logPlacesByTier(svcClient, logger, actorUserId, {
       search_essentials_live: rankingStats.live_calls,
       search_essentials_cache: rankingStats.cache_hits,
       details_live: hydrationStats.live_calls,
@@ -6959,7 +7093,7 @@ Deno.serve(async (req) => {
         `;places_cache_hits=${totalCacheHits}/${totalPlacesCalls || 1}` +
         `;sub_calls=${totals.call_count}`;
       const { error: totalErr } = await svcClient.from("ai_request_log").insert({
-        user_id: user.id,
+        user_id: actorUserId,
         feature: "trip_builder_total",
         model: modelLabel,
         input_tokens: totals.input_tokens,
@@ -6976,7 +7110,7 @@ Deno.serve(async (req) => {
     // ---- Analytics (best-effort; not in scope of fail-loud requirement) ----
     await svcClient.from("analytics_events").insert({
       event_name: "ai_trip_builder",
-      user_id: user.id,
+      user_id: actorUserId,
       properties: {
         source: "generated",
         destination: intent.destination,
@@ -6989,10 +7123,31 @@ Deno.serve(async (req) => {
         places_details_live: hydrationStats.live_calls,
         places_details_cache: hydrationStats.cache_hits,
         llm_cost_usd: logger.totals().cost_usd,
+        anonymous: isAnonymous,
       },
     });
 
-    return jsonResponse({ success: true, ...responsePayload });
+    // ---- Anonymous persistence ----
+    // Anon visitors get their generated trip stored so /trips/anon/[id] can
+    // render it later. Failure is non-fatal — we still return the payload.
+    let anonTripId: string | null = null;
+    if (isAnonymous && anonSessionId) {
+      anonTripId = await persistAnonymousTrip(
+        svcClient as unknown as AnonStorageClient,
+        {
+          anonSessionId,
+          prompt: typeof body.free_text === "string" ? body.free_text : null,
+          sourceIp: clientIp,
+          payload: responsePayload,
+        },
+      );
+    }
+
+    return jsonResponse({
+      success: true,
+      ...responsePayload,
+      ...(anonTripId ? { anon_trip_id: anonTripId } : {}),
+    });
   } catch (e) {
     console.error("generate-trip-itinerary error:", e);
 
