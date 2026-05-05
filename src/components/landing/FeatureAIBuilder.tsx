@@ -47,8 +47,9 @@ export function FeatureAIBuilder() {
           style={{ ["--stagger-index" as string]: 2 }}
         >
           Tell Junto where you're going, who's coming, and what you're into.
-          Get a real itinerary in minutes - hotels, restaurants, day-by-day
-          plans your group will actually agree on.
+          Get a real itinerary in minutes, then plan together as a group: vote
+          on options, comment on ideas, and lock in a trip everyone actually
+          agrees on.
         </p>
       </div>
 
