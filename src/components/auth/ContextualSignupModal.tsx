@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles, CalendarRange, Users, Wallet, Bookmark } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,8 +32,8 @@ const COPY: Record<SignupTrigger, { headline: string; sub: string }> = {
     sub: "Tweak vibes, swap activities, and try again with a free account.",
   },
   rate_limit: {
-    headline: "You've used your free generation",
-    sub: "Sign up to plan unlimited trips with Junto AI.",
+    headline: "You've used your free Junto preview",
+    sub: "Sign up to plan unlimited group trips with AI.",
   },
 };
 
@@ -182,11 +182,34 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
       }}
     >
       <div className="text-center pt-4 pb-5">
+        {trigger === "rate_limit" && (
+          <div className="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-teal-400/30 to-teal-600/20 ring-1 ring-teal-300/30">
+            <Sparkles className="h-5 w-5 text-teal-300" />
+          </div>
+        )}
         <h2 className="text-[22px] font-bold leading-tight tracking-tight">
           {copy.headline}
         </h2>
         <p className="mt-2 text-sm text-white/70">{copy.sub}</p>
       </div>
+
+      {trigger === "rate_limit" && (
+        <ul className="mb-5 space-y-2.5 rounded-2xl bg-white/[0.04] ring-1 ring-white/10 p-4">
+          {[
+            { Icon: CalendarRange, text: "Plan unlimited trips" },
+            { Icon: Users, text: "Invite friends to vote and collaborate" },
+            { Icon: Wallet, text: "Split expenses automatically across the group" },
+            { Icon: Bookmark, text: "Save and edit trips anytime" },
+          ].map(({ Icon, text }) => (
+            <li key={text} className="flex items-center gap-3 text-[13.5px] text-white/85">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 ring-1 ring-teal-400/25">
+                <Icon className="h-3.5 w-3.5 text-teal-300" />
+              </span>
+              {text}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {error && (
         <p className="mb-3 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5" }}>
@@ -285,6 +308,21 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
           </>
         )}
       </p>
+
+      {trigger === "rate_limit" && (
+        <div className="mt-4 space-y-2 text-center">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[12px] text-white/55 hover:text-white/80 underline underline-offset-2"
+          >
+            Back to trip
+          </button>
+          <p className="text-[11px] text-white/35 px-2">
+            Your previous trip is saved — you'll find it in your dashboard after signup.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
