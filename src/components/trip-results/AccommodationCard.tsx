@@ -367,36 +367,90 @@ export function AccommodationCard({
         </div>
       )}
 
-      {/* Expanded details */}
-      {expanded && (
-        <div className="border-t border-border animate-fade-in relative">
-          <button
-            onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-            aria-label="Close details"
-            className="absolute top-2 right-2 z-10 h-11 w-11 inline-flex items-center justify-center rounded-full bg-[#0D9488] text-white shadow-lg hover:bg-[#0D9488]/90 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          {description && (
-            <div className="px-3.5 pt-2.5 pb-2">
-              <p className={`text-xs text-muted-foreground leading-relaxed ${!descExpanded && descIsLong ? "line-clamp-3" : ""}`}>
-                {description}
-              </p>
-              {descIsLong && !descExpanded && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setDescExpanded(true); }}
-                  className="text-[11px] text-primary font-medium mt-0.5 hover:underline"
+      {/* Details Sheet — slides in from right (or bottom on mobile) */}
+      <Sheet open={expanded} onOpenChange={setExpanded}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-[480px] p-0 overflow-y-auto bg-background"
+        >
+          {/* Hero */}
+          <div className="relative h-[260px] w-full bg-muted overflow-hidden">
+            {heroSrc ? (
+              <img src={heroSrc} alt={name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-primary/5">
+                <Hotel className="h-12 w-12 text-primary/30" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(180_25%_8%)] via-[hsl(180_25%_8%)]/50 to-transparent" />
+            <div className="absolute top-4 left-4">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-white bg-white/10 backdrop-blur-md ring-1 ring-white/20">
+                <Hotel className="h-2.5 w-2.5" /> Your Stay
+              </span>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 px-4 pb-4">
+              <h4 className="text-[22px] font-semibold text-white leading-tight tracking-tight drop-shadow-md">
+                {name}
+              </h4>
+              {neighborhood && (
+                <div className="flex items-center gap-1 mt-1.5 text-[11px] text-white/80">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate font-mono uppercase tracking-wider">{neighborhood}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+                {rating != null && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 backdrop-blur-md ring-1 ring-white/15">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="text-[11px] text-white font-mono font-semibold tabular-nums">{rating.toFixed(1)}</span>
+                    {reviewCount ? (
+                      <span className="text-[10px] text-white/60 font-mono tabular-nums">({reviewCount.toLocaleString()})</span>
+                    ) : null}
+                  </div>
+                )}
+                {priceLabel && (
+                  <span className="text-[11px] text-[#5EEAD4] font-mono font-medium uppercase tracking-wider">{priceLabel}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Action row */}
+          {((hasBooking && bookingUrlWithDates) || googleMapsUrl) && (
+            <div className="px-4 py-3 flex items-center justify-between gap-3 border-b border-border">
+              {googleMapsUrl ? (
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono uppercase tracking-wider transition-colors"
                 >
-                  Read more
-                </button>
+                  <MapPin className="h-3 w-3" /> View on Maps
+                </a>
+              ) : <span />}
+              {hasBooking && bookingUrlWithDates && (
+                <a
+                  href={bookingUrlWithDates}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3.5 py-2 rounded-lg text-[11px] font-semibold bg-[#0D9488] text-white hover:bg-[#0D9488]/90 transition-colors shadow-[0_4px_14px_-4px_rgba(13,148,136,0.5)] whitespace-nowrap"
+                >
+                  Book on {partnerLabel} <ExternalLink className="h-3 w-3" />
+                </a>
               )}
             </div>
           )}
 
+          {description && (
+            <div className="px-4 pt-4 pb-2">
+              <p className="text-sm text-foreground/80 leading-relaxed">{description}</p>
+            </div>
+          )}
+
           {proTip && (
-            <div className="mx-3.5 mb-2 border-l-2 border-primary/50 pl-2.5 py-1 bg-primary/5 rounded-r-lg">
-              <p className="text-[11px] text-muted-foreground flex items-start gap-1">
-                <Lightbulb className="h-3 w-3 text-primary shrink-0 mt-0.5" />
+            <div className="mx-4 mb-3 mt-2 border-l-2 border-primary/50 pl-3 py-2 bg-primary/5 rounded-r-lg">
+              <p className="text-[12px] text-muted-foreground flex items-start gap-1.5">
+                <Lightbulb className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
                 <span>
                   <span className="font-semibold text-primary mr-1">Tip:</span>
                   <span className="text-foreground/80">{proTip}</span>
@@ -405,42 +459,41 @@ export function AccommodationCard({
             </div>
           )}
 
-          {/* Google Reviews */}
           {isLoading ? (
-            <div className="px-3.5 pb-2.5 space-y-1.5">
-              <Skeleton className="h-14 w-full rounded-lg" />
+            <div className="px-4 pb-4 space-y-2">
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
             </div>
           ) : reviews.length > 0 ? (
-            <div className="px-3.5 pb-1 space-y-1.5">
-              {reviews.slice(0, 2).map((review, i) => (
-                <div key={i} className="flex gap-2 p-2 rounded-lg bg-accent/50 border border-border">
+            <div className="px-4 pb-4 space-y-2">
+              <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-muted-foreground mt-2">What visitors say</p>
+              {reviews.slice(0, 4).map((review, i) => (
+                <div key={i} className="flex gap-2 p-2.5 rounded-lg bg-accent/40 border border-border">
                   <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 mt-0.5"
                     style={{ backgroundColor: `hsl(${(review.author.charCodeAt(0) * 37) % 360}, 55%, 55%)` }}
                   >
                     {review.author.charAt(0) || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-medium text-foreground">{review.author}</span>
+                      <span className="text-[12px] font-medium text-foreground">{review.author}</span>
                       <MiniStars rating={review.rating} />
                       {review.time && (
                         <span className="text-[10px] text-muted-foreground">{review.time}</span>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                    <p className="text-[12px] text-muted-foreground leading-snug mt-0.5">
                       {review.text}
                     </p>
                   </div>
                 </div>
               ))}
-              <p className="text-[9px] text-muted-foreground/60 pb-1">Photos & reviews from Google</p>
+              <p className="text-[10px] text-muted-foreground/60">Photos & reviews from Google</p>
             </div>
           ) : null}
-
-          {/* View on Maps lives in the action row above — no duplicate here */}
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
