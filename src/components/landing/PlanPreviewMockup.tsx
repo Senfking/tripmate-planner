@@ -192,7 +192,7 @@ function PhoneSceneGroup() {
           <MiniAvatar label="S" className="bg-primary" />
           <div className="flex-1 rounded-xl rounded-tl-sm bg-muted px-2.5 py-1.5">
             <p className="text-[7px] font-semibold text-foreground">Sarah</p>
-            <p className="text-[7px] text-muted-foreground">Yes — adding it now 🙌</p>
+            <p className="text-[7px] text-muted-foreground">Yes, adding it now 🙌</p>
           </div>
         </div>
       </div>
@@ -317,7 +317,7 @@ function LaptopSceneDay() {
   return (
     <div className="h-full bg-background p-4">
       <div className="mb-3">
-        <p className="text-[13px] font-bold text-foreground">Day 3 — Surf & Sunset</p>
+        <p className="text-[13px] font-bold text-foreground">Day 3 · Surf & Sunset</p>
         <p className="text-[9px] text-muted-foreground">3 activities planned</p>
       </div>
       <div className="grid grid-cols-2 gap-2">

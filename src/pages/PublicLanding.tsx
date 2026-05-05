@@ -98,7 +98,7 @@ export default function PublicLanding() {
       <FeaturePhoneSection
         eyebrow="Expenses"
         headline="Money sorts itself."
-        body="Add a receipt, Junto splits it. Multiple currencies, custom shares, live balances — no end-of-trip spreadsheet."
+        body="Add a receipt, Junto splits it. Multiple currencies, custom shares, live balances. No end-of-trip spreadsheet."
         image={mockupExpenses}
         alt="Junto expenses screen on iPhone showing €255 owed, balances and a list of split expenses"
         imageSide="left"
@@ -115,7 +115,7 @@ export default function PublicLanding() {
       <FeaturePhoneSection
         eyebrow="All your trips"
         headline="Your travel home."
-        body="Past trips, current ones, upcoming, drafts. Every trip you've planned with your groups stays in one place — easy to revisit, easy to plan the next one from."
+        body="Past trips, current ones, upcoming, drafts. Every trip you've planned with your groups stays in one place, easy to revisit and easy to plan the next one from."
         image={mockupTrips}
         alt="Junto trips home screen on iPhone showing a 'Good evening, Oliver' header, a live Bali trip card, and an upcoming Dubai trip"
         imageSide="left"

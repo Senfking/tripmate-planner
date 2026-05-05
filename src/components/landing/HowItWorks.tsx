@@ -25,7 +25,7 @@ const STEPS: Step[] = [
     num: "03",
     Icon: MapPin,
     title: "Go.",
-    body: "Junto's there during the trip too — bookings, expenses, and updates.",
+    body: "Junto's there during the trip too. Bookings, expenses, and updates.",
   },
 ];
 
