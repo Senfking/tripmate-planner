@@ -6,10 +6,12 @@ import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 import { FeatureAIBuilder } from "@/components/landing/FeatureAIBuilder";
 import { FeatureTripDashboard } from "@/components/landing/FeatureTripDashboard";
 import { FeaturePhoneSection } from "@/components/landing/FeaturePhoneSection";
+import { HowItWorks } from "@/components/landing/HowItWorks";
+import { FinalCTA } from "@/components/landing/FinalCTA";
 import mockupExpenses from "@/assets/mockup-expenses.png";
 import mockupBookings from "@/assets/mockup-bookings.png";
+import mockupTrips from "@/assets/mockup-trips-page.png";
 import { TripCarousels } from "@/components/landing/TripCarousel";
-import { ShimmerButton } from "@/components/landing/ShimmerButton";
 import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
 import { ContextualSignupModal } from "@/components/auth/ContextualSignupModal";
 import { isAnonRateLimited, markAnonRateLimited } from "@/lib/anonSession";
@@ -112,54 +114,34 @@ export default function PublicLanding() {
         background="sand"
       />
 
-      {/* Destination card carousels (ported). id used by Hero's
+      <FeaturePhoneSection
+        eyebrow="All your trips"
+        headline="Your travel home."
+        body="Past trips, current ones, upcoming, drafts. Every trip you've planned with your groups stays in one place — easy to revisit, easy to plan the next one from."
+        image={mockupTrips}
+        alt="Junto trips home screen on iPhone showing a 'Good evening, Oliver' header, a live Bali trip card, and an upcoming Dubai trip"
+        imageSide="left"
+        background="white"
+      />
+
+      <HowItWorks />
+
+      {/* Destination card carousels — curated slice. id used by Hero's
           "Browse trip ideas" chip to smooth-scroll here. */}
-      <section id="trip-ideas" className="py-20 sm:py-28 scroll-mt-4">
+      <section id="trip-ideas" className="py-20 sm:py-28 scroll-mt-4 bg-[#FAFAF9]">
         <Reveal>
-          <TripCarousels />
+          <TripCarousels limit={4} showSeeAllFooter />
         </Reveal>
       </section>
 
-      {/* Bottom CTA — re-prompt with shimmer button */}
-      <section className="pt-6 pb-16 sm:pt-10 sm:pb-24 px-5">
-        <div className="mx-auto max-w-xl">
-          <Reveal>
-            <div
-              className="relative overflow-hidden rounded-3xl px-6 py-12 sm:px-10 sm:py-16 text-center shadow-[0_20px_60px_-30px_rgba(13,148,136,0.5)] border border-[#0D9488]/15"
-              style={{
-                background:
-                  "radial-gradient(120% 120% at 50% 0%, rgba(45,212,191,0.18) 0%, rgba(13,148,136,0.06) 45%, rgba(255,255,255,0) 75%), linear-gradient(180deg, #ffffff 0%, #f5fbfa 100%)",
-              }}
-            >
-              {/* Soft glow blob */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -top-24 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full blur-3xl opacity-60"
-                style={{ background: "radial-gradient(circle, #2dd4bf 0%, transparent 70%)" }}
-              />
-              <h2 className="relative text-3xl sm:text-4xl font-bold text-[#1a1a1a] mb-3 leading-tight tracking-tight">
-                Your{" "}
-                <span
-                  className="bg-clip-text text-transparent"
-                  style={{ backgroundImage: "linear-gradient(90deg, #0D9488 0%, #2dd4bf 60%, #0D9488 100%)" }}
-                >
-                  next trip
-                </span>
-                {" "}starts here
-              </h2>
-              <p className="relative text-[15px] text-[#6b7280] mb-8 max-w-sm mx-auto">
-                Plan smarter. Travel better. No spreadsheets required.
-              </p>
-              <ShimmerButton
-                onClick={() => navigate(user ? "/trips/new" : "/ref")}
-                className="relative w-full sm:w-auto sm:px-14 mx-auto rounded-2xl py-4 text-[16px]"
-              >
-                Start planning
-              </ShimmerButton>
-            </div>
-          </Reveal>
-        </div>
-      </section>
+      {/* Final dark teal CTA */}
+      <FinalCTA
+        onPrimary={() => navigate(user ? "/trips/new" : "/ref")}
+        onBrowse={() => {
+          const el = document.getElementById("trip-ideas");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
 
       {/* Footer (ported) */}
       <footer className="py-8 px-5 border-t border-[#e5e5e5]">
