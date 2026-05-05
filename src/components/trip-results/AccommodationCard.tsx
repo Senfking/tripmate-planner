@@ -28,6 +28,13 @@ interface Props {
    *  don't have to re-enter the trip's dates after clicking "Book". */
   checkInDate?: string | null;
   checkOutDate?: string | null;
+  /** Up to 5 alternative hotels for this leg (same shape as the chosen
+   *  hotel). When non-empty, SWAP opens an in-app alternatives panel.
+   *  When empty/undefined, the SWAP button is hidden. */
+  alternatives?: any[];
+  /** Called when the user picks an alternative. Parent persists the swap
+   *  to ai_trip_plans.result. */
+  onSwap?: (newHotel: any) => void;
 }
 
 const PRICE_LABELS: Record<PriceLevel, { dollars: string; label: string }> = {
