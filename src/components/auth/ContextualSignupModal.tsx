@@ -316,7 +316,7 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
             onClick={onClose}
             className="text-[12px] text-white/55 hover:text-white/80 underline underline-offset-2"
           >
-            Back to trip
+            Maybe later
           </button>
           <p className="text-[11px] text-white/35 px-2">
             Your trip is saved — you'll find it in your dashboard after signup.
