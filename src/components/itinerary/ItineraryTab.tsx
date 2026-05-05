@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { captureReactError } from "@/lib/sentry";
 import { useNavigate } from "react-router-dom";
+import { TripIdeasStrip } from "@/components/ideas/TripIdeasStrip";
 
 // Error boundary so the builder never crashes the itinerary page
 class BuilderBoundary extends Component<
