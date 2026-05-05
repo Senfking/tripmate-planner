@@ -266,38 +266,31 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     enabled: !!userId,
   });
 
-  // Track when user last viewed this trip dashboard to compute "new since last visit".
-  const lastSeenKey = `trip-last-seen:${tripId}`;
-  const lastSeenAt = useMemo(() => {
-    if (typeof window === "undefined") return new Date(0).toISOString();
-    return localStorage.getItem(lastSeenKey) ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  }, [lastSeenKey]);
+  // Group activity in the last 7 days (comments on items + plan + ideas, by other members).
+  const sinceIso = useMemo(
+    () => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    [],
+  );
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !userId) return;
-    // Stamp on unmount so the *next* visit reflects activity since now.
-    return () => {
-      try { localStorage.setItem(lastSeenKey, new Date().toISOString()); } catch { /* ignore */ }
-    };
-  }, [lastSeenKey, userId]);
-
-  // Group activity since last visit (comments + ideas + plan reactions).
   const { data: groupActivity } = useQuery({
-    queryKey: ["trip-group-activity", tripId, lastSeenAt],
+    queryKey: ["trip-group-activity", tripId, aiPlanData?.id ?? null],
     queryFn: async () => {
+      const planId = aiPlanData?.id;
       const [commentsRes, planCommentsRes, ideasRes] = await Promise.all([
         supabase.from("comments").select("id", { count: "exact", head: true })
-          .eq("trip_id", tripId).gt("created_at", lastSeenAt).neq("user_id", userId ?? ""),
-        (supabase.from("plan_activity_comments" as any) as any)
-          .select("id", { count: "exact", head: true })
-          .gt("created_at", lastSeenAt).neq("user_id", userId ?? "")
-          .eq("plan_id", aiPlanData?.id ?? "00000000-0000-0000-0000-000000000000"),
+          .eq("trip_id", tripId).gt("created_at", sinceIso).neq("user_id", userId ?? ""),
+        planId
+          ? (supabase.from("plan_activity_comments" as any) as any)
+              .select("id", { count: "exact", head: true })
+              .gt("created_at", sinceIso).neq("user_id", userId ?? "")
+              .eq("plan_id", planId)
+          : Promise.resolve({ count: 0 }),
         (supabase.from("trip_ideas" as any) as any)
           .select("id", { count: "exact", head: true })
-          .eq("trip_id", tripId).gt("created_at", lastSeenAt).neq("created_by", userId ?? ""),
+          .eq("trip_id", tripId).gt("created_at", sinceIso).neq("created_by", userId ?? ""),
       ]);
       return {
-        comments: (commentsRes.count ?? 0) + (planCommentsRes.count ?? 0),
+        comments: (commentsRes.count ?? 0) + ((planCommentsRes as any).count ?? 0),
         ideas: ideasRes.count ?? 0,
       };
     },
