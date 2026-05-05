@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Search, X } from "lucide-react";
 import { useTripTemplates, type TripTemplate } from "@/hooks/useTripTemplates";
 import { TemplateCard } from "@/components/templates/TemplateCard";
