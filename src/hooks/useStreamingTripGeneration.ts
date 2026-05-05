@@ -594,7 +594,7 @@ function handleFrame(
       const tripAdjustment = typeof (data as any)?.adjustment_notice === "string" && (data as any).adjustment_notice.trim().length > 0
         ? (data as any).adjustment_notice.trim()
         : cur.adjustmentNotice;
-      const result = assembleResult(meta, cur.days, cur.imageUrl, trip, cur.legs, cur.accommodations, tripAdjustment);
+      const result = assembleResult(meta, cur.days, cur.imageUrl, trip, cur.legs, cur.accommodations, cur.accommodationAlternatives, tripAdjustment);
       const anonTripId =
         typeof data?.anon_trip_id === "string"
           ? data.anon_trip_id
