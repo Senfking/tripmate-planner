@@ -128,18 +128,26 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
     setError(null);
     setGoogleLoading(true);
     const callback = `${window.location.origin}/auth/callback?redirect=${encodeURIComponent("/trips/new?claim=1")}`;
-    const { error: err } = await lovable.auth.signInWithOAuth("google", { redirect_uri: callback });
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: callback });
     setGoogleLoading(false);
-    if (err) setError(friendlyError(String(err)));
+    if (result.error) {
+      setError(friendlyError(String(result.error)));
+      return;
+    }
+    if (!result.redirected) await handleAfterAuth();
   }
 
   async function handleApple() {
     setError(null);
     setAppleLoading(true);
     const callback = `${window.location.origin}/auth/callback?redirect=${encodeURIComponent("/trips/new?claim=1")}`;
-    const { error: err } = await lovable.auth.signInWithOAuth("apple", { redirect_uri: callback });
+    const result = await lovable.auth.signInWithOAuth("apple", { redirect_uri: callback });
     setAppleLoading(false);
-    if (err) setError(friendlyError(String(err)));
+    if (result.error) {
+      setError(friendlyError(String(result.error)));
+      return;
+    }
+    if (!result.redirected) await handleAfterAuth();
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -287,7 +295,7 @@ export function ContextualSignupModal({ open, onOpenChange, trigger, fallbackRed
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="bg-[#0a0a0a] border-white/10 text-white">
+        <DrawerContent className="z-[10000] bg-[#0a0a0a] border-white/10 text-white">
           <DrawerTitle className="sr-only">Sign up to Junto</DrawerTitle>
           <SignupBody trigger={trigger} onClose={() => onOpenChange(false)} fallbackRedirect={fallbackRedirect} />
         </DrawerContent>
@@ -297,7 +305,7 @@ export function ContextualSignupModal({ open, onOpenChange, trigger, fallbackRed
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 bg-[#0a0a0a] border-white/10 overflow-hidden">
+      <DialogContent className="z-[10000] max-w-md p-0 bg-[#0a0a0a] border-white/10 overflow-hidden">
         <DialogTitle className="sr-only">Sign up to Junto</DialogTitle>
         <SignupBody trigger={trigger} onClose={() => onOpenChange(false)} fallbackRedirect={fallbackRedirect} />
       </DialogContent>
