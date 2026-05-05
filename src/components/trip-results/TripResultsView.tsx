@@ -528,7 +528,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             in StandaloneTripBuilder), so the transition to the final state is
             just one element disappearing — no other layout change. */}
         {streaming && (
-          <div className="px-4 pt-4 pb-1 space-y-3">
+          <div
+            className="sticky z-30 px-4 py-3 space-y-3 animate-fade-in backdrop-blur-lg border-b"
+            style={{
+              top: "env(safe-area-inset-top, 0px)",
+              backgroundColor: "rgba(240, 253, 250, 0.72)",
+              borderColor: "rgba(13, 148, 136, 0.12)",
+              boxShadow: "0 6px 20px -8px rgba(13,148,136,0.18)",
+            }}
+          >
             <StreamingStatusPill
               stage={streamingStage ?? null}
               statusMessages={streamingStatusMessages ?? []}

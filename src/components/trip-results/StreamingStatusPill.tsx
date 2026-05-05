@@ -11,15 +11,8 @@ interface Props {
 }
 
 /**
- * Cinematic status pill shown at the top of the streaming results surface.
- *
- * - Default: shows `stage.user_text` (e.g. "Locating Madrid").
- * - During the long ranking_days stage, rotates through the destination-
- *   specific micro-copy strings (when 2+ provided) every 3.5s with a 250ms
- *   cross-fade. Rotation is anchored to a ref so component re-renders during
- *   streaming don't reset the cycle back to index 0.
- * - Falls back to `fallback` if no enriched events have arrived (older edge
- *   function deployment).
+ * Cinematic, glassmorphic status pill shown at the top of the streaming
+ * results surface. See StreamingProgressLadder for state-pill details.
  */
 export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) {
   const isRanking = stage?.stage === "ranking_days" || stage?.stage === "ranking";
@@ -27,9 +20,6 @@ export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) 
 
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(true);
-  // Track the last messages array identity we set up an interval for, so we
-  // only reset the rotation on actual content change — not on every re-render
-  // (parent re-renders during streaming would otherwise restart the cycle).
   const setupKeyRef = useRef<string>("");
 
   useEffect(() => {
@@ -58,11 +48,12 @@ export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) 
   return (
     <div className="flex justify-center">
       <div
-        className="inline-flex items-center gap-2.5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full shadow-md"
+        className="inline-flex items-center gap-2.5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full border backdrop-blur-lg"
         style={{
           backgroundColor: "rgba(13, 148, 136, 0.12)",
-          border: "1px solid rgba(13, 148, 136, 0.35)",
-          backdropFilter: "blur(8px)",
+          borderColor: "rgba(255, 255, 255, 0.55)",
+          boxShadow:
+            "0 8px 24px rgba(13,148,136,0.12), inset 0 1px 0 rgba(255,255,255,0.6)",
         }}
       >
         <Loader2
@@ -128,15 +119,16 @@ interface LadderProps {
 }
 
 /**
- * Horizontal "progress ladder" of pills, one per day. Filled = complete,
- * pulsing = currently being generated (next after the last completed),
- * empty = not yet started. Gives users a clear "I'm on day 2 of 5" sense
- * throughout generation.
+ * Horizontal "progress ladder" of glassmorphic pills, one per day.
+ * Filled = complete, pulsing = currently being generated, empty = not started.
+ * Auto-scrolls the current pill into view; long trips scroll horizontally
+ * with fade edges instead of wrapping.
  */
 export function StreamingProgressLadder({ totalDays, completedDays }: LadderProps) {
-  if (totalDays <= 0) return null;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentRef = useRef<HTMLDivElement>(null);
+
   const completedSet = new Set(completedDays);
-  // Current = lowest day_number not yet in completed set.
   let current = 0;
   for (let n = 1; n <= totalDays; n++) {
     if (!completedSet.has(n)) {
@@ -144,54 +136,109 @@ export function StreamingProgressLadder({ totalDays, completedDays }: LadderProp
       break;
     }
   }
+
+  // Auto-scroll the current pill into view as it progresses.
+  useEffect(() => {
+    if (!currentRef.current || !scrollRef.current) return;
+    currentRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [current]);
+
+  if (totalDays <= 0) return null;
+
   return (
-    <div className="flex flex-wrap justify-center gap-1.5 px-2">
-      {Array.from({ length: totalDays }, (_, i) => i + 1).map((n) => {
-        const isDone = completedSet.has(n);
-        const isCurrent = n === current;
-        return (
-          <div
-            key={n}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-mono font-semibold transition-all"
-            style={{
-              backgroundColor: isDone
-                ? "rgba(13, 148, 136, 0.18)"
-                : isCurrent
-                ? "rgba(13, 148, 136, 0.10)"
-                : "rgba(229, 231, 235, 0.4)",
-              border: isDone
-                ? "1px solid rgba(13, 148, 136, 0.45)"
-                : isCurrent
-                ? "1px solid rgba(13, 148, 136, 0.35)"
-                : "1px solid rgba(229, 231, 235, 0.6)",
-              color: isDone || isCurrent ? "#0F766E" : "#9CA3AF",
-              boxShadow: isDone ? "0 0 8px rgba(13, 148, 136, 0.25)" : undefined,
-              animation: isCurrent ? "ladderPulse 1.4s ease-in-out infinite" : undefined,
-            }}
-            aria-label={isDone ? `Day ${n} complete` : isCurrent ? `Day ${n} generating` : `Day ${n} pending`}
-          >
-            {isDone ? (
-              <Check className="h-3 w-3" strokeWidth={3} />
-            ) : isCurrent ? (
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: "#0D9488" }}
-              />
-            ) : (
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full border"
-                style={{ borderColor: "#9CA3AF" }}
-              />
-            )}
-            <span>Day {n}</span>
-          </div>
-        );
-      })}
+    <div className="relative w-full">
+      {/* Fade edges for horizontal scroll */}
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 w-6 z-10"
+        style={{
+          background: "linear-gradient(to right, hsl(var(--background)), transparent)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-y-0 right-0 w-6 z-10"
+        style={{
+          background: "linear-gradient(to left, hsl(var(--background)), transparent)",
+        }}
+      />
+      <div
+        ref={scrollRef}
+        className="flex items-center gap-1.5 overflow-x-auto px-4 py-1 scrollbar-none justify-start sm:justify-center"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {Array.from({ length: totalDays }, (_, i) => i + 1).map((n) => {
+          const isDone = completedSet.has(n);
+          const isCurrent = n === current;
+          const refProp = isCurrent ? { ref: currentRef } : {};
+          return (
+            <div
+              key={n}
+              {...refProp}
+              className="inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold transition-all duration-300 backdrop-blur-md border"
+              style={{
+                backgroundColor: isDone
+                  ? "rgba(13, 148, 136, 0.18)"
+                  : isCurrent
+                  ? "rgba(13, 148, 136, 0.28)"
+                  : "rgba(255, 255, 255, 0.35)",
+                borderColor: isDone
+                  ? "rgba(13, 148, 136, 0.45)"
+                  : isCurrent
+                  ? "rgba(13, 148, 136, 0.55)"
+                  : "rgba(255, 255, 255, 0.6)",
+                color: isDone || isCurrent ? "#0F766E" : "#9CA3AF",
+                boxShadow: isDone
+                  ? "0 4px 12px rgba(13,148,136,0.18), inset 0 1px 0 rgba(255,255,255,0.45)"
+                  : isCurrent
+                  ? "0 6px 18px rgba(13,148,136,0.28), 0 0 0 3px rgba(13,148,136,0.12), inset 0 1px 0 rgba(255,255,255,0.55)"
+                  : "inset 0 1px 0 rgba(255,255,255,0.55)",
+                transform: isCurrent ? "scale(1.05)" : "scale(1)",
+                animation: isCurrent ? "ladderPulse 1.6s ease-in-out infinite" : undefined,
+              }}
+              aria-label={
+                isDone ? `Day ${n} complete` : isCurrent ? `Day ${n} generating` : `Day ${n} pending`
+              }
+            >
+              {isDone ? (
+                <span
+                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full"
+                  style={{ backgroundColor: "#0D9488" }}
+                >
+                  <Check className="h-2.5 w-2.5 text-white" strokeWidth={3.5} />
+                </span>
+              ) : isCurrent ? (
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full"
+                  style={{
+                    backgroundColor: "#0D9488",
+                    boxShadow: "0 0 8px rgba(13,148,136,0.7)",
+                    animation: "dotPulse 1.2s ease-in-out infinite",
+                  }}
+                />
+              ) : (
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full border"
+                  style={{ borderColor: "#9CA3AF" }}
+                />
+              )}
+              <span>Day {n}</span>
+            </div>
+          );
+        })}
+      </div>
       <style>{`
         @keyframes ladderPulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.55; }
+          0%, 100% { transform: scale(1.05); }
+          50% { transform: scale(1.09); }
         }
+        @keyframes dotPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.3); }
+        }
+        .scrollbar-none::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   );
