@@ -60,8 +60,9 @@ export function TripCreationSurface({
   templateCard,
   belowHero,
   busy = false,
+  prefill,
 }: TripCreationSurfaceProps) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(prefill ?? "");
   const [shake, setShake] = useState(false);
 
   function handleSubmit(e: FormEvent) {
