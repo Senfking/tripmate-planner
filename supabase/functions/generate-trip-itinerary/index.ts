@@ -6899,12 +6899,11 @@ Deno.serve(async (req) => {
 
             let accommodation: EnrichedActivity | undefined = await accommodationEarlyPromise;
             const accomRaw = meta?.accommodation;
-            if (accommodation) {
-              // Already hydrated + emitted early; skip re-hydration below.
-            } else
-            
             const accomPlaceId = accomRaw?.place_id ?? accommodationPlaceId;
-            if (accomPlaceId) {
+            if (!accommodation && accomPlaceId) {
+              // Fallback: early hydration didn't produce a result (e.g.
+              // place wasn't in pool at the time, or hydrateActivity
+              // returned null). Retry now that everything has settled.
               const place = placeById.get(accomPlaceId) ?? null;
               if (place) {
                 const fakeSlot: PacingSlot = {
@@ -6930,9 +6929,14 @@ Deno.serve(async (req) => {
                   hydrated.booking_url = aff.booking_url;
                   hydrated.booking_partner = aff.booking_partner;
                   accommodation = hydrated;
+                  // Late fallback: still emit so the streaming UI updates.
+                  try {
+                    send("accommodation", { destination_index: 0, hotel: hydrated });
+                  } catch {}
                 }
               }
             }
+
 
             // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
             // See rankInParallel for rationale: parallel metadata writes copy
