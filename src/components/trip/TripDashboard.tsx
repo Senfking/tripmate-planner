@@ -740,6 +740,38 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                   </span>
                 </div>
               )}
+
+              {/* Group activity since last visit */}
+              {(groupActivity?.comments ?? 0) + (groupActivity?.ideas ?? 0) > 0 && (
+                <div
+                  className="relative mt-3 pt-3 flex items-center gap-2 flex-wrap"
+                  style={{ borderTop: "1px solid rgba(255,255,255,0.18)" }}
+                >
+                  <span className="flex items-center gap-1.5 text-white/85 text-[10.5px] font-semibold uppercase tracking-[0.12em]">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75 animate-ping" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-300" />
+                    </span>
+                    New since you were here
+                  </span>
+                  {(groupActivity?.comments ?? 0) > 0 && (
+                    <span
+                      className="px-2 py-0.5 rounded-full text-white text-[10.5px] font-semibold"
+                      style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.22)" }}
+                    >
+                      💬 {groupActivity!.comments} {groupActivity!.comments === 1 ? "comment" : "comments"}
+                    </span>
+                  )}
+                  {(groupActivity?.ideas ?? 0) > 0 && (
+                    <span
+                      className="px-2 py-0.5 rounded-full text-white text-[10.5px] font-semibold"
+                      style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.22)" }}
+                    >
+                      💡 {groupActivity!.ideas} {groupActivity!.ideas === 1 ? "idea" : "ideas"}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </button>
         );
