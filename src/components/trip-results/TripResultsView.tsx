@@ -969,8 +969,32 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             );
           }
 
+          // Find the previous real destination (skipping transit pseudo-legs)
+          // and any transit metadata in between, so we can render an inter-leg
+          // transit card at the top of every destination after the first.
+          let prevRealDest: typeof dest | null = null;
+          let interTransit: any = null;
+          for (let j = destIdx - 1; j >= 0; j--) {
+            const d = result.destinations[j];
+            if ((d.kind ?? "destination") === "transit") {
+              if (!interTransit) interTransit = (d as any).transit ?? {};
+            } else {
+              prevRealDest = d;
+              break;
+            }
+          }
+
           return (
             <div key={destIdx}>
+              {prevRealDest && (
+                <InterLegTransitCard
+                  from={prevRealDest.name}
+                  to={dest.name}
+                  mode={interTransit?.transit_type ?? null}
+                  durationHours={typeof interTransit?.estimated_duration_hours === "number" ? interTransit.estimated_duration_hours : null}
+                  arrivalDate={dest.start_date ?? null}
+                />
+              )}
               <div id={`section-dest-${dest.name}`} className={rc} style={revealStyle(`dest-${destIdx}`)}>
                 <DestinationSection
                   name={dest.name}
