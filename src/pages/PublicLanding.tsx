@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
@@ -12,7 +12,9 @@ import mockupExpenses from "@/assets/mockup-expenses.webp";
 import mockupBookings from "@/assets/mockup-bookings.webp";
 import mockupTrips from "@/assets/mockup-trips-page.webp";
 import { TripCarousels } from "@/components/landing/TripCarousel";
-import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
+const AnonTripGenerator = lazy(() =>
+  import("@/components/trip-builder/AnonTripGenerator").then((m) => ({ default: m.AnonTripGenerator })),
+);
 import { ContextualSignupModal } from "@/components/auth/ContextualSignupModal";
 import { isAnonRateLimited, markAnonRateLimited } from "@/lib/anonSession";
 
@@ -76,15 +78,17 @@ export default function PublicLanding() {
 
   if (anonPrompt) {
     return (
-      <AnonTripGenerator
-        prompt={anonPrompt}
-        onCancel={() => setAnonPrompt(null)}
-        onRateLimited={() => {
-          markAnonRateLimited();
-          setAnonPrompt(null);
-          setRateLimitOpen(true);
-        }}
-      />
+      <Suspense fallback={null}>
+        <AnonTripGenerator
+          prompt={anonPrompt}
+          onCancel={() => setAnonPrompt(null)}
+          onRateLimited={() => {
+            markAnonRateLimited();
+            setAnonPrompt(null);
+            setRateLimitOpen(true);
+          }}
+        />
+      </Suspense>
     );
   }
 
