@@ -56,12 +56,12 @@ function useAutoSize(value: string) {
 // Elaborate sample prompts that cycle through the placeholder typewriter-style
 // to show users the depth of detail Junto AI can handle.
 const SAMPLE_PROMPTS = [
-  "10 days in Japan in April for 4 friends — Tokyo, Kyoto, Osaka, mid-budget, food and temples",
-  "Honeymoon in Greece, 2 weeks in June — island hopping Santorini & Milos, boutique hotels",
-  "7-day Iceland road trip in September for a couple — northern lights, hot springs, glacier hike",
-  "Family of 5 in Costa Rica over Christmas, 12 days — beaches + rainforest, kid-friendly",
-  "Bachelor weekend in Lisbon for 8 guys, late May — rooftops, surf day, Michelin dinner",
-  "Solo backpacking SE Asia for 3 weeks — Thailand, Vietnam, Cambodia, hostels under $40/night",
+  "10 days in Japan in April for 4 friends, visiting Tokyo, Kyoto and Osaka, mid-budget, love food and temples",
+  "Honeymoon in Greece for 2 weeks in June, island hopping Santorini and Milos, boutique hotels",
+  "7-day Iceland road trip in September for a couple, northern lights, hot springs, glacier hike",
+  "Family of 5 in Costa Rica over Christmas, 12 days of beaches and rainforest, kid-friendly",
+  "Bachelor weekend in Lisbon for 8 guys, late May, rooftops, a surf day and a Michelin dinner",
+  "Solo backpacking SE Asia for 3 weeks across Thailand, Vietnam and Cambodia, hostels under $40/night",
 ];
 
 function useTypewriterPlaceholder(active: boolean, fallback: string) {
