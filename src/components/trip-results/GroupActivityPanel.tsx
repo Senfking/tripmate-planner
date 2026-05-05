@@ -297,7 +297,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
         {/* Inline reply bar */}
         {replyTo && (
-          <div className="px-4 pt-2 pb-1 border-t border-border bg-accent/30 shrink-0">
+          <div className="px-4 pt-2 border-t border-border bg-accent/30 shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] text-muted-foreground">
                 Replying to <span className="font-medium text-foreground">{getActivityLabel(replyTo, allDays)}</span>
