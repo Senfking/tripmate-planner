@@ -186,6 +186,50 @@ export type Database = {
           },
         ]
       }
+      anonymous_trips: {
+        Row: {
+          anon_session_id: string
+          claimed_at: string | null
+          claimed_by_user_id: string | null
+          claimed_trip_id: string | null
+          created_at: string
+          id: string
+          payload: Json
+          prompt: string | null
+          source_ip: unknown
+        }
+        Insert: {
+          anon_session_id: string
+          claimed_at?: string | null
+          claimed_by_user_id?: string | null
+          claimed_trip_id?: string | null
+          created_at?: string
+          id?: string
+          payload: Json
+          prompt?: string | null
+          source_ip?: unknown
+        }
+        Update: {
+          anon_session_id?: string
+          claimed_at?: string | null
+          claimed_by_user_id?: string | null
+          claimed_trip_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          prompt?: string | null
+          source_ip?: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anonymous_trips_claimed_trip_id_fkey"
+            columns: ["claimed_trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachments: {
         Row: {
           booking_data: Json | null
@@ -1853,6 +1897,14 @@ export type Database = {
       }
       cleanup_expired_places_cache: { Args: never; Returns: undefined }
       clone_template_to_user_trip: { Args: { _slug: string }; Returns: Json }
+      count_anon_generations_last_day: {
+        Args: { p_anon_session_id: string }
+        Returns: number
+      }
+      count_ip_anon_generations_last_day: {
+        Args: { p_ip: unknown }
+        Returns: number
+      }
       count_user_trip_generations_last_hour: {
         Args: { p_user_id: string }
         Returns: number
