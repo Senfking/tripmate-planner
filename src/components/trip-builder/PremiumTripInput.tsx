@@ -307,7 +307,7 @@ export function PremiumTripInput({
 
         {/* Date range */}
         <div ref={dateRef} className="space-y-1.5 scroll-mt-24">
-          <label className="text-[13px] font-semibold text-foreground">When? *</label>
+          <label className="text-[13px] font-semibold text-foreground">When?{!hasFreeText && " *"}</label>
           <div className={cn(
             "rounded-xl",
             showErrors && dateMissing && "ring-1 ring-red-300"
