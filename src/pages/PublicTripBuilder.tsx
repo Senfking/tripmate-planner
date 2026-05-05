@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// useNavigate not needed at this layer — anon flow handles its own navigation.
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
 import {
@@ -27,7 +27,7 @@ import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
  *   triggers a contextual signup modal, not a /ref redirect.
  */
 export default function PublicTripBuilder() {
-  const navigate = useNavigate();
+  // navigate removed; anon flow handles its own routing.
   const { user } = useAuth();
 
   const [pending, setPending] = useState<string | undefined>(() => {
