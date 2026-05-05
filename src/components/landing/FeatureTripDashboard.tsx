@@ -26,11 +26,7 @@ export function FeatureTripDashboard() {
   return (
     <section
       ref={sectionRef}
-      className={`landing-reveal ${visible ? "landing-visible" : ""} relative w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 bg-[#F5EEE9]`}
-      style={{
-        backgroundImage:
-          "radial-gradient(ellipse 70% 60% at 80% 50%, rgba(255,238,220,0.55), transparent 70%)",
-      }}
+      className={`landing-reveal ${visible ? "landing-visible" : ""} relative w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 bg-[#FAFAF9]`}
     >
       <div className="mx-auto max-w-6xl grid gap-12 lg:gap-20 lg:grid-cols-2 items-center relative">
         {/* Copy — left on desktop, below image on mobile */}
@@ -48,12 +44,12 @@ export function FeatureTripDashboard() {
           </p>
         </div>
 
-        {/* Phone mockup — render as-is, no extra frame/shadow */}
+        {/* Phone mockup — transparent PNG, render as-is */}
         <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
           <img
             src={mockup}
             alt="Junto trip dashboard on iPhone showing a Singapore trip with members, AI plan, expenses, flight and visa info"
-            className="w-full max-w-[520px] h-auto mix-blend-multiply"
+            className="w-full max-w-[520px] h-auto"
             loading="lazy"
             decoding="async"
           />
