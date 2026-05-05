@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { DestinationSection } from "./DestinationSection";
 import { DaySection } from "./DaySection";
 import { TransportCard } from "./TransportCard";
+import { InterLegTransitCard } from "./InterLegTransitCard";
 import { AccommodationCard } from "./AccommodationCard";
 import { StayMiniCard } from "./StayMiniCard";
 import { getCategoryColor } from "./categoryColors";
