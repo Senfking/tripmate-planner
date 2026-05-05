@@ -242,6 +242,8 @@ const INITIAL: StreamingState = {
   currentStage: null,
   completedDays: [],
   accommodations: {},
+  legs: [],
+  adjustmentNotice: null,
 };
 
 function assembleResult(
