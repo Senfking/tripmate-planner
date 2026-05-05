@@ -347,7 +347,7 @@ export function AccommodationCard({
       )}
 
       {/* Action row beneath hero */}
-      {((hasBooking && bookingUrlWithDates) || googleMapsUrl) && (
+      {(mapsUrl || (hasBooking && bookingUrlWithDates)) && (
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           {mapsUrl ? (
             <a
@@ -423,7 +423,7 @@ export function AccommodationCard({
           </div>
 
           {/* Action row */}
-          {((hasBooking && bookingUrlWithDates) || googleMapsUrl) && (
+          {(mapsUrl || (hasBooking && bookingUrlWithDates)) && (
             <div className="px-4 py-3 flex items-center justify-between gap-3 border-b border-border">
               {mapsUrl ? (
                 <a
