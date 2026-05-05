@@ -527,11 +527,33 @@ function handleFrame(
       update({ accommodations: { ...cur.accommodations, [idx]: hotel as AIActivity } });
       break;
     }
+    case "leg": {
+      const rawLegs = Array.isArray(data?.legs) ? data.legs : [];
+      const legs: StreamLeg[] = rawLegs
+        .map((l: any): StreamLeg | null => {
+          if (typeof l?.index !== "number" || typeof l?.name !== "string") return null;
+          return {
+            index: l.index,
+            name: l.name,
+            kind: l.kind === "transit" ? "transit" : "destination",
+            days: typeof l.days === "number" ? l.days : 0,
+            day_numbers: Array.isArray(l.day_numbers) ? l.day_numbers : [],
+            transit: !!l.transit,
+            description: typeof l.description === "string" ? l.description : undefined,
+            transit_meta: l.transit_meta ?? undefined,
+          };
+        })
+        .filter((l: StreamLeg | null): l is StreamLeg => l !== null);
+      const adjustmentNotice = typeof data?.adjustment_notice === "string" && data.adjustment_notice.trim().length > 0
+        ? data.adjustment_notice.trim()
+        : null;
+      update({ legs, ...(adjustmentNotice ? { adjustmentNotice } : {}) });
+      break;
+    }
     case "day": {
       const day = normalizeDayFromServer(data);
       if (!day) break;
       const cur = getState();
-      // Replace if same day_number already present (e.g. from cache replay), else append.
       const existing = cur.days.findIndex((d) => d.day_number === day.day_number);
       const next = cur.days.slice();
       if (existing >= 0) next[existing] = day;
@@ -548,7 +570,10 @@ function handleFrame(
         update({ stage: "error", error: "Stream protocol violation: trip_complete before meta" });
         break;
       }
-      const result = assembleResult(meta, cur.days, cur.imageUrl, trip);
+      const tripAdjustment = typeof (data as any)?.adjustment_notice === "string" && (data as any).adjustment_notice.trim().length > 0
+        ? (data as any).adjustment_notice.trim()
+        : cur.adjustmentNotice;
+      const result = assembleResult(meta, cur.days, cur.imageUrl, trip, cur.legs, cur.accommodations, tripAdjustment);
       const anonTripId =
         typeof data?.anon_trip_id === "string"
           ? data.anon_trip_id
