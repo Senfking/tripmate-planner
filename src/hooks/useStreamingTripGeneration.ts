@@ -200,6 +200,7 @@ const INITIAL: StreamingState = {
   statusMessages: [],
   currentStage: null,
   completedDays: [],
+  accommodations: {},
 };
 
 function assembleResult(
