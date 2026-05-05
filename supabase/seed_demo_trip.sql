@@ -234,6 +234,13 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- ---- profiles ----
+  -- Defensive: ensure the owner has a profile row before any FK-dependent
+  -- INSERT below (attachments.created_by → profiles.id). The handle_new_user
+  -- trigger normally backfills this on signup, but legacy users may pre-date
+  -- the trigger or have hit the EXCEPTION branch silently.
+  INSERT INTO public.profiles (id) VALUES (_owner_id)
+  ON CONFLICT (id) DO NOTHING;
+
   INSERT INTO public.profiles (id, display_name, avatar_url)
   VALUES
     (_aisha_id,  'Aisha Rahman',  'https://i.pravatar.cc/300?u=demo-aisha'),
