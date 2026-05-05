@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { DestinationSection } from "./DestinationSection";
 import { DaySection } from "./DaySection";
 import { TransportCard } from "./TransportCard";
+import { InterLegTransitCard } from "./InterLegTransitCard";
 import { AccommodationCard } from "./AccommodationCard";
 import { StayMiniCard } from "./StayMiniCard";
 import { getCategoryColor } from "./categoryColors";
@@ -930,46 +931,39 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
           // Transit pseudo-leg: render a slim "Travel: A → B" card instead
           // of the full destination layout (no hero, no hotel, no day cards).
+          // Transit pseudo-legs are now rendered as a compact inter-leg
+          // transit card at the top of the next real destination — skip the
+          // standalone block entirely to avoid duplication.
           if (dest.kind === "transit") {
-            const transitMeta = (dest as any).transit ?? {};
-            const fromName = result.destinations[destIdx - 1]?.name ?? "";
-            const toName = result.destinations[destIdx + 1]?.name ?? "";
-            const ttype = transitMeta.transit_type as string | undefined;
-            const TransitIcon = ttype === "train" ? Plane : ttype === "ferry" ? Plane : ttype === "drive" ? Plane : Plane;
-            const hours = typeof transitMeta.estimated_duration_hours === "number" ? transitMeta.estimated_duration_hours : null;
-            const durationLabel = hours != null
-              ? `~${hours.toFixed(1).replace(/\.0$/, "")}h${ttype ? ` by ${ttype}` : ""}`
-              : null;
-            return (
-              <div key={destIdx} className={cn("mx-4 my-3", rc)} style={revealStyle(`dest-${destIdx}`)}>
-                <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-3 flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <TransitIcon className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground/70">
-                      Travel{dayRange2 ? ` · ${dayRange2}` : ""}
-                    </p>
-                    <h3 className="text-sm font-semibold text-foreground mt-0.5 leading-tight">
-                      {fromName && toName ? `${fromName} → ${toName}` : dest.name}
-                    </h3>
-                    {durationLabel && (
-                      <p className="text-xs text-muted-foreground font-mono mt-0.5">{durationLabel}</p>
-                    )}
-                    {transitMeta.description && (
-                      <p className="text-xs text-muted-foreground mt-1.5 leading-snug">{transitMeta.description}</p>
-                    )}
-                    <p className="text-[10px] text-muted-foreground/60 mt-2 leading-snug">
-                      Estimated travel time based on typical routes — not actual flight or train schedules. Plan for buffer.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
+            return null;
+          }
+
+          // Find the previous real destination (skipping transit pseudo-legs)
+          // and any transit metadata in between, so we can render an inter-leg
+          // transit card at the top of every destination after the first.
+          let prevRealDest: typeof dest | null = null;
+          let interTransit: any = null;
+          for (let j = destIdx - 1; j >= 0; j--) {
+            const d = result.destinations[j];
+            if ((d.kind ?? "destination") === "transit") {
+              if (!interTransit) interTransit = (d as any).transit ?? {};
+            } else {
+              prevRealDest = d;
+              break;
+            }
           }
 
           return (
             <div key={destIdx}>
+              {prevRealDest && (
+                <InterLegTransitCard
+                  from={prevRealDest.name}
+                  to={dest.name}
+                  mode={interTransit?.transit_type ?? null}
+                  durationHours={typeof interTransit?.estimated_duration_hours === "number" ? interTransit.estimated_duration_hours : null}
+                  arrivalDate={dest.start_date ?? null}
+                />
+              )}
               <div id={`section-dest-${dest.name}`} className={rc} style={revealStyle(`dest-${destIdx}`)}>
                 <DestinationSection
                   name={dest.name}
