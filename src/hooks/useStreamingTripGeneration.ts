@@ -396,11 +396,19 @@ function handleFrame(
         break;
       }
       const result = assembleResult(meta, cur.days, cur.imageUrl, trip);
+      const anonTripId =
+        typeof data?.anon_trip_id === "string"
+          ? data.anon_trip_id
+          : typeof data?.anonTripId === "string"
+            ? data.anonTripId
+            : typeof data?.anonymous_trip_id === "string"
+              ? data.anonymous_trip_id
+              : null;
       update({
         stage: "complete",
         trip,
         result,
-        anonTripId: typeof trip.anon_trip_id === "string" ? trip.anon_trip_id : null,
+        anonTripId,
       });
       break;
     }
