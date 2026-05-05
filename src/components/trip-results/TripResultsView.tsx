@@ -437,15 +437,18 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           }}
         />
 
-        {/* Floating glass controls — back (left) + map / dashboard / edit (right) */}
+        {/* Floating glass controls — back (left) + map / dashboard / edit (right).
+            `fixed` so the controls stay reachable while users scroll through the
+            itinerary; the glass background + backdrop-blur keeps them legible
+            over any content underneath. */}
         <div
-          className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4"
+          className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-4 pointer-events-none"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
         >
           <button
             onClick={onClose}
             aria-label="Back"
-            className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
+            className="pointer-events-auto h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
             style={{
               background: "rgba(0,0,0,0.3)",
               backdropFilter: "blur(8px)",
@@ -456,7 +459,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <ArrowLeft className="h-4 w-4" />
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pointer-events-auto">
             <button
               onClick={() => {
                 if (mapState !== "closed") {
