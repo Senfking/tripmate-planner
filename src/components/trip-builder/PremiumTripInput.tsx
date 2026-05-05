@@ -138,9 +138,10 @@ export function PremiumTripInput({
   const destRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
 
-  const destMissing = destination.trim().length === 0;
-  const dateMissing = !dateRange?.from;
-  const canGenerate = !destMissing && !dateMissing;
+  const hasFreeText = freeText.trim().length > 0;
+  const destMissing = !hasFreeText && destination.trim().length === 0;
+  const dateMissing = !hasFreeText && !dateRange?.from;
+  const canGenerate = hasFreeText || (!destMissing && !dateMissing);
 
   // Heuristic: warn (don't block) when the destination string suggests
   // multiple locations. We check for " and ", "+", "/" or 2+ commas
