@@ -426,7 +426,11 @@ export function Hero({
 
       <div
         className="fixed top-0 left-0 right-0 z-50 flex items-center justify-end px-5 sm:px-10"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)", paddingBottom: 18 }}
+        style={{
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
+          paddingBottom: 24,
+          background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
+        }}
       >
         <Link
           to="/"
