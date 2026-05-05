@@ -31,6 +31,7 @@ import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 import { NameTripModal } from "@/components/trip-builder/NameTripModal";
 import { stripEmoji } from "@/lib/stripEmoji";
+import { toTitleCase } from "@/lib/titleCase";
 import {
   useStreamingTripGeneration,
   buildPartialResult,
