@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Star, ExternalLink, Hotel, MapPin, Lightbulb, ArrowLeftRight, X } from "lucide-react";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 type PriceLevel =
   | "PRICE_LEVEL_FREE"
