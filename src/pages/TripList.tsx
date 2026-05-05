@@ -23,6 +23,8 @@ import { TabHeroHeader, type HeroPill } from "@/components/ui/TabHeroHeader";
 import { Hero } from "@/components/hero/Hero";
 import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 
+import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
+
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
 
