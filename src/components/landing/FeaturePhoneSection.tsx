@@ -57,6 +57,8 @@ export function FeaturePhoneSection({
           <img
             src={image}
             alt={alt}
+            width={1100}
+            height={1374}
             className="w-full max-w-[600px] h-auto"
             loading="lazy"
             decoding="async"
