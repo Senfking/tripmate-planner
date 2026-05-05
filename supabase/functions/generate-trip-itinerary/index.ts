@@ -5988,9 +5988,18 @@ Deno.serve(async (req) => {
     // ---- Validate inputs and resolve dates ----
     const surpriseMe = body.surprise_me === true;
     const rawDest = (body.destination || "").trim();
-    if (!surpriseMe && !rawDest) {
+    const rawFreeText = (body.free_text || "").trim();
+    // Three valid input shapes:
+    //   1. explicit destination (form-driven flow)
+    //   2. surprise_me=true (anon landing page / "pick for me")
+    //   3. free_text only — destination is recovered from
+    //      intent.named_destinations[0] after parseIntent runs.
+    // The third shape is what the authenticated landing-page hero uses
+    // ("4 day trip to Marrakech with hidden gems"). Rejecting it here used
+    // to block intent extraction from ever running.
+    if (!surpriseMe && !rawDest && !rawFreeText) {
       return jsonResponse(
-        { success: false, error: "destination is required (or set surprise_me=true)" },
+        { success: false, error: "destination, free_text, or surprise_me=true is required" },
         400,
       );
     }
@@ -6064,6 +6073,32 @@ Deno.serve(async (req) => {
         `(skipping surprise picker; named_count=${intent.named_destinations.length})`,
       );
       return true;
+    };
+
+    // Helper: when the user supplied only free_text (no destination, not
+    // surprise mode), parseIntent's system prompt forces intent.destination
+    // to "" — the surprise picker would normally fill it in. For a non-
+    // surprise free-text request we instead derive the destination from
+    // intent.named_destinations[0] (e.g. "4 day trip to Marrakech" =>
+    // "marrakech"). Throws a user-facing PipelineError when neither path
+    // produced a destination so the caller gets actionable feedback rather
+    // than the old "destination is required" pre-flight rejection.
+    const ensureDerivedDestination = (intent: Intent): void => {
+      if (intent.destination?.trim()) return;
+      const first = intent.named_destinations?.[0]?.trim();
+      if (first) {
+        intent.destination = first;
+        console.log(
+          `[free_text_destination] derived destination="${first}" from ` +
+          `named_destinations (free-text-only request; named_count=${intent.named_destinations.length})`,
+        );
+        return;
+      }
+      throw new PipelineError(
+        "parseIntent",
+        "We couldn't find a destination in your description. Try \"3 days in Lisbon\" or fill in the destination field.",
+        "free-text-only request produced no destination; named_destinations=[]",
+      );
     };
 
     // ---- Required env ----
@@ -6276,6 +6311,13 @@ Deno.serve(async (req) => {
             tStage("parse_intent", tParseIntent);
             applyIntentDuration(intent);
             if (intent.destination) loggedDestination = intent.destination;
+
+            // Free-text-only flow: parseIntent leaves destination empty (the
+            // system prompt requires it). Recover from named_destinations[0].
+            if (!surpriseMe && !rawDest) {
+              ensureDerivedDestination(intent);
+              loggedDestination = intent.destination;
+            }
 
             if (surpriseMe) {
               if (applyNamedDestination(intent)) {
@@ -7186,6 +7228,13 @@ Deno.serve(async (req) => {
     tStage("parse_intent", tParseIntent);
     applyIntentDuration(intent);
     if (intent.destination) loggedDestination = intent.destination;
+
+    // Free-text-only flow: parseIntent leaves destination empty (the system
+    // prompt requires it). Recover from named_destinations[0].
+    if (!surpriseMe && !rawDest) {
+      ensureDerivedDestination(intent);
+      loggedDestination = intent.destination;
+    }
 
     // ---- Step 1.5: surprise destination picker (only when surprise_me) ----
     if (surpriseMe) {
