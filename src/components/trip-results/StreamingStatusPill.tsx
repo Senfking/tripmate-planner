@@ -48,12 +48,12 @@ export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) 
   return (
     <div className="flex justify-center">
       <div
-        className="inline-flex items-center gap-2.5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full border backdrop-blur-lg"
+        className="inline-flex items-center gap-2.5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full border backdrop-blur-xl backdrop-saturate-150"
         style={{
-          backgroundColor: "rgba(13, 148, 136, 0.12)",
-          borderColor: "rgba(255, 255, 255, 0.55)",
+          backgroundColor: "rgba(255, 255, 255, 0.78)",
+          borderColor: "rgba(13, 148, 136, 0.35)",
           boxShadow:
-            "0 8px 24px rgba(13,148,136,0.12), inset 0 1px 0 rgba(255,255,255,0.6)",
+            "0 10px 28px rgba(13,148,136,0.22), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.85)",
         }}
       >
         <Loader2
