@@ -57,8 +57,8 @@ export function FeatureTripDashboard() {
           <img
             src={mockup}
             alt="Junto trip dashboard on iPhone showing a Singapore trip with members, AI plan, expenses, flight and visa info"
-            width={1100}
-            height={1374}
+            width={720}
+            height={899}
             className="w-full max-w-[600px] h-auto"
             loading="lazy"
             decoding="async"
