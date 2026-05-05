@@ -1310,6 +1310,215 @@ async function pickSurpriseDestination(
 }
 
 // ---------------------------------------------------------------------------
+// Status messages (rich streaming UX) — destination-specific micro-copy that
+// the frontend rotates while waiting on the long rank_and_enrich stage.
+//
+// Fired fire-and-forget right after the destination is known. Hard-capped at
+// STATUS_MESSAGES_TIMEOUT_MS so a slow Haiku response never blocks the
+// pipeline; on any failure we return null and the frontend keeps its existing
+// generic copy fallback.
+//
+// Cached in ai_response_cache keyed on (destination, vibes_sorted, must_haves_sorted).
+// Same destination + same preferences reuses messages, keeping the per-trip
+// added cost ~0 on repeat lookups.
+// ---------------------------------------------------------------------------
+
+const STATUS_MESSAGES_SYSTEM_PROMPT = `You are a knowledgeable local travel guide writing micro-copy for a trip-builder UI. Generate exactly 4 short status messages that show what the system is doing while it builds the user's itinerary, in a destination-specific way.
+
+HARD RULES:
+- Exactly 4 messages.
+- Each message: 4-8 words, present continuous tense ("Hunting...", "Mapping...", "Tracking down...", "Finding..."), NO ending punctuation.
+- Each message must reference something concrete about the destination — neighborhoods, dishes, landmarks, scenes a knowledgeable local would name. Generic copy that could apply to any city is FORBIDDEN.
+- Pull on the user's vibes and must_haves when given (e.g. food trip → restaurants/markets; nightlife → bars/clubs; family → parks/kid-friendly spots).
+- BANNED phrases (do not use these or close paraphrases): "Building your trip", "Crafting your itinerary", "Planning your adventure", "Preparing your getaway", "Curating recommendations". The frontend already shows generic copy as a fallback.
+- Voice: warm, in-the-know local. Not marketing-speak.
+
+EXAMPLES:
+- Madrid food trip → ["Hunting tapas spots in La Latina","Mapping rooftop terraces for golden hour","Tracking down family-run tabernas","Finding the best Madrid neighborhoods for foodies"]
+- Tokyo nightlife → ["Tracking down hidden bars in Golden Gai","Mapping Shibuya nightlife","Finding rooftop spots with neon views","Discovering after-hours ramen joints"]
+- Lisbon generic → ["Mapping miradouros for sunset views","Finding the best fado houses","Tracking down local pastel de nata","Mapping Alfama's tile-clad streets"]
+
+OUTPUT: call the emit_status_messages tool exactly once with an array of 4 strings.`;
+
+const STATUS_MESSAGES_TOOL: ClaudeTool = {
+  name: "emit_status_messages",
+  description: "Emit 4 destination-specific status messages.",
+  input_schema: {
+    type: "object",
+    properties: {
+      messages: {
+        type: "array",
+        minItems: 4,
+        maxItems: 4,
+        items: { type: "string" },
+        description:
+          "Exactly 4 destination-specific status messages, 4-8 words each, present continuous tense, no ending punctuation.",
+      },
+    },
+    required: ["messages"],
+    additionalProperties: false,
+  },
+};
+
+const STATUS_MESSAGES_TIMEOUT_MS = 1500;
+const STATUS_MESSAGES_CACHE_TTL_MS = 30 * 86_400_000; // 30 days
+
+function buildStatusMessagesUserMessage(intent: Intent, destination: string): string {
+  const payload = {
+    destination,
+    vibes: [...intent.vibes].sort(),
+    must_haves: [...intent.must_haves].sort(),
+  };
+  return `Generate 4 status messages for this trip:\n${JSON.stringify(payload, null, 2)}`;
+}
+
+async function generateStatusMessages(
+  apiKey: string,
+  intent: Intent,
+  destination: string,
+  svcClient: ReturnType<typeof createClient>,
+  logger: LLMLogger,
+): Promise<string[] | null> {
+  if (!apiKey || !destination) return null;
+
+  const cacheShape = JSON.stringify({
+    dest: destination.toLowerCase().trim(),
+    vibes: [...intent.vibes].map((v) => v.toLowerCase().trim()).sort(),
+    must_haves: [...intent.must_haves].map((m) => m.toLowerCase().trim()).sort(),
+  });
+  let cacheKey: string;
+  try {
+    cacheKey = `status_messages:v1:${await sha256Hex(cacheShape)}`;
+  } catch {
+    return null;
+  }
+
+  try {
+    const { data: cached } = await svcClient
+      .from("ai_response_cache")
+      .select("response_json")
+      .eq("cache_key", cacheKey)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (cached?.response_json) {
+      const arr = (cached.response_json as { messages?: unknown }).messages;
+      if (Array.isArray(arr)) {
+        const messages = arr
+          .filter((s): s is string => typeof s === "string")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .slice(0, 4);
+        if (messages.length > 0) {
+          console.log(`[status_messages] cache hit count=${messages.length}`);
+          return messages;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[status_messages] cache lookup failed:", (e as Error).message);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), STATUS_MESSAGES_TIMEOUT_MS);
+  const callStart = Date.now();
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": ANTHROPIC_VERSION,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: HAIKU_MODEL,
+        max_tokens: 200,
+        system: [{ type: "text", text: STATUS_MESSAGES_SYSTEM_PROMPT }],
+        messages: [{ role: "user", content: buildStatusMessagesUserMessage(intent, destination) }],
+        tools: [
+          {
+            name: STATUS_MESSAGES_TOOL.name,
+            description: STATUS_MESSAGES_TOOL.description,
+            input_schema: STATUS_MESSAGES_TOOL.input_schema,
+          },
+        ],
+        tool_choice: { type: "tool", name: STATUS_MESSAGES_TOOL.name },
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const snippet = await res.text().catch(() => "");
+      console.warn(`[status_messages] HTTP ${res.status}: ${snippet.slice(0, 200)}`);
+      return null;
+    }
+    const json = (await res.json()) as {
+      content?: Array<{ type: string; name?: string; input?: { messages?: unknown } }>;
+      usage?: {
+        input_tokens?: number;
+        output_tokens?: number;
+        cache_creation_input_tokens?: number;
+        cache_read_input_tokens?: number;
+      };
+    };
+    const block = (json.content ?? []).find(
+      (b) => b.type === "tool_use" && b.name === STATUS_MESSAGES_TOOL.name,
+    );
+    const arr = block?.input?.messages;
+    if (!Array.isArray(arr)) return null;
+    const messages = arr
+      .filter((s): s is string => typeof s === "string")
+      .map((s) => s.trim().replace(/[.!?]+$/, ""))
+      .filter(Boolean)
+      .slice(0, 4);
+    if (messages.length === 0) return null;
+
+    const usage: ClaudeUsage = {
+      input_tokens: json.usage?.input_tokens ?? 0,
+      output_tokens: json.usage?.output_tokens ?? 0,
+      cache_creation_input_tokens: json.usage?.cache_creation_input_tokens ?? 0,
+      cache_read_input_tokens: json.usage?.cache_read_input_tokens ?? 0,
+    };
+    logger
+      .log({
+        feature: "trip_builder_status_messages",
+        model: HAIKU_MODEL,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        cost_usd: computeHaikuCost(usage),
+        cached: usage.cache_read_input_tokens > 0,
+      })
+      .catch((e) => console.warn("[status_messages] logger.log failed:", (e as Error).message));
+
+    svcClient
+      .from("ai_response_cache")
+      .insert({
+        cache_key: cacheKey,
+        response_json: { messages } as unknown as Record<string, unknown>,
+        expires_at: new Date(Date.now() + STATUS_MESSAGES_CACHE_TTL_MS).toISOString(),
+      })
+      .then((r: { error: { message: string; code?: string } | null }) => {
+        if (r.error && r.error.code !== "23505") {
+          console.warn(`[status_messages] cache write failed: ${r.error.message}`);
+        }
+      });
+
+    console.log(
+      `[status_messages] generated count=${messages.length} ms=${Date.now() - callStart}`,
+    );
+    return messages;
+  } catch (e) {
+    const err = e as Error;
+    if (controller.signal.aborted || err.name === "AbortError") {
+      console.warn(`[status_messages] timeout after ${STATUS_MESSAGES_TIMEOUT_MS}ms`);
+    } else {
+      console.warn("[status_messages] failed:", err.message);
+    }
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Step 4: pacing skeleton (pure code, no LLM)
 //
 // Emits an ordered list of slots per day. Slot types are granular enough that
@@ -5969,13 +6178,16 @@ Deno.serve(async (req) => {
     // STREAMING BRANCH — Server-Sent Events for the standalone trip builder
     //
     // Triggered by `Accept: text/event-stream`. Emits:
-    //   event: progress     { stage, ...detail }       (UX heartbeats)
-    //   event: meta         { destination, country_code, dates: [...], skeleton, currency, num_days }
-    //   event: image        { url }                    (when destination cover resolves)
-    //   event: day          { day_number, date, theme, activities }  (one per closed day)
-    //   event: trip_complete { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, total_activities, map_center, map_zoom, currency, budget_tier }
-    //   event: error        { error, step, message }
-    //   event: ping         {}                         (10s keepalive)
+    //   event: progress        { stage, ...detail }       (legacy UX heartbeats — kept for backwards compat)
+    //   event: stage_progress  { stage, user_text, percent_complete }  (rich progress copy for the UI)
+    //   event: status_messages { messages: string[] }     (4 destination-specific micro-copy lines, fired once)
+    //   event: meta            { destination, country_code, dates: [...], skeleton, currency, num_days }
+    //   event: image           { url }                    (when destination cover resolves)
+    //   event: day             { day_number, date, theme, activities }  (one per closed day)
+    //   event: day_complete    { day_number, theme, activity_count }    (UI milestone after each day)
+    //   event: trip_complete   { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, total_activities, map_center, map_zoom, currency, budget_tier }
+    //   event: error           { error, step, message }
+    //   event: ping            {}                         (10s keepalive)
     //
     // The full payload is also written to ai_response_cache so non-streaming
     // callers (TripBuilderFlow, useResultsState) keep working from the same
@@ -6045,6 +6257,12 @@ Deno.serve(async (req) => {
             let stepLabel = "stream_init";
             try {
               send("progress", { stage: "parsing_intent" });
+              send("stage_progress", {
+                stage: "parsing_intent",
+                user_text: "Reading your request",
+                percent_complete: 5,
+              });
+              console.log("[stream] stage_progress: parsing_intent (5%)");
 
             // ---- parseIntent in parallel with geocode (non-surprise) ----
             const tParseIntent = Date.now();
@@ -6073,6 +6291,23 @@ Deno.serve(async (req) => {
                 send("progress", { stage: "destination_picked", destination: intent.destination });
               }
             }
+
+            // ---- Status messages (fire-and-forget, parallel with everything below) ----
+            // Destination-specific micro-copy the frontend rotates while waiting
+            // on rank_and_enrich. Hard 1500ms timeout inside generateStatusMessages
+            // so it cannot block the pipeline; the .catch is a defensive net for
+            // anything the helper missed. send() guards on closedRef so a late
+            // arrival after stream close is a no-op.
+            generateStatusMessages(anthropicKey, intent, intent.destination, svcClient, logger)
+              .then((messages) => {
+                if (messages && messages.length > 0) {
+                  send("status_messages", { messages });
+                  console.log(`[stream] status_messages emitted (${messages.length} messages)`);
+                }
+              })
+              .catch((e) => {
+                console.warn("[stream.status_messages] unexpected error:", (e as Error).message);
+              });
 
             // ---- Cache lookup ----
             stepLabel = "cacheLookup";
@@ -6158,7 +6393,25 @@ Deno.serve(async (req) => {
                 logDescriptionGrounding(payload as unknown as PipelineResult, intent);
                 logOpeningHoursViolations(payload as unknown as PipelineResult);
                 logPricingAnomalies(payload as unknown as PipelineResult);
-                for (const d of dest?.days ?? []) send("day", d);
+                // Cache-hit fast path: collapse the new stage_progress events
+                // into a single 95% finalize signal so the frontend can
+                // transition directly to filled cards. Days still emit
+                // day_complete per day below.
+                send("stage_progress", {
+                  stage: "finalizing",
+                  user_text: "Final touches",
+                  percent_complete: 95,
+                });
+                console.log("[stream] stage_progress: finalizing (95%) [cache hit]");
+                for (const d of dest?.days ?? []) {
+                  send("day", d);
+                  send("day_complete", {
+                    day_number: d.day_number,
+                    theme: d.theme ?? "",
+                    activity_count: Array.isArray(d.activities) ? d.activities.length : 0,
+                  });
+                  console.log(`[stream] day_complete: day_number=${d.day_number} [cache hit]`);
+                }
                 const juntoPlaceIds: string[] = [];
                 for (const day of dest?.days ?? []) {
                   for (const a of day.activities ?? []) if (a?.is_junto_pick && a.place_id) juntoPlaceIds.push(a.place_id);
@@ -6207,6 +6460,12 @@ Deno.serve(async (req) => {
 
             // ---- Geocode + skeleton + queries ----
             send("progress", { stage: "geocoding" });
+            send("stage_progress", {
+              stage: "geocoding",
+              user_text: `Locating ${intent.destination}`,
+              percent_complete: 15,
+            });
+            console.log("[stream] stage_progress: geocoding (15%)");
             stepLabel = "geocodeDestination";
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const tGeocode = Date.now();
@@ -6239,6 +6498,12 @@ Deno.serve(async (req) => {
 
             // ---- Places search + hydrate + events ----
             send("progress", { stage: "searching_venues" });
+            send("stage_progress", {
+              stage: "searching_places",
+              user_text: "Finding the best venues",
+              percent_complete: 30,
+            });
+            console.log("[stream] stage_progress: searching_places (30%)");
             const tQueryPlan = Date.now();
             const queries = buildPlacesQueries(intent, skeleton, { lat: geo.lat, lng: geo.lng, name: intent.destination });
             tStage("build_queries", tQueryPlan);
@@ -6324,6 +6589,12 @@ Deno.serve(async (req) => {
             //              The metadata call still runs in parallel with day 1
             //              (it doesn't compete on place_ids).
             send("progress", { stage: "ranking" });
+            send("stage_progress", {
+              stage: "ranking_days",
+              user_text: "Crafting your itinerary",
+              percent_complete: 50,
+            });
+            console.log("[stream] stage_progress: ranking_days (50%)");
             stepLabel = "rankAndEnrich";
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const tRank = Date.now();
@@ -6450,6 +6721,12 @@ Deno.serve(async (req) => {
               }
 
               send("day", rankedDay);
+              send("day_complete", {
+                day_number: rankedDay.day_number,
+                theme: rankedDay.theme,
+                activity_count: rankedDay.activities.length,
+              });
+              console.log(`[stream] day_complete: day_number=${rankedDay.day_number}`);
             };
 
             // Metadata call fires in parallel with day calls in both modes —
@@ -6564,6 +6841,12 @@ Deno.serve(async (req) => {
             );
 
             // ---- Metadata + accommodation ----
+            send("stage_progress", {
+              stage: "finalizing",
+              user_text: "Final touches",
+              percent_complete: 95,
+            });
+            console.log("[stream] stage_progress: finalizing (95%)");
             const metadataResult = await metadataPromise;
             const meta = metadataResult.data;
 
