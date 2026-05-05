@@ -2089,6 +2089,7 @@ export type Database = {
       resolve_referral_code: { Args: { _code: string }; Returns: string }
       seed_demo_trip: { Args: { p_trip_id: string }; Returns: undefined }
       send_daily_digest: { Args: never; Returns: undefined }
+      shares_trip_with: { Args: { _other: string }; Returns: boolean }
       shift_template_result_dates: {
         Args: { _result: Json; _start_date: string }
         Returns: Json
