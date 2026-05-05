@@ -555,32 +555,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       }
     : ({} as const);
 
-  // Confirmation card overlay
-  if (phase === "confirming" && inputData) {
-    return (
-      <>
-        <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-y-auto">
-          <div className="flex items-center justify-end px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-2 max-w-lg mx-auto w-full">
-            <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors">
-              <X className="h-5 w-5 text-muted-foreground" />
-            </button>
-          </div>
-          <PremiumTripInput
-            onGenerate={handleInputComplete}
-            onStartBlank={handleStartBlank}
-            initialDestination={initialDestination}
-            initialFreeText={effectiveInitialFreeText}
-            {...templateInputProps}
-          />
-        </div>
-        <ConfirmationCard
-          data={inputData}
-          onConfirm={retryGenerate}
-          onEdit={() => setPhase("input")}
-        />
-      </>
-    );
-  }
+  // Confirmation step removed — input now submits straight to generating.
 
   // Input view
   return (
