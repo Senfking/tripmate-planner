@@ -78,15 +78,17 @@ export default function PublicLanding() {
 
   if (anonPrompt) {
     return (
-      <AnonTripGenerator
-        prompt={anonPrompt}
-        onCancel={() => setAnonPrompt(null)}
-        onRateLimited={() => {
-          markAnonRateLimited();
-          setAnonPrompt(null);
-          setRateLimitOpen(true);
-        }}
-      />
+      <Suspense fallback={null}>
+        <AnonTripGenerator
+          prompt={anonPrompt}
+          onCancel={() => setAnonPrompt(null)}
+          onRateLimited={() => {
+            markAnonRateLimited();
+            setAnonPrompt(null);
+            setRateLimitOpen(true);
+          }}
+        />
+      </Suspense>
     );
   }
 
