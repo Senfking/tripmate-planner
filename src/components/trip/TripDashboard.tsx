@@ -266,6 +266,45 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
     enabled: !!userId,
   });
 
+  // Track when user last viewed this trip dashboard to compute "new since last visit".
+  const lastSeenKey = `trip-last-seen:${tripId}`;
+  const lastSeenAt = useMemo(() => {
+    if (typeof window === "undefined") return new Date(0).toISOString();
+    return localStorage.getItem(lastSeenKey) ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  }, [lastSeenKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !userId) return;
+    // Stamp on unmount so the *next* visit reflects activity since now.
+    return () => {
+      try { localStorage.setItem(lastSeenKey, new Date().toISOString()); } catch { /* ignore */ }
+    };
+  }, [lastSeenKey, userId]);
+
+  // Group activity since last visit (comments + ideas + plan reactions).
+  const { data: groupActivity } = useQuery({
+    queryKey: ["trip-group-activity", tripId, lastSeenAt],
+    queryFn: async () => {
+      const [commentsRes, planCommentsRes, ideasRes] = await Promise.all([
+        supabase.from("comments").select("id", { count: "exact", head: true })
+          .eq("trip_id", tripId).gt("created_at", lastSeenAt).neq("user_id", userId ?? ""),
+        (supabase.from("plan_activity_comments" as any) as any)
+          .select("id", { count: "exact", head: true })
+          .gt("created_at", lastSeenAt).neq("user_id", userId ?? "")
+          .eq("plan_id", aiPlanData?.id ?? "00000000-0000-0000-0000-000000000000"),
+        (supabase.from("trip_ideas" as any) as any)
+          .select("id", { count: "exact", head: true })
+          .eq("trip_id", tripId).gt("created_at", lastSeenAt).neq("created_by", userId ?? ""),
+      ]);
+      return {
+        comments: (commentsRes.count ?? 0) + (planCommentsRes.count ?? 0),
+        ideas: ideasRes.count ?? 0,
+      };
+    },
+    enabled: !!userId && !!tripId,
+    staleTime: 30_000,
+  });
+
   const hasPlan = !!aiPlanData;
 
   const toggleBuilder = (open: boolean) => {
@@ -699,6 +738,38 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
                     <Sparkles className="h-3 w-3" />
                     Generate
                   </span>
+                </div>
+              )}
+
+              {/* Group activity since last visit */}
+              {(groupActivity?.comments ?? 0) + (groupActivity?.ideas ?? 0) > 0 && (
+                <div
+                  className="relative mt-3 pt-3 flex items-center gap-2 flex-wrap"
+                  style={{ borderTop: "1px solid rgba(255,255,255,0.18)" }}
+                >
+                  <span className="flex items-center gap-1.5 text-white/85 text-[10.5px] font-semibold uppercase tracking-[0.12em]">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75 animate-ping" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-300" />
+                    </span>
+                    New since you were here
+                  </span>
+                  {(groupActivity?.comments ?? 0) > 0 && (
+                    <span
+                      className="px-2 py-0.5 rounded-full text-white text-[10.5px] font-semibold"
+                      style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.22)" }}
+                    >
+                      💬 {groupActivity!.comments} {groupActivity!.comments === 1 ? "comment" : "comments"}
+                    </span>
+                  )}
+                  {(groupActivity?.ideas ?? 0) > 0 && (
+                    <span
+                      className="px-2 py-0.5 rounded-full text-white text-[10.5px] font-semibold"
+                      style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.22)" }}
+                    >
+                      💡 {groupActivity!.ideas} {groupActivity!.ideas === 1 ? "idea" : "ideas"}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
