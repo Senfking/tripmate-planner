@@ -627,7 +627,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
             className="group relative w-full text-left overflow-hidden transition-all active:scale-[0.99]"
             style={{
               background: "linear-gradient(135deg, #0f766e 0%, #0D9488 55%, #0891b2 100%)",
-              borderRadius: 24,
+              borderRadius: 18,
               boxShadow: "0 8px 28px -8px rgba(13,148,136,0.45), 0 2px 6px rgba(13,148,136,0.18)",
             }}
           >
