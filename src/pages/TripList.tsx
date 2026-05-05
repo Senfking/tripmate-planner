@@ -825,20 +825,8 @@ export default function TripList() {
     tripsPills.unshift({ icon: <Radio className="h-3 w-3" />, label: `${liveCount} live` });
   }
 
-  /* ── Standalone builder overlay ── */
-  if (showBuilder) {
-    return (
-      <StandaloneTripBuilder
-        onClose={() => {
-          setShowBuilder(false);
-          setBuilderInitDest("");
-          queryClient.invalidateQueries({ queryKey: ["draft-trips"] });
-          queryClient.invalidateQueries({ queryKey: ["trips"] });
-        }}
-        initialDestination={builderInitDest || undefined}
-      />
-    );
-  }
+  /* Standalone builder overlay removed — empty state now renders Hero inline,
+     and the "New trip" pill navigates to /trips/new. */
 
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
