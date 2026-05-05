@@ -944,26 +944,42 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 />
               </div>
 
-              {/* Accommodation card per destination */}
-              {dest.accommodation ? (
-                <AccommodationCard
-                  name={dest.accommodation.title || dest.accommodation.name || "Stay"}
-                  description={dest.accommodation.description ?? null}
-                  proTip={dest.accommodation.pro_tip ?? dest.accommodation.tips ?? null}
-                  photos={dest.accommodation.photos}
-                  rating={dest.accommodation.rating ?? null}
-                  userRatingCount={dest.accommodation.user_rating_count ?? null}
-                  priceLevel={dest.accommodation.price_level ?? null}
-                  priceRange={dest.accommodation.priceRange ?? null}
-                  neighborhood={dest.accommodation.neighborhood ?? null}
-                  googleMapsUrl={dest.accommodation.google_maps_url ?? null}
-                  bookingUrl={dest.accommodation.booking_url ?? null}
-                  bookingPartner={dest.accommodation.booking_partner ?? null}
-                  locationHint={dest.name}
-                  checkInDate={dest.start_date || null}
-                  checkOutDate={dest.end_date || null}
-                />
-              ) : (
+              {/* Accommodation card per destination — apply optimistic swap override if any */}
+              {(() => {
+                const override = hotelOverrides[destIdx];
+                const baseAccom = dest.accommodation as any;
+                if (!baseAccom) return null;
+                const accom = override
+                  ? {
+                      ...baseAccom,
+                      ...override,
+                      // Preserve the original alternatives pool so further swaps still work
+                      alternatives: baseAccom.alternatives ?? [],
+                    }
+                  : baseAccom;
+                return (
+                  <AccommodationCard
+                    name={accom.title || accom.name || "Stay"}
+                    description={accom.description ?? null}
+                    proTip={accom.pro_tip ?? accom.tips ?? null}
+                    photos={accom.photos}
+                    rating={accom.rating ?? null}
+                    userRatingCount={accom.user_rating_count ?? null}
+                    priceLevel={accom.price_level ?? null}
+                    priceRange={accom.priceRange ?? null}
+                    neighborhood={accom.neighborhood ?? null}
+                    googleMapsUrl={accom.google_maps_url ?? null}
+                    bookingUrl={accom.booking_url ?? null}
+                    bookingPartner={accom.booking_partner ?? null}
+                    locationHint={dest.name}
+                    checkInDate={dest.start_date || null}
+                    checkOutDate={dest.end_date || null}
+                    alternatives={Array.isArray(accom.alternatives) ? accom.alternatives : []}
+                    onSwap={(newHotel) => handleSwapHotel(destIdx, newHotel)}
+                  />
+                );
+              })()}
+              {!dest.accommodation && (
                 <div
                   className="mx-4 mb-4 rounded-2xl overflow-hidden border border-border bg-card shadow-sm"
                   aria-label="Loading accommodation"
