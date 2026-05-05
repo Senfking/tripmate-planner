@@ -42,7 +42,7 @@ export function AnonTripGenerator({ prompt, onCancel }: Props) {
         trip_id: null,
         anon_session_id: sessionId,
         free_text: prompt,
-        surprise_me: false,
+        surprise_me: true,
         flexible: true,
         budget_level: "mid-range",
         vibes: [],
