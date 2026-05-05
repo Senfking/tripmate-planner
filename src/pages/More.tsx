@@ -758,7 +758,7 @@ const More = () => {
       <div className="min-h-dvh flex flex-col px-4 pb-32 space-y-4 md:max-w-[640px] md:mx-auto md:px-8" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.5rem)" }}>
       {/* ── Back button ── */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={back}
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors -mb-2"
       >
         <ArrowLeft className="h-4 w-4" />
