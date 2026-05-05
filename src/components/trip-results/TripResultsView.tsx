@@ -82,8 +82,12 @@ interface Props {
   readOnly?: boolean;
 }
 
-export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, onShare, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage, dateMode = "calendar", readOnly = false }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, onShare, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage, streamingStatusMessages, streamingStage, streamingCompletedDays, dateMode = "calendar", readOnly = false }: Props) {
   const reveal = useStreamReveal(result, !!revealMode);
+
+  // Fire "Day N ready ✓" toasts as each day_complete event arrives. Hook is
+  // a no-op when streaming isn't happening or no events arrive.
+  useDayCompleteToasts(streaming ? (streamingCompletedDays ?? []) : []);
 
   // Notify parent when reveal completes
   useEffect(() => {
