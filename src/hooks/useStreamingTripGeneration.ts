@@ -174,6 +174,8 @@ const INITIAL: StreamingState = {
   trip: null,
   result: null,
   error: null,
+  errorCode: null,
+  anonTripId: null,
   isCacheHit: false,
 };
 
