@@ -52,3 +52,49 @@ export function clearAnonSessionId(): void {
     /* noop */
   }
 }
+
+// ---------------------------------------------------------------------------
+// Anonymous rate-limit marker. When the server rejects a generation with
+// 429/anon_limit, we stash the timestamp locally so the next submit on the
+// homepage can short-circuit the streaming UI and just open the signup modal
+// over the blurred homepage — no black "generating" screen, no second 429.
+// 24h matches ANON_SESSION_LIMIT_PER_DAY on the server.
+// ---------------------------------------------------------------------------
+
+const RATE_LIMIT_KEY = "junto_anon_rate_limited_at";
+const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export function markAnonRateLimited(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(RATE_LIMIT_KEY, String(Date.now()));
+  } catch {
+    /* noop */
+  }
+}
+
+export function isAnonRateLimited(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem(RATE_LIMIT_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!Number.isFinite(ts)) return false;
+    if (Date.now() - ts > RATE_LIMIT_WINDOW_MS) {
+      window.localStorage.removeItem(RATE_LIMIT_KEY);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function clearAnonRateLimited(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(RATE_LIMIT_KEY);
+  } catch {
+    /* noop */
+  }
+}
