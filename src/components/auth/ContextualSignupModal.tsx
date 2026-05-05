@@ -319,7 +319,7 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
             Back to trip
           </button>
           <p className="text-[11px] text-white/35 px-2">
-            Your previous trip is saved — you'll find it in your dashboard after signup.
+            Your trip is saved — you'll find it in your dashboard after signup.
           </p>
         </div>
       )}
