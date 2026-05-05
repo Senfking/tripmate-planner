@@ -42,6 +42,9 @@ export type TripCreationSurfaceProps = {
   belowHero?: ReactNode;
   /** Disables the submit button. */
   busy?: boolean;
+  /** Initial value for the free-text pill (used to restore prompt after a
+   *  failed generation so the user doesn't have to retype). */
+  prefill?: string;
 };
 
 export function TripCreationSurface({
