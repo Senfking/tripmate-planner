@@ -32,6 +32,7 @@ import { DayCardReveal } from "./DayCardReveal";
 import { MapSlidePanel, type MapState } from "./MapSlidePanel";
 import { EntryRequirementsPreview } from "./EntryRequirementsPreview";
 import { PackingCard } from "./PackingCard";
+import { TripIdeasStrip } from "@/components/ideas/TripIdeasStrip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetchEurRates } from "@/lib/fetchCrossRates";
