@@ -756,6 +756,12 @@ interface RankedDestination {
   intro: string;
   days: RankedDay[];
   accommodation?: EnrichedActivity;
+  // Up to MAX_ACCOMMODATION_ALTERNATIVES alternative hydrated lodging
+  // EnrichedActivity entries from the same leg's candidate pool, sorted by
+  // (rating desc, reviews desc). Excludes the chosen accommodation. Empty
+  // for transit legs and for real legs whose lodging pool only had one
+  // candidate. Frontend uses these for in-app hotel SWAP.
+  accommodation_alternatives?: EnrichedActivity[];
   // "destination" for real legs, "transit" for transit pseudo-legs. Frontend
   // rails check this to decide between activity-card list vs transit summary.
   kind?: "destination" | "transit";
@@ -784,6 +790,15 @@ interface PipelineResult {
   // first leg's hotel. Single-destination trips: equals
   // (daily_budget_estimate × num_days) + (accommodation × num_days).
   trip_total_estimate: number;
+  // How trip_total_estimate was derived. "calculated" = sum-of-parts (the
+  // primary path; PR #261's logic). "llm_corrected" = the calculated value
+  // fell wildly outside Haiku's plausible range, so we substituted the
+  // range midpoint as a backstop. Frontend can show an "Estimated" badge
+  // when this is "llm_corrected". See validateBudgetEstimate.
+  estimation_method?: "calculated" | "llm_corrected";
+  // Plausible range from the Haiku sanity-check, when available. Null when
+  // the validator failed or never ran (the calculated total stays as-is).
+  expected_range_eur?: [number, number] | null;
   currency: string;
   packing_suggestions: string[];
   total_activities: number;
@@ -1879,6 +1894,286 @@ async function estimateTransitLegs(
     `transit_days=${legs.filter((l) => l.needs_transit_day).length}`,
   );
   return legs;
+}
+
+// ---------------------------------------------------------------------------
+// Budget sanity check (Haiku) — backstop validator for trip_total_estimate.
+//
+// PR #261's computeTripTotalEstimate is the source of truth (sum of all
+// activity costs + per-leg accommodation × leg-day-count). This validator
+// only kicks in for OUTLIERS: when the calculated total is wildly outside
+// what Haiku considers plausible for the trip shape (destinations, days,
+// budget tier). Two failure modes it defends against:
+//   1. A future calculation regression that double-counts or zero-counts.
+//   2. An LLM cost hallucination upstream (one venue with a 10x cost
+//      estimate poisoning the per-day rollup).
+//
+// PRINCIPLES:
+//   - The LLM never invents specific prices for specific venues — those
+//     still come from Google Places via hydrateActivity.
+//   - It only validates AGGREGATE ranges. Output is range, not prices.
+//   - On any failure (timeout, parse error, etc.) we return null and the
+//     caller keeps the calculated total. Backstop, not primary.
+//   - 30-day cache keyed on (sorted destinations + days + budget tier) so
+//     the per-trip cost on cache hits is ~0.
+// ---------------------------------------------------------------------------
+
+const BUDGET_VALIDATOR_SYSTEM_PROMPT = `You are a travel cost estimator. You assess whether a calculated budget is plausible for a given trip. You DO NOT invent costs or override calculated values — your job is sanity-checking and providing a fallback range.
+
+You will receive: a list of destinations, total days, a budget tier ("budget" | "mid-range" | "premium"), and a calculated per-person total in EUR.
+
+Return:
+- plausible: true if the calculated total is within a reasonable range for that destination set + days + tier; false if it is wildly low or wildly high.
+- expected_range_eur: [low, high] per-person total you'd expect for this trip — your fallback range, used as a midpoint substitute when the calculated total is rejected.
+- confidence: "high" for well-known destinations and standard durations, "medium" for less-common destinations, "low" when you are guessing.
+- rationale: ONE sentence explaining the range and why the calculated value is or isn't plausible.
+
+GUIDANCE:
+- Mid-range Western Europe city: ~€100–200 per person per day all-in (lodging share + food + activities).
+- Budget Southeast Asia: ~€40–80 per person per day all-in.
+- Premium: 2-3x mid-range.
+- Add ~30-50% headroom for short trips (1-3 days) where fixed costs dominate.
+- Multi-destination trips spend more on transit and lodging churn — bump the high end ~10-20%.
+
+CALL the validate_budget tool exactly once.`;
+
+const BUDGET_VALIDATOR_TOOL: ClaudeTool = {
+  name: "validate_budget",
+  description: "Sanity-check a calculated trip budget total and return a fallback plausible range.",
+  input_schema: {
+    type: "object",
+    properties: {
+      plausible: { type: "boolean" },
+      expected_range_eur: {
+        type: "array",
+        minItems: 2,
+        maxItems: 2,
+        items: { type: "number", minimum: 0 },
+        description: "[low, high] per-person total in EUR.",
+      },
+      confidence: { type: "string", enum: ["high", "medium", "low"] },
+      rationale: { type: "string" },
+    },
+    required: ["plausible", "expected_range_eur", "confidence", "rationale"],
+    additionalProperties: false,
+  },
+};
+
+const BUDGET_VALIDATOR_CACHE_TTL_MS = 30 * 86_400_000; // 30 days
+
+interface BudgetValidationResult {
+  plausible: boolean;
+  expected_range_eur: [number, number];
+  confidence: "high" | "medium" | "low";
+  rationale: string;
+}
+
+function budgetValidatorCacheKeyShape(
+  destinations: string[],
+  totalDays: number,
+  budgetTier: string,
+): string {
+  const sortedDests = [...destinations]
+    .map((d) => d.toLowerCase().trim())
+    .filter((d) => d.length > 0)
+    .sort();
+  return JSON.stringify({
+    destinations: sortedDests,
+    days: totalDays,
+    tier: budgetTier,
+  });
+}
+
+function normalizeBudgetValidation(raw: unknown): BudgetValidationResult | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const range = o.expected_range_eur;
+  if (!Array.isArray(range) || range.length !== 2) return null;
+  const [lowRaw, highRaw] = range;
+  const low = typeof lowRaw === "number" && Number.isFinite(lowRaw) ? lowRaw : NaN;
+  const high = typeof highRaw === "number" && Number.isFinite(highRaw) ? highRaw : NaN;
+  if (!Number.isFinite(low) || !Number.isFinite(high) || low < 0 || high < low) return null;
+  const conf = o.confidence;
+  if (conf !== "high" && conf !== "medium" && conf !== "low") return null;
+  const rationale = typeof o.rationale === "string" ? o.rationale.trim() : "";
+  if (typeof o.plausible !== "boolean") return null;
+  return {
+    plausible: o.plausible,
+    expected_range_eur: [Math.round(low), Math.round(high)],
+    confidence: conf,
+    rationale,
+  };
+}
+
+async function validateBudgetEstimate(
+  apiKey: string,
+  destinations: string[],
+  totalDays: number,
+  budgetTier: string,
+  calculatedTotalEur: number,
+  svcClient: ReturnType<typeof createClient>,
+  logger: LLMLogger,
+  pipelineStartedAt: number,
+): Promise<BudgetValidationResult | null> {
+  if (destinations.length === 0 || totalDays <= 0) return null;
+
+  // Cache lookup — keyed on (sorted destinations + days + tier). The
+  // calculated total is NOT in the key: same trip shape gets the same
+  // expected range regardless of what the calculator produced this run.
+  const shape = budgetValidatorCacheKeyShape(destinations, totalDays, budgetTier);
+  let cacheKey = "";
+  try {
+    cacheKey = `budget_validator:v1:${await sha256Hex(shape)}`;
+  } catch {
+    cacheKey = "";
+  }
+
+  if (cacheKey) {
+    try {
+      const { data } = await svcClient
+        .from("ai_response_cache")
+        .select("response_json")
+        .eq("cache_key", cacheKey)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (data?.response_json) {
+        const cached = normalizeBudgetValidation(data.response_json);
+        if (cached) {
+          // Re-evaluate plausibility against THIS run's calculated total —
+          // the cached `plausible` was computed against a previous run's
+          // calc and isn't reusable. The range is preference-independent
+          // (depends only on destinations/days/tier), so we keep it and
+          // recompute plausible from the range.
+          const [low, high] = cached.expected_range_eur;
+          const plausibleNow = calculatedTotalEur >= low && calculatedTotalEur <= high;
+          console.log(
+            `[budget_validator] cache hit range=[${low},${high}] calc=${calculatedTotalEur} plausible=${plausibleNow}`,
+          );
+          return { ...cached, plausible: plausibleNow };
+        }
+      }
+    } catch (e) {
+      console.warn("[budget_validator] cache lookup failed:", (e as Error).message);
+    }
+  }
+
+  const userPayload = {
+    destinations,
+    total_days: totalDays,
+    budget_tier: budgetTier,
+    calculated_total_eur: Math.round(calculatedTotalEur),
+  };
+
+  let result: ClaudeCallResult<Record<string, unknown>>;
+  try {
+    result = await callClaudeHaiku<Record<string, unknown>>(
+      apiKey,
+      [{ type: "text", text: BUDGET_VALIDATOR_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      `Validate this trip budget:\n\n${JSON.stringify(userPayload, null, 2)}`,
+      BUDGET_VALIDATOR_TOOL,
+      400,
+      pipelineStartedAt,
+      "validateBudgetEstimate",
+    );
+  } catch (e) {
+    console.warn("[budget_validator] Haiku failed; skipping sanity check:", (e as Error).message);
+    return null;
+  }
+
+  await logger.log({
+    feature: "trip_builder_budget_validator",
+    model: HAIKU_MODEL,
+    input_tokens: result.usage.input_tokens,
+    output_tokens: result.usage.output_tokens,
+    cost_usd: computeHaikuCost(result.usage),
+    cached: result.usage.cache_read_input_tokens > 0,
+  }).catch((e) => console.warn("[budget_validator] logger.log failed:", (e as Error).message));
+
+  const normalized = normalizeBudgetValidation(result.data);
+  if (!normalized) {
+    console.warn("[budget_validator] response failed to normalize; skipping sanity check");
+    return null;
+  }
+
+  if (cacheKey) {
+    svcClient
+      .from("ai_response_cache")
+      .upsert({
+        cache_key: cacheKey,
+        response_json: normalized as unknown as Record<string, unknown>,
+        expires_at: new Date(Date.now() + BUDGET_VALIDATOR_CACHE_TTL_MS).toISOString(),
+      })
+      .then((r: { error: { message: string; code?: string } | null }) => {
+        if (r.error && r.error.code !== "23505") {
+          console.warn(`[budget_validator] cache write failed: ${r.error.message}`);
+        }
+      });
+  }
+
+  console.log(
+    `[budget_validator] range=[${normalized.expected_range_eur[0]},${normalized.expected_range_eur[1]}] ` +
+    `calc=${calculatedTotalEur} plausible=${normalized.plausible} confidence=${normalized.confidence}`,
+  );
+  return normalized;
+}
+
+// Pull the names of real-destination legs (skipping transit pseudo-legs)
+// for the budget validator's cache key. Keeps the LLM grounded on the
+// places the user actually spends days at.
+function realDestinationNames(destinations: Array<{ name: string; kind?: string }>): string[] {
+  const out: string[] = [];
+  for (const d of destinations) {
+    if (d.kind === "transit") continue;
+    if (typeof d.name === "string" && d.name.trim()) out.push(d.name.trim());
+  }
+  return out;
+}
+
+// Total days excluding transit legs. Matches the per-person-per-day notion
+// the validator's prompt is calibrated against.
+function realDestinationDayCount(destinations: Array<{ days?: unknown; kind?: string }>): number {
+  let n = 0;
+  for (const d of destinations) {
+    if (d.kind === "transit") continue;
+    if (Array.isArray(d.days)) n += d.days.length;
+  }
+  return n;
+}
+
+// Apply Haiku's sanity check to a PipelineResult. Mutates result in-place,
+// setting estimation_method + expected_range_eur and (when needed) replacing
+// trip_total_estimate with the range midpoint. Logs a `[budget_anomaly]`
+// line when the calculated value is rejected so post-deploy monitoring can
+// alert on regression. Always sets estimation_method (defaults to
+// "calculated") so downstream code can rely on the field being present.
+function applyBudgetSanityCheck(
+  result: PipelineResult,
+  validation: BudgetValidationResult | null,
+): void {
+  result.estimation_method = "calculated";
+  result.expected_range_eur = validation?.expected_range_eur ?? null;
+  if (!validation) return;
+
+  const [low, high] = validation.expected_range_eur;
+  const calc = result.trip_total_estimate;
+  const inRange = calc >= low && calc <= high;
+  if (validation.plausible || inRange) return;
+
+  // Only intervene on extreme outliers — >50% below low OR >100% above
+  // high. Mild deviations stay as the calculated value (the ranges are
+  // intentionally wide; small drift is normal).
+  const wayBelow = calc < low * 0.5;
+  const wayAbove = calc > high * 2;
+  if (!wayBelow && !wayAbove) return;
+
+  const midpoint = Math.round((low + high) / 2);
+  console.warn(
+    `[budget_anomaly] calculated=${calc} expected_range=[${low},${high}] ` +
+    `confidence=${validation.confidence} replacement=${midpoint} ` +
+    `rationale="${validation.rationale.slice(0, 200)}"`,
+  );
+  result.trip_total_estimate = midpoint;
+  result.estimation_method = "llm_corrected";
 }
 
 // ---------------------------------------------------------------------------
@@ -5332,6 +5627,41 @@ function pickAccommodationPlaceIdsByLeg(
   return out;
 }
 
+// Maximum lodging alternatives to surface in the accommodation event for
+// in-app SWAP. Frontend renders up to this many; fewer is fine for remote
+// destinations where the lodging pool is thin.
+const MAX_ACCOMMODATION_ALTERNATIVES = 5;
+
+// Pick alternative lodging place_ids for a given leg (excluding the chosen
+// hotel). Uses the same lodging-type filter as pickAccommodationPlaceIdsByLeg
+// (PR #261's isLodgingPlace) so non-hotels never slip through. Same leg-scoped
+// candidate pool means alternatives come from the same neighborhood/area as
+// the chosen hotel via Places' location bias.
+//
+// Sort: rating desc, then review-count desc — same heuristic as the primary
+// pick, so the "best of the rest" surfaces first. Caller hydrates each id
+// the same way as the chosen hotel (hydrateActivity + buildAffiliateUrl).
+//
+// Returns an array of BatchPlaceResult of length 0..MAX_ACCOMMODATION_ALTERNATIVES.
+// 0 is acceptable for remote destinations with a single lodging candidate.
+function pickAccommodationAlternativesForLeg(
+  venuesByPool: Map<PoolKey, BatchPlaceResult[]>,
+  legIdx: number,
+  excludePlaceId: string | null,
+): BatchPlaceResult[] {
+  const lodging = (venuesByPool.get("lodging") ?? []).filter(isLodgingPlace);
+  const candidates = lodging.filter(
+    (v) => (v.destinationIndex ?? 0) === legIdx && v.id !== excludePlaceId,
+  );
+  if (candidates.length === 0) return [];
+  candidates.sort((a, b) => {
+    const ra = a.rating ?? 0, rb = b.rating ?? 0;
+    if (rb !== ra) return rb - ra;
+    return (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0);
+  });
+  return candidates.slice(0, MAX_ACCOMMODATION_ALTERNATIVES);
+}
+
 // Validate a metadata-supplied accommodation place_id. Returns the place_id
 // only when the place exists in the lodging pool AND has a lodging-typed
 // types[]. Otherwise returns null and logs the rejection so the caller can
@@ -5849,7 +6179,9 @@ async function rankInParallel(
     return -1;
   })();
 
-  const hydrateAccomForLeg = (legIdx: number): EnrichedActivity | undefined => {
+  const hydrateAccomForLeg = (
+    legIdx: number,
+  ): { hotel: EnrichedActivity; alternatives: EnrichedActivity[] } | undefined => {
     const placeId = (legIdx === metaAccomLegIdx && metaAccomPlaceId)
       ? metaAccomPlaceId
       : accomByLeg.get(legIdx) ?? null;
@@ -5872,7 +6204,33 @@ async function rankInParallel(
       },
       fakeAccomSlot, place, googleKey, currency, intent.budget_tier,
     );
-    return hydrated ?? undefined;
+    if (!hydrated) return undefined;
+    // Build alternatives from the same leg's lodging pool (excluding the
+    // chosen hotel). Affiliate URLs are decorated by the non-streaming
+    // caller's per-leg loop after rankInParallel returns — same path the
+    // chosen hotel takes — so we leave booking_url placeholder values that
+    // hydrateActivity sets and let the caller overwrite them uniformly.
+    const altPlaces = pickAccommodationAlternativesForLeg(venuesByPool, legIdx, place.id);
+    const alternatives: EnrichedActivity[] = [];
+    for (const altPlace of altPlaces) {
+      const altHydrated = hydrateActivity(
+        {
+          slot_index: -1, slot_type: "lodging",
+          place_id: altPlace.id, is_event: false,
+          title: altPlace.displayName ?? "Hotel",
+          description: "",
+          pro_tip: "",
+          why_for_you: "",
+          skip_if: null,
+          category: "accommodation",
+          estimated_cost_per_person: 0,
+          dietary_notes: null,
+        },
+        fakeAccomSlot, altPlace, googleKey, currency, intent.budget_tier,
+      );
+      if (altHydrated) alternatives.push(altHydrated);
+    }
+    return { hotel: hydrated, alternatives };
   };
 
   // ---- Trip-level rollups ----
@@ -5907,6 +6265,7 @@ async function rankInParallel(
         ...(leg.transit_meta ? { transit: leg.transit_meta } : {}),
       };
     }
+    const accom = hydrateAccomForLeg(leg.index);
     return {
       name: leg.name,
       start_date: startDate,
@@ -5916,7 +6275,8 @@ async function rankInParallel(
       // "destination intro = trip_summary" behavior.
       intro: legs.length === 1 ? finalSummary : "",
       days: legDays,
-      accommodation: hydrateAccomForLeg(leg.index),
+      accommodation: accom?.hotel,
+      accommodation_alternatives: accom?.alternatives ?? [],
       kind: "destination",
     };
   });
@@ -7735,12 +8095,21 @@ Deno.serve(async (req) => {
                 send("image", { url: payload?.destination_image_url ?? null });
                 // Emit accommodation per real-destination leg. Multi-leg
                 // payloads carry per-leg accommodation; legacy single-leg
-                // payloads emit one event with destination_index=0.
+                // payloads emit one event with destination_index=0. Cached
+                // payloads written before this PR have no
+                // accommodation_alternatives — fall back to [] so the event
+                // shape stays stable.
                 for (let li = 0; li < cachedDests.length; li++) {
                   const ld = cachedDests[li];
                   if (ld?.kind === "transit") continue;
                   if (ld?.accommodation) {
-                    send("accommodation", { destination_index: li, hotel: ld.accommodation });
+                    send("accommodation", {
+                      destination_index: li,
+                      hotel: ld.accommodation,
+                      alternatives: Array.isArray(ld.accommodation_alternatives)
+                        ? ld.accommodation_alternatives
+                        : [],
+                    });
                   }
                 }
                 // Re-apply junto picks against the current request's intent
@@ -7792,6 +8161,24 @@ Deno.serve(async (req) => {
                 const cachedTripTotal = typeof payload?.trip_total_estimate === "number"
                   ? payload.trip_total_estimate
                   : computeTripTotalEstimate(cachedDests as unknown as RankedDestination[]);
+                // Budget sanity check on the cached value. Mostly a cache
+                // hit on the validator's own 30-day cache (same trip
+                // shape → same range), so net cost ~0.
+                const cacheHitBudgetValidation = await validateBudgetEstimate(
+                  anthropicKey,
+                  realDestinationNames(cachedDests as Array<{ name: string; kind?: string }>),
+                  realDestinationDayCount(cachedDests as Array<{ days?: unknown; kind?: string }>),
+                  payload?.budget_tier ?? intent.budget_tier,
+                  cachedTripTotal,
+                  svcClient,
+                  logger,
+                  pipelineStartedAt,
+                );
+                const cacheHitFakeResult: PipelineResult = {
+                  ...(payload as unknown as PipelineResult),
+                  trip_total_estimate: cachedTripTotal,
+                };
+                applyBudgetSanityCheck(cacheHitFakeResult, cacheHitBudgetValidation);
                 send("trip_complete", {
                   trip_title: stripEmojis(payload?.trip_title),
                   trip_summary: payload?.trip_summary ?? "",
@@ -7799,7 +8186,9 @@ Deno.serve(async (req) => {
                   packing_suggestions: payload?.packing_suggestions ?? [],
                   junto_pick_place_ids: juntoPlaceIds,
                   daily_budget_estimate: payload?.daily_budget_estimate ?? 0,
-                  trip_total_estimate: cachedTripTotal,
+                  trip_total_estimate: cacheHitFakeResult.trip_total_estimate,
+                  estimation_method: cacheHitFakeResult.estimation_method ?? "calculated",
+                  expected_range_eur: cacheHitFakeResult.expected_range_eur ?? null,
                   total_activities: payload?.total_activities ?? 0,
                   map_center: payload?.map_center ?? null,
                   map_zoom: payload?.map_zoom ?? 12,
@@ -8219,11 +8608,57 @@ Deno.serve(async (req) => {
             //     that leg's top-rated lodging (auto-generated copy)
             // This preserves the legacy single-destination shape (one event
             // with destination_index=0) while supporting multi-destination.
+            // Hydrate a lodging place as an EnrichedActivity using auto-generated
+            // copy. Used for the alternatives list (which shouldn't reuse the
+            // metadata call's editorial copy — that's the chosen hotel's voice).
+            const hydrateLodgingAlt = (
+              legIdx: number,
+              place: BatchPlaceResult,
+            ): EnrichedActivity | undefined => {
+              const fakeSlot: PacingSlot = {
+                type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
+              };
+              const hydrated = hydrateActivity(
+                {
+                  slot_index: -1, slot_type: "lodging",
+                  place_id: place.id, is_event: false,
+                  title: place.displayName ?? "Hotel",
+                  description: "",
+                  pro_tip: "",
+                  why_for_you: "",
+                  skip_if: null,
+                  category: "accommodation",
+                  estimated_cost_per_person: 0,
+                  dietary_notes: null,
+                },
+                fakeSlot, place, googleKey, currency, intent.budget_tier,
+              );
+              if (!hydrated) return undefined;
+              const legAffEnv: AffiliateEnv = { ...affEnv, cityHint: legs[legIdx]?.name ?? intent.destination };
+              const aff = buildAffiliateUrl(place, legAffEnv, hydrated.event_url);
+              hydrated.booking_url = aff.booking_url;
+              hydrated.booking_partner = aff.booking_partner;
+              return hydrated;
+            };
+
+            const buildAlternativesForLeg = (
+              legIdx: number,
+              chosenPlaceId: string | null,
+            ): EnrichedActivity[] => {
+              const alts = pickAccommodationAlternativesForLeg(venuesByPool, legIdx, chosenPlaceId);
+              const out: EnrichedActivity[] = [];
+              for (const place of alts) {
+                const hydrated = hydrateLodgingAlt(legIdx, place);
+                if (hydrated) out.push(hydrated);
+              }
+              return out;
+            };
+
             const emitOneLegAccommodation = (
               legIdx: number,
               place: BatchPlaceResult,
               raw: { title?: string | null; description?: string | null; pro_tip?: string | null; why_for_you?: string | null; skip_if?: string | null; estimated_cost_per_person?: number | null; dietary_notes?: string | null } | null,
-            ): EnrichedActivity | undefined => {
+            ): { hotel: EnrichedActivity; alternatives: EnrichedActivity[] } | undefined => {
               const fakeSlot: PacingSlot = {
                 type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
               };
@@ -8247,18 +8682,30 @@ Deno.serve(async (req) => {
               const aff = buildAffiliateUrl(place, legAffEnv, hydrated.event_url);
               hydrated.booking_url = aff.booking_url;
               hydrated.booking_partner = aff.booking_partner;
+              const alternatives = buildAlternativesForLeg(legIdx, place.id);
               try {
-                send("accommodation", { destination_index: legIdx, hotel: hydrated });
-                console.log(`[stream] accommodation emitted early leg=${legIdx} place_id=${place.id}`);
+                send("accommodation", {
+                  destination_index: legIdx,
+                  hotel: hydrated,
+                  alternatives,
+                });
+                console.log(
+                  `[stream] accommodation emitted early leg=${legIdx} place_id=${place.id} ` +
+                  `alternatives=${alternatives.length}`,
+                );
               } catch (e) {
                 console.warn("[stream.accommodation] early emit failed:", (e as Error).message);
               }
               accommodationEmittedLegs.add(legIdx);
-              return hydrated;
+              return { hotel: hydrated, alternatives };
             };
 
-            const accommodationEarlyPromise: Promise<Map<number, EnrichedActivity>> = metadataPromise.then((res) => {
-              const out = new Map<number, EnrichedActivity>();
+            interface EarlyAccommodationEntry {
+              hotel: EnrichedActivity;
+              alternatives: EnrichedActivity[];
+            }
+            const accommodationEarlyPromise: Promise<Map<number, EarlyAccommodationEntry>> = metadataPromise.then((res) => {
+              const out = new Map<number, EarlyAccommodationEntry>();
               const accomRaw = res.data?.accommodation;
               // Validate the metadata's pick against the lodging pool — refuses
               // non-lodging picks before they ship as a hotel card.
@@ -8286,13 +8733,13 @@ Deno.serve(async (req) => {
                 if (!placeId) continue;
                 const place = placeById.get(placeId) ?? null;
                 if (!place) continue;
-                const hydrated = emitOneLegAccommodation(leg.index, place, raw);
-                if (hydrated) out.set(leg.index, hydrated);
+                const emitted = emitOneLegAccommodation(leg.index, place, raw);
+                if (emitted) out.set(leg.index, emitted);
               }
               return out;
             }).catch((e) => {
               console.warn("[stream.accommodation] early hydrate failed:", (e as Error).message);
-              return new Map<number, EnrichedActivity>();
+              return new Map<number, EarlyAccommodationEntry>();
             });
 
             if (sequentialRanking) {
@@ -8392,7 +8839,9 @@ Deno.serve(async (req) => {
               }
               return -1;
             })();
-            const hydrateAccomForLegStream = (legIdx: number): EnrichedActivity | undefined => {
+            const hydrateAccomForLegStream = (
+              legIdx: number,
+            ): { hotel: EnrichedActivity; alternatives: EnrichedActivity[] } | undefined => {
               // Prefer the early-emitted instance so the SSE event and
               // assembly references are the same EnrichedActivity object.
               const early = earlyAccommodations.get(legIdx);
@@ -8425,21 +8874,27 @@ Deno.serve(async (req) => {
               const aff = buildAffiliateUrl(place, legAffEnv, hydrated.event_url);
               hydrated.booking_url = aff.booking_url;
               hydrated.booking_partner = aff.booking_partner;
+              const alternatives = buildAlternativesForLeg(legIdx, place.id);
               // Late fallback emit: the early promise didn't cover this leg
               // (hydrateActivity returned null at early time); now that
               // everything is settled, emit so the streaming UI updates
               // before trip_complete.
               if (!accommodationEmittedLegs.has(legIdx)) {
                 try {
-                  send("accommodation", { destination_index: legIdx, hotel: hydrated });
+                  send("accommodation", {
+                    destination_index: legIdx,
+                    hotel: hydrated,
+                    alternatives,
+                  });
                   accommodationEmittedLegs.add(legIdx);
                 } catch {}
               }
-              return hydrated;
+              return { hotel: hydrated, alternatives };
             };
             // Trip-level accommodation = leg 0's accommodation (matches legacy
             // shape; trip_complete still emits a single accommodation field).
-            const accommodation: EnrichedActivity | undefined = hydrateAccomForLegStream(0);
+            const accommodationEntry = hydrateAccomForLegStream(0);
+            const accommodation: EnrichedActivity | undefined = accommodationEntry?.hotel;
 
 
             // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
@@ -8497,13 +8952,15 @@ Deno.serve(async (req) => {
                   ...(leg.transit_meta ? { transit: leg.transit_meta } : {}),
                 };
               }
+              const accom = hydrateAccomForLegStream(leg.index);
               return {
                 name: leg.name,
                 start_date: startDate,
                 end_date: endDate,
                 intro: legs.length === 1 ? finalSummary : "",
                 days: legDays,
-                accommodation: hydrateAccomForLegStream(leg.index),
+                accommodation: accom?.hotel,
+                accommodation_alternatives: accom?.alternatives ?? [],
                 kind: "destination",
               };
             });
@@ -8527,6 +8984,24 @@ Deno.serve(async (req) => {
             logDescriptionGrounding(pipelineResult, intent);
             logOpeningHoursViolations(pipelineResult);
             logPricingAnomalies(pipelineResult);
+
+            // ---- Budget sanity check (Haiku, ~$0.0005/trip, 30-day cache).
+            // Backstop only: PR #261's computeTripTotalEstimate is the source
+            // of truth. The validator's range is consulted; only EXTREME
+            // outliers (>50% below low or >100% above high) get the midpoint
+            // substitution. Failures are non-fatal — pipelineResult keeps the
+            // calculated value with estimation_method="calculated". ----
+            const budgetValidation = await validateBudgetEstimate(
+              anthropicKey,
+              realDestinationNames(destinationsAssembled),
+              realDestinationDayCount(destinationsAssembled),
+              intent.budget_tier,
+              pipelineResult.trip_total_estimate,
+              svcClient,
+              logger,
+              pipelineStartedAt,
+            );
+            applyBudgetSanityCheck(pipelineResult, budgetValidation);
 
             const juntoPlaceIds: string[] = [];
             for (const day of ranked_days) {
@@ -8588,6 +9063,8 @@ Deno.serve(async (req) => {
               junto_pick_place_ids: juntoPlaceIds,
               daily_budget_estimate,
               trip_total_estimate: pipelineResult.trip_total_estimate,
+              estimation_method: pipelineResult.estimation_method ?? "calculated",
+              expected_range_eur: pipelineResult.expected_range_eur ?? null,
               total_activities,
               map_center: pipelineResult.map_center,
               map_zoom: pipelineResult.map_zoom,
@@ -8826,6 +9303,31 @@ Deno.serve(async (req) => {
             `[nonstream.cache] hit cache_key=${cacheKey} month_bucket=${monthBucket} date_swap=true events_refreshed=${eventsResult.refreshed} events_cleared=${eventsResult.cleared} booking_urls_rewritten=${bookingRewriteStats.rewritten}`,
           );
           console.log(`[nonstream.cache] junto_picks_tagged=${juntoPicksTagged}`);
+
+          // Budget sanity check on the cached payload. Recompute the total
+          // from the cached destinations[] when the cached field is missing
+          // (legacy entries pre-PR multi-destination).
+          const cachedTripTotalNonStream = typeof payload?.trip_total_estimate === "number"
+            ? payload.trip_total_estimate
+            : computeTripTotalEstimate(cachedDestsArr as unknown as RankedDestination[]);
+          const cacheHitBudgetValidationNonStream = await validateBudgetEstimate(
+            anthropicKey,
+            realDestinationNames(cachedDestsArr as Array<{ name: string; kind?: string }>),
+            realDestinationDayCount(cachedDestsArr as Array<{ days?: unknown; kind?: string }>),
+            payload?.budget_tier ?? intent.budget_tier,
+            cachedTripTotalNonStream,
+            svcClient,
+            logger,
+            pipelineStartedAt,
+          );
+          const cacheHitFakeResultNonStream: PipelineResult = {
+            ...(payload as unknown as PipelineResult),
+            trip_total_estimate: cachedTripTotalNonStream,
+          };
+          applyBudgetSanityCheck(cacheHitFakeResultNonStream, cacheHitBudgetValidationNonStream);
+          payload.trip_total_estimate = cacheHitFakeResultNonStream.trip_total_estimate;
+          payload.estimation_method = cacheHitFakeResultNonStream.estimation_method ?? "calculated";
+          payload.expected_range_eur = cacheHitFakeResultNonStream.expected_range_eur ?? null;
           console.log(
             `[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stages: stageTimings })}`,
           );
@@ -9053,6 +9555,9 @@ Deno.serve(async (req) => {
         a.booking_partner = aff.booking_partner;
       };
       if (dest.accommodation) decorate(dest.accommodation);
+      if (Array.isArray(dest.accommodation_alternatives)) {
+        for (const alt of dest.accommodation_alternatives) decorate(alt);
+      }
       for (const day of dest.days) {
         for (const act of day.activities) decorate(act);
       }
@@ -9071,7 +9576,26 @@ Deno.serve(async (req) => {
       { lat: geo.lat, lng: geo.lng },
       legCenters,
     );
+    // Recompute trip_total_estimate after validation drops so the budget
+    // sanity check sees the final number that ships in the response.
+    validated.trip_total_estimate = computeTripTotalEstimate(validated.destinations);
     tStage("validate", tValidate);
+
+    // ---- Budget sanity check (Haiku, ~$0.0005/trip, 30-day cache).
+    // Backstop only: PR #261's computeTripTotalEstimate is the source of
+    // truth. Failures are non-fatal — `validated` keeps the calculated
+    // value with estimation_method="calculated". ----
+    const budgetValidationNonStream = await validateBudgetEstimate(
+      anthropicKey,
+      realDestinationNames(validated.destinations),
+      realDestinationDayCount(validated.destinations),
+      validated.budget_tier,
+      validated.trip_total_estimate,
+      svcClient,
+      logger,
+      pipelineStartedAt,
+    );
+    applyBudgetSanityCheck(validated, budgetValidationNonStream);
 
     // ---- Resolve destination cover image (kicked off in parallel with rank) ----
     // The promise was started before rankAndEnrich; awaited here. Failures are
