@@ -41,8 +41,8 @@ const SLIDES = [
     headline: ["Decide as", "a group."],
     subhead: "Vote on activities, pick favorites, no more endless debates.",
   },
-  // (Removed "friends on beach" scene — pixelated faces read as awkward;
-  // the remaining 4 scenes carry the "trips with friends" vibe better.)
+  // (Removed "friends on beach" scene — pixelated faces read as awkward.)
+];
 
 
 /* ── Value-prop rotator (independent of the video carousel). Lives in
