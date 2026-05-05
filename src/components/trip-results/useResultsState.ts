@@ -95,6 +95,9 @@ export interface AIDestination {
     google_maps_url?: string | null;
     booking_url?: string | null;
     booking_partner?: string | null;
+    /** Up to 5 lodging-filtered alternative hotels for this leg. Same shape
+     *  as the chosen hotel. Empty/undefined = SWAP UI hidden. */
+    alternatives?: any[];
     // Legacy fields (older cached responses)
     stars?: number;
     price_per_night?: number;
