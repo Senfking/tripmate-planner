@@ -10,7 +10,7 @@ import { trackEvent } from "@/lib/analytics";
 import { stripEmoji } from "@/lib/stripEmoji";
 
 import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
-import { ConfirmationCard } from "./ConfirmationCard";
+// ConfirmationCard removed — flow now submits straight from PremiumTripInput.
 // StreamingGeneratingScreen retired — TripResultsView is now the streaming surface.
 import { BlankTripModal } from "./BlankTripModal";
 import { NameTripModal } from "./NameTripModal";
