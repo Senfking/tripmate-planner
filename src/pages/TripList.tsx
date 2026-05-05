@@ -1117,7 +1117,7 @@ export default function TripList() {
                 </button>
               </div>
               <p className="mt-2 font-bold text-[15px] leading-snug">
-                Loved planning {postTripNudge.name}?
+                Loved planning {toTitleCase(postTripNudge.name)}?
               </p>
               <p className="mt-1 text-[13px] text-white/70 leading-relaxed">
                 Share Junto with someone planning their next trip.
