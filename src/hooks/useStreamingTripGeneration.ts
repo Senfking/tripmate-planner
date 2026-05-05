@@ -191,6 +191,9 @@ const INITIAL: StreamingState = {
   errorCode: null,
   anonTripId: null,
   isCacheHit: false,
+  statusMessages: [],
+  currentStage: null,
+  completedDays: [],
 };
 
 function assembleResult(
