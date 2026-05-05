@@ -16,19 +16,37 @@ import { stripEmoji } from "@/lib/stripEmoji";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
 
 interface Props {
-  prompt: string;
+  /** Free-text prompt — used when there's no structured form data. */
+  prompt?: string;
+  /** Pre-built generation payload (e.g. from PremiumTripInput). Takes
+   *  precedence over `prompt`. */
+  payload?: Record<string, unknown>;
   onCancel: () => void;
 }
 
+const DEFAULT_FREE_TEXT_PAYLOAD = (prompt: string): Record<string, unknown> => ({
+  trip_id: null,
+  free_text: prompt,
+  surprise_me: false,
+  flexible: true,
+  budget_level: "mid-range",
+  vibes: [],
+  pace: "balanced",
+  dietary: [],
+  notes: "",
+  group_size: 2,
+  travel_party: "couple",
+});
+
 /**
- * Authenticated free-text trip generation. Mirrors AnonTripGenerator's UX
- * (streams TripResultsView mid-flight) but on completion persists a draft
- * trip to the signed-in user's account and routes to /app/trips/[id].
+ * Authenticated trip generation. Mirrors AnonTripGenerator's UX (streams
+ * TripResultsView mid-flight) but on completion persists a draft trip to
+ * the signed-in user's account and routes to /app/trips/[id].
  *
- * This replaces the legacy StandaloneTripBuilder modal for the free-text
- * submission path.
+ * Replaces the legacy StandaloneTripBuilder modal for the free-text
+ * submission path and the step-by-step inline form path.
  */
-export function AuthTripGenerator({ prompt, onCancel }: Props) {
+export function AuthTripGenerator({ prompt, payload: payloadProp, onCancel }: Props) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const streaming = useStreamingTripGeneration();
@@ -37,19 +55,10 @@ export function AuthTripGenerator({ prompt, onCancel }: Props) {
   const [persisting, setPersisting] = useState(false);
   const [persistError, setPersistError] = useState<string | null>(null);
 
-  const payload = useRef({
-    trip_id: null,
-    free_text: prompt,
-    surprise_me: false,
-    flexible: true,
-    budget_level: "mid-range",
-    vibes: [],
-    pace: "balanced",
-    dietary: [],
-    notes: "",
-    group_size: 2,
-    travel_party: "couple",
-  } as Record<string, unknown>).current;
+  const payloadRef = useRef<Record<string, unknown>>(
+    payloadProp ?? DEFAULT_FREE_TEXT_PAYLOAD(prompt ?? ""),
+  );
+  const payload = payloadRef.current;
 
   useEffect(() => {
     if (startedRef.current) return;
