@@ -641,38 +641,83 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* Flights section intentionally hidden until the feature ships. */}
 
-        {/* All stays overview — multi-destination only (compact horizontal carousel) */}
+        {/* All stays overview — multi-destination only (full-image cards w/ transit between) */}
         {isMultiDestination && result.destinations.some(d => d.accommodation) && (
           <div id="section-stays-overview" className={cn("mb-4", rc)} style={revealStyle("overview-stays")}>
             <h3 className="px-4 text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <Bed className="h-5 w-5 text-primary" /> Where you'll stay
             </h3>
-            <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 -mx-px snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {result.destinations.filter(d => d.accommodation).map((dest, i) => {
-                const destDays = allDays.filter(d => d.date >= dest.start_date && d.date <= dest.end_date);
-                const nightCount = destDays.length;
-                const firstDay = destDays[0]?.day_number || 1;
-                const lastDay = destDays[destDays.length - 1]?.day_number || firstDay;
-                const dayLabel = firstDay === lastDay ? `Day ${firstDay}` : `Days ${firstDay}–${lastDay}`;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => scrollToSection(`section-dest-${dest.name}`)}
-                    className="snap-start shrink-0 w-[180px] text-left rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-accent/40 transition-colors p-3"
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <MapPin className="h-3 w-3 text-primary shrink-0" />
-                      <span className="text-[13px] font-semibold text-foreground truncate">{dest.name}</span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground font-mono">
-                      {dayLabel} · {nightCount} {nightCount === 1 ? "night" : "nights"}
-                    </p>
-                    <span className="mt-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
-                      <Hotel className="h-2.5 w-2.5" /> 1 stay
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="flex items-stretch gap-2 overflow-x-auto px-4 pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {(() => {
+                const realDests = result.destinations.filter(d => (d.kind ?? "destination") === "destination" && d.accommodation);
+                const nodes: JSX.Element[] = [];
+                realDests.forEach((dest, i) => {
+                  const destDays = allDays.filter(d => d.date >= dest.start_date && d.date <= dest.end_date);
+                  const nightCount = destDays.length;
+                  const firstDay = destDays[0]?.day_number || 1;
+                  const lastDay = destDays[destDays.length - 1]?.day_number || firstDay;
+                  const dayLabel = firstDay === lastDay ? `Day ${firstDay}` : `Days ${firstDay}–${lastDay}`;
+                  const photos = (dest.accommodation as any)?.photos as string[] | undefined;
+                  const hero = photos && photos.length > 0 ? photos[0] : null;
+
+                  nodes.push(
+                    <button
+                      key={`dest-${i}`}
+                      onClick={() => scrollToSection(`section-dest-${dest.name}`)}
+                      className="snap-start shrink-0 w-[200px] h-[260px] relative overflow-hidden rounded-2xl border border-border bg-muted text-left group shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      {hero ? (
+                        <img
+                          src={hero}
+                          alt={dest.name}
+                          loading="lazy"
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 p-3 text-white">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          <span className="text-[14px] font-semibold truncate">{dest.name}</span>
+                        </div>
+                        <p className="text-[11px] text-white/85 mt-0.5">
+                          {dayLabel} · {nightCount} {nightCount === 1 ? "night" : "nights"}
+                        </p>
+                      </div>
+                    </button>
+                  );
+
+                  if (i < realDests.length - 1) {
+                    const fullIdx = result.destinations.indexOf(dest);
+                    const after = result.destinations.slice(fullIdx + 1);
+                    const transit = after.find(d => d.kind === "transit");
+                    const nextRealDest = after.find(d => (d.kind ?? "destination") === "destination");
+                    const useTransit = transit && (!nextRealDest || after.indexOf(transit) < after.indexOf(nextRealDest));
+                    const mode = useTransit ? transit?.transit?.transit_type : undefined;
+                    const dur = useTransit ? transit?.transit?.estimated_duration_hours : undefined;
+                    const Icon =
+                      mode === "train" ? TrainFront :
+                      mode === "drive" ? Car :
+                      mode === "ferry" ? Ship :
+                      Plane;
+                    const label = mode === "train" ? "Train" : mode === "drive" ? "Drive" : mode === "ferry" ? "Ferry" : mode === "mixed" ? "Travel" : "Flight";
+
+                    nodes.push(
+                      <div key={`transit-${i}`} className="shrink-0 flex flex-col items-center justify-center px-1 self-center">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-sm">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <span className="mt-1 text-[10px] font-medium text-muted-foreground tabular-nums whitespace-nowrap">
+                          {label}{dur ? ` · ~${dur}h` : ""}
+                        </span>
+                      </div>
+                    );
+                  }
+                });
+                return nodes;
+              })()}
             </div>
           </div>
         )}
