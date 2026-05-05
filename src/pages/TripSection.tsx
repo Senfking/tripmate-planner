@@ -9,6 +9,7 @@ import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
 import { BookingsTab } from "@/components/bookings/BookingsTab";
 import { ExpensesTab } from "@/components/expenses/ExpensesTab";
 import { AdminTab } from "@/components/admin/AdminTab";
+import { IdeasTab } from "@/components/ideas/IdeasTab";
 import { useTripRealtime, type ConnectionStatus } from "@/hooks/useTripRealtime";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import type { AITripResult } from "@/components/trip-results/useResultsState";
