@@ -52,23 +52,30 @@ export function HowItWorks() {
   return (
     <section
       ref={sectionRef}
-      className={`landing-reveal ${visible ? "landing-visible" : ""} w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 bg-white`}
+      className={`landing-reveal ${visible ? "landing-visible" : ""} w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 bg-[#FAFAF9]`}
     >
       <div className="mx-auto max-w-6xl">
         <div className="text-center mb-16 sm:mb-20">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0D9488] mb-4">
+          <p
+            className="landing-reveal-child text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0D9488] mb-4"
+            style={{ ["--stagger-index" as string]: 0 }}
+          >
             How it works
           </p>
-          <h2 className="text-[34px] sm:text-[44px] lg:text-[52px] leading-[1.05] tracking-tight font-bold text-[#1a1a1a] max-w-3xl mx-auto">
+          <h2
+            className="landing-reveal-child text-[34px] sm:text-[44px] lg:text-[52px] leading-[1.05] tracking-tight font-bold text-[#1a1a1a] max-w-3xl mx-auto"
+            style={{ ["--stagger-index" as string]: 1 }}
+          >
             Three steps to your group's next trip.
           </h2>
         </div>
 
         <div className="grid gap-12 lg:gap-0 lg:grid-cols-3 lg:divide-x lg:divide-[#e7e2dc]">
-          {STEPS.map(({ num, Icon, title, body }) => (
+          {STEPS.map(({ num, Icon, title, body }, i) => (
             <div
               key={num}
-              className="flex flex-col items-start text-left lg:px-10 first:lg:pl-0 last:lg:pr-0"
+              className="flex flex-col items-start text-left lg:px-10 first:lg:pl-0 last:lg:pr-0 landing-reveal-child"
+              style={{ ["--stagger-index" as string]: 2 + i }}
             >
               <Icon className="h-6 w-6 text-[#0D9488] mb-5" strokeWidth={1.5} />
               <p

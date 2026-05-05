@@ -102,7 +102,6 @@ export default function PublicLanding() {
         image={mockupExpenses}
         alt="Junto expenses screen on iPhone showing €255 owed, balances and a list of split expenses"
         imageSide="left"
-        background="white"
       />
       <FeaturePhoneSection
         eyebrow="Bookings"
@@ -111,7 +110,6 @@ export default function PublicLanding() {
         image={mockupBookings}
         alt="Junto bookings & docs screen on iPhone showing flight tickets, hotel confirmation and entry document warnings"
         imageSide="right"
-        background="sand"
       />
 
       <FeaturePhoneSection
@@ -121,7 +119,6 @@ export default function PublicLanding() {
         image={mockupTrips}
         alt="Junto trips home screen on iPhone showing a 'Good evening, Oliver' header, a live Bali trip card, and an upcoming Dubai trip"
         imageSide="left"
-        background="white"
       />
 
       <HowItWorks />
@@ -135,14 +132,15 @@ export default function PublicLanding() {
       </section>
 
       {/* Final dark teal CTA */}
-      <FinalCTA
-        onPrimary={() => navigate(user ? "/trips/new" : "/ref")}
-        onBrowse={() => {
-          const el = document.getElementById("trip-ideas");
-          if (el) el.scrollIntoView({ behavior: "smooth" });
-        }}
-      />
-
+      <Reveal>
+        <FinalCTA
+          onPrimary={() => navigate(user ? "/trips/new" : "/ref")}
+          onBrowse={() => {
+            const el = document.getElementById("trip-ideas");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }}
+        />
+      </Reveal>
       {/* Footer (ported) */}
       <footer className="py-10 px-5 border-t border-[#e5e5e5]">
         <div className="mx-auto max-w-5xl grid grid-cols-3 items-center gap-4 text-sm text-[#9ca3af]">
