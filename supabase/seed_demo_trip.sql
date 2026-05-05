@@ -17,15 +17,19 @@
 --     owner. RAISE EXCEPTION if any are missing.
 --
 -- Group chat surfaces:
---   The trip view (TripResultsView) renders the group chat from
---   `plan_activity_comments`, scoped by `plan_id` (an `ai_trip_plans.id`) and
---   `activity_key`. The function looks up the latest plan for the trip and
---   uses:
+--   The Group Activity panel (rendered at /app/trips/:tripId/ai-plan/:planId
+--   via TripResultsView → GroupActivityPanel) reads `plan_activity_comments`
+--   + `plan_activity_reactions` filtered by the planId in the URL. A trip can
+--   have multiple `ai_trip_plans` rows (each generation/regeneration creates
+--   one), so the seed loops over ALL plans for the trip and writes the same
+--   demo set under each — otherwise opening an older plan in the URL would
+--   show an empty panel.
 --     * activity_key='trip-general' for the main group chat thread
 --     * activity_key='day-{N}-activity-{M}' for inline per-activity comments
---   Reactions live in `plan_activity_reactions` with the same key scheme.
---   If the trip has no `ai_trip_plans` row, group-chat / activity inserts are
---   skipped with a NOTICE (the rest of the seed still runs).
+--   "Members active" is derived from unique user_ids across both tables, so
+--   populating reactions+comments auto-fills that count too.
+--   If the trip has no `ai_trip_plans` row, the loop is a no-op and a NOTICE
+--   reports the skip (the rest of the seed still runs).
 --
 --   The legacy itinerary view (ItineraryItemCard) reads `public.comments`
 --   filtered by itinerary_item_id. We also write 2 of those if the trip has
@@ -82,6 +86,7 @@ DECLARE
   _comments_inserted int := 0;
   _reactions_inserted int := 0;
   _itin_comments_inserted int := 0;
+  _plan_count int := 0;
 
   _owner_name text;
   _outbound_date date;
@@ -128,15 +133,16 @@ BEGIN
       USING ERRCODE = 'data_exception';
   END IF;
 
-  -- Latest AI plan for this trip (group-chat scope). Optional; null = skip.
-  SELECT id INTO _plan_id
-    FROM public.ai_trip_plans
-   WHERE trip_id = p_trip_id
-   ORDER BY created_at DESC
-   LIMIT 1;
+  -- AI plans for this trip. The group-chat panel reads
+  -- plan_activity_comments / plan_activity_reactions filtered by plan_id, and
+  -- a trip can have multiple plans (each generation/regeneration = one row).
+  -- We seed under all of them in the loop further down. Just count here for
+  -- the initial NOTICE.
+  SELECT count(*) INTO _plan_count
+    FROM public.ai_trip_plans WHERE trip_id = p_trip_id;
 
-  RAISE NOTICE 'seed_demo_trip: target trip % | currency=% | dates % .. % | plan_id=%',
-    p_trip_id, _trip_currency, _trip_start, _trip_end, _plan_id;
+  RAISE NOTICE 'seed_demo_trip: target trip % | currency=% | dates % .. % | ai_trip_plans=%',
+    p_trip_id, _trip_currency, _trip_start, _trip_end, _plan_count;
 
   -- ---- Idempotency: remove any prior demo rows tied to this trip ----
   -- expense_splits before expenses; vote/option/poll cascades handle themselves.
@@ -183,16 +189,14 @@ BEGIN
      AND title = 'Sunday brunch — Wild Honey or PS.Cafe?';
 
   -- plan_activity_comments / plan_activity_reactions: only present if the trip
-  -- has an AI plan. Scoped by plan_id + demo user_id so real users' activity
-  -- on the same plan stays intact.
-  IF _plan_id IS NOT NULL THEN
-    DELETE FROM public.plan_activity_comments
-     WHERE plan_id = _plan_id
-       AND user_id = ANY(_demo_ids);
-    DELETE FROM public.plan_activity_reactions
-     WHERE plan_id = _plan_id
-       AND user_id = ANY(_demo_ids);
-  END IF;
+  -- has at least one AI plan. Scoped to ALL plans for the trip so re-running
+  -- after the user generates additional plans still cleans every demo row.
+  DELETE FROM public.plan_activity_comments
+   WHERE user_id = ANY(_demo_ids)
+     AND plan_id IN (SELECT id FROM public.ai_trip_plans WHERE trip_id = p_trip_id);
+  DELETE FROM public.plan_activity_reactions
+   WHERE user_id = ANY(_demo_ids)
+     AND plan_id IN (SELECT id FROM public.ai_trip_plans WHERE trip_id = p_trip_id);
 
   -- Booking attachments: matched by exact demo title (covers both demo-persona-
   -- authored and owner-authored demo rows without touching real owner uploads).
@@ -341,30 +345,40 @@ BEGIN
 
   RAISE NOTICE 'Inserted 13 idea votes (Hawker Chan 4, Night Safari 3, SkyPark/Lau Pa Sat 2, Orchid/Tiong Bahru 1, others 0)';
 
-  -- ---- Group chat (plan_activity_comments) ----
-  IF _plan_id IS NOT NULL THEN
+  -- ---- Group chat (plan_activity_comments + plan_activity_reactions) ----
+  -- The trip view at /app/trips/:tripId/ai-plan/:planId reads these tables
+  -- filtered by the planId in the URL. A trip can have multiple ai_trip_plans
+  -- rows (each generation/regeneration creates one), and the user may navigate
+  -- to any of them. Earlier versions only seeded under the latest plan, which
+  -- left the panel empty whenever the user opened an older plan. Fix: insert
+  -- the full demo set under EVERY plan attached to this trip.
+  _plan_count := 0;
+  _comments_inserted := 0;
+  _reactions_inserted := 0;
+  FOR _plan_id IN
+    SELECT id FROM public.ai_trip_plans
+     WHERE trip_id = p_trip_id
+     ORDER BY created_at ASC
+  LOOP
+    _plan_count := _plan_count + 1;
+
     INSERT INTO public.plan_activity_comments (plan_id, activity_key, user_id, text, created_at) VALUES
       (_plan_id, 'trip-general', _aisha_id,  'Just looked at the itinerary — Marina Bay night looks amazing!!',          now() - interval '6 days'),
       (_plan_id, 'trip-general', _priya_id,  'Reminder: bring an umbrella, it rains every afternoon there',              now() - interval '5 days'),
       (_plan_id, 'trip-general', _marcus_id, 'Should we book Night Safari tickets in advance? Heard it sells out',       now() - interval '4 days'),
       (_plan_id, 'trip-general', _aisha_id,  'Saved Hawker Chan to ideas — heard the wait is brutal but worth it',       now() - interval '3 days'),
       (_plan_id, 'trip-general', _priya_id,  'Just checked weather: 30°C all week, bring layers for the AC indoors',     now() - interval '2 days'),
-      (_plan_id, 'trip-general', _marcus_id, 'Anyone want to do an early morning Botanic Gardens walk Day 2?',            now() - interval '1 days');
-    GET DIAGNOSTICS _comments_inserted = ROW_COUNT;
-
-    -- Activity-level inline comments. activity_key format is 'day-{N}-activity-{M}',
-    -- where N/M are 0-based positions in ai_trip_plans.result.days[N].activities[M].
-    -- We pick keys that virtually any 5-day plan will render. If a key doesn't
-    -- match an actual rendered activity, the row sits silent — no error.
-    INSERT INTO public.plan_activity_comments (plan_id, activity_key, user_id, text, created_at) VALUES
+      (_plan_id, 'trip-general', _marcus_id, 'Anyone want to do an early morning Botanic Gardens walk Day 2?',            now() - interval '1 days'),
+      -- Activity-level inline comments. activity_key format is 'day-{N}-activity-{M}',
+      -- where N/M are 0-based positions in ai_trip_plans.result.days[N].activities[M].
+      -- If a key doesn't match a rendered activity, the row sits silent — no error.
       (_plan_id, 'day-0-activity-1', _aisha_id,  'Heard the sushi place takes walk-ins after 9pm — let''s aim late', now() - interval '4 days 6 hours'),
       (_plan_id, 'day-1-activity-2', _marcus_id, 'We should swap this for the rooftop bar at CÉ LA VI instead',      now() - interval '3 days 4 hours'),
       (_plan_id, 'day-2-activity-1', _priya_id,  'Reservation confirmed for 4 at 19:30 — pls don''t be late again',   now() - interval '2 days 2 hours');
-    GET DIAGNOSTICS _reactions_inserted = ROW_COUNT;  -- reused below; reset
-    _comments_inserted := _comments_inserted + _reactions_inserted;
+    _comments_inserted := _comments_inserted + 9;
 
-    -- Emoji reactions for "lived in" feel. UNIQUE (plan_id, activity_key, user_id, emoji)
-    -- so re-runs are safe (cleanup deletes by user_id first anyway).
+    -- Emoji reactions. UNIQUE (plan_id, activity_key, user_id, emoji); cleanup
+    -- above deletes by user_id so re-runs don't violate the constraint.
     INSERT INTO public.plan_activity_reactions (plan_id, activity_key, user_id, emoji) VALUES
       (_plan_id, 'day-0-activity-0', _aisha_id,  '🔥'),
       (_plan_id, 'day-0-activity-0', _marcus_id, '👍'),
@@ -373,12 +387,14 @@ BEGIN
       (_plan_id, 'day-2-activity-0', _marcus_id, '🔥'),
       (_plan_id, 'day-2-activity-2', _priya_id,  '🤔'),
       (_plan_id, 'day-3-activity-0', _aisha_id,  '👍');
-    GET DIAGNOSTICS _reactions_inserted = ROW_COUNT;
+    _reactions_inserted := _reactions_inserted + 7;
+  END LOOP;
 
-    RAISE NOTICE 'Inserted % plan_activity_comments (6 group-chat + 3 activity-level) and % emoji reactions',
-      _comments_inserted, _reactions_inserted;
+  IF _plan_count > 0 THEN
+    RAISE NOTICE 'Inserted % plan_activity_comments and % reactions across % AI plan(s)',
+      _comments_inserted, _reactions_inserted, _plan_count;
   ELSE
-    RAISE NOTICE 'Skipped group chat: trip has no ai_trip_plans row (plan_activity_comments lives under plan_id, not trip_id)';
+    RAISE NOTICE 'Skipped group chat: trip has no ai_trip_plans row (the panel lives under plan_id, not trip_id)';
   END IF;
 
   -- ---- Itinerary-item comments (legacy itinerary view) ----
