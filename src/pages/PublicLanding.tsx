@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
 import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
-import { FeatureCards } from "@/components/landing/FeatureCards";
+import { FeatureAIBuilder } from "@/components/landing/FeatureAIBuilder";
+import { FeatureTripDashboard } from "@/components/landing/FeatureTripDashboard";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 import { ShimmerButton } from "@/components/landing/ShimmerButton";
 import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
@@ -86,8 +87,9 @@ export default function PublicLanding() {
     <div className="bg-[#fafaf9] text-[#1a1a1a] min-h-dvh overflow-x-hidden">
       <Hero onSubmit={handleSubmit} variant="public" />
 
-      {/* Dark phone-mockup feature section (ported) */}
-      <FeatureCards />
+      {/* Feature sections (part 1 of 3) */}
+      <FeatureAIBuilder />
+      <FeatureTripDashboard />
 
       {/* Destination card carousels (ported). id used by Hero's
           "Browse trip ideas" chip to smooth-scroll here. */}

@@ -410,7 +410,7 @@ export function Hero({
         decoding="async"
         // @ts-expect-error -- fetchpriority is valid HTML, not yet typed
         fetchpriority="high"
-        className="absolute inset-0 -z-20 h-full w-full object-cover"
+        className="absolute inset-0 -z-20 h-full w-full object-cover hero-kenburns"
       />
       {/* Layered gradient: darker at top for legibility, AND a deep fade
           at the very bottom into the page background (#fafaf9) so the
