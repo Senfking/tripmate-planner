@@ -163,6 +163,13 @@ export function AccommodationCard({
 
   // Booking.com search URL for the destination, pre-filled with trip dates,
   // so users can browse alternative stays in the same area.
+  // Fallback Google Maps search URL when backend didn't provide one
+  // (e.g. second-leg hotels that haven't fully resolved yet).
+  const mapsUrl = googleMapsUrl
+    ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      [name, locationHint || neighborhood].filter(Boolean).join(" ")
+    )}`;
+
   const browseAlternativesUrl = (() => {
     const cityQuery = (locationHint || neighborhood || name).trim();
     const params = new URLSearchParams();
@@ -340,11 +347,11 @@ export function AccommodationCard({
       )}
 
       {/* Action row beneath hero */}
-      {((hasBooking && bookingUrlWithDates) || googleMapsUrl) && (
+      {(mapsUrl || (hasBooking && bookingUrlWithDates)) && (
         <div className="px-4 py-3 flex items-center justify-between gap-3">
-          {googleMapsUrl ? (
+          {mapsUrl ? (
             <a
-              href={googleMapsUrl}
+              href={mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -416,11 +423,11 @@ export function AccommodationCard({
           </div>
 
           {/* Action row */}
-          {((hasBooking && bookingUrlWithDates) || googleMapsUrl) && (
+          {(mapsUrl || (hasBooking && bookingUrlWithDates)) && (
             <div className="px-4 py-3 flex items-center justify-between gap-3 border-b border-border">
-              {googleMapsUrl ? (
+              {mapsUrl ? (
                 <a
-                  href={googleMapsUrl}
+                  href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono uppercase tracking-wider transition-colors"
