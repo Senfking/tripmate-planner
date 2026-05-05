@@ -1442,6 +1442,76 @@ export type Database = {
           },
         ]
       }
+      trip_idea_votes: {
+        Row: {
+          created_at: string
+          id: string
+          idea_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_idea_votes_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "trip_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_ideas: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string
+          id: string
+          status: string
+          title: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          status?: string
+          title: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          status?: string
+          title?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_ideas_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_last_seen: {
         Row: {
           last_seen_at: string

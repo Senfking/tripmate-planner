@@ -26,12 +26,13 @@ import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import { CONCIERGE_ENABLED } from "@/lib/featureFlags";
 import { useStreamReveal } from "@/hooks/useStreamReveal";
 import { StreamRevealIndicator } from "./StreamRevealIndicator";
-import { StreamingStatusPill, StreamingProgressBar } from "./StreamingStatusPill";
+import { StreamingStatusPill, StreamingProgressBar, StreamingProgressLadder } from "./StreamingStatusPill";
 import { useDayCompleteToasts } from "./useDayCompleteToasts";
 import { DayCardReveal } from "./DayCardReveal";
 import { MapSlidePanel, type MapState } from "./MapSlidePanel";
 import { EntryRequirementsPreview } from "./EntryRequirementsPreview";
 import { PackingCard } from "./PackingCard";
+import { TripIdeasStrip } from "@/components/ideas/TripIdeasStrip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetchEurRates } from "@/lib/fetchCrossRates";
@@ -527,11 +528,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             in StandaloneTripBuilder), so the transition to the final state is
             just one element disappearing — no other layout change. */}
         {streaming && (
-          <div className="px-4 pt-3 space-y-2">
+          <div className="px-4 pt-4 pb-1 space-y-3">
             <StreamingStatusPill
               stage={streamingStage ?? null}
               statusMessages={streamingStatusMessages ?? []}
               fallback={streamingMessage || "Crafting your trip"}
+            />
+            <StreamingProgressLadder
+              totalDays={allDays.length}
+              completedDays={streamingCompletedDays ?? []}
             />
             <StreamingProgressBar percent={streamingStage?.percent_complete ?? null} />
           </div>
@@ -807,6 +812,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <span className="text-[11px] text-muted-foreground leading-snug">
               💬 Comments unlock once you create the trip. Save it and invite your group to start the conversation.
             </span>
+          </div>
+        )}
+
+        {/* Group ideas strip — discoverable inline on the AI plan view */}
+        {!standalone && !streaming && tripId && (
+          <div className="mx-4 mb-4">
+            <TripIdeasStrip tripId={tripId} />
           </div>
         )}
 

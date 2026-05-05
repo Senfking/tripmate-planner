@@ -7124,9 +7124,18 @@ Deno.serve(async (req) => {
     // ---- Validate inputs and resolve dates ----
     const surpriseMe = body.surprise_me === true;
     const rawDest = (body.destination || "").trim();
-    if (!surpriseMe && !rawDest) {
+    const rawFreeText = (body.free_text || "").trim();
+    // Three valid input shapes:
+    //   1. explicit destination (form-driven flow)
+    //   2. surprise_me=true (anon landing page / "pick for me")
+    //   3. free_text only — destination is recovered from
+    //      intent.named_destinations[0] after parseIntent runs.
+    // The third shape is what the authenticated landing-page hero uses
+    // ("4 day trip to Marrakech with hidden gems"). Rejecting it here used
+    // to block intent extraction from ever running.
+    if (!surpriseMe && !rawDest && !rawFreeText) {
       return jsonResponse(
-        { success: false, error: "destination is required (or set surprise_me=true)" },
+        { success: false, error: "destination, free_text, or surprise_me=true is required" },
         400,
       );
     }
@@ -7200,6 +7209,32 @@ Deno.serve(async (req) => {
         `(skipping surprise picker; named_count=${intent.named_destinations.length})`,
       );
       return true;
+    };
+
+    // Helper: when the user supplied only free_text (no destination, not
+    // surprise mode), parseIntent's system prompt forces intent.destination
+    // to "" — the surprise picker would normally fill it in. For a non-
+    // surprise free-text request we instead derive the destination from
+    // intent.named_destinations[0] (e.g. "4 day trip to Marrakech" =>
+    // "marrakech"). Throws a user-facing PipelineError when neither path
+    // produced a destination so the caller gets actionable feedback rather
+    // than the old "destination is required" pre-flight rejection.
+    const ensureDerivedDestination = (intent: Intent): void => {
+      if (intent.destination?.trim()) return;
+      const first = intent.named_destinations?.[0]?.trim();
+      if (first) {
+        intent.destination = first;
+        console.log(
+          `[free_text_destination] derived destination="${first}" from ` +
+          `named_destinations (free-text-only request; named_count=${intent.named_destinations.length})`,
+        );
+        return;
+      }
+      throw new PipelineError(
+        "parseIntent",
+        "We couldn't find a destination in your description. Try \"3 days in Lisbon\" or fill in the destination field.",
+        "free-text-only request produced no destination; named_destinations=[]",
+      );
     };
 
     // ---- Required env ----
@@ -7321,6 +7356,7 @@ Deno.serve(async (req) => {
     //   event: image           { url }                    (when destination cover resolves)
     //   event: day             { day_number, date, theme, activities }  (one per closed day)
     //   event: day_complete    { day_number, theme, activity_count }    (UI milestone after each day)
+    //   event: accommodation   { destination_index, hotel }              (emitted as soon as metadata resolves)
     //   event: trip_complete   { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, total_activities, map_center, map_zoom, currency, budget_tier }
     //   event: error           { error, step, message }
     //   event: ping            {}                         (10s keepalive)
@@ -7411,6 +7447,13 @@ Deno.serve(async (req) => {
             tStage("parse_intent", tParseIntent);
             applyIntentDuration(intent);
             if (intent.destination) loggedDestination = intent.destination;
+
+            // Free-text-only flow: parseIntent leaves destination empty (the
+            // system prompt requires it). Recover from named_destinations[0].
+            if (!surpriseMe && !rawDest) {
+              ensureDerivedDestination(intent);
+              loggedDestination = intent.destination;
+            }
 
             if (surpriseMe) {
               if (applyNamedDestination(intent)) {
@@ -7564,6 +7607,21 @@ Deno.serve(async (req) => {
                   adjustment_notice: payload?.adjustment_notice ?? null,
                 });
                 send("image", { url: payload?.destination_image_url ?? null });
+                // Emit accommodation per real-destination leg. Multi-leg
+                // payloads carry per-leg accommodation; legacy single-leg
+                // payloads emit one event with destination_index=0.
+                for (let li = 0; li < cachedDests.length; li++) {
+                  const ld = cachedDests[li];
+                  if (ld?.kind === "transit") continue;
+                  if (ld?.accommodation) {
+                    send("accommodation", { destination_index: li, hotel: ld.accommodation });
+                  }
+                }
+                // Re-apply junto picks against the current request's intent
+                // before streaming days — cached payloads were tagged under
+                // whatever intent generated them, and signal matches may
+                // differ for this caller. markJuntoPicks resets stale flags
+                // internally.
                 markJuntoPicks(payload as unknown as PipelineResult, intent);
                 logVibeCoverage(payload as unknown as PipelineResult, intent);
                 logDescriptionGrounding(payload as unknown as PipelineResult, intent);
@@ -8013,6 +8071,92 @@ Deno.serve(async (req) => {
               );
             };
 
+            // Track which legs have already had their accommodation emitted
+            // so the late assembly path doesn't double-emit. Used by both the
+            // early-emit promise below and the post-rank fallback emit.
+            const accommodationEmittedLegs = new Set<number>();
+
+            // Early-emit accommodation per real-destination leg as soon as
+            // metadata resolves (typically lands ~10-15s in, well before the
+            // last day completes). The frontend renders hotel cards
+            // immediately instead of waiting for trip_complete. We emit:
+            //   - one event for the leg whose pool contains metadata's
+            //     editorially-chosen place_id (with metadata's title/desc)
+            //   - one fallback event per OTHER real-destination leg using
+            //     that leg's top-rated lodging (auto-generated copy)
+            // This preserves the legacy single-destination shape (one event
+            // with destination_index=0) while supporting multi-destination.
+            const emitOneLegAccommodation = (
+              legIdx: number,
+              place: BatchPlaceResult,
+              raw: { title?: string | null; description?: string | null; pro_tip?: string | null; why_for_you?: string | null; skip_if?: string | null; estimated_cost_per_person?: number | null; dietary_notes?: string | null } | null,
+            ): EnrichedActivity | undefined => {
+              const fakeSlot: PacingSlot = {
+                type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
+              };
+              const hydrated = hydrateActivity(
+                {
+                  slot_index: -1, slot_type: "lodging",
+                  place_id: place.id, is_event: false,
+                  title: raw?.title ?? place.displayName ?? "Hotel",
+                  description: raw?.description ?? "",
+                  pro_tip: raw?.pro_tip ?? "",
+                  why_for_you: raw?.why_for_you ?? "",
+                  skip_if: raw?.skip_if ?? null,
+                  category: "accommodation",
+                  estimated_cost_per_person: raw?.estimated_cost_per_person ?? 0,
+                  dietary_notes: raw?.dietary_notes ?? null,
+                },
+                fakeSlot, place, googleKey, currency, intent.budget_tier,
+              );
+              if (!hydrated) return undefined;
+              const legAffEnv: AffiliateEnv = { ...affEnv, cityHint: legs[legIdx]?.name ?? intent.destination };
+              const aff = buildAffiliateUrl(place, legAffEnv, hydrated.event_url);
+              hydrated.booking_url = aff.booking_url;
+              hydrated.booking_partner = aff.booking_partner;
+              try {
+                send("accommodation", { destination_index: legIdx, hotel: hydrated });
+                console.log(`[stream] accommodation emitted early leg=${legIdx} place_id=${place.id}`);
+              } catch (e) {
+                console.warn("[stream.accommodation] early emit failed:", (e as Error).message);
+              }
+              accommodationEmittedLegs.add(legIdx);
+              return hydrated;
+            };
+
+            const accommodationEarlyPromise: Promise<Map<number, EnrichedActivity>> = metadataPromise.then((res) => {
+              const out = new Map<number, EnrichedActivity>();
+              const accomRaw = res.data?.accommodation;
+              const metaPlaceId = accomRaw?.place_id ?? null;
+              // Find the leg whose pool contains metadata's place_id.
+              let metaLegIdx = -1;
+              if (metaPlaceId) {
+                for (const [idx, m] of placeByIdByLeg.entries()) {
+                  if (m.has(metaPlaceId)) { metaLegIdx = idx; break; }
+                }
+              }
+              for (const leg of legs) {
+                if (leg.kind !== "destination") continue;
+                let placeId: string | null = null;
+                let raw: typeof accomRaw | null = null;
+                if (metaLegIdx === leg.index && metaPlaceId) {
+                  placeId = metaPlaceId;
+                  raw = accomRaw ?? null;
+                } else {
+                  placeId = accomByLeg.get(leg.index) ?? null;
+                }
+                if (!placeId) continue;
+                const place = placeById.get(placeId) ?? null;
+                if (!place) continue;
+                const hydrated = emitOneLegAccommodation(leg.index, place, raw);
+                if (hydrated) out.set(leg.index, hydrated);
+              }
+              return out;
+            }).catch((e) => {
+              console.warn("[stream.accommodation] early hydrate failed:", (e as Error).message);
+              return new Map<number, EnrichedActivity>();
+            });
+
             if (sequentialRanking) {
               let budgetExhausted = false;
               for (const day of skeleton) {
@@ -8087,9 +8231,14 @@ Deno.serve(async (req) => {
             const metadataResult = await metadataPromise;
             const meta = metadataResult.data;
 
-            // ---- Per-leg accommodation hydration. The metadata call's
-            // accommodation editorial copy lands on the leg whose pool
-            // contains its picked place_id; other legs get auto-fallback. ----
+            // ---- Per-leg accommodation hydration. The early-emit promise
+            // already streamed `accommodation` events for every leg whose
+            // pool had a candidate; we await its result map here so the
+            // final destinations[] assembly can reuse the same hydrated
+            // EnrichedActivity instances. Legs without an early-emit (rare
+            // — only when hydrateActivity returned null at early time) get
+            // a late fallback emit below. ----
+            const earlyAccommodations = await accommodationEarlyPromise;
             const fakeAccomSlot: PacingSlot = {
               type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
             };
@@ -8103,6 +8252,10 @@ Deno.serve(async (req) => {
               return -1;
             })();
             const hydrateAccomForLegStream = (legIdx: number): EnrichedActivity | undefined => {
+              // Prefer the early-emitted instance so the SSE event and
+              // assembly references are the same EnrichedActivity object.
+              const early = earlyAccommodations.get(legIdx);
+              if (early) return early;
               const placeId = (legIdx === metaAccomLegIdx && metaAccomPlaceId)
                 ? metaAccomPlaceId
                 : accomByLeg.get(legIdx) ?? null;
@@ -8131,11 +8284,22 @@ Deno.serve(async (req) => {
               const aff = buildAffiliateUrl(place, legAffEnv, hydrated.event_url);
               hydrated.booking_url = aff.booking_url;
               hydrated.booking_partner = aff.booking_partner;
+              // Late fallback emit: the early promise didn't cover this leg
+              // (hydrateActivity returned null at early time); now that
+              // everything is settled, emit so the streaming UI updates
+              // before trip_complete.
+              if (!accommodationEmittedLegs.has(legIdx)) {
+                try {
+                  send("accommodation", { destination_index: legIdx, hotel: hydrated });
+                  accommodationEmittedLegs.add(legIdx);
+                } catch {}
+              }
               return hydrated;
             };
             // Trip-level accommodation = leg 0's accommodation (matches legacy
             // shape; trip_complete still emits a single accommodation field).
             const accommodation: EnrichedActivity | undefined = hydrateAccomForLegStream(0);
+
 
             // ---- Grounded title + summary (overwrites parallel-metadata's copy) ----
             // See rankInParallel for rationale: parallel metadata writes copy
@@ -8405,6 +8569,13 @@ Deno.serve(async (req) => {
     tStage("parse_intent", tParseIntent);
     applyIntentDuration(intent);
     if (intent.destination) loggedDestination = intent.destination;
+
+    // Free-text-only flow: parseIntent leaves destination empty (the system
+    // prompt requires it). Recover from named_destinations[0].
+    if (!surpriseMe && !rawDest) {
+      ensureDerivedDestination(intent);
+      loggedDestination = intent.destination;
+    }
 
     // ---- Step 1.5: surprise destination picker (only when surprise_me) ----
     if (surpriseMe) {
