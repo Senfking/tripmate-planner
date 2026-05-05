@@ -1109,60 +1109,72 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
         {/* Trip-level discussion moved into Group Activity panel */}
 
-        {/* Bottom spacer — clears fixed bottom action bar + Group Chat pill + safe area */}
-        <div className="h-40" />
+        {/* Bottom spacer — clears floating CTAs + safe area */}
+        <div className="h-24" />
       </div>
 
-      {/* Sticky bottom bar */}
-      <div className={cn("fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+8px)]", rc)} style={revealStyle("complete")}>
-        <div className="max-w-[700px] mx-auto relative">
+      {/* Floating glassmorphic action cluster (CTAs + Group Chat) */}
+      <div
+        className={cn("fixed left-0 right-0 z-40 flex justify-center px-4 pointer-events-none", rc)}
+        style={{ ...revealStyle("complete"), bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+      >
+        <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-1.5">
           {standalone ? (
-            <div className="flex items-center justify-center gap-2 px-4 py-3">
-              <Button
+            <>
+              <button
                 type="button"
-                variant="outline"
                 onClick={() => (readOnly ? onRegenerate() : setEditTripOpen(true))}
-                className="h-10 px-4 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none"
+                className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-foreground/80 hover:bg-white/60 transition-colors inline-flex items-center gap-1.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-              </Button>
-              <Button
+              </button>
+              <button
                 type="button"
-                variant="outline"
                 onClick={onSaveDraft}
-                className="h-10 px-4 rounded-xl text-[13px] font-semibold flex-1 sm:flex-none"
+                className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-foreground/80 hover:bg-white/60 transition-colors"
               >
                 Save draft
-              </Button>
-              <Button
+              </button>
+              <button
                 type="button"
                 onClick={onCreateTrip}
                 disabled={creatingTrip || !!streaming}
                 title={streaming ? "Available once your trip finishes generating" : undefined}
-                className="h-10 px-5 rounded-xl font-semibold text-[13px] bg-[#0D9488] hover:bg-[#0D9488]/90 text-white flex-1 sm:flex-none"
+                className="h-9 px-4 rounded-full text-[13px] font-semibold bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shadow-md disabled:opacity-60 transition-colors"
               >
                 {creatingTrip ? "Creating..." : streaming ? "Generating…" : "Create trip"}
-              </Button>
-            </div>
+              </button>
+            </>
           ) : (
-            <div className="flex items-center justify-center gap-2 px-4 py-3">
-              <Button
-                variant="outline"
-                size="sm"
+            <>
+              <button
+                type="button"
                 onClick={handleShare}
-                className="h-10 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none sm:px-4"
+                className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-foreground/80 hover:bg-white/60 transition-colors inline-flex items-center gap-1.5"
               >
                 <Share2 className="h-3.5 w-3.5" /> Share
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button
+                type="button"
                 onClick={() => setEditTripOpen(true)}
-                className="h-10 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none sm:px-4"
+                className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-foreground/80 hover:bg-white/60 transition-colors inline-flex items-center gap-1.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-              </Button>
-            </div>
+              </button>
+              {planId && (
+                <>
+                  <span className="h-5 w-px bg-foreground/10 mx-0.5" aria-hidden />
+                  <button
+                    type="button"
+                    onClick={() => setGroupActivityOpen(true)}
+                    className="h-9 px-3.5 rounded-full text-[13px] font-semibold bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shadow-md inline-flex items-center gap-1.5 transition-colors"
+                  >
+                    <Users className="h-3.5 w-3.5" /> Group Chat
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
+                  </button>
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
