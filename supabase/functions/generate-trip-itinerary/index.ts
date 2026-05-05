@@ -6115,23 +6115,7 @@ Deno.serve(async (req) => {
     const rateLimit = Number.parseInt(Deno.env.get("RATE_LIMIT_TRIPS_PER_HOUR") ?? "", 10);
     const effectiveRateLimit = Number.isFinite(rateLimit) && rateLimit > 0 ? rateLimit : DEFAULT_RATE_LIMIT_PER_HOUR;
     const wantsStream = (req.headers.get("accept") ?? "").toLowerCase().includes("text/event-stream");
-    // Bypass list — anonymous session ids (or client IPs) in
-    // ANON_RATE_LIMIT_BYPASS_IDS (comma-separated) skip the anon rate limit
-    // entirely. Used for internal QA/dev testing of the anonymous flow.
-    const bypassRaw = Deno.env.get("ANON_RATE_LIMIT_BYPASS_IDS") ?? "";
-    const bypassSet = new Set(
-      bypassRaw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
-    );
-    const anonBypass = isAnonymous && (
-      (anonSessionId && bypassSet.has(anonSessionId.toLowerCase())) ||
-      (clientIp && bypassSet.has(clientIp.toLowerCase()))
-    );
-    if (anonBypass) {
-      console.log(
-        `[anon_rate_limit] bypass anon_session_id=${anonSessionId} ip=${clientIp ?? "unknown"}`,
-      );
-    }
-    if (isAnonymous && !anonBypass) {
+    if (isAnonymous) {
       // Two-tier rate limit:
       //   - per anon_session_id: 1 / 24h    (primary)
       //   - per source IP:        3 / 24h   (defense-in-depth, skipped if proxy
@@ -6157,7 +6141,7 @@ Deno.serve(async (req) => {
         };
         return wantsStream ? sseEventResponse("error", anonLimitBody) : jsonResponse(anonLimitBody, 429);
       }
-    } else if (!isAnonymous && actorUserId !== ADMIN_USER_ID) {
+    } else if (actorUserId !== ADMIN_USER_ID) {
       const recentCount = await userGenerationsInLastHour(svcClient, actorUserId!);
       if (recentCount >= effectiveRateLimit) {
         return jsonResponse(
