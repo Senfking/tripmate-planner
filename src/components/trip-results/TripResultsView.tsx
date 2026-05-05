@@ -1199,9 +1199,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   <button
                     type="button"
                     onClick={() => setGroupActivityOpen(true)}
-                    className="h-9 px-3.5 rounded-full text-[13px] font-semibold bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shadow-md inline-flex items-center gap-1.5 transition-colors"
+                    className="h-9 px-3.5 rounded-full text-[13px] font-semibold bg-[#0D9488] hover:bg-[#0D9488]/90 text-white shadow-md inline-flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
                   >
-                    <Users className="h-3.5 w-3.5" /> Group Chat
+                    <Users className="h-3.5 w-3.5 shrink-0" /> <span className="whitespace-nowrap">Group Chat</span>
                     <span className="w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
                   </button>
                 </>
