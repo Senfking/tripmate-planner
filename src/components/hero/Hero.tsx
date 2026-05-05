@@ -490,7 +490,7 @@ export function Hero({
         className="absolute inset-0 -z-10"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.20) 30%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0.55) 88%, #fafaf9 100%)",
+            "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.20) 30%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.32) 75%, rgba(40,30,25,0.45) 86%, rgba(160,140,125,0.55) 92%, rgba(230,222,215,0.85) 97%, #fafaf9 100%)",
         }}
         aria-hidden
       />
