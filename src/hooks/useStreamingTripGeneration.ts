@@ -266,6 +266,7 @@ const INITIAL: StreamingState = {
   currentStage: null,
   completedDays: [],
   accommodations: {},
+  accommodationAlternatives: {},
   legs: [],
   adjustmentNotice: null,
 };
