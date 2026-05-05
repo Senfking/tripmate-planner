@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
 import {
   consumePendingPrompt,
-  stashPendingPrompt,
 } from "@/components/hero/usePendingPrompt";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
@@ -14,18 +13,18 @@ import {
 } from "@/components/trip-builder/TripCreationSurface";
 import { PremiumTripInput, type PremiumInputData } from "@/components/trip-builder/PremiumTripInput";
 import { TripCarousels } from "@/components/landing/TripCarousel";
+import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
 
 /**
  * /trips/new — single trip-creation entry point.
  *
  * Logged-in: hero-first TripCreationSurface (free-text pill + two
- *   side-by-side outline CTAs). "Step-by-step" expands the form INLINE
- *   on the same page (no modal, no route change). "Skip itinerary" opens
- *   BlankTripModal. Free-text submit hands off to StandaloneTripBuilder
- *   for confirmation + generation.
+ *   side-by-side outline CTAs).
  *
- * Anonymous: full-bleed atmospheric Hero — prompt is stashed and the
- *   visitor is routed to /ref to sign up.
+ * Anonymous: full-bleed atmospheric Hero. On submit we DO NOT redirect
+ *   to /ref — we stream a free trip via the anon path and route the
+ *   visitor to /trips/anon/[id]. Save / regenerate / second-generation
+ *   triggers a contextual signup modal, not a /ref redirect.
  */
 export default function PublicTripBuilder() {
   const navigate = useNavigate();
@@ -38,6 +37,7 @@ export default function PublicTripBuilder() {
   const [blankOpen, setBlankOpen] = useState(false);
   const [stepExpanded, setStepExpanded] = useState(false);
   const [submittedInputData, setSubmittedInputData] = useState<PremiumInputData | null>(null);
+  const [anonPrompt, setAnonPrompt] = useState<string | null>(null);
   const formAnchorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -53,8 +53,10 @@ export default function PublicTripBuilder() {
   }, [user, pending, builderOpen]);
 
   function handlePublicHeroSubmit(prompt: string) {
-    stashPendingPrompt(prompt);
-    navigate("/ref");
+    // Anonymous flow: stream the trip in-place, no /ref redirect.
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+    setAnonPrompt(trimmed);
   }
 
   function handleFreeTextSubmit(prompt: string) {
@@ -66,7 +68,6 @@ export default function PublicTripBuilder() {
     setStepExpanded((v) => {
       const next = !v;
       if (next) {
-        // Smooth-scroll the inline form into view after it renders.
         window.requestAnimationFrame(() => {
           formAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         });
@@ -85,8 +86,11 @@ export default function PublicTripBuilder() {
     setSubmittedInputData(null);
   }
 
-  // Anonymous visitors get the original public Hero.
+  // Anonymous visitors: Hero → in-place anon stream.
   if (!user) {
+    if (anonPrompt) {
+      return <AnonTripGenerator prompt={anonPrompt} onCancel={() => setAnonPrompt(null)} />;
+    }
     return (
       <div className="min-h-dvh bg-background">
         <Hero
