@@ -182,11 +182,34 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
       }}
     >
       <div className="text-center pt-4 pb-5">
+        {trigger === "rate_limit" && (
+          <div className="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-teal-400/30 to-teal-600/20 ring-1 ring-teal-300/30">
+            <Sparkles className="h-5 w-5 text-teal-300" />
+          </div>
+        )}
         <h2 className="text-[22px] font-bold leading-tight tracking-tight">
           {copy.headline}
         </h2>
         <p className="mt-2 text-sm text-white/70">{copy.sub}</p>
       </div>
+
+      {trigger === "rate_limit" && (
+        <ul className="mb-5 space-y-2.5 rounded-2xl bg-white/[0.04] ring-1 ring-white/10 p-4">
+          {[
+            { Icon: CalendarRange, text: "Plan unlimited trips" },
+            { Icon: Users, text: "Invite friends to vote and collaborate" },
+            { Icon: Wallet, text: "Split expenses automatically across the group" },
+            { Icon: Bookmark, text: "Save and edit trips anytime" },
+          ].map(({ Icon, text }) => (
+            <li key={text} className="flex items-center gap-3 text-[13.5px] text-white/85">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 ring-1 ring-teal-400/25">
+                <Icon className="h-3.5 w-3.5 text-teal-300" />
+              </span>
+              {text}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {error && (
         <p className="mb-3 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5" }}>
