@@ -657,8 +657,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   const firstDay = destDays[0]?.day_number || 1;
                   const lastDay = destDays[destDays.length - 1]?.day_number || firstDay;
                   const dayLabel = firstDay === lastDay ? `Day ${firstDay}` : `Days ${firstDay}–${lastDay}`;
-                  const photos = (dest.accommodation as any)?.photos as string[] | undefined;
-                  const hero = photos && photos.length > 0 ? photos[0] : null;
+                  const acc = dest.accommodation as any;
+                  const photos = (acc?.photos as string[] | undefined) || [];
+                  const altPhotos: string[] = Array.isArray(acc?.alternatives)
+                    ? acc.alternatives.flatMap((a: any) => Array.isArray(a?.photos) ? a.photos : [])
+                    : [];
+                  const activityPhotos: string[] = destDays.flatMap(d =>
+                    (d.activities || []).flatMap((a: any) => Array.isArray(a?.photos) ? a.photos : [])
+                  );
+                  const hero = photos[0] || altPhotos[0] || activityPhotos[0] || null;
 
                   nodes.push(
                     <button
