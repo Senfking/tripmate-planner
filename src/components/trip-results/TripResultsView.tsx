@@ -815,6 +815,13 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
+        {/* Group ideas strip — discoverable inline on the AI plan view */}
+        {!standalone && !streaming && tripId && (
+          <div className="mx-4 mb-4">
+            <TripIdeasStrip tripId={tripId} />
+          </div>
+        )}
+
         {/* ===== PER-DESTINATION CONTENT ===== */}
         {result.destinations.map((dest, destIdx) => {
           const destDays = allDays.filter(
