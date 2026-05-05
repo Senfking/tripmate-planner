@@ -6185,6 +6185,7 @@ Deno.serve(async (req) => {
     //   event: image           { url }                    (when destination cover resolves)
     //   event: day             { day_number, date, theme, activities }  (one per closed day)
     //   event: day_complete    { day_number, theme, activity_count }    (UI milestone after each day)
+    //   event: accommodation   { destination_index, hotel }              (emitted as soon as metadata resolves)
     //   event: trip_complete   { trip_title, trip_summary, accommodation, packing_suggestions, junto_pick_place_ids, daily_budget_estimate, total_activities, map_center, map_zoom, currency, budget_tier }
     //   event: error           { error, step, message }
     //   event: ping            {}                         (10s keepalive)
