@@ -147,7 +147,7 @@ export default function PublicLanding() {
       <footer className="py-10 px-5 border-t border-[#e5e5e5]">
         <div className="mx-auto max-w-5xl grid grid-cols-3 items-center gap-4 text-sm text-[#9ca3af]">
           <span className="text-xs justify-self-start">&copy; {new Date().getFullYear()} Junto</span>
-          <span className="font-extrabold tracking-[0.32em] uppercase text-[#1a1a1a] text-2xl sm:text-3xl justify-self-center">
+          <span className="font-extrabold tracking-[0.32em] uppercase text-[#1a1a1a] text-base justify-self-center">
             Junto
           </span>
           <div className="flex items-center gap-6 justify-self-end">
