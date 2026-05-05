@@ -60,7 +60,9 @@ export function AnonTripGenerator({ prompt, onCancel, onRateLimited }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt]);
 
-  // 429 -> rate-limit signup modal.
+  // 429 -> rate-limit signup modal. If a parent (e.g. PublicLanding) wants
+  // to handle this itself by showing the modal over its own blurred page,
+  // it can pass onRateLimited and we hand off control.
   useEffect(() => {
     if (
       streaming.state.stage === "error" &&
@@ -68,9 +70,13 @@ export function AnonTripGenerator({ prompt, onCancel, onRateLimited }: Props) {
         streaming.state.errorCode === "anon_limit" ||
         /anon_limit|signup_required|free trip preview|rate.?limit|too many|429/i.test(streaming.state.error ?? ""))
     ) {
-      setRateLimitOpen(true);
+      if (onRateLimited) {
+        onRateLimited();
+      } else {
+        setRateLimitOpen(true);
+      }
     }
-  }, [streaming.state.stage, streaming.state.error, streaming.state.errorCode]);
+  }, [streaming.state.stage, streaming.state.error, streaming.state.errorCode, onRateLimited]);
 
   // On successful complete with an anon_trip_id, navigate to /trips/anon/[id]
   // and hand the assembled result through router state to avoid a refetch.
