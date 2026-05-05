@@ -38,9 +38,43 @@ export interface StreamMeta {
   destination: string;
   country_code: string | null;
   num_days: number;
-  skeleton: { day_number: number; date: string; theme: string }[];
+  skeleton: {
+    day_number: number;
+    date: string;
+    theme: string;
+    destination_index?: number;
+    transit?: TransitDayMeta;
+  }[];
   currency: string;
   from_cache: boolean;
+}
+
+export interface TransitDayMeta {
+  from_index: number;
+  to_index: number;
+  half_day: boolean;
+  description: string;
+}
+
+/** A leg in the unified leg list. Real-destination legs (kind=destination)
+ *  carry an accommodation; transit pseudo-legs (kind=transit) carry travel
+ *  metadata for the "Travel: A → B" UI. Single-destination trips are simply
+ *  one destination leg. */
+export interface StreamLeg {
+  index: number;
+  name: string;
+  kind: "destination" | "transit";
+  days: number;
+  day_numbers: number[];
+  transit?: boolean;
+  description?: string;
+  /** Populated alongside the leg by the transit estimator — surfaces
+   *  duration/mode for transit-day UI. Real-destination legs omit this. */
+  transit_meta?: {
+    estimated_duration_hours?: number;
+    transit_type?: "flight" | "train" | "drive" | "ferry" | "mixed";
+    description?: string;
+  };
 }
 
 interface TripCompleteEvent {
@@ -95,6 +129,12 @@ export interface StreamingState {
    *  current single-destination flow; multi-leg trips will populate
    *  multiple keys (forward-compat). */
   accommodations: Record<number, AIActivity>;
+  /** Unified leg list (real + transit) emitted by the `leg` event right
+   *  after `meta`. Drives the multi-destination header/badges and per-leg
+   *  rendering. Empty until the leg event lands. */
+  legs: StreamLeg[];
+  /** Optional notice from the LLM when it dropped or trimmed destinations. */
+  adjustmentNotice: string | null;
 }
 
 /**
@@ -109,8 +149,6 @@ export interface StreamingState {
  * days / destination name).
  */
 export function buildPartialResult(state: StreamingState): AITripResult | null {
-  // Once trip_complete fires we have the fully-assembled result. Use that
-  // verbatim — no point reconstructing it.
   if (state.result) return state.result;
 
   const meta = state.meta;
@@ -119,45 +157,65 @@ export function buildPartialResult(state: StreamingState): AITripResult | null {
   const arrived = new Map(state.days.map((d) => [d.day_number, d]));
   const skeletonByNum = new Map(meta.skeleton.map((s) => [s.day_number, s]));
 
-  // Merge skeleton + arrived days, preserving the skeleton's ordering. A
-  // skeleton entry with no matching streamed day yields an empty-activities
-  // AIDay so DaySection can render a placeholder in the correct slot.
   const allDays: AIDay[] = meta.skeleton.map((s) => {
     const got = arrived.get(s.day_number);
-    if (got) return got;
+    if (got) {
+      return { ...got, destination_index: s.destination_index ?? got.destination_index ?? 0, transit: s.transit ?? got.transit };
+    }
     return {
       day_number: s.day_number,
       date: s.date,
       theme: s.theme,
       activities: [],
+      destination_index: s.destination_index ?? 0,
+      transit: s.transit,
     };
   });
-
-  // Some streams may emit a day with a number that isn't in the skeleton
-  // (defensive — shouldn't happen but don't drop data). Append at the end.
   for (const d of state.days) {
     if (!skeletonByNum.has(d.day_number)) allDays.push(d);
   }
   allDays.sort((a, b) => a.day_number - b.day_number);
 
-  const startDate = allDays[0]?.date ?? "";
-  const endDate = allDays[allDays.length - 1]?.date ?? startDate;
+  // Multi-leg reconstruction: use legs[] when present (PR #259); otherwise
+  // collapse to a single legacy destination. Each leg gets the days whose
+  // destination_index matches its own; transit legs render distinctly.
+  const legs = state.legs.length > 0
+    ? state.legs
+    : [{ index: 0, name: meta.destination, kind: "destination" as const, days: allDays.length, day_numbers: allDays.map(d => d.day_number) }];
+
+  const destinations = legs.map((leg) => {
+    const legDays = allDays.filter((d) => (d.destination_index ?? 0) === leg.index);
+    const startDate = legDays[0]?.date ?? "";
+    const endDate = legDays[legDays.length - 1]?.date ?? startDate;
+    const isTransit = leg.kind === "transit";
+    return {
+      name: leg.name,
+      start_date: startDate,
+      end_date: endDate,
+      intro: "",
+      days: legDays,
+      ...(isTransit
+        ? {
+            kind: "transit" as const,
+            transit: {
+              description: leg.description ?? leg.transit_meta?.description ?? "",
+              estimated_duration_hours: leg.transit_meta?.estimated_duration_hours,
+              transit_type: leg.transit_meta?.transit_type,
+            },
+          }
+        : {
+            kind: "destination" as const,
+            accommodation: state.accommodations[leg.index] as any,
+          }),
+    };
+  });
 
   const totalActivities = allDays.reduce((n, d) => n + d.activities.length, 0);
 
   return {
-    trip_title: meta.destination || "Your Trip",
+    trip_title: legs.filter(l => l.kind !== "transit").map(l => l.name).join(" • ") || meta.destination || "Your Trip",
     trip_summary: "",
-    destinations: [
-      {
-        name: meta.destination,
-        start_date: startDate,
-        end_date: endDate,
-        intro: "",
-        days: allDays,
-        accommodation: state.accommodations[0] as any,
-      },
-    ],
+    destinations,
     map_center: { lat: 0, lng: 0 },
     map_zoom: 6,
     daily_budget_estimate: 0,
@@ -169,6 +227,7 @@ export function buildPartialResult(state: StreamingState): AITripResult | null {
       typeof meta.country_code === "string" && meta.country_code.length === 2
         ? meta.country_code.toUpperCase()
         : null,
+    adjustment_notice: state.adjustmentNotice ?? null,
   };
 }
 
@@ -202,6 +261,8 @@ const INITIAL: StreamingState = {
   currentStage: null,
   completedDays: [],
   accommodations: {},
+  legs: [],
+  adjustmentNotice: null,
 };
 
 function assembleResult(
@@ -209,32 +270,63 @@ function assembleResult(
   days: AIDay[],
   imageUrl: string | null,
   trip: TripCompleteEvent,
+  legs: StreamLeg[],
+  accommodations: Record<number, AIActivity>,
+  adjustmentNotice: string | null,
 ): AITripResult {
-  // Apply junto picks based on place_ids from trip_complete.
   const juntoSet = new Set(trip.junto_pick_place_ids ?? []);
+  const skeletonByNum = new Map(meta.skeleton.map((s) => [s.day_number, s]));
   const annotatedDays: AIDay[] = days
     .slice()
     .sort((a, b) => a.day_number - b.day_number)
-    .map((day) => ({
-      ...day,
-      activities: day.activities.map((a) =>
-        a && a.location_name && juntoSet.has((a as any).place_id) ? { ...a, is_junto_pick: true } : a,
-      ),
-    }));
+    .map((day) => {
+      const sk = skeletonByNum.get(day.day_number);
+      return {
+        ...day,
+        destination_index: sk?.destination_index ?? day.destination_index ?? 0,
+        transit: sk?.transit ?? day.transit,
+        activities: day.activities.map((a) =>
+          a && a.location_name && juntoSet.has((a as any).place_id) ? { ...a, is_junto_pick: true } : a,
+        ),
+      };
+    });
+
+  const effectiveLegs = legs.length > 0
+    ? legs
+    : [{ index: 0, name: meta.destination, kind: "destination" as const, days: annotatedDays.length, day_numbers: annotatedDays.map(d => d.day_number) }];
+
+  const destinations = effectiveLegs.map((leg) => {
+    const legDays = annotatedDays.filter((d) => (d.destination_index ?? 0) === leg.index);
+    const startDate = legDays[0]?.date ?? "";
+    const endDate = legDays[legDays.length - 1]?.date ?? startDate;
+    const isTransit = leg.kind === "transit";
+    return {
+      name: leg.name,
+      start_date: startDate,
+      end_date: endDate,
+      intro: effectiveLegs.length === 1 ? trip.trip_summary : "",
+      days: legDays,
+      ...(isTransit
+        ? {
+            kind: "transit" as const,
+            transit: {
+              description: leg.description ?? leg.transit_meta?.description ?? "",
+              estimated_duration_hours: leg.transit_meta?.estimated_duration_hours,
+              transit_type: leg.transit_meta?.transit_type,
+            },
+          }
+        : {
+            kind: "destination" as const,
+            // Per-leg accommodation from streamed events; fallback to trip.accommodation for legacy single-leg payloads.
+            accommodation: (accommodations[leg.index] ?? (leg.index === 0 ? trip.accommodation : null)) as any,
+          }),
+    };
+  });
 
   return {
     trip_title: stripEmoji(trip.trip_title),
     trip_summary: trip.trip_summary,
-    destinations: [
-      {
-        name: meta.destination,
-        start_date: annotatedDays[0]?.date ?? "",
-        end_date: annotatedDays[annotatedDays.length - 1]?.date ?? "",
-        intro: trip.trip_summary,
-        days: annotatedDays,
-        accommodation: trip.accommodation as any,
-      },
-    ],
+    destinations,
     map_center: trip.map_center ?? { lat: 0, lng: 0 },
     map_zoom: trip.map_zoom ?? 12,
     daily_budget_estimate: trip.daily_budget_estimate ?? 0,
@@ -244,6 +336,7 @@ function assembleResult(
     budget_tier: trip.budget_tier,
     destination_image_url: trip.destination_image_url ?? imageUrl ?? null,
     destination_country_iso: trip.destination_country_iso ?? null,
+    adjustment_notice: (trip as any).adjustment_notice ?? adjustmentNotice ?? null,
   };
 }
 
@@ -434,11 +527,33 @@ function handleFrame(
       update({ accommodations: { ...cur.accommodations, [idx]: hotel as AIActivity } });
       break;
     }
+    case "leg": {
+      const rawLegs = Array.isArray(data?.legs) ? data.legs : [];
+      const legs: StreamLeg[] = rawLegs
+        .map((l: any): StreamLeg | null => {
+          if (typeof l?.index !== "number" || typeof l?.name !== "string") return null;
+          return {
+            index: l.index,
+            name: l.name,
+            kind: l.kind === "transit" ? "transit" : "destination",
+            days: typeof l.days === "number" ? l.days : 0,
+            day_numbers: Array.isArray(l.day_numbers) ? l.day_numbers : [],
+            transit: !!l.transit,
+            description: typeof l.description === "string" ? l.description : undefined,
+            transit_meta: l.transit_meta ?? undefined,
+          };
+        })
+        .filter((l: StreamLeg | null): l is StreamLeg => l !== null);
+      const adjustmentNotice = typeof data?.adjustment_notice === "string" && data.adjustment_notice.trim().length > 0
+        ? data.adjustment_notice.trim()
+        : null;
+      update({ legs, ...(adjustmentNotice ? { adjustmentNotice } : {}) });
+      break;
+    }
     case "day": {
       const day = normalizeDayFromServer(data);
       if (!day) break;
       const cur = getState();
-      // Replace if same day_number already present (e.g. from cache replay), else append.
       const existing = cur.days.findIndex((d) => d.day_number === day.day_number);
       const next = cur.days.slice();
       if (existing >= 0) next[existing] = day;
@@ -455,7 +570,10 @@ function handleFrame(
         update({ stage: "error", error: "Stream protocol violation: trip_complete before meta" });
         break;
       }
-      const result = assembleResult(meta, cur.days, cur.imageUrl, trip);
+      const tripAdjustment = typeof (data as any)?.adjustment_notice === "string" && (data as any).adjustment_notice.trim().length > 0
+        ? (data as any).adjustment_notice.trim()
+        : cur.adjustmentNotice;
+      const result = assembleResult(meta, cur.days, cur.imageUrl, trip, cur.legs, cur.accommodations, tripAdjustment);
       const anonTripId =
         typeof data?.anon_trip_id === "string"
           ? data.anon_trip_id
@@ -502,6 +620,8 @@ function normalizeDayFromServer(raw: any): AIDay | null {
     day_number: raw.day_number,
     theme: typeof raw.theme === "string" ? stripEmoji(raw.theme) : "",
     activities,
+    destination_index: typeof raw.destination_index === "number" ? raw.destination_index : 0,
+    transit: raw.transit ?? undefined,
   };
 }
 

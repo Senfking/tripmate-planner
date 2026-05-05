@@ -200,20 +200,22 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
     }
   }, [result]);
 
+  // Real-destination legs only (skip transit pseudo-legs) for header/badges.
+  const realDestinations = useMemo(
+    () => result.destinations.filter((d) => d.kind !== "transit"),
+    [result],
+  );
+
   const uniqueCities = useMemo(() => {
-    const names = new Set(result.destinations.map((d) => d.name));
+    const names = new Set(realDestinations.map((d) => d.name?.trim().toLowerCase()).filter(Boolean));
     return names.size;
-  }, [result]);
+  }, [realDestinations]);
 
   const totalHotels = useMemo(() => {
-    return result.destinations.filter((d) => d.accommodation).length;
-  }, [result]);
+    return realDestinations.filter((d) => d.accommodation).length;
+  }, [realDestinations]);
 
-  // Determine trip shape: single-destination (all days same place) vs multi-destination.
-  const isMultiDestination = useMemo(() => {
-    const names = new Set(result.destinations.map((d) => d.name?.trim().toLowerCase()).filter(Boolean));
-    return names.size >= 2;
-  }, [result]);
+  const isMultiDestination = useMemo(() => uniqueCities >= 2, [uniqueCities]);
 
   // Warn once if backend never marks any activity as a Junto Pick.
   useEffect(() => {
@@ -502,7 +504,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <span className="inline-flex items-center gap-1.5 min-w-0">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">
-                {result.destinations.map((d) => d.name).join(" · ")}
+                {realDestinations.map((d) => d.name).join(" • ")}
               </span>
             </span>
             {dateMode !== "generic" && <span className="font-mono text-xs">{dateRange}</span>}
@@ -809,6 +811,16 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           </div>
         )}
 
+        {/* Adjustment notice — when LLM dropped/trimmed destinations */}
+        {result.adjustment_notice && (
+          <div className="mx-4 mb-3 flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-3 py-2.5">
+            <Bell className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+            <span className="text-[12px] text-amber-900 dark:text-amber-200 leading-snug">
+              {result.adjustment_notice}
+            </span>
+          </div>
+        )}
+
         {/* Single draft notice — replaces per-day repetitions */}
         {standalone && (
           <div className="mx-4 mb-3 flex items-start gap-2 rounded-xl bg-muted/40 border border-dashed border-border px-3 py-2.5">
@@ -833,6 +845,46 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           const firstDay = destDays[0]?.day_number || 1;
           const lastDay = destDays[destDays.length - 1]?.day_number || firstDay;
           const dayRange2 = firstDay === lastDay ? `Day ${firstDay}` : `Days ${firstDay}–${lastDay}`;
+
+          // Transit pseudo-leg: render a slim "Travel: A → B" card instead
+          // of the full destination layout (no hero, no hotel, no day cards).
+          if (dest.kind === "transit") {
+            const transitMeta = (dest as any).transit ?? {};
+            const fromName = result.destinations[destIdx - 1]?.name ?? "";
+            const toName = result.destinations[destIdx + 1]?.name ?? "";
+            const ttype = transitMeta.transit_type as string | undefined;
+            const TransitIcon = ttype === "train" ? Plane : ttype === "ferry" ? Plane : ttype === "drive" ? Plane : Plane;
+            const hours = typeof transitMeta.estimated_duration_hours === "number" ? transitMeta.estimated_duration_hours : null;
+            const durationLabel = hours != null
+              ? `~${hours.toFixed(1).replace(/\.0$/, "")}h${ttype ? ` by ${ttype}` : ""}`
+              : null;
+            return (
+              <div key={destIdx} className={cn("mx-4 my-3", rc)} style={revealStyle(`dest-${destIdx}`)}>
+                <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-3 flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <TransitIcon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground/70">
+                      Travel{dayRange2 ? ` · ${dayRange2}` : ""}
+                    </p>
+                    <h3 className="text-sm font-semibold text-foreground mt-0.5 leading-tight">
+                      {fromName && toName ? `${fromName} → ${toName}` : dest.name}
+                    </h3>
+                    {durationLabel && (
+                      <p className="text-xs text-muted-foreground font-mono mt-0.5">{durationLabel}</p>
+                    )}
+                    {transitMeta.description && (
+                      <p className="text-xs text-muted-foreground mt-1.5 leading-snug">{transitMeta.description}</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground/60 mt-2 leading-snug">
+                      Estimated travel time based on typical routes — not actual flight or train schedules. Plan for buffer.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
           return (
             <div key={destIdx}>
