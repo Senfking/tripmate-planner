@@ -468,12 +468,12 @@ export function Hero({
       {/* Responsive hero image — smaller on mobile cuts ~70% of bytes.
           decoding="async" + fetchpriority="high" keep LCP healthy. */}
       <img
-        src="https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1200&q=70&auto=format&fit=crop"
+        src="https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1200&q=55&auto=format&fit=crop&fm=webp"
         srcSet={[
-          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=800&q=65&auto=format&fit=crop 800w",
-          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1200&q=70&auto=format&fit=crop 1200w",
-          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1800&q=72&auto=format&fit=crop 1800w",
-          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=2400&q=75&auto=format&fit=crop 2400w",
+          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=640&q=50&auto=format&fit=crop&fm=webp 640w",
+          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=960&q=52&auto=format&fit=crop&fm=webp 960w",
+          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1280&q=55&auto=format&fit=crop&fm=webp 1280w",
+          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1600&q=55&auto=format&fit=crop&fm=webp 1600w",
         ].join(", ")}
         sizes="100vw"
         alt=""
