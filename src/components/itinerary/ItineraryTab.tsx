@@ -235,6 +235,10 @@ export function ItineraryTab({ tripId, tripStartDate, myRole, newItemIds }: Prop
         </BuilderBoundary>
       )}
 
+      {/* Group ideas strip — surfaced inline so members discover suggestions
+          alongside the AI itinerary instead of behind a separate tab. */}
+      <TripIdeasStrip tripId={tripId} />
+
       {/* Empty state: AI Builder as primary CTA */}
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center pt-12 pb-6 text-center px-4">
