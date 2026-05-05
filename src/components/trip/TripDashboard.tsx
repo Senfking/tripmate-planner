@@ -96,10 +96,10 @@ class BuilderErrorBoundary extends Component<
   }
 }
 
-function BuilderWrapper({ tripId, onClose }: { tripId: string; onClose: () => void }) {
+function BuilderWrapper({ tripId, onClose, onShare }: { tripId: string; onClose: () => void; onShare?: () => void }) {
   return (
     <BuilderErrorBoundary onClose={onClose}>
-      <TripBuilderFlow tripId={tripId} onClose={onClose} />
+      <TripBuilderFlow tripId={tripId} onClose={onClose} onShare={onShare} />
     </BuilderErrorBoundary>
   );
 }
@@ -973,7 +973,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
   return (
     <div className="animate-fade-in-card pb-16">
       {builderOpen && (
-        <BuilderWrapper tripId={tripId} onClose={() => toggleBuilder(false)} />
+        <BuilderWrapper tripId={tripId} onClose={() => toggleBuilder(false)} onShare={onShareOpen} />
       )}
 
       <div className="px-4 md:max-w-[700px] md:mx-auto md:px-8 flex flex-col gap-3">
