@@ -1928,12 +1928,16 @@ Return:
 - confidence: "high" for well-known destinations and standard durations, "medium" for less-common destinations, "low" when you are guessing.
 - rationale: ONE sentence explaining the range and why the calculated value is or isn't plausible.
 
-GUIDANCE:
-- Mid-range Western Europe city: ~€100–200 per person per day all-in (lodging share + food + activities).
-- Budget Southeast Asia: ~€40–80 per person per day all-in.
-- Premium: 2-3x mid-range.
+GUIDANCE (per person per day, all-in: lodging share + food + activities + local transit):
+- Budget Southeast Asia (Bangkok, Hanoi, Bali): €40–80.
+- Mid-range Southeast Asia / Eastern Europe (Lisbon, Prague, Krakow): €80–150.
+- Mid-range Western Europe (Paris, Amsterdam, Rome, Berlin): €110–210.
+- Mid-range expensive Asia (Tokyo, Kyoto, Seoul, Singapore, Hong Kong): €130–240.
+- Mid-range high-cost cities (London, Zurich, Reykjavik, NYC, San Francisco): €170–300.
+- Budget tier: ~0.6x mid-range. Premium tier: ~2-3x mid-range.
 - Add ~30-50% headroom for short trips (1-3 days) where fixed costs dominate.
 - Multi-destination trips spend more on transit and lodging churn — bump the high end ~10-20%.
+- A 4-star hotel ALONE in Tokyo/Paris/London is €130+/night; trips priced below €600/week in those cities are almost certainly underestimated.
 
 CALL the validate_budget tool exactly once.`;
 
@@ -2015,7 +2019,18 @@ async function validateBudgetEstimate(
   logger: LLMLogger,
   pipelineStartedAt: number,
 ): Promise<BudgetValidationResult | null> {
-  if (destinations.length === 0 || totalDays <= 0) return null;
+  if (destinations.length === 0 || totalDays <= 0) {
+    console.log(
+      `[budget_validator] start skipped reason=empty_inputs ` +
+      `destinations=[${destinations.join(",")}] days=${totalDays}`,
+    );
+    return null;
+  }
+
+  console.log(
+    `[budget_validator] start calculated=${calculatedTotalEur} ` +
+    `destinations=[${destinations.join(",")}] days=${totalDays} tier=${budgetTier}`,
+  );
 
   // Cache lookup — keyed on (sorted destinations + days + tier). The
   // calculated total is NOT in the key: same trip shape gets the same
@@ -2023,7 +2038,10 @@ async function validateBudgetEstimate(
   const shape = budgetValidatorCacheKeyShape(destinations, totalDays, budgetTier);
   let cacheKey = "";
   try {
-    cacheKey = `budget_validator:v1:${await sha256Hex(shape)}`;
+    // v2 — bumped when the system prompt's GUIDANCE table was widened to
+    // include expensive-Asia and high-cost-city tiers. Old v1 entries had a
+    // narrower Western-Europe-centric range that under-bid Tokyo/NYC trips.
+    cacheKey = `budget_validator:v2:${await sha256Hex(shape)}`;
   } catch {
     cacheKey = "";
   }
@@ -2152,25 +2170,47 @@ function applyBudgetSanityCheck(
 ): void {
   result.estimation_method = "calculated";
   result.expected_range_eur = validation?.expected_range_eur ?? null;
-  if (!validation) return;
+  if (!validation) {
+    console.log(`[budget_validator] decision use=calculated calc=${result.trip_total_estimate} (no validation result)`);
+    return;
+  }
 
   const [low, high] = validation.expected_range_eur;
   const calc = result.trip_total_estimate;
   const inRange = calc >= low && calc <= high;
-  if (validation.plausible || inRange) return;
+  if (inRange) {
+    console.log(
+      `[budget_validator] decision use=calculated calc=${calc} range=[${low},${high}] in_range=true`,
+    );
+    return;
+  }
 
-  // Only intervene on extreme outliers — >50% below low OR >100% above
-  // high. Mild deviations stay as the calculated value (the ranges are
-  // intentionally wide; small drift is normal).
-  const wayBelow = calc < low * 0.5;
+  // Outlier thresholds: >35% below low (under-counts are the more
+  // dangerous failure mode — broken priceLevel clamps, FX drift,
+  // missing accommodation) OR >100% above high. Mild deviations stay as
+  // the calculated value. Note: validation.plausible is ignored when calc
+  // is out of range — Haiku's plausibility judgment can disagree with the
+  // numeric range it just produced; the range is the source of truth.
+  const wayBelow = calc < low * 0.65;
   const wayAbove = calc > high * 2;
-  if (!wayBelow && !wayAbove) return;
+  if (!wayBelow && !wayAbove) {
+    console.log(
+      `[budget_validator] decision use=calculated calc=${calc} range=[${low},${high}] ` +
+      `out_of_range=true mild_deviation=true plausible=${validation.plausible}`,
+    );
+    return;
+  }
 
   const midpoint = Math.round((low + high) / 2);
   console.warn(
     `[budget_anomaly] calculated=${calc} expected_range=[${low},${high}] ` +
     `confidence=${validation.confidence} replacement=${midpoint} ` +
+    `direction=${wayBelow ? "below" : "above"} ` +
     `rationale="${validation.rationale.slice(0, 200)}"`,
+  );
+  console.log(
+    `[budget_validator] decision use=corrected calc=${calc} range=[${low},${high}] ` +
+    `replacement=${midpoint} direction=${wayBelow ? "below" : "above"}`,
   );
   result.trip_total_estimate = midpoint;
   result.estimation_method = "llm_corrected";
@@ -4524,7 +4564,10 @@ const EXPERIENCE_COST_BAND_EUR_PLACE: Array<{ match: RegExp; range: [number, num
   { match: /park|natural_feature/i,                        range: [0, 10] },
   { match: /cafe|bakery|coffee/i,                          range: [4, 12] },
   { match: /restaurant/i,                                  range: [22, 55] },
-  { match: /lodging/i,                                     range: [80, 250] },
+  // NOTE: lodging intentionally NOT in this list. Hotels are clamped via
+  // clampLodgingCostPerNight (tier-aware EUR bands, distinct from the
+  // food-scaled PRICE_BANDS used for activities). A single per-night band
+  // here would either underbid premium hotels or overbid hostels.
 ];
 const EXPERIENCE_COST_BAND_EUR_SLOT: Partial<Record<SlotType, [number, number]>> = {
   breakfast: [6, 18],
@@ -4618,6 +4661,12 @@ function clampCostPerPerson(
   budgetTier: Intent["budget_tier"],
 ): number {
   if (!Number.isFinite(llmCost) || llmCost < 0) llmCost = 0;
+  // Hotels are per-room-per-night; the food-scaled PRICE_BANDS used below
+  // would clamp a Tokyo 4-star hotel to ¥10,000/night. Route lodging to its
+  // own band table.
+  if (slotType === "lodging" || isLodgingTypes(placeTypes)) {
+    return clampLodgingCostPerNight(llmCost, priceLevel, currency, venueTitle, budgetTier);
+  }
   const idx = priceLevelIndex(priceLevel);
   if (idx === 0) return 0;
 
@@ -4668,6 +4717,80 @@ function clampCostPerPerson(
       );
       llmCost = realistic.ceiling;
     }
+  }
+  return Math.max(0, Math.round(llmCost));
+}
+
+// Tier-aware lodging EUR bands (per room per night). Distinct from the
+// food-scaled PRICE_BANDS — a "moderate" Tokyo dinner is ¥4,000 but a
+// moderate Tokyo 3-star is ¥15,000-25,000. Numbers are deliberately wide
+// to cover real-world spread (capsule → ryokan → design hotel).
+const LODGING_BAND_EUR_BY_TIER: Record<Intent["budget_tier"], { floor: number; ceiling: number }> = {
+  "budget":    { floor: 35,  ceiling: 110 },
+  "mid-range": { floor: 95,  ceiling: 280 },
+  "premium":   { floor: 200, ceiling: 600 },
+};
+
+// Lodging-specific priceLevel modifier. Hotels span a wider quality/price
+// range than food (hostel → 5-star is 10x; cheap eats → fine dining is 4x),
+// so spread the multipliers further than the food-side priceLevelMultiplier.
+function lodgingPriceLevelMultiplier(priceLevel: string | null): number {
+  switch (priceLevel) {
+    case "PRICE_LEVEL_FREE":           return 0;
+    case "PRICE_LEVEL_INEXPENSIVE":    return 0.65;
+    case "PRICE_LEVEL_MODERATE":       return 1.0;
+    case "PRICE_LEVEL_EXPENSIVE":      return 1.6;
+    case "PRICE_LEVEL_VERY_EXPENSIVE": return 2.4;
+    default:                           return 1.0;
+  }
+}
+
+function isLodgingTypes(placeTypes: string[] | null | undefined): boolean {
+  if (!placeTypes || placeTypes.length === 0) return false;
+  return /(?:^|\b)(?:lodging|hotel|resort_hotel|motel|guest_house|hostel|bed_and_breakfast|inn|extended_stay_hotel)(?:\b|$)/i.test(
+    placeTypes.join(" "),
+  );
+}
+
+// Clamp lodging-per-night cost into a realistic band keyed on budget_tier
+// and modulated by Google priceLevel. Floor adjustment lifts under-quotes
+// to mid-band; ceiling adjustment caps obvious over-quotes. Never clamps
+// to 0 (PRICE_LEVEL_FREE on a hotel is a Places-side data error, not a
+// signal that the night is free).
+function clampLodgingCostPerNight(
+  llmCost: number,
+  priceLevel: string | null,
+  currency: string,
+  venueTitle: string,
+  budgetTier: Intent["budget_tier"],
+): number {
+  if (!Number.isFinite(llmCost) || llmCost < 0) llmCost = 0;
+  const tierBand = LODGING_BAND_EUR_BY_TIER[budgetTier] ?? LODGING_BAND_EUR_BY_TIER["mid-range"];
+  const fx = eurToLocalMultiplier(currency);
+  // PRICE_LEVEL_FREE on a hotel is bogus Google data; treat as unknown.
+  const plMul = priceLevel === "PRICE_LEVEL_FREE" ? 1.0 : lodgingPriceLevelMultiplier(priceLevel);
+  const floor = Math.round(tierBand.floor * fx * plMul);
+  const ceiling = Math.round(tierBand.ceiling * fx * plMul);
+  const target = Math.round((floor + ceiling) / 2);
+
+  // Floor: LLM ≥ 15% below floor → lift to mid-band. Mirrors
+  // clampCostPerPerson's slack so a near-floor LLM quote isn't churned.
+  const floorTolerated = floor * 0.85;
+  if (llmCost < floorTolerated) {
+    console.warn(
+      `[hydrateActivity.lodging] clamped-up "${venueTitle}" from ${llmCost} ${currency} → ${target} ${currency} ` +
+      `(tier=${budgetTier}, priceLevel=${priceLevel}, band=[${floor},${ceiling}])`,
+    );
+    return Math.max(0, target);
+  }
+  // Ceiling: LLM > 30% above ceiling → cap. Wider slack than the floor
+  // because over-quotes are less destructive than zero-counts.
+  if (llmCost > ceiling * 1.3) {
+    console.warn(
+      `[hydrateActivity.lodging] clamped-down "${venueTitle}" from ${llmCost} ${currency} → ${ceiling} ${currency} ` +
+      `(tier=${budgetTier}, priceLevel=${priceLevel}, band=[${floor},${ceiling}])`,
+    );
+    return ceiling;
   }
   return Math.max(0, Math.round(llmCost));
 }
