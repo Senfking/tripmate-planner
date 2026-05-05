@@ -64,6 +64,16 @@ interface Props {
    *  surface while streaming (e.g. "Composing your day-by-day itinerary…").
    *  Hidden once streaming=false. */
   streamingMessage?: string;
+  /** Destination-specific micro-copy rotated through during the longest
+   *  pipeline stage (ranking_days). Optional — older edge function deploys
+   *  may not emit this. */
+  streamingStatusMessages?: string[];
+  /** Latest pipeline milestone from stage_progress. Drives the pill's user
+   *  text for non-ranking stages plus the progress bar width. Optional. */
+  streamingStage?: { stage: string; user_text: string; percent_complete: number } | null;
+  /** day_numbers that finished ranking. Triggers a "Day N ready" toast and
+   *  card fade-in animation. Optional. */
+  streamingCompletedDays?: number[];
   /** "calendar" (default) or "generic" — generic mode hides real dates and
    *  the date range, used for date-agnostic template previews. */
   dateMode?: "calendar" | "generic";
