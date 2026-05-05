@@ -441,7 +441,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
               setInputData({ ...inputData, freeText: prompt });
             }
             setPhase("generating");
-            handleConfirm();
+            retryGenerate();
           }}
           onAdjust={() => {
             setResults(null);
@@ -498,7 +498,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
             <p className="text-xs text-muted-foreground">{streaming.state.error ?? "Unknown error"}</p>
             <div className="flex gap-2 pt-2">
               <Button variant="outline" onClick={onClose} className="flex-1">Close</Button>
-              <Button onClick={handleConfirm} className="flex-1">Try again</Button>
+              <Button onClick={retryGenerate} className="flex-1">Try again</Button>
             </div>
           </div>
         </div>
@@ -575,7 +575,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
         </div>
         <ConfirmationCard
           data={inputData}
-          onConfirm={handleConfirm}
+          onConfirm={retryGenerate}
           onEdit={() => setPhase("input")}
         />
       </>
