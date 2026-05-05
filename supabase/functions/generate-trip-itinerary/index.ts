@@ -768,6 +768,12 @@ interface RankedDestination {
   // Mirrors RankedDay.transit on the leg level so the frontend can render a
   // header/banner without scanning days. Only present when kind === "transit".
   transit?: TransitDayMeta;
+  // Destination-level market price baselines used when clamping this leg's
+  // activity / lodging costs (PR adding LLM-driven baselining). Persisted
+  // so cache-replay paths can reuse them without re-running the Haiku call.
+  // Null on transit pseudo-legs and on real legs whose baseline call failed
+  // (the calc fell back to PR #264's hardcoded tier bands).
+  price_baselines?: DestinationPriceBaselines | null;
 }
 
 interface PipelineResult {
@@ -2214,6 +2220,531 @@ function applyBudgetSanityCheck(
   );
   result.trip_total_estimate = midpoint;
   result.estimation_method = "llm_corrected";
+}
+
+// ---------------------------------------------------------------------------
+// Destination price baselines (Haiku) — per-destination market rates feeding
+// the cost clamps. Tier-based hardcoded EUR bands (PR #264) treat every
+// "mid-range" city the same, but a Tokyo mid-range lodging is ~€180/night
+// while Bangkok mid-range is ~€85. Haiku gives us city-shaped low/median/high
+// per-person/per-night EUR ranges; Google price_level still positions the
+// specific venue within the band. Hardcoded bands stay as the fallback when
+// the LLM call times out or returns garbage — no regression vs. PR #264.
+//
+// PRINCIPLES:
+//   - LLM provides MARKET-LEVEL BASELINES for the city, never venue prices.
+//   - Google price_level drives per-venue positioning inside the band.
+//   - 30-day cache keyed on (destination, tier) — most calls are cache hits.
+// ---------------------------------------------------------------------------
+
+const PRICE_BASELINES_SYSTEM_PROMPT = `You are a travel cost analyst. For the given destination and budget tier, provide realistic per-person/per-night EUR price ranges based on typical market rates. Return median values that reflect what travelers actually pay, not aspirational pricing. You provide MARKET-LEVEL BASELINES, not prices for specific venues.
+
+Return three categories of EUR ranges (low/median/high) per person:
+- lodging_per_night_eur: cost share per traveler per night (assume double occupancy → roughly half of room rate). Examples — Tokyo mid-range: 130/180/280. Bangkok mid-range: 50/85/130. Lisbon premium: 180/250/400.
+- food_per_meal_eur: typical per-meal cost (lunch or dinner at a sit-down spot). Examples — Tokyo mid-range: 18/35/65. Bangkok mid-range: 5/12/25. Lisbon premium: 35/55/95.
+- activity_per_person_eur: typical paid attraction or experience entry per person. Examples — Tokyo mid-range: 15/30/60. Bangkok mid-range: 10/20/40. Lisbon premium: 25/45/85.
+
+GUIDANCE:
+- "low" = cheap end of the tier (still tier-appropriate, not the lowest possible).
+- "median" = what most travelers in this tier actually pay.
+- "high" = upper end of the tier before crossing into the next tier up.
+- Adjust for the destination's actual cost level — expensive Asia (Tokyo, Singapore, Hong Kong) and high-cost cities (London, Zurich, Reykjavik, NYC) are well above mid-range Western Europe; SEA and Eastern Europe are well below.
+- "luxury" tier = roughly 1.5-2x premium values; still real prices not vanity numbers.
+- "budget" tier = hostels/guesthouses, street food and casual eateries, mostly free attractions plus occasional paid entries.
+
+Output: call the emit_price_baselines tool exactly once with all three bands and a one-sentence rationale.`;
+
+const PRICE_BASELINES_TOOL: ClaudeTool = {
+  name: "emit_price_baselines",
+  description: "Emit destination-level per-person EUR price baselines for lodging-per-night, food-per-meal, and activity-per-person.",
+  input_schema: {
+    type: "object",
+    properties: {
+      lodging_per_night_eur: {
+        type: "object",
+        properties: {
+          low: { type: "number", minimum: 0 },
+          median: { type: "number", minimum: 0 },
+          high: { type: "number", minimum: 0 },
+        },
+        required: ["low", "median", "high"],
+        additionalProperties: false,
+      },
+      food_per_meal_eur: {
+        type: "object",
+        properties: {
+          low: { type: "number", minimum: 0 },
+          median: { type: "number", minimum: 0 },
+          high: { type: "number", minimum: 0 },
+        },
+        required: ["low", "median", "high"],
+        additionalProperties: false,
+      },
+      activity_per_person_eur: {
+        type: "object",
+        properties: {
+          low: { type: "number", minimum: 0 },
+          median: { type: "number", minimum: 0 },
+          high: { type: "number", minimum: 0 },
+        },
+        required: ["low", "median", "high"],
+        additionalProperties: false,
+      },
+      rationale: { type: "string" },
+    },
+    required: [
+      "lodging_per_night_eur",
+      "food_per_meal_eur",
+      "activity_per_person_eur",
+      "rationale",
+    ],
+    additionalProperties: false,
+  },
+};
+
+const PRICE_BASELINES_CACHE_TTL_MS = 30 * 86_400_000; // 30 days
+// Hard cap so a slow Haiku call never stalls the trip pipeline. Cache misses
+// fall back to hardcoded tier bands; we'd rather under-bid than block the
+// rank stage waiting on a baseline.
+const PRICE_BASELINES_TIMEOUT_MS = 4000;
+
+interface PriceBand {
+  low: number;
+  median: number;
+  high: number;
+}
+
+interface DestinationPriceBaselines {
+  lodging_per_night_eur: PriceBand;
+  food_per_meal_eur: PriceBand;
+  activity_per_person_eur: PriceBand;
+  rationale: string;
+}
+
+type PriceBaselineTier = Intent["budget_tier"] | "luxury";
+
+function normalizePriceBand(raw: unknown): PriceBand | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const low = typeof o.low === "number" && Number.isFinite(o.low) ? o.low : NaN;
+  const median = typeof o.median === "number" && Number.isFinite(o.median) ? o.median : NaN;
+  const high = typeof o.high === "number" && Number.isFinite(o.high) ? o.high : NaN;
+  if (![low, median, high].every((n) => Number.isFinite(n) && n >= 0)) return null;
+  if (median < low || high < median) return null;
+  return {
+    low: Math.round(low * 100) / 100,
+    median: Math.round(median * 100) / 100,
+    high: Math.round(high * 100) / 100,
+  };
+}
+
+function normalizePriceBaselines(raw: unknown): DestinationPriceBaselines | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const lodging = normalizePriceBand(o.lodging_per_night_eur);
+  const food = normalizePriceBand(o.food_per_meal_eur);
+  const activity = normalizePriceBand(o.activity_per_person_eur);
+  if (!lodging || !food || !activity) return null;
+  const rationale = typeof o.rationale === "string" ? o.rationale.trim() : "";
+  return {
+    lodging_per_night_eur: lodging,
+    food_per_meal_eur: food,
+    activity_per_person_eur: activity,
+    rationale,
+  };
+}
+
+function priceBaselinesCacheKeyShape(destination: string, tier: string): string {
+  return JSON.stringify({
+    destination: destination.toLowerCase().trim(),
+    tier: tier.toLowerCase().trim(),
+  });
+}
+
+async function estimateDestinationPriceBaselines(
+  apiKey: string,
+  destination: string,
+  tier: PriceBaselineTier,
+  svcClient: ReturnType<typeof createClient>,
+  logger: LLMLogger,
+  pipelineStartedAt: number,
+): Promise<DestinationPriceBaselines | null> {
+  if (!apiKey || !destination || !destination.trim()) {
+    console.log(`[price_baselines] start skipped reason=empty_inputs destination="${destination}" tier=${tier}`);
+    return null;
+  }
+
+  const shape = priceBaselinesCacheKeyShape(destination, tier);
+  let cacheKey = "";
+  try {
+    cacheKey = `price_baselines:v1:${await sha256Hex(shape)}`;
+  } catch {
+    cacheKey = "";
+  }
+
+  if (cacheKey) {
+    try {
+      const { data } = await svcClient
+        .from("ai_response_cache")
+        .select("response_json")
+        .eq("cache_key", cacheKey)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (data?.response_json) {
+        const cached = normalizePriceBaselines(data.response_json);
+        if (cached) {
+          console.log(
+            `[price_baselines] start destination=${destination} tier=${tier} cache_hit=true`,
+          );
+          console.log(
+            `[price_baselines] result lodging_median=${cached.lodging_per_night_eur.median} ` +
+            `food_median=${cached.food_per_meal_eur.median} ` +
+            `activity_median=${cached.activity_per_person_eur.median}`,
+          );
+          return cached;
+        }
+      }
+    } catch (e) {
+      console.warn("[price_baselines] cache lookup failed:", (e as Error).message);
+    }
+  }
+
+  console.log(
+    `[price_baselines] start destination=${destination} tier=${tier} cache_hit=false`,
+  );
+
+  // Bound the LLM call separately from the pipeline budget so a slow tail
+  // never blocks ranking. On timeout the caller falls back to hardcoded
+  // bands and the build continues.
+  const userPayload = { destination, tier };
+  let result: ClaudeCallResult<Record<string, unknown>> | null = null;
+  try {
+    const callPromise = callClaudeHaiku<Record<string, unknown>>(
+      apiKey,
+      [{ type: "text", text: PRICE_BASELINES_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      `Estimate price baselines for this destination and tier:\n\n${JSON.stringify(userPayload, null, 2)}`,
+      PRICE_BASELINES_TOOL,
+      400,
+      pipelineStartedAt,
+      "estimateDestinationPriceBaselines",
+      0,
+    );
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), PRICE_BASELINES_TIMEOUT_MS),
+    );
+    const settled = await Promise.race([callPromise, timeoutPromise]);
+    if (!settled) {
+      console.warn(`[price_baselines] timeout after ${PRICE_BASELINES_TIMEOUT_MS}ms destination=${destination}`);
+      return null;
+    }
+    result = settled;
+  } catch (e) {
+    console.warn("[price_baselines] Haiku failed; using fallback:", (e as Error).message);
+    return null;
+  }
+
+  await logger.log({
+    feature: "trip_builder_price_baselines",
+    model: HAIKU_MODEL,
+    input_tokens: result.usage.input_tokens,
+    output_tokens: result.usage.output_tokens,
+    cost_usd: computeHaikuCost(result.usage),
+    cached: result.usage.cache_read_input_tokens > 0,
+  }).catch((e) => console.warn("[price_baselines] logger.log failed:", (e as Error).message));
+
+  const normalized = normalizePriceBaselines(result.data);
+  if (!normalized) {
+    console.warn(`[price_baselines] response failed to normalize destination=${destination}`);
+    return null;
+  }
+
+  if (cacheKey) {
+    svcClient
+      .from("ai_response_cache")
+      .upsert({
+        cache_key: cacheKey,
+        response_json: normalized as unknown as Record<string, unknown>,
+        expires_at: new Date(Date.now() + PRICE_BASELINES_CACHE_TTL_MS).toISOString(),
+      })
+      .then((r: { error: { message: string; code?: string } | null }) => {
+        if (r.error && r.error.code !== "23505") {
+          console.warn(`[price_baselines] cache write failed: ${r.error.message}`);
+        }
+      });
+  }
+
+  console.log(
+    `[price_baselines] result lodging_median=${normalized.lodging_per_night_eur.median} ` +
+    `food_median=${normalized.food_per_meal_eur.median} ` +
+    `activity_median=${normalized.activity_per_person_eur.median}`,
+  );
+  return normalized;
+}
+
+// Position a venue inside a destination baseline band given Google's
+// PRICE_LEVEL_*. Returns EUR. Caller multiplies by FX for local currency.
+//   1 → 0.7 × low      (very cheap end)
+//   2 → median * 0.9   (slightly below median)
+//   3 → median * 1.2   (slightly above median)
+//   4 → median * 1.6   (high end)
+//   FREE → 0
+//   null/unknown → median (default)
+function positionInPriceBand(band: PriceBand, priceLevel: string | null): number {
+  switch (priceLevel) {
+    case "PRICE_LEVEL_FREE":           return 0;
+    case "PRICE_LEVEL_INEXPENSIVE":    return band.low * 0.7;
+    case "PRICE_LEVEL_MODERATE":       return band.median * 0.9;
+    case "PRICE_LEVEL_EXPENSIVE":      return band.median * 1.2;
+    case "PRICE_LEVEL_VERY_EXPENSIVE": return band.median * 1.6;
+    default:                            return band.median;
+  }
+}
+
+// Routes a non-lodging activity to the right baseline band. breakfast/lunch/
+// dinner → food. Filler slots (rest, arrival, departure, transit_buffer)
+// have no associated cost — caller skips the clamp. Everything else is an
+// activity (museums, tours, nightlife, attractions, etc.) — except: if the
+// place looks like a food venue (cafe/bakery/restaurant), route it to food.
+function baselineCategoryFor(
+  slotType: SlotType,
+  placeTypes: string[] | null | undefined,
+): "food" | "activity" | null {
+  if (slotType === "breakfast" || slotType === "lunch" || slotType === "dinner") return "food";
+  if (slotType === "rest" || slotType === "arrival" || slotType === "departure" || slotType === "transit_buffer") return null;
+  if (placeTypes && placeTypes.length > 0) {
+    const joined = placeTypes.join(" ");
+    if (/cafe|bakery|coffee|restaurant|meal_/i.test(joined)) return "food";
+  }
+  return "activity";
+}
+
+// ---------------------------------------------------------------------------
+// Per-venue accommodation cost (Haiku) — refines the destination-baseline
+// approach for HOTELS specifically. Lodging dominates trip cost and has the
+// highest variance: Park Hyatt Tokyo and a 4-star business hotel can both
+// be Google price_level 3-4 yet differ 3-4x in real EUR. Destination
+// baselines smooth that out, so we estimate per-venue here and let the
+// baseline path act as the fallback for low-confidence properties.
+//
+// AI Feature Standards trade-off: this is a deliberate exception to "LLM
+// never invents prices for specific places" — for budget estimation only,
+// market estimation based on real venue characteristics is acceptable, and
+// the existing "Estimated based on typical prices" disclaimer covers it.
+//
+// PRINCIPLES:
+//   - confidence "high"/"medium" → use the LLM EUR estimate
+//   - confidence "low" → caller falls back to destination baseline + price_level
+//   - call timeout/parse error → caller falls back to destination baseline
+//   - 30-day cache keyed on (hotel_name, destination)
+// ---------------------------------------------------------------------------
+
+const ACCOM_ESTIMATE_SYSTEM_PROMPT = `You are a travel cost analyst with knowledge of typical hotel pricing across global markets. For the given accommodation, estimate a realistic per-night EUR rate per person (assume double occupancy → roughly half the room rate). Use your knowledge of the specific property if known; otherwise estimate based on the city + neighborhood + Google price_level + star rating combination. Return median values reflecting what travelers actually pay, not aspirational pricing.
+
+Confidence scale (be honest — this gates whether we trust the estimate or fall back to a destination baseline):
+- "high"   = you recognize the specific property OR the chain in this city, and have a confident range.
+- "medium" = you don't recognize the property but the city + neighborhood + price_level + star rating give you a confident estimate from comparable properties.
+- "low"    = limited data: obscure property in an obscure city, or signals contradict each other (e.g. price_level 4 with rating 3.0 / 8 reviews). Caller will fall back to a destination baseline.
+
+EXAMPLES:
+- Park Hyatt Tokyo, Shinjuku, price_level 4, rating 4.7, 1500 reviews, premium tier → ~580 EUR/night, "high", "Park Hyatt Tokyo is a recognized luxury property; typical 500-700 EUR/night per person".
+- Hotel Minato, Shibuya, price_level 3, rating 4.0, 200 reviews, mid-range → ~165 EUR/night, "medium", "Mid-range Tokyo hotel in Shibuya, typical 4-star pricing for area".
+- Hotel Lariosik, Bishkek (no neighborhood), price_level 2, rating 4.2, 30 reviews, mid-range → "low", "Limited data on this property; defer to regional baseline".
+
+OUTPUT: call the emit_accommodation_estimate tool exactly once.`;
+
+const ACCOM_ESTIMATE_TOOL: ClaudeTool = {
+  name: "emit_accommodation_estimate",
+  description: "Emit a per-night per-person EUR cost estimate for a specific hotel along with a confidence level.",
+  input_schema: {
+    type: "object",
+    properties: {
+      estimated_eur_per_night: { type: "number", minimum: 0 },
+      confidence: { type: "string", enum: ["high", "medium", "low"] },
+      rationale: { type: "string" },
+    },
+    required: ["estimated_eur_per_night", "confidence", "rationale"],
+    additionalProperties: false,
+  },
+};
+
+const ACCOM_ESTIMATE_CACHE_TTL_MS = 30 * 86_400_000; // 30 days
+// 4s soft cap so a slow Haiku call doesn't stall accommodation hydration.
+// Cache misses fall back to the destination-baseline path; no regression.
+const ACCOM_ESTIMATE_TIMEOUT_MS = 4000;
+
+interface AccommodationEstimate {
+  estimated_eur_per_night: number;
+  confidence: "high" | "medium" | "low";
+  rationale: string;
+}
+
+function normalizeAccommodationEstimate(raw: unknown): AccommodationEstimate | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const eur = o.estimated_eur_per_night;
+  const conf = o.confidence;
+  if (typeof eur !== "number" || !Number.isFinite(eur) || eur < 0) return null;
+  if (conf !== "high" && conf !== "medium" && conf !== "low") return null;
+  const rationale = typeof o.rationale === "string" ? o.rationale.trim() : "";
+  return {
+    estimated_eur_per_night: Math.round(eur * 100) / 100,
+    confidence: conf,
+    rationale,
+  };
+}
+
+function accommodationEstimateCacheKeyShape(hotelName: string, destination: string): string {
+  return JSON.stringify({
+    hotel: hotelName.toLowerCase().trim(),
+    destination: destination.toLowerCase().trim(),
+  });
+}
+
+// Convert Google's enum string to a 0-4 numeric for the prompt payload.
+// Returns null when Google has no price_level info — the prompt is
+// shaped to use neighborhood + rating in that case.
+function priceLevelEnumToNumber(priceLevel: string | null): number | null {
+  switch (priceLevel) {
+    case "PRICE_LEVEL_FREE":           return 0;
+    case "PRICE_LEVEL_INEXPENSIVE":    return 1;
+    case "PRICE_LEVEL_MODERATE":       return 2;
+    case "PRICE_LEVEL_EXPENSIVE":      return 3;
+    case "PRICE_LEVEL_VERY_EXPENSIVE": return 4;
+    default:                           return null;
+  }
+}
+
+async function estimateAccommodationCost(
+  apiKey: string,
+  hotelName: string,
+  destination: string,
+  neighborhood: string | null,
+  priceLevel: number | null,
+  starRating: number | null,
+  reviewCount: number | null,
+  tier: PriceBaselineTier,
+  svcClient: ReturnType<typeof createClient>,
+  logger: LLMLogger,
+  pipelineStartedAt: number,
+): Promise<AccommodationEstimate | null> {
+  if (!apiKey || !hotelName?.trim() || !destination?.trim()) {
+    console.log(
+      `[hotel_estimate] start skipped reason=empty_inputs hotel="${hotelName}" destination="${destination}"`,
+    );
+    return null;
+  }
+
+  const shape = accommodationEstimateCacheKeyShape(hotelName, destination);
+  let cacheKey = "";
+  try {
+    cacheKey = `hotel_estimate:v1:${await sha256Hex(shape)}`;
+  } catch {
+    cacheKey = "";
+  }
+
+  if (cacheKey) {
+    try {
+      const { data } = await svcClient
+        .from("ai_response_cache")
+        .select("response_json")
+        .eq("cache_key", cacheKey)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (data?.response_json) {
+        const cached = normalizeAccommodationEstimate(data.response_json);
+        if (cached) {
+          console.log(
+            `[hotel_estimate] start hotel="${hotelName}" destination=${destination} cache_hit=true`,
+          );
+          console.log(
+            `[hotel_estimate] result eur=${cached.estimated_eur_per_night} confidence=${cached.confidence} ` +
+            `rationale="${cached.rationale.slice(0, 120)}"`,
+          );
+          return cached;
+        }
+      }
+    } catch (e) {
+      console.warn("[hotel_estimate] cache lookup failed:", (e as Error).message);
+    }
+  }
+
+  console.log(
+    `[hotel_estimate] start hotel="${hotelName}" destination=${destination} cache_hit=false`,
+  );
+
+  const userPayload = {
+    hotel_name: hotelName,
+    destination,
+    neighborhood,
+    price_level: priceLevel,
+    star_rating: starRating,
+    review_count: reviewCount,
+    tier,
+  };
+
+  let result: ClaudeCallResult<Record<string, unknown>> | null = null;
+  try {
+    const callPromise = callClaudeHaiku<Record<string, unknown>>(
+      apiKey,
+      [{ type: "text", text: ACCOM_ESTIMATE_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      `Estimate per-person/per-night EUR for this hotel:\n\n${JSON.stringify(userPayload, null, 2)}`,
+      ACCOM_ESTIMATE_TOOL,
+      400,
+      pipelineStartedAt,
+      "estimateAccommodationCost",
+      0,
+    );
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), ACCOM_ESTIMATE_TIMEOUT_MS),
+    );
+    const settled = await Promise.race([callPromise, timeoutPromise]);
+    if (!settled) {
+      console.warn(
+        `[hotel_estimate] timeout after ${ACCOM_ESTIMATE_TIMEOUT_MS}ms hotel="${hotelName}"`,
+      );
+      return null;
+    }
+    result = settled;
+  } catch (e) {
+    console.warn(`[hotel_estimate] Haiku failed hotel="${hotelName}": ${(e as Error).message}`);
+    return null;
+  }
+
+  await logger.log({
+    feature: "trip_builder_hotel_estimate",
+    model: HAIKU_MODEL,
+    input_tokens: result.usage.input_tokens,
+    output_tokens: result.usage.output_tokens,
+    cost_usd: computeHaikuCost(result.usage),
+    cached: result.usage.cache_read_input_tokens > 0,
+  }).catch((e) => console.warn("[hotel_estimate] logger.log failed:", (e as Error).message));
+
+  const normalized = normalizeAccommodationEstimate(result.data);
+  if (!normalized) {
+    console.warn(`[hotel_estimate] response failed to normalize hotel="${hotelName}"`);
+    return null;
+  }
+
+  if (cacheKey) {
+    svcClient
+      .from("ai_response_cache")
+      .upsert({
+        cache_key: cacheKey,
+        response_json: normalized as unknown as Record<string, unknown>,
+        expires_at: new Date(Date.now() + ACCOM_ESTIMATE_CACHE_TTL_MS).toISOString(),
+      })
+      .then((r: { error: { message: string; code?: string } | null }) => {
+        if (r.error && r.error.code !== "23505") {
+          console.warn(`[hotel_estimate] cache write failed: ${r.error.message}`);
+        }
+      });
+  }
+
+  console.log(
+    `[hotel_estimate] result eur=${normalized.estimated_eur_per_night} confidence=${normalized.confidence} ` +
+    `rationale="${normalized.rationale.slice(0, 120)}"`,
+  );
+  return normalized;
 }
 
 // ---------------------------------------------------------------------------
@@ -4619,6 +5150,40 @@ function tierMultiplier(tier: Intent["budget_tier"]): number {
   return 1.0;
 }
 
+// Apply destination-level price baselines (if available) for a non-lodging
+// activity. Returns the position-targeted cost in trip currency, OR null
+// when baselines aren't available / don't apply (filler slot, no band for
+// the category). The caller treats null as "fall back to hardcoded clamp".
+//
+// PRICE_LEVEL_FREE → 0 always. Unknown priceLevel on a free-coded place
+// type (parks, public landmarks, churches) → null so the caller leaves the
+// LLM value untouched (avoids bumping a "free" Jemaa el-Fnaa to a median).
+function applyBaselinesForActivity(
+  baselines: DestinationPriceBaselines,
+  slotType: SlotType,
+  placeTypes: string[] | null | undefined,
+  priceLevel: string | null,
+  currency: string,
+): number | null {
+  const category = baselineCategoryFor(slotType, placeTypes);
+  if (!category) return null;
+  if (priceLevel === "PRICE_LEVEL_FREE") return 0;
+  // Free-coded place types with unknown priceLevel → don't override.
+  // Otherwise we'd bump a public landmark to the activity median.
+  if (priceLevel === null && placeTypes && placeTypes.length > 0) {
+    if (/park|natural_feature|tourist_attraction|landmark|church|mosque|temple|historical_landmark/i
+        .test(placeTypes.join(" "))) {
+      return null;
+    }
+  }
+  const band = category === "food"
+    ? baselines.food_per_meal_eur
+    : baselines.activity_per_person_eur;
+  const eurTarget = positionInPriceBand(band, priceLevel);
+  const fx = eurToLocalMultiplier(currency);
+  return Math.max(0, Math.round(eurTarget * fx));
+}
+
 // Compute realistic floor + ceiling in trip currency. Returns null if the
 // slot/types combo has no band entry — caller skips the floor/ceiling
 // adjustment and falls back to the LLM value as-is.
@@ -4659,13 +5224,35 @@ function clampCostPerPerson(
   slotType: SlotType,
   placeTypes: string[] | null | undefined,
   budgetTier: Intent["budget_tier"],
+  baselines: DestinationPriceBaselines | null = null,
+  hotelEstimate: AccommodationEstimate | null = null,
 ): number {
   if (!Number.isFinite(llmCost) || llmCost < 0) llmCost = 0;
   // Hotels are per-room-per-night; the food-scaled PRICE_BANDS used below
   // would clamp a Tokyo 4-star hotel to ¥10,000/night. Route lodging to its
   // own band table.
   if (slotType === "lodging" || isLodgingTypes(placeTypes)) {
-    return clampLodgingCostPerNight(llmCost, priceLevel, currency, venueTitle, budgetTier);
+    return clampLodgingCostPerNight(
+      llmCost, priceLevel, currency, venueTitle, budgetTier, baselines, hotelEstimate,
+    );
+  }
+
+  // Destination-level baselines (Haiku) — when present, they replace the
+  // hardcoded EUR bands. Google price_level still positions the venue
+  // within the destination's band. Falls through to the hardcoded path
+  // when baselines aren't available (no LLM call this run, or the
+  // category doesn't map — filler slots, free-coded landmarks, etc.).
+  if (baselines) {
+    const baselineTarget = applyBaselinesForActivity(
+      baselines, slotType, placeTypes, priceLevel, currency,
+    );
+    if (baselineTarget !== null) {
+      console.log(
+        `[activity_clamp] place="${venueTitle}" slot=${slotType} price_level=${priceLevel ?? "null"} ` +
+        `raw=${llmCost} clamped=${baselineTarget} source=baselines`,
+      );
+      return baselineTarget;
+    }
   }
   const idx = priceLevelIndex(priceLevel);
   if (idx === 0) return 0;
@@ -4763,8 +5350,49 @@ function clampLodgingCostPerNight(
   currency: string,
   venueTitle: string,
   budgetTier: Intent["budget_tier"],
+  baselines: DestinationPriceBaselines | null = null,
+  hotelEstimate: AccommodationEstimate | null = null,
 ): number {
   if (!Number.isFinite(llmCost) || llmCost < 0) llmCost = 0;
+
+  // Per-venue Haiku estimate is preferred when confidence allows. Hotel
+  // costs dominate trip totals and have venue-level variance the
+  // destination band can't capture (Park Hyatt vs business hotel — both
+  // price_level 4 in Tokyo, but 3-4x apart). On low confidence or no
+  // estimate, fall through to the destination-baseline path.
+  if (hotelEstimate && (hotelEstimate.confidence === "high" || hotelEstimate.confidence === "medium")) {
+    const fx = eurToLocalMultiplier(currency);
+    const target = Math.max(0, Math.round(hotelEstimate.estimated_eur_per_night * fx));
+    console.log(
+      `[lodging_clamp] place="${venueTitle}" price_level=${priceLevel ?? "null"} ` +
+      `raw=${llmCost} clamped=${target} source=hotel_estimate confidence=${hotelEstimate.confidence}`,
+    );
+    return target;
+  }
+
+  // Destination-level baseline path. Replaces the hardcoded tier band
+  // entirely; price_level positions the venue inside the city's lodging
+  // band. Falls through on missing baselines.
+  if (baselines) {
+    const fx = eurToLocalMultiplier(currency);
+    // PRICE_LEVEL_FREE on a hotel is bogus Google data — treat as unknown
+    // (median) rather than free.
+    const effectivePriceLevel = priceLevel === "PRICE_LEVEL_FREE" ? null : priceLevel;
+    const targetEur = positionInPriceBand(baselines.lodging_per_night_eur, effectivePriceLevel);
+    const target = Math.max(0, Math.round(targetEur * fx));
+    const fallbackReason = hotelEstimate?.confidence === "low" ? "low_confidence" : "no_estimate";
+    console.log(
+      `[lodging_clamp] place="${venueTitle}" price_level=${priceLevel ?? "null"} ` +
+      `raw=${llmCost} clamped=${target} source=baselines fallback_reason=${fallbackReason}`,
+    );
+    if (hotelEstimate?.confidence === "low") {
+      console.log(
+        `[hotel_estimate] fallback reason=low_confidence used_baseline=${target}`,
+      );
+    }
+    return target;
+  }
+
   const tierBand = LODGING_BAND_EUR_BY_TIER[budgetTier] ?? LODGING_BAND_EUR_BY_TIER["mid-range"];
   const fx = eurToLocalMultiplier(currency);
   // PRICE_LEVEL_FREE on a hotel is bogus Google data; treat as unknown.
@@ -5495,6 +6123,8 @@ function hydrateActivity(
   currency: string,
   budgetTier: Intent["budget_tier"],
   events: EventCandidate[] = [],
+  baselines: DestinationPriceBaselines | null = null,
+  hotelEstimate: AccommodationEstimate | null = null,
 ): EnrichedActivity | null {
   // Non-event activities without a pool match get dropped here.
   if (!raw.is_event && !place) return null;
@@ -5526,6 +6156,8 @@ function hydrateActivity(
         slot.type,
         place.types,
         budgetTier,
+        baselines,
+        hotelEstimate,
       )
     : Math.max(0, Math.round(raw.estimated_cost_per_person ?? 0));
 
@@ -6026,6 +6658,7 @@ async function rankInParallel(
   endDate: string,
   logger: LLMLogger,
   pipelineStartedAt: number,
+  svcClient: ReturnType<typeof createClient>,
 ): Promise<PipelineResult> {
   // Trip-level currency anchored to leg 0's country. Cross-country trips
   // reasonably surface the first destination's currency to the user; the
@@ -6064,6 +6697,70 @@ async function rankInParallel(
     `[rankInParallel] mode=${sequentialRanking ? "sequential" : "parallel"} ` +
     `numDays=${numDays} pool_size=${placeById.size}`,
   );
+
+  // ---- Per-leg destination price baselines (Haiku, ~$0.0005/leg, 30-day
+  // cache). Fires in parallel with metadata + day rankers; awaited before
+  // hydrate so per-activity clamping can use city-shaped EUR ranges instead
+  // of the hardcoded tier bands. Failures are non-fatal — clamps fall back
+  // to PR #264's hardcoded LODGING_BAND_EUR_BY_TIER + PRICE_BANDS path.
+  const baselinesPromise: Promise<Map<number, DestinationPriceBaselines | null>> = Promise.all(
+    legs
+      .filter((leg) => leg.kind === "destination" && leg.name)
+      .map(async (leg) => {
+        try {
+          const b = await estimateDestinationPriceBaselines(
+            anthropicKey, leg.name, intent.budget_tier, svcClient, logger, pipelineStartedAt,
+          );
+          return [leg.index, b] as [number, DestinationPriceBaselines | null];
+        } catch (e) {
+          console.warn(`[price_baselines] leg ${leg.index} (${leg.name}) failed:`, (e as Error).message);
+          return [leg.index, null] as [number, DestinationPriceBaselines | null];
+        }
+      }),
+  ).then((entries) => new Map(entries));
+
+  // ---- Per-venue accommodation cost (Haiku, ~$0.005/leg, 30-day cache).
+  // For the chosen accommodation per leg we estimate the per-night EUR cost
+  // directly from the property's name + city + neighborhood + price_level
+  // + rating. Hotel cost dominates the trip total and has venue-level
+  // variance that destination baselines can't capture. Alternatives keep
+  // the destination-baseline path (cheaper; less impactful since they're
+  // only seen via SWAP). On low confidence or any failure the clamp falls
+  // back to the destination-baseline + price_level path. ----
+  const hotelEstimatesPromise: Promise<Map<string, AccommodationEstimate | null>> = Promise.all(
+    legs
+      .filter((leg) => leg.kind === "destination" && leg.name)
+      .map(async (leg) => {
+        const placeId = accomByLeg.get(leg.index) ?? null;
+        if (!placeId) return null;
+        const place = placeById.get(placeId);
+        if (!place) return null;
+        const neighborhood = extractNeighborhood(place.addressComponents);
+        try {
+          const est = await estimateAccommodationCost(
+            anthropicKey,
+            place.displayName ?? placeId,
+            leg.name,
+            neighborhood,
+            priceLevelEnumToNumber(place.priceLevel),
+            place.rating ?? null,
+            place.userRatingCount ?? null,
+            intent.budget_tier,
+            svcClient,
+            logger,
+            pipelineStartedAt,
+          );
+          return [placeId, est] as [string, AccommodationEstimate | null];
+        } catch (e) {
+          console.warn(`[hotel_estimate] leg ${leg.index} hotel="${place.displayName}" failed:`, (e as Error).message);
+          return [placeId, null] as [string, AccommodationEstimate | null];
+        }
+      }),
+  ).then((entries) => {
+    const out = new Map<string, AccommodationEstimate | null>();
+    for (const e of entries) if (e) out.set(e[0], e[1]);
+    return out;
+  });
 
   // Metadata fires in parallel either way.
   const metadataPromise = rankTripMetadata(
@@ -6104,6 +6801,15 @@ async function rankInParallel(
   let fallbackDays = 0;
   let thinDays = 0;
 
+  // Await baselines + hotel estimates before any hydrate runs. Both promises
+  // fired in parallel with metadata + day rankers; on cache hit they resolve
+  // in ~50ms, on miss in ~1-3s — well under the rank step's 5-30s critical
+  // path. Per-leg failures resolve to null entries; clamps fall back to
+  // PR #264's hardcoded bands.
+  const [baselinesByLeg, hotelEstimatesByPlaceId] = await Promise.all([
+    baselinesPromise, hotelEstimatesPromise,
+  ]);
+
   const hydrateDay = (
     day: DaySkeleton,
     rawDay: RawRankerDay | null,
@@ -6113,6 +6819,7 @@ async function rankInParallel(
     const legSeen = getSeenForLeg(legIdx);
     const legPool = placeByIdByLeg.get(legIdx) ?? new Map();
     const legAccomId = accomByLeg.get(legIdx) ?? null;
+    const legBaselines = baselinesByLeg.get(legIdx) ?? null;
     const theme = rawDay?.theme?.trim() || day.theme;
     const activities: EnrichedActivity[] = [];
     const rawActs = Array.isArray(rawDay?.activities) ? rawDay!.activities : [];
@@ -6153,7 +6860,9 @@ async function rankInParallel(
           continue;
         }
       }
-      const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, intent.budget_tier, events);
+      const activity = hydrateActivity(
+        rawAct, slot, place, googleKey, currency, intent.budget_tier, events, legBaselines,
+      );
       if (!activity) {
         dropReasons.push("hydrate_failed");
         continue;
@@ -6312,6 +7021,8 @@ async function rankInParallel(
     const place = placeById.get(placeId) ?? null;
     if (!place) return undefined;
     const useMeta = legIdx === metaAccomLegIdx && meta?.accommodation;
+    const legBaselines = baselinesByLeg.get(legIdx) ?? null;
+    const hotelEstimate = hotelEstimatesByPlaceId.get(placeId) ?? null;
     const hydrated = hydrateActivity(
       {
         slot_index: -1, slot_type: "lodging",
@@ -6325,7 +7036,7 @@ async function rankInParallel(
         estimated_cost_per_person: useMeta ? (meta!.accommodation!.estimated_cost_per_person ?? 0) : 0,
         dietary_notes: useMeta ? (meta!.accommodation!.dietary_notes ?? null) : null,
       },
-      fakeAccomSlot, place, googleKey, currency, intent.budget_tier,
+      fakeAccomSlot, place, googleKey, currency, intent.budget_tier, [], legBaselines, hotelEstimate,
     );
     if (!hydrated) return undefined;
     // Build alternatives from the same leg's lodging pool (excluding the
@@ -6349,7 +7060,7 @@ async function rankInParallel(
           estimated_cost_per_person: 0,
           dietary_notes: null,
         },
-        fakeAccomSlot, altPlace, googleKey, currency, intent.budget_tier,
+        fakeAccomSlot, altPlace, googleKey, currency, intent.budget_tier, [], legBaselines,
       );
       if (altHydrated) alternatives.push(altHydrated);
     }
@@ -6401,6 +7112,7 @@ async function rankInParallel(
       accommodation: accom?.hotel,
       accommodation_alternatives: accom?.alternatives ?? [],
       kind: "destination",
+      price_baselines: baselinesByLeg.get(leg.index) ?? null,
     };
   });
 
@@ -8571,16 +9283,78 @@ Deno.serve(async (req) => {
               `numDays=${numDays} pool_size=${placeById.size} legs=${legs.length}`,
             );
 
+            // ---- Per-leg destination price baselines (Haiku, cached 30d).
+            // Fired in parallel with the metadata + day-rank calls. We await
+            // before the rank loop so hydrateAndEmit can read leg baselines
+            // synchronously. Cache hit ~50ms; miss ~1-3s. Failures fall back
+            // to PR #264's hardcoded tier bands. ----
+            const baselinesPromise: Promise<Map<number, DestinationPriceBaselines | null>> = Promise.all(
+              legs
+                .filter((leg) => leg.kind === "destination" && leg.name)
+                .map(async (leg) => {
+                  try {
+                    const b = await estimateDestinationPriceBaselines(
+                      anthropicKey, leg.name, intent.budget_tier, svcClient, logger, pipelineStartedAt,
+                    );
+                    return [leg.index, b] as [number, DestinationPriceBaselines | null];
+                  } catch (e) {
+                    console.warn(`[price_baselines] leg ${leg.index} (${leg.name}) failed:`, (e as Error).message);
+                    return [leg.index, null] as [number, DestinationPriceBaselines | null];
+                  }
+                }),
+            ).then((entries) => new Map(entries));
+
+            // ---- Per-venue accommodation cost (Haiku, cached 30d). One
+            // estimate per leg's chosen hotel (1-3 per trip in practice).
+            // Alternatives stay on the destination-baseline path. Fires in
+            // parallel; failures fall back to baselines via the clamp. ----
+            const hotelEstimatesPromise: Promise<Map<string, AccommodationEstimate | null>> = Promise.all(
+              legs
+                .filter((leg) => leg.kind === "destination" && leg.name)
+                .map(async (leg) => {
+                  const placeId = accomByLeg.get(leg.index) ?? null;
+                  if (!placeId) return null;
+                  const place = placeById.get(placeId);
+                  if (!place) return null;
+                  const neighborhood = extractNeighborhood(place.addressComponents);
+                  try {
+                    const est = await estimateAccommodationCost(
+                      anthropicKey,
+                      place.displayName ?? placeId,
+                      leg.name,
+                      neighborhood,
+                      priceLevelEnumToNumber(place.priceLevel),
+                      place.rating ?? null,
+                      place.userRatingCount ?? null,
+                      intent.budget_tier,
+                      svcClient,
+                      logger,
+                      pipelineStartedAt,
+                    );
+                    return [placeId, est] as [string, AccommodationEstimate | null];
+                  } catch (e) {
+                    console.warn(`[hotel_estimate] leg ${leg.index} hotel="${place.displayName}" failed:`, (e as Error).message);
+                    return [placeId, null] as [string, AccommodationEstimate | null];
+                  }
+                }),
+            ).then((entries) => {
+              const out = new Map<string, AccommodationEstimate | null>();
+              for (const e of entries) if (e) out.set(e[0], e[1]);
+              return out;
+            });
+
             const hydrateAndEmit = (
               rawDay: RawRankerDay | null,
               day: DaySkeleton,
               source: "llm" | "fallback",
+              baselinesByLeg: Map<number, DestinationPriceBaselines | null>,
             ) => {
               if (emittedDayNumbers.has(day.day_number)) return;
               const legIdx = day.destination_index;
               const legSeen = getSeenForLeg(legIdx);
               const legPool = placeByIdByLeg.get(legIdx) ?? new Map<string, BatchPlaceResult>();
               const legAccomId = accomByLeg.get(legIdx) ?? null;
+              const legBaselines = baselinesByLeg.get(legIdx) ?? null;
               // Per-leg city hint for affiliate hotel search. The leg's name
               // ("Bangkok, Thailand") feeds buildBookingSearchString so each
               // leg's hotel link queries that leg's city, not the trip's first.
@@ -8625,7 +9399,9 @@ Deno.serve(async (req) => {
                     continue;
                   }
                 }
-                const activity = hydrateActivity(rawAct, slot, place, googleKey, currency, intent.budget_tier, events);
+                const activity = hydrateActivity(
+                  rawAct, slot, place, googleKey, currency, intent.budget_tier, events, legBaselines,
+                );
                 if (!activity) {
                   dropReasons.push("hydrate_failed");
                   continue;
@@ -8737,6 +9513,7 @@ Deno.serve(async (req) => {
             const hydrateLodgingAlt = (
               legIdx: number,
               place: BatchPlaceResult,
+              baselinesByLeg: Map<number, DestinationPriceBaselines | null>,
             ): EnrichedActivity | undefined => {
               const fakeSlot: PacingSlot = {
                 type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
@@ -8755,6 +9532,7 @@ Deno.serve(async (req) => {
                   dietary_notes: null,
                 },
                 fakeSlot, place, googleKey, currency, intent.budget_tier,
+                [], baselinesByLeg.get(legIdx) ?? null,
               );
               if (!hydrated) return undefined;
               const legAffEnv: AffiliateEnv = { ...affEnv, cityHint: legs[legIdx]?.name ?? intent.destination };
@@ -8767,11 +9545,12 @@ Deno.serve(async (req) => {
             const buildAlternativesForLeg = (
               legIdx: number,
               chosenPlaceId: string | null,
+              baselinesByLeg: Map<number, DestinationPriceBaselines | null>,
             ): EnrichedActivity[] => {
               const alts = pickAccommodationAlternativesForLeg(venuesByPool, legIdx, chosenPlaceId);
               const out: EnrichedActivity[] = [];
               for (const place of alts) {
-                const hydrated = hydrateLodgingAlt(legIdx, place);
+                const hydrated = hydrateLodgingAlt(legIdx, place, baselinesByLeg);
                 if (hydrated) out.push(hydrated);
               }
               return out;
@@ -8781,6 +9560,8 @@ Deno.serve(async (req) => {
               legIdx: number,
               place: BatchPlaceResult,
               raw: { title?: string | null; description?: string | null; pro_tip?: string | null; why_for_you?: string | null; skip_if?: string | null; estimated_cost_per_person?: number | null; dietary_notes?: string | null } | null,
+              baselinesByLeg: Map<number, DestinationPriceBaselines | null>,
+              hotelEstimatesByPlaceId: Map<string, AccommodationEstimate | null>,
             ): { hotel: EnrichedActivity; alternatives: EnrichedActivity[] } | undefined => {
               const fakeSlot: PacingSlot = {
                 type: "lodging", start_time: "15:00", duration_minutes: 0, region_tag_for_queries: "primary",
@@ -8799,13 +9580,15 @@ Deno.serve(async (req) => {
                   dietary_notes: raw?.dietary_notes ?? null,
                 },
                 fakeSlot, place, googleKey, currency, intent.budget_tier,
+                [], baselinesByLeg.get(legIdx) ?? null,
+                hotelEstimatesByPlaceId.get(place.id) ?? null,
               );
               if (!hydrated) return undefined;
               const legAffEnv: AffiliateEnv = { ...affEnv, cityHint: legs[legIdx]?.name ?? intent.destination };
               const aff = buildAffiliateUrl(place, legAffEnv, hydrated.event_url);
               hydrated.booking_url = aff.booking_url;
               hydrated.booking_partner = aff.booking_partner;
-              const alternatives = buildAlternativesForLeg(legIdx, place.id);
+              const alternatives = buildAlternativesForLeg(legIdx, place.id, baselinesByLeg);
               try {
                 send("accommodation", {
                   destination_index: legIdx,
@@ -8827,7 +9610,14 @@ Deno.serve(async (req) => {
               hotel: EnrichedActivity;
               alternatives: EnrichedActivity[];
             }
-            const accommodationEarlyPromise: Promise<Map<number, EarlyAccommodationEntry>> = metadataPromise.then((res) => {
+            // Early accommodation emit needs baselines + hotel estimates;
+            // gate on all three promises so the chosen-hotel cost reflects
+            // the per-venue Haiku estimate when available.
+            const accommodationEarlyPromise: Promise<Map<number, EarlyAccommodationEntry>> = Promise.all([
+              metadataPromise,
+              baselinesPromise,
+              hotelEstimatesPromise,
+            ]).then(([res, baselinesByLeg, hotelEstimatesByPlaceId]) => {
               const out = new Map<number, EarlyAccommodationEntry>();
               const accomRaw = res.data?.accommodation;
               // Validate the metadata's pick against the lodging pool — refuses
@@ -8856,7 +9646,7 @@ Deno.serve(async (req) => {
                 if (!placeId) continue;
                 const place = placeById.get(placeId) ?? null;
                 if (!place) continue;
-                const emitted = emitOneLegAccommodation(leg.index, place, raw);
+                const emitted = emitOneLegAccommodation(leg.index, place, raw, baselinesByLeg, hotelEstimatesByPlaceId);
                 if (emitted) out.set(leg.index, emitted);
               }
               return out;
@@ -8864,6 +9654,16 @@ Deno.serve(async (req) => {
               console.warn("[stream.accommodation] early hydrate failed:", (e as Error).message);
               return new Map<number, EarlyAccommodationEntry>();
             });
+
+            // Await baselines + hotel estimates before hydrating any day.
+            // Both fetches fired alongside metadata + day-rank calls; on
+            // cache hit they resolve in ~50ms, on miss ~1-3s — well under
+            // the rank step's 5-30s critical path. Failures resolve to
+            // empty entries; clamps fall through to baselines and PR #264's
+            // hardcoded bands.
+            const [baselinesByLeg, hotelEstimatesByPlaceId] = await Promise.all([
+              baselinesPromise, hotelEstimatesPromise,
+            ]);
 
             if (sequentialRanking) {
               let budgetExhausted = false;
@@ -8884,13 +9684,13 @@ Deno.serve(async (req) => {
                 }
                 if (budgetExhausted) {
                   fallbackDays++;
-                  hydrateAndEmit(null, day, "fallback");
+                  hydrateAndEmit(null, day, "fallback", baselinesByLeg);
                   continue;
                 }
                 const avoidIds = Array.from(getSeenForLeg(day.destination_index));
                 const settled = await rankOneDayStream(day, avoidIds);
                 if (settled.source === "fallback") fallbackDays++;
-                hydrateAndEmit(settled.raw, day, settled.source);
+                hydrateAndEmit(settled.raw, day, settled.source, baselinesByLeg);
               }
             } else {
               const dayPromises = skeleton.map((day) =>
@@ -8899,7 +9699,7 @@ Deno.serve(async (req) => {
               for (const p of dayPromises) {
                 const settled = await p;
                 if (settled.source === "fallback") fallbackDays++;
-                hydrateAndEmit(settled.raw, settled.day, settled.source);
+                hydrateAndEmit(settled.raw, settled.day, settled.source, baselinesByLeg);
               }
             }
             ranked_days.sort((a, b) => a.day_number - b.day_number);
@@ -8976,6 +9776,8 @@ Deno.serve(async (req) => {
               const place = placeById.get(placeId) ?? null;
               if (!place) return undefined;
               const useMeta = legIdx === metaAccomLegIdx && accomRaw;
+              const legBaselines = baselinesByLeg.get(legIdx) ?? null;
+              const hotelEstimate = hotelEstimatesByPlaceId.get(placeId) ?? null;
               const hydrated = hydrateActivity(
                 {
                   slot_index: -1, slot_type: "lodging",
@@ -8990,6 +9792,7 @@ Deno.serve(async (req) => {
                   dietary_notes: useMeta ? (accomRaw!.dietary_notes ?? null) : null,
                 },
                 fakeAccomSlot, place, googleKey, currency, intent.budget_tier,
+                [], legBaselines, hotelEstimate,
               );
               if (!hydrated) return undefined;
               // Per-leg cityHint for the booking URL.
@@ -8997,7 +9800,7 @@ Deno.serve(async (req) => {
               const aff = buildAffiliateUrl(place, legAffEnv, hydrated.event_url);
               hydrated.booking_url = aff.booking_url;
               hydrated.booking_partner = aff.booking_partner;
-              const alternatives = buildAlternativesForLeg(legIdx, place.id);
+              const alternatives = buildAlternativesForLeg(legIdx, place.id, baselinesByLeg);
               // Late fallback emit: the early promise didn't cover this leg
               // (hydrateActivity returned null at early time); now that
               // everything is settled, emit so the streaming UI updates
@@ -9085,6 +9888,7 @@ Deno.serve(async (req) => {
                 accommodation: accom?.hotel,
                 accommodation_alternatives: accom?.alternatives ?? [],
                 kind: "destination",
+                price_baselines: baselinesByLeg.get(leg.index) ?? null,
               };
             });
             const pipelineResult: PipelineResult = {
@@ -9640,6 +10444,7 @@ Deno.serve(async (req) => {
       endDate,
       logger,
       pipelineStartedAt,
+      svcClient,
     );
     tStage("rank_and_enrich", tRank);
 
