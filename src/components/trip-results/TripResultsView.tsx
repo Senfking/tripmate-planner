@@ -1197,19 +1197,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       />
 
       {/* Overlays (outside flex layout) */}
-      {/* Group Activity floating button — disabled in draft mode */}
-      {planId && !standalone && (
-        <button
-          onClick={() => setGroupActivityOpen(true)}
-          className="fixed right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground shadow-xl hover:bg-primary/90 hover:scale-105 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
-          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 9rem)" }}
-          title="Group activity"
-        >
-          <Users className="h-4 w-4" />
-          <span className="text-xs font-semibold">Group Chat</span>
-          <span className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />
-        </button>
-      )}
+      {/* Group Chat for non-draft trips is rendered inline in the floating action cluster above */}
 
       {planId && standalone && (
         <Popover>
