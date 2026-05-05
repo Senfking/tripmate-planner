@@ -441,7 +441,7 @@ export function Hero({
           <Link
             to="/"
             aria-label="Junto home"
-            className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[28px] sm:text-[30px] font-extrabold tracking-[0.32em] uppercase text-white/90 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors"
+            className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors"
             style={{ top: "calc(env(safe-area-inset-top, 0px) + 18px)" }}
           >
             Junto
