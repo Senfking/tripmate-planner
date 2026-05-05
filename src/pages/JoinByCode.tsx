@@ -21,6 +21,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default function JoinByCode() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const back = useSmartBack("/");
   const { code: urlCode } = useParams<{ code?: string }>();
   const [code, setCode] = useState(urlCode?.toUpperCase() || "");
   const attempted = useRef(false);
