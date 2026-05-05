@@ -392,6 +392,28 @@ function handleFrame(
       update({ imageUrl: data?.url ?? null });
       break;
     }
+    case "status_messages": {
+      const msgs = Array.isArray(data?.messages)
+        ? data.messages.filter((s: unknown): s is string => typeof s === "string" && s.length > 0)
+        : [];
+      if (msgs.length > 0) update({ statusMessages: msgs });
+      break;
+    }
+    case "stage_progress": {
+      const stage = typeof data?.stage === "string" ? data.stage : null;
+      const user_text = typeof data?.user_text === "string" ? data.user_text : "";
+      const percent_complete = typeof data?.percent_complete === "number" ? data.percent_complete : 0;
+      if (stage) update({ currentStage: { stage, user_text, percent_complete } });
+      break;
+    }
+    case "day_complete": {
+      const n = typeof data?.day_number === "number" ? data.day_number : null;
+      if (n == null) break;
+      const cur = getState();
+      if (cur.completedDays.includes(n)) break;
+      update({ completedDays: [...cur.completedDays, n] });
+      break;
+    }
     case "day": {
       const day = normalizeDayFromServer(data);
       if (!day) break;
