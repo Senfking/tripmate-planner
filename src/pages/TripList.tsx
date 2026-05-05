@@ -857,28 +857,6 @@ export default function TripList() {
             </button>
           }
         />
-
-          <button
-            onClick={() => {
-              setBuilderInitDest("");
-              setShowBuilder(true);
-            }}
-            className="mt-3 text-sm font-medium bg-transparent border-none cursor-pointer"
-            style={{ color: "#0D9488" }}
-          >
-            or plan step by step
-          </button>
-
-          <div className="w-full h-px bg-border my-6" />
-
-          <button
-            className="text-sm font-medium bg-transparent border-none cursor-pointer"
-            style={{ color: "#0D9488" }}
-            onClick={() => setJoinOpen(true)}
-          >
-            Join an existing trip with a code
-          </button>
-        </div>
         <JoinDrawer
           open={joinOpen}
           onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}
