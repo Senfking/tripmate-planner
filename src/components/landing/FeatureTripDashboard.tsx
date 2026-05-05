@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import mockup from "@/assets/mockup-trip-dashboard.png";
+import mockup from "@/assets/mockup-trip-dashboard.webp";
 
 export function FeatureTripDashboard() {
   const sectionRef = useRef<HTMLElement>(null);

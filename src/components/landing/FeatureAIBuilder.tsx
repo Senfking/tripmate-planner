@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import mockupAIBuilder from "@/assets/mockup-ai-builder.png";
+import mockupAIBuilder from "@/assets/mockup-ai-builder.webp";
 
 // Static premium device shot — the laptop mockup PNG is the entire visual.
 // No CSS frame, no overlay, no scroll animation.

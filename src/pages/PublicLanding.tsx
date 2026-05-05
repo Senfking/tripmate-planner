@@ -8,9 +8,9 @@ import { FeatureTripDashboard } from "@/components/landing/FeatureTripDashboard"
 import { FeaturePhoneSection } from "@/components/landing/FeaturePhoneSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { FinalCTA } from "@/components/landing/FinalCTA";
-import mockupExpenses from "@/assets/mockup-expenses.png";
-import mockupBookings from "@/assets/mockup-bookings.png";
-import mockupTrips from "@/assets/mockup-trips-page.png";
+import mockupExpenses from "@/assets/mockup-expenses.webp";
+import mockupBookings from "@/assets/mockup-bookings.webp";
+import mockupTrips from "@/assets/mockup-trips-page.webp";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 import { AnonTripGenerator } from "@/components/trip-builder/AnonTripGenerator";
 import { ContextualSignupModal } from "@/components/auth/ContextualSignupModal";
