@@ -504,7 +504,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <span className="inline-flex items-center gap-1.5 min-w-0">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">
-                {result.destinations.map((d) => d.name).join(" · ")}
+                {realDestinations.map((d) => d.name).join(" • ")}
               </span>
             </span>
             {dateMode !== "generic" && <span className="font-mono text-xs">{dateRange}</span>}
