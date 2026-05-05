@@ -414,9 +414,12 @@ function handleFrame(
       break;
     }
     case "error": {
+      const rawCode = typeof data?.code === "string" ? data.code : typeof data?.error === "string" ? data.error : null;
+      const errorCode = rawCode === "anon_limit" || rawCode === "rate_limited" || data?.reason === "signup_required" ? "rate_limited" : rawCode;
       update({
         stage: "error",
         error: data?.message ?? data?.error ?? "Trip generation failed",
+        errorCode,
       });
       break;
     }
