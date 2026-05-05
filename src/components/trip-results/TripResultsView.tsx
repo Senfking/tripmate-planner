@@ -425,19 +425,21 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 <LayoutDashboard className="h-4 w-4" />
               </button>
             )}
-            <button
-              onClick={() => setEditTripOpen(true)}
-              aria-label="Edit trip"
-              className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
-              style={{
-                background: "rgba(0,0,0,0.3)",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.2)",
-              }}
-            >
-              <PenLine className="h-4 w-4" />
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setEditTripOpen(true)}
+                aria-label="Edit trip"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
+                style={{
+                  background: "rgba(0,0,0,0.3)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                }}
+              >
+                <PenLine className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -885,13 +887,15 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           {standalone ? (
             <div className="flex items-center justify-center gap-2 px-4 py-3">
               <Button
+                type="button"
                 variant="outline"
-                onClick={() => setEditTripOpen(true)}
+                onClick={() => (readOnly ? onRegenerate() : setEditTripOpen(true))}
                 className="h-10 px-4 rounded-xl text-[13px] font-semibold gap-1.5 flex-1 sm:flex-none"
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Regenerate
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={onSaveDraft}
                 className="h-10 px-4 rounded-xl text-[13px] font-semibold flex-1 sm:flex-none"
@@ -899,6 +903,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 Save draft
               </Button>
               <Button
+                type="button"
                 onClick={onCreateTrip}
                 disabled={creatingTrip || !!streaming}
                 title={streaming ? "Available once your trip finishes generating" : undefined}
