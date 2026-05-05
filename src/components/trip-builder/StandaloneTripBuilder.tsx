@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Loader2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
@@ -10,7 +10,7 @@ import { trackEvent } from "@/lib/analytics";
 import { stripEmoji } from "@/lib/stripEmoji";
 
 import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
-import { ConfirmationCard } from "./ConfirmationCard";
+// ConfirmationCard removed — flow now submits straight from PremiumTripInput.
 // StreamingGeneratingScreen retired — TripResultsView is now the streaming surface.
 import { BlankTripModal } from "./BlankTripModal";
 import { NameTripModal } from "./NameTripModal";
@@ -138,7 +138,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
   const { user } = useAuth();
 
   const [phase, setPhase] = useState<Phase>(
-    draftResult ? "results" : initialInputData && !forceInputFirst ? "confirming" : "input"
+    draftResult ? "results" : initialInputData && !forceInputFirst ? "generating" : "input"
   );
   const [inputData, setInputData] = useState<PremiumInputData | null>(initialInputData ?? null);
   const [results, setResults] = useState<AITripResult | null>(draftResult ?? null);
@@ -169,11 +169,6 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     setBlankModalOpen(true);
   }, []);
 
-  const handleInputComplete = useCallback((data: PremiumInputData) => {
-    setInputData(data);
-    setPhase("confirming");
-  }, []);
-
   const buildPayload = useCallback((data: PremiumInputData) => ({
     trip_id: null,
     destination: data.destination,
@@ -199,7 +194,18 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     kids_ages: data.kidsAges || undefined,
   }), []);
 
-  const handleConfirm = useCallback(async () => {
+  // Submit straight from the input — no confirmation step (matches anonymous flow).
+  const handleInputComplete = useCallback(async (data: PremiumInputData) => {
+    setInputData(data);
+    const payload = buildPayload(data);
+    setPendingPayload(payload);
+    setPhase("generating");
+    streaming.reset();
+    await streaming.start(payload);
+  }, [buildPayload, streaming]);
+
+  // Used by retry / regenerate — re-runs the current inputData through streaming.
+  const retryGenerate = useCallback(async () => {
     if (!inputData) return;
     const payload = buildPayload(inputData);
     setPendingPayload(payload);
@@ -207,6 +213,20 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
     streaming.reset();
     await streaming.start(payload);
   }, [inputData, buildPayload, streaming]);
+
+  // Auto-kick streaming when the builder opens directly into "generating"
+  // (e.g. template personalization with prefilled initialInputData).
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    if (phase !== "generating") return;
+    if (!inputData || pendingPayload) return;
+    autoStartedRef.current = true;
+    const payload = buildPayload(inputData);
+    setPendingPayload(payload);
+    streaming.reset();
+    void streaming.start(payload);
+  }, [phase, inputData, pendingPayload, buildPayload, streaming]);
 
   // When streaming completes, persist the trip as a `draft` row and navigate
   // to its canonical /app/trips/[id] URL. TripHome owns the draft results UI.
@@ -435,7 +455,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
               setInputData({ ...inputData, freeText: prompt });
             }
             setPhase("generating");
-            handleConfirm();
+            retryGenerate();
           }}
           onAdjust={() => {
             setResults(null);
@@ -492,7 +512,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
             <p className="text-xs text-muted-foreground">{streaming.state.error ?? "Unknown error"}</p>
             <div className="flex gap-2 pt-2">
               <Button variant="outline" onClick={onClose} className="flex-1">Close</Button>
-              <Button onClick={handleConfirm} className="flex-1">Try again</Button>
+              <Button onClick={retryGenerate} className="flex-1">Try again</Button>
             </div>
           </div>
         </div>
@@ -549,32 +569,7 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
       }
     : ({} as const);
 
-  // Confirmation card overlay
-  if (phase === "confirming" && inputData) {
-    return (
-      <>
-        <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-y-auto">
-          <div className="flex items-center justify-end px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-2 max-w-lg mx-auto w-full">
-            <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors">
-              <X className="h-5 w-5 text-muted-foreground" />
-            </button>
-          </div>
-          <PremiumTripInput
-            onGenerate={handleInputComplete}
-            onStartBlank={handleStartBlank}
-            initialDestination={initialDestination}
-            initialFreeText={effectiveInitialFreeText}
-            {...templateInputProps}
-          />
-        </div>
-        <ConfirmationCard
-          data={inputData}
-          onConfirm={handleConfirm}
-          onEdit={() => setPhase("input")}
-        />
-      </>
-    );
-  }
+  // Confirmation step removed — input now submits straight to generating.
 
   // Input view
   return (
