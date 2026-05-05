@@ -425,22 +425,26 @@ export function Hero({
       />
 
       <div
-        className="relative z-10 flex items-center justify-end px-5 sm:px-10"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)", paddingBottom: 24 }}
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-end px-5 sm:px-10"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)", paddingBottom: 18 }}
       >
         <Link
           to="/"
           aria-label="Junto home"
-          className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 hover:text-white transition-colors"
+          className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/85 hover:text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)] transition-colors"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 18px)" }}
         >
           Junto
         </Link>
         <Link
           to="/ref"
-          className="inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 transition-colors"
+          className="group relative inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(13,148,136,0.65)] transition-transform hover:scale-[1.03] active:scale-95"
+          style={{
+            background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)",
+          }}
         >
-          Log in
+          <span className="absolute inset-0 rounded-full bg-gradient-to-r from-white/20 via-transparent to-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <span className="relative">Get started</span>
         </Link>
       </div>
 
