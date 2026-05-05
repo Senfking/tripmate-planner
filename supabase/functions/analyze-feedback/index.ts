@@ -13,7 +13,43 @@ serve(async (req) => {
   }
 
   try {
+    // ─── Authentication gate ───
+    // All branches of this function call paid Anthropic APIs and/or mutate
+    // feedback/admin_notifications via service-role. Require a valid JWT
+    // (verified against Supabase auth) before dispatching on body.action.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.slice("Bearer ".length).trim();
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+    );
+    const { data: userData, error: authErr } = await authClient.auth.getUser(token);
+    if (authErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const callerId = userData.user.id;
+
     const body = await req.json();
+
+    // Backfill is an admin-only maintenance action.
+    if (body.action === "backfill_screenshot_urls") {
+      const adminUserId = Deno.env.get("ADMIN_USER_ID");
+      if (!adminUserId || callerId !== adminUserId) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // --- Screenshot hint action ---
     if (body.action === "describe_screenshot") {
