@@ -124,6 +124,47 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   // Optimistic per-leg hotel swap overrides; keyed by destination_index.
   // Persisted to ai_trip_plans.result on selection.
   const [hotelOverrides, setHotelOverrides] = useState<Record<number, any>>({});
+  const qcSwap = useQueryClient();
+  const handleSwapHotel = useCallback(
+    async (destinationIndex: number, newHotel: any) => {
+      // Strip alternatives from the picked hotel before storing — keep the
+      // existing leg's alternatives pool for future swaps. We re-attach them
+      // at render time below.
+      const { alternatives: _altsDrop, ...hotelClean } = newHotel || {};
+      setHotelOverrides((prev) => ({ ...prev, [destinationIndex]: hotelClean }));
+      if (!planId) {
+        toast.success("Hotel swapped");
+        return;
+      }
+      try {
+        // Read current row, mutate the destination's accommodation, write back.
+        const { data: row, error: readErr } = await (supabase
+          .from("ai_trip_plans") as any)
+          .select("result")
+          .eq("id", planId)
+          .maybeSingle();
+        if (readErr || !row?.result) throw readErr || new Error("Plan not found");
+        const next = JSON.parse(JSON.stringify(row.result));
+        const dest = next?.destinations?.[destinationIndex];
+        if (dest) {
+          const existingAlts = Array.isArray(dest.accommodation?.alternatives)
+            ? dest.accommodation.alternatives
+            : [];
+          dest.accommodation = { ...hotelClean, alternatives: existingAlts };
+        }
+        const { error: updErr } = await (supabase
+          .from("ai_trip_plans") as any)
+          .update({ result: next })
+          .eq("id", planId);
+        if (updErr) throw updErr;
+        await qcSwap.invalidateQueries({ queryKey: ["trip-draft-plan", tripId] });
+        toast.success("Hotel swapped");
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to save hotel swap");
+      }
+    },
+    [planId, qcSwap, tripId],
+  );
   const [packingOpen, setPackingOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
