@@ -58,6 +58,7 @@ interface TripCompleteEvent {
   destination_image_url: string | null;
   destination_country_iso: string | null;
   from_cache: boolean;
+  anon_trip_id?: string | null;
 }
 
 export interface StreamingState {
@@ -68,6 +69,11 @@ export interface StreamingState {
   trip: TripCompleteEvent | null;
   result: AITripResult | null;
   error: string | null;
+  /** Set when the server returned 429 (anon rate limit hit). */
+  errorCode: string | null;
+  /** Anonymous-mode only: the row id in `anonymous_trips` once the
+   *  trip_complete event lands. Used to navigate to /trips/anon/[id]. */
+  anonTripId: string | null;
   isCacheHit: boolean;
 }
 
