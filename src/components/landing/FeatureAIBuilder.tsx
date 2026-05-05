@@ -1,14 +1,25 @@
 import { useEffect, useRef, useState } from "react";
+import macbookMockup from "@/assets/mockup-ai-builder.png";
 import featureAIBuilder from "@/assets/feature-ai-builder.png";
 
-// Auto-scrolling browser-window screenshot section.
+// Photorealistic MacBook mockup (transparent PNG, head-on view) with an
+// auto-scrolling screenshot overlaid inside the screen rectangle.
 // Image LEFT on desktop, stacks above copy on mobile.
+//
+// Screen rectangle as a percentage of the mockup PNG (1672x941) — measured
+// by sampling the bezel/screen transitions in the source image:
+//   left   17.5%   top    11.5%
+//   right  82.4%   bottom 67.7%
+const SCREEN = {
+  left: "17.5%",
+  top: "11.5%",
+  width: "64.9%",   // 82.4 - 17.5
+  height: "56.2%",  // 67.7 - 11.5
+};
+
 export function FeatureAIBuilder() {
   const sectionRef = useRef<HTMLElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-  const [scrollEnd, setScrollEnd] = useState<string>("calc(-100% + 480px)");
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -26,64 +37,50 @@ export function FeatureAIBuilder() {
     return () => io.disconnect();
   }, []);
 
-  // Compute scroll distance from real image height vs viewport height
-  useEffect(() => {
-    function compute() {
-      const img = imgRef.current;
-      const vp = viewportRef.current;
-      if (!img || !vp) return;
-      const imgH = img.getBoundingClientRect().height;
-      const vpH = vp.getBoundingClientRect().height;
-      const diff = Math.max(0, imgH - vpH);
-      setScrollEnd(`-${diff}px`);
-    }
-    compute();
-    const img = imgRef.current;
-    if (img && !img.complete) img.addEventListener("load", compute);
-    window.addEventListener("resize", compute);
-    return () => {
-      window.removeEventListener("resize", compute);
-      if (img) img.removeEventListener("load", compute);
-    };
-  }, []);
-
   return (
     <section
       ref={sectionRef}
       className={`landing-reveal ${visible ? "landing-visible" : ""} w-full py-24 sm:py-32 lg:py-[120px] px-5 sm:px-8 bg-white`}
     >
       <div className="mx-auto max-w-6xl grid gap-12 lg:gap-20 lg:grid-cols-2 items-center">
-        {/* Browser-window frame with auto-scrolling screenshot */}
+        {/* MacBook mockup with HTML scroll overlay */}
         <div className="order-1 lg:order-1">
-          <div
-            className="rounded-[14px] bg-white overflow-hidden border border-[#e7e2dc]"
-            style={{
-              boxShadow:
-                "0 30px 60px -25px rgba(180, 120, 80, 0.18), 0 12px 28px -12px rgba(60, 40, 25, 0.10), 0 2px 6px rgba(60, 40, 25, 0.05)",
-            }}
-          >
-            {/* Browser chrome */}
-            <div className="flex items-center gap-1.5 px-3.5 py-2.5 border-b border-[#f0ece6] bg-[#fafaf9]">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#E5E7EB]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#E5E7EB]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#E5E7EB]" />
-            </div>
-            {/* Viewport */}
+          <div className="relative w-full max-w-[640px] mx-auto">
+            {/* Static laptop frame — already shows top viewport baked in */}
+            <img
+              src={macbookMockup}
+              alt=""
+              aria-hidden
+              className="block w-full h-auto select-none pointer-events-none"
+              draggable={false}
+              loading="lazy"
+              decoding="async"
+            />
+            {/* Screen overlay: auto-scrolling screenshot */}
             <div
-              ref={viewportRef}
-              className="relative w-full overflow-hidden bg-white"
-              style={{ height: "min(480px, 60vh)" }}
+              className="absolute overflow-hidden"
+              style={{
+                left: SCREEN.left,
+                top: SCREEN.top,
+                width: SCREEN.width,
+                height: SCREEN.height,
+              }}
+              aria-hidden
             >
               <img
-                ref={imgRef}
                 src={featureAIBuilder}
-                alt="Junto AI trip builder showing a generated Singapore itinerary with budget breakdown, hotel, daily activities, and packing essentials"
-                className="auto-scroll-screenshot block w-full h-auto"
-                style={{ ["--scroll-end" as string]: scrollEnd } as React.CSSProperties}
+                alt=""
+                draggable={false}
+                className="ai-builder-scroll block w-full h-auto select-none"
                 loading="lazy"
                 decoding="async"
               />
             </div>
+            {/* Accessible label for the whole composition */}
+            <span className="sr-only">
+              Junto AI trip builder showing a generated Singapore itinerary
+              with budget breakdown, hotel, daily activities, and packing essentials.
+            </span>
           </div>
         </div>
 
