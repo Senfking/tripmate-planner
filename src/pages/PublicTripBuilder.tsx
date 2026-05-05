@@ -33,7 +33,7 @@ export default function PublicTripBuilder() {
   const [pending, setPending] = useState<string | undefined>(() => {
     return consumePendingPrompt() ?? undefined;
   });
-  const [builderOpen, setBuilderOpen] = useState(false);
+  
   const [blankOpen, setBlankOpen] = useState(false);
   const [stepExpanded, setStepExpanded] = useState(false);
   const [authPrompt, setAuthPrompt] = useState<string | null>(null);
