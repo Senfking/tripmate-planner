@@ -119,9 +119,14 @@ export function Hero({
         "focus-within:ring-2 focus-within:ring-white/70",
       ].join(" ");
 
-  const placeholder = isApp
+  const staticPlaceholder = isApp
     ? "Describe your trip — destination, dates, group"
     : "Tell Junto AI about your trip — destination, dates, group";
+
+  const animatedPlaceholder = useTypewriterPlaceholder(
+    !isApp && value.length === 0,
+    staticPlaceholder,
+  );
 
   const sharedTextareaProps = {
     ref: textareaRef,
@@ -132,7 +137,7 @@ export function Hero({
     },
     onKeyDown: handleKeyDown,
     disabled: busy,
-    placeholder,
+    placeholder: animatedPlaceholder,
     "aria-label": "Describe your trip",
     "aria-invalid": !!error,
   };
