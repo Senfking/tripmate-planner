@@ -84,12 +84,15 @@ export function AccommodationCard({
   locationHint,
   checkInDate,
   checkOutDate,
+  alternatives = [],
+  onSwap,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const swapPopoverRef = useRef<HTMLDivElement>(null);
+  const hasAlternatives = Array.isArray(alternatives) && alternatives.length > 0;
 
   // Close swap popover on outside click
   useEffect(() => {
