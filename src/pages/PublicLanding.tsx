@@ -96,17 +96,17 @@ export default function PublicLanding() {
       <FeatureAIBuilder />
       <FeatureTripDashboard />
       <FeaturePhoneSection
-        eyebrow="Expenses"
+        eyebrow="Junto AI expenses"
         headline="Money sorts itself."
-        body="Add a receipt, Junto splits it. Multiple currencies, custom shares, live balances. No end-of-trip spreadsheet."
+        body="Snap a receipt and Junto AI reads it, categorizes it, and splits it across the group. Multiple currencies, custom shares, live balances. No end-of-trip spreadsheet."
         image={mockupExpenses}
         alt="Junto expenses screen on iPhone showing €255 owed, balances and a list of split expenses"
         imageSide="left"
       />
       <FeaturePhoneSection
-        eyebrow="Bookings"
+        eyebrow="Junto AI bookings"
         headline="Bookings and entry requirements, in one place."
-        body="Drag in hotel confirmations, flight tickets, visa requirements. Junto keeps them organized, surfaces what needs attention, and reminds the group what to bring."
+        body="Drop in a hotel confirmation, flight ticket, or visa PDF and Junto AI pulls out the details automatically. It surfaces what needs attention and reminds the group what to bring."
         image={mockupBookings}
         alt="Junto bookings & docs screen on iPhone showing flight tickets, hotel confirmation and entry document warnings"
         imageSide="right"

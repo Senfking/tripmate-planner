@@ -32,7 +32,7 @@ export function FeatureTripDashboard() {
             className="landing-reveal-child text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0D9488] mb-4"
             style={{ ["--stagger-index" as string]: 0 }}
           >
-            Your trip
+            Junto AI dashboard
           </p>
           <h2
             className="landing-reveal-child text-[34px] sm:text-[44px] lg:text-[52px] leading-[1.05] tracking-tight font-bold text-[#1a1a1a] mb-6"
@@ -44,9 +44,9 @@ export function FeatureTripDashboard() {
             className="landing-reveal-child text-[16px] sm:text-[17px] leading-relaxed text-[#4b5563] max-w-xl font-sans"
             style={{ ["--stagger-index" as string]: 2 }}
           >
-            Trip plan, group activity, expenses, flights, visa requirements -
-            every part of your trip in one shared dashboard. Built around how
-            groups actually travel.
+            Trip plan, group activity, expenses, flights, visa requirements.
+            Junto AI keeps every part of your trip in one shared dashboard,
+            organized around how groups actually travel.
           </p>
         </div>
 
