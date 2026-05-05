@@ -38,9 +38,43 @@ export interface StreamMeta {
   destination: string;
   country_code: string | null;
   num_days: number;
-  skeleton: { day_number: number; date: string; theme: string }[];
+  skeleton: {
+    day_number: number;
+    date: string;
+    theme: string;
+    destination_index?: number;
+    transit?: TransitDayMeta;
+  }[];
   currency: string;
   from_cache: boolean;
+}
+
+export interface TransitDayMeta {
+  from_index: number;
+  to_index: number;
+  half_day: boolean;
+  description: string;
+}
+
+/** A leg in the unified leg list. Real-destination legs (kind=destination)
+ *  carry an accommodation; transit pseudo-legs (kind=transit) carry travel
+ *  metadata for the "Travel: A → B" UI. Single-destination trips are simply
+ *  one destination leg. */
+export interface StreamLeg {
+  index: number;
+  name: string;
+  kind: "destination" | "transit";
+  days: number;
+  day_numbers: number[];
+  transit?: boolean;
+  description?: string;
+  /** Populated alongside the leg by the transit estimator — surfaces
+   *  duration/mode for transit-day UI. Real-destination legs omit this. */
+  transit_meta?: {
+    estimated_duration_hours?: number;
+    transit_type?: "flight" | "train" | "drive" | "ferry" | "mixed";
+    description?: string;
+  };
 }
 
 interface TripCompleteEvent {
