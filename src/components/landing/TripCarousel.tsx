@@ -45,9 +45,41 @@ function CarouselSkeleton() {
   );
 }
 
-export function TripCarousels({ showHeader = true }: { showHeader?: boolean } = {}) {
+// Preferred ordering for the curated landing slice. Categories not in this
+// list still appear (in source order) after these, but the `limit` prop
+// caps how many sections actually render.
+const CATEGORY_ORDER = [
+  "Adventure trips",
+  "Beach getaways",
+  "City breaks",
+  "Cultural journeys",
+];
+
+function orderSections(sections: { title: string; cards: TripTemplate[] }[]) {
+  const map = new Map(sections.map((s) => [s.title, s]));
+  const ordered: typeof sections = [];
+  for (const name of CATEGORY_ORDER) {
+    const s = map.get(name);
+    if (s) {
+      ordered.push(s);
+      map.delete(name);
+    }
+  }
+  return [...ordered, ...Array.from(map.values())];
+}
+
+export function TripCarousels({
+  showHeader = true,
+  limit,
+  showSeeAllFooter = false,
+}: {
+  showHeader?: boolean;
+  limit?: number;
+  showSeeAllFooter?: boolean;
+} = {}) {
   const { data, isLoading } = useTripTemplates();
-  const sections = data ? groupByCategory(data) : [];
+  const allSections = data ? orderSections(groupByCategory(data)) : [];
+  const sections = typeof limit === "number" ? allSections.slice(0, limit) : allSections;
 
   return (
     <div>
@@ -68,6 +100,17 @@ export function TripCarousels({ showHeader = true }: { showHeader?: boolean } = 
       {sections.map((section) => (
         <CarouselRow key={section.title} title={section.title} cards={section.cards} seeAll />
       ))}
+
+      {showSeeAllFooter && !isLoading && (
+        <div className="mt-2 flex justify-center">
+          <Link
+            to="/templates"
+            className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-[#0D9488] hover:text-[#064E4E] transition-colors"
+          >
+            See all trip ideas →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
