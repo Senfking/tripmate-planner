@@ -36,32 +36,32 @@ export default function PublicTripBuilder() {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [blankOpen, setBlankOpen] = useState(false);
   const [stepExpanded, setStepExpanded] = useState(false);
-  const [submittedInputData, setSubmittedInputData] = useState<PremiumInputData | null>(null);
+  const [authPrompt, setAuthPrompt] = useState<string | null>(null);
+  const [authPayload, setAuthPayload] = useState<Record<string, unknown> | null>(null);
   const [anonPrompt, setAnonPrompt] = useState<string | null>(null);
   const formAnchorRef = useRef<HTMLDivElement | null>(null);
 
+  // Cross-nav resume: signed-in user lands here with a stashed prompt
+  // (e.g. from /app/trips empty-state Hero) — kick generation immediately.
   useEffect(() => {
-    if (user && !pending) {
-      const v = consumePendingPrompt();
-      if (v) {
-        setPending(v);
-        setBuilderOpen(true);
-      }
-    } else if (user && pending && !builderOpen) {
-      setBuilderOpen(true);
+    if (!user) return;
+    if (authPrompt) return;
+    if (pending) {
+      setAuthPrompt(pending);
+      setPending(undefined);
     }
-  }, [user, pending, builderOpen]);
+  }, [user, pending, authPrompt]);
 
   function handlePublicHeroSubmit(prompt: string) {
-    // Anonymous flow: stream the trip in-place, no /ref redirect.
     const trimmed = prompt.trim();
     if (!trimmed) return;
     setAnonPrompt(trimmed);
   }
 
   function handleFreeTextSubmit(prompt: string) {
-    setPending(prompt);
-    setBuilderOpen(true);
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+    setAuthPrompt(trimmed);
   }
 
   function handleStepByStep() {
@@ -77,13 +77,40 @@ export default function PublicTripBuilder() {
   }
 
   function handleInlineGenerate(data: PremiumInputData) {
-    setSubmittedInputData(data);
-    setBuilderOpen(true);
+    const payload: Record<string, unknown> = {
+      trip_id: null,
+      destination: data.destination,
+      surprise_me: false,
+      start_date: data.dateRange?.from
+        ? data.dateRange.from.toISOString().slice(0, 10)
+        : null,
+      end_date: data.dateRange?.to
+        ? data.dateRange.to.toISOString().slice(0, 10)
+        : null,
+      flexible: false,
+      duration_days: null,
+      budget_level: data.budgetLevel || "mid-range",
+      vibes: data.vibes,
+      pace: data.pace || "balanced",
+      dietary: [],
+      notes: data.dealBreakers || "",
+      free_text: data.freeText || "",
+      group_size:
+        data.travelParty === "solo" ? 1
+        : data.travelParty === "couple" ? 2
+        : data.travelParty === "group" ? 6
+        : data.travelParty === "family" ? 4
+        : data.travelParty === "friends" ? 4
+        : 1,
+      travel_party: data.travelParty,
+      kids_ages: data.kidsAges || undefined,
+    };
+    setAuthPayload(payload);
   }
 
-  function handleBuilderClose() {
-    setBuilderOpen(false);
-    setSubmittedInputData(null);
+  function handleGeneratorCancel() {
+    setAuthPrompt(null);
+    setAuthPayload(null);
   }
 
   // Anonymous visitors: Hero → in-place anon stream.
