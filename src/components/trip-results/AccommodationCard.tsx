@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Star, ExternalLink, Hotel, MapPin, Lightbulb, ArrowLeftRight } from "lucide-react";
+import { Star, ExternalLink, Hotel, MapPin, Lightbulb, ArrowLeftRight, X } from "lucide-react";
 import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { Skeleton } from "@/components/ui/skeleton";
 
