@@ -183,15 +183,19 @@ export function Hero({
           disabled={busy}
           aria-label="Plan with Junto AI"
           className={[
-            "inline-flex items-center justify-center gap-2 shrink-0",
-            "rounded-full bg-primary text-white font-medium",
+            "group relative overflow-hidden inline-flex items-center justify-center gap-2 shrink-0",
+            "rounded-full text-white font-semibold",
             "h-[52px] w-[52px] p-0 sm:h-auto sm:w-auto sm:self-stretch sm:px-6 text-sm whitespace-nowrap",
-            "shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
-            "transition-all hover:brightness-110 hover:shadow-[0_6px_20px_-2px_hsl(var(--primary)/0.6)]",
-            "active:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed",
+            "shadow-[0_8px_24px_-6px_rgba(13,148,136,0.55)]",
+            "transition-transform hover:scale-[1.02] active:scale-95",
+            "disabled:opacity-60 disabled:cursor-not-allowed",
           ].join(" ")}
+          style={{
+            background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)",
+          }}
         >
-          {buttonContent}
+          <span className="landing-shimmer pointer-events-none rounded-full" aria-hidden />
+          <span className="relative inline-flex items-center gap-2">{buttonContent}</span>
         </button>
       </div>
 
