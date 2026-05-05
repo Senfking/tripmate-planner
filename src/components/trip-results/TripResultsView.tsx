@@ -664,7 +664,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     <button
                       key={`dest-${i}`}
                       onClick={() => scrollToSection(`section-dest-${dest.name}`)}
-                      className="snap-start shrink-0 w-[200px] h-[260px] relative overflow-hidden rounded-2xl border border-border bg-muted text-left group shadow-sm hover:shadow-md transition-shadow"
+                      className="snap-start shrink-0 w-[220px] h-[150px] relative overflow-hidden rounded-2xl border border-border bg-muted text-left group shadow-sm hover:shadow-md transition-shadow"
                     >
                       {hero ? (
                         <img
