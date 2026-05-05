@@ -192,9 +192,9 @@ export function StreamingProgressLadder({ totalDays, completedDays }: LadderProp
               {isDone ? (
                 <span
                   className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full"
-                  style={{ backgroundColor: "#0D9488" }}
+                  style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  <Check className="h-2.5 w-2.5 text-white" strokeWidth={3.5} />
+                  <Check className="h-2.5 w-2.5 text-[#0D9488]" strokeWidth={3.5} />
                 </span>
               ) : isCurrent ? (
                 <span
@@ -208,7 +208,7 @@ export function StreamingProgressLadder({ totalDays, completedDays }: LadderProp
               ) : (
                 <span
                   className="inline-block h-1.5 w-1.5 rounded-full border"
-                  style={{ borderColor: "#9CA3AF" }}
+                  style={{ borderColor: "#64748B" }}
                 />
               )}
               <span>Day {n}</span>
