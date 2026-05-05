@@ -129,6 +129,12 @@ export interface StreamingState {
    *  current single-destination flow; multi-leg trips will populate
    *  multiple keys (forward-compat). */
   accommodations: Record<number, AIActivity>;
+  /** Unified leg list (real + transit) emitted by the `leg` event right
+   *  after `meta`. Drives the multi-destination header/badges and per-leg
+   *  rendering. Empty until the leg event lands. */
+  legs: StreamLeg[];
+  /** Optional notice from the LLM when it dropped or trimmed destinations. */
+  adjustmentNotice: string | null;
 }
 
 /**
