@@ -175,11 +175,11 @@ export function AccommodationCard({
   return (
     <div
       id={`section-stay-${(locationHint || name).replace(/\s+/g, "-")}`}
-      className="group mx-4 mb-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden"
+      className="group mx-4 mb-4 rounded-2xl border border-border bg-card shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-[box-shadow,transform] duration-300 relative overflow-hidden isolate"
     >
-      {/* Cinematic banner — taller, with overlay typography */}
+      {/* Cinematic banner — image scales inside a clipped container so corners stay rounded mid-hover */}
       <div
-        className="w-full h-[280px] sm:h-[340px] bg-muted relative cursor-pointer overflow-hidden [contain:paint]"
+        className="w-full h-[280px] sm:h-[340px] bg-muted relative cursor-pointer overflow-hidden rounded-t-2xl [contain:paint] [clip-path:inset(0_round_1rem_1rem_0_0)]"
         onClick={() => setExpanded((e) => !e)}
       >
         {isLoading ? (
