@@ -108,13 +108,37 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  // 18+ confirmation. Required before any signup button works. Stored in
+  // localStorage so it survives the OAuth redirect; AuthCallback then writes
+  // profiles.confirmed_adult = true. No effect on the signin path.
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
+  const isSignup = mode === "signup";
+  const signupBlocked = isSignup && !adultConfirmed;
   const copy = COPY[trigger];
 
   useEffect(() => {
     trackEvent("contextual_signup_shown", { trigger });
   }, [trigger]);
 
+  function persistAdultConsent() {
+    try {
+      localStorage.setItem("junto.adult_confirmed", "1");
+    } catch { /* localStorage may be unavailable in some embedded contexts */ }
+  }
+
+  async function setAdultConfirmedOnProfile() {
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const uid = sess.session?.user.id;
+      if (!uid) return;
+      await supabase.from("profiles").update({ confirmed_adult: true }).eq("id", uid);
+    } catch (e) {
+      console.warn("[signup] failed to write confirmed_adult:", e);
+    }
+  }
+
   async function handleAfterAuth() {
+    if (isSignup) await setAdultConfirmedOnProfile();
     const claimed = await claimAnonTrips();
     onClose();
     if (claimed) {
@@ -125,8 +149,10 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
   }
 
   async function handleGoogle() {
+    if (signupBlocked) return;
     setError(null);
     setGoogleLoading(true);
+    if (isSignup) persistAdultConsent();
     const callback = `${window.location.origin}/auth/callback?redirect=${encodeURIComponent("/trips/new?claim=1")}`;
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: callback });
     setGoogleLoading(false);
@@ -138,8 +164,10 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
   }
 
   async function handleApple() {
+    if (signupBlocked) return;
     setError(null);
     setAppleLoading(true);
+    if (isSignup) persistAdultConsent();
     const callback = `${window.location.origin}/auth/callback?redirect=${encodeURIComponent("/trips/new?claim=1")}`;
     const result = await lovable.auth.signInWithOAuth("apple", { redirect_uri: callback });
     setAppleLoading(false);
@@ -153,8 +181,10 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (signupBlocked) return;
     setLoading(true);
     if (mode === "signup") {
+      persistAdultConsent();
       const { error: err } = await signUp(email, password, displayName || email.split("@")[0]);
       setLoading(false);
       if (err) {
@@ -217,12 +247,26 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
         </p>
       )}
 
+      {isSignup && (
+        <label className="mb-3 flex items-start gap-2 text-[12.5px] text-white/75 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={adultConfirmed}
+            onChange={(e) => setAdultConfirmed(e.target.checked)}
+            className="mt-[3px] h-3.5 w-3.5 cursor-pointer accent-teal-500"
+          />
+          <span>I confirm I am 18 years or older. Junto is only intended for users aged 18+.</span>
+        </label>
+      )}
+
       <div className="space-y-3">
         <button
           type="button"
-          disabled={googleLoading}
+          disabled={googleLoading || signupBlocked}
+          aria-disabled={signupBlocked}
+          title={signupBlocked ? "Confirm you are 18+ to continue" : undefined}
           onClick={handleGoogle}
-          className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80"
+          className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ height: 50, fontSize: 15, background: "#ffffff", color: "#1f1f1f" }}
         >
           {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
@@ -230,9 +274,11 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
         </button>
         <button
           type="button"
-          disabled={appleLoading}
+          disabled={appleLoading || signupBlocked}
+          aria-disabled={signupBlocked}
+          title={signupBlocked ? "Confirm you are 18+ to continue" : undefined}
           onClick={handleApple}
-          className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80"
+          className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ height: 50, fontSize: 15, background: "#000", color: "#fff", border: "1px solid rgba(255,255,255,0.1)" }}
         >
           {appleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <AppleIcon />}
@@ -281,8 +327,10 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
           />
           <button
             type="submit"
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-2xl active:opacity-80"
+            disabled={loading || signupBlocked}
+            aria-disabled={signupBlocked}
+            title={signupBlocked ? "Confirm you are 18+ to continue" : undefined}
+            className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-2xl active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ height: 50, fontSize: 15, background: "linear-gradient(135deg,#0D9488 0%,#0F766E 100%)" }}
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}

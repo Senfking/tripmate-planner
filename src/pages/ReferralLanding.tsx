@@ -273,6 +273,18 @@ export default function ReferralLanding() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  // 18+ confirmation. Same pattern as ContextualSignupModal.
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
+  const isSignupMode = mode === "signup";
+  const signupBlocked = isSignupMode && !adultConfirmed;
+  const persistAdultConsent = () => {
+    try { localStorage.setItem("junto.adult_confirmed", "1"); } catch { /* noop */ }
+  };
+  const setAdultConfirmedOnProfile = async (userId: string) => {
+    try { await supabase.from("profiles").update({ confirmed_adult: true }).eq("id", userId); } catch (e) {
+      console.warn("[signup] failed to write confirmed_adult:", e);
+    }
+  };
 
   const handleForgotPassword = async () => {
     setError(null);
@@ -349,8 +361,10 @@ export default function ReferralLanding() {
   }, []);
 
   const handleGoogleSignIn = async () => {
+    if (signupBlocked) return;
     setError(null);
     setGoogleLoading(true);
+    if (isSignupMode) persistAdultConsent();
     const callbackUrl = `${window.location.origin}/auth/callback${redirectAfterAuth ? `?redirect=${encodeURIComponent(redirectAfterAuth)}` : ""}`;
     const { error: err } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: callbackUrl,
@@ -360,8 +374,10 @@ export default function ReferralLanding() {
   };
 
   const handleAppleSignIn = async () => {
+    if (signupBlocked) return;
     setError(null);
     setAppleLoading(true);
+    if (isSignupMode) persistAdultConsent();
     const callbackUrl = `${window.location.origin}/auth/callback${redirectAfterAuth ? `?redirect=${encodeURIComponent(redirectAfterAuth)}` : ""}`;
     const { error: err } = await lovable.auth.signInWithOAuth("apple", {
       redirect_uri: callbackUrl,
@@ -384,11 +400,16 @@ export default function ReferralLanding() {
         navigate(redirectAfterAuth || "/app/trips", { replace: true });
       }
     } else {
+      if (signupBlocked) { setLoading(false); return; }
+      persistAdultConsent();
       const { error: err, data } = await signUp(email, password, displayName);
       setLoading(false);
       if (err) {
         setError(friendlyError(err.message));
       } else {
+        if (data?.user?.id) {
+          await setAdultConfirmedOnProfile(data.user.id);
+        }
         if (referralCode.current && data?.user?.id) {
           const { data: referrerId } = await supabase
             .rpc("resolve_referral_code", { _code: referralCode.current });
@@ -592,12 +613,27 @@ export default function ReferralLanding() {
                   </div>
                 )}
 
+                {/* 18+ confirmation — required for signup, hidden in signin mode */}
+                {isSignupMode && (
+                  <label className="flex items-start gap-2 text-[12.5px] cursor-pointer select-none" style={{ color: "rgba(255,255,255,0.75)" }}>
+                    <input
+                      type="checkbox"
+                      checked={adultConfirmed}
+                      onChange={(e) => setAdultConfirmed(e.target.checked)}
+                      className="mt-[3px] h-3.5 w-3.5 cursor-pointer accent-teal-500"
+                    />
+                    <span>I confirm I am 18 years or older. Junto is only intended for users aged 18+.</span>
+                  </label>
+                )}
+
                 {/* Google OAuth */}
                 <button
                   type="button"
-                  disabled={googleLoading}
+                  disabled={googleLoading || signupBlocked}
+                  aria-disabled={signupBlocked}
+                  title={signupBlocked ? "Confirm you are 18+ to continue" : undefined}
                   onClick={handleGoogleSignIn}
-                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80 transition-transform"
+                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     height: 52,
                     fontSize: 15,
@@ -616,9 +652,11 @@ export default function ReferralLanding() {
                 {/* Apple OAuth */}
                 <button
                   type="button"
-                  disabled={appleLoading}
+                  disabled={appleLoading || signupBlocked}
+                  aria-disabled={signupBlocked}
+                  title={signupBlocked ? "Confirm you are 18+ to continue" : undefined}
                   onClick={handleAppleSignIn}
-                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80 transition-transform"
+                  className="w-full flex items-center justify-center gap-2 font-medium rounded-2xl active:opacity-80 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     height: 52,
                     fontSize: 15,
@@ -703,8 +741,10 @@ export default function ReferralLanding() {
                   )}
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-2xl active:opacity-80 transition-transform"
+                    disabled={loading || signupBlocked}
+                    aria-disabled={signupBlocked}
+                    title={signupBlocked ? "Confirm you are 18+ to continue" : undefined}
+                    className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-2xl active:opacity-80 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       height: 52,
                       fontSize: 16,
