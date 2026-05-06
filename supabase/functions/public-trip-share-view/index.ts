@@ -117,7 +117,8 @@ Deno.serve(async (req) => {
         .from("attachments")
         .select("title, url, og_title, og_description, og_image_url")
         .eq("trip_id", tripId)
-        .eq("type", "link"),
+        .eq("type", "link")
+        .eq("is_private", false),
       supabase
         .from("trip_route_stops")
         .select("destination, start_date, end_date")
