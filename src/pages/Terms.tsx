@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useSmartBack } from "@/hooks/useSmartBack";
+import { useCanonical } from "@/hooks/useCanonical";
 
 const Terms = () => {
   const back = useSmartBack("/");
+  useCanonical("/terms");
   return (
   <div className="min-h-dvh bg-background">
     <div className="max-w-[680px] mx-auto pt-10 pb-20 px-6 md:px-8">
