@@ -304,9 +304,9 @@ export default function ShareView() {
 
         {/* Footer CTA */}
         <footer className="text-center py-6 space-y-4 border-t border-gray-100">
-          <p className="text-sm text-gray-500">Planning a trip?</p>
+          <p className="text-sm text-gray-500">See the full plan</p>
           <Button asChild size="lg">
-            <Link to="/signup">Join Junto free →</Link>
+            <Link to={`/share/${token}/itinerary`}>View itinerary →</Link>
           </Button>
           <p className="text-xs text-gray-400">
             Last updated {format(new Date(), "MMM d, yyyy 'at' HH:mm")}
