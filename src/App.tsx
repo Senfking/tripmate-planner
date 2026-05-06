@@ -35,6 +35,7 @@ const More = lazy(() => import("./pages/More"));
 const InviteRedeem = lazy(() => import("./pages/InviteRedeem"));
 const JoinByCode = lazy(() => import("./pages/JoinByCode"));
 const ShareView = lazy(() => import("./pages/ShareView"));
+const AnonItineraryView = lazy(() => import("./pages/AnonItineraryView"));
 const ReferralLanding = lazy(() => import("./pages/ReferralLanding"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Privacy = lazy(() => import("./pages/Privacy"));
@@ -201,6 +202,7 @@ function AppInner() {
             <Route path="/login" element={<Navigate to="/ref" replace />} />
             <Route path="/signup" element={<Navigate to="/ref" replace />} />
             <Route path="/share/:token" element={<ShareView />} />
+            <Route path="/share/:token/itinerary" element={<AnonItineraryView />} />
             <Route path="/app/invite/:token" element={<InviteRedeem />} />
             <Route path="/i/:token" element={<InviteRedeem />} />
             <Route path="/join" element={<JoinByCode />} />

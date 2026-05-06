@@ -183,7 +183,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   const handleWhatsAppInvite = () => {
     if (!inviteUrl) return;
     const msg = filterLines([
-      `Join me on ${tripName} on Junto! ✈️`,
+      `Join me on ${tripName} on Junto! 🛫`,
       "",
       tripCode ? `Use code ${tripCode} or tap:` : `Tap to join:`,
       inviteUrl,
@@ -194,7 +194,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
 
   const handleWhatsAppShare = () => {
     if (!shareUrl) return;
-    const emoji = (trip as any).emoji || "✈️";
+    const emoji = (trip as any).emoji || "🛫";
     const dateLine = dateStr + (dayCount ? ` · ${dayCount} days` : "");
     const msg = filterLines([
       `${emoji} ${tripName}`,
@@ -207,7 +207,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       "",
       inviteUrl ? `Want to join us?\n${inviteUrl}` : "",
       "",
-      `Planned with Junto 🗺️ junto.pro`,
+      `Planned with Junto 🌍 junto.pro`,
     ]);
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
     trackEvent("trip_invite_sent", { method: "whatsapp", type: "full_plan" }, user?.id);

@@ -28,3 +28,9 @@ project_id = "dwtbqomfleihcvkfoopm"
   # Public read of an anonymous_trips row for the /trips/anon/[id] page.
   [functions.get-anonymous-trip]
     verify_jwt = false
+  # Public anon itinerary view for /share/:token/itinerary.
+  [functions.public-trip-share-itinerary]
+    verify_jwt = false
+  # Public minimal trip share landing /share/:token.
+  [functions.public-trip-share-view]
+    verify_jwt = false
