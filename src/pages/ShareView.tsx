@@ -76,11 +76,9 @@ const statusColors: Record<string, string> = {
 
 export default function ShareView() {
   const { token } = useParams<{ token: string }>();
-  const [searchParams] = useSearchParams();
-  const includeExpenses = searchParams.get("expenses") === "1";
 
   const { data, isLoading, error } = useQuery<ShareData>({
-    queryKey: ["share-view", token, includeExpenses],
+    queryKey: ["share-view", token],
     queryFn: async () => {
       const projId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
@@ -88,7 +86,8 @@ export default function ShareView() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, include_expenses: includeExpenses }),
+          // Defense in depth: never request expense data on public share view.
+          body: JSON.stringify({ token, include_expenses: false }),
         },
       );
       if (!res.ok) {
