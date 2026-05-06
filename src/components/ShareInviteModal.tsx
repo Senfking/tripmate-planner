@@ -183,7 +183,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   const handleWhatsAppInvite = () => {
     if (!inviteUrl) return;
     const msg = filterLines([
-      `Join me on ${tripName} on Junto! ✈️`,
+      `Join me on ${tripName} on Junto! 🛫`,
       "",
       tripCode ? `Use code ${tripCode} or tap:` : `Tap to join:`,
       inviteUrl,
