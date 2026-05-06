@@ -319,21 +319,10 @@ export default function ReferralLanding() {
     })();
   }, [code]);
 
-  // Background video carousel — also drives the headline/subhead overlay
-  // since each slide carries its own copy. 5.5s per slide feels right:
-  // long enough to read, short enough that the variety registers across
-  // 5 slides without dragging.
+  // Background video carousel.
   useEffect(() => {
     const interval = setInterval(() => {
-      // Quick fade-out → swap → fade-in for the headline overlay so the
-      // copy doesn't pop. The video itself crossfades on a 1.5s curve in
-      // VideoSlideshow, so the headline ends up reappearing roughly when
-      // the new background settles.
-      setHeadlineVisible(false);
-      setTimeout(() => {
-        setActiveIndex((prev) => (prev + 1) % SLIDES.length);
-        setHeadlineVisible(true);
-      }, 350);
+      setActiveIndex((prev) => (prev + 1) % SLIDES.length);
     }, 5500);
     return () => clearInterval(interval);
   }, []);
