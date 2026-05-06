@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminSidebar } from "@/components/admin-dashboard/AdminSidebar";
 import { DashboardOverview } from "@/components/admin-dashboard/DashboardOverview";
