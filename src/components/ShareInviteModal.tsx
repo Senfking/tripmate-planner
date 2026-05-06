@@ -62,7 +62,6 @@ function filterLines(lines: string[]): string {
 export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin, trip }: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [includeExpenses, setIncludeExpenses] = useState(false);
 
   const shareRestricted = (trip as any).share_permission === "admin" && !isAdmin;
 
