@@ -31,7 +31,7 @@ const Privacy = () => {
       </span>
 
       <h1 className="text-2xl font-bold text-foreground mt-4 mb-1">Privacy Notice</h1>
-      <p className="text-sm text-muted-foreground mb-8">Last updated: April 9, 2026</p>
+      <p className="text-sm text-muted-foreground mb-8">Last updated: May 6, 2026</p>
 
       <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed space-y-6">
         <p>
@@ -113,9 +113,13 @@ const Privacy = () => {
                 <td className="py-2 px-2">Account data, trip data, expense data, and other app data necessary to provide the service</td>
               </tr>
               <tr className="border-b border-border/50">
-                <td className="py-2 px-2 font-medium text-foreground">Anthropic</td>
-                <td className="py-2 px-2">AI-powered features (receipt scanning, activity suggestions, feedback analysis)</td>
-                <td className="py-2 px-2">Only the content you submit to or that is required for the specific AI feature being used</td>
+                <td className="py-2 px-2 font-medium text-foreground">
+                  Anthropic (
+                  <a href="https://www.anthropic.com/legal/dpa" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">DPA</a>
+                  )
+                </td>
+                <td className="py-2 px-2">AI-powered features: receipt scanning, booking PDF/image extraction, itinerary generation and import, concierge suggestions, trip-summary confirmation, and feedback analysis</td>
+                <td className="py-2 px-2">The trip data, free-text content, and uploaded booking documents (PDFs and images) you submit to the specific AI feature being used. Anthropic processes this content under their data processing agreement and does not train models on it.</td>
               </tr>
               <tr className="border-b border-border/50">
                 <td className="py-2 px-2 font-medium text-foreground">Google</td>
@@ -137,6 +141,11 @@ const Privacy = () => {
         </div>
 
         <p>We may also disclose data if required by law, court order, or to protect the rights, safety, or property of Junto or its users.</p>
+
+        <h3 className="text-base font-medium text-foreground mt-4">Sensitive content in uploaded documents</h3>
+        <p>
+          Booking PDFs and receipt images you upload may contain sensitive information such as passport numbers, full date of birth, full name, government ID numbers, frequent flyer numbers, ticket numbers, and confirmation codes. These documents are sent to Anthropic for AI-powered field extraction (booking dates, provider, totals, etc.) and stored in your trip's private attachments. We recommend redacting passport numbers and any other identifiers you do not want extracted before uploading. Server-side redaction is on our roadmap but not yet implemented.
+        </p>
 
         <h3 className="text-base font-medium text-foreground mt-4">Data shared within trip groups</h3>
         <p>

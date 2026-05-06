@@ -39,6 +39,18 @@ export default function AuthCallback() {
           localStorage.removeItem("junto_referral_code");
         }
       }
+      // 18+ confirmation flag set by the signup modal before OAuth redirect.
+      // Persist it to the profile and clear the local flag. Existing accounts
+      // are backfilled to true (migration 20260506240000) so re-logins of
+      // pre-launch users no-op here.
+      const adultFlag = localStorage.getItem("junto.adult_confirmed");
+      if (adultFlag === "1") {
+        try {
+          await supabase.from("profiles").update({ confirmed_adult: true }).eq("id", user.id);
+        } finally {
+          localStorage.removeItem("junto.adult_confirmed");
+        }
+      }
       // Claim any anonymous trips for this session before routing.
       const anonSessionId = peekAnonSessionId();
       let claimedTripId: string | null = null;
