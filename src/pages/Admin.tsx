@@ -74,7 +74,7 @@ export default function Admin() {
       </div>
     );
   }
-  if (!user || user.id !== ADMIN_USER_ID) return <div />;
+  if (!user || user.id !== ADMIN_USER_ID) return <Navigate to="/" replace />;
 
   const ActiveComponent = MODULE_MAP[activeModule];
 

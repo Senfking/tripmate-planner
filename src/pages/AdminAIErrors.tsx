@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminData } from "@/hooks/useAdminQuery";
 import { C, mono, sans, AdminSkeleton, EmptyState, StatusPill, Card } from "@/components/admin-dashboard/shared";
@@ -75,7 +76,7 @@ export default function AdminAIErrors() {
       </div>
     );
   }
-  if (!user || user.id !== ADMIN_USER_ID) return <div />;
+  if (!user || user.id !== ADMIN_USER_ID) return <Navigate to="/" replace />;
 
   const rows = (data || []) as ErrorRow[];
 
