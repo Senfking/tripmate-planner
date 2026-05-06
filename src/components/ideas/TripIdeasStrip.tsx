@@ -138,7 +138,7 @@ export function TripIdeasStrip({ tripId }: Props) {
           <Plus className="h-4 w-4 text-[#0D9488] shrink-0" />
         </button>
       ) : (
-        <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 pb-1">
+        <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-hide pl-4 md:pl-0 pb-1">
           {visible.map((idea) => (
             <IdeaCard
               key={idea.id}
