@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { FeedbackAnalysisSchema } from "../_shared/schemas/feedback-analysis.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -279,13 +280,13 @@ Return ONLY valid JSON with no other text:
     const aiBody = await aiResponse.json();
     const text = aiBody.content?.[0]?.text ?? "";
 
-    let result: any;
+    let parsedJson: unknown;
     try {
-      result = JSON.parse(text);
+      parsedJson = JSON.parse(text);
     } catch {
       const match = text.match(/\{[\s\S]*\}/);
       if (match) {
-        result = JSON.parse(match[0]);
+        parsedJson = JSON.parse(match[0]);
       } else {
         console.error("Failed to parse AI response:", text);
         return new Response(JSON.stringify({ user_message: null }), {
@@ -293,6 +294,22 @@ Return ONLY valid JSON with no other text:
         });
       }
     }
+
+    // Validate against the strict schema before persistence — anything that
+    // doesn't match (wrong severity literal, unknown keys, oversize summary)
+    // is rejected so a hallucinated response can't corrupt feedback.ai_*.
+    const validation = FeedbackAnalysisSchema.safeParse(parsedJson);
+    if (!validation.success) {
+      console.error("[analyze-feedback] schema validation failed", {
+        feedback_id: feedbackId,
+        zod_errors: validation.error.issues,
+        raw_keys: parsedJson && typeof parsedJson === "object" ? Object.keys(parsedJson) : null,
+      });
+      return new Response(JSON.stringify({ user_message: null }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const result = validation.data;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

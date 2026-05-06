@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkAndIncrement, rateLimitResponse } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -179,6 +180,16 @@ Deno.serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Rate limit: 20 receipt scans / hour / user.
+    const _rlClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const rl = await checkAndIncrement(_rlClient, user.id, "scan-receipt", 20);
+    if (!rl.allowed) {
+      return rateLimitResponse(corsHeaders, rl);
     }
 
     const { image } = await req.json();

@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkTripMembership } from "./authz.ts";
+import { checkAndIncrement, rateLimitResponse } from "../_shared/rateLimit.ts";
+import { BookingExtractionSchema } from "../_shared/schemas/booking.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,6 +90,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Rate limit: 20 extractions / hour / user (cost control on Anthropic).
+    const rl = await checkAndIncrement(supabaseAdmin, authUser.id, "extract-booking-info", 20);
+    if (!rl.allowed) {
+      return rateLimitResponse(corsHeaders, rl);
+    }
+
     // Download file from storage
     const { data: fileData, error: dlError } = await supabaseAdmin.storage
       .from("trip-attachments")
@@ -171,14 +179,32 @@ Return only valid JSON, no other text.`;
     const anthropicData = await anthropicRes.json();
     const textContent = anthropicData.content?.find((c: { type: string }) => c.type === "text")?.text || "";
 
-    // Extract JSON from response (handle markdown code blocks)
+    // Extract JSON from response (handle markdown code blocks), then validate
+    // against the strict Zod schema before persistence. Anything malformed —
+    // wrong type, unknown key, bad date — is rejected so a hallucinated field
+    // can't corrupt attachments.booking_data / og_title / type.
     const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, textContent];
-    let extracted: Record<string, unknown>;
+    let parsedJson: unknown;
     try {
-      extracted = JSON.parse(jsonMatch[1].trim());
+      parsedJson = JSON.parse(jsonMatch[1].trim());
     } catch {
       throw new Error("Failed to parse extraction JSON");
     }
+
+    const validation = BookingExtractionSchema.safeParse(parsedJson);
+    if (!validation.success) {
+      console.error("[extract-booking-info] schema validation failed", {
+        attachment_id,
+        user_id: authUser.id,
+        zod_errors: validation.error.issues,
+        raw_keys: parsedJson && typeof parsedJson === "object" ? Object.keys(parsedJson) : null,
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: "extracted data failed validation" }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const extracted = validation.data;
 
     // Read current type to decide whether to override
     const { data: current } = await supabaseAdmin
