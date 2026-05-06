@@ -251,9 +251,6 @@ export default function ReferralLanding() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [statementIndex, setStatementIndex] = useState(0);
   const [statementVisible, setStatementVisible] = useState(true);
-  // Headline overlay fade is decoupled from the value-prop card fade —
-  // each rotates on its own timer and would clash if they shared state.
-  const [headlineVisible, setHeadlineVisible] = useState(true);
   // Form is open by default — no "Get Started" intermediate step.
   const [formOpen, setFormOpen] = useState(true);
 
