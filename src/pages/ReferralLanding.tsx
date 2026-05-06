@@ -15,44 +15,37 @@ import posterImage from "@/assets/video-poster.png";
    (see AutoPlayVideo). Keeps initial page weight tiny on the unauth
    landing where LCP matters most. ── */
 const SLIDES = [
-  {
-    // ocean / coast — 1080p30, ~5.2 MB
-    video: "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
-    headline: ["Plan trips", "together."],
-    subhead: "Ditch the group chat chaos. Plan, split & decide, all in one place.",
-  },
-  {
-    // city / urban — best available is 720p24 (~5.0 MB); no small 1080p
-    // variant exists for this clip on Pexels (1080p jumps to ~10 MB).
-    video: "https://videos.pexels.com/video-files/2519660/2519660-hd_1280_720_24fps.mp4",
-    headline: ["Discover", "hidden gems."],
-    subhead: "AI-powered itineraries tailored to your group's vibe.",
-  },
-  {
-    // food / culture — 720p25 (~6.5 MB); 1080p variant is 14 MB so we
-    // hold at 720p to keep the carousel snappy.
-    video: "https://videos.pexels.com/video-files/7314884/7314884-hd_1280_720_25fps.mp4",
-    headline: ["Split costs", "effortlessly."],
-    subhead: "Track expenses, settle up, no awkward math.",
-  },
-  {
-    // group / people — 1080p30, ~4.4 MB
-    video: "https://videos.pexels.com/video-files/4918986/4918986-hd_1920_1080_30fps.mp4",
-    headline: ["Decide as", "a group."],
-    subhead: "Vote on activities, pick favorites, no more endless debates.",
-  },
-  // (Removed "friends on beach" scene — pixelated faces read as awkward.)
+  { video: "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4" },
+  { video: "https://videos.pexels.com/video-files/2519660/2519660-hd_1280_720_24fps.mp4" },
+  { video: "https://videos.pexels.com/video-files/7314884/7314884-hd_1280_720_25fps.mp4" },
+  { video: "https://videos.pexels.com/video-files/4918986/4918986-hd_1920_1080_30fps.mp4" },
 ];
 
 
-/* ── Value-prop rotator (independent of the video carousel). Lives in
-   the glass card — short benefit statements that cycle on their own
-   timing so users get more reading variety than the headline alone. ── */
+/* ── Value-prop rotator. Each pair names a real friction point in
+   group travel and how Junto resolves it today. Kept honest to the
+   current app stage — no roadmap promises. ── */
 const STATEMENTS = [
-  { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip. Itinerary, decisions, everything." },
-  { problem: "Splitting costs always gets awkward.", solution: "Log expenses, scan receipts with Junto AI, and settle up in any currency." },
-  { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas, all in one place." },
-  { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
+  {
+    problem: "Planning a group trip eats your evenings.",
+    solution: "Describe the vibe, Junto AI drafts a full itinerary your group can shape together.",
+  },
+  {
+    problem: "Receipts pile up, the math gets awkward.",
+    solution: "Snap a photo, Junto AI reads the total and splits it across the group in any currency.",
+  },
+  {
+    problem: "Bookings live in inboxes and screenshots.",
+    solution: "Drop in a confirmation or PDF, Junto AI pulls out flights, hotels and visas automatically.",
+  },
+  {
+    problem: "Group chats never actually decide anything.",
+    solution: "Propose options, vote, lock it in, and the plan updates for everyone instantly.",
+  },
+  {
+    problem: "Every new trip starts from a blank page.",
+    solution: "Past trips, expenses and bookings stay in one place, ready to reuse for the next one.",
+  },
 ];
 
 
@@ -258,9 +251,6 @@ export default function ReferralLanding() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [statementIndex, setStatementIndex] = useState(0);
   const [statementVisible, setStatementVisible] = useState(true);
-  // Headline overlay fade is decoupled from the value-prop card fade —
-  // each rotates on its own timer and would clash if they shared state.
-  const [headlineVisible, setHeadlineVisible] = useState(true);
   // Form is open by default — no "Get Started" intermediate step.
   const [formOpen, setFormOpen] = useState(true);
 
@@ -329,21 +319,10 @@ export default function ReferralLanding() {
     })();
   }, [code]);
 
-  // Background video carousel — also drives the headline/subhead overlay
-  // since each slide carries its own copy. 5.5s per slide feels right:
-  // long enough to read, short enough that the variety registers across
-  // 5 slides without dragging.
+  // Background video carousel.
   useEffect(() => {
     const interval = setInterval(() => {
-      // Quick fade-out → swap → fade-in for the headline overlay so the
-      // copy doesn't pop. The video itself crossfades on a 1.5s curve in
-      // VideoSlideshow, so the headline ends up reappearing roughly when
-      // the new background settles.
-      setHeadlineVisible(false);
-      setTimeout(() => {
-        setActiveIndex((prev) => (prev + 1) % SLIDES.length);
-        setHeadlineVisible(true);
-      }, 350);
+      setActiveIndex((prev) => (prev + 1) % SLIDES.length);
     }, 5500);
     return () => clearInterval(interval);
   }, []);
@@ -480,58 +459,8 @@ export default function ReferralLanding() {
             </div>
           )}
 
-          {/* Headline + subhead — rotates with the background video.
-              Wrapped in a grid so the tallest copy reserves vertical
-              space; otherwise the CTA below jumps each time the slide
-              changes (some headlines are 2 lines, some subheads wrap to
-              3). The visible layer is absolutely positioned over it. */}
-          <div className="relative">
-            {/* Reservoir: all slides rendered invisibly so the container
-                always sizes to the tallest headline+subhead pair. */}
-            <div aria-hidden="true" className="pointer-events-none invisible grid">
-              {SLIDES.map((slide, i) => (
-                <div key={i} className="[grid-area:1/1]">
-                  <h2 className="font-bold" style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}>
-                    {slide.headline[0]}
-                    <br />
-                    {slide.headline[1]}
-                  </h2>
-                  <p className="mt-2" style={{ fontSize: 15, lineHeight: 1.5 }}>
-                    {slide.subhead}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Visible layer */}
-            <div
-              className="absolute inset-0"
-              style={{
-                opacity: headlineVisible ? 1 : 0,
-                transition: "opacity 0.35s ease-in-out",
-              }}
-            >
-              <h1
-                className="text-white font-bold"
-                style={{ fontSize: 34, lineHeight: 1.08, letterSpacing: "-0.02em" }}
-              >
-                {SLIDES[activeIndex].headline[0]}
-                <br />
-                {SLIDES[activeIndex].headline[1]}
-              </h1>
-              <p
-                className="mt-2"
-                style={{
-                  fontSize: 15,
-                  lineHeight: 1.5,
-                  color: "rgba(255,255,255,0.75)",
-                  textShadow: "0 1px 8px rgba(0,0,0,0.5)",
-                }}
-              >
-                {SLIDES[activeIndex].subhead}
-              </p>
-            </div>
-          </div>
+          {/* Headline overlay removed — the rotating problem/solution
+              panel below is the single source of value-prop copy. */}
 
           {/* Rotating statement panel */}
           <div
