@@ -120,6 +120,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   }, [open, shareLoading, activeShare, user]);
 
   const shareUrl = activeShare ? `${origin}/share/${activeShare.token}` : null;
+  const itineraryShareUrl = activeShare ? `${origin}/share/${activeShare.token}/itinerary` : null;
 
   const revokeShare = useMutation({
     mutationFn: async (id: string) => {
@@ -193,7 +194,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
   };
 
   const handleWhatsAppShare = () => {
-    if (!shareUrl) return;
+    if (!itineraryShareUrl) return;
     const emoji = (trip as any).emoji || "🛫";
     const dateLine = dateStr + (dayCount ? ` · ${dayCount} days` : "");
     const msg = filterLines([
@@ -203,7 +204,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       membersLine,
       "",
       `See the full trip plan:`,
-      shareUrl,
+      itineraryShareUrl,
       "",
       inviteUrl ? `Want to join us?\n${inviteUrl}` : "",
       "",
@@ -302,7 +303,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
             <div className="flex justify-center py-3">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
-          ) : shareUrl && activeShare ? (
+          ) : shareUrl && itineraryShareUrl && activeShare ? (
             <div className="space-y-2.5">
               <Button
                 className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-xl h-11 text-[14px] font-medium shadow-sm"
@@ -317,7 +318,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                 </p>
                 <button
                   className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                  onClick={() => copyToClipboard(shareUrl)}
+                  onClick={() => copyToClipboard(itineraryShareUrl)}
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </button>
