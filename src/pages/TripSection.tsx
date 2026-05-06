@@ -126,16 +126,41 @@ export default function TripSection() {
     enabled: tripIdValid && !!user && section === "plan",
   });
 
-  if (!trip) {
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
-    }
-    return null;
+  const loading = tripLoading || (tripIdValid && !!user && membershipLoading);
+  const notFound = !tripLoading && !trip;
+  const notMember = !!trip && !membershipLoading && (!myMembership || membershipError);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
+
+  if (tripError || notFound || notMember) {
+    const title = notMember ? "You're not a member of this trip" : "Trip not found";
+    const body = notMember
+      ? "Ask the trip owner to invite you, or head back to your trips."
+      : "This trip doesn't exist or has been deleted.";
+    return (
+      <div className="flex flex-col items-center justify-center min-h-dvh text-center p-6 space-y-4">
+        <MapPin className="h-14 w-14 text-muted-foreground/50" />
+        <div>
+          <p className="text-lg font-semibold text-foreground">{title}</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">{body}</p>
+        </div>
+        <button
+          onClick={() => navigate("/app/trips")}
+          className="text-sm font-semibold text-[#0D9488] hover:underline"
+        >
+          Back to My Trips
+        </button>
+      </div>
+    );
+  }
+
+  if (!trip) return null;
 
   if (!section || !SECTION_TITLES[section]) {
     return (
