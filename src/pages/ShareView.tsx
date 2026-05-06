@@ -127,7 +127,7 @@ export default function ShareView() {
     );
   }
 
-  const { trip, members, member_count, route_stops, itinerary_items, attachments, expenses_summary } = data;
+  const { trip, members, member_count, route_stops, itinerary_items, attachments } = data;
 
   // Date range
   const formatDateRange = (s: string | null, e: string | null) => {
