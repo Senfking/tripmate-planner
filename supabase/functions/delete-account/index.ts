@@ -110,6 +110,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // 3. profiles.referred_by: clear referee rows pointing at this user before
+    //    auth.admin.deleteUser fires the FK cascade. The
+    //    enforce_profiles_privileged_fields trigger (migration 20260506200000)
+    //    raises on `OLD.referred_by IS NOT NULL` -> NULL transitions, and
+    //    `auth.role()` is unset on the GoTrue admin connection, so the
+    //    service-role bypass branch wouldn't fire from inside the cascade.
+    //    Doing the clear here, on the service-role-keyed adminClient, picks
+    //    up the trigger's bypass; the FK's ON DELETE SET NULL then becomes
+    //    belt-and-suspenders.
+    const { error: referredByClearError } = await adminClient
+      .from("profiles")
+      .update({ referred_by: null })
+      .eq("referred_by", user.id);
+    if (referredByClearError) {
+      return new Response(JSON.stringify({ error: referredByClearError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Delete the user
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
     if (deleteError) {
