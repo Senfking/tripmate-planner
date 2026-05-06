@@ -129,12 +129,15 @@ Allow: /
 # ─── Default: allow all, protect private surfaces ─────────────────
 User-agent: *
 Allow: /
-Disallow: /app/admin
+Disallow: /app/
 Disallow: /admin
+Disallow: /share/
 Disallow: /auth/callback
 Disallow: /reset-password
 Disallow: /invite/
+Disallow: /i/
 Disallow: /join/
+Disallow: /trips/anon/
 
 Host: https://junto.pro
 Sitemap: https://junto.pro/sitemap.xml
