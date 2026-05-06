@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
 import { lovable } from "@/integrations/lovable/index";
 import { trackEvent } from "@/lib/analytics";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, MailCheck } from "lucide-react";
 import posterImage from "@/assets/video-poster.png";
 
 
