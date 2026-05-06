@@ -143,6 +143,25 @@ export interface AITripResult {
    *  (max-destinations cap, pacing fix, etc). Surfaced as a notice card
    *  at the top of the trip view. */
   adjustment_notice?: string | null;
+  /** Backend-computed per-person trip cost in trip currency. Sum of every
+   *  activity's estimated_cost_per_person + per-leg accommodation per-night
+   *  × (days.length - 1). Single source of truth for the headline budget;
+   *  the legacy `computeTripBudget` helper only runs when this is missing
+   *  (cached plans saved before the persistence fix). */
+  trip_total_estimate?: number;
+  /** Per-person EUR additive for daily-living spend not captured as a
+   *  scheduled activity (unscheduled meals, local transit, tips/drinks/
+   *  snacks). Always EUR — convert at render. The default headline is
+   *  trip_total_estimate + this; the "Only calculate itinerary" toggle
+   *  hides it. */
+  daily_living_additive_eur?: number;
+  /** "calculated" = sum-of-parts. "llm_corrected" = the calculated value
+   *  was an extreme outlier vs. Haiku's plausible range, so we substituted
+   *  the range midpoint. UI shows an "Estimated" badge on llm_corrected. */
+  estimation_method?: "calculated" | "llm_corrected";
+  /** Plausible per-person EUR range from the Haiku sanity-check; null when
+   *  the validator failed or didn't run. */
+  expected_range_eur?: [number, number] | null;
 }
 
 export function useResultsState(tripId: string) {

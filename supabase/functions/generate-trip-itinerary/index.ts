@@ -805,6 +805,14 @@ interface PipelineResult {
   // Plausible range from the Haiku sanity-check, when available. Null when
   // the validator failed or never ran (the calculated total stays as-is).
   expected_range_eur?: [number, number] | null;
+  // Per-person EUR additive covering daily living costs that aren't
+  // represented as scheduled activities — unscheduled meals (breakfast +
+  // any lunch/dinner the pace didn't slot), local transit, and a buffer
+  // for tips/drinks/snacks. Computed deterministically from each leg's
+  // Haiku food_per_meal_eur baseline. The frontend defaults to displaying
+  // (trip_total_estimate + daily_living_additive_eur); a UI toggle lets
+  // users see the itinerary-only number. Always EUR; convert at render.
+  daily_living_additive_eur?: number;
   currency: string;
   packing_suggestions: string[];
   total_activities: number;
@@ -818,8 +826,10 @@ interface PipelineResult {
 }
 
 // Compute per-person total trip cost across all real-destination legs.
-// Activities sum to all days (transit days have 0 cost), accommodation
-// sums to (per-leg cost-per-night × leg days_count) for every real leg.
+// Activities sum to all days (transit days have 0 cost). Accommodation
+// uses the hotel-night convention: an N-day leg has N-1 nights — checkout
+// is the morning of the last day, so the last day doesn't add a hotel
+// night. Backend and frontend agree on this rule.
 function computeTripTotalEstimate(destinations: RankedDestination[]): number {
   let total = 0;
   for (const dest of destinations) {
@@ -830,10 +840,91 @@ function computeTripTotalEstimate(destinations: RankedDestination[]): number {
       }
     }
     if (dest.kind !== "transit" && dest.accommodation && realDays > 0) {
-      total += (dest.accommodation.estimated_cost_per_person || 0) * realDays;
+      const nights = Math.max(0, realDays - 1);
+      total += (dest.accommodation.estimated_cost_per_person || 0) * nights;
     }
   }
   return Math.round(total);
+}
+
+// Per-person EUR additive for daily-living spend that isn't represented as
+// a scheduled activity. Per leg, per day:
+//   - unscheduled_meals × food_per_meal_eur.median, where unscheduled_meals
+//     = 3 - min(3, count of activities tagged category="food"). Pace
+//     patterns top out at breakfast+lunch+dinner; "balanced" trips
+//     typically schedule 2/day, leaving breakfast unscheduled.
+//   - 0.4 × food_median for local transit. Scales with destination cost
+//     since metro/taxi fares track the broader cost-of-living level.
+//   - 0.4 × food_median for tips/drinks/snacks/coffee.
+// Legs missing baselines (cache-hit, no Haiku call, etc.) contribute 0 —
+// the additive degrades gracefully rather than guessing. Always EUR;
+// frontend converts to display currency.
+function computeDailyLivingAdditiveEur(destinations: RankedDestination[]): number {
+  let totalEur = 0;
+  for (const dest of destinations) {
+    if (dest.kind === "transit") continue;
+    const baselines = dest.price_baselines;
+    if (!baselines) continue;
+    const foodMedianEur = Math.max(0, baselines.food_per_meal_eur?.median ?? 0);
+    if (foodMedianEur <= 0) continue;
+    for (const day of dest.days) {
+      const scheduledMeals = Math.min(
+        3,
+        day.activities.filter(
+          (a) => (a.category ?? "").trim().toLowerCase() === "food",
+        ).length,
+      );
+      const unscheduledMeals = 3 - scheduledMeals;
+      const dailyLivingPerDay =
+        unscheduledMeals * foodMedianEur + 0.8 * foodMedianEur;
+      totalEur += dailyLivingPerDay;
+    }
+  }
+  return Math.round(totalEur);
+}
+
+// Structured observability log emitted once at pipeline completion. Lets
+// future budget-diagnosis runs grep one line per trip instead of stitching
+// together [lodging_clamp]/[activity_clamp] entries by hand.
+function logBudgetRollup(
+  destinations: RankedDestination[],
+  tripTotalEstimate: number,
+  dailyLivingAdditiveEur: number,
+  expectedRangeEur: [number, number] | null | undefined,
+  estimationMethod: "calculated" | "llm_corrected" | undefined,
+  currency: string,
+): void {
+  const perLeg = destinations
+    .filter((d) => d.kind !== "transit")
+    .map((d) => {
+      const realDays = d.days.length;
+      const nights = Math.max(0, realDays - 1);
+      const accomPerNight = d.accommodation?.estimated_cost_per_person ?? 0;
+      const accomTotal = accomPerNight * nights;
+      const activityTotal = d.days.reduce(
+        (s, day) =>
+          s + day.activities.reduce((a, act) => a + (act.estimated_cost_per_person || 0), 0),
+        0,
+      );
+      const foodMedianEur = d.price_baselines?.food_per_meal_eur?.median ?? null;
+      return {
+        leg: d.name,
+        days: realDays,
+        nights,
+        accom_per_night: accomPerNight,
+        accom_total: accomTotal,
+        activity_total: activityTotal,
+        food_median_eur: foodMedianEur,
+      };
+    });
+  console.log(
+    `[budget_rollup] currency=${currency} ` +
+      `trip_total_estimate=${tripTotalEstimate} ` +
+      `daily_living_additive_eur=${dailyLivingAdditiveEur} ` +
+      `estimation_method=${estimationMethod ?? "calculated"} ` +
+      `expected_range_eur=${expectedRangeEur ? `[${expectedRangeEur[0]},${expectedRangeEur[1]}]` : "null"} ` +
+      `legs=${JSON.stringify(perLeg)}`,
+  );
 }
 
 interface ClaudeUsage {
@@ -5574,7 +5665,7 @@ ABSOLUTE RULES:
 
 ACCOMMODATION:
 - Pick ONE lodging for the whole destination from the lodging pool. Prefer rating ≥ 4.3, reviews 100+, and a priceLevel consistent with intent.budget_tier. If the pool is thin, pick the best available and note the limitation.
-- description, pro_tip, why_for_you follow the same EDITORIAL VOICE rules as activities: cite specific details, no travel-brochure adjectives, no generic phrases. estimated_cost_per_person is per room per night in the trip's local currency.
+- description, pro_tip, why_for_you follow the same EDITORIAL VOICE rules as activities: cite specific details, no travel-brochure adjectives, no generic phrases. estimated_cost_per_person is per person per night in the trip's local currency, assuming double occupancy (~half the room rate). The pipeline clamps this against the destination's lodging baseline and a per-hotel Haiku estimate, both of which are also per-person/double-occupancy, so the value that ships always represents per-person cost.
 
 OUTPUT: call the emit_trip_metadata tool exactly once. No prose outside the tool call.`;
 
@@ -7116,6 +7207,8 @@ async function rankInParallel(
     };
   });
 
+  const tripTotalEstimateNonStream = computeTripTotalEstimate(destinations);
+  const dailyLivingAdditiveEurNonStream = computeDailyLivingAdditiveEur(destinations);
   return {
     trip_title: finalTitle,
     trip_summary: finalSummary,
@@ -7123,7 +7216,8 @@ async function rankInParallel(
     map_center: computeMapCenter(geos),
     map_zoom: computeMapZoom(geos),
     daily_budget_estimate,
-    trip_total_estimate: computeTripTotalEstimate(destinations),
+    trip_total_estimate: tripTotalEstimateNonStream,
+    daily_living_additive_eur: dailyLivingAdditiveEurNonStream,
     currency,
     packing_suggestions: Array.isArray(meta?.packing_suggestions) ? meta!.packing_suggestions.slice(0, 10) : [],
     total_activities,
@@ -8996,6 +9090,12 @@ Deno.serve(async (req) => {
                 const cachedTripTotal = typeof payload?.trip_total_estimate === "number"
                   ? payload.trip_total_estimate
                   : computeTripTotalEstimate(cachedDests as unknown as RankedDestination[]);
+                // Daily-living additive: prefer cached, otherwise recompute
+                // from cached price_baselines on each leg. Pre-PR cache rows
+                // without baselines yield 0; UI hides the toggle in that case.
+                const cachedDailyLiving = typeof payload?.daily_living_additive_eur === "number"
+                  ? payload.daily_living_additive_eur
+                  : computeDailyLivingAdditiveEur(cachedDests as unknown as RankedDestination[]);
                 // Budget sanity check on the cached value. Mostly a cache
                 // hit on the validator's own 30-day cache (same trip
                 // shape → same range), so net cost ~0.
@@ -9012,8 +9112,17 @@ Deno.serve(async (req) => {
                 const cacheHitFakeResult: PipelineResult = {
                   ...(payload as unknown as PipelineResult),
                   trip_total_estimate: cachedTripTotal,
+                  daily_living_additive_eur: cachedDailyLiving,
                 };
                 applyBudgetSanityCheck(cacheHitFakeResult, cacheHitBudgetValidation);
+                logBudgetRollup(
+                  cachedDests as unknown as RankedDestination[],
+                  cacheHitFakeResult.trip_total_estimate,
+                  cacheHitFakeResult.daily_living_additive_eur ?? 0,
+                  cacheHitFakeResult.expected_range_eur ?? null,
+                  cacheHitFakeResult.estimation_method,
+                  payload?.currency ?? "USD",
+                );
                 send("trip_complete", {
                   trip_title: stripEmojis(payload?.trip_title),
                   trip_summary: payload?.trip_summary ?? "",
@@ -9022,6 +9131,7 @@ Deno.serve(async (req) => {
                   junto_pick_place_ids: juntoPlaceIds,
                   daily_budget_estimate: payload?.daily_budget_estimate ?? 0,
                   trip_total_estimate: cacheHitFakeResult.trip_total_estimate,
+                  daily_living_additive_eur: cacheHitFakeResult.daily_living_additive_eur ?? 0,
                   estimation_method: cacheHitFakeResult.estimation_method ?? "calculated",
                   expected_range_eur: cacheHitFakeResult.expected_range_eur ?? null,
                   total_activities: payload?.total_activities ?? 0,
@@ -9899,6 +10009,7 @@ Deno.serve(async (req) => {
               map_zoom: computeMapZoom(geos),
               daily_budget_estimate,
               trip_total_estimate: computeTripTotalEstimate(destinationsAssembled),
+              daily_living_additive_eur: computeDailyLivingAdditiveEur(destinationsAssembled),
               currency,
               packing_suggestions: Array.isArray(meta?.packing_suggestions) ? meta!.packing_suggestions.slice(0, 10) : [],
               total_activities,
@@ -9981,6 +10092,15 @@ Deno.serve(async (req) => {
               );
             }
 
+            logBudgetRollup(
+              destinationsAssembled,
+              pipelineResult.trip_total_estimate,
+              pipelineResult.daily_living_additive_eur ?? 0,
+              pipelineResult.expected_range_eur ?? null,
+              pipelineResult.estimation_method,
+              currency,
+            );
+
             // ---- Final event ----
             send("trip_complete", {
               trip_title: pipelineResult.trip_title,
@@ -9990,6 +10110,7 @@ Deno.serve(async (req) => {
               junto_pick_place_ids: juntoPlaceIds,
               daily_budget_estimate,
               trip_total_estimate: pipelineResult.trip_total_estimate,
+              daily_living_additive_eur: pipelineResult.daily_living_additive_eur ?? 0,
               estimation_method: pipelineResult.estimation_method ?? "calculated",
               expected_range_eur: pipelineResult.expected_range_eur ?? null,
               total_activities,
@@ -10237,6 +10358,12 @@ Deno.serve(async (req) => {
           const cachedTripTotalNonStream = typeof payload?.trip_total_estimate === "number"
             ? payload.trip_total_estimate
             : computeTripTotalEstimate(cachedDestsArr as unknown as RankedDestination[]);
+          // Daily-living additive: prefer cached value, otherwise recompute
+          // from the cached destinations[] (yields 0 if no price_baselines on
+          // the cached legs, e.g. pre-PR cache rows — that's intentional).
+          const cachedDailyLivingNonStream = typeof payload?.daily_living_additive_eur === "number"
+            ? payload.daily_living_additive_eur
+            : computeDailyLivingAdditiveEur(cachedDestsArr as unknown as RankedDestination[]);
           const cacheHitBudgetValidationNonStream = await validateBudgetEstimate(
             anthropicKey,
             realDestinationNames(cachedDestsArr as Array<{ name: string; kind?: string }>),
@@ -10250,11 +10377,21 @@ Deno.serve(async (req) => {
           const cacheHitFakeResultNonStream: PipelineResult = {
             ...(payload as unknown as PipelineResult),
             trip_total_estimate: cachedTripTotalNonStream,
+            daily_living_additive_eur: cachedDailyLivingNonStream,
           };
           applyBudgetSanityCheck(cacheHitFakeResultNonStream, cacheHitBudgetValidationNonStream);
           payload.trip_total_estimate = cacheHitFakeResultNonStream.trip_total_estimate;
+          payload.daily_living_additive_eur = cacheHitFakeResultNonStream.daily_living_additive_eur ?? 0;
           payload.estimation_method = cacheHitFakeResultNonStream.estimation_method ?? "calculated";
           payload.expected_range_eur = cacheHitFakeResultNonStream.expected_range_eur ?? null;
+          logBudgetRollup(
+            cachedDestsArr as unknown as RankedDestination[],
+            cacheHitFakeResultNonStream.trip_total_estimate,
+            cacheHitFakeResultNonStream.daily_living_additive_eur ?? 0,
+            cacheHitFakeResultNonStream.expected_range_eur ?? null,
+            cacheHitFakeResultNonStream.estimation_method,
+            (payload?.currency as string) ?? "USD",
+          );
           console.log(
             `[timing-summary] ${JSON.stringify({ total_ms: Date.now() - pipelineStartedAt, cache_hit: true, stages: stageTimings })}`,
           );
@@ -10504,9 +10641,11 @@ Deno.serve(async (req) => {
       { lat: geo.lat, lng: geo.lng },
       legCenters,
     );
-    // Recompute trip_total_estimate after validation drops so the budget
-    // sanity check sees the final number that ships in the response.
+    // Recompute trip_total_estimate + daily-living additive after validation
+    // drops so the budget sanity check sees the final numbers that ship in
+    // the response.
     validated.trip_total_estimate = computeTripTotalEstimate(validated.destinations);
+    validated.daily_living_additive_eur = computeDailyLivingAdditiveEur(validated.destinations);
     tStage("validate", tValidate);
 
     // ---- Budget sanity check (Haiku, ~$0.0005/trip, 30-day cache).
@@ -10524,6 +10663,14 @@ Deno.serve(async (req) => {
       pipelineStartedAt,
     );
     applyBudgetSanityCheck(validated, budgetValidationNonStream);
+    logBudgetRollup(
+      validated.destinations,
+      validated.trip_total_estimate,
+      validated.daily_living_additive_eur ?? 0,
+      validated.expected_range_eur ?? null,
+      validated.estimation_method,
+      validated.currency,
+    );
 
     // ---- Resolve destination cover image (kicked off in parallel with rank) ----
     // The promise was started before rankAndEnrich; awaited here. Failures are

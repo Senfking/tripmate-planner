@@ -93,6 +93,13 @@ interface TripCompleteEvent {
   destination_country_iso: string | null;
   from_cache: boolean;
   anon_trip_id?: string | null;
+  // Backend-authoritative budget fields. Optional because legacy cache rows
+  // (pre-budget-pipeline) may emit a trip_complete event without them.
+  trip_total_estimate?: number;
+  daily_living_additive_eur?: number;
+  estimation_method?: "calculated" | "llm_corrected";
+  expected_range_eur?: [number, number] | null;
+  adjustment_notice?: string | null;
 }
 
 /** Pipeline progress milestone emitted by the edge function. */
@@ -352,7 +359,21 @@ function assembleResult(
     budget_tier: trip.budget_tier,
     destination_image_url: trip.destination_image_url ?? imageUrl ?? null,
     destination_country_iso: trip.destination_country_iso ?? null,
-    adjustment_notice: (trip as any).adjustment_notice ?? adjustmentNotice ?? null,
+    adjustment_notice: trip.adjustment_notice ?? adjustmentNotice ?? null,
+    trip_total_estimate: typeof trip.trip_total_estimate === "number" ? trip.trip_total_estimate : undefined,
+    daily_living_additive_eur:
+      typeof trip.daily_living_additive_eur === "number" ? trip.daily_living_additive_eur : undefined,
+    estimation_method:
+      trip.estimation_method === "calculated" || trip.estimation_method === "llm_corrected"
+        ? trip.estimation_method
+        : undefined,
+    expected_range_eur:
+      Array.isArray(trip.expected_range_eur)
+        && trip.expected_range_eur.length === 2
+        && typeof trip.expected_range_eur[0] === "number"
+        && typeof trip.expected_range_eur[1] === "number"
+        ? [trip.expected_range_eur[0], trip.expected_range_eur[1]]
+        : null,
   };
 }
 
