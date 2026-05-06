@@ -56,6 +56,12 @@ export default function TripSection() {
     }
   }, [tripId, tripIdValid, navigate]);
 
+  // Draft trips only have one canonical view (the preview at /trips/:id with
+  // Regenerate / Save draft / Create trip CTAs). Sub-routes like /itinerary,
+  // /ideas, /expenses are only meaningful for committed trips, so redirect
+  // drafts back to the root.
+  // (declared after `trip` query below — see useEffect further down)
+
   const { connectionStatus, newItemIds } = useTripRealtime(tripIdValid ? tripId : undefined);
 
   const { data: trip, isLoading: tripLoading, isError: tripError } = useQuery({
@@ -72,6 +78,13 @@ export default function TripSection() {
     enabled: tripIdValid && !!user,
     retry: false,
   });
+
+  // Redirect draft trips to the root preview view — sub-routes are committed-only.
+  useEffect(() => {
+    if (trip && (trip as any).status === "draft" && tripId) {
+      navigate(`/app/trips/${tripId}`, { replace: true });
+    }
+  }, [trip, tripId, navigate]);
 
   const {
     data: myMembership,
