@@ -68,16 +68,67 @@
           "@type": "SoftwareApplication",
           "name": "Junto",
           "applicationCategory": "TravelApplication",
+          "applicationSubCategory": "Trip Planner",
           "operatingSystem": "Web, iOS, Android",
           "url": "https://junto.pro",
-          "description": "AI group trip planner. Collaborate on itineraries, vote on where to go, and split expenses with friends.",
+          "description": "AI group trip planner. Discover where to travel, build day-by-day itineraries, vote with friends, split expenses, and store bookings — all in one collaborative workspace.",
           "featureList": [
-            "AI-powered itinerary generation",
-            "Group voting on destinations and activities",
-            "Shared expense tracking and splitting",
-            "Collaborative trip decisions",
-            "Real-time itinerary updates",
-            "Booking and document storage"
+            "AI destination recommendations based on vibe, budget, season and group size",
+            "AI-powered day-by-day itinerary generation",
+            "Group voting on destinations, dates, hotels, restaurants and activities",
+            "Shared expense tracking and multi-currency splitting",
+            "Real-time collaborative itinerary editing",
+            "Booking parsing for hotels, flights and trains",
+            "Entry requirements: visas, vaccinations, passport validity",
+            "Trip templates and curated travel inspiration",
+            "Offline access and PWA install",
+            "Solo, couple, family, friends and corporate group trips"
+          ],
+          "keywords": "trip planner, group travel, AI travel planner, where to travel, travel recommendations, vacation planner, itinerary builder, travel inspiration, holiday ideas, weekend getaways, city breaks, road trips, honeymoon planner, family vacation, bachelor party, bachelorette trip, ski trip, beach holiday, backpacking, travel expenses, split costs, visa check"
+        },
+        {
+          "@type": "Service",
+          "name": "AI Travel Planning by Junto",
+          "provider": { "@id": "https://junto.pro/#organization" },
+          "serviceType": "Travel planning and itinerary generation",
+          "areaServed": { "@type": "Place", "name": "Worldwide" },
+          "audience": [
+            { "@type": "Audience", "audienceType": "Friends planning a trip together" },
+            { "@type": "Audience", "audienceType": "Families planning a vacation" },
+            { "@type": "Audience", "audienceType": "Couples planning a honeymoon or romantic getaway" },
+            { "@type": "Audience", "audienceType": "Solo travelers" },
+            { "@type": "Audience", "audienceType": "Bachelor and bachelorette parties" },
+            { "@type": "Audience", "audienceType": "Corporate offsites and team retreats" },
+            { "@type": "Audience", "audienceType": "Backpackers and budget travelers" }
+          ],
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Trip types Junto helps plan",
+            "itemListElement": [
+              { "@type": "OfferCatalog", "name": "City breaks and weekend getaways" },
+              { "@type": "OfferCatalog", "name": "Beach holidays and island trips" },
+              { "@type": "OfferCatalog", "name": "Ski and snowboard trips" },
+              { "@type": "OfferCatalog", "name": "Road trips and multi-stop itineraries" },
+              { "@type": "OfferCatalog", "name": "Honeymoons and romantic getaways" },
+              { "@type": "OfferCatalog", "name": "Family vacations with kids" },
+              { "@type": "OfferCatalog", "name": "Backpacking and gap-year travel" },
+              { "@type": "OfferCatalog", "name": "Festivals, weddings and event trips" },
+              { "@type": "OfferCatalog", "name": "Adventure and outdoor expeditions" },
+              { "@type": "OfferCatalog", "name": "Cultural, food and wine tours" }
+            ]
+          }
+        },
+        {
+          "@type": "HowTo",
+          "name": "How to plan a group trip with Junto",
+          "description": "Plan a trip with friends or family from idea to booking using Junto's AI group trip planner.",
+          "totalTime": "PT10M",
+          "step": [
+            { "@type": "HowToStep", "name": "Describe your trip", "text": "Tell Junto who's going, when, and the vibe — beach, city, ski, road trip, honeymoon, etc. Junto's AI suggests destinations that fit." },
+            { "@type": "HowToStep", "name": "Vote as a group", "text": "Invite friends, vote on destinations, dates, hotels, restaurants and activities. Decisions are made transparently in one place." },
+            { "@type": "HowToStep", "name": "Generate the itinerary", "text": "Junto's AI builds a day-by-day itinerary tailored to your group, which everyone can edit in real time." },
+            { "@type": "HowToStep", "name": "Track bookings and documents", "text": "Forward hotel and flight confirmations, check visa and vaccination requirements, store passports and tickets." },
+            { "@type": "HowToStep", "name": "Split expenses", "text": "Snap receipts, split in any currency, settle balances when you're back home." }
           ]
         },
         {
