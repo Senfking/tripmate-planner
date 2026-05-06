@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { mirrorPlacePhotos } from "../_shared/places/photoMirror.ts";
 
 console.log("[get-place-details] module loaded");
 
@@ -141,15 +142,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify(empty), { headers: JSON_HEADERS });
     }
 
-    // Step 2: Build photo URLs
-    const photos: string[] = [];
-    if (Array.isArray(place.photos)) {
-      for (const p of place.photos.slice(0, 3)) {
-        if (p.name) {
-          photos.push(`https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=800&key=${apiKey}`);
-        }
-      }
-    }
+    // Step 2: Mirror up to 3 photos to the public `place-photos` Storage
+    // bucket and persist Storage URLs (NOT Google URLs with api keys) in
+    // the response. Failure to mirror an individual photo silently drops it
+    // — the caller's `photos[]` may have 0-3 entries. The previous version
+    // built `https://places.googleapis.com/...?key=${apiKey}` URLs that
+    // leaked the Google Places API key to every authenticated client and
+    // billed Google's $0.007/load photo-media SKU on every <img> render.
+    const photos: string[] = supabase && place.id && Array.isArray(place.photos)
+      ? await mirrorPlacePhotos(supabase, apiKey, place.id, place.photos, { max: 3 })
+      : [];
 
     // Step 3: Extract reviews
     const reviews: { author: string; rating: number; text: string; time: string }[] = [];
