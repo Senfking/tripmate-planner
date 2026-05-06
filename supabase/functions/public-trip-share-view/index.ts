@@ -52,7 +52,9 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const token = body?.token;
-    const includeExpenses = body?.include_expenses === true;
+    // Public share view never exposes expense data — privacy by design.
+    // The `include_expenses` field is intentionally ignored for defense in depth.
+    const includeExpenses = false;
 
     if (!token || typeof token !== "string") {
       return new Response(JSON.stringify({ error: "Token is required" }), {
