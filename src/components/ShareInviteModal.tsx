@@ -302,24 +302,26 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
             </div>
           ) : shareUrl && itineraryShareUrl && activeShare ? (
             <div className="space-y-2.5">
-              <Button
-                className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-xl h-11 text-[14px] font-medium shadow-sm"
-                onClick={handleWhatsAppShare}
-              >
-                <WhatsAppIcon className="h-4 w-4" />
-                Share itinerary via WhatsApp
-              </Button>
-              <div className="flex items-center justify-between">
-                <p className="text-[12px] text-muted-foreground">
-                  Expires {format(new Date(activeShare.expires_at), "MMM d, yyyy")}
-                </p>
-                <button
-                  className="text-muted-foreground hover:text-foreground transition-colors p-1"
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-xl h-11 text-[14px] font-medium gap-1.5"
                   onClick={() => copyToClipboard(itineraryShareUrl)}
                 >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
+                  <Copy className="h-4 w-4" />
+                  Copy link
+                </Button>
+                <Button
+                  className="flex-1 gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-xl h-11 text-[14px] font-medium shadow-sm"
+                  onClick={handleWhatsAppShare}
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  Share via WhatsApp
+                </Button>
               </div>
+              <p className="text-[12px] text-muted-foreground">
+                Expires {format(new Date(activeShare.expires_at), "MMM d, yyyy")}
+              </p>
               {isAdmin && (
                 <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
                   <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
