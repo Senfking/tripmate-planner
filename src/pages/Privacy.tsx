@@ -1,8 +1,10 @@
 import { ArrowLeft } from "lucide-react";
 import { useSmartBack } from "@/hooks/useSmartBack";
+import { useCanonical } from "@/hooks/useCanonical";
 
 const Privacy = () => {
   const back = useSmartBack("/");
+  useCanonical("/privacy");
   return (
   <div className="min-h-dvh bg-background">
     <div className="max-w-[680px] mx-auto pt-10 pb-20 px-6 md:px-8">
