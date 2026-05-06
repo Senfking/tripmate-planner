@@ -891,19 +891,19 @@ const More = () => {
               {/* CTAs */}
               <div className="flex gap-2">
                 <Button
-                  className="flex-1 gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white shadow-md font-semibold h-11"
-                  onClick={handleShareWhatsApp}
-                >
-                  <WhatsAppIcon className="h-4 w-4" />
-                  Share on WhatsApp
-                </Button>
-                <Button
                   variant="secondary"
                   className="flex-1 gap-2 bg-white/95 hover:bg-white text-foreground h-11"
                   onClick={handleCopyReferralLink}
                 >
                   <Copy className="h-4 w-4" />
                   Copy link
+                </Button>
+                <Button
+                  className="flex-1 gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white shadow-md font-semibold h-11"
+                  onClick={handleShareWhatsApp}
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  Share on WhatsApp
                 </Button>
               </div>
             </div>
