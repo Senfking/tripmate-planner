@@ -15,44 +15,37 @@ import posterImage from "@/assets/video-poster.png";
    (see AutoPlayVideo). Keeps initial page weight tiny on the unauth
    landing where LCP matters most. ── */
 const SLIDES = [
-  {
-    // ocean / coast — 1080p30, ~5.2 MB
-    video: "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4",
-    headline: ["Plan trips", "together."],
-    subhead: "Ditch the group chat chaos. Plan, split & decide, all in one place.",
-  },
-  {
-    // city / urban — best available is 720p24 (~5.0 MB); no small 1080p
-    // variant exists for this clip on Pexels (1080p jumps to ~10 MB).
-    video: "https://videos.pexels.com/video-files/2519660/2519660-hd_1280_720_24fps.mp4",
-    headline: ["Discover", "hidden gems."],
-    subhead: "AI-powered itineraries tailored to your group's vibe.",
-  },
-  {
-    // food / culture — 720p25 (~6.5 MB); 1080p variant is 14 MB so we
-    // hold at 720p to keep the carousel snappy.
-    video: "https://videos.pexels.com/video-files/7314884/7314884-hd_1280_720_25fps.mp4",
-    headline: ["Split costs", "effortlessly."],
-    subhead: "Track expenses, settle up, no awkward math.",
-  },
-  {
-    // group / people — 1080p30, ~4.4 MB
-    video: "https://videos.pexels.com/video-files/4918986/4918986-hd_1920_1080_30fps.mp4",
-    headline: ["Decide as", "a group."],
-    subhead: "Vote on activities, pick favorites, no more endless debates.",
-  },
-  // (Removed "friends on beach" scene — pixelated faces read as awkward.)
+  { video: "https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4" },
+  { video: "https://videos.pexels.com/video-files/2519660/2519660-hd_1280_720_24fps.mp4" },
+  { video: "https://videos.pexels.com/video-files/7314884/7314884-hd_1280_720_25fps.mp4" },
+  { video: "https://videos.pexels.com/video-files/4918986/4918986-hd_1920_1080_30fps.mp4" },
 ];
 
 
-/* ── Value-prop rotator (independent of the video carousel). Lives in
-   the glass card — short benefit statements that cycle on their own
-   timing so users get more reading variety than the headline alone. ── */
+/* ── Value-prop rotator. Each pair names a real friction point in
+   group travel and how Junto resolves it today. Kept honest to the
+   current app stage — no roadmap promises. ── */
 const STATEMENTS = [
-  { problem: "Planning a group trip is chaos.", solution: "One shared space for the whole trip. Itinerary, decisions, everything." },
-  { problem: "Splitting costs always gets awkward.", solution: "Log expenses, scan receipts with Junto AI, and settle up in any currency." },
-  { problem: "Group chats, spreadsheets, random screenshots.", solution: "No more digging through 200 messages. Flights, hotels, visas, all in one place." },
-  { problem: "Making decisions in a group is painful.", solution: "Vote on options, lock in the plan, and actually move forward." },
+  {
+    problem: "Planning a group trip eats your evenings.",
+    solution: "Describe the vibe, Junto AI drafts a full itinerary your group can shape together.",
+  },
+  {
+    problem: "Receipts pile up, the math gets awkward.",
+    solution: "Snap a photo, Junto AI reads the total and splits it across the group in any currency.",
+  },
+  {
+    problem: "Bookings live in inboxes and screenshots.",
+    solution: "Drop in a confirmation or PDF, Junto AI pulls out flights, hotels and visas automatically.",
+  },
+  {
+    problem: "Group chats never actually decide anything.",
+    solution: "Propose options, vote, lock it in, and the plan updates for everyone instantly.",
+  },
+  {
+    problem: "Every new trip starts from a blank page.",
+    solution: "Past trips, expenses and bookings stay in one place, ready to reuse for the next one.",
+  },
 ];
 
 
