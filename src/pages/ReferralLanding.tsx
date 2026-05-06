@@ -443,9 +443,14 @@ export default function ReferralLanding() {
             background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
           }}
         >
-          <span className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 hover:text-white transition-colors"
+            aria-label="Junto home"
+          >
             Junto
-          </span>
+          </button>
         </div>
 
         {/* Let the video breathe */}
