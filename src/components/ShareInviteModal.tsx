@@ -6,8 +6,6 @@ import { getShareableAppOrigin } from "@/lib/appUrl";
 import { trackEvent } from "@/lib/analytics";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   Copy,
   Loader2,
