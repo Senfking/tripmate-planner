@@ -6,6 +6,7 @@ import { friendlyError } from "@/lib/friendlyError";
 import { lovable } from "@/integrations/lovable/index";
 import { trackEvent } from "@/lib/analytics";
 import { Loader2, AlertCircle, MailCheck } from "lucide-react";
+import { useCanonical } from "@/hooks/useCanonical";
 import posterImage from "@/assets/video-poster.png";
 
 
