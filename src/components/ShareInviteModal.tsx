@@ -292,16 +292,10 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
         {/* ── Section 2: Share plan ────────────────────── */}
         <section className="space-y-3">
           <div>
-            <h3 className="text-[15px] font-semibold text-foreground">Share plan</h3>
-            <p className="text-[13px] text-muted-foreground font-normal mt-0.5">View-only - no login needed</p>
-          </div>
-
-          <div className="flex items-center justify-between gap-3 py-0.5">
-            <div>
-              <Label htmlFor="include-expenses" className="text-[14px] font-medium text-foreground">Include expenses</Label>
-              <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">Who owes whom</p>
-            </div>
-            <Switch id="include-expenses" checked={includeExpenses} onCheckedChange={setIncludeExpenses} />
+            <h3 className="text-[15px] font-semibold text-foreground">Share itinerary</h3>
+            <p className="text-[13px] text-muted-foreground font-normal mt-0.5">
+              Send a read-only preview to anyone — they can view but not edit or join.
+            </p>
           </div>
 
           {shareLoading || createShare.isPending ? (
@@ -315,7 +309,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
                 onClick={handleWhatsAppShare}
               >
                 <WhatsAppIcon className="h-4 w-4" />
-                Share plan via WhatsApp
+                Share itinerary via WhatsApp
               </Button>
               <div className="flex items-center justify-between">
                 <p className="text-[12px] text-muted-foreground">
