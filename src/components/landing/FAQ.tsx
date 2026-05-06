@@ -9,6 +9,10 @@ const FAQS = [
     a: "Junto is designed for how friends actually plan trips together. Most apps handle one piece (bookings, splitting costs, or solo itineraries), so the rest ends up scattered across WhatsApp, spreadsheets, and Splitwise. Junto puts AI itinerary generation, group voting, real-time editing, and expense splitting in one place.",
   },
   {
+    q: "Why use Junto instead of starting from scratch every trip?",
+    a: "Because trips don't really end when you fly home. Junto is built to be your travel hub over time, not a one-off planner you abandon after the trip. Every trip you plan, past, current, and upcoming, lives in one home, with its itinerary, bookings, expenses, and group decisions intact. That means you can look back at what you did in Lisbon two years ago when a friend asks for tips, see who still owes you from the ski trip, or reuse the structure of a trip that worked well as a starting point for the next one. The more you use it, the more useful it gets: your travel history, your favorite spots, the people you travel with, all in one place instead of scattered across chats, screenshots, and folders.",
+  },
+  {
     q: "How does Junto use AI?",
     a: "Junto's AI shows up across the trip, not just at the planning stage. You describe the trip in plain language, like “four friends, Tokyo, late June, mid-range, foodie focus,” and Junto generates a full itinerary: days, activities, restaurants, accommodation, paced reasonably and grounded in real places. The real magic is everything after that. Snap a photo of a restaurant receipt and the AI reads the total, currency, date and line items, then splits it across the group. Forward a hotel confirmation email or screenshot a flight ticket and the AI pulls out the dates, locations, confirmation numbers and adds them to the trip automatically. It also surfaces visa and entry requirements per traveler, and adapts as plans change. Your group still drives the decisions; the AI handles the busywork so everyone stays on the same page without anyone playing trip secretary.",
   },
