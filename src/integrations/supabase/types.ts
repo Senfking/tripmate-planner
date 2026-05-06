@@ -119,7 +119,7 @@ export type Database = {
       ai_trip_plans: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           is_public: boolean
           prompt: Json
@@ -128,7 +128,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           is_public?: boolean
           prompt: Json
@@ -137,7 +137,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           is_public?: boolean
           prompt?: Json
@@ -700,7 +700,7 @@ export type Database = {
           incurred_on: string
           itinerary_item_id: string | null
           notes: string | null
-          payer_id: string
+          payer_id: string | null
           receipt_image_path: string | null
           split_type: string
           title: string
@@ -718,7 +718,7 @@ export type Database = {
           incurred_on: string
           itinerary_item_id?: string | null
           notes?: string | null
-          payer_id: string
+          payer_id?: string | null
           receipt_image_path?: string | null
           split_type?: string
           title: string
@@ -736,7 +736,7 @@ export type Database = {
           incurred_on?: string
           itinerary_item_id?: string | null
           notes?: string | null
-          payer_id?: string
+          payer_id?: string | null
           receipt_image_path?: string | null
           split_type?: string
           title?: string
@@ -854,7 +854,7 @@ export type Database = {
       }
       invites: {
         Row: {
-          created_by: string
+          created_by: string | null
           expires_at: string
           id: string
           revoked_at: string | null
@@ -863,7 +863,7 @@ export type Database = {
           trip_id: string
         }
         Insert: {
-          created_by: string
+          created_by?: string | null
           expires_at: string
           id?: string
           revoked_at?: string | null
@@ -872,7 +872,7 @@ export type Database = {
           trip_id: string
         }
         Update: {
-          created_by?: string
+          created_by?: string | null
           expires_at?: string
           id?: string
           revoked_at?: string | null
@@ -1667,7 +1667,7 @@ export type Database = {
       }
       trip_share_tokens: {
         Row: {
-          created_by: string
+          created_by: string | null
           expires_at: string
           id: string
           revoked_at: string | null
@@ -1675,7 +1675,7 @@ export type Database = {
           trip_id: string
         }
         Insert: {
-          created_by: string
+          created_by?: string | null
           expires_at: string
           id?: string
           revoked_at?: string | null
@@ -1683,7 +1683,7 @@ export type Database = {
           trip_id: string
         }
         Update: {
-          created_by?: string
+          created_by?: string | null
           expires_at?: string
           id?: string
           revoked_at?: string | null
