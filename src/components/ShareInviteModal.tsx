@@ -207,7 +207,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
       "",
       inviteUrl ? `Want to join us?\n${inviteUrl}` : "",
       "",
-      `Planned with Junto 🗺️ junto.pro`,
+      `Planned with Junto 🌍 junto.pro`,
     ]);
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
     trackEvent("trip_invite_sent", { method: "whatsapp", type: "full_plan" }, user?.id);
