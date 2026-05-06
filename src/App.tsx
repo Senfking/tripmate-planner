@@ -202,6 +202,7 @@ function AppInner() {
             <Route path="/login" element={<Navigate to="/ref" replace />} />
             <Route path="/signup" element={<Navigate to="/ref" replace />} />
             <Route path="/share/:token" element={<ShareView />} />
+            <Route path="/share/:token/itinerary" element={<AnonItineraryView />} />
             <Route path="/app/invite/:token" element={<InviteRedeem />} />
             <Route path="/i/:token" element={<InviteRedeem />} />
             <Route path="/join" element={<JoinByCode />} />
