@@ -89,6 +89,10 @@
 - npm run dev — start local dev server
 - npm run build — production build
 
+## Package Manager
+- **npm** is the canonical package manager. `package-lock.json` is the source of truth.
+- `bun.lock` / `bun.lockb` are gitignored — do not commit them. If you ran `bun install` locally, that's fine for speed, but Lovable's build uses `npm ci` against `package-lock.json`. Mixing the two has caused dependency drift in the past.
+
 ## Diagnosis First
 Always diagnose before fixing. Read the relevant code, understand the current state, then propose changes. Don't assume the build doc or any external description reflects the current codebase accurately.
 
