@@ -54,52 +54,76 @@ export function FAQ() {
       aria-labelledby="faq-heading"
     >
       <div className="mx-auto max-w-3xl">
-        <h2
-          id="faq-heading"
-          className="text-3xl sm:text-5xl font-bold tracking-tight text-[#1a1a1a] text-center"
-        >
-          Frequently asked questions
-        </h2>
-        <p className="mt-4 text-center text-[#6b7280] text-base sm:text-lg">
-          Everything you need to know about planning group trips with Junto.
-        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] sm:gap-x-12 gap-y-2 items-baseline">
+          <span className="hidden sm:block text-[11px] font-mono uppercase tracking-[0.22em] text-[#0D9488] pt-3">
+            (FAQ)
+          </span>
+          <div>
+            <h2
+              id="faq-heading"
+              className="text-4xl sm:text-6xl font-bold tracking-tight text-[#1a1a1a] leading-[1.05]"
+            >
+              Frequently<br />asked questions
+            </h2>
+            <p className="mt-5 text-[#6b7280] text-base sm:text-lg max-w-md">
+              Everything you need to know about planning group trips with Junto.
+            </p>
+          </div>
+        </div>
 
-        <div className="mt-12 space-y-3">
+        <ol className="mt-16 sm:mt-20">
           {FAQS.map((item, i) => {
             const isOpen = openSet.has(i);
+            const num = String(i + 1).padStart(2, "0");
             return (
-              <div
+              <li
                 key={item.q}
-                className="rounded-2xl border border-gray-100 bg-white shadow-sm"
+                className="border-t border-[#e7e5e0] last:border-b group"
               >
                 <button
                   type="button"
                   onClick={() => toggle(i)}
-                  className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5 text-left"
+                  className="w-full flex items-start gap-5 sm:gap-8 py-6 sm:py-7 text-left transition-colors"
                   aria-expanded={isOpen}
                   aria-controls={`faq-panel-${i}`}
                 >
-                  <h3 className="text-base sm:text-lg font-semibold text-[#1a1a1a]">
+                  <span
+                    className={`shrink-0 text-[11px] font-mono tracking-widest pt-1.5 transition-colors ${
+                      isOpen ? "text-[#0D9488]" : "text-[#9ca3af]"
+                    }`}
+                  >
+                    {num}
+                  </span>
+                  <h3
+                    className={`flex-1 text-lg sm:text-2xl font-semibold tracking-tight transition-colors ${
+                      isOpen ? "text-[#0D9488]" : "text-[#1a1a1a] group-hover:text-[#0D9488]"
+                    }`}
+                  >
                     {item.q}
                   </h3>
                   <ChevronDown
-                    className={`h-5 w-5 shrink-0 text-[#0D9488] transition-transform duration-200 ${
-                      isOpen ? "rotate-180" : ""
+                    className={`h-5 w-5 shrink-0 mt-2 transition-all duration-300 ${
+                      isOpen ? "rotate-180 text-[#0D9488]" : "text-[#9ca3af] group-hover:text-[#0D9488]"
                     }`}
                     aria-hidden
                   />
                 </button>
                 <div
                   id={`faq-panel-${i}`}
-                  hidden={!isOpen}
-                  className="px-5 sm:px-6 pb-5 sm:pb-6 -mt-1 text-[#4b5563] leading-relaxed text-[15px] sm:text-base"
+                  className={`grid transition-all duration-300 ease-out ${
+                    isOpen ? "grid-rows-[1fr] opacity-100 pb-7 sm:pb-8" : "grid-rows-[0fr] opacity-0"
+                  }`}
                 >
-                  {item.a}
+                  <div className="overflow-hidden">
+                    <div className="pl-9 sm:pl-14 pr-8 sm:pr-12 text-[#4b5563] leading-relaxed text-[15px] sm:text-[17px] max-w-2xl">
+                      {item.a}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </div>
     </section>
   );
