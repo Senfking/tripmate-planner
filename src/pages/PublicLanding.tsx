@@ -8,6 +8,7 @@ import { FeatureTripDashboard } from "@/components/landing/FeatureTripDashboard"
 import { FeaturePhoneSection } from "@/components/landing/FeaturePhoneSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { FinalCTA } from "@/components/landing/FinalCTA";
+import { FAQ } from "@/components/landing/FAQ";
 import mockupExpenses from "@/assets/mockup-expenses.webp";
 import mockupBookings from "@/assets/mockup-bookings.webp";
 import mockupTrips from "@/assets/mockup-trips-page.webp";
@@ -134,6 +135,11 @@ export default function PublicLanding() {
           <TripCarousels limit={4} showSeeAllFooter />
         </Reveal>
       </section>
+
+      {/* FAQ — visible on-page; mirrors FAQPage JSON-LD in index.html */}
+      <Reveal>
+        <FAQ />
+      </Reveal>
 
       {/* Final dark teal CTA */}
       <Reveal>
