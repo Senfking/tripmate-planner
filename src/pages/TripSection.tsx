@@ -58,21 +58,26 @@ export default function TripSection() {
 
   const { connectionStatus, newItemIds } = useTripRealtime(tripIdValid ? tripId : undefined);
 
-  const { data: trip, isLoading } = useQuery({
+  const { data: trip, isLoading: tripLoading, isError: tripError } = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trips")
         .select("*")
         .eq("id", tripId!)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
     enabled: tripIdValid && !!user,
+    retry: false,
   });
 
-  const { data: myMembership } = useQuery({
+  const {
+    data: myMembership,
+    isLoading: membershipLoading,
+    isError: membershipError,
+  } = useQuery({
     queryKey: ["my-trip-membership", tripId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -80,11 +85,12 @@ export default function TripSection() {
         .select("role, attendance_status")
         .eq("trip_id", tripId!)
         .eq("user_id", user!.id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as { role: string; attendance_status: string };
+      return data as { role: string; attendance_status: string } | null;
     },
     enabled: tripIdValid && !!user,
+    retry: false,
   });
 
   const myRole = myMembership?.role;
