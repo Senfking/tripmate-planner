@@ -119,9 +119,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
     }
   }, [open, shareLoading, activeShare, user]);
 
-  const shareUrl = activeShare
-    ? `${origin}/share/${activeShare.token}${includeExpenses ? "?expenses=1" : ""}`
-    : null;
+  const shareUrl = activeShare ? `${origin}/share/${activeShare.token}` : null;
 
   const revokeShare = useMutation({
     mutationFn: async (id: string) => {
