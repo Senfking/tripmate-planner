@@ -194,7 +194,7 @@ export function ShareInviteModal({ tripId, tripName, open, onOpenChange, isAdmin
 
   const handleWhatsAppShare = () => {
     if (!shareUrl) return;
-    const emoji = (trip as any).emoji || "✈️";
+    const emoji = (trip as any).emoji || "🛫";
     const dateLine = dateStr + (dayCount ? ` · ${dayCount} days` : "");
     const msg = filterLines([
       `${emoji} ${tripName}`,
