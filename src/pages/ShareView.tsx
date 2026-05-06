@@ -37,12 +37,6 @@ interface ShareData {
     og_description: string | null;
     og_image_url: string | null;
   }[];
-  expenses_summary?: {
-    total_spent: number;
-    settlement_currency: string;
-    balances: { name: string; net_amount: number }[];
-    settle_up: { from: string; to: string; amount: number }[];
-  };
 }
 
 function getDestinationForDate(dayDate: string, stops: RouteStop[]): string | null {
