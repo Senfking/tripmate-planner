@@ -35,6 +35,7 @@ const More = lazy(() => import("./pages/More"));
 const InviteRedeem = lazy(() => import("./pages/InviteRedeem"));
 const JoinByCode = lazy(() => import("./pages/JoinByCode"));
 const ShareView = lazy(() => import("./pages/ShareView"));
+const AnonItineraryView = lazy(() => import("./pages/AnonItineraryView"));
 const ReferralLanding = lazy(() => import("./pages/ReferralLanding"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Privacy = lazy(() => import("./pages/Privacy"));
