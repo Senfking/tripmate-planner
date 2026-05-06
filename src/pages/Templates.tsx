@@ -22,6 +22,7 @@ function matchesQuery(t: TripTemplate, q: string) {
 }
 
 export default function Templates() {
+  useCanonical("/templates");
   const { data, isLoading } = useTripTemplates();
   const [searchParams] = useSearchParams();
   const initialCategory = searchParams.get("category") ?? "All";
