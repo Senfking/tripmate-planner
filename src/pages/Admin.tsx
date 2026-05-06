@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminSidebar } from "@/components/admin-dashboard/AdminSidebar";
 import { DashboardOverview } from "@/components/admin-dashboard/DashboardOverview";
@@ -73,7 +74,7 @@ export default function Admin() {
       </div>
     );
   }
-  if (!user || user.id !== ADMIN_USER_ID) return <div />;
+  if (!user || user.id !== ADMIN_USER_ID) return <Navigate to="/" replace />;
 
   const ActiveComponent = MODULE_MAP[activeModule];
 
