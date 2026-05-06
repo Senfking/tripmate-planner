@@ -72,6 +72,18 @@ function HeaderAvatar() {
 export function AppLayout() {
   const location = useLocation();
 
+  // iOS Safari (non-PWA) tints the status bar / safe-area inset using the
+  // page's background color. Body bg is light gray (#F1F5F9) so the very top
+  // appears as a gray strip above our teal header. Override body bg to the
+  // teal gradient start while inside /app so the status bar blends in.
+  useEffect(() => {
+    const prev = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = "#0f766e";
+    return () => {
+      document.body.style.backgroundColor = prev;
+    };
+  }, []);
+
   // Hide mobile bottom nav on trip detail pages (was previously handled by routing outside AppLayout)
   const isTripPage = /^\/app\/trips\/[^/]+/.test(location.pathname) && location.pathname !== "/app/trips/new";
 
