@@ -188,6 +188,13 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Cap base64 payload at ~14 MB (~10 MB raw image) to prevent abuse / oversized AI calls
+    if (image.length > 14_000_000) {
+      return new Response(JSON.stringify({ error: true, message: "Image too large (max ~10 MB)" }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
