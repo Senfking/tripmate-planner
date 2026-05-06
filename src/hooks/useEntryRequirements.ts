@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ensureFreshSession, forceRefreshSession } from "@/lib/sessionRefresh";
 import { toast } from "sonner";
 
 export interface EntryRequirementDoc {
@@ -43,9 +44,20 @@ export function useEntryRequirements({ tripId, enabled }: UseArgs) {
   return useQuery({
     queryKey: ["entry-requirements", tripId],
     queryFn: async (): Promise<EntryRequirementsResult> => {
-      const { data, error } = await supabase.functions.invoke("get-entry-requirements", {
+      await ensureFreshSession();
+      let { data, error } = await supabase.functions.invoke("get-entry-requirements", {
         body: { trip_id: tripId },
       });
+      // Retry once on auth failure with a forced refresh — handles tab-throttled
+      // token refresh races where the cached JWT is expired/invalid.
+      const isAuthErr =
+        error && (((error as any).context?.status === 401) || /unauthor/i.test(error.message ?? ""));
+      if (isAuthErr) {
+        await forceRefreshSession();
+        ({ data, error } = await supabase.functions.invoke("get-entry-requirements", {
+          body: { trip_id: tripId },
+        }));
+      }
       if (error) throw error;
       return (data ?? {}) as EntryRequirementsResult;
     },
