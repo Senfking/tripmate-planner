@@ -10,15 +10,15 @@ const FAQS = [
   },
   {
     q: "How does Junto use AI?",
-    a: "Junto's AI shows up across the trip, not just at the planning stage. You describe the trip in plain language, like “four friends, Tokyo, late June, mid-range, foodie focus,” and Junto generates a full itinerary: days, activities, restaurants, accommodation, paced reasonably and grounded in real places. The AI also helps with the smaller pieces as the trip moves: making sense of expenses, surfacing relevant info on entry requirements and visas, and adapting recommendations as plans change. Your group still drives the decisions; the AI handles the busywork.",
+    a: "Junto's AI shows up across the trip, not just at the planning stage. You describe the trip in plain language, like “four friends, Tokyo, late June, mid-range, foodie focus,” and Junto generates a full itinerary: days, activities, restaurants, accommodation, paced reasonably and grounded in real places. The real magic is everything after that. Snap a photo of a restaurant receipt and the AI reads the total, currency, date and line items, then splits it across the group. Forward a hotel confirmation email or screenshot a flight ticket and the AI pulls out the dates, locations, confirmation numbers and adds them to the trip automatically. It also surfaces visa and entry requirements per traveler, and adapts as plans change. Your group still drives the decisions; the AI handles the busywork so everyone stays on the same page without anyone playing trip secretary.",
   },
   {
     q: "Why not just use ChatGPT to plan a trip?",
-    a: "ChatGPT is great for brainstorming, but it stops at a wall of text. Junto picks up where the suggestions end. Once you have an idea of what you want, Junto turns it into a structured trip your group can vote on, edit together in real time, and come back to as plans change. It also handles the parts a chat can't: splitting expenses among friends, storing booking confirmations, and tracking entry requirements like visas. ChatGPT helps you brainstorm; Junto helps you actually run the trip together.",
+    a: "ChatGPT is great for brainstorming, but it stops at a wall of text. Junto picks up where the suggestions end. Once you have an idea of what you want, Junto turns it into a structured trip your group can vote on, edit together in real time, and come back to as plans change. It also handles the parts a chat can't: splitting expenses from a photo of a receipt, parsing booking confirmations from a screenshot, and tracking entry requirements like visas. ChatGPT helps you brainstorm; Junto helps you actually run the trip together.",
   },
   {
     q: "Can Junto split travel expenses?",
-    a: "Yes. You can add expenses as the trip happens, split them by person or share, handle multiple currencies, and see who owes whom at any time. It lives next to the itinerary, so you're not switching apps or rebuilding the trip in Splitwise.",
+    a: "Yes — and you don't have to type anything. Snap a photo of the receipt and Junto's AI reads the total, currency, date and line items, then splits it across the group. Add expenses as the trip happens, split by person or share, handle multiple currencies, and see who owes whom at any time. It lives next to the itinerary, so you're not switching between Junto, your camera roll and Splitwise.",
   },
   {
     q: "Does Junto work for solo travelers too?",
