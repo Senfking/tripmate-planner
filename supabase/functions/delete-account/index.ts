@@ -76,6 +76,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Scrub PII on rows that survive auth.users deletion via ON DELETE SET NULL.
+    // expenses.payer_id flips to NULL on cascade, but title/notes still hold
+    // free-text content the user typed (and may include third-party names).
+    // Run this *before* deleteUser — afterwards payer_id is NULL and we can't
+    // identify the rows.
+    const { error: scrubError } = await adminClient
+      .from("expenses")
+      .update({ title: "Deleted user", notes: null })
+      .eq("payer_id", user.id);
+    if (scrubError) {
+      return new Response(JSON.stringify({ error: scrubError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Delete the user
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
     if (deleteError) {
