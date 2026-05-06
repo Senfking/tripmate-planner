@@ -3,6 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!--
+      Defense-in-depth security headers. CSP and Referrer-Policy are the only
+      directives that browsers honour when set via meta — HSTS, X-Frame-Options,
+      X-Content-Type-Options, and CSP frame-ancestors must be set as real
+      response headers (Lovable hosting layer; not configurable here yet).
+
+      The CSP below is intentionally permissive ('unsafe-inline' for scripts
+      and styles, broad img/media for OG/place photos) to avoid breaking prod.
+      Tighten in follow-ups: prefer hashes over 'unsafe-inline', drop the
+      nominatim/open.er-api allowlist once their callers move to edge functions.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://dwtbqomfleihcvkfoopm.supabase.co wss://dwtbqomfleihcvkfoopm.supabase.co https://*.ingest.de.sentry.io https://*.ingest.sentry.io https://open.er-api.com https://nominatim.openstreetmap.org; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; base-uri 'self'; object-src 'none'" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
     <title>Junto — AI Group Trip Planner | Plan Trips With Friends</title>
     <meta name="description" content="Junto is the AI-powered group trip planner for friends and family. Build itineraries together, vote on destinations, split expenses, and plan group travel in one app.">
     <meta name="keywords" content="group trip planner, plan trips with friends, AI travel planner, group travel app, collaborative itinerary, split travel expenses, group vacation planning, trip planning app, travel itinerary builder, group holiday planner">

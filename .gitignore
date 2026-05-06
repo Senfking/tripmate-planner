@@ -30,3 +30,8 @@ dist-ssr
 
 # Supabase CLI temp files
 supabase/.temp/
+
+# Bun lockfiles — npm is the canonical package manager (package-lock.json is
+# the source of truth). Bun-generated lockfiles drift and confuse CI.
+bun.lock
+bun.lockb
