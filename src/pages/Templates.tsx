@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Search, X } from "lucide-react";
 import { useTripTemplates, type TripTemplate } from "@/hooks/useTripTemplates";
 import { TemplateCard } from "@/components/templates/TemplateCard";
+import { useCanonical } from "@/hooks/useCanonical";
 
 function matchesQuery(t: TripTemplate, q: string) {
   if (!q) return true;
@@ -21,6 +22,7 @@ function matchesQuery(t: TripTemplate, q: string) {
 }
 
 export default function Templates() {
+  useCanonical("/templates");
   const { data, isLoading } = useTripTemplates();
   const [searchParams] = useSearchParams();
   const initialCategory = searchParams.get("category") ?? "All";
