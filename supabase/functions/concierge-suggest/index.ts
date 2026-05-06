@@ -16,6 +16,7 @@ import {
   placesSpendLastDayUsd,
   userGenerationsInLastHour,
 } from "../_shared/places/cache.ts";
+import { mirrorPlacePhoto } from "../_shared/places/photoMirror.ts";
 
 const DEFAULT_RATE_LIMIT_PER_HOUR = 5;
 const DEFAULT_PLACES_DAILY_BUDGET_USD = 50;
@@ -2437,12 +2438,19 @@ Suggest DIFFERENT venues and events only.`;
         if (vd.id && vd.displayName) venueNameById.set(vd.id, vd.displayName);
       }
 
-      // Map validated results to frontend-compatible shape
-      enriched = validated.map((v) => {
+      // Map validated results to frontend-compatible shape. The hero photo
+      // is mirrored to the public `place-photos` Storage bucket so we don't
+      // leak GOOGLE_PLACES_API_KEY in the response and don't re-bill the
+      // photo-media SKU on every <img> render. Mirroring runs in parallel
+      // across all suggestions (typically ≤5); a per-photo failure resolves
+      // to null and the suggestion is rendered without an image.
+      enriched = await Promise.all(validated.map(async (v) => {
         const photos = (v.photos as Array<{ name: string }>) || [];
+        const placeId = (v.id as string | undefined) ?? "";
+        const heroName = photos[0]?.name;
         let photo_url: string | null = null;
-        if (googleKey && photos.length > 0 && photos[0]?.name) {
-          photo_url = `https://places.googleapis.com/v1/${photos[0].name}/media?maxWidthPx=800&key=${googleKey}`;
+        if (googleKey && placeId && heroName) {
+          photo_url = await mirrorPlacePhoto(svcClient, googleKey, placeId, heroName);
         }
 
         let distance_km: number | null = null;
@@ -2505,7 +2513,7 @@ Suggest DIFFERENT venues and events only.`;
           distance_km,
           type: isEventItem ? "event" : "venue",
         };
-      });
+      }));
     } else {
       // No verified venue data from Google Places. For venues, return empty
       // rather than unvalidated AI suggestions that could contain wrong-location

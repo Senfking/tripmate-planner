@@ -38,6 +38,7 @@ import {
   placesSpendLastDayUsd,
   userGenerationsInLastHour,
 } from "../_shared/places/cache.ts";
+import { mirrorPhotosForPlaces } from "../_shared/places/photoMirror.ts";
 import {
   decideAnonRateLimit,
   extractClientIp,
@@ -6133,24 +6134,12 @@ interface RawRankerActivity {
   dietary_notes: string | null;
 }
 
-// Lazy photos: only build the URL for the first photo (the one rendered as
-// the activity card hero). Secondary photos stay in the venue pool as
-// { name } stubs; the frontend fetches additional photos on-demand via
-// get-place-details when the user opens the activity detail view.
-//
-// Photo media downloads are billed per-load by Google — constructing 3 URLs
-// that the browser never loads wouldn't directly cost money, BUT the `photos`
-// field in the *upstream* Text Search response pushes that SKU to Enterprise.
-// By dropping photos from the ranking field mask and only hydrating photo
-// names for finalists, we pay for 11–15 Details calls instead of 20 fat
-// searches, and the browser only loads the single hero photo.
-function buildPhotoUrls(photos: Array<{ name: string }>, googleKey: string, max = 1): string[] {
-  if (!photos?.length) return [];
-  return photos
-    .slice(0, max)
-    .filter((p) => p?.name)
-    .map((p) => `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=800&key=${googleKey}`);
-}
+// Photo URLs are now produced by the mirror-to-Storage path
+// (mirrorPhotosForPlaces in _shared/places/photoMirror.ts) — call sites pass
+// the resulting Storage URLs into hydrateActivity directly. The previous
+// buildPhotoUrls helper baked GOOGLE_PLACES_API_KEY into every <img src>
+// returned to the client and was retired in the photo-loading optimization
+// PR.
 
 // Neighborhood preference order: the first address component that carries one
 // of these types wins. Google returns these in decreasing granularity, so
@@ -6210,7 +6199,11 @@ function hydrateActivity(
   raw: RawRankerActivity,
   slot: PacingSlot,
   place: BatchPlaceResult | null,
-  googleKey: string,
+  // Mirrored Supabase Storage URLs for this place's hero photos. The caller
+  // looks them up via photoUrlByPlaceId.get(place.id); empty array means the
+  // mirror failed or the place had no photos. NEVER pass raw Google URLs
+  // here — they would embed the API key and be persisted to the client.
+  photoUrls: string[],
   currency: string,
   budgetTier: Intent["budget_tier"],
   events: EventCandidate[] = [],
@@ -6279,7 +6272,10 @@ function hydrateActivity(
     // the fields), we'd overwrite here.
     price_level: place?.priceLevel ?? null,
     priceRange: place?.priceRange ?? null,
-    photos: place ? buildPhotoUrls(place.photos ?? [], googleKey) : [],
+    // Storage-mirrored URLs are passed in; never construct Google URLs with
+    // the API key here. Empty array if the place has no photos or every
+    // mirror attempt failed.
+    photos: place ? photoUrls : [],
     google_maps_url: place?.googleMapsUri ?? null,
     estimated_cost_per_person: clampedCost,
     currency,
@@ -6892,13 +6888,33 @@ async function rankInParallel(
   let fallbackDays = 0;
   let thinDays = 0;
 
-  // Await baselines + hotel estimates before any hydrate runs. Both promises
-  // fired in parallel with metadata + day rankers; on cache hit they resolve
-  // in ~50ms, on miss in ~1-3s — well under the rank step's 5-30s critical
-  // path. Per-leg failures resolve to null entries; clamps fall back to
-  // PR #264's hardcoded bands.
-  const [baselinesByLeg, hotelEstimatesByPlaceId] = await Promise.all([
-    baselinesPromise, hotelEstimatesPromise,
+  // Mirror Google Place photos to the public `place-photos` Storage bucket
+  // for every candidate place in parallel with metadata + day rankers.
+  // hydrateActivity reads from this map to populate EnrichedActivity.photos
+  // — failures-to-mirror resolve to an empty array per place, never a Google
+  // URL with the API key. Wall-time impact is negligible: mirror typically
+  // completes in 1-3s while the rank step takes 5-30s.
+  const allCandidatePlaces: BatchPlaceResult[] = [];
+  for (const venues of venuesByPool.values()) {
+    for (const v of venues) allCandidatePlaces.push(v);
+  }
+  const photoMirrorPromise = mirrorPhotosForPlaces(
+    svcClient,
+    googleKey,
+    allCandidatePlaces,
+    { max: 1 },
+  ).catch((e) => {
+    console.warn("[rankInParallel] photo mirror batch threw:", (e as Error).message);
+    return new Map<string, string[]>();
+  });
+
+  // Await baselines + hotel estimates + photo mirror before any hydrate runs.
+  // All three promises fired in parallel with metadata + day rankers; on
+  // cache hit they resolve in ~50ms, on miss in ~1-3s — well under the rank
+  // step's 5-30s critical path. Per-leg failures resolve to null/empty
+  // entries; clamps fall back to PR #264's hardcoded bands and photos to [].
+  const [baselinesByLeg, hotelEstimatesByPlaceId, photoUrlByPlaceId] = await Promise.all([
+    baselinesPromise, hotelEstimatesPromise, photoMirrorPromise,
   ]);
 
   const hydrateDay = (
@@ -6952,7 +6968,8 @@ async function rankInParallel(
         }
       }
       const activity = hydrateActivity(
-        rawAct, slot, place, googleKey, currency, intent.budget_tier, events, legBaselines,
+        rawAct, slot, place, place ? (photoUrlByPlaceId.get(place.id) ?? []) : [],
+        currency, intent.budget_tier, events, legBaselines,
       );
       if (!activity) {
         dropReasons.push("hydrate_failed");
@@ -7127,7 +7144,8 @@ async function rankInParallel(
         estimated_cost_per_person: useMeta ? (meta!.accommodation!.estimated_cost_per_person ?? 0) : 0,
         dietary_notes: useMeta ? (meta!.accommodation!.dietary_notes ?? null) : null,
       },
-      fakeAccomSlot, place, googleKey, currency, intent.budget_tier, [], legBaselines, hotelEstimate,
+      fakeAccomSlot, place, photoUrlByPlaceId.get(place.id) ?? [],
+      currency, intent.budget_tier, [], legBaselines, hotelEstimate,
     );
     if (!hydrated) return undefined;
     // Build alternatives from the same leg's lodging pool (excluding the
@@ -7151,7 +7169,8 @@ async function rankInParallel(
           estimated_cost_per_person: 0,
           dietary_notes: null,
         },
-        fakeAccomSlot, altPlace, googleKey, currency, intent.budget_tier, [], legBaselines,
+        fakeAccomSlot, altPlace, photoUrlByPlaceId.get(altPlace.id) ?? [],
+        currency, intent.budget_tier, [], legBaselines,
       );
       if (altHydrated) alternatives.push(altHydrated);
     }
@@ -9309,6 +9328,28 @@ Deno.serve(async (req) => {
             const placeById = new Map<string, BatchPlaceResult>();
             for (const venues of venuesByPool.values()) for (const v of venues) placeById.set(v.id, v);
 
+            // Kick off photo mirroring as soon as candidate places are settled.
+            // Runs concurrently with metadata + day rankers; awaited along
+            // with baselines/hotel estimates before any hydrate step. See
+            // _shared/places/photoMirror.ts for the cost/security rationale.
+            const photoMirrorPromise = mirrorPhotosForPlaces(
+              svcClient, googleKey, places, { max: 1 },
+            ).catch((e) => {
+              console.warn(
+                "[stream.photo_mirror] batch threw — proceeding with empty photos:",
+                (e as Error).message,
+              );
+              return new Map<string, string[]>();
+            });
+
+            // Mutable shared map populated when photoMirrorPromise resolves.
+            // Hydrate closures below capture this by reference; their gating
+            // Promise.all (accommodationEarlyPromise + the day-rank await
+            // below) includes photoMirrorPromise so the map is populated by
+            // the time any closure runs. Default empty map keeps the hydrate
+            // path safe if the mirror batch fails outright.
+            let photoUrlByPlaceId: Map<string, string[]> = new Map();
+
             // ---- Parallel rank: N per-day calls + 1 metadata call ----
             //
             // Cold-cache wall time used to be 60s for the whole trip because the
@@ -9510,7 +9551,8 @@ Deno.serve(async (req) => {
                   }
                 }
                 const activity = hydrateActivity(
-                  rawAct, slot, place, googleKey, currency, intent.budget_tier, events, legBaselines,
+                  rawAct, slot, place, place ? (photoUrlByPlaceId.get(place.id) ?? []) : [],
+                  currency, intent.budget_tier, events, legBaselines,
                 );
                 if (!activity) {
                   dropReasons.push("hydrate_failed");
@@ -9641,7 +9683,8 @@ Deno.serve(async (req) => {
                   estimated_cost_per_person: 0,
                   dietary_notes: null,
                 },
-                fakeSlot, place, googleKey, currency, intent.budget_tier,
+                fakeSlot, place, photoUrlByPlaceId.get(place.id) ?? [],
+                currency, intent.budget_tier,
                 [], baselinesByLeg.get(legIdx) ?? null,
               );
               if (!hydrated) return undefined;
@@ -9689,7 +9732,8 @@ Deno.serve(async (req) => {
                   estimated_cost_per_person: raw?.estimated_cost_per_person ?? 0,
                   dietary_notes: raw?.dietary_notes ?? null,
                 },
-                fakeSlot, place, googleKey, currency, intent.budget_tier,
+                fakeSlot, place, photoUrlByPlaceId.get(place.id) ?? [],
+                currency, intent.budget_tier,
                 [], baselinesByLeg.get(legIdx) ?? null,
                 hotelEstimatesByPlaceId.get(place.id) ?? null,
               );
@@ -9720,14 +9764,17 @@ Deno.serve(async (req) => {
               hotel: EnrichedActivity;
               alternatives: EnrichedActivity[];
             }
-            // Early accommodation emit needs baselines + hotel estimates;
-            // gate on all three promises so the chosen-hotel cost reflects
-            // the per-venue Haiku estimate when available.
+            // Early accommodation emit needs baselines + hotel estimates +
+            // photo mirror; gate on all four so the chosen-hotel SSE event
+            // already carries the Storage URL (no flash from "no photo" to
+            // "photo arrived").
             const accommodationEarlyPromise: Promise<Map<number, EarlyAccommodationEntry>> = Promise.all([
               metadataPromise,
               baselinesPromise,
               hotelEstimatesPromise,
-            ]).then(([res, baselinesByLeg, hotelEstimatesByPlaceId]) => {
+              photoMirrorPromise,
+            ]).then(([res, baselinesByLeg, hotelEstimatesByPlaceId, mirroredPhotos]) => {
+              photoUrlByPlaceId = mirroredPhotos;
               const out = new Map<number, EarlyAccommodationEntry>();
               const accomRaw = res.data?.accommodation;
               // Validate the metadata's pick against the lodging pool — refuses
@@ -9765,15 +9812,18 @@ Deno.serve(async (req) => {
               return new Map<number, EarlyAccommodationEntry>();
             });
 
-            // Await baselines + hotel estimates before hydrating any day.
-            // Both fetches fired alongside metadata + day-rank calls; on
-            // cache hit they resolve in ~50ms, on miss ~1-3s — well under
-            // the rank step's 5-30s critical path. Failures resolve to
-            // empty entries; clamps fall through to baselines and PR #264's
-            // hardcoded bands.
-            const [baselinesByLeg, hotelEstimatesByPlaceId] = await Promise.all([
-              baselinesPromise, hotelEstimatesPromise,
+            // Await baselines + hotel estimates + photo mirror before
+            // hydrating any day. All three fetches fired alongside metadata
+            // + day-rank calls; on cache hit they resolve in ~50ms, on miss
+            // ~1-3s — well under the rank step's 5-30s critical path.
+            // Failures resolve to empty entries; clamps fall through to
+            // baselines and PR #264's hardcoded bands, and photos to [].
+            const [baselinesByLeg, hotelEstimatesByPlaceId, mirroredPhotos] = await Promise.all([
+              baselinesPromise, hotelEstimatesPromise, photoMirrorPromise,
             ]);
+            // Same Map identity is reused if accommodationEarlyPromise
+            // already assigned; harmless re-assignment otherwise.
+            photoUrlByPlaceId = mirroredPhotos;
 
             if (sequentialRanking) {
               let budgetExhausted = false;
@@ -9901,7 +9951,8 @@ Deno.serve(async (req) => {
                   estimated_cost_per_person: useMeta ? (accomRaw!.estimated_cost_per_person ?? 0) : 0,
                   dietary_notes: useMeta ? (accomRaw!.dietary_notes ?? null) : null,
                 },
-                fakeAccomSlot, place, googleKey, currency, intent.budget_tier,
+                fakeAccomSlot, place, photoUrlByPlaceId.get(place.id) ?? [],
+                currency, intent.budget_tier,
                 [], legBaselines, hotelEstimate,
               );
               if (!hydrated) return undefined;
