@@ -318,53 +318,7 @@ export default function ShareView() {
           </section>
         )}
 
-        {/* Expense summary */}
-        {expenses_summary && (
-          <section>
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-              💰 Expenses
-            </h2>
-            <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-4">
-              <p className="text-xl font-bold text-gray-900">
-                Total spent: {formatCurrency(expenses_summary.total_spent, expenses_summary.settlement_currency)}
-              </p>
-
-              {expenses_summary.balances.length > 0 && (
-                <div className="space-y-1.5">
-                  {expenses_summary.balances.map((b, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700">{b.name}</span>
-                      <span
-                        className={`font-medium ${
-                          b.net_amount > 0 ? "text-emerald-600" : "text-red-500"
-                        }`}
-                      >
-                        {b.net_amount > 0 ? "is owed " : "owes "}
-                        {formatCurrency(Math.abs(b.net_amount), expenses_summary.settlement_currency)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {expenses_summary.settle_up.length > 0 && (
-                <div className="border-t border-gray-200 pt-3 space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Settle up</p>
-                  {expenses_summary.settle_up.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-gray-700">
-                      <span className="font-medium">{s.from}</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="font-medium">{s.to}</span>
-                      <span className="ml-auto font-semibold text-gray-900">
-                        {formatCurrency(s.amount, expenses_summary.settlement_currency)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
+        {/* Expense data is intentionally excluded from public share view for privacy. */}
 
         {/* Footer CTA */}
         <footer className="text-center py-6 space-y-4 border-t border-gray-100">
