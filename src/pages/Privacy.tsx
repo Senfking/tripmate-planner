@@ -1,10 +1,15 @@
 import { ArrowLeft } from "lucide-react";
 import { useSmartBack } from "@/hooks/useSmartBack";
 import { useCanonical } from "@/hooks/useCanonical";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Privacy = () => {
   const back = useSmartBack("/");
   useCanonical("/privacy");
+  usePageMeta({
+    title: "Privacy Policy — Junto",
+    description: "How Junto collects, uses, and protects your data when you plan group trips with AI. Read our full privacy policy.",
+  });
   return (
   <div className="min-h-dvh bg-background">
     <div className="max-w-[680px] mx-auto pt-10 pb-20 px-6 md:px-8">

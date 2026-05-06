@@ -2,10 +2,15 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useSmartBack } from "@/hooks/useSmartBack";
 import { useCanonical } from "@/hooks/useCanonical";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Terms = () => {
   const back = useSmartBack("/");
   useCanonical("/terms");
+  usePageMeta({
+    title: "Terms of Service — Junto",
+    description: "The terms governing your use of Junto, the AI-powered group trip planner. Read our terms of service before signing up.",
+  });
   return (
   <div className="min-h-dvh bg-background">
     <div className="max-w-[680px] mx-auto pt-10 pb-20 px-6 md:px-8">
