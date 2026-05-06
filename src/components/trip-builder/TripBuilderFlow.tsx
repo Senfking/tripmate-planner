@@ -99,6 +99,25 @@ function normalizeAIResponse(raw: Record<string, any>): AITripResult {
       typeof raw.destination_image_url === "string" && raw.destination_image_url.length > 0
         ? raw.destination_image_url
         : null,
+    destination_country_iso:
+      typeof raw.destination_country_iso === "string" && raw.destination_country_iso.length === 2
+        ? raw.destination_country_iso.toUpperCase()
+        : null,
+    adjustment_notice: typeof raw.adjustment_notice === "string" ? raw.adjustment_notice : null,
+    trip_total_estimate: typeof raw.trip_total_estimate === "number" ? raw.trip_total_estimate : undefined,
+    daily_living_additive_eur:
+      typeof raw.daily_living_additive_eur === "number" ? raw.daily_living_additive_eur : undefined,
+    estimation_method:
+      raw.estimation_method === "calculated" || raw.estimation_method === "llm_corrected"
+        ? raw.estimation_method
+        : undefined,
+    expected_range_eur:
+      Array.isArray(raw.expected_range_eur)
+        && raw.expected_range_eur.length === 2
+        && typeof raw.expected_range_eur[0] === "number"
+        && typeof raw.expected_range_eur[1] === "number"
+        ? [raw.expected_range_eur[0], raw.expected_range_eur[1]]
+        : null,
   };
 }
 

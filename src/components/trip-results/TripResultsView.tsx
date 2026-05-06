@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2, Loader2, Lock as LockIcon, TrainFront, Car, Ship } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2, Loader2, Lock as LockIcon, TrainFront, Car, Ship, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, parseISO } from "date-fns";
@@ -201,6 +203,12 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   );
   const [packingOpen, setPackingOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
+  // "Only calculate itinerary" toggle. OFF (default) = headline includes the
+  // backend-computed daily_living_additive_eur on top of trip_total_estimate.
+  // Session-only — intentionally NOT persisted across reloads. When the trip
+  // has no additive (legacy plans, or no Haiku baselines on any leg), the
+  // toggle is hidden and this state is irrelevant.
+  const [itineraryOnly, setItineraryOnly] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
   const [mapState, setMapState] = useState<MapState>("closed");
   const [mapActiveDayIndex, setMapActiveDayIndex] = useState(-1);
@@ -258,11 +266,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
   // removed: remainingCount / addedCount no longer needed
 
-  // Single source of truth for budget math — mirrors the sticky footer,
-  // any dashboard summary, and the preview breakdown. Avoids the drift
-  // CLAUDE.md flags: every surface routes through computeTripBudget.
-  // budget_tier gates the accommodation fallback when Places returns
-  // no pricing — otherwise a luxury trip would default to mid-range.
+  // Frontend rollup. Used for:
+  //   - The per-category breakdown bar (Accommodation / Food / Culture / etc.).
+  //     The backend doesn't ship a category split, so we re-derive it here
+  //     from each activity's estimated_cost_per_person + each leg's
+  //     accommodation × nights.
+  //   - The headline total ONLY when result.trip_total_estimate is absent
+  //     (legacy plans cached before the persistence fix).
+  // For PR-265+ plans, the headline comes from result.trip_total_estimate
+  // directly (see budgetDisplay below). budget_tier gates the accommodation
+  // fallback when Places returns no hotel pricing — otherwise a luxury trip
+  // would default to mid-range.
   const costBreakdown = useMemo(
     () => computeTripBudget(result, result.budget_tier),
     [result],
@@ -322,10 +336,16 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   const destCurrency = currency.toUpperCase();
   const conversionEnabled = userCurrency !== destCurrency;
 
+  // EUR rates are needed for two things: (1) converting trip-currency totals
+  // into the user's preferred display currency, and (2) converting the
+  // backend's daily_living_additive_eur into the trip's local currency before
+  // we add it to the trip_total_estimate. Enable whenever either is true.
+  const hasDailyLivingAdditive =
+    typeof result.daily_living_additive_eur === "number" && result.daily_living_additive_eur > 0;
   const { data: eurRates } = useQuery({
     queryKey: ["budget-eur-rates"],
     queryFn: fetchEurRates,
-    enabled: conversionEnabled,
+    enabled: conversionEnabled || hasDailyLivingAdditive,
     staleTime: 1000 * 60 * 60,
   });
 
@@ -750,25 +770,76 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         {/* Trip budget — fintech-style card */}
         <div id="section-budget" className={cn("mx-4 mb-6", rc)} style={revealStyle("overview-budget")}>
           {(() => {
-            const converted = convertToUserCurrency(costBreakdown.total);
-            const showConverted = conversionEnabled && converted !== null;
-            const primaryAmount = showConverted
-              ? formatBudget(converted!, userCurrency)
-              : `${currency} ${costBreakdown.total.toLocaleString()}`;
+            // ---- Source-of-truth selection ----
+            // Backend ships trip_total_estimate (sum-of-parts in trip
+            // currency) + daily_living_additive_eur (EUR additive for
+            // unscheduled meals + transit + tips/buffer). Headline default
+            // is the sum; toggle hides the additive. Legacy plans without
+            // trip_total_estimate use the local computeTripBudget rollup
+            // and the toggle is hidden — there's no additive to remove.
+            const backendTripTotal =
+              typeof result.trip_total_estimate === "number" && result.trip_total_estimate > 0
+                ? result.trip_total_estimate
+                : null;
+            const additiveEur = typeof result.daily_living_additive_eur === "number"
+              ? Math.max(0, result.daily_living_additive_eur)
+              : 0;
 
-            const activitiesConv = convertToUserCurrency(costBreakdown.activitiesTotal);
-            const stayConv = convertToUserCurrency(costBreakdown.accommodationTotal);
-            const dailyConv = convertToUserCurrency(costBreakdown.dailyAvg);
+            // Convert the EUR additive into the trip's local currency so we
+            // can add it to backendTripTotal cleanly. Same eurRates the
+            // user-currency conversion already uses; null when rates haven't
+            // arrived yet (we degrade to itinerary-only in that case).
+            const additiveInTripCcy: number | null = (() => {
+              if (additiveEur <= 0) return 0;
+              if (destCurrency === "EUR") return additiveEur;
+              if (!eurRates) return null;
+              const rate = eurRates[destCurrency];
+              if (!rate || rate <= 0) return null;
+              return additiveEur * rate;
+            })();
+
+            const canShowAdditive =
+              backendTripTotal !== null && additiveEur > 0 && additiveInTripCcy !== null;
+            const showAdditiveLine = canShowAdditive && !itineraryOnly;
+
+            // Headline total in trip currency.
+            const totalInTripCcy = backendTripTotal !== null
+              ? backendTripTotal + (showAdditiveLine ? (additiveInTripCcy ?? 0) : 0)
+              : costBreakdown.total;
+            const totalDays = costBreakdown.days || 1;
+            const dailyAvgInTripCcy = backendTripTotal !== null
+              ? Math.round(totalInTripCcy / totalDays)
+              : costBreakdown.dailyAvg;
+            const activitiesInTripCcy = costBreakdown.activitiesTotal;
+            const stayInTripCcy = costBreakdown.accommodationTotal;
+
+            // Display conversion (user currency).
+            const converted = convertToUserCurrency(totalInTripCcy);
+            const showConverted = conversionEnabled && converted !== null;
+
+            const activitiesConv = convertToUserCurrency(activitiesInTripCcy);
+            const stayConv = convertToUserCurrency(stayInTripCcy);
+            const dailyConv = convertToUserCurrency(dailyAvgInTripCcy);
+            const additiveConv =
+              additiveInTripCcy !== null ? convertToUserCurrency(additiveInTripCcy) : null;
 
             const activitiesDisplay = showConverted && activitiesConv !== null
               ? formatBudget(activitiesConv, userCurrency)
-              : `${currency} ${costBreakdown.activitiesTotal.toLocaleString()}`;
+              : `${currency} ${activitiesInTripCcy.toLocaleString()}`;
             const stayDisplay = showConverted && stayConv !== null
               ? formatBudget(stayConv, userCurrency)
-              : `${currency} ${costBreakdown.accommodationTotal.toLocaleString()}`;
+              : `${currency} ${stayInTripCcy.toLocaleString()}`;
             const dailyDisplay = showConverted && dailyConv !== null
               ? formatBudget(dailyConv, userCurrency)
-              : `${currency} ${costBreakdown.dailyAvg.toLocaleString()}`;
+              : `${currency} ${dailyAvgInTripCcy.toLocaleString()}`;
+            const additiveDisplay =
+              additiveInTripCcy !== null
+                ? showConverted && additiveConv !== null
+                  ? formatBudget(additiveConv, userCurrency)
+                  : `${currency} ${Math.round(additiveInTripCcy).toLocaleString()}`
+                : null;
+
+            const isLlmCorrected = result.estimation_method === "llm_corrected";
 
             return (
               <div className="relative rounded-3xl overflow-hidden bg-[hsl(180_25%_10%)] text-white shadow-[0_20px_50px_-20px_rgba(13,148,136,0.45)]">
@@ -789,24 +860,29 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
                   <div className="relative flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center gap-2 mb-3 flex-wrap">
                         <div className="w-6 h-6 rounded-md bg-white/10 backdrop-blur-sm flex items-center justify-center">
                           <Wallet className="h-3 w-3 text-[#5EEAD4]" />
                         </div>
                         <span className="text-[10px] uppercase tracking-[0.18em] font-medium text-white/60">Estimated budget · per person</span>
+                        {isLlmCorrected && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider font-semibold bg-amber-400/15 text-amber-200 border border-amber-400/20">
+                            Estimated
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-xs font-medium text-white/50 tabular-nums tracking-wider">{showConverted ? userCurrency : currency}</span>
                         <span className="text-[40px] sm:text-[44px] font-semibold tracking-tight text-white tabular-nums leading-none">
                           {showConverted
                             ? converted!.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                            : costBreakdown.total.toLocaleString()}
+                            : Math.round(totalInTripCcy).toLocaleString()}
                         </span>
                       </div>
                       {showConverted && (
                         <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-white/50 font-mono tabular-nums">
                           <span className="inline-block w-1 h-1 rounded-full bg-[#5EEAD4]" />
-                          ≈ {currency} {costBreakdown.total.toLocaleString()} locally
+                          ≈ {currency} {Math.round(totalInTripCcy).toLocaleString()} locally
                         </div>
                       )}
                     </div>
@@ -857,7 +933,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                   <div className="px-6 py-5 border-t border-white/[0.08] bg-[hsl(180_25%_8%)] animate-fade-in">
                     <div className="flex items-center justify-between mb-4">
                       <div className="text-[10px] uppercase tracking-[0.18em] font-medium text-white/50">Breakdown</div>
-                      <div className="text-[10px] uppercase tracking-wider text-white/40">{costBreakdown.categories.length} categories</div>
+                      <div className="text-[10px] uppercase tracking-wider text-white/40">{costBreakdown.categories.length}{showAdditiveLine ? " + 1" : ""} categories</div>
                     </div>
                     <div className="space-y-3">
                       {costBreakdown.categories.map(([cat, amount]) => {
@@ -877,11 +953,56 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                           </div>
                         );
                       })}
+                      {showAdditiveLine && additiveDisplay && additiveInTripCcy !== null && (
+                        <div className="flex items-center gap-3">
+                          <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-[#94A3B8]" />
+                          <span className="text-xs text-white/80 flex-1 inline-flex items-center gap-1.5 min-w-0">
+                            <span className="truncate">Daily living estimate</span>
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label="What's in daily living estimate"
+                                    className="shrink-0 inline-flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
+                                  >
+                                    <Info className="h-3 w-3" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[240px] text-[11px]">
+                                  Estimated breakfasts, local transport, tips, drinks, and snacks not in your itinerary.
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </span>
+                          <span className="text-[10px] text-white/40 font-mono tabular-nums w-10 text-right">
+                            {totalInTripCcy > 0
+                              ? `${Math.round((additiveInTripCcy / totalInTripCcy) * 100)}%`
+                              : "0%"}
+                          </span>
+                          <span className="text-xs font-mono text-white tabular-nums w-24 text-right">{additiveDisplay}</span>
+                        </div>
+                      )}
                     </div>
+                    {canShowAdditive && (
+                      <div className="mt-5 flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[11px] font-medium text-white/80">Only calculate itinerary</div>
+                          <div className="text-[10px] text-white/45 mt-0.5">
+                            Hides the daily living estimate from the total.
+                          </div>
+                        </div>
+                        <Switch
+                          checked={itineraryOnly}
+                          onCheckedChange={setItineraryOnly}
+                          aria-label="Only count scheduled itinerary in the total"
+                        />
+                      </div>
+                    )}
                     <div className="mt-5 pt-4 border-t border-white/[0.08] flex items-center justify-between">
                       <span className="text-[11px] uppercase tracking-[0.14em] text-white/60 font-medium">Total per person</span>
                       <span className="text-base font-mono font-semibold text-[#5EEAD4] tabular-nums">
-                        {showConverted ? userCurrency : currency} {(showConverted ? converted! : costBreakdown.total).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {showConverted ? userCurrency : currency} {(showConverted ? converted! : Math.round(totalInTripCcy)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </span>
                     </div>
                     <p className="text-[10px] text-white/40 mt-3">Based on typical prices · actual costs may vary by season and availability.</p>
