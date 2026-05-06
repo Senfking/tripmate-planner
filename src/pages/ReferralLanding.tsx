@@ -243,6 +243,7 @@ function GoogleIcon() {
 }
 
 export default function ReferralLanding() {
+  useCanonical("/ref");
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const code = params.get("ref");
