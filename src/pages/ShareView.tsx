@@ -1,4 +1,4 @@
-import { useParams, useSearchParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, MapPin, ExternalLink, Calendar, Users, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
