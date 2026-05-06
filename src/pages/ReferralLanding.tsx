@@ -7,6 +7,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { trackEvent } from "@/lib/analytics";
 import { Loader2, AlertCircle, MailCheck } from "lucide-react";
 import { useCanonical } from "@/hooks/useCanonical";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import posterImage from "@/assets/video-poster.png";
 
 
@@ -244,6 +245,10 @@ function GoogleIcon() {
 
 export default function ReferralLanding() {
   useCanonical("/ref");
+  usePageMeta({
+    title: "Plan Your Next Group Trip with Junto — Invite-Only Access",
+    description: "A friend invited you to Junto: the AI group trip planner that handles ideas, votes, itineraries and expenses in one place. Claim your spot.",
+  });
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const code = params.get("ref");
