@@ -79,6 +79,13 @@ export default function TripSection() {
     retry: false,
   });
 
+  // Redirect draft trips to the root preview view — sub-routes are committed-only.
+  useEffect(() => {
+    if (trip && (trip as any).status === "draft" && tripId) {
+      navigate(`/app/trips/${tripId}`, { replace: true });
+    }
+  }, [trip, tripId, navigate]);
+
   const {
     data: myMembership,
     isLoading: membershipLoading,
