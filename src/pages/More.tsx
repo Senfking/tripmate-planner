@@ -898,8 +898,9 @@ const More = () => {
                   Share on WhatsApp
                 </Button>
                 <Button
+                  size="icon"
                   variant="secondary"
-                  className="gap-2 bg-white/95 hover:bg-white text-foreground h-11 px-4"
+                  className="shrink-0 h-11 w-11 bg-white/95 hover:bg-white text-foreground"
                   onClick={handleCopyReferralLink}
                   aria-label="Copy invite link"
                 >
