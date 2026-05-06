@@ -745,10 +745,11 @@ const More = () => {
 
   const handleShareWhatsApp = useCallback(() => {
     if (!profile?.referral_code) return;
-    const text = `✈️ ${profile.display_name} thinks you'd love Junto.\n\nGroup trips are chaos - 200-message threads, spreadsheets, nobody knowing who booked what.\n\nJunto fixes that. One place for your itinerary, expenses, bookings and group decisions.\n\nTry it free → https://junto.pro/ref?ref=${profile.referral_code}`;
+    const inviter = profile.display_name?.split(" ")[0] || "I";
+    const text = `Hey — ${inviter} here.\n\nI've been using this app called Junto to plan our group trips and it's honestly made the whole thing 10x less painful. No more 500-message group chats, no more "wait, who booked the Airbnb?", no more chasing people for their share of dinner.\n\nEverything — itinerary, expenses, bookings, group decisions — lives in one place. The AI even helps build the trip with you.\n\nIt's free while they're in beta. Grab a spot:\nhttps://junto.pro/ref?ref=${profile.referral_code}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     trackEvent("referral_link_shared", { method: "whatsapp" }, user?.id);
-  }, [profile?.referral_code, user?.id]);
+  }, [profile?.referral_code, profile?.display_name, user?.id]);
 
 
   const tier = (profile?.subscription_tier || "free") as "free" | "pro";
