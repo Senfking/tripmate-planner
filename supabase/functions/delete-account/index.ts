@@ -76,17 +76,35 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Scrub PII on rows that survive auth.users deletion via ON DELETE SET NULL.
-    // expenses.payer_id flips to NULL on cascade, but title/notes still hold
-    // free-text content the user typed (and may include third-party names).
-    // Run this *before* deleteUser — afterwards payer_id is NULL and we can't
-    // identify the rows.
-    const { error: scrubError } = await adminClient
+    // Pre-deletion cleanup. Most user-FK columns flip to NULL via ON DELETE
+    // SET NULL after the auth user is removed, so we have to act here while
+    // we can still identify the rows by user.id.
+    //
+    // 1. expenses: scrub free-text PII (title, notes). Amount / currency /
+    //    date are kept so the trip's split history still reconciles.
+    const { error: expensesScrubError } = await adminClient
       .from("expenses")
       .update({ title: "Deleted user", notes: null })
       .eq("payer_id", user.id);
-    if (scrubError) {
-      return new Response(JSON.stringify({ error: scrubError.message }), {
+    if (expensesScrubError) {
+      return new Response(JSON.stringify({ error: expensesScrubError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. ai_trip_plans drafts: plans with trip_id IS NULL are personal drafts
+    //    only the creator can see (per RLS in migration 20260412063404). After
+    //    created_by is nullified they become unreachable orphans, so delete
+    //    them outright. Trip-attached plans are shared content of the trip
+    //    and stay (created_by simply goes NULL).
+    const { error: draftsDeleteError } = await adminClient
+      .from("ai_trip_plans")
+      .delete()
+      .eq("created_by", user.id)
+      .is("trip_id", null);
+    if (draftsDeleteError) {
+      return new Response(JSON.stringify({ error: draftsDeleteError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
