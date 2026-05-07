@@ -367,12 +367,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                         <ReactionRow
                           key={t.activityKey}
                           thread={t}
-                          onScrollTo={() => {
-                            if (t.sectionId) {
-                              onClose();
-                              setTimeout(() => onScrollTo(t.sectionId), 200);
-                            }
-                          }}
+                          onScrollTo={() => goToSection(t.sectionId)}
                           onComment={() => setReplyTo(t.activityKey)}
                         />
                       ))}
