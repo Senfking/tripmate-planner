@@ -243,12 +243,7 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
         </p>
       )}
 
-      {isSignup && (
-        <label className="mb-3 flex items-start gap-2 text-[12.5px] text-white/75 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={adultConfirmed}
-            onChange={(e) => setAdultConfirmed(e.target.checked)}
+      <div className="space-y-3">
             className="mt-[3px] h-3.5 w-3.5 cursor-pointer accent-teal-500"
           />
           <span>I confirm I am 18 years or older. Junto is only intended for users aged 18+.</span>
