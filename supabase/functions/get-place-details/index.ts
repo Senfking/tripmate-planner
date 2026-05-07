@@ -30,30 +30,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: require a valid Bearer token to prevent anonymous abuse of the
-    // Google Places API quota and the place_details_cache table.
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: JSON_HEADERS,
-      });
-    }
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (supabaseUrl && anonKey) {
-      const authClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: { user }, error: authErr } = await authClient.auth.getUser();
-      if (authErr || !user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: JSON_HEADERS,
-        });
-      }
-    }
-
+    // Authn is delegated to the platform: config.toml keeps verify_jwt = true,
+    // so a valid Supabase JWT (anon key OR session) is required to even reach
+    // this code. We deliberately do not call auth.getUser() to require a
+    // *signed-in* user — TripResultsView (and `useGooglePlaceDetails` inside
+    // it) is rendered both on authenticated routes (AIPlan/TripHome) and on
+    // public ones (AnonTripView, TemplateDetail), and ActivityCard fires the
+    // hook on mount, racing session restore. Demanding a real user here was
+    // the root cause of the activity-photo 401 storm on trip previews.
     const { query } = await req.json();
     const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
 
