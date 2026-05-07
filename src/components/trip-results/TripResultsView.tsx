@@ -514,7 +514,10 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             itinerary; the glass background + backdrop-blur keeps them legible
             over any content underneath. */}
         <div
-          className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-4 pointer-events-none"
+          className={cn(
+            "fixed top-0 z-40 flex items-center justify-between px-4 pointer-events-none",
+            mapState === "partial" ? "left-0 right-[440px] max-lg:right-0" : "inset-x-0"
+          )}
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
         >
           <button

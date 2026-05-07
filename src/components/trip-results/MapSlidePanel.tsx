@@ -143,7 +143,7 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
   }
 
   return (
-    <div className="fixed inset-0 z-[10000] bg-muted">
+      <div className="fixed inset-0 z-[10000] bg-muted">
       <div className="absolute inset-0">
         <ResultsMap
           key="full"
@@ -171,7 +171,7 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
           </button>
 
           {/* Info card — full width on mobile (minus buttons), constrained on desktop */}
-          <div className="pointer-events-auto bg-card/92 backdrop-blur-xl rounded-2xl border border-border shadow-2xl px-4 py-3 sm:px-5 sm:py-4 flex-1 min-w-0 sm:max-w-sm sm:flex-initial">
+          <div className="pointer-events-auto bg-card/92 backdrop-blur-xl rounded-2xl border border-border shadow-2xl px-4 py-3 sm:px-5 sm:py-4 flex-1 min-w-0 sm:max-w-[min(22rem,calc(100vw-8.5rem))] sm:flex-initial">
             <h2 className="text-sm sm:text-base font-bold text-foreground truncate">{result.trip_title}</h2>
             <p className="text-[11px] text-muted-foreground font-mono mt-0.5">{dateRange}</p>
             <div className="flex items-center gap-3 mt-2 sm:mt-2.5 flex-wrap">
