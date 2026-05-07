@@ -597,19 +597,6 @@ export default function ReferralLanding() {
                   </div>
                 )}
 
-                {/* 18+ confirmation — required for signup, hidden in signin mode */}
-                {isSignupMode && (
-                  <label className="flex items-start gap-2 text-[12.5px] cursor-pointer select-none" style={{ color: "rgba(255,255,255,0.75)" }}>
-                    <input
-                      type="checkbox"
-                      checked={adultConfirmed}
-                      onChange={(e) => setAdultConfirmed(e.target.checked)}
-                      className="mt-[3px] h-3.5 w-3.5 cursor-pointer accent-teal-500"
-                    />
-                    <span>I confirm I am 18 years or older. Junto is only intended for users aged 18+.</span>
-                  </label>
-                )}
-
                 {/* Google OAuth */}
                 <button
                   type="button"
