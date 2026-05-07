@@ -667,19 +667,30 @@ html.dark, html.dark body, html.dark #root {
   transform: translateY(0);
 }
 
-/* Mockups get a slight scale settle alongside fade + rise. */
+/* Mockups: cinematic settle — slight rise, scale, and a hint of rotation. */
 .landing-reveal-mockup {
   opacity: 0;
-  transform: translateY(16px) scale(0.97);
+  transform: translateY(40px) scale(0.94) rotateX(6deg);
+  transform-origin: center bottom;
   transition:
-    opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: calc(var(--stagger-index, 0) * 120ms);
+    opacity 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1100ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--stagger-index, 0) * 100ms);
   will-change: opacity, transform;
 }
 .landing-visible .landing-reveal-mockup {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateY(0) scale(1) rotateX(0deg);
+}
+
+/* Idle float for phone mockups — subtle, premium drift after reveal. */
+@keyframes landing-phone-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.landing-visible .landing-phone-float {
+  animation: landing-phone-float 7s ease-in-out infinite;
+  animation-delay: 1.2s;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -689,6 +700,9 @@ html.dark, html.dark body, html.dark #root {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+  }
+  .landing-phone-float {
+    animation: none !important;
   }
 }
 
