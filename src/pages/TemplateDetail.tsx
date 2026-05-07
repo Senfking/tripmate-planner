@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useTripTemplate, type CuratedHighlight } from "@/hooks/useTripTemplates";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { stashIntent } from "@/lib/templateIntent";
 import { getCountryFacts } from "@/lib/countryFacts";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
@@ -33,6 +34,7 @@ import { HighlightCard } from "@/components/templates/HighlightCard";
 export default function TemplateDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack("/templates");
   const { user } = useAuth();
   const { template, isLoading } = useTripTemplate(slug);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -155,7 +157,7 @@ export default function TemplateDetail() {
   // Floating back button shared between both states.
   const FloatingBack = (
     <button
-      onClick={() => navigate("/templates")}
+      onClick={goBack}
       className="fixed top-[calc(env(safe-area-inset-top,0px)+12px)] left-4 z-40 inline-flex items-center justify-center h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/20 hover:bg-black/55 transition"
       aria-label="Back to templates"
     >
@@ -181,7 +183,7 @@ export default function TemplateDetail() {
             tripId={`template-${template.slug}`}
             planId={null}
             result={template.cached_result}
-            onClose={() => navigate("/templates")}
+            onClose={goBack}
             onRegenerate={() => { /* gated in readOnly */ }}
             standalone
             dateMode="generic"
