@@ -273,18 +273,8 @@ export default function ReferralLanding() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
-  // 18+ confirmation. Same pattern as ContextualSignupModal.
-  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const isSignupMode = mode === "signup";
-  const signupBlocked = isSignupMode && !adultConfirmed;
-  const persistAdultConsent = () => {
-    try { localStorage.setItem("junto.adult_confirmed", "1"); } catch { /* noop */ }
-  };
-  const setAdultConfirmedOnProfile = async (userId: string) => {
-    try { await supabase.from("profiles").update({ confirmed_adult: true }).eq("id", userId); } catch (e) {
-      console.warn("[signup] failed to write confirmed_adult:", e);
-    }
-  };
+  const signupBlocked = false;
 
   const handleForgotPassword = async () => {
     setError(null);
