@@ -7757,6 +7757,33 @@ function buildAffiliateUrl(
 
 const VALIDATION_MAX_KM_FROM_CENTER = 200;
 const VALIDATION_DROP_THRESHOLD = 0.20;
+// Continental cap: anything over this is unworkable as a single leg (e.g.
+// "USA", "Europe") — the LLM will scatter activities across thousands of km
+// regardless. Better to keep filtering on for those rather than disable.
+const VALIDATION_MAX_KM_CEILING = 3000;
+
+// Country/region inputs (e.g. "peru", "italy", "japan") geocode to the
+// country centroid, which can sit hundreds of km from any individual tourist
+// destination. The 200 km city-scope radius then drops the entire activity
+// pool. Derive an effective radius from the geocode viewport: a city's
+// viewport is tens of km (floor wins), a country's spans the country
+// (floor is overridden). Half the diagonal ≈ centroid-to-corner distance;
+// 1.25× buffer covers off-center centroids and viewports that don't fully
+// enclose the destination's tourist cluster.
+function validationRadiusKm(geo: GeocodeResult | null): number {
+  const vp = geo?.viewport;
+  if (!vp) return VALIDATION_MAX_KM_FROM_CENTER;
+  const diagonalKm = haversineKm(
+    vp.northeast.lat, vp.northeast.lng,
+    vp.southwest.lat, vp.southwest.lng,
+  );
+  const radius = (diagonalKm / 2) * 1.25;
+  if (!Number.isFinite(radius) || radius <= 0) return VALIDATION_MAX_KM_FROM_CENTER;
+  return Math.max(
+    VALIDATION_MAX_KM_FROM_CENTER,
+    Math.min(VALIDATION_MAX_KM_CEILING, radius),
+  );
+}
 
 // Per-day validator used by the streaming pipeline so days can be emitted to
 // the client as they arrive without waiting for all days. Mirrors the
@@ -7766,6 +7793,7 @@ function validateDayActivitiesInline(
   activities: EnrichedActivity[],
   allPlaces: Map<string, BatchPlaceResult>,
   center: { lat: number; lng: number },
+  maxKmFromCenter: number = VALIDATION_MAX_KM_FROM_CENTER,
 ): { kept: EnrichedActivity[]; dropped: number } {
   const kept: EnrichedActivity[] = [];
   let dropped = 0;
@@ -7782,8 +7810,8 @@ function validateDayActivitiesInline(
         center.lat, center.lng,
         place.location.latitude, place.location.longitude,
       );
-      if (d > VALIDATION_MAX_KM_FROM_CENTER) {
-        console.warn(`[stream.validate] drop "${act.title}" — ${d.toFixed(0)} km from center`);
+      if (d > maxKmFromCenter) {
+        console.warn(`[stream.validate] drop "${act.title}" — ${d.toFixed(0)} km from center (limit ${maxKmFromCenter.toFixed(0)})`);
         dropped++;
         continue;
       }
@@ -7801,8 +7829,8 @@ function validateDayActivitiesInline(
 function validateActivities(
   result: PipelineResult,
   allPlaces: Map<string, BatchPlaceResult>,
-  center: { lat: number; lng: number },
-  legCenters?: Map<number, { lat: number; lng: number }>,
+  center: { lat: number; lng: number; radiusKm: number },
+  legCenters?: Map<number, { lat: number; lng: number; radiusKm: number }>,
 ): PipelineResult {
   let totalBefore = 0;
   let dropped = 0;
@@ -7834,9 +7862,9 @@ function validateActivities(
             legCenter.lat, legCenter.lng,
             place.location.latitude, place.location.longitude,
           );
-          if (d > VALIDATION_MAX_KM_FROM_CENTER) {
+          if (d > legCenter.radiusKm) {
             console.warn(
-              `[validateActivities] drop "${act.title}" — ${d.toFixed(0)} km from leg center (limit ${VALIDATION_MAX_KM_FROM_CENTER})`,
+              `[validateActivities] drop "${act.title}" — ${d.toFixed(0)} km from leg center (limit ${legCenter.radiusKm.toFixed(0)})`,
             );
             dropped++;
             continue;
@@ -9567,7 +9595,12 @@ Deno.serve(async (req) => {
                 activity.booking_partner = aff.booking_partner;
                 activities.push(activity);
               }
-              const validated = validateDayActivitiesInline(activities, allPlacesById, { lat: legGeo.lat, lng: legGeo.lng });
+              const validated = validateDayActivitiesInline(
+                activities,
+                allPlacesById,
+                { lat: legGeo.lat, lng: legGeo.lng },
+                validationRadiusKm(legGeo),
+              );
               totalDropped += validated.dropped;
               const rankedDay: RankedDay = {
                 date: day.date, day_number: day.day_number, theme, activities: validated.kept,
@@ -10683,13 +10716,19 @@ Deno.serve(async (req) => {
 
     loggedStep = "validateActivities";
     const tValidate = Date.now();
-    const legCenters = new Map<number, { lat: number; lng: number }>();
+    const legCenters = new Map<number, { lat: number; lng: number; radiusKm: number }>();
     for (const leg of legs) {
-      if (leg.geo) legCenters.set(leg.index, { lat: leg.geo.lat, lng: leg.geo.lng });
+      if (leg.geo) {
+        legCenters.set(leg.index, {
+          lat: leg.geo.lat,
+          lng: leg.geo.lng,
+          radiusKm: validationRadiusKm(leg.geo),
+        });
+      }
     }
     const validated = validateActivities(
       ranked, allPlacesById,
-      { lat: geo.lat, lng: geo.lng },
+      { lat: geo.lat, lng: geo.lng, radiusKm: validationRadiusKm(geo) },
       legCenters,
     );
     // Recompute trip_total_estimate + daily-living additive after validation
