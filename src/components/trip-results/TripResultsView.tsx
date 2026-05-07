@@ -686,6 +686,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               </span>
             )}
           </div>
+          {/* Prominent map CTA on mobile (hidden when map is open or on desktop) */}
+          {mapState === "closed" && (
+            <button
+              type="button"
+              onClick={() => setMapStatePersisted("full")}
+              className="lg:hidden mt-3 w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#0D9488] text-white font-semibold text-sm shadow-md active:opacity-90 transition-opacity"
+            >
+              <MapIcon className="h-4 w-4" />
+              View trip on map
+            </button>
+          )}
         </div>
 
         {/* Trip summary — only render once we actually have one. During
