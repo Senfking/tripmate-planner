@@ -437,7 +437,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
         {/* Inline reply bar */}
         {replyTo && (
-          <div className="px-4 pt-2 border-t border-border bg-accent/30 shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
+          <div className="px-4 pt-2 border-t border-border/50 bg-background/40 backdrop-blur-xl shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] text-muted-foreground">
                 Replying to <span className="font-medium text-foreground">{getActivityMeta(replyTo, allDays).label}</span>
@@ -454,7 +454,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                 onChange={(e) => setReplyText(e.target.value.slice(0, 500))}
                 placeholder="Write a reply..."
                 maxLength={500}
-                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]"
+                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-border/60 bg-background/50 backdrop-blur-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]"
                 onKeyDown={(e) => { if (e.key === "Enter" && replyText.trim()) handleReply(); }}
               />
               <button onClick={handleReply} disabled={!replyText.trim()} className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30">
@@ -466,7 +466,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
         {/* General comment input */}
         {!replyTo && (
-          <div className="px-4 pt-3 border-t border-border bg-card shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
+          <div className="px-4 pt-3 border-t border-border/50 bg-background/40 backdrop-blur-xl shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
             <div className="flex gap-2 items-end">
               <input
                 type="text"
@@ -474,7 +474,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                 onChange={(e) => setGeneralText(e.target.value.slice(0, 500))}
                 placeholder="Comment on this trip..."
                 maxLength={500}
-                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]"
+                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-border/60 bg-background/50 backdrop-blur-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]"
                 onKeyDown={(e) => { if (e.key === "Enter" && generalText.trim()) handleSendGeneral(); }}
               />
               <button onClick={handleSendGeneral} disabled={!generalText.trim()} className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30">
