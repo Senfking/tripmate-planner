@@ -33,25 +33,26 @@ function parseActivityKey(key: string): { dayIndex: number; activityIndex: numbe
   return { dayIndex: parseInt(match[1]), activityIndex: parseInt(match[2]) };
 }
 
-function getActivityMeta(key: string, allDays: AIDay[]): { label: string; dayLabel: string | null; activityTitle: string | null; locationName: string | null } {
+function getActivityMeta(key: string, allDays: AIDay[]): { label: string; dayLabel: string | null; activityTitle: string | null; locationName: string | null; activityDataId: string | null } {
   const parsed = parseActivityKey(key);
   if (!parsed) {
-    if (key === "trip-general") return { label: "Trip discussion", dayLabel: null, activityTitle: null, locationName: null };
+    if (key === "trip-general") return { label: "Trip discussion", dayLabel: null, activityTitle: null, locationName: null, activityDataId: null };
     const dayMatch = key.match(/^day-(\d+)$/);
     if (dayMatch) {
       const day = allDays[parseInt(dayMatch[1])];
-      return { label: day ? `Day ${day.day_number} discussion` : key, dayLabel: null, activityTitle: null, locationName: null };
+      return { label: day ? `Day ${day.day_number} discussion` : key, dayLabel: null, activityTitle: null, locationName: null, activityDataId: null };
     }
-    return { label: key, dayLabel: null, activityTitle: null, locationName: null };
+    return { label: key, dayLabel: null, activityTitle: null, locationName: null, activityDataId: null };
   }
   const day = allDays[parsed.dayIndex];
-  if (!day) return { label: key, dayLabel: null, activityTitle: null, locationName: null };
+  if (!day) return { label: key, dayLabel: null, activityTitle: null, locationName: null, activityDataId: null };
   const activity = day.activities[parsed.activityIndex];
   return {
     label: activity?.title ?? `Day ${day.day_number}`,
     dayLabel: `Day ${day.day_number}`,
     activityTitle: activity?.title ?? null,
     locationName: activity?.location_name ?? null,
+    activityDataId: `${day.date}-${parsed.activityIndex}`,
   };
 }
 
@@ -94,6 +95,7 @@ type Thread = {
   sectionId: string;
   activityTitle: string | null;
   locationName: string | null;
+  activityDataId: string | null;
   comments: CommentEntry[];
   reactions: ReactionEntry[];
   latestAt: Date;
@@ -182,6 +184,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
           sectionId: getSectionId(key, allDays),
           activityTitle: meta.activityTitle,
           locationName: meta.locationName,
+          activityDataId: meta.activityDataId,
           comments: [],
           reactions: [],
           latestAt: new Date(0),
@@ -281,24 +284,51 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
     return [...map.values()];
   }, [allUserIds, profileMap]);
 
-  const goToSection = useCallback((sectionId: string) => {
-    if (!sectionId) return;
+  const scrollElementToTop = useCallback((el: HTMLElement) => {
+    const SCROLL_TOP_GAP = 12;
+    const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
+    const useInner = !!(marked && marked.scrollHeight > marked.clientHeight + 1);
+    const elementRect = el.getBoundingClientRect();
+    if (useInner && marked) {
+      const rootRect = marked.getBoundingClientRect();
+      const targetTop = Math.max(0, marked.scrollTop + (elementRect.top - rootRect.top) - SCROLL_TOP_GAP);
+      marked.scrollTo({ top: targetTop, behavior: "smooth" });
+    } else {
+      const targetTop = Math.max(0, window.scrollY + elementRect.top - SCROLL_TOP_GAP);
+      window.scrollTo({ top: targetTop, behavior: "smooth" });
+    }
+  }, []);
+
+  const goToThread = useCallback((thread: Thread) => {
+    if (!thread.sectionId) return;
     onClose();
     setTimeout(() => {
-      // Tell DaySection to expand if collapsed, then scroll
-      window.dispatchEvent(new CustomEvent("results:expand", { detail: { id: sectionId } }));
-      setTimeout(() => onScrollTo(sectionId), 60);
+      // Expand the day accordion if needed
+      window.dispatchEvent(new CustomEvent("results:expand", { detail: { id: thread.sectionId } }));
+      // Wait for the accordion to open + content to render, then scroll precisely to the activity card
+      setTimeout(() => {
+        if (thread.activityDataId) {
+          const activityEl = document.querySelector<HTMLElement>(
+            `[data-activity-id="${thread.activityDataId}"]`,
+          );
+          if (activityEl) {
+            scrollElementToTop(activityEl);
+            return;
+          }
+        }
+        onScrollTo(thread.sectionId);
+      }, 220);
     }, 200);
-  }, [onClose, onScrollTo]);
+  }, [onClose, onScrollTo, scrollElementToTop]);
 
   return (
     <div className="fixed inset-0 z-[10001] flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      {/* Panel: full-width on mobile, side panel on >=md */}
-      <div className="relative w-full md:max-w-[440px] bg-background md:border-l border-border h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
-        {/* Header — richer with gradient strip + avatar stack */}
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      {/* Panel: full-width on mobile, side panel on >=md — frosted glass */}
+      <div className="relative w-full md:max-w-[440px] bg-background/70 backdrop-blur-2xl md:border-l border-border/60 h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
+        {/* Header — frosted with gradient strip + avatar stack */}
         <div
-          className="sticky top-0 z-10 shrink-0 border-b border-border bg-card relative overflow-hidden"
+          className="sticky top-0 z-10 shrink-0 border-b border-border/50 bg-background/40 backdrop-blur-xl relative overflow-hidden"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px))" }}
         >
           {/* Decorative gradient bar */}
@@ -368,7 +398,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                         <ReactionRow
                           key={t.activityKey}
                           thread={t}
-                          onScrollTo={() => goToSection(t.sectionId)}
+                          onScrollTo={() => goToThread(t)}
                           onComment={() => setReplyTo(t.activityKey)}
                         />
                       ))}
@@ -393,7 +423,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                         currentUserId={user?.id}
                         isExpanded={expandedThreads.has(thread.activityKey)}
                         onToggle={() => toggleThread(thread.activityKey)}
-                        onScrollTo={() => goToSection(thread.sectionId)}
+                        onScrollTo={() => goToThread(thread)}
                         onReply={() => setReplyTo(thread.activityKey)}
                         onDelete={handleDeleteComment}
                       />
@@ -407,7 +437,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
         {/* Inline reply bar */}
         {replyTo && (
-          <div className="px-4 pt-2 border-t border-border bg-accent/30 shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
+          <div className="px-4 pt-2 border-t border-border/50 bg-background/40 backdrop-blur-xl shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] text-muted-foreground">
                 Replying to <span className="font-medium text-foreground">{getActivityMeta(replyTo, allDays).label}</span>
@@ -424,7 +454,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                 onChange={(e) => setReplyText(e.target.value.slice(0, 500))}
                 placeholder="Write a reply..."
                 maxLength={500}
-                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]"
+                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-border/60 bg-background/50 backdrop-blur-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]"
                 onKeyDown={(e) => { if (e.key === "Enter" && replyText.trim()) handleReply(); }}
               />
               <button onClick={handleReply} disabled={!replyText.trim()} className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30">
@@ -436,7 +466,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
         {/* General comment input */}
         {!replyTo && (
-          <div className="px-4 pt-3 border-t border-border bg-card shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
+          <div className="px-4 pt-3 border-t border-border/50 bg-background/40 backdrop-blur-xl shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
             <div className="flex gap-2 items-end">
               <input
                 type="text"
@@ -444,7 +474,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                 onChange={(e) => setGeneralText(e.target.value.slice(0, 500))}
                 placeholder="Comment on this trip..."
                 maxLength={500}
-                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]"
+                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-border/60 bg-background/50 backdrop-blur-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#0D9488]"
                 onKeyDown={(e) => { if (e.key === "Enter" && generalText.trim()) handleSendGeneral(); }}
               />
               <button onClick={handleSendGeneral} disabled={!generalText.trim()} className="p-1.5 rounded-lg bg-[#0D9488] text-white disabled:opacity-30">
@@ -579,7 +609,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, onToggle, onScrollTo, o
   const heroSrc = photos && photos.length > 0 ? photos[0] : null;
 
   return (
-    <div className="rounded-2xl bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-border/40">
+    <div className="rounded-2xl bg-card/50 backdrop-blur-md shadow-sm hover:shadow-md hover:bg-card/70 transition-all overflow-hidden border border-border/40">
       {/* Place header — image + title */}
       <button
         onClick={onScrollTo}
@@ -668,7 +698,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, onToggle, onScrollTo, o
 
       {/* Threaded replies */}
       {isExpanded && hasReplies && (
-        <div className="bg-muted/30 px-3 py-2 border-t border-border/40">
+        <div className="bg-background/30 backdrop-blur-sm px-3 py-2 border-t border-border/40">
           <div className="ml-6 border-l-2 border-[#0D9488]/40 pl-3 space-y-2 py-1">
             {replies.map(reply => (
               <CommentRow
