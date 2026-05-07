@@ -323,12 +323,12 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
   return (
     <div className="fixed inset-0 z-[10001] flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      {/* Panel: full-width on mobile, side panel on >=md */}
-      <div className="relative w-full md:max-w-[440px] bg-background md:border-l border-border h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
-        {/* Header — richer with gradient strip + avatar stack */}
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      {/* Panel: full-width on mobile, side panel on >=md — frosted glass */}
+      <div className="relative w-full md:max-w-[440px] bg-background/70 backdrop-blur-2xl md:border-l border-border/60 h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
+        {/* Header — frosted with gradient strip + avatar stack */}
         <div
-          className="sticky top-0 z-10 shrink-0 border-b border-border bg-card relative overflow-hidden"
+          className="sticky top-0 z-10 shrink-0 border-b border-border/50 bg-background/40 backdrop-blur-xl relative overflow-hidden"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px))" }}
         >
           {/* Decorative gradient bar */}
