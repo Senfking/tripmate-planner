@@ -571,45 +571,82 @@ function ThreadCard({ thread, currentUserId, isExpanded, onToggle, onScrollTo, o
     return Object.entries(counts);
   }, [thread.reactions]);
 
+  // Pull a hero photo for activity threads (skips trip-general / day-discussion)
+  const { photos } = useGooglePlaceDetails(
+    thread.activityTitle || "",
+    thread.locationName || "",
+  );
+  const heroSrc = photos && photos.length > 0 ? photos[0] : null;
+
   return (
-    <div className="rounded-xl bg-card shadow-sm overflow-hidden">
-      {/* Header */}
+    <div className="rounded-2xl bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-border/40">
+      {/* Place header — image + title */}
       <button
         onClick={onScrollTo}
-        className="w-full flex items-center justify-between px-3 pt-2.5 pb-1.5 text-left hover:bg-muted/30 transition-colors"
+        className="w-full flex items-stretch text-left group/header"
       >
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[12px] font-semibold text-foreground truncate">
-            {thread.activityLabel}
-          </span>
-          {thread.dayLabel && (
-            <span className="text-[10px] text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5 shrink-0">
-              {thread.dayLabel}
+        {/* Thumbnail (or accent strip when no image) */}
+        {heroSrc ? (
+          <div className="relative w-16 shrink-0 overflow-hidden bg-muted">
+            <img
+              src={heroSrc}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover group-hover/header:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="w-1 shrink-0 bg-gradient-to-b from-[#0D9488] to-[#0D9488]/40" />
+        )}
+
+        {/* Title block */}
+        <div className="flex-1 min-w-0 px-3 py-2.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[12.5px] font-semibold text-foreground leading-tight group-hover/header:text-[#0D9488] transition-colors">
+                  {thread.activityLabel}
+                </span>
+                {thread.dayLabel && (
+                  <span className="text-[9.5px] font-medium text-[#0D9488] bg-[#0D9488]/10 rounded px-1.5 py-0.5 shrink-0 leading-none">
+                    {thread.dayLabel}
+                  </span>
+                )}
+              </div>
+              {thread.locationName && (
+                <div className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground/80 truncate">
+                  <MapPin className="h-2.5 w-2.5 shrink-0" />
+                  <span className="truncate">{thread.locationName}</span>
+                </div>
+              )}
+            </div>
+            <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap shrink-0 mt-0.5">
+              {formatDistanceToNow(thread.latestAt, { addSuffix: true })}
             </span>
+          </div>
+
+          {/* Reaction pills inline */}
+          {reactionCounts.length > 0 && (
+            <div className="mt-1.5 flex items-center gap-1">
+              {reactionCounts.map(([emoji, count]) => {
+                const info = EMOJI_MAP[emoji];
+                return info ? (
+                  <span key={emoji} className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-muted/50 rounded-full px-1.5 py-0.5">
+                    <info.Icon className="h-2.5 w-2.5" />{count > 1 ? count : ""}
+                  </span>
+                ) : null;
+              })}
+            </div>
           )}
         </div>
-        <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap ml-2 shrink-0">
-          {formatDistanceToNow(thread.latestAt, { addSuffix: true })}
-        </span>
       </button>
 
-      {/* Reactions inline (subtle) */}
-      {reactionCounts.length > 0 && (
-        <div className="px-3 pb-1 flex items-center gap-2">
-          {reactionCounts.map(([emoji, count]) => {
-            const info = EMOJI_MAP[emoji];
-            return info ? (
-              <span key={emoji} className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                <info.Icon className="h-3 w-3" /> {count}
-              </span>
-            ) : null;
-          })}
-        </div>
-      )}
+      {/* Divider */}
+      <div className="h-px bg-border/40 mx-3" />
 
       {/* First comment */}
       {firstComment && (
-        <div className="px-3 pb-2.5 pt-1">
+        <div className="px-3 pb-2.5 pt-2">
           <CommentRow
             comment={firstComment}
             isOwn={firstComment.userId === currentUserId}
@@ -631,7 +668,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, onToggle, onScrollTo, o
 
       {/* Threaded replies */}
       {isExpanded && hasReplies && (
-        <div className="bg-muted/20 px-3 py-1.5">
+        <div className="bg-muted/30 px-3 py-2 border-t border-border/40">
           <div className="ml-6 border-l-2 border-[#0D9488]/40 pl-3 space-y-2 py-1">
             {replies.map(reply => (
               <CommentRow
