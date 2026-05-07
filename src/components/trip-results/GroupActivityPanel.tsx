@@ -293,9 +293,9 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
 
   return (
     <div className="fixed inset-0 z-[10001] flex justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       {/* Panel: full-width on mobile, side panel on >=md */}
-      <div className="relative w-full md:max-w-[440px] bg-gradient-to-b from-muted/40 to-muted/20 md:border-l border-border h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
+      <div className="relative w-full md:max-w-[440px] bg-background md:border-l border-border h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
         {/* Header — richer with gradient strip + avatar stack */}
         <div
           className="sticky top-0 z-10 shrink-0 border-b border-border bg-card relative overflow-hidden"
