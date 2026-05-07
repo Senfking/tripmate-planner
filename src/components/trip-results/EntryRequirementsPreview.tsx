@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ensureFreshSession, forceRefreshSession } from "@/lib/sessionRefresh";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
