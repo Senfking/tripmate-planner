@@ -609,7 +609,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, onToggle, onScrollTo, o
   const heroSrc = photos && photos.length > 0 ? photos[0] : null;
 
   return (
-    <div className="rounded-2xl bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-border/40">
+    <div className="rounded-2xl bg-card/50 backdrop-blur-md shadow-sm hover:shadow-md hover:bg-card/70 transition-all overflow-hidden border border-border/40">
       {/* Place header — image + title */}
       <button
         onClick={onScrollTo}
@@ -698,7 +698,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, onToggle, onScrollTo, o
 
       {/* Threaded replies */}
       {isExpanded && hasReplies && (
-        <div className="bg-muted/30 px-3 py-2 border-t border-border/40">
+        <div className="bg-background/30 backdrop-blur-sm px-3 py-2 border-t border-border/40">
           <div className="ml-6 border-l-2 border-[#0D9488]/40 pl-3 space-y-2 py-1">
             {replies.map(reply => (
               <CommentRow
