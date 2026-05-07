@@ -1369,7 +1369,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {/* Overlays (outside flex layout) */}
       {/* Group Chat for non-draft trips is rendered inline in the floating action cluster above */}
 
-      {planId && standalone && (
+      {planId && standalone && mapState !== "full" && (
         <Popover>
           <PopoverTrigger asChild>
             <button
