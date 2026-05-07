@@ -1359,7 +1359,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         totalActivities={totalActivities}
         state={mapState}
         onStateChange={(s) => {
-          setMapState(s);
+          setMapStatePersisted(s);
           if (s === "closed") setMapActiveDayIndex(-1);
         }}
         activeDayIndex={mapActiveDayIndex}
