@@ -392,12 +392,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                         currentUserId={user?.id}
                         isExpanded={expandedThreads.has(thread.activityKey)}
                         onToggle={() => toggleThread(thread.activityKey)}
-                        onScrollTo={() => {
-                          if (thread.sectionId) {
-                            onClose();
-                            setTimeout(() => onScrollTo(thread.sectionId), 200);
-                          }
-                        }}
+                        onScrollTo={() => goToSection(thread.sectionId)}
                         onReply={() => setReplyTo(thread.activityKey)}
                         onDelete={handleDeleteComment}
                       />
