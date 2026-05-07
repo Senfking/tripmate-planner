@@ -91,19 +91,41 @@ export default function AnonTripView() {
 
   async function handleShare() {
     const url = window.location.href;
-    if (navigator.share && window.matchMedia("(max-width: 767px)").matches) {
+    const shareText = "Check out this trip plan I made on Junto";
+
+    // Prefer native share (mobile + supporting desktop browsers).
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: "My trip plan from Junto", url });
-      } catch {
-        // Native share cancel is not an error state for the user.
+        await navigator.share({ title: "My trip plan from Junto", text: shareText, url });
+        return;
+      } catch (err) {
+        // User cancelled or share unavailable — fall through to clipboard.
+        if ((err as Error)?.name === "AbortError") return;
       }
-      return;
     }
+
+    // Clipboard fallback.
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copied");
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      toast.success("Link copied to clipboard");
     } catch {
-      toast.error("Couldn't copy link");
+      // Last resort: open WhatsApp share sheet.
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(`${shareText}\n${url}`)}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
     }
   }
 
