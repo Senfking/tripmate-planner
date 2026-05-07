@@ -91,8 +91,12 @@ export function EntryRequirementsPreview({
 
   const destName = countryName(destIso);
 
-  // Section wrapper (matches sibling sections in TripResultsView style)
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  // Section wrapper (matches sibling sections in TripResultsView style).
+  // IMPORTANT: must be defined outside the component body OR inlined — defining
+  // it inside the render creates a new component type on every render, which
+  // unmounts/remounts children (resetting AllClearPanel's open state whenever
+  // an unrelated sibling like PackingCard toggles).
+  const wrap = (children: React.ReactNode) => (
     <div
       id="section-entry-requirements"
       className={cn("mx-4 mt-2 mb-4", className)}
